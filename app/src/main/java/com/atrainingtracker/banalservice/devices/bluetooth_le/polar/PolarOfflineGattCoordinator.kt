@@ -565,6 +565,146 @@ object PolarOfflineGattCoordinator {
     @JvmStatic
     fun getAccChannelOwner(polarId: String): String? = activeAccOwners[normalizeId(polarId)]
 
+    private fun collectAliasClosure(vararg seeds: String?): Set<String> {
+        val normalized = linkedSetOf<String>()
+        for (seed in seeds) {
+            seed?.let(::normalizeId)?.takeIf { it.isNotEmpty() }?.let { normalized.add(it) }
+        }
+        if (normalized.isEmpty()) return emptySet()
+        val closure = linkedSetOf<String>()
+        closure.addAll(normalized)
+        for (id in normalized) {
+            deviceAliases[id]?.let { closure.addAll(it) }
+        }
+        for ((key, aliases) in deviceAliases) {
+            if (key in closure || aliases.any { it in closure }) {
+                closure.add(key)
+                closure.addAll(aliases)
+            }
+        }
+        return closure
+    }
+
+    /**
+     * Synchronously disconnects every known MAC and canonical 8-hex Polar ID alias for a target
+     * peripheral on the shared [PolarBleApi] (and any distinct active session API) without shutting
+     * down `sharedApi` or disturbing sibling paired Polar sensors (`ATT-9155`, `REQ-CON-054.1`,
+     * `REQ-SET-118.3`).
+     *
+     * Pass [clearRegistrations] = `true` on unpair, delete, or shutdown; pass `false` during an
+     * in-session watchdog reconnect so multiplexer `callbackListeners` and `activeSessions` remain
+     * intact for subsequent `connectToDevice()` callbacks.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun forceDisconnectDevice(
+        context: Context?,
+        macAddress: String?,
+        polarId: String? = null,
+        clearRegistrations: Boolean = true
+    ) {
+        val persistedId = if (context != null && !macAddress.isNullOrBlank()) {
+            try {
+                PolarOfflineCapabilityStore.getPolarDeviceId(context, macAddress)
+            } catch (_: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
+        registerDeviceAliases(macAddress, polarId, persistedId)
+        val aliases = collectAliasClosure(macAddress, polarId, persistedId)
+        if (aliases.isEmpty()) return
+
+        val apisToDisconnect = linkedSetOf<PolarBleApi>()
+        synchronized(apiLock) { sharedApi }?.let { apisToDisconnect.add(it) }
+        for (alias in aliases) {
+            activeSessions[alias]?.let { apisToDisconnect.add(it) }
+            connectedDeviceIds.remove(alias)
+        }
+
+        if (clearRegistrations) {
+            for (alias in aliases) {
+                activeAccOwners.remove(alias)
+                activeSessions.remove(alias)
+                val removedCb = activeSessionCallbacks.remove(alias)
+                removedCb?.let(::removeCallbackListeners)
+            }
+            val orphanListeners = callbackListeners.filter { reg ->
+                reg.targetIdentifiers.isNotEmpty() && reg.targetIdentifiers.all { it in aliases }
+            }
+            if (orphanListeners.isNotEmpty()) {
+                callbackListeners.removeAll(orphanListeners)
+            }
+        }
+
+        for (api in apisToDisconnect) {
+            for (alias in aliases) {
+                try {
+                    api.disconnectFromDevice(alias)
+                } catch (t: Throwable) {
+                    Log.d(TAG, "Best-effort forceDisconnectDevice($alias) ignored: ${t.message}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Releases any lingering connected or registered [PolarBleApi] sessions whose device aliases
+     * are no longer paired in [DevicesDatabaseManager] so unpaired sensors immediately resume BLE
+     * advertising for rediscovery without affecting paired sibling Polar sensors (`ATT-9155`,
+     * `REQ-CON-054.1`, `REQ-CON-054.2`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun disconnectUnpairedSessions(
+        context: Context,
+        pairedIdentifiersProvider: (() -> Set<String>)? = null
+    ) {
+        val candidates = linkedSetOf<String>()
+        candidates.addAll(connectedDeviceIds)
+        candidates.addAll(activeSessions.keys)
+        if (candidates.isEmpty()) return
+
+        val pairedIds: Set<String> = try {
+            if (pairedIdentifiersProvider != null) {
+                pairedIdentifiersProvider.invoke().map(::normalizeId).filter { it.isNotEmpty() }.toSet()
+            } else {
+                val db = DevicesDatabaseManager.getInstance(context)
+                val paired = linkedSetOf<String>()
+                for (dev in db.allDevicesForCache.orEmpty()) {
+                    if (dev.type == DeviceType.HRM && dev.protocol == Protocol.BLUETOOTH_LE && db.isPaired(dev.id)) {
+                        val mac = db.getBluetoothMACAddress(dev.id)
+                        if (!mac.isNullOrBlank()) {
+                            paired.add(normalizeId(mac))
+                            val resolved = extractPolarId(context, dev.name ?: "", mac)
+                            if (resolved.isNotBlank()) {
+                                paired.add(normalizeId(resolved))
+                            }
+                        }
+                    }
+                }
+                paired
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Unable to query paired Polar sensors during disconnectUnpairedSessions: ${t.message}")
+            return
+        }
+
+        val visited = mutableSetOf<String>()
+        for (candidate in candidates) {
+            if (!visited.add(candidate)) continue
+            val cluster = collectAliasClosure(candidate)
+            visited.addAll(cluster)
+            val isStillPaired = cluster.any { alias ->
+                pairedIds.any { paired -> matchesDeviceIdentifier(paired, alias) }
+            }
+            if (!isStillPaired) {
+                forceDisconnectDevice(context, candidate, null, clearRegistrations = true)
+            }
+        }
+    }
+
     @VisibleForTesting
     fun getActiveLeaseCountForTesting(): Int = synchronized(apiLock) { activeLeaseCount }
 

@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -433,60 +434,11 @@ fun TrackOnMapScreen(
             mapOverlay = {},
             mapTopEndActions = {
                 if (showTechnicalTracks) {
-                    var showTrackMenu by remember { mutableStateOf(false) }
-                    Box {
-                        Surface(
-                            onClick = { showTrackMenu = true },
-                            modifier = Modifier.size(44.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                            shadowElevation = 6.dp,
-                            tonalElevation = 2.dp
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Layers,
-                                    contentDescription = stringResource(R.string.track_layers),
-                                    modifier = Modifier.size(22.dp),
-                                    tint = if (enabledTrackTypes.size > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-                                )
-                            }
-                        }
-                        DropdownMenu(
-                            expanded = showTrackMenu,
-                            onDismissRequest = { showTrackMenu = false }
-                        ) {
-                            TrackType.entries.forEach { type ->
-                                val isAvailable = type in availableTrackTypes
-                                DropdownMenuItem(
-                                    enabled = isAvailable,
-                                    text = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                            modifier = Modifier.alpha(if (isAvailable) TTAlpha.High else TTAlpha.Disabled)
-                                        ) {
-                                            Checkbox(
-                                                checked = enabledTrackTypes.contains(type),
-                                                onCheckedChange = null,
-                                                enabled = isAvailable
-                                            )
-                                            Surface(
-                                                modifier = Modifier.size(12.dp),
-                                                color = type.color,
-                                                shape = RoundedCornerShape(2.dp)
-                                            ) {}
-                                            Text(
-                                                text = getTrackTypeName(type),
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                        }
-                                    },
-                                    onClick = { onToggleTrackType(type) }
-                                )
-                            }
-                        }
-                    }
+                    TrackLayersMenuButton(
+                        availableTrackTypes = availableTrackTypes,
+                        enabledTrackTypes = enabledTrackTypes,
+                        onToggleTrackType = onToggleTrackType
+                    )
                 }
             },
             onSplitLapClick = {
@@ -583,66 +535,11 @@ fun TrackOnMapScreen(
         overlay = {},
         topEndActions = {
             if (showTechnicalTracks) {
-                var showTrackMenu by remember { mutableStateOf(false) }
-
-                Box {
-                    Surface(
-                        onClick = { showTrackMenu = true },
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Layers,
-                                contentDescription = stringResource(R.string.track_layers),
-                                modifier = Modifier.size(22.dp),
-                                tint = if (enabledTrackTypes.size > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-                            )
-                        }
-                    }
-
-                    DropdownMenu(
-                        expanded = showTrackMenu,
-                        onDismissRequest = { showTrackMenu = false }
-                    ) {
-                        TrackType.entries.forEach { type ->
-                            val isAvailable = type in availableTrackTypes
-                            
-                            DropdownMenuItem(
-                                enabled = isAvailable,
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        modifier = Modifier.alpha(if (isAvailable) TTAlpha.High else TTAlpha.Disabled)
-                                    ) {
-                                        Checkbox(
-                                            checked = enabledTrackTypes.contains(type),
-                                            onCheckedChange = null,
-                                            enabled = isAvailable
-                                        )
-                                        // THE LEGEND: Small color square
-                                        Surface(
-                                            modifier = Modifier.size(12.dp),
-                                            color = type.color,
-                                            shape = RoundedCornerShape(2.dp)
-                                        ) {}
-                                        Text(
-                                            text = getTrackTypeName(type),
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    onToggleTrackType(type)
-                                }
-                            )
-                        }
-                    }
-                }
+                TrackLayersMenuButton(
+                    availableTrackTypes = availableTrackTypes,
+                    enabledTrackTypes = enabledTrackTypes,
+                    onToggleTrackType = onToggleTrackType
+                )
             }
         },
         metadataContent = {
@@ -1026,5 +923,91 @@ private fun getTrackTypeName(type: TrackType): String {
         TrackType.GPS -> stringResource(R.string.track_type_gps)
         TrackType.FUSED -> stringResource(R.string.track_type_fused)
         TrackType.ATT_FUSED -> stringResource(R.string.track_type_att_fused)
+    }
+}
+
+/**
+ * Deterministic semantics test tags for [TrackLayersMenuButton] (`REQ-REV-016.2` / `TST-REV-017`).
+ */
+internal object TrackOnMapTestTags {
+    const val LAYERS_BUTTON = "track_layers_button"
+    const val LAYERS_MENU = "track_layers_menu"
+    fun layerMenuItem(type: TrackType): String = "track_layers_item_${type.name}"
+}
+
+/**
+ * Floating circular Layers action button and [DropdownMenu] toggling technical [TrackType]
+ * overlays (`REQ-MAP-012`, `REQ-UI-500.5`, `REQ-REV-016.2`).
+ */
+@Composable
+internal fun TrackLayersMenuButton(
+    availableTrackTypes: Set<TrackType>,
+    enabledTrackTypes: Set<TrackType>,
+    onToggleTrackType: (TrackType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showTrackMenu by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Surface(
+            onClick = { showTrackMenu = true },
+            modifier = Modifier
+                .size(44.dp)
+                .testTag(TrackOnMapTestTags.LAYERS_BUTTON),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+            shadowElevation = 6.dp,
+            tonalElevation = 2.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Layers,
+                    contentDescription = stringResource(R.string.track_layers),
+                    modifier = Modifier.size(22.dp),
+                    tint = if (enabledTrackTypes.size > 1) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
+                    }
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = showTrackMenu,
+            onDismissRequest = { showTrackMenu = false },
+            modifier = Modifier.testTag(TrackOnMapTestTags.LAYERS_MENU)
+        ) {
+            TrackType.entries.forEach { type ->
+                val isAvailable = type in availableTrackTypes
+                DropdownMenuItem(
+                    enabled = isAvailable,
+                    modifier = Modifier.testTag(TrackOnMapTestTags.layerMenuItem(type)),
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.alpha(if (isAvailable) TTAlpha.High else TTAlpha.Disabled)
+                        ) {
+                            Checkbox(
+                                checked = enabledTrackTypes.contains(type),
+                                onCheckedChange = null,
+                                enabled = isAvailable
+                            )
+                            Surface(
+                                modifier = Modifier.size(12.dp),
+                                color = type.color,
+                                shape = RoundedCornerShape(2.dp)
+                            ) {}
+                            Text(
+                                text = getTrackTypeName(type),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    },
+                    onClick = { onToggleTrackType(type) }
+                )
+            }
+        }
     }
 }

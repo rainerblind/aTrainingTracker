@@ -73,8 +73,10 @@ class BTSearchForNewDevicesEngineTest {
 
     private lateinit var mockContext: Context
     private lateinit var mockCallback: BTSearchForNewDevicesEngine.IBTSearchForNewDevicesEngineInterface
+    private lateinit var mockBluetoothManager: BluetoothManager
     private lateinit var mockBluetoothAdapter: BluetoothAdapter
     private lateinit var mockScanner: BluetoothLeScanner
+    private lateinit var mockDevicesDbManager: DevicesDatabaseManager
     private val postedRunnables = mutableListOf<Runnable>()
 
     // Test harness exposing protected and package-private members for test verification
@@ -145,7 +147,8 @@ class BTSearchForNewDevicesEngineTest {
         } returns PackageManager.PERMISSION_GRANTED
 
         mockkStatic(DevicesDatabaseManager::class)
-        every { DevicesDatabaseManager.getInstance(any()) } returns mockk(relaxed = true)
+        mockDevicesDbManager = mockk(relaxed = true)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
 
         mockkConstructor(Handler::class)
         every { anyConstructed<Handler>().post(any()) } answers {
@@ -171,7 +174,7 @@ class BTSearchForNewDevicesEngineTest {
         val mockLooper = mockk<Looper>(relaxed = true)
         every { mockContext.mainLooper } returns mockLooper
 
-        val mockBluetoothManager = mockk<BluetoothManager>(relaxed = true)
+        mockBluetoothManager = mockk<BluetoothManager>(relaxed = true)
         mockBluetoothAdapter = mockk(relaxed = true)
         mockScanner = mockk(relaxed = true)
         every { mockBluetoothAdapter.bluetoothLeScanner } returns mockScanner
@@ -814,6 +817,96 @@ class BTSearchForNewDevicesEngineTest {
         } finally {
             PolarOfflineCapabilityStore.resetForTesting()
         }
+    }
+
+    // REQ-CON-054.2 / TST-CON-054.2
+    @Test
+    fun testStartAsyncSearch_probesConnectedGattHrmSkipsPairedAndRejectsNonMatching_TST_CON_054_2() {
+        val verityMac = "24:AC:AC:24:82:56"
+        val pairedH10Mac = "AA:BB:CC:DD:EE:11"
+        val earbudsMac = "11:22:33:44:55:99"
+
+        val verityDevice = mockk<BluetoothDevice>(relaxed = true)
+        val verityGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { verityDevice.address } returns verityMac
+        every { verityDevice.name } returns "Polar Sense 24825632"
+        every { verityDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) } returns verityGatt
+        every { verityGatt.device } returns verityDevice
+        every { verityGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns mockk(relaxed = true)
+        every { verityGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { verityGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { verityGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns null
+        every { verityGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns null
+        every { verityGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_SPEED_AND_CADENCE)) } returns null
+        every { verityGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_POWER)) } returns null
+
+        val pairedH10Device = mockk<BluetoothDevice>(relaxed = true)
+        every { pairedH10Device.address } returns pairedH10Mac
+        every { mockDevicesDbManager.isBluetoothDeviceInDB(DeviceType.HRM, pairedH10Mac) } returns true
+        every { mockDevicesDbManager.getDeviceId(DeviceType.HRM, pairedH10Mac) } returns 55L
+        every { mockDevicesDbManager.isPaired(55L) } returns true
+
+        val earbudsDevice = mockk<BluetoothDevice>(relaxed = true)
+        val earbudsGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { earbudsDevice.address } returns earbudsMac
+        every { earbudsDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) } returns earbudsGatt
+        every { earbudsGatt.device } returns earbudsDevice
+        every { earbudsGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns null
+
+        every { mockBluetoothManager.getConnectedDevices(android.bluetooth.BluetoothProfile.GATT) } returns listOf(
+            verityDevice,
+            pairedH10Device,
+            earbudsDevice
+        )
+
+        val mockPolarApi = mockk<com.polar.sdk.api.PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.resetForTesting()
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockPolarApi }
+        try {
+            PolarOfflineGattCoordinator.acquirePersistentSession(mockContext, "24825632", verityMac, mockk(relaxed = true))
+            PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+                .deviceConnected(com.polar.sdk.api.model.PolarDeviceInfo("24825632", verityMac, -55, "Polar Sense 24825632", true))
+
+            val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+            engine.startAsyncSearch()
+            drainPostedRunnables()
+
+            // Unpaired Polar session released before scan
+            verify(atLeast = 1) { mockPolarApi.disconnectFromDevice(verityMac) }
+            // Already-paired H10 skipped completely
+            verify(exactly = 0) { pairedH10Device.connectGatt(any(), any(), any(), any()) }
+            // Unpaired Verity Sense & earbuds probed
+            verify(exactly = 1) { verityDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) }
+            verify(exactly = 1) { earbudsDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) }
+
+            // Non-matching earbuds probe rejected and closed immediately
+            engine.getGattCallback().onServicesDiscovered(earbudsGatt, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+            verify(exactly = 1) { earbudsGatt.disconnect() }
+            verify(exactly = 1) { earbudsGatt.close() }
+            verify(exactly = 0) { mockCallback.onNewDeviceFound(DeviceType.HRM, earbudsMac, any(), any(), any()) }
+
+            // Matching connected-GATT Verity Sense surfaces via onNewDeviceFound
+            engine.getGattCallback().onServicesDiscovered(verityGatt, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+            verify(exactly = 1) { mockCallback.onNewDeviceFound(DeviceType.HRM, verityMac, any(), any(), any()) }
+        } finally {
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
+
+    // REQ-CON-054.2 / TST-CON-054.2
+    @Test
+    fun testStartAsyncSearch_missingBluetoothConnectPermission_skipsConnectedProbeGracefully_TST_CON_054_2() {
+        every { ContextCompat.checkSelfPermission(any(), Manifest.permission.BLUETOOTH_CONNECT) } returns PackageManager.PERMISSION_DENIED
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        engine.testSdkInt = Build.VERSION_CODES.S
+
+        engine.startAsyncSearch()
+        drainPostedRunnables()
+
+        assertTrue("BLE scan should still run when only BLUETOOTH_SCAN is granted", engine.isScanning())
+        verify(exactly = 0) { mockBluetoothManager.getConnectedDevices(any()) }
     }
 }
 

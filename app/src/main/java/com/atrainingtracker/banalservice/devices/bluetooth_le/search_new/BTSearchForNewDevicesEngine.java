@@ -54,11 +54,13 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -88,6 +90,8 @@ public class BTSearchForNewDevicesEngine
     protected Map<String, String> mManufacturerMap = new HashMap<String, String>();
     protected Map<String, Integer> mBatteryPercentage = new HashMap<String, Integer>();
     protected Map<String, Queue<BluetoothGattCharacteristic>> mReadCharacteristicQueue = new HashMap<String, Queue<BluetoothGattCharacteristic>>();
+    protected Set<String> mConnectedGattProbes = new HashSet<String>();
+    protected BluetoothManager mBluetoothManager;
     BluetoothAdapter mBluetoothAdapter;
     final DevicesDatabaseManager mDevicesDatabaseManager;
 
@@ -129,6 +133,10 @@ public class BTSearchForNewDevicesEngine
                 @Override
                 public void run() {
                     String address = gatt.getDevice().getAddress();
+                    if (mConnectedGattProbes.contains(address) && !hasTargetServiceForConnectedProbe(gatt)) {
+                        closeNonMatchingConnectedProbe(address, gatt);
+                        return;
+                    }
                     mReadCharacteristicQueue.put(address, new LinkedList<BluetoothGattCharacteristic>());
 
                     enqueueCharacteristicIfPresent(address,
@@ -305,8 +313,8 @@ public class BTSearchForNewDevicesEngine
         mDeviceType = deviceType;
         mCallbackInterface = callbackInterface;
 
-        BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
-        mBluetoothAdapter = bluetoothManager.getAdapter();
+        mBluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+        mBluetoothAdapter = mBluetoothManager != null ? mBluetoothManager.getAdapter() : null;
 
         mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
     }
@@ -355,6 +363,7 @@ public class BTSearchForNewDevicesEngine
             }
         }
         mBTGatts.clear();
+        mConnectedGattProbes.clear();
         mReadCharacteristicQueue.clear();
         mInformedDevices.clear();
         mNameMap.clear();
@@ -416,6 +425,10 @@ public class BTSearchForNewDevicesEngine
 
             scanning = true;
 
+            if (getDeviceType() == DeviceType.HRM) {
+                PolarOfflineGattCoordinator.disconnectUnpairedSessions(mContext);
+            }
+
             List<ScanFilter> filters = buildScanFilters(getDeviceType());
 
             ScanSettings settings = new ScanSettings.Builder()
@@ -427,12 +440,125 @@ public class BTSearchForNewDevicesEngine
 
             try {
                 scanner.startScan(filters, settings, mScanCallback);
+                probeAlreadyConnectedGattDevices();
             } catch (SecurityException | IllegalStateException e) {
                 Log.e(TAG, "Failed to start BLE scan: " + e.getMessage(), e);
                 scanning = false;
             }
         } else if (DEBUG) {
             Log.i(TAG, "already searching");
+        }
+    }
+
+    /**
+     * Enumerates BLE peripherals already connected at the Android GATT profile layer so unpaired
+     * sensors that suppressed advertisements while connected (e.g., Polar Verity Sense) can be
+     * rediscovered without power-cycling ({@code ATT-9155}, {@code REQ-CON-054.2}).
+     */
+    protected void probeAlreadyConnectedGattDevices() {
+        if (mBluetoothManager == null) {
+            return;
+        }
+        if (getBuildVersionSdkInt() >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+        }
+        final List<BluetoothDevice> connectedDevices;
+        try {
+            connectedDevices = mBluetoothManager.getConnectedDevices(BluetoothProfile.GATT);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Unable to enumerate connected GATT devices: " + e.getMessage());
+            return;
+        }
+        if (connectedDevices == null || connectedDevices.isEmpty()) {
+            return;
+        }
+        for (final BluetoothDevice device : connectedDevices) {
+            if (device == null) {
+                continue;
+            }
+            final String address = device.getAddress();
+            if (address == null || address.isEmpty() || mBTGatts.containsKey(address)) {
+                continue;
+            }
+            if (isAlreadyPairedInDb(address)) {
+                continue;
+            }
+            mConnectedGattProbes.add(address);
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (!scanning || mBTGatts.containsKey(address)) {
+                        return;
+                    }
+                    if (getBuildVersionSdkInt() >= Build.VERSION_CODES.S) {
+                        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            mConnectedGattProbes.remove(address);
+                            return;
+                        }
+                    }
+                    try {
+                        BluetoothGatt gatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                        if (gatt != null) {
+                            mBTGatts.put(address, gatt);
+                        } else {
+                            mConnectedGattProbes.remove(address);
+                        }
+                    } catch (RuntimeException e) {
+                        mConnectedGattProbes.remove(address);
+                        Log.w(TAG, "Failed probing connected GATT device " + address + ": " + e.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
+    private boolean isAlreadyPairedInDb(String address) {
+        if (mDevicesDatabaseManager == null) {
+            return false;
+        }
+        try {
+            if (!mDevicesDatabaseManager.isBluetoothDeviceInDB(mDeviceType, address)) {
+                return false;
+            }
+            long deviceId = mDevicesDatabaseManager.getDeviceId(mDeviceType, address);
+            return deviceId > 0 && mDevicesDatabaseManager.isPaired(deviceId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean hasTargetServiceForConnectedProbe(BluetoothGatt gatt) {
+        if (gatt == null) {
+            return false;
+        }
+        UUID serviceUuid = BluetoothConstants.getServiceUUID(mDeviceType);
+        if (serviceUuid != null && gatt.getService(serviceUuid) != null) {
+            return true;
+        }
+        if (mDeviceType == DeviceType.BIKE_RADAR) {
+            return gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) != null
+                    || gatt.getService(BluetoothConstants.UUID_SERVICE_GARMIN_MEMBER) != null;
+        }
+        return false;
+    }
+
+    private void closeNonMatchingConnectedProbe(String address, BluetoothGatt gatt) {
+        mConnectedGattProbes.remove(address);
+        mBTGatts.remove(address);
+        mReadCharacteristicQueue.remove(address);
+        if (gatt == null) {
+            return;
+        }
+        try {
+            if (getBuildVersionSdkInt() < Build.VERSION_CODES.S
+                    || ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                gatt.disconnect();
+                gatt.close();
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Error closing non-matching connected GATT probe for " + address + ": " + e.getMessage());
         }
     }
 

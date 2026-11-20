@@ -74,7 +74,6 @@ com/atrainingtracker/trainingtracker/ui/map/ElevationProfileContractTest.kt
 com/atrainingtracker/trainingtracker/ui/map/ElevationProfileEmptyStateContractTest.kt
 com/atrainingtracker/trainingtracker/ui/map/ElevationProfileGestureContractTest.kt
 com/atrainingtracker/trainingtracker/ui/map/ElevationProfileGestureTest.kt
-com/atrainingtracker/trainingtracker/ui/map/ElevationProfileGradeColorTest.kt
 com/atrainingtracker/trainingtracker/ui/map/ElevationProfileHistogramAlignmentContractTest.kt
 com/atrainingtracker/trainingtracker/ui/map/ElevationProfileLayoutTest.kt
 com/atrainingtracker/trainingtracker/ui/map/ElevationProfileSmoothingContractTest.kt

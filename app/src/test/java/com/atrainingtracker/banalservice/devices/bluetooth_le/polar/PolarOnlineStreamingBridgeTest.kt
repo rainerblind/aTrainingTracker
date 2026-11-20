@@ -2160,4 +2160,136 @@ class PolarOnlineStreamingBridgeTest {
             bridge.shutDown()
         }
     }
+
+    // REQ-CON-054.1 / REQ-CON-054.3 / TST-CON-054.1 / TST-CON-054.3
+    @Test
+    fun testSilentHrWatchdog_resubscribesThenDisconnectsPreservingRegistrationsAndShutDownDisconnectsAllAliases_TST_CON_054_3() = runTest {
+        val mac = "24:AC:AC:24:82:56"
+        val polarId = "24825632"
+        val hrFlows = mutableListOf<kotlinx.coroutines.flow.MutableSharedFlow<PolarHrData>>()
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        every { mockApi.startHrStreaming(any()) } answers {
+            kotlinx.coroutines.flow.MutableSharedFlow<PolarHrData>(extraBufferCapacity = 4).also { hrFlows.add(it) }
+        }
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = 901L,
+            macAddress = mac,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.silentHrWatchdogTimeoutMs = 1_000L
+
+        try {
+            bridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            mux.deviceConnected(PolarDeviceInfo(polarId, mac, -52, "Polar Sense $polarId", true))
+            mux.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+            testScheduler.runCurrent()
+            assertTrue(bridge.isReceivingData())
+            assertEquals(1, hrFlows.size)
+
+            // 1st silent window (1_000 ms) -> cancels HR slot & re-subscribes startHrStreaming
+            testScheduler.advanceTimeBy(1_001L)
+            testScheduler.runCurrent()
+            assertTrue(bridge.isReceivingData())
+            assertEquals("Silent watchdog must re-subscribe HR stream once", 2, hrFlows.size)
+
+            // 2nd silent window -> disconnects aliases with clearRegistrations=false and schedules reconnect
+            testScheduler.advanceTimeBy(1_001L)
+            testScheduler.runCurrent()
+            assertFalse("Persistent silence must exit connected state", bridge.isReceivingData())
+            verify(atLeast = 1) { mockApi.disconnectFromDevice(mac) }
+            verify(atLeast = 1) { mockApi.disconnectFromDevice(polarId) }
+            assertNotNull("In-session watchdog must preserve activeSession for reconnect", PolarOfflineGattCoordinator.getActiveSession(polarId))
+            assertNotNull("Persistent silence must schedule backoff reconnect", bridge.getReconnectJobForTesting())
+
+            // Reconnect succeeds and first HR sample disarms watchdog cleanly
+            mux.deviceConnected(PolarDeviceInfo(polarId, mac, -52, "Polar Sense $polarId", true))
+            mux.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+            testScheduler.runCurrent()
+            assertTrue(bridge.isReceivingData())
+            val countBeforeSample = hrFlows.size
+            bridge.processHrData(
+                PolarHrData(listOf(PolarHrData.PolarHrSample(72, 72, 0, emptyList(), emptyList(), false, true, true))),
+                100_000L
+            )
+            testScheduler.advanceTimeBy(5_000L)
+            testScheduler.runCurrent()
+            assertTrue("Receiving HR sample must disarm watchdog", bridge.isReceivingData())
+            assertEquals(countBeforeSample, hrFlows.size)
+        } finally {
+            bridge.shutDown()
+        }
+        assertNull("shutDown() must clear coordinator registration", PolarOfflineGattCoordinator.getActiveSession(polarId))
+    }
+
+    // REQ-CON-054.3 / TST-CON-054.3
+    @Test
+    fun testStaleWatchdogGenerationTick_afterDisconnectReconnectOrHrPacket_doesNotCancelHrSlotOrLeakTimer_TST_CON_054_3() = runTest {
+        val mac = "24:AC:AC:24:82:57"
+        val polarId = "24825633"
+        val hrFlows = mutableListOf<kotlinx.coroutines.flow.MutableSharedFlow<PolarHrData>>()
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        every { mockApi.startHrStreaming(any()) } answers {
+            kotlinx.coroutines.flow.MutableSharedFlow<PolarHrData>(extraBufferCapacity = 4).also { hrFlows.add(it) }
+        }
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = 902L,
+            macAddress = mac,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+        bridge.silentHrWatchdogTimeoutMs = 1_000L
+
+        try {
+            bridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            val info = PolarDeviceInfo(polarId, mac, -52, "Polar Sense $polarId", true)
+
+            // Session 1 connects -> captures gen1
+            mux.deviceConnected(info)
+            mux.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+            testScheduler.runCurrent()
+            val gen1 = bridge.getSilentHrWatchdogGenerationForTesting()
+            assertEquals(1, hrFlows.size)
+
+            // Disconnect + reconnect -> new generation gen2 and fresh HR slot
+            mux.deviceDisconnected(info)
+            mux.deviceConnected(info)
+            mux.bleSdkFeatureReady(polarId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR)
+            testScheduler.runCurrent()
+            val gen2 = bridge.getSilentHrWatchdogGenerationForTesting()
+            assertTrue(gen2 > gen1)
+            assertEquals(2, hrFlows.size)
+
+            // Stale gen1 timeout firing against session 2 must be ignored completely (no HR slot cancel/re-subscribe)
+            bridge.triggerSilentHrWatchdogTimeoutForTesting(gen1)
+            testScheduler.runCurrent()
+            assertEquals("Stale gen1 tick must not cancel/re-subscribe live gen2 HR stream", 2, hrFlows.size)
+            assertTrue(bridge.isHrJobActiveForTesting())
+
+            // HR packet disarms gen2 -> stale gen2 tick must NOT re-subscribe or leak a follow-up watchdog job
+            bridge.processHrData(
+                PolarHrData(listOf(PolarHrData.PolarHrSample(68, 68, 0, emptyList(), emptyList(), false, true, true))),
+                200_000L
+            )
+            assertNull("Disarming on HR packet must clear silentHrWatchdogJob", bridge.getSilentHrWatchdogJobForTesting())
+            bridge.triggerSilentHrWatchdogTimeoutForTesting(gen2)
+            testScheduler.runCurrent()
+            assertEquals("Stale gen2 tick after HR packet must not re-subscribe HR stream", 2, hrFlows.size)
+            assertNull("Stale gen2 tick must not leak a follow-up watchdog job", bridge.getSilentHrWatchdogJobForTesting())
+        } finally {
+            bridge.shutDown()
+        }
+    }
 }

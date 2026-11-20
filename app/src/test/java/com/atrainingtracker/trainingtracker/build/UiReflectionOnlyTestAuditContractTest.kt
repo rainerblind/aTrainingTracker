@@ -33,7 +33,7 @@ import java.io.File
 class UiReflectionOnlyTestAuditContractTest {
 
     companion object {
-        private const val LEGACY_BASELINE_CEILING = 189
+        private const val LEGACY_BASELINE_CEILING = 188
         private val UI_PATH_REGEX = Regex("(?:^|/)ui/")
         private val KT_REFLECTION_REGEX = Regex("""Class\.forName\s*\(\s*"[^"]*Kt"\s*\)""")
     }

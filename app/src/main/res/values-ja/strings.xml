@@ -2475,4 +2475,11 @@
     <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
     <string name="prefs_volume_keys_switch_cockpit_tabs_title">音量ボタンでタブ切り替え</string>
     <string name="prefs_volume_keys_switch_cockpit_tabs_summary">コックピットで音量+/-ボタンを使ってタブを循環切り替え</string>
+    <!-- Decoupled Stop-Workout Post-Processing Notification (REQ-TRK-091 / ATT-9154) -->
+    <string name="notification_post_processing_title">ワークアウトを完了しています</string>
+    <string name="notification_post_processing_stage_polar_h10">Polar H10 センサーデータを同期中…</string>
+    <string name="notification_post_processing_stage_polar_verity">Polar Verity Sense データを同期中…</string>
+    <string name="notification_post_processing_stage_recompute">HRV とトラック指標を再計算中…</string>
+    <string name="notification_post_processing_stage_export">ワークアウトのエクスポートを完了中…</string>
+    <string name="notification_post_processing_failed">バックグラウンド処理が警告付きで完了しました</string>
 </resources>

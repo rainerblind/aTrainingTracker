@@ -1,14 +1,14 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BTLE`  
-**Version**: 1.0.5  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,274 LOC)  
+**Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,324 LOC)  
 **Superclass / Subclasses**: Extends `MyRemoteDevice`; specialized by BLE profiles (`BTLEHeartRateDevice`, `BTLERadarDevice`, cycling speed/cadence/power devices)  
 **SWE.2 Alignment**: `docs/architecture.md` §3.4, §4.5, §4.9 (`IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`
 
 ---
 
@@ -72,7 +72,8 @@ stateDiagram-v2
 | `onCharacteristicChanged` / `onCharacteristicRead` | `!mIsShutDown` | Clone bytes via `obtainSnapshotCharacteristic` (`REQ-CON-020.1`); dispatch `measurementCharacteristicUpdate` on `mHandler` when `mState == CONNECTED_WITH_SERVICE && gatt == mBluetoothGatt` | `CONNECTED_WITH_SERVICE` |
 | `mGattCallback.onConnectionStateChange` | `newState == STATE_DISCONNECTED` or `(newState == STATE_CONNECTED && status != GATT_SUCCESS)` | `mState = DISCONNECTED`; `unregisterSensors()`; `disconnectFromGatt()` (clears `mIsBackgroundReconnecting = false`); if `!mIsShutDown` schedule `mReconnectRunnable` (`attemptBackgroundReconnect()` re-arms `mIsBackgroundReconnecting = true` upon execution) | `DISCONNECTED` |
 | `pauseGattOperations()` / `resumeGattOperations()` | External GATT arbitration (`PolarOfflineGattCoordinator`) | `pauseGattOperations()` sets `mIsGattPaused = true`, `stopScanAssistance()`, cancels `mSearchTimeoutRunnable` & `mReconnectRunnable` without changing `mState` or closing GATT; `resumeGattOperations()` clears `mIsGattPaused = false` and if `mState == DISCONNECTED && !mIsShutDown` routes to `attemptBackgroundReconnect()` when `mIsBackgroundReconnecting` is `true` (staying `DISCONNECTED`, `mSearching = false`) or `startSearching()` otherwise | `mState` preserved on pause; `DISCONNECTED` or `SEARCHING` on resume |
-| `shutDown()` / `shutDown(onTeardownComplete)` | Any state | Store `mPendingTeardownCallback` and dispatch polymorphically through `shutDown()` (preserving subclass overrides like `BTLEHeartRateDevice.shutDown()`), then `performShutDown`: set `mIsShutDown = true`, `mHasConnectedInSession = false`; `stopScanAssistance()`; clear `mHandler` callbacks; `disconnectFromGatt(onTeardownComplete)` (`gattToClose.disconnect(); gattToClose.close()` on `mHandler` before callback); `super.shutDown()` | `DISCONNECTED` |
+| `shutDown()` / `shutDown(onTeardownComplete)` | Any state | Store `mPendingTeardownCallback` and dispatch polymorphically through `shutDown()` (preserving subclass overrides like `BTLEHeartRateDevice.shutDown()`), then `performShutDown`: set `mIsShutDown = true`, `mHasConnectedInSession = false`; `stopScanAssistance()`; clear `mHandler` callbacks; `disconnectFromGatt(onTeardownComplete)` (`gattToClose.disconnect(); gattToClose.close()` synchronously when `onGattClosed == null && mHandler.getLooper() != null && mHandler.getLooper() == Looper.myLooper()`, else posted to `mHandler` with synchronous `closeRunnable.run()` fallback when `!posted` before callback); `super.shutDown()`; late `onConnectionStateChange` callbacks strictly when `mIsShutDown == true` immediately disconnect & close `gatt` | `DISCONNECTED` |
+| `triggerSilentConnectionReconnect()` | Subclass silent-HR watchdog (`BTLEHeartRateDevice`, `REQ-CON-054.3`) | `unregisterSensors()`; `disconnectFromGatt()`; if `!mIsShutDown && !mIsGattPaused`, set `mIsBackgroundReconnecting = true`, reset `mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS`, and post `mReconnectRunnable` after `INITIAL_RECONNECT_DELAY_MS` | `DISCONNECTED` |
 
 ---
 
@@ -119,3 +120,4 @@ stateDiagram-v2
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8998`) | `ATT-8998` | Decoupled `mSearchTimeoutRunnable` and `mReconnectRunnable` from `State.SEARCHING` / `MyRemoteDevice.mSearching` via `mIsBackgroundReconnecting` and guaranteed `notifyStopSearching(false)` queue handoff (`REQ-CON-051`). |
 | `1.0.4` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: guarded `mSearchTimeoutRunnable` on `CONNECTED_TO_GATT`/`CONNECTED_WITH_SERVICE` under `mGattLock` and documented `resumeGattOperations()` routing to `attemptBackgroundReconnect()` when `mIsBackgroundReconnecting == true`. |
 | `1.0.5` | 2026-11-19 | AI Agent (`ATT-8965`) | `ATT-8965` | Delegated runtime backoff progression beyond `16s` (`32s->64s->128s->finalPeriodMs`) to `SensorReconnectBackoffPolicy` while preserving `MAX_RECONNECT_DELAY_MS = 16000L` constant (`SYSREQ-TRK-002`, `REQ-CON-052`); updated unit LOC (`1,274`). |
+| `1.0.6` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Added null-safe same-looper synchronous `disconnectFromGatt()` (`onGattClosed == null`), strict `mIsShutDown == true` late `onConnectionStateChange` GATT close guard, and `triggerSilentConnectionReconnect()` for `BTLEHeartRateDevice` silent-HR recovery (`REQ-CON-054`, `1,324 LOC`). |

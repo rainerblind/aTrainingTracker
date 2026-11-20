@@ -1540,6 +1540,73 @@ class TrackerServiceFinalizationTest {
             com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
         }
     }
+
+    @Test
+    fun testEndWorkout_decouplesPostProcessingAndBroadcastsTrackingFinishedImmediately_tstTrk091_1() {
+        // REQ-TRK-091.1 / TST-TRK-091.1
+        WorkoutPostProcessingCoordinator.resetForTesting()
+        var capturedRequest: WorkoutPostProcessingCoordinator.PostProcessingRequest? = null
+        WorkoutPostProcessingCoordinator.enqueueHookForTesting = { _, req ->
+            capturedRequest = req
+            true
+        }
+
+        mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController::class)
+        mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController::class)
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.isRecordingArmed() } returns true
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getSessionStartTimeMs() } returns 1111L
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getArmedSessionToken() } returns 42L
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.isRecordingArmed() } returns true
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.getSessionStartTimeMs() } returns 2222L
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.getArmedSessionToken() } returns 84L
+
+        try {
+            mockkConstructor(Intent::class)
+            every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+            every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
+            every { anyConstructed<Intent>().action } returns TrackerService.TRACKING_FINISHED_INTENT
+
+            val mockApp = mockk<Application>(relaxed = true)
+            every { mockApp.applicationContext } returns mockApp
+            every { mockApp.packageName } returns "com.atrainingtracker"
+            val sentBroadcasts = mutableListOf<Intent>()
+            val spyingService = object : TestableTrackerService() {
+                override fun getApplicationContext(): Context = mockApp
+                override fun sendBroadcast(intent: Intent?) {
+                    if (intent != null) sentBroadcasts.add(intent)
+                }
+            }
+            spyingService.delegateToRealEndWorkout = true
+
+            val repoMock = mockk<WorkoutRepository>(relaxed = true)
+            WorkoutRepository.resetForTesting(repoMock)
+
+            spyingService.endWorkout(null, 2414L, "2026-11-20_184953", null)
+
+            val request = requireNotNull(capturedRequest) { "Expected PostProcessingRequest to be enqueued" }
+            assertEquals(2414L, request.workoutId)
+            assertEquals("2026-11-20_184953", request.baseFileName)
+            assertTrue(request.h10Armed)
+            assertEquals(42L, request.h10ArmedToken)
+            assertTrue(request.verityArmed)
+            assertEquals(84L, request.verityArmedToken)
+            assertTrue(
+                "TRACKING_FINISHED_INTENT must be broadcast immediately on Stop",
+                sentBroadcasts.isNotEmpty()
+            )
+            verify(exactly = 0) {
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController
+                    .stopAndBackfillWorkoutBlocking(any(), any(), any())
+            }
+            verify(exactly = 0) {
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController
+                    .stopAndBackfillWorkoutBlocking(any(), any(), any())
+            }
+        } finally {
+            WorkoutPostProcessingCoordinator.resetForTesting()
+            WorkoutRepository.resetForTesting(null)
+        }
+    }
 }
 
 

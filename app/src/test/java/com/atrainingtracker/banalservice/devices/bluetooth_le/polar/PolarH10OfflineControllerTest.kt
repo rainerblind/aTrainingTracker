@@ -682,4 +682,33 @@ class PolarH10OfflineControllerTest {
         }
         assertNotNull(caughtCancellation)
     }
+
+    @Test
+    fun testStopAndBackfillWorkout_staleArmedTokenPreservesNewerWorkoutArmedStateAndSuppressesNotification_tstTrk091_1() = runBlocking {
+        // REQ-TRK-091.1 / TST-TRK-091.1
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.setArmedForTesting(true)
+        val workout1Token = PolarH10OfflineController.getArmedSessionToken()
+
+        // Simulate back-to-back workout 2 arming before workout 1's async backfill exits
+        PolarH10OfflineController.setArmedForTesting(true)
+        val workout2Token = PolarH10OfflineController.getArmedSessionToken()
+        assertTrue("Monotonic armed token must increment on re-arm", workout2Token > workout1Token)
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-20_180000") } returns true
+        every { mockDevicesDb.allDevicesForCache } returns emptyList()
+
+        val result = PolarH10OfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 459L,
+            baseFileName = "2026-11-20_180000",
+            startTimeMs = 1000L,
+            showOwnNotification = false,
+            expectedArmedToken = workout1Token
+        )
+
+        assertFalse(result)
+        assertTrue("Stale workout 1 exit must NOT clear workout 2 armed state", PolarH10OfflineController.isRecordingArmed())
+        assertEquals(workout2Token, PolarH10OfflineController.getArmedSessionToken())
+    }
 }

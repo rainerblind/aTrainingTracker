@@ -58,6 +58,7 @@ import kotlinx.coroutines.runBlocking
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
 
 /**
@@ -93,6 +94,10 @@ object PolarH10OfflineController {
     )
 
     private val isArmed = AtomicBoolean(false)
+    private val armedStateLock = Any()
+    private val armedTokenGenerator = AtomicLong(0L)
+    @Volatile
+    private var currentArmedToken: Long = 0L
     private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var sessionStartTimeMs: Long = 0L
     private var armedDeviceId: String? = null
@@ -115,6 +120,21 @@ object PolarH10OfflineController {
     @JvmStatic
     fun isRecordingArmed(): Boolean = isArmed.get()
 
+    /**
+     * Returns the monotonic armed session token used to prevent an earlier async backfill exit
+     * from disarming a newly started subsequent workout (`REQ-TRK-091.1`).
+     */
+    @JvmStatic
+    fun getArmedSessionToken(): Long = currentArmedToken
+
+    private fun clearArmedStateIfTokenMatches(expectedToken: Long) {
+        synchronized(armedStateLock) {
+            if (expectedToken == 0L || currentArmedToken == expectedToken) {
+                isArmed.set(false)
+            }
+        }
+    }
+
     @JvmStatic
     fun setSessionStartTimeMs(timeMs: Long) {
         sessionStartTimeMs = timeMs
@@ -125,7 +145,10 @@ object PolarH10OfflineController {
 
     @VisibleForTesting
     fun setArmedForTesting(armed: Boolean) {
-        isArmed.set(armed)
+        synchronized(armedStateLock) {
+            isArmed.set(armed)
+            currentArmedToken = if (armed) armedTokenGenerator.incrementAndGet() else 0L
+        }
     }
 
     @JvmStatic
@@ -142,7 +165,10 @@ object PolarH10OfflineController {
 
     @VisibleForTesting
     fun resetForTesting() {
-        isArmed.set(false)
+        synchronized(armedStateLock) {
+            isArmed.set(false)
+            currentArmedToken = 0L
+        }
         apiOverride = null
         sdkIntOverride = null
         stopConnectionTimeoutMs = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
@@ -247,16 +273,18 @@ object PolarH10OfflineController {
     }
 
     /**
-     * Executes Polar H10 workout stop, zero-gap evaluation, PFTP backfill, and transactional cleanup (REQ-SET-105).
+     * Executes Polar H10 workout stop, zero-gap evaluation, PFTP backfill, and transactional cleanup (`REQ-SET-105`, `REQ-TRK-091.1`).
      */
     suspend fun stopAndBackfillWorkout(
         context: Context,
         workoutId: Long,
         baseFileName: String,
-        startTimeMs: Long = sessionStartTimeMs
+        startTimeMs: Long = sessionStartTimeMs,
+        showOwnNotification: Boolean = true,
+        expectedArmedToken: Long = 0L
     ): Boolean {
         if (getEffectiveSdkInt() < Build.VERSION_CODES.TIRAMISU) {
-            isArmed.set(false)
+            clearArmedStateIfTokenMatches(expectedArmedToken)
             return false
         }
 
@@ -266,7 +294,7 @@ object PolarH10OfflineController {
         }
         if (targetDevice == null) {
             Log.d(TAG, "No enabled Polar H10 device found for backfill.")
-            isArmed.set(false)
+            clearArmedStateIfTokenMatches(expectedArmedToken)
             return false
         }
         val targetMac = targetDevice.macAddress
@@ -280,11 +308,11 @@ object PolarH10OfflineController {
             if (needsBackfill && workoutId > 0) {
                 recordPendingSync(appContext, workoutId, targetId, startTimeMs)
             }
-            isArmed.set(false)
+            clearArmedStateIfTokenMatches(expectedArmedToken)
             return false
         }
 
-        if (needsBackfill) {
+        if (showOwnNotification && needsBackfill) {
             showSyncNotification(appContext)
         }
 
@@ -437,8 +465,8 @@ object PolarH10OfflineController {
             }
             return false
         } finally {
-            isArmed.set(false)
-            if (needsBackfill) {
+            clearArmedStateIfTokenMatches(expectedArmedToken)
+            if (showOwnNotification && needsBackfill) {
                 dismissSyncNotification(appContext)
             }
         }
@@ -740,9 +768,12 @@ object PolarH10OfflineController {
                 )
                 Log.i(TAG, "Successfully armed Polar H10 offline RR recording on $polarId (id: $exerciseId)")
 
-                armedDeviceId = polarId
-                armedExerciseId = exerciseId
-                isArmed.set(true)
+                synchronized(armedStateLock) {
+                    armedDeviceId = polarId
+                    armedExerciseId = exerciseId
+                    currentArmedToken = armedTokenGenerator.incrementAndGet()
+                    isArmed.set(true)
+                }
                 true
             } ?: run {
                 Log.w(TAG, "Arming Polar H10 offline recording timed out after $ARMING_TIMEOUT_MS ms")

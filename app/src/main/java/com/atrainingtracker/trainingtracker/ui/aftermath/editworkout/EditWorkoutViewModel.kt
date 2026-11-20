@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
@@ -105,6 +106,42 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     var userManuallyChangedWorkoutName: Boolean = false
         internal set
 
+    private var userClearedRecordingErrors: Boolean = false
+
+    companion object {
+        /**
+         * Merges asynchronously refreshed telemetry/derived fields from [fresh] into [current]
+         * while strictly preserving all 19 user-editable metadata fields and any explicit warning
+         * clearance performed in the editor (`REQ-TRK-091.2`, `ATT-9154`).
+         */
+        internal fun mergeTelemetryPreservingUserEdits(
+            current: WorkoutData,
+            fresh: WorkoutData,
+            preserveClearedRecordingErrors: Boolean = false
+        ): WorkoutData = fresh.copy(
+            workoutName = current.workoutName,
+            sportId = current.sportId,
+            sportName = current.sportName,
+            bSportType = current.bSportType,
+            stravaSportName = current.stravaSportName,
+            equipmentId = current.equipmentId,
+            equipmentName = current.equipmentName,
+            clusterId = current.clusterId,
+            clusterName = current.clusterName,
+            rpe = current.rpe,
+            feel = current.feel,
+            description = current.description,
+            goal = current.goal,
+            method = current.method,
+            commute = current.commute,
+            trainer = current.trainer,
+            race = current.race,
+            uploadToStrava = current.uploadToStrava,
+            syncToHealthConnect = current.syncToHealthConnect,
+            recordingErrors = if (preserveClearedRecordingErrors) null else fresh.recordingErrors
+        )
+    }
+
     init {
         loadWorkoutData()
 
@@ -130,7 +167,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 if (data.id != workoutId) return@collect
 
                 _workoutData.update { current ->
-                    // If we already have data and are just updating identity, merge it
+                    // If we already have data and are just updating identity (e.g. createNewCluster), merge it
                     if (current != null) {
                         current.copy(
                             workoutName = if (userManuallyChangedWorkoutName) current.workoutName else data.workoutName,
@@ -149,7 +186,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                         )
                     }
                 }
-                
+
                 suggestedSportTypeName = data.sportName
                 currentBSportType = data.bSportType
 
@@ -189,6 +226,22 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 updateSuggestedSportTypeNames(data)
                 updateSuggestedEquipmentNames(data.sportName)
             }
+        }
+
+        // Edit-safe reactive telemetry refresh from background post-processing (REQ-TRK-091.2)
+        viewModelScope.launch {
+            repository.allWorkouts
+                .mapNotNull { list -> list.find { it.id == workoutId } }
+                .distinctUntilChanged()
+                .collect { fresh ->
+                    _workoutData.update { current ->
+                        if (current != null) {
+                            mergeTelemetryPreservingUserEdits(current, fresh, userClearedRecordingErrors)
+                        } else {
+                            null
+                        }
+                    }
+                }
         }
     }
 
@@ -424,6 +477,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
      * Clears diagnostic recording errors for this workout session (REQ-TRK-053.4).
      */
     fun clearRecordingErrors() {
+        userClearedRecordingErrors = true
         viewModelScope.launch {
             repository.clearRecordingErrors(workoutId)
             _workoutData.update { it?.copy(recordingErrors = null) }

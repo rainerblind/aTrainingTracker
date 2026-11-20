@@ -37,6 +37,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -557,6 +558,18 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             if (DEBUG)
                 Log.i(TAG, "onConnectionStateChange: status=" + status + ", newState=" + newState);
 
+            if (mIsShutDown) {
+                if (gatt != null && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    try {
+                        gatt.disconnect();
+                        gatt.close();
+                    } catch (Exception e) {
+                        Log.w(TAG, "Error closing late GATT callback after shutdown", e);
+                    }
+                }
+                return;
+            }
+
             synchronized (mGattLock) {
                 if (mBluetoothGatt != null && gatt != mBluetoothGatt) {
                     if (DEBUG) Log.d(TAG, "Ignoring onConnectionStateChange from stale or superseded BluetoothGatt instance");
@@ -885,7 +898,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
 
         if (gattToClose != null) {
-            boolean posted = mHandler.post(new Runnable() {
+            final Runnable closeRunnable = new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -901,14 +914,51 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         }
                     }
                 }
-            });
-            if (!posted && onGattClosed != null) {
-                onGattClosed.run();
+            };
+            if (onGattClosed == null && isOnHandlerLooper()) {
+                closeRunnable.run();
+            } else {
+                boolean posted = mHandler != null && mHandler.post(closeRunnable);
+                if (!posted) {
+                    closeRunnable.run();
+                }
             }
         } else if (onGattClosed != null) {
-            if (!mHandler.post(onGattClosed)) {
+            if (mHandler == null || !mHandler.post(onGattClosed)) {
                 onGattClosed.run();
             }
+        }
+    }
+
+    private boolean isOnHandlerLooper() {
+        if (mHandler == null) {
+            return false;
+        }
+        try {
+            Looper handlerLooper = mHandler.getLooper();
+            return handlerLooper != null && handlerLooper == Looper.myLooper();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Tears down a silent GATT connection and schedules a clean reconnect attempt when not shut
+     * down or GATT-paused ({@code ATT-9155}, {@code REQ-CON-054.3}).
+     */
+    protected void triggerSilentConnectionReconnect() {
+        unregisterSensors();
+        disconnectFromGatt();
+        synchronized (mGattLock) {
+            if (mIsShutDown || mIsGattPaused) {
+                return;
+            }
+            mIsBackgroundReconnecting = true;
+            mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+        }
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mReconnectRunnable);
+            mHandler.postDelayed(mReconnectRunnable, INITIAL_RECONNECT_DELAY_MS);
         }
     }
 

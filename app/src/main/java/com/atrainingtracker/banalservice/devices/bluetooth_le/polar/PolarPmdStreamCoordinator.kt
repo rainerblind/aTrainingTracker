@@ -188,6 +188,22 @@ class PolarPmdStreamCoordinator(
     }
 
     /**
+     * Cancels a single active stream [slot] atomically and clears its ownership under [slotLock]
+     * so a silent-HR watchdog can cleanly re-subscribe [StreamSlot.HR] without disturbing sibling
+     * PMD streams (`ATT-9155`, `REQ-CON-054.3`).
+     */
+    fun cancelSlot(slot: StreamSlot) {
+        val jobToCancel = synchronized(slotLock) {
+            val state = slots.getValue(slot)
+            val current = state.job
+            state.job = null
+            state.active.set(false)
+            current
+        }
+        jobToCancel?.cancel()
+    }
+
+    /**
      * Cancels all active stream jobs atomically, clears slot ownership and executes
      * [onStreamsCancelled] under [slotLock] so no concurrent launch can re-acquire channels before
      * cleanup completes, then cancels the snapshotted jobs outside [slotLock].

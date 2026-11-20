@@ -1,14 +1,14 @@
 # Living Requirements: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-REQ-REVIEWS`  
-**Version**: 1.0.5  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 15
+**Total Requirements**: 16
 
 ---
 
@@ -466,6 +466,38 @@
 
 **Invariants**: Zero duplicate visible headers when `showHeader = false`; non-null full-fidelity `headerLayer` bitmap on Share Snapshot; `showHeader = true` standalone parity; `MapDetailLayout.kt <= 1,500` LoC; `0` `src/main` reads in tests; `Localization Parity: N/A - no new or modified UI strings`.
 
+### REQ-REV-016: Isolated Floating Map Controls Gesture Handling & Hoisted `TrackLayersMenuButton` in `MapDetailLayout` / `TrackOnMapScreen` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-REV-017`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt`
+- **Rationale**: In `MapDetailLayout.kt` (`mapBox`), `onInteractiveCanvasTouch(true)` currently wraps the outer `Box` enclosing both `ATrainingTrackerMap` and `FLOATING CONTROLS` (`overlay()` + `topEndActions`), coupling taps on the round map **Layers** button inside `WorkoutDetailTabbedContent` to mid-gesture `HorizontalPager(userScrollEnabled)` flips, while `TrackOnMapScreen.kt` duplicates the inline `showTrackMenu` / `DropdownMenu` block without `testTag`s (`ATT-9067`, Parent Epic `ATT-68`).
+- **Description**:
+  1. *Floating Map Controls Gesture & Z-Order Isolation (`REQ-REV-016.1`)*:
+     - In `MapDetailLayout.kt` (`mapBox`), the `onInteractiveCanvasTouch(true)` `pointerInput(Unit)` detector **SHALL** wrap **strictly** `ATrainingTrackerMap` and **SHALL NOT** enclose the sibling `FLOATING CONTROLS` `Box` (`overlay()` and `topEndActions`).
+     - The `FLOATING CONTROLS` `Box` **SHALL** apply `.zIndex(1f)` above `GoogleMap` `AndroidView` and emit `onInteractiveCanvasTouch(false)` on `PointerEventPass.Initial` (when `onInteractiveCanvasTouch != null`) so tapping the round Layers button or floating Share button never toggles `isTouchingInteractiveCanvas` / `HorizontalPager(userScrollEnabled)` mid-gesture.
+  2. *Hoisted `TrackLayersMenuButton` & Testability (`REQ-REV-016.2`)*:
+     - `TrackOnMapScreen.kt` **SHALL** extract and deduplicate the duplicated `mapTopEndActions` / `topEndActions` Layers `Surface` + `DropdownMenu` block into a single reusable `TrackLayersMenuButton` composable with explicit `testTag`s (`track_layers_button`, `track_layers_menu`, `track_layers_item_<TrackType.name>`), hoisting `showTrackMenu` cleanly and preserving `controlsTopOffsetDp` (`REQ-UI-491`), `44.dp` `CircleShape` overlay styling (`REQ-UI-500.5`), `TrackType.entries` (`BEST`, `GPS`, `FUSED`, `ATT_FUSED`), and `enabledTrackTypes` persistence (`REQ-MAP-013`).
+     - `MapDetailLayout.kt <= 1,500` LoC and `TrackOnMapScreen.kt <= 1,500` LoC **MUST** remain preserved (`Localization Parity: N/A - no new or modified UI strings`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-REV-016`, complementing `REQ-UI-491`, `REQ-UI-500.5`, `REQ-MAP-013`, and `REQ-REV-015`; targets `MapDetailLayout.kt` and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: `b185d9b1` (`ATT-6214` / `REQ-UI-500`), `3652c31c` (`ATT-8080`), `ba5e86e4` (`ATT-9168` / `REQ-REV-015`).
+3. *Root Reason for Existing Formulation*: `mapBox` attached `onInteractiveCanvasTouch(true)` to the outer container to lock `HorizontalPager` swipes during map panning (`REQ-UI-408.4`), inadvertently covering `FLOATING CONTROLS` (`topEndActions`), while `TrackOnMapScreen.kt` duplicated inline `showTrackMenu` lambdas without `testTag`s.
+4. *Preservation of Core Invariants*: Map-canvas panning on `ATrainingTrackerMap` still triggers `onInteractiveCanvasTouch(true)` outside the `32.dp` edge gutter; `controlsTopOffsetDp` (`REQ-UI-491`), `showFloatingShareButton = workoutData == null` & `44.dp` `CircleShape` (`REQ-UI-500.5`), `REQ-MAP-013` persistence, and `REQ-REV-015` offscreen `snapshotHeader` isolation remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutDetailTabbedContent` hosting `MapDetailLayout(showMap = true)` with `onInteractiveCanvasTouch` wired and `TrackLayersMenuButton` in `topEndActions`,
+• *When* the user taps `track_layers_button` at `Alignment.TopEnd` (including inner coordinates `< width - 32.dp`),
+• *Then* `onInteractiveCanvasTouch(true)` is NOT emitted, `HorizontalPager(userScrollEnabled)` remains stable, and `FLOATING CONTROLS` (`.zIndex(1f)`) receives the click above `ATrainingTrackerMap` / `GoogleMap`.
+• *Given* `TrackOnMapScreen` (tabbed and non-tabbed fallback) with `showTechnicalTracks = true`,
+• *When* `track_layers_button` is tapped,
+• *Then* `track_layers_menu` opens displaying `TrackType.entries` (`BEST`, `GPS`, `FUSED`, `ATT_FUSED`) and tapping an available `track_layers_item_<TYPE>` invokes `onToggleTrackType(type)`.
+
+**Invariants**: Map-pan gesture isolation on `ATrainingTrackerMap` (`REQ-UI-408.4`); `REQ-UI-491` `controlsTopOffsetDp`; `REQ-UI-500.5` `44.dp` `CircleShape` & `showFloatingShareButton = workoutData == null`; `REQ-MAP-013` persistence; `REQ-REV-015` offscreen `snapshotHeader` isolation; `MapDetailLayout.kt <= 1,500` LoC; `TrackOnMapScreen.kt <= 1,500` LoC; `0` `src/main` reads in tests; `Localization Parity: N/A - no new or modified UI strings`.
+
 ---
 
 ## Change History
@@ -478,3 +510,6 @@
 | `1.0.3` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `REQ-REV-015` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9302`) `76/76 PASS` across 12 suites on `2251a7de` (`Rule 7.5`, zero `app/` diff post-`2251a7de`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
 | `1.0.4` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Stage 6 Bounce 1 (`Implemented`): moved `.pointerInput(Unit)` (`PointerEventPass.Initial` consume loop) after `.layout(0, 0)` onto the inner full-width `Box` and shifted off-viewport placement to `placeable.place(0, -placeable.height - 10_000)` (`MapDetailLayout.kt` `1,096 / 1,500` LoC; added `activeSnapshotWithTransparentForeground_blocksPointerClicksOnOffscreenHeader_tstRev016_2` and draw-pass assertions). |
 | `1.0.5` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `REQ-REV-015` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9314`) `77/77 PASS` across 12 suites on `408d9fb0` (`Rule 7.5`, zero `app/` diff post-`408d9fb0`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and updated `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
+| `1.0.6` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Added `REQ-REV-016` `[Planned]` for isolating `MapDetailLayout.kt` `FLOATING CONTROLS` (`.zIndex(1f)` + `onInteractiveCanvasTouch(false)`) from `ATrainingTrackerMap` canvas touch detection and hoisting/deduplicating `TrackLayersMenuButton` with `testTag`s in `TrackOnMapScreen.kt` (`N/A - no new or modified UI strings`). |
+| `1.0.7` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `REQ-REV-016` to `[Implemented]` following Stage 4 implementation in `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, and `TrackOnMapLayersUiTest.kt`. |
+| `1.0.8` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `REQ-REV-016` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9334`) `103/103 PASS` across 25 suites on `1c1df08e` (`0` `app/` diff post-`1c1df08e`, `0` compiler warnings, `4/4` linters PASS), `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9067_walkthrough.md`. |

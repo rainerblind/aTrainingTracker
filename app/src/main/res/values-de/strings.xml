@@ -2581,4 +2581,11 @@
     <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
     <string name="prefs_volume_keys_switch_cockpit_tabs_title">Lautstärketasten für Cockpit-Tabs</string>
     <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Im Cockpit mit Lautstärke +/- zyklisch durch die Tabs blättern</string>
+    <!-- Decoupled Stop-Workout Post-Processing Notification (REQ-TRK-091 / ATT-9154) -->
+    <string name="notification_post_processing_title">Training wird abgeschlossen</string>
+    <string name="notification_post_processing_stage_polar_h10">Polar H10-Sensordaten werden synchronisiert…</string>
+    <string name="notification_post_processing_stage_polar_verity">Polar Verity Sense-Daten werden synchronisiert…</string>
+    <string name="notification_post_processing_stage_recompute">HRV- und Streckendaten werden neu berechnet…</string>
+    <string name="notification_post_processing_stage_export">Trainingsexporte werden abgeschlossen…</string>
+    <string name="notification_post_processing_failed">Nachbearbeitung des Trainings mit Warnungen beendet</string>
 </resources>

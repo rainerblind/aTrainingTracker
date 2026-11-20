@@ -455,6 +455,11 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 )
             }
             if (originalState.isPaired != finalState.isPaired) {
+                if (!finalState.isPaired) {
+                    val mac = devicesDatabaseManager.getBluetoothMACAddress(finalState.id)
+                    com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
+                        .forceDisconnectDevice(application, mac, null)
+                }
                 sendPairingChangedBroadcast(finalState.id, finalState.isPaired)
             }
             if (originalState.polarLiveImuEnabled != finalState.polarLiveImuEnabled) {
@@ -591,7 +596,10 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     fun deleteDevice(deviceId: Long) {
         repositoryScope.launch {
+            val mac = devicesDatabaseManager.getBluetoothMACAddress(deviceId)
             sendPairingChangedBroadcast(deviceId, false)
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
+                .forceDisconnectDevice(application, mac, null)
             devicesDatabaseManager.deleteDevice(deviceId)
             loadAllDevices()
         }

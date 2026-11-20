@@ -359,78 +359,83 @@ fun MapDetailLayout(
     }
 
     val mapBox: @Composable (Modifier, Dp) -> Unit = { boxModifier, controlsTopOffsetDp ->
-        Box(
-            modifier = boxModifier.then(
-                if (onInteractiveCanvasTouch != null) {
-                    Modifier.pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent(PointerEventPass.Initial)
-                                onInteractiveCanvasTouch(true)
-                            }
-                        }
-                    }
-                } else Modifier
-            )
-        ) {
-            ATrainingTrackerMap(
-                zoomFocus = zoomFocus,
-                initialBounds = initialBounds,
-                bSportType = bSportType,
-                currentLocationFlow = noLocation,
-                selectedDistance = selectedDistance,
-                activeScrubPath = activeScrubPath,
-                activeScrubPoint = activeScrubPoint,
-                modifier = Modifier.fillMaxSize(),
-                shouldTakeSnapshot = readyToTakeMapSnapshot,
-                onMapClick = onMapClick,
-                onSnapshotReady = { mapBitmap ->
-                    scope.launch {
-                        executeSnapshotCaptureAndShare(
-                            captureHeader = {
-                                if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
-                                    headerLayer.toImageBitmap().asAndroidBitmap()
-                                } else null
-                            },
-                            captureElevation = {
-                                if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
-                                    elevationLayer.toImageBitmap().asAndroidBitmap()
-                                } else null
-                            },
-                            captureAnalytics = {
-                                if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
-                                    analyticsLayer.toImageBitmap().asAndroidBitmap()
-                                } else null
-                            },
-                            mapBitmap = mapBitmap,
-                            shareAction = { hBmp, mBmp, eBmp, aBmp ->
-                                combineWorkoutAndShare(context, hBmp, mBmp, eBmp, aBmp)
-                            },
-                            onError = { t ->
-                                if (t !is CancellationException) {
-                                    android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
-                                    android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onFinally = {
-                                isSharing = false
-                                onSnapshotComplete?.invoke()
-                            }
-                        )
-                    }
-                },
-                onSnapshotError = {
-                    isSharing = false
-                    onSnapshotComplete?.invoke()
-                    android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
-                },
-                content = mapContent
-            )
-
-            // FLOATING CONTROLS (Overlay & Share Button - REQ-UI-491 / ATT-5851: padded to avoid status bar collision)
+        Box(modifier = boxModifier) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(
+                        if (onInteractiveCanvasTouch != null) {
+                            Modifier.pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent(PointerEventPass.Initial)
+                                        onInteractiveCanvasTouch(true)
+                                    }
+                                }
+                            }
+                        } else Modifier
+                    )
+            ) {
+                ATrainingTrackerMap(
+                    zoomFocus = zoomFocus,
+                    initialBounds = initialBounds,
+                    bSportType = bSportType,
+                    currentLocationFlow = noLocation,
+                    selectedDistance = selectedDistance,
+                    activeScrubPath = activeScrubPath,
+                    activeScrubPoint = activeScrubPoint,
+                    modifier = Modifier.fillMaxSize(),
+                    shouldTakeSnapshot = readyToTakeMapSnapshot,
+                    onMapClick = onMapClick,
+                    onSnapshotReady = { mapBitmap ->
+                        scope.launch {
+                            executeSnapshotCaptureAndShare(
+                                captureHeader = {
+                                    if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
+                                        headerLayer.toImageBitmap().asAndroidBitmap()
+                                    } else null
+                                },
+                                captureElevation = {
+                                    if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
+                                        elevationLayer.toImageBitmap().asAndroidBitmap()
+                                    } else null
+                                },
+                                captureAnalytics = {
+                                    if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
+                                        analyticsLayer.toImageBitmap().asAndroidBitmap()
+                                    } else null
+                                },
+                                mapBitmap = mapBitmap,
+                                shareAction = { hBmp, mBmp, eBmp, aBmp ->
+                                    combineWorkoutAndShare(context, hBmp, mBmp, eBmp, aBmp)
+                                },
+                                onError = { t ->
+                                    if (t !is CancellationException) {
+                                        android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
+                                        android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onFinally = {
+                                    isSharing = false
+                                    onSnapshotComplete?.invoke()
+                                }
+                            )
+                        }
+                    },
+                    onSnapshotError = {
+                        isSharing = false
+                        onSnapshotComplete?.invoke()
+                        android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    content = mapContent
+                )
+            }
+
+            // FLOATING CONTROLS (Overlay & Share Button - REQ-UI-491 / ATT-5851 / REQ-REV-016.1: isolated above GoogleMap)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(1f)
                     .padding(top = controlsTopOffsetDp)
             ) {
                 overlay()
@@ -439,7 +444,19 @@ fun MapDetailLayout(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .then(
+                            if (onInteractiveCanvasTouch != null) {
+                                Modifier.pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            awaitPointerEvent(PointerEventPass.Initial)
+                                            onInteractiveCanvasTouch(false)
+                                        }
+                                    }
+                                }
+                            } else Modifier
+                        ),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.End
                 ) {

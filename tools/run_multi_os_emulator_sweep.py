@@ -41,6 +41,14 @@ DEFAULT_PACKAGE = agent_emulator.DEFAULT_PACKAGE
 DEFAULT_MAIN_ACTIVITY = "com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation"
 DEFAULT_INSTRUMENTATION_CLASS = "com.atrainingtracker.trainingtracker.MultiLocaleUiSweepAndroidTest"
 DEFAULT_GEO_FIX: Tuple[float, float] = (11.5761, 48.1372)  # (lon, lat) Munich
+LAUNCHER_PACKAGE_TOKENS: Tuple[str, ...] = ("nexuslauncher", "launcher3", "android.launcher", ".launcher")
+INSTRUMENTATION_FAIL_MARKERS: Tuple[str, ...] = (
+    "FAILURES!!!",
+    "INSTRUMENTATION_FAILED",
+    "INSTRUMENTATION_ABORTED",
+    "Process crashed",
+    "Unable to find instrumentation info",
+)
 
 LOGCAT_DEFECT_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
     ("FATAL_EXCEPTION", re.compile(r"FATAL EXCEPTION", re.IGNORECASE)),
@@ -274,9 +282,68 @@ def _run_adb(
     args: Sequence[str],
     timeout: int = 30,
     runner: Callable = subprocess.run,
+    check: bool = False,
 ) -> subprocess.CompletedProcess:
     assert_emulator_only_serial(serial)
-    return runner([adb_bin, "-s", serial] + list(args), capture_output=True, text=True, timeout=timeout)
+    res = runner([adb_bin, "-s", serial] + list(args), capture_output=True, text=True, timeout=timeout)
+    if check and getattr(res, "returncode", 0) != 0:
+        detail = ((getattr(res, "stderr", "") or "") or (getattr(res, "stdout", "") or "")).strip()
+        raise RuntimeError(f"ADB command failed ({' '.join(args)}, rc={res.returncode}): {detail[:300]}")
+    return res
+
+
+def verify_instrumentation_output(returncode: int, stdout: str, stderr: str = "") -> None:
+    """REQ-PRO-135.1: Fails closed unless `am instrument` exited 0, reported `OK (`, and had no failure markers."""
+    out_text = stdout or ""
+    err_text = stderr or ""
+    combined = f"{out_text}\n{err_text}"
+    if returncode != 0:
+        raise RuntimeError(f"am instrument exited with code {returncode}: {combined.strip()[:400]}")
+    for marker in INSTRUMENTATION_FAIL_MARKERS:
+        if marker in combined:
+            raise RuntimeError(f"am instrument reported '{marker}': {combined.strip()[:400]}")
+    if "OK (" not in out_text:
+        raise RuntimeError(f"am instrument did not report 'OK (' success marker: {out_text.strip()[:400]}")
+
+
+def validate_captured_ui_xml(xml_text: str, package: str) -> None:
+    """REQ-PRO-135.1: Rejects empty/malformed XML, launcher UIs, or dumps missing target `package` nodes."""
+    if not xml_text or not xml_text.strip():
+        raise RuntimeError("uiautomator dump returned empty XML.")
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as e:
+        raise RuntimeError(f"uiautomator dump returned malformed XML: {e}") from e
+
+    packages = {
+        (elem.attrib.get("package") or "").strip()
+        for elem in root.iter()
+        if (elem.attrib.get("package") or "").strip()
+    }
+    launcher_hits = sorted(
+        pkg for pkg in packages if any(tok in pkg.lower() for tok in LAUNCHER_PACKAGE_TOKENS)
+    )
+    if launcher_hits and package not in packages:
+        raise RuntimeError(
+            f"uiautomator captured Android Launcher {launcher_hits} instead of target app '{package}'."
+        )
+    if package not in packages:
+        raise RuntimeError(
+            f"uiautomator XML contains no nodes for target package '{package}' (found: {sorted(packages)})."
+        )
+
+
+def install_apk(
+    serial: str,
+    apk_path: str,
+    adb_bin: str = "adb",
+    runner: Callable = subprocess.run,
+) -> None:
+    """Installs an APK (`--apk` or `--test-apk`) via ADB and fails closed on non-zero or Failure output."""
+    res = _run_adb(adb_bin, serial, ["install", "-r", "-d", apk_path], timeout=120, runner=runner, check=True)
+    combined = f"{getattr(res, 'stdout', '') or ''}\n{getattr(res, 'stderr', '') or ''}"
+    if "Failure" in combined:
+        raise RuntimeError(f"adb install failed for '{apk_path}': {combined.strip()[:300]}")
 
 
 def shutdown_emulator(
@@ -342,15 +409,140 @@ def boot_single_avd(
         raise
 
 
+def _locale_tag_matches(actual: str, target: str) -> bool:
+    act = (actual or "").strip().lower().replace("_", "-")
+    tgt = (target or "").strip().lower().replace("_", "-")
+    if not act or not tgt:
+        return False
+    return act == tgt or act.split("-")[0] == tgt.split("-")[0]
+
+
+def verify_get_app_locales_output(stdout: str, target_locale: str, sdk: int = 33) -> List[str]:
+    """
+    Parses the bracketed locale tag list `[...]` from `adb shell cmd locale get-app-locales`
+    and verifies fail-closed that at least one tag matches `target_locale` via `_locale_tag_matches`.
+    Avoids substring false positives such as `"de"` in `"debug"` or `"es"` in `"locales"`.
+    """
+    out = (stdout or "").strip()
+    match = re.search(r"\[([^\]]*)\]", out)
+    if match is None:
+        raise RuntimeError(
+            f"Android {sdk} locale verification failed for '{target_locale}': "
+            f"missing bracketed locale list in get-app-locales output '{out}'"
+        )
+    tags = [tok.strip() for tok in match.group(1).split(",") if tok.strip()]
+    if not tags or not any(_locale_tag_matches(tag, target_locale) for tag in tags):
+        raise RuntimeError(
+            f"Android {sdk} locale verification failed for '{target_locale}': "
+            f"get-app-locales returned {tags} from '{out}'"
+        )
+    return tags
+
+
+def get_device_sdk_int(
+    serial: str,
+    adb_bin: str = "adb",
+    runner: Callable = subprocess.run,
+) -> int:
+    """Queries `ro.build.version.sdk` on the target emulator serial."""
+    res = _run_adb(adb_bin, serial, ["shell", "getprop", "ro.build.version.sdk"], runner=runner, check=True)
+    raw = (getattr(res, "stdout", "") or "").strip()
+    if not raw.isdigit():
+        raise RuntimeError(f"Unable to parse Android SDK version from getprop ro.build.version.sdk: '{raw}'")
+    return int(raw)
+
+
 def set_app_locale(
     serial: str,
     package: str,
     locale: str,
     adb_bin: str = "adb",
     runner: Callable = subprocess.run,
+    boot_check_fn: Callable = agent_emulator.is_boot_completed,
+    tune_fn: Callable = agent_emulator.tune_emulator_settings,
+    sleep_fn: Callable = time.sleep,
+    timeout_sec: int = 120,
 ) -> None:
-    """Switches app runtime locale via Android 13+ `cmd locale` (with persist.sys.locale fallback)."""
-    _run_adb(adb_bin, serial, ["shell", "cmd", "locale", "set-app-locales", package, "--locales", locale], runner=runner)
+    """
+    REQ-PRO-135.1: Switches runtime locale API-safely.
+    - API >= 33: `cmd locale set-app-locales` + verified `get-app-locales`.
+    - API < 33 (Android 12): verifies `adb root` (`uid=0`), applies `persist.sys.locale` +
+      `system_locales` + runtime restart when locale differs + `am force-stop <package>`.
+    """
+    sdk = get_device_sdk_int(serial, adb_bin=adb_bin, runner=runner)
+    if sdk >= 33:
+        _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "cmd", "locale", "set-app-locales", package, "--locales", locale],
+            runner=runner,
+            check=True,
+        )
+        verify_res = _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "cmd", "locale", "get-app-locales", package],
+            runner=runner,
+            check=True,
+        )
+        verify_get_app_locales_output(getattr(verify_res, "stdout", "") or "", locale, sdk=sdk)
+        return
+
+    # API < 33 fallback (e.g. Android 12 API 31)
+    cur_res = _run_adb(adb_bin, serial, ["shell", "getprop", "persist.sys.locale"], runner=runner)
+    cur_loc = (getattr(cur_res, "stdout", "") or "").strip()
+    if not cur_loc:
+        prod_res = _run_adb(adb_bin, serial, ["shell", "getprop", "ro.product.locale"], runner=runner)
+        cur_loc = (getattr(prod_res, "stdout", "") or "").strip()
+
+    id_res = _run_adb(adb_bin, serial, ["shell", "id"], runner=runner)
+    if "uid=0" not in (getattr(id_res, "stdout", "") or ""):
+        _run_adb(adb_bin, serial, ["root"], timeout=20, runner=runner, check=True)
+        _run_adb(adb_bin, serial, ["wait-for-device"], timeout=30, runner=runner, check=True)
+        id_after = _run_adb(adb_bin, serial, ["shell", "id"], runner=runner, check=True)
+        if "uid=0" not in (getattr(id_after, "stdout", "") or ""):
+            raise RuntimeError(
+                f"API < 33 (SDK {sdk}) locale fallback requires rootable emulator (uid=0); "
+                f"got '{(getattr(id_after, 'stdout', '') or '').strip()}'. Non-rootable Play Store API < 33 images are unsupported."
+            )
+
+    if not _locale_tag_matches(cur_loc, locale):
+        _run_adb(adb_bin, serial, ["shell", "setprop", "persist.sys.locale", locale], runner=runner, check=True)
+        _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "settings", "put", "system", "system_locales", locale],
+            runner=runner,
+            check=True,
+        )
+        _run_adb(adb_bin, serial, ["shell", "am", "force-stop", package], runner=runner)
+        _run_adb(adb_bin, serial, ["shell", "setprop", "sys.boot_completed", "0"], runner=runner, check=True)
+        _run_adb(adb_bin, serial, ["shell", "stop"], runner=runner, check=True)
+        _run_adb(adb_bin, serial, ["shell", "start"], runner=runner, check=True)
+        _run_adb(adb_bin, serial, ["wait-for-device"], timeout=30, runner=runner, check=True)
+
+        deadline = time.time() + timeout_sec
+        booted = False
+        while time.time() < deadline:
+            if boot_check_fn(serial, adb_bin):
+                svc_res = _run_adb(adb_bin, serial, ["shell", "service", "check", "activity"], runner=runner)
+                svc_out = (getattr(svc_res, "stdout", "") or "").lower()
+                if "found" in svc_out and "not found" not in svc_out:
+                    booted = True
+                    break
+            sleep_fn(2)
+        if not booted:
+            raise TimeoutError(f"API {sdk} runtime failed to reboot after locale change to '{locale}' within {timeout_sec}s.")
+
+        tune_fn(serial, adb_bin)
+        verify_prop = _run_adb(adb_bin, serial, ["shell", "getprop", "persist.sys.locale"], runner=runner, check=True)
+        actual_prop = (getattr(verify_prop, "stdout", "") or "").strip()
+        if not _locale_tag_matches(actual_prop, locale):
+            raise RuntimeError(
+                f"API {sdk} persist.sys.locale verification failed: expected '{locale}', got '{actual_prop}'"
+            )
+    else:
+        _run_adb(adb_bin, serial, ["shell", "am", "force-stop", package], runner=runner)
 
 
 def run_ui_probe(
@@ -363,13 +555,14 @@ def run_ui_probe(
     runner: Callable = subprocess.run,
     instrumentation_class: Optional[str] = DEFAULT_INSTRUMENTATION_CLASS,
     geo_fix: Tuple[float, float] = DEFAULT_GEO_FIX,
+    sleep_fn: Callable = time.sleep,
 ) -> Tuple[List[str], List[BoundsDefect], Optional[str]]:
-    """Clears logcat, injects mock GPS, launches/instruments UI, captures uiautomator & screenshot."""
-    _run_adb(adb_bin, serial, ["logcat", "-c"], runner=runner)
-    _run_adb(adb_bin, serial, ["emu", "geo", "fix", str(geo_fix[0]), str(geo_fix[1])], runner=runner)
+    """Clears logcat, injects mock GPS, runs instrumentation, launches foreground App UI, and verifies dump + PNG."""
+    _run_adb(adb_bin, serial, ["logcat", "-c"], runner=runner, check=True)
+    _run_adb(adb_bin, serial, ["emu", "geo", "fix", str(geo_fix[0]), str(geo_fix[1])], runner=runner, check=True)
 
     if instrumentation_class:
-        _run_adb(
+        inst_res = _run_adb(
             adb_bin,
             serial,
             [
@@ -382,37 +575,52 @@ def run_ui_probe(
                 instrumentation_class,
                 f"{package}.test/androidx.test.runner.AndroidJUnitRunner",
             ],
-            timeout=120,
+            timeout=180,
             runner=runner,
         )
-    else:
-        _run_adb(
-            adb_bin,
-            serial,
-            ["shell", "am", "start", "-W", "-n", f"{package}/{DEFAULT_MAIN_ACTIVITY}"],
-            timeout=30,
-            runner=runner,
+        verify_instrumentation_output(
+            getattr(inst_res, "returncode", 1),
+            getattr(inst_res, "stdout", "") or "",
+            getattr(inst_res, "stderr", "") or "",
         )
 
-    _run_adb(adb_bin, serial, ["shell", "uiautomator", "dump", "/sdcard/att_sweep_dump.xml"], runner=runner)
-    xml_res = _run_adb(adb_bin, serial, ["shell", "cat", "/sdcard/att_sweep_dump.xml"], runner=runner)
+    # Always bring MainActivityWithNavigation to foreground after instrumentation finishes
+    start_res = _run_adb(
+        adb_bin,
+        serial,
+        ["shell", "am", "start", "-W", "-n", f"{package}/{DEFAULT_MAIN_ACTIVITY}"],
+        timeout=30,
+        runner=runner,
+        check=True,
+    )
+    start_out = f"{getattr(start_res, 'stdout', '') or ''}\n{getattr(start_res, 'stderr', '') or ''}"
+    if "Error:" in start_out:
+        raise RuntimeError(f"am start -W failed: {start_out.strip()[:300]}")
+    sleep_fn(1.0)
+
+    # Remove any prior dump so stale XML cannot cause a false pass
+    _run_adb(adb_bin, serial, ["shell", "rm", "-f", "/sdcard/att_sweep_dump.xml"], runner=runner)
+    _run_adb(adb_bin, serial, ["shell", "uiautomator", "dump", "/sdcard/att_sweep_dump.xml"], timeout=30, runner=runner, check=True)
+    xml_res = _run_adb(adb_bin, serial, ["shell", "cat", "/sdcard/att_sweep_dump.xml"], runner=runner, check=True)
+    xml_text = getattr(xml_res, "stdout", "") or ""
+    validate_captured_ui_xml(xml_text, package)
+
     log_res = _run_adb(adb_bin, serial, ["logcat", "-d", "-v", "time"], runner=runner)
 
     os.makedirs(screenshots_dir, exist_ok=True)
     screenshot_path = os.path.join(screenshots_dir, f"{avd_name}_{label}.png")
-    try:
-        assert_emulator_only_serial(serial)
-        shot_res = runner([adb_bin, "-s", serial, "exec-out", "screencap", "-p"], capture_output=True, timeout=20)
-        if shot_res.returncode == 0 and shot_res.stdout:
-            with open(screenshot_path, "wb") as f:
-                f.write(shot_res.stdout)
-        else:
-            screenshot_path = None
-    except Exception:
-        screenshot_path = None
+    assert_emulator_only_serial(serial)
+    shot_res = runner([adb_bin, "-s", serial, "exec-out", "screencap", "-p"], capture_output=True, timeout=20)
+    png_bytes = getattr(shot_res, "stdout", b"") or b""
+    if getattr(shot_res, "returncode", 1) != 0 or not isinstance(png_bytes, (bytes, bytearray)) or not png_bytes.startswith(b"\x89PNG"):
+        raise RuntimeError(
+            f"screencap failed or returned invalid PNG (rc={getattr(shot_res, 'returncode', 1)}, bytes={len(png_bytes)})"
+        )
+    with open(screenshot_path, "wb") as f:
+        f.write(png_bytes)
 
     log_defects = scan_logcat_defects(getattr(log_res, "stdout", "") or "")
-    bounds_defects = analyze_uiautomator_bounds(getattr(xml_res, "stdout", "") or "")
+    bounds_defects = analyze_uiautomator_bounds(xml_text)
     return log_defects, bounds_defects, screenshot_path
 
 
@@ -458,6 +666,24 @@ def write_sweep_report(
             f"{len(lr.logcat_defects)} | {len(lr.bounds_defects)} | `{shot}` |"
         )
 
+    diag_lines: List[str] = []
+    for r in os_results:
+        if r.error:
+            diag_lines.append(f"- OS `{r.avd_name}` (`{r.locale}`): error={r.error}")
+        for d in r.logcat_defects:
+            diag_lines.append(f"- OS `{r.avd_name}` (`{r.locale}`) logcat: {d}")
+        for b in r.bounds_defects:
+            diag_lines.append(f"- OS `{r.avd_name}` (`{r.locale}`) bounds [{b.kind}]: {b.detail}")
+    for lr in locale_results:
+        if lr.error:
+            diag_lines.append(f"- Locale `{lr.locale}` (`{lr.avd_name}`): error={lr.error}")
+        for d in lr.logcat_defects:
+            diag_lines.append(f"- Locale `{lr.locale}` (`{lr.avd_name}`) logcat: {d}")
+        for b in lr.bounds_defects:
+            diag_lines.append(f"- Locale `{lr.locale}` (`{lr.avd_name}`) bounds [{b.kind}]: {b.detail}")
+    if diag_lines:
+        lines.extend(["", "## 3. Failure & Defect Diagnostics", ""] + diag_lines)
+
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     return report_path
@@ -467,6 +693,7 @@ def run_sweep(
     requested_avds: Optional[Sequence[str]] = None,
     ref_avd: Optional[str] = None,
     apk_path: Optional[str] = None,
+    test_apk_path: Optional[str] = None,
     package: str = DEFAULT_PACKAGE,
     locales: Sequence[str] = SUPPORTED_LOCALES,
     out_dir: Optional[str] = None,
@@ -524,9 +751,21 @@ def run_sweep(
             assert_emulator_only_serial(serial)
             tune_fn(serial, adb_bin)
             if apk_path:
-                _run_adb(adb_bin, serial, ["install", "-r", "-d", apk_path], timeout=120, runner=runner)
+                install_apk(serial, apk_path, adb_bin=adb_bin, runner=runner)
+            if test_apk_path:
+                install_apk(serial, test_apk_path, adb_bin=adb_bin, runner=runner)
             configure_fn(serial, package=package, adb_bin=adb_bin)
-            set_app_locale(serial, package, rotating_locale, adb_bin=adb_bin, runner=runner)
+            set_app_locale(
+                serial,
+                package,
+                rotating_locale,
+                adb_bin=adb_bin,
+                runner=runner,
+                boot_check_fn=boot_check_fn,
+                tune_fn=tune_fn,
+                sleep_fn=sleep_fn,
+                timeout_sec=timeout_sec,
+            )
 
             log_defects, bounds_defects, shot = run_ui_probe(
                 serial=serial,
@@ -537,6 +776,7 @@ def run_sweep(
                 adb_bin=adb_bin,
                 runner=runner,
                 instrumentation_class=instrumentation_class,
+                sleep_fn=sleep_fn,
             )
             os_results.append(
                 AvdRunResult(
@@ -551,31 +791,53 @@ def run_sweep(
                 )
             )
 
-            # Tier 2: Execute 9-language UI sweep on reference AVD before tearing it down
+            # Tier 2: Execute language UI sweep on reference AVD before tearing it down
             if avd == chosen_ref_avd:
                 for loc in locales:
-                    set_app_locale(serial, package, loc, adb_bin=adb_bin, runner=runner)
-                    l_log, l_bounds, l_shot = run_ui_probe(
-                        serial=serial,
-                        package=package,
-                        avd_name=avd,
-                        label=f"loc_{loc}",
-                        screenshots_dir=screenshots_dir,
-                        adb_bin=adb_bin,
-                        runner=runner,
-                        instrumentation_class=instrumentation_class,
-                    )
-                    locale_results.append(
-                        LocaleSweepResult(
-                            locale=loc,
-                            avd_name=avd,
-                            serial=serial,
-                            passed=(not l_log and not l_bounds),
-                            logcat_defects=l_log,
-                            bounds_defects=l_bounds,
-                            screenshot_path=l_shot,
+                    try:
+                        set_app_locale(
+                            serial,
+                            package,
+                            loc,
+                            adb_bin=adb_bin,
+                            runner=runner,
+                            boot_check_fn=boot_check_fn,
+                            tune_fn=tune_fn,
+                            sleep_fn=sleep_fn,
+                            timeout_sec=timeout_sec,
                         )
-                    )
+                        l_log, l_bounds, l_shot = run_ui_probe(
+                            serial=serial,
+                            package=package,
+                            avd_name=avd,
+                            label=f"loc_{loc}",
+                            screenshots_dir=screenshots_dir,
+                            adb_bin=adb_bin,
+                            runner=runner,
+                            instrumentation_class=instrumentation_class,
+                            sleep_fn=sleep_fn,
+                        )
+                        locale_results.append(
+                            LocaleSweepResult(
+                                locale=loc,
+                                avd_name=avd,
+                                serial=serial,
+                                passed=(not l_log and not l_bounds),
+                                logcat_defects=l_log,
+                                bounds_defects=l_bounds,
+                                screenshot_path=l_shot,
+                            )
+                        )
+                    except Exception as loc_err:
+                        locale_results.append(
+                            LocaleSweepResult(
+                                locale=loc,
+                                avd_name=avd,
+                                serial=serial,
+                                passed=False,
+                                error=str(loc_err),
+                            )
+                        )
         except Exception as e:
             os_results.append(
                 AvdRunResult(
@@ -606,8 +868,10 @@ def build_cli_parser() -> argparse.ArgumentParser:
         description="Serial Multi-OS & 9-Language Emulator UI Verification Sweep (ATT-8222 / REQ-PRO-135)"
     )
     parser.add_argument("--avds", nargs="+", default=None, help="Explicit AVD names to sweep serially")
-    parser.add_argument("--ref-avd", default=None, help="Reference AVD for 9-locale UI sweep")
+    parser.add_argument("--ref-avd", default=None, help="Reference AVD for language UI sweep")
     parser.add_argument("--apk", default=None, help="Path to debug APK to install per AVD")
+    parser.add_argument("--test-apk", default=None, help="Path to debug androidTest APK to install per AVD")
+    parser.add_argument("--locales", nargs="+", default=None, help="Locales for UI sweep (default: all 9 supported)")
     parser.add_argument("--package", default=DEFAULT_PACKAGE, help=f"Target package (default: {DEFAULT_PACKAGE})")
     parser.add_argument("--out-dir", default=None, help="Output directory for sweep reports")
     parser.add_argument("--port", type=int, default=5554, help="Emulator console port (default: 5554)")
@@ -623,13 +887,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         requested_avds=args.avds,
         ref_avd=args.ref_avd,
         apk_path=args.apk,
+        test_apk_path=args.test_apk,
         package=args.package,
+        locales=args.locales if args.locales is not None else SUPPORTED_LOCALES,
         out_dir=args.out_dir,
         port=args.port,
         timeout_sec=args.timeout,
         allow_fewer_avds=args.allow_fewer_avds,
     )
     print(f"Emulator sweep report written to {report_path} (OS={len(os_res)}, Locales={len(loc_res)}, PASS={all_ok})")
+    for r in os_res:
+        if not r.passed:
+            print(f"[FAIL] AVD={r.avd_name} locale={r.locale} error={r.error} logcat={len(r.logcat_defects)} bounds={len(r.bounds_defects)}", file=sys.stderr)
+    for lr in loc_res:
+        if not lr.passed:
+            print(f"[FAIL] Locale={lr.locale} avd={lr.avd_name} error={lr.error} logcat={len(lr.logcat_defects)} bounds={len(lr.bounds_defects)}", file=sys.stderr)
     return 0 if all_ok else 1
 
 

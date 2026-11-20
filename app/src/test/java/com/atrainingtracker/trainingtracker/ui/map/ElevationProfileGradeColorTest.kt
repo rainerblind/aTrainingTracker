@@ -18,21 +18,39 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
-import androidx.compose.ui.graphics.Color
+import android.app.Application
+import android.content.Context
+import androidx.compose.material3.Surface
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
 import com.atrainingtracker.testing.LocalizationTestCache
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
- * Unit and contract tests for [ElevationProfile] 7-zone slope gradient color shading,
+ * Unit and behavioral Compose UI tests for [ElevationProfile] 7-zone slope gradient color shading,
  * [getElevationGradeColor] half-open interval boundaries, non-finite guards, and
- * [GradeLegend] 7-item accessibility outline (REQ-UI-371, TST-UI-334).
+ * [GradeLegend] 7-item accessibility rendering (REQ-UI-371, REQ-PRO-132, TST-UI-334).
  */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = Application::class)
 class ElevationProfileGradeColorTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
     @Test
     fun testElevationGradeColor_allZonesAndExactBoundaries() {
@@ -96,12 +114,34 @@ class ElevationProfileGradeColorTest {
         assertEquals(TTColor.Zone7, getElevationGradeColor(100.0))
     }
 
+    /**
+     * TST-UI-334.2 / REQ-PRO-132.4: Composes [GradeLegend] directly and asserts all 7
+     * localized grade range labels render visibly without legacy `*Kt` reflection stubs.
+     */
     @Test
     fun testElevationProfile_contractAndLegendSevenZones() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.ElevationProfileKt")
-        assertNotNull("ElevationProfileKt must exist", clazz)
-        val legendMethod = clazz.declaredMethods.find { it.name.startsWith("GradeLegend") }
-        assertNotNull("GradeLegend composable must exist", legendMethod)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val expectedResIds = listOf(
+            R.string.grade_legend_under_2,
+            R.string.grade_legend_2_to_5,
+            R.string.grade_legend_5_to_10,
+            R.string.grade_legend_10_to_15,
+            R.string.grade_legend_15_to_20,
+            R.string.grade_legend_20_to_25,
+            R.string.grade_legend_over_25
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Surface {
+                    GradeLegend()
+                }
+            }
+        }
+
+        for (resId in expectedResIds) {
+            composeTestRule.onNodeWithText(context.getString(resId)).assertIsDisplayed()
+        }
     }
 
     @Test
@@ -123,12 +163,6 @@ class ElevationProfileGradeColorTest {
                 assertTrue("Missing key $key in $loc", strings.containsKey(key))
             }
         }
-    }
-
-    @Test
-    fun testElevationProfile_marginalAltitudeHistogramColorIsFixedZone1Green() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.ElevationProfileKt")
-        assertNotNull("ElevationProfileKt must exist", clazz)
     }
 
     @Test

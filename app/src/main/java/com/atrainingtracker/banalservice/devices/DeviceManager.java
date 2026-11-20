@@ -922,7 +922,7 @@ public class DeviceManager {
             }
         } else { // device not yet in map
             if (!paired) {
-                Log.d(TAG, "BUG: an unpaired device became unpaired");
+                PolarOfflineGattCoordinator.forceDisconnectDevice(mContext, mDeviceDataRepository.getBluetoothMACAddress(deviceId), null);
             } else {
                 MyRemoteDevice myRemoteDevice = createRemoteDevice(deviceId);
                 if (myRemoteDevice != null) {

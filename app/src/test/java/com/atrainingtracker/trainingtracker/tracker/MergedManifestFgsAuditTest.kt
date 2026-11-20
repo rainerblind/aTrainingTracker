@@ -132,4 +132,32 @@ class MergedManifestFgsAuditTest {
             content.contains("connectedDevice")
         )
     }
+
+    @Test
+    fun testManifest_postProcessingService_declaresShortServiceAndExportedFalse_tstTrk091_3() {
+        // REQ-TRK-091.3 / TST-TRK-091.3
+        val manifest = resolveManifestFile()
+        val content = manifest.readText()
+
+        val postProcessingRegex = Regex(
+            """<service\s+[^>]*android:name="\.trainingtracker\.tracker\.WorkoutPostProcessingService"[^>]*/>""",
+            RegexOption.DOT_MATCHES_ALL
+        )
+        val match = postProcessingRegex.find(content)
+            ?: throw AssertionError("WorkoutPostProcessingService declaration not found in AndroidManifest.xml")
+
+        val block = match.value
+        assertTrue(
+            "WorkoutPostProcessingService must declare android:foregroundServiceType=\"shortService\"",
+            block.contains("""android:foregroundServiceType="shortService"""")
+        )
+        assertTrue(
+            "WorkoutPostProcessingService must declare android:exported=\"false\"",
+            block.contains("""android:exported="false"""")
+        )
+        assertFalse(
+            "WorkoutPostProcessingService must NOT contain 'connectedDevice'",
+            block.contains("connectedDevice")
+        )
+    }
 }

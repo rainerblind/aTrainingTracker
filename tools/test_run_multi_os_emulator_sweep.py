@@ -23,12 +23,22 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
     """Offline tests covering TST-PRO-135.1 and TST-PRO-135.2."""
 
     def test_tst_pro_135_1_serial_multi_os_and_9_locale_sweep_and_cleanup_on_failure(self):
-        """TST-PRO-135.1: Serial Multi-OS AVDs + 9-language UI sweep on ref AVD + finally cleanup."""
+        """TST-PRO-135.1: Serial Multi-OS (--apk/--test-apk, API<33 + API>=33) + 9-language UI sweep + finally cleanup."""
         boot_order = []
         active_avds = []
         killed_serials = []
         locale_calls = []
         geo_fix_calls = []
+        installed_apks = []
+        probe_sequence = []
+        state = {"app_loc": "en", "sys_loc": "en-US"}
+
+        sdk_by_avd = {
+            "Pixel_5_Android_12": "31",
+            "Pixel_6_Pro_Android_12": "31",
+            "Pixel_8_Android_15": "35",
+            "Pixel_7_Android_36": "36",
+        }
 
         def fake_avds(_emu_bin):
             return ["Pixel_5_Android_12", "Pixel_6_Pro_Android_12", "Pixel_8_Android_15", "Pixel_7_Android_36"]
@@ -64,28 +74,59 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             res = MagicMock()
             res.returncode = 0
             res.stdout = ""
+            res.stderr = ""
+            current_avd = active_avds[-1] if active_avds else "Pixel_8_Android_15"
             if "kill" in cmd and "emu" in cmd:
                 killed_serials.append(cmd[2])
                 active_avds.clear()
-            elif "set-app-locales" in cmd:
+            elif "install" in cmd:
+                installed_apks.append(cmd[-1])
+                res.stdout = "Success"
+            elif "ro.build.version.sdk" in cmd:
+                res.stdout = sdk_by_avd.get(current_avd, "35")
+            elif "getprop" in cmd and "persist.sys.locale" in cmd:
+                res.stdout = state["sys_loc"]
+            elif "setprop" in cmd and "persist.sys.locale" in cmd:
+                state["sys_loc"] = cmd[-1]
                 locale_calls.append(cmd[-1])
+            elif "id" == cmd[-1]:
+                res.stdout = "uid=0(root) gid=0(root)"
+            elif "set-app-locales" in cmd:
+                state["app_loc"] = cmd[-1]
+                locale_calls.append(cmd[-1])
+            elif "get-app-locales" in cmd:
+                res.stdout = f"Locales for com.atrainingtracker.debug are [{state['app_loc']}]"
+            elif "am" in cmd and "instrument" in cmd:
+                probe_sequence.append("instrument")
+                res.stdout = "Time: 0.5\n\nOK (1 test)\n"
+            elif "am" in cmd and "start" in cmd:
+                probe_sequence.append("am_start")
+                res.stdout = "Status: ok\nComplete\n"
+            elif "rm" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
+                probe_sequence.append("rm_dump")
+            elif "uiautomator" in cmd and "dump" in cmd:
+                probe_sequence.append("uiautomator_dump")
+                res.stdout = "UI hierchary dumped to: /sdcard/att_sweep_dump.xml"
             elif "geo" in cmd and "fix" in cmd:
                 geo_fix_calls.append((cmd[-2], cmd[-1]))
-            elif "cat" in cmd and "att_sweep_dump.xml" in cmd:
+            elif "cat" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
                 res.stdout = (
                     '<hierarchy rotation="0">'
-                    '<node text="Start Tracking" bounds="[40,100][500,180]" />'
-                    '<node text="Workouts" bounds="[40,220][500,300]" />'
+                    '<node package="com.atrainingtracker.debug" text="Start Tracking" bounds="[40,100][500,180]" />'
+                    '<node package="com.atrainingtracker.debug" text="Workouts" bounds="[40,220][500,300]" />'
                     '</hierarchy>'
                 )
             elif "logcat" in cmd and "-d" in cmd:
                 res.stdout = "01-01 12:00:00.000 I/ActivityTaskManager: Displayed MainActivityWithNavigation"
             elif "screencap" in cmd:
+                probe_sequence.append("screencap")
                 res.stdout = b"\x89PNG\r\n\x1a\nFAKEPNG"
             return res
 
         with tempfile.TemporaryDirectory() as tmpdir:
             ok, report_path, os_res, loc_res = sweep.run_sweep(
+                apk_path="/mock/app-debug.apk",
+                test_apk_path="/mock/app-debug-androidTest.apk",
                 out_dir=tmpdir,
                 emulator_bin="/mock/emulator",
                 adb_bin="adb",
@@ -112,6 +153,13 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             self.assertGreaterEqual(len(geo_fix_calls), 12)
             self.assertEqual(len(killed_serials), 3)
             self.assertEqual(len(active_avds), 0)
+            self.assertEqual(installed_apks.count("/mock/app-debug.apk"), 3)
+            self.assertEqual(installed_apks.count("/mock/app-debug-androidTest.apk"), 3)
+            # Verify foreground App-UI launch precedes stale-dump removal, uiautomator dump & screencap
+            self.assertEqual(
+                probe_sequence[:5],
+                ["instrument", "am_start", "rm_dump", "uiautomator_dump", "screencap"],
+            )
 
             with open(report_path, encoding="utf-8") as rf:
                 content = rf.read()
@@ -189,6 +237,187 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
         self.assertIn("OUT_OF_SCREEN_CLIP", kinds)
         self.assertIn("ELLIPSIZED_TEXT", kinds)
         self.assertIn("OVERLAPPING_TEXT", kinds)
+
+    def test_tst_pro_135_1_api31_locale_fallback_and_non_rootable_error(self):
+        """TST-PRO-135.1: Android 12 (API<33) switches via adb root + persist.sys.locale + stop/start; rejects non-root."""
+        cmds_seen = []
+        state = {"sys_loc": "en-US"}
+
+        def api31_root_runner(cmd, **_kwargs):
+            cmds_seen.append(list(cmd))
+            res = MagicMock()
+            res.returncode = 0
+            res.stdout = ""
+            res.stderr = ""
+            if "ro.build.version.sdk" in cmd:
+                res.stdout = "31"
+            elif "getprop" in cmd and "persist.sys.locale" in cmd:
+                res.stdout = state["sys_loc"]
+            elif "setprop" in cmd and "persist.sys.locale" in cmd:
+                state["sys_loc"] = cmd[-1]
+            elif "service" in cmd and "activity" in cmd:
+                res.stdout = "Service activity: found\n"
+            elif cmd[-1] == "id":
+                res.stdout = "uid=0(root) gid=0(root)" if any("root" in c for c in cmds_seen) else "uid=2000(shell)"
+            return res
+
+        tuned = []
+        sweep.set_app_locale(
+            "emulator-5554",
+            "com.atrainingtracker.debug",
+            "de",
+            runner=api31_root_runner,
+            boot_check_fn=lambda _s, _a="adb": True,
+            tune_fn=lambda s, _a="adb": tuned.append(s),
+            sleep_fn=lambda _x: None,
+        )
+        flat_cmds = [" ".join(c) for c in cmds_seen]
+        self.assertTrue(any("adb -s emulator-5554 root" in c for c in flat_cmds))
+        self.assertTrue(any("setprop persist.sys.locale de" in c for c in flat_cmds))
+        self.assertTrue(any("settings put system system_locales de" in c for c in flat_cmds))
+        self.assertTrue(any("shell stop" in c for c in flat_cmds))
+        self.assertTrue(any("shell start" in c for c in flat_cmds))
+        self.assertEqual(tuned, ["emulator-5554"])
+
+        # Non-rootable Play Store API 31 image must raise RuntimeError transparently
+        def non_root_runner(cmd, **_kwargs):
+            res = MagicMock()
+            res.returncode = 0
+            res.stdout = "31" if "ro.build.version.sdk" in cmd else ("uid=2000(shell)" if cmd[-1] == "id" else "en-US")
+            res.stderr = ""
+            return res
+
+        with self.assertRaises(RuntimeError) as ctx:
+            sweep.set_app_locale(
+                "emulator-5554",
+                "com.atrainingtracker.debug",
+                "fr",
+                runner=non_root_runner,
+                sleep_fn=lambda _x: None,
+            )
+        self.assertIn("uid=0", str(ctx.exception))
+
+        # CLI parser accepts --test-apk and --locales
+        parsed = sweep.build_cli_parser().parse_args(
+            ["--test-apk", "/tmp/t.apk", "--locales", "de", "ja", "--allow-fewer-avds"]
+        )
+        self.assertEqual(parsed.test_apk, "/tmp/t.apk")
+        self.assertEqual(parsed.locales, ["de", "ja"])
+
+    def test_tst_pro_135_2_fail_closed_install_instrument_launcher_and_screencap(self):
+        """TST-PRO-135.2: Rejects failed install, instrument failures, launcher/empty XML, and bad screencap."""
+        # 1. Failed adb install
+        def bad_install(cmd, **_kwargs):
+            res = MagicMock()
+            res.returncode = 1
+            res.stdout = "Failure [INSTALL_FAILED_VERSION_DOWNGRADE]"
+            res.stderr = ""
+            return res
+
+        with self.assertRaises(RuntimeError):
+            sweep.install_apk("emulator-5554", "/tmp/bad.apk", runner=bad_install)
+
+        # 2. Instrumentation failure variants (non-zero, FAILURES!!!, INSTRUMENTATION_FAILED, missing OK)
+        with self.assertRaises(RuntimeError):
+            sweep.verify_instrumentation_output(1, "OK (1 test)")
+        with self.assertRaises(RuntimeError):
+            sweep.verify_instrumentation_output(0, "Tests run: 1, Failures: 1\nFAILURES!!!")
+        with self.assertRaises(RuntimeError):
+            sweep.verify_instrumentation_output(0, "INSTRUMENTATION_FAILED: com.atrainingtracker.debug.test")
+        with self.assertRaises(RuntimeError):
+            sweep.verify_instrumentation_output(0, "")
+        sweep.verify_instrumentation_output(0, "OK (1 test)\n")
+
+        # 3. Launcher & empty XML validation
+        with self.assertRaises(RuntimeError):
+            sweep.validate_captured_ui_xml("", "com.atrainingtracker.debug")
+        with self.assertRaises(RuntimeError) as launcher_ctx:
+            sweep.validate_captured_ui_xml(
+                '<hierarchy><node package="com.google.android.apps.nexuslauncher" text="Search" bounds="[0,0][100,100]"/></hierarchy>',
+                "com.atrainingtracker.debug",
+            )
+        self.assertIn("Launcher", str(launcher_ctx.exception))
+
+        # 4. Invalid screencap PNG must raise inside run_ui_probe
+        def bad_screencap_runner(cmd, **_kwargs):
+            res = MagicMock()
+            res.returncode = 0
+            res.stderr = ""
+            if "am" in cmd and "instrument" in cmd:
+                res.stdout = "OK (1 test)\n"
+            elif "cat" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
+                res.stdout = '<hierarchy><node package="com.atrainingtracker.debug" text="Track" bounds="[10,10][200,80]"/></hierarchy>'
+            elif "screencap" in cmd:
+                res.returncode = 1
+                res.stdout = b""
+            else:
+                res.stdout = "ok"
+            return res
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaises(RuntimeError):
+                sweep.run_ui_probe(
+                    "emulator-5554",
+                    "com.atrainingtracker.debug",
+                    "Pixel_8_Android_15",
+                    "de",
+                    tmpdir,
+                    runner=bad_screencap_runner,
+                    sleep_fn=lambda _x: None,
+                )
+
+        # 5. API >= 33 bracketed get-app-locales verification (rejects substring false positives)
+        def make_api35_runner(get_locales_stdout: str):
+            def _runner(cmd, **_kwargs):
+                res = MagicMock()
+                res.returncode = 0
+                res.stderr = ""
+                if "ro.build.version.sdk" in cmd:
+                    res.stdout = "35"
+                elif "get-app-locales" in cmd:
+                    res.stdout = get_locales_stdout
+                else:
+                    res.stdout = ""
+                return res
+
+            return _runner
+
+        # Empty brackets `[]` must fail even when `"de"` appears in `"debug"` and `"es"` in `"locales"`
+        for tricky_locale in ("de", "es"):
+            with self.assertRaises(RuntimeError) as loc_ctx:
+                sweep.set_app_locale(
+                    "emulator-5554",
+                    "com.atrainingtracker.debug",
+                    tricky_locale,
+                    runner=make_api35_runner("Locales for com.atrainingtracker.debug are []\n"),
+                )
+            self.assertIn(tricky_locale, str(loc_ctx.exception))
+
+        # `[en]` must fail when `"de"` is requested
+        with self.assertRaises(RuntimeError):
+            sweep.set_app_locale(
+                "emulator-5554",
+                "com.atrainingtracker.debug",
+                "de",
+                runner=make_api35_runner("Locales for com.atrainingtracker.debug are [en]\n"),
+            )
+
+        # `[de]` and `[es-ES]` pass cleanly; missing brackets fail closed
+        with self.assertRaises(RuntimeError):
+            sweep.verify_get_app_locales_output("unexpected output", "en")
+        sweep.set_app_locale(
+            "emulator-5554",
+            "com.atrainingtracker.debug",
+            "de",
+            runner=make_api35_runner("Locales for com.atrainingtracker.debug are [de]\n"),
+        )
+        sweep.set_app_locale(
+            "emulator-5554",
+            "com.atrainingtracker.debug",
+            "es",
+            runner=make_api35_runner("Locales for com.atrainingtracker.debug are [es-ES]\n"),
+        )
+
 
 
 if __name__ == "__main__":

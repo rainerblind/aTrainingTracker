@@ -2495,4 +2495,11 @@
     <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
     <string name="prefs_volume_keys_switch_cockpit_tabs_title">Touches de volume pour onglets</string>
     <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Faire défiler les onglets du cockpit avec volume +/-</string>
+    <!-- Decoupled Stop-Workout Post-Processing Notification (REQ-TRK-091 / ATT-9154) -->
+    <string name="notification_post_processing_title">Finalisation de l\'entraînement</string>
+    <string name="notification_post_processing_stage_polar_h10">Synchronisation du capteur Polar H10…</string>
+    <string name="notification_post_processing_stage_polar_verity">Synchronisation de Polar Verity Sense…</string>
+    <string name="notification_post_processing_stage_recompute">Recalcul de la VFC et de la trace…</string>
+    <string name="notification_post_processing_stage_export">Finalisation des exports d\'entraînement…</string>
+    <string name="notification_post_processing_failed">Traitement en arrière-plan terminé avec des avertissements</string>
 </resources>

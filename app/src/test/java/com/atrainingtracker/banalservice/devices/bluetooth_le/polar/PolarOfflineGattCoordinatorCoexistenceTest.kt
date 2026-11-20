@@ -321,4 +321,58 @@ class PolarOfflineGattCoordinatorCoexistenceTest {
             unmockkStatic(BANALService::class)
         }
     }
+
+    // REQ-CON-054.1 / TST-CON-054.1
+    @Test
+    fun testForceDisconnectDeviceAndDisconnectUnpairedSessions_clearsTargetAliasesWithoutHarmingSibling_TST_CON_054_1() {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        val verityMac = "24:AC:AC:24:82:56"
+        val verityId = "24825632"
+        val h10Mac = "AA:BB:CC:DD:EE:01"
+        val h10Id = "1C3B2421"
+
+        val verityCallback = mockk<PolarBleApiCallback>(relaxed = true)
+        val h10Callback = mockk<PolarBleApiCallback>(relaxed = true)
+
+        PolarOfflineGattCoordinator.acquirePersistentSession(context, verityId, verityMac, verityCallback)
+        PolarOfflineGattCoordinator.acquirePersistentSession(context, h10Id, h10Mac, h10Callback)
+        PolarOfflineGattCoordinator.tryAcquireAccChannel(verityId, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
+        PolarOfflineGattCoordinator.tryAcquireAccChannel(h10Id, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
+
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.deviceConnected(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        mux.deviceConnected(PolarDeviceInfo(h10Id, h10Mac, -48, "Polar H10 $h10Id", true))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnected(verityMac))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnected(h10Mac))
+
+        // 1. In-session watchdog reconnect (clearRegistrations = false) disconnects both aliases but keeps registrations intact
+        PolarOfflineGattCoordinator.forceDisconnectDevice(context, verityMac, verityId, clearRegistrations = false)
+        verify(exactly = 1) { sharedApi.disconnectFromDevice(verityMac) }
+        verify(exactly = 1) { sharedApi.disconnectFromDevice(verityId) }
+        verify(exactly = 0) { sharedApi.disconnectFromDevice(h10Mac) }
+        verify(exactly = 0) { sharedApi.disconnectFromDevice(h10Id) }
+        verify(exactly = 0) { sharedApi.shutDown() }
+        assertFalse(PolarOfflineGattCoordinator.isDeviceConnected(verityId))
+        assertNotNull(PolarOfflineGattCoordinator.getActiveSession(verityId))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnected(h10Id))
+
+        // Reconnect callback still delivers to verityCallback when clearRegistrations was false
+        mux.deviceConnected(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        verify(exactly = 2) { verityCallback.deviceConnected(any()) }
+
+        // 2. disconnectUnpairedSessions releases only unpaired Verity Sense while preserving paired H10
+        PolarOfflineGattCoordinator.disconnectUnpairedSessions(context) { setOf(h10Mac) }
+        verify(exactly = 2) { sharedApi.disconnectFromDevice(verityMac) }
+        verify(exactly = 2) { sharedApi.disconnectFromDevice(verityId) }
+        verify(exactly = 0) { sharedApi.disconnectFromDevice(h10Mac) }
+        verify(exactly = 0) { sharedApi.disconnectFromDevice(h10Id) }
+        verify(exactly = 0) { sharedApi.shutDown() }
+        assertFalse(PolarOfflineGattCoordinator.isDeviceConnected(verityId))
+        assertNull(PolarOfflineGattCoordinator.getActiveSession(verityId))
+        assertNull(PolarOfflineGattCoordinator.getAccChannelOwner(verityId))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnected(h10Id))
+        assertNotNull(PolarOfflineGattCoordinator.getActiveSession(h10Id))
+        assertEquals(PolarOfflineGattCoordinator.ACC_OWNER_ONLINE, PolarOfflineGattCoordinator.getAccChannelOwner(h10Id))
+    }
 }

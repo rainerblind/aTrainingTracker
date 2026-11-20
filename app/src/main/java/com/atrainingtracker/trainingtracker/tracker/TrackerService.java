@@ -80,7 +80,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
-import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer;
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -2465,47 +2464,6 @@ public class TrackerService extends Service {
         }
 
         try {
-            final long finalWorkoutId = workoutId;
-            final Context appContext = getApplicationContext();
-            if (finalWorkoutId > 0) {
-                // ATT-7918 (REQ-SET-105.2, REQ-SET-105.5): If Polar H10 offline recording was armed,
-                // synchronously execute stop & backfill before summary recomputation and exports!
-                if (PolarH10OfflineController.isRecordingArmed()) {
-                    try {
-                        PolarH10OfflineController.stopAndBackfillWorkoutBlocking(appContext, finalWorkoutId, baseFileName);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error in Polar H10 stop and backfill for workout " + finalWorkoutId, t);
-                    }
-                }
-                if (PolarVeritySenseOfflineController.isRecordingArmed()) {
-                    try {
-                        PolarVeritySenseOfflineController.stopAndBackfillWorkoutBlocking(appContext, finalWorkoutId, baseFileName);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error in Polar Verity Sense stop and backfill for workout " + finalWorkoutId, t);
-                    }
-                }
-
-                // ATT-7918 (REQ-SET-105.4, REQ-SET-105.5): Execute post-workout HRV and ERTS recomputations
-                // synchronously on mDbExecutor BEFORE ExportManager.workoutFinished() so exported files
-                // (FIT, TCX, Strava, Health Connect) contain complete, updated metrics.
-                try {
-                    boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                    boolean ertsRecomputed = false;
-                    if (com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext)) {
-                        ertsRecomputed = com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                    }
-                    if (recomputed || ertsRecomputed) {
-                        WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
-                    }
-                } catch (Throwable t) {
-                    Log.e(TAG, "Error in post-workout recompute for workout " + finalWorkoutId, t);
-                }
-            }
-        } catch (Throwable t) {
-            Log.e(TAG, "Error in post-workout processing", t);
-        }
-
-        try {
             com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.stopActiveSession();
         } catch (Throwable t) {
             Log.w(TAG, "Error stopping PolarRawTelemetryRecorder active session: " + t.getMessage());
@@ -2517,12 +2475,26 @@ public class TrackerService extends Service {
         }
 
         try {
-            ExportManager exportManager = new ExportManager(this);
-            if (baseFileName != null && !baseFileName.trim().isEmpty()) {
-                exportManager.workoutFinished(baseFileName);
+            // ATT-9154 (REQ-TRK-091.1): Capture armed-state snapshot synchronously and enqueue
+            // Polar backfill, HRV/ERTS recompute, and export finalization asynchronously so
+            // TRACKING_FINISHED_INTENT -> EditWorkoutScreen navigation completes immediately (< 1 s).
+            final Context appContext = getApplicationContext();
+            if (workoutId > 0 || (baseFileName != null && !baseFileName.trim().isEmpty())) {
+                boolean h10Armed = PolarH10OfflineController.isRecordingArmed();
+                long h10StartMs = h10Armed ? PolarH10OfflineController.getSessionStartTimeMs() : 0L;
+                long h10Token = h10Armed ? PolarH10OfflineController.getArmedSessionToken() : 0L;
+                boolean verityArmed = PolarVeritySenseOfflineController.isRecordingArmed();
+                long verityStartMs = verityArmed ? PolarVeritySenseOfflineController.getSessionStartTimeMs() : 0L;
+                long verityToken = verityArmed ? PolarVeritySenseOfflineController.getArmedSessionToken() : 0L;
+                boolean ertsEnabled = SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext);
+                WorkoutPostProcessingCoordinator.PostProcessingRequest request =
+                        new WorkoutPostProcessingCoordinator.PostProcessingRequest(
+                                workoutId, baseFileName, h10Armed, h10StartMs, h10Token,
+                                verityArmed, verityStartMs, verityToken, ertsEnabled);
+                WorkoutPostProcessingCoordinator.enqueue(appContext, request);
             }
         } catch (Throwable t) {
-            Log.e(TAG, "Error finishing workout export during endWorkout", t);
+            Log.e(TAG, "Error enqueueing async post-workout processing for workout " + workoutId, t);
         } finally {
             try {
                 // 1. Broadcast TRACKING_FINISHED_INTENT with WORKOUT_ID at system level

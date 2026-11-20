@@ -278,4 +278,50 @@ class DeviceManagerTeardownTest {
 
         deviceManager.shutDown()
     }
+
+    // REQ-CON-054.1 / TST-CON-054.1
+    @Test
+    fun testPairingChangedUnpair_whenAbsentFromRemoteDevices_forceDisconnectsPolarSession_TST_CON_054_1() {
+        val deviceId = 77L
+        val mac = "24:AC:AC:24:82:56"
+        val polarId = "24825632"
+        val mockRepo = mockk<DeviceDataRepository>(relaxed = true)
+        every { mockRepo.getBluetoothMACAddress(deviceId) } returns mac
+
+        val mockPolarApi = mockk<com.polar.sdk.api.PolarBleApi>(relaxed = true)
+        com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator.resetForTesting()
+        com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockPolarApi }
+        try {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator.acquirePersistentSession(
+                mockBanalService,
+                polarId,
+                mac,
+                mockk(relaxed = true)
+            )
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+                .deviceConnected(com.polar.sdk.api.model.PolarDeviceInfo(polarId, mac, -55, "Polar Sense $polarId", true))
+
+            val deviceManager = DeviceManager(mockBanalService, mockSensorManager, mockRepo)
+            assertFalse(deviceManager.mMyRemoteDevices.containsKey(deviceId))
+
+            val pairingChangedField = DeviceManager::class.java.getDeclaredField("mPairingChangedReceiver")
+            pairingChangedField.isAccessible = true
+            val receiver = pairingChangedField.get(deviceManager) as android.content.BroadcastReceiver
+
+            val unpairIntent = mockk<Intent>(relaxed = true)
+            every { unpairIntent.hasExtra(BANALService.PAIRED) } returns true
+            every { unpairIntent.hasExtra(BANALService.DEVICE_ID) } returns true
+            every { unpairIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns deviceId
+            every { unpairIntent.getBooleanExtra(BANALService.PAIRED, true) } returns false
+
+            receiver.onReceive(mockBanalService, unpairIntent)
+
+            verify(exactly = 1) { mockPolarApi.disconnectFromDevice(mac) }
+            verify(exactly = 1) { mockPolarApi.disconnectFromDevice(polarId) }
+            assertFalse(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator.isDeviceConnected(polarId))
+            deviceManager.shutDown()
+        } finally {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
 }
