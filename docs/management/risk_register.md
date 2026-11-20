@@ -3,8 +3,8 @@
 **Document ID**: `DOC-MGT-RISK`  
 **Document Identifier**: `RISK-REG-ATT`  
 **Standard**: ASPICE 4.0 `MAN.5` (Risk Management — `MAN.5.BP1–BP6`, incorporating legacy ASPICE 3.1 `MAN.3.BP5` Define, monitor and adjust project risks)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.11  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Last Review Date**: 2026-11-19  
+**Target Release**: `V5.0.0` | **Version**: 1.2.12  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Last Review Date**: 2026-11-20  
 **Governing Ticket**: [ATT-6151](https://rainerblind.atlassian.net/browse/ATT-6151), [ATT-8167](https://rainerblind.atlassian.net/browse/ATT-8167), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-010`, `REQ-PRO-120` | **Test**: `TST-STP-010`  
 
 ---
@@ -146,3 +146,4 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 | `1.2.9` | 2026-11-19 | Sprint Coordinator (`ATT-9121`) | `ATT-9121` | Ceremony 1 risk review for `2026-11-19_02_Spät` (`6.0 SP` WIP carryovers `ATT-8917`/`ATT-8951`/`ATT-8324` + `17.0 SP` packed across 3 lanes). |
 | `1.2.10` | 2026-11-19 | Sprint Coordinator (`ATT-9121`) | `ATT-9121` | Ceremony 2 risk review for `2026-11-19_02_Spät` (`17.0 SP` delivered across 9 tickets, `0` WIP carryover, `95.6%` Gate FTPR, `2/2` QA audit COMPLIANT, full-repo `7,096/7,102` + `27/27` isolation PASS, pre-existing `ATT-9179` filed, `1,105/1,105` verified TSTs, `Pixel 10` deployed `5.0.0-dev-47d4cebb`). |
 | `1.2.11` | 2026-11-19 | Sprint Coordinator (`ATT-9180`) | `ATT-9180` | Ceremony 1 risk review for `2026-11-19_03_Nacht` (Sprint 464, `0` WIP carryover + `23.0 SP` packed across 3 disjoint Epics: `ATT-8138` Flash tooling/verification, `ATT-3539` Neon HRV/charts, `ATT-166` Neon RTS/carriage physics; Option 1 routing, Rule 7.5 incremental Gradle, Rule 8.6 cache-stable builds). |
+| `1.2.12` | 2026-11-20 | Sprint Coordinator (`ATT-9180`) | `ATT-9180` | Ceremony 2 risk review for `2026-11-19_03_Nacht` (Sprint 464: `9` tickets = `20.0 SP` delivered across all 3 lanes, `0` WIP carryover, `ATT-8990` returned untouched to `447`, `95.2%` Gate FTPR, `100.0%` bug resolution `6/6`, `2/2` QA audit COMPLIANT seed `70352`, Scoped Lean Tier-2 `629/629` PASS in `19m 25s` + isolation PASS, `1,154/1,154` verified TSTs, stamped APK `5.0.0-dev-8f587ea5` deployed to `Pixel 10`). |
