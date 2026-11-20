@@ -260,5 +260,63 @@ class HrvReadinessEntryTest {
         assertEquals(3, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5).toInt())
         assertEquals(1, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5).toInt())
         assertEquals("FOAM_ROLLING", cv.getAsString(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS))
+        assertEquals(HrvSensorModality.ECG.name, cv.getAsString(HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY))
+    }
+
+    @Test
+    fun sensorModality_roundTripsSymmetricallyAndDefaultsLegacyCursorToEcg_TST_HRV_049() {
+        // REQ-HRV-049.3 / TST-HRV-049.3: Symmetric single & batch cursor mapping for sensor_modality + legacy fallback
+        val opticalEntry = HrvReadinessEntry(
+            id = 42L,
+            timestampMs = 1731398400000L,
+            dateIso = "2026-11-12",
+            timezoneId = "Europe/Berlin",
+            restingHrBpm = 52,
+            rmssdMs = 58.0,
+            lnRmssd = 4.06,
+            hrvScore100 = 81.2,
+            sdnnMs = 64.0,
+            artifactRatePct = 1.2,
+            durationSec = 60,
+            posture = HrvPosture.SEATED,
+            isPrimaryForDay = true,
+            sensorModality = HrvSensorModality.OPTICAL_PPI
+        )
+        val cv = opticalEntry.toContentValues()
+        assertEquals(HrvSensorModality.OPTICAL_PPI.name, cv.getAsString(HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY))
+
+        val v3Cols = arrayOf(
+            HrvReadinessDbHelper.COLUMN_ID,
+            HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS,
+            HrvReadinessDbHelper.COLUMN_DATE_ISO,
+            HrvReadinessDbHelper.COLUMN_TIMEZONE_ID,
+            HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM,
+            HrvReadinessDbHelper.COLUMN_RMSSD_MS,
+            HrvReadinessDbHelper.COLUMN_LN_RMSSD,
+            HrvReadinessDbHelper.COLUMN_HRV_SCORE_100,
+            HrvReadinessDbHelper.COLUMN_SDNN_MS,
+            HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT,
+            HrvReadinessDbHelper.COLUMN_DURATION_SEC,
+            HrvReadinessDbHelper.COLUMN_POSTURE,
+            HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY,
+            HrvReadinessDbHelper.COLUMN_NOTES,
+            HrvReadinessDbHelper.COLUMN_SENSOR_MODALITY
+        )
+        val v3Cursor = android.database.MatrixCursor(v3Cols).apply {
+            addRow(arrayOf<Any?>(42L, 1731398400000L, "2026-11-12", "Europe/Berlin", 52, 58.0, 4.06, 81.2, 64.0, 1.2, 60, "SEATED", 1, null, "OPTICAL_PPI"))
+        }
+        v3Cursor.moveToFirst()
+        val single = HrvReadinessEntry.fromCursor(v3Cursor)
+        val batch = HrvReadinessEntry.fromCursorBatch(v3Cursor)
+        assertEquals(HrvSensorModality.OPTICAL_PPI, single.sensorModality)
+        assertEquals(listOf(single), batch)
+
+        val legacyCols = v3Cols.dropLast(1).toTypedArray()
+        val legacyCursor = android.database.MatrixCursor(legacyCols).apply {
+            addRow(arrayOf<Any?>(43L, 1731398400000L, "2026-11-12", "Europe/Berlin", 50, 62.0, 4.13, 82.6, 70.0, 0.8, 60, "SUPINE", 1, null))
+        }
+        legacyCursor.moveToFirst()
+        assertEquals(HrvSensorModality.ECG, HrvReadinessEntry.fromCursor(legacyCursor).sensorModality)
+        assertEquals(HrvSensorModality.ECG, HrvReadinessEntry.fromCursorBatch(legacyCursor).first().sensorModality)
     }
 }

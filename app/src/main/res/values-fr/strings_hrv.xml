@@ -321,4 +321,12 @@
     <string name="tuning_cat_morning_check">Contrôles matinaux &amp; bien-être</string>
     <string name="tuning_morning_check_start_short">Bouton accueil (jusqu\'à %02d:00)</string>
     <string name="tuning_morning_check_none_enabled">Désactivé</string>
+
+    <!-- Polar Verity Sense Optical PPI Morning HRV & Baseline Isolation (ATT-9177 / REQ-HRV-049) -->
+    <string name="morning_hrv_optical_guidance_title">PPI optique (Verity Sense)</string>
+    <string name="morning_hrv_optical_guidance_desc">Restez parfaitement immobile avec le brassard bien ajusté sur la peau. Enregistré dans une référence optique distincte afin de préserver vos tendances ECG.</string>
+    <string name="morning_hrv_optical_artifact_warning_desc">Le taux d\'artefacts optiques de contact ou de mouvement dépasse 5%% (%1$.1f%%). Gardez le bras immobile et vérifiez le bon contact du brassard sur la peau.</string>
+    <string name="hrv_modality_ecg_short">ECG</string>
+    <string name="hrv_modality_optical_ppi_short">Optique (PPI)</string>
+    <string name="hrv_modality_optical_ppi_badge">PPI optique</string>
 </resources>

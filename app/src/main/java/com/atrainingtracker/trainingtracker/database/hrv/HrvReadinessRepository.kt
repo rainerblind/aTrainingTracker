@@ -58,8 +58,12 @@ class HrvReadinessRepository(
         databaseManager.getEntriesForDate(dateIso, posture)
     }
 
-    suspend fun getPrimaryEntryForDate(dateIso: String, posture: HrvPosture): HrvReadinessEntry? = withContext(ioDispatcher) {
-        databaseManager.getPrimaryEntryForDate(dateIso, posture)
+    suspend fun getPrimaryEntryForDate(
+        dateIso: String,
+        posture: HrvPosture,
+        sensorModality: HrvSensorModality? = null
+    ): HrvReadinessEntry? = withContext(ioDispatcher) {
+        databaseManager.getPrimaryEntryForDate(dateIso, posture, sensorModality)
     }
 
     /**
@@ -69,18 +73,22 @@ class HrvReadinessRepository(
         databaseManager.hasCompletedMorningCheck(dateIso)
     }
 
-    suspend fun getAllEntries(posture: HrvPosture? = null): List<HrvReadinessEntry> = withContext(ioDispatcher) {
-        databaseManager.getAllEntries(posture)
+    suspend fun getAllEntries(
+        posture: HrvPosture? = null,
+        sensorModality: HrvSensorModality? = null
+    ): List<HrvReadinessEntry> = withContext(ioDispatcher) {
+        databaseManager.getAllEntries(posture, sensorModality)
     }
 
     suspend fun calculateReadiness(
         targetDateIso: String,
-        posture: HrvPosture
+        posture: HrvPosture,
+        sensorModality: HrvSensorModality = HrvSensorModality.ECG
     ): HrvReadinessResult = withContext(ioDispatcher) {
         val targetDate = LocalDate.parse(targetDateIso)
         val dMinus59Iso = targetDate.minusDays(59).toString()
-        val entries = databaseManager.getPrimaryEntriesInWindow(posture, dMinus59Iso, targetDateIso)
-        HrvReadinessCalculator.calculateReadiness(targetDateIso, posture, entries)
+        val entries = databaseManager.getPrimaryEntriesInWindow(posture, dMinus59Iso, targetDateIso, sensorModality)
+        HrvReadinessCalculator.calculateReadiness(targetDateIso, posture, entries, sensorModality)
     }
 
     companion object {

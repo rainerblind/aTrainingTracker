@@ -27,15 +27,38 @@ package com.atrainingtracker.banalservice.devices
  * @property protocol Hardware protocol source ([ProtocolType.BLE], [ProtocolType.ANT_PLUS], or [ProtocolType.SIMULATED]).
  * @property gapBeats Number of dropped beats across an RF dropout preceding this beat (0 for continuous beats).
  * @property artifactFlag Artifact flag (0 = NORMAL, 1 = ECTOPIC, 2 = SHORT, 3 = LONG, 4 = MISSED, 5 = GAP).
+ * @property isOpticalPpi True when the interval originates from optical PPG pulse-to-pulse intervals (e.g. Polar Verity Sense, `REQ-HRV-049.1`).
  */
-data class RrBeatEvent(
+data class RrBeatEvent @JvmOverloads constructor(
     val beatTimestampMs: Long,
     val rrMs: Double,
     val rawCounter: Int,
     val protocol: ProtocolType,
     val gapBeats: Int = 0,
-    val artifactFlag: Int = ARTIFACT_NORMAL
+    val artifactFlag: Int = ARTIFACT_NORMAL,
+    val isOpticalPpi: Boolean = false
 ) {
+    /**
+     * 6-argument Java-compatible overload preserving [isOpticalPpi] when Java callers
+     * (e.g. `DeviceManager.java`) adjust timestamps without modifying modality provenance.
+     */
+    fun copy(
+        beatTimestampMs: Long,
+        rrMs: Double,
+        rawCounter: Int,
+        protocol: ProtocolType,
+        gapBeats: Int,
+        artifactFlag: Int
+    ): RrBeatEvent = copy(
+        beatTimestampMs = beatTimestampMs,
+        rrMs = rrMs,
+        rawCounter = rawCounter,
+        protocol = protocol,
+        gapBeats = gapBeats,
+        artifactFlag = artifactFlag,
+        isOpticalPpi = this.isOpticalPpi
+    )
+
     companion object {
         const val ARTIFACT_NORMAL = 0
         const val ARTIFACT_ECTOPIC = 1

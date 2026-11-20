@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.21  
+**Version**: 1.0.24  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 73
+**Total Tests**: 74
 
 ---
 
@@ -1316,6 +1316,30 @@
 
 ---
 
+### TST-HRV-049: **Polar Verity Sense Optical PPI Morning HRV Check, DB v3 Provenance & Baseline Isolation Suite** (`ATT-9177`) [Verified]
+- **Requirement(s)**: `REQ-HRV-049` (`REQ-HRV-049.1`..`REQ-HRV-049.4`)
+- **Component**: `RrBeatEvent.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvSensorModality.kt`, `HrvReadinessEntry.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessCalculator.kt`, `HrvReadinessRepository.kt`, `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `MorningHrvOpticalCards.kt`, `HrvReadinessTrendMath.kt`, `HrvReadinessTrendCard.kt`, `res/values*/strings_hrv.xml`, `HrvSignalQualityAnalyzerTest.kt`, `HrvReadinessEntryTest.kt`, `HrvReadinessDatabaseManagerTest.kt`, `DatabaseSchemaRegistryHrvTest.kt`, `HrvReadinessCalculatorTest.kt`, `HrvReadinessRepositoryTest.kt`, `MorningHrvCheckViewModelTest.kt`, `MorningHrvOpticalPpiUiTest.kt`, `MorningHrvCheckScreenTest.kt`, `HrvReadinessTrendMathTest.kt`, `HrvReadinessTrendCardTest.kt`, `ControlTrackingViewModelTest.kt`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9177`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `9-locale verified (en, de, es, fr, it, ja, nl, pl, pt)` in `res/values*/strings_hrv.xml` via `TranslationParityTest`
+- **Test Description**:
+  1. *Optical PPI Contract & Signal Quality Mode (`TST-HRV-049.1`, `HrvSignalQualityAnalyzerTest.testOpticalPpiMode_bypassesSmoothedAndQuantizedFlagsWhileEnforcingArtifactAndBeatGates_TST_HRV_049`)*:
+     • Verify `@JvmOverloads` `RrBeatEvent` defaults `isOpticalPpi = false`, 6-arg Java `copy(...)` preserves `isOpticalPpi`, and Java callers (`ANTHeartRateDevice.java`, `DeviceManager.java`) compile unchanged.
+     • Verify `HrvSignalQualityAnalyzer.analyze`/`analyzeBeats(..., isOpticalPpi = true)` returns `VALID` on low-variance/integer-ms optical PPI streams (no `QUANTIZED_SYNTHETIC` or `SMOOTHED_STREAM` false positives) while still enforcing `INSUFFICIENT_DATA` (`< 30` beats) and `HIGH_ARTIFACTS` (`> 5.0%`), and preserving existing ECG checks when `isOpticalPpi = false`.
+  2. *Non-Sticky Morning HRV Optical UX, Start-Screen Eligibility, Rule 8.5 PNG & 9-Locale Parity (`TST-HRV-049.2`, `MorningHrvCheckViewModelTest.testOpticalPpiNonStickyMode_andIsolatedPersistenceWithoutSmoothedEcgFalsePositive_TST_HRV_049`, `MorningHrvCheckViewModelTest.testOpticalPpiHighArtifactSession_triggersHighArtifactWarning_TST_HRV_049`, `MorningHrvOpticalPpiUiTest.testOpticalPpiMorningHrv_showsGuidanceProvenanceAndOpticalArtifactAdvice_TST_HRV_049`, `MorningHrvOpticalPpiUiTest.testCaptureOpticalPpiMorningHrvLightDarkPng_TST_HRV_049`, `ControlTrackingViewModelTest.isMorningHrvCheckVisible_whenPolarVeritySensePaired_remainsEligibleAndHidesAfterOpticalSave_TST_HRV_049`, `HrvReadinessTrendCardTest.testNineLocaleLocalizationParity_allHrvReadinessTrendStringsPresent`, `TranslationParityTest`)*:
+     • Verify `MorningHrvCheckViewModel` toggles `isOpticalPpiSession` non-stickily in `READY`/`STABILIZING` (clearing on ECG beats), completes and persists `HrvSensorModality.OPTICAL_PPI` entries without smoothed-ECG alerts, and flags `highArtifactWarning` when optical artifacts exceed `5.0%`.
+     • Verify `MorningHrvCheckScreen` behavioral Compose UI renders optical stillness/snug-contact guidance, optical armband artifact advice, `Optical PPI` provenance badge on `ReadinessResultCard`, and captures Rule 8.5 Light/Dark PNG (`docs/engineering/walkthroughs/img/ATT-9177_morning_hrv_optical_ppi.png`) with `private fun` `@Preview`s and `0` `src/main` reads.
+     • Verify `ControlTrackingViewModel` keeps the Morning HRV Start-screen CTA eligible for a paired Polar Verity Sense (`DeviceType.HRM`) and hides it after an optical morning check is saved; verify `TranslationParityTest` passes across all 9 locales.
+  3. *SQLite v2->v3 Migration, `.attbackup` Parity & Per-Modality Primary Isolation (`TST-HRV-049.3`, `HrvReadinessEntryTest.sensorModality_roundTripsSymmetricallyAndDefaultsLegacyCursorToEcg_TST_HRV_049`, `HrvReadinessDatabaseManagerTest.schemaUpgrade_v1ToV3_and_v2ToV3_matchOnCreateV3ExactParity_TST_HRV_049`, `HrvReadinessDatabaseManagerTest.sameDayEcgAndOpticalEntries_maintainIndependentPrimariesAndFilteredWindowQueries_TST_HRV_049`, `DatabaseSchemaRegistryHrvTest.databaseSchemaRegistry_referencesHrvReadinessDbVersionDirectly_Rule62`, `HrvReadinessRepositoryTest.repositoryCalculateReadiness_isolatesOpticalFromEcgCohort_TST_HRV_049`)*:
+     • Verify `v1 -> v3`, `v2 -> v3`, and `onCreate (v3)` exact schema parity (`Rule 64`), legacy rows defaulting to `ECG`, symmetric `toContentValues`/`fromCursor`/`fromCursorBatch` (`Rule 20`), and `DatabaseSchemaRegistryHrvTest` (`v3` supported, `v4` rejected for `.attbackup`).
+     • Verify same-day `ECG` and `OPTICAL_PPI` entries retain independent `is_primary_for_day = 1` flags, `updateEntry` recomputes the old `(dateIso, posture, sensorModality)` cohort when keys change, and `getPrimaryEntriesInWindow(..., sensorModality)` filters strictly by `AND sensor_modality = ?`.
+  4. *ECG vs Optical SWC Baseline Isolation, Trend Card Segmented Selector & Architecture Contracts (`TST-HRV-049.4`, `HrvReadinessCalculatorTest.calculateReadiness_strictlyIsolatesEcgAndOpticalPpiSwcBaselines_TST_HRV_049`, `HrvReadinessTrendMathTest.calculateTrendSeries_isolatesEcgAndOpticalCohortsAndDefaultsOpticalOnlyAthletes_TST_HRV_049`, `MorningHrvOpticalPpiUiTest.testTrendCard_segmentedModalitySelectorSwitchesBetweenEcgAndOpticalCohorts_TST_HRV_049`, `ArchitectureConformanceContractTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`)*:
+     • Verify `HrvReadinessCalculator` and `HrvReadinessTrendMath` isolate 7d rolling average and 60d SWC corridors by `(posture, sensorModality)`, default optical-only athletes to `OPTICAL_PPI`, and render a `SingleChoiceSegmentedButtonRow` (`icon = {}`) cohort selector + provenance badge in `HrvReadinessTrendCard` without modifying `AthleteProfileScreen.kt` (`1,975/1,975` LoC) while keeping `MorningHrvCheckScreen.kt <= 1,450` LoC and tagging all new tests with hyphenated `TST-HRV-049` comments (`REQ-PRO-099.3`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1342,3 +1366,6 @@
 | `1.0.19` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Added `TST-HRV-048` (`[Planned]`, `.1`–`.4`) covering 1:1 input artifact/gap metadata, idempotent delta DB persistence, 180s causal filter context & phase-aligned reconciliation, and unified artifact gate thresholds. |
 | `1.0.20` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `TST-HRV-048` to `[Implemented]` with 100% PASS across all 10 unit/DB/golden/contract test suites and static `TST-HRV-048` code tag verification. |
 | `1.0.21` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `TST-HRV-048` to `[Verified]` in Stage 5 reusing Gate 4 verified `76/76 PASS` evidence across all 10 suites (`Rule 7.5`, `0` `app/` code drift since `f6f7bb41`), clean-checkout `TST-HRV-048` traceability parity, and governance sync. |
+| `1.0.22` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Added `TST-HRV-049` (`[Planned]`, `.1`–`.4`) covering `@JvmOverloads` optical PPI contract & signal quality mode, non-sticky Morning HRV optical UX/Rule 8.5 PNG/9-locale parity, SQLite v2->v3 `.attbackup` & primary isolation, and SWC baseline isolation with `SingleChoiceSegmentedButtonRow` trend selector. |
+| `1.0.23` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `TST-HRV-049` to `[Implemented]` with `133/133 PASS` across all 16 targeted/contract/localization/UI suites, static `TST-HRV-049` code tag verification, and Rule 8.5 Light/Dark PNG (`ATT-9177_morning_hrv_optical_ppi.png`) inspected. |
+| `1.0.24` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `TST-HRV-049` to `[Verified]` in Stage 5 reusing Gate 4 verified `133/133 PASS` evidence across all 16 suites (`Rule 7.5`, `0` `app/` code drift since `88c46b60`), Rule 8.5 PNG certification, verbatim test method citations, clean-checkout `TST-HRV-049` traceability parity, and governance sync. |

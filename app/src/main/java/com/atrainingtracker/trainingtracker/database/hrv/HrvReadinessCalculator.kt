@@ -86,18 +86,21 @@ object HrvReadinessCalculator {
     const val MAX_VALID_ARTIFACT_RATE_PCT = 5.0
 
     @JvmStatic
+    @JvmOverloads
     fun calculateReadiness(
         targetDateIso: String,
         posture: HrvPosture,
-        entries: List<HrvReadinessEntry>
+        entries: List<HrvReadinessEntry>,
+        sensorModality: HrvSensorModality = HrvSensorModality.ECG
     ): HrvReadinessResult {
         val targetDate = LocalDate.parse(targetDateIso)
         val dMinus6 = targetDate.minusDays(6)
         val dMinus59 = targetDate.minusDays(59)
 
-        // 1. Filter by posture, valid artifact rate (<= 5.0% or null), and presence of HRV metrics
+        // 1. Filter by posture, sensor modality (REQ-HRV-049.4), valid artifact rate (<= 5.0% or null), and presence of HRV metrics
         val validPostureEntries = entries.filter { entry ->
             entry.posture == posture &&
+                entry.sensorModality == sensorModality &&
                 (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT) &&
                 entry.lnRmssd != null
         }

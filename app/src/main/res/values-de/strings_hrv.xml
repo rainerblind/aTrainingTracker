@@ -321,4 +321,12 @@
     <string name="tuning_cat_morning_check">Morgendliche Checks &amp; Wohlbefinden</string>
     <string name="tuning_morning_check_start_short">Start-Button (bis %02d:00)</string>
     <string name="tuning_morning_check_none_enabled">Deaktiviert</string>
+
+    <!-- Polar Verity Sense Optical PPI Morning HRV & Baseline Isolation (ATT-9177 / REQ-HRV-049) -->
+    <string name="morning_hrv_optical_guidance_title">Optisches PPI (Verity Sense)</string>
+    <string name="morning_hrv_optical_guidance_desc">Bleibe vollkommen ruhig mit festem Hautkontakt des Armbands. Wird in einer separaten optischen Baseline gespeichert, damit EKG-Brustgurt-Trends unverfälscht bleiben.</string>
+    <string name="morning_hrv_optical_artifact_warning_desc">Optische Kontakt- oder Bewegungsartefakte überschreiten 5%% (%1$.1f%%). Halte den Arm vollkommen ruhig und prüfe den engen Hautkontakt des Armbands.</string>
+    <string name="hrv_modality_ecg_short">EKG</string>
+    <string name="hrv_modality_optical_ppi_short">Optisch (PPI)</string>
+    <string name="hrv_modality_optical_ppi_badge">Optisches PPI</string>
 </resources>

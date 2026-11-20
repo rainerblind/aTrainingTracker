@@ -104,6 +104,7 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
+import com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality
 import com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -327,6 +328,9 @@ fun MorningHrvCheckContent(
             }
 
             if (!isPureWellnessMode) {
+                if (uiState.isOpticalPpiSession) {
+                    OpticalPpiGuidanceCard()
+                }
                 // 3. Live Pacing / Measurement Status Card
                 MeasurementPacingCard(
                     uiState = uiState,
@@ -336,7 +340,10 @@ fun MorningHrvCheckContent(
 
             // 4. Artifact Warning (Amber Badge if > 5.0%)
             if (uiState.highArtifactWarning) {
-                ArtifactWarningCard(artifactRatePct = uiState.artifactRatePct ?: 0.0)
+                ArtifactWarningCard(
+                    artifactRatePct = uiState.artifactRatePct ?: 0.0,
+                    isOpticalPpi = uiState.isOpticalPpiSession
+                )
             }
 
             // Smoothed / Quantized Signal Warning (REQ-TRK-068.3)
@@ -629,6 +636,7 @@ private fun MeasurementPacingCard(
 @Composable
 private fun ArtifactWarningCard(
     artifactRatePct: Double,
+    isOpticalPpi: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -658,8 +666,13 @@ private fun ArtifactWarningCard(
                     fontWeight = FontWeight.Bold,
                     color = TTColor.ArtifactWarningTitle
                 )
+                val descRes = if (isOpticalPpi) {
+                    R.string.morning_hrv_optical_artifact_warning_desc
+                } else {
+                    R.string.morning_hrv_artifact_warning_desc
+                }
                 Text(
-                    text = stringResource(R.string.morning_hrv_artifact_warning_desc, artifactRatePct),
+                    text = stringResource(descRes, artifactRatePct),
                     style = MaterialTheme.typography.bodySmall,
                     color = TTColor.ArtifactWarningDesc
                 )
@@ -733,12 +746,22 @@ private fun ReadinessResultCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.morning_hrv_result_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.morning_hrv_result_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                if (entry.sensorModality == HrvSensorModality.OPTICAL_PPI) {
+                    OpticalPpiProvenanceBadge()
+                }
+            }
 
             // Autonomic Readiness Status Pill
             if (readinessResult != null) {

@@ -604,4 +604,129 @@ class MorningHrvCheckViewModelTest {
         assertFalse(viewModel.uiState.value.showMorningCheckOnStartScreen)
         assertTrue(viewModel.uiState.value.enableMorningSleepAndWellness)
     }
+
+    @Test
+    fun testOpticalPpiNonStickyMode_andIsolatedPersistenceWithoutSmoothedEcgFalsePositive_TST_HRV_049() = runTest(testDispatcher) {
+        // REQ-HRV-049.2 / TST-HRV-049.2: Non-sticky Verity Sense -> H10 switch, optical completion without smoothed-ECG warning, isolated pre-save preview & persistence
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        // Seed 14 historical ECG days in SUPINE so any leakage into optical readiness preview is immediately detectable
+        val today = java.time.LocalDate.now()
+        for (i in 1..14) {
+            hrvRepository.insertEntry(
+                com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry(
+                    timestampMs = 1731000000000L + i * 86_400_000L,
+                    dateIso = today.minusDays(i.toLong()).toString(),
+                    timezoneId = "UTC",
+                    restingHrBpm = 48,
+                    rmssdMs = 75.0,
+                    lnRmssd = kotlin.math.ln(75.0),
+                    hrvScore100 = 86.0,
+                    durationSec = 60,
+                    posture = HrvPosture.SUPINE,
+                    isPrimaryForDay = true,
+                    sensorModality = com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.ECG
+                )
+            )
+        }
+
+        // Non-sticky toggle in READY: Verity Sense optical beat sets true, subsequent Polar H10 ECG beat resets false
+        viewModel.handleRrBeat(RrBeatEvent(1000L, 950.0, 1, ProtocolType.BLE, isOpticalPpi = true))
+        assertTrue(viewModel.uiState.value.isOpticalPpiSession)
+        viewModel.handleRrBeat(RrBeatEvent(1950L, 940.0, 2, ProtocolType.BLE, isOpticalPpi = false))
+        assertFalse("Switching to ECG strap in READY must immediately clear optical mode", viewModel.uiState.value.isOpticalPpiSession)
+
+        // Start optical PPI measurement with low-variance integer-ms PPG beats (would trigger QUANTIZED_SYNTHETIC on ECG)
+        viewModel.setPosture(HrvPosture.SUPINE)
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        advanceTimeBy(500L) // STABILIZING
+        viewModel.handleRrBeat(RrBeatEvent(2000L, 950.0, 3, ProtocolType.BLE, isOpticalPpi = true))
+        assertTrue(viewModel.uiState.value.isOpticalPpiSession)
+        viewModel.handleRrBeat(RrBeatEvent(2950L, 950.0, 4, ProtocolType.BLE, isOpticalPpi = false))
+        assertFalse("Switching to ECG strap in STABILIZING must immediately clear optical mode", viewModel.uiState.value.isOpticalPpiSession)
+
+        advanceTimeBy(600L) // enter MEASURING
+        assertEquals(MorningHrvPhase.MEASURING, viewModel.uiState.value.phase)
+
+        var ts = 5000L
+        for (i in 0 until 45) {
+            ts += 950L
+            val rr = if (i % 5 == 0) 952.0 else 950.0
+            viewModel.handleRrBeat(RrBeatEvent(ts, rr, i, ProtocolType.BLE, isOpticalPpi = true))
+        }
+
+        advanceTimeBy(2500L)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(MorningHrvPhase.COMPLETED, state.phase)
+        assertTrue(state.isOpticalPpiSession)
+        assertEquals(
+            "Optical PPI must bypass ECG quantized/smoothed false positives",
+            com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.VALID,
+            state.signalQualityStatus
+        )
+        assertEquals(
+            com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI,
+            state.computedEntry?.sensorModality
+        )
+        // Pre-save readiness preview MUST reflect isolated optical cohort (n60d = 1, CALIBRATING), NOT the 14 ECG days!
+        assertEquals(1, state.readinessResult?.n60d)
+        assertEquals(
+            com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus.CALIBRATING,
+            state.readinessResult?.status
+        )
+
+        val rowId = viewModel.saveReading()
+        advanceUntilIdle()
+        assertTrue(rowId > 0)
+        val persisted = hrvRepository.getEntryById(rowId)
+        assertEquals(
+            com.atrainingtracker.trainingtracker.database.hrv.HrvSensorModality.OPTICAL_PPI,
+            persisted?.sensorModality
+        )
+        assertEquals(1, viewModel.uiState.value.readinessResult?.n60d)
+    }
+
+    @Test
+    fun testOpticalPpiHighArtifactSession_triggersHighArtifactWarning_TST_HRV_049() = runTest(testDispatcher) {
+        // REQ-HRV-049.2 / TST-HRV-049.2: Optical PPI still enforces > 5.0% artifact gate
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        advanceTimeBy(1001L)
+
+        var ts = 1000L
+        for (i in 0 until 40) {
+            ts += 950L
+            val flag = if (i in 10..15) RrBeatEvent.ARTIFACT_GAP else RrBeatEvent.ARTIFACT_NORMAL
+            viewModel.handleRrBeat(RrBeatEvent(ts, 950.0, i, ProtocolType.BLE, artifactFlag = flag, isOpticalPpi = true))
+        }
+        advanceTimeBy(2500L)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(MorningHrvPhase.COMPLETED, state.phase)
+        assertTrue(state.isOpticalPpiSession)
+        assertTrue(state.highArtifactWarning)
+        assertEquals(
+            com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.HIGH_ARTIFACTS,
+            state.signalQualityStatus
+        )
+    }
 }

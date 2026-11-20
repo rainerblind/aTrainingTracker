@@ -650,6 +650,50 @@ class ControlTrackingViewModelTest {
         job.cancel()
     }
 
+    @Test
+    fun isMorningHrvCheckVisible_whenPolarVeritySensePaired_remainsEligibleAndHidesAfterOpticalSave_TST_HRV_049() = runTest {
+        // REQ-HRV-049.2 / TST-HRV-049.2: Paired Polar Verity Sense (DeviceType.HRM) keeps Start-screen Morning HRV CTA eligible
+        val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
+        every { mockBanalRepo.trackingMode } returns trackingModeLiveData
+
+        val configFlow = MutableStateFlow(
+            TuningConfig(
+                enableMorningSleepAndWellness = false,
+                showMorningCheckOnStartScreen = true,
+                morningCheckCutoffHour = 11
+            )
+        )
+        val mockTuning = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuning.tuningConfigFlow } returns configFlow
+
+        val mockHrv = mockk<HrvReadinessRepository>(relaxed = true)
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns false
+
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(77L, DeviceType.HRM, "Polar Sense 123456")
+        )
+
+        val viewModel = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { java.time.LocalTime.of(8, 15) }
+        )
+
+        val values = mutableListOf<Boolean>()
+        val job = launch(testDispatcher) {
+            viewModel.isMorningHrvCheckVisible.collect { values.add(it) }
+        }
+
+        assertTrue("Paired Polar Verity Sense must make Morning HRV shortcut visible", values.last())
+
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns true
+        viewModel.refreshMorningCheckStatus()
+        assertFalse("Shortcut must hide after today's optical morning HRV check is saved", values.last())
+
+        job.cancel()
+    }
+
     private fun createDeviceUiData(id: Long, deviceType: DeviceType, name: String): DeviceUiData {
         return DeviceUiData(
             id = id,

@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.20  
+**Version**: 1.0.23  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 67
+**Total Requirements**: 68
 
 ---
 
@@ -2019,6 +2019,42 @@
 
 ---
 
+### REQ-HRV-049: Polar Verity Sense Optical PPI Support in Morning HRV Check, Provenance Persistence & Baseline Isolation (`ATT-9177`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Backward-compatible optical PPI beat flag, optical-aware morning HRV guidance and signal-quality gating, SQLite v2->v3 modality provenance with `.attbackup` parity, and isolated ECG vs Optical PPI 60-day SWC baselines (refining `REQ-PER-030`, `REQ-PER-032`, `REQ-PER-033`, and `REQ-TRK-067`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-049`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `RrBeatEvent.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvSensorModality.kt`, `HrvReadinessEntry.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessCalculator.kt`, `HrvReadinessRepository.kt`, `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `MorningHrvOpticalCards.kt`, `HrvReadinessTrendMath.kt`, `HrvReadinessTrendCard.kt`, `res/values*/strings_hrv.xml`
+- **Rationale**: Requiring a wet ECG chest strap in bed creates friction for daily morning HRV tracking. Polar Verity Sense optical PPI (`ATT-9176`) enables slip-on morning `rMSSD` checks, but optical PPG pulse-to-pulse intervals carry systematic PPG-vs-ECG offsets (~6–15% MAPE) and mild pulse-wave damping that would otherwise trigger misleading ECG smoothed-stream warnings and silently contaminate an athlete's existing ECG 60-day SWC baseline (`ATT-9177`).
+- **Description**:
+  1. *Backward-Compatible Optical PPI Contract & Signal Quality Mode (`REQ-HRV-049.1`)*:
+     - `RrBeatEvent` SHALL add `val isOpticalPpi: Boolean = false` via `@JvmOverloads constructor(...)`, keeping 6-argument Java (`ANTHeartRateDevice.java`) and Kotlin callers source/binary compatible. `HrvSignalQualityAnalyzer.analyze(...)` and `analyzeBeats(...)` SHALL add `@JvmOverloads` with optional `isOpticalPpi: Boolean = false`: when `isOpticalPpi == true`, `INSUFFICIENT_DATA` (`< 30` beats) and `HIGH_ARTIFACTS` (`> 5.0%`) SHALL remain strictly enforced while ECG-specific `QUANTIZED_SYNTHETIC` and `SMOOTHED_STREAM` gates (`REQ-TRK-067`) SHALL be bypassed.
+  2. *Non-Sticky Morning HRV Optical UX, Start-Screen Eligibility, 9-Locale Parity & Rule 8.5 PNG (`REQ-HRV-049.2`)*:
+     - `MorningHrvCheckViewModel.handleRrBeat(event)` SHALL update `isOpticalPpiSession = event.isOpticalPpi` non-stickily in `READY`/`STABILIZING` (clearing optical mode immediately when ECG beats arrive) and derive `isOpticalPpiSession = bufferedBeats.any { it.isOpticalPpi }` during `MEASURING`/`completeMeasurement()`, passing `isOpticalPpi` to `HrvSignalQualityAnalyzer.analyzeBeats(...)` and storing `HrvSensorModality.OPTICAL_PPI` vs `ECG` on `computedEntry`.
+     - `MorningHrvCheckScreen.kt` (`<= 1,450` LoC; helper composables extracted to `MorningHrvOpticalCards.kt` as needed) SHALL display an optical stillness/snug-contact guidance card when `isOpticalPpiSession == true` (outside pure-wellness mode), display optical armband fit/stillness artifact guidance when `highArtifactWarning && isOpticalPpiSession`, and show an `Optical PPI` provenance badge on `ReadinessResultCard`.
+     - `ControlTrackingViewModel` (`0` edits) paired Polar Verity Sense (`DeviceType.HRM`) eligibility and daily completion behavior SHALL be verified by unit test. All new UI strings SHALL achieve 9-language parity (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) in `res/values*/strings_hrv.xml` (`TranslationParityTest`). A Rule 8.5 Light/Dark PNG (`docs/engineering/walkthroughs/img/ATT-9177_morning_hrv_optical_ppi.png`) SHALL be captured via Robolectric (`private fun` `@Preview`, `0` `src/main` reads).
+  3. *`HrvSensorModality`, SQLite v2->v3 Migration, `.attbackup` Parity & Per-Modality Primary Isolation (`REQ-HRV-049.3`)*:
+     - Introduce `HrvSensorModality` (`ECG`, `OPTICAL_PPI`; fallback `ECG`) and migrate `HrvReadinessDbHelper.DB_VERSION` `2 -> 3` adding `sensor_modality TEXT NOT NULL DEFAULT 'ECG'` with exact schema parity across `onCreate (v3)`, `v1 -> v3`, and `v2 -> v3` (`Rule 64`), symmetric `toContentValues`/`fromCursor`/`fromCursorBatch` (`Rule 20`), and `.attbackup` / `DatabaseSchemaRegistry` (`Rule 62`) symmetry.
+     - Scope `HrvReadinessDatabaseManager.recomputePrimaryForDayInternal(...)` by `(date_iso, posture, sensor_modality)` so same-day optical and ECG readings maintain independent primary flags; in `updateEntry(...)`, fetch the pre-update row and recompute the previous `(dateIso, posture, sensorModality)` cohort if any key changed; filter `getPrimaryEntriesInWindow(posture, startDateIso, endDateIso, sensorModality: HrvSensorModality? = null)` via `AND sensor_modality = ?` when specified.
+  4. *ECG vs Optical SWC Baseline Isolation & `HrvReadinessTrendCard` Segmented Selector (`REQ-HRV-049.4`)*:
+     - `HrvReadinessCalculator.calculateReadiness(...)` (`@JvmOverloads`, default `sensorModality = HrvSensorModality.ECG`) and `HrvReadinessRepository.calculateReadiness(...)` SHALL isolate 7-day rolling averages and 60-day SWC corridors strictly by `(posture, sensorModality)`.
+     - `HrvReadinessTrendMath.calculateTrendSeries(...)` SHALL isolate ECG vs Optical PPI cohorts, default to an available modality (`OPTICAL_PPI`) for optical-only athletes, and expose `sensorModality`, `availableModalities`, and `seriesByModality` on `HrvTrendSeries`. `HrvReadinessTrendCard.kt` SHALL display an optical provenance badge and render a `SingleChoiceSegmentedButtonRow` (`icon = {}`, `docs/design_guidelines.md` §1) when both modalities exist for the active posture, keeping `AthleteProfileScreen.kt` untouched (`1,975/1,975` LoC).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PER-030`, `REQ-PER-032`, `REQ-PER-033`, `REQ-TRK-067` targeting `RrBeatEvent.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvReadiness*.kt`, `MorningHrvCheck*.kt`, `HrvReadinessTrend*.kt`, and `res/values*/strings_hrv.xml`.
+  2. *Historical Origin & Commit Trace*: `ATT-3540` (`98df60c9`), `ATT-3545` (`669146df`), `ATT-4981` (`287d8a6b`), `ATT-7034` (`a77ce176`), `ATT-7533` (`86a0549d`), `ATT-7532` (`647ef674`), `ATT-8469` (`241df3a3`), `ATT-8598` (`596a54f3`), `ATT-8846` (`574ae3b5`), `ATT-3557` (`4df73e2f`), `ATT-6712` (`369a830b`).
+  3. *Root Reason for Existing Formulation*: `REQ-TRK-067` targeted firmware-smoothed ECG chest straps; `HrvReadiness.db` v2 keyed primary selection and SWC baselines solely on `HrvPosture`; `AthleteProfileScreen.kt` sits at its exact `1,975` LoC ceiling.
+  4. *Preservation of Core Invariants*: Preserves Java 6-arg `RrBeatEvent` callers via `@JvmOverloads`, `<= 5.0%` artifact gating, legacy v1/v2 `ECG` default compatibility, `.attbackup` schema parity, `AthleteProfileScreen.kt` `1,975` LoC ceiling (`0` edits), and `MorningHrvCheckScreen.kt <= 1,450` LoC.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* optical PPI beats (`isOpticalPpi = true`), *When* a 60–120s morning check completes, *Then* optical stillness guidance shows, no ECG smoothed-stream warning fires, `> 5.0%` artifacts still warn with optical armband guidance, and `HrvReadinessEntry` saves with `OPTICAL_PPI` provenance.
+  • *Given* `READY`/`STABILIZING` optical PPI beats followed by ECG beats (`isOpticalPpi = false`), *When* `handleRrBeat` processes the ECG beat, *Then* `isOpticalPpiSession` resets non-stickily to `false`.
+  • *Given* historical ECG morning entries and new optical PPI entries, *When* `HrvReadinessCalculator` and `HrvReadinessTrendCard` evaluate and render, *Then* ECG 60d SWC baselines remain isolated from optical entries, optical-only athletes default to `OPTICAL_PPI`, mixed cohorts render a `SingleChoiceSegmentedButtonRow` (`icon = {}`), and `HrvReadiness.db` v1->v3/v2->v3/onCreate v3 parity holds across `.attbackup`.
+  • *Given* all new UI strings across `en, de, es, fr, it, ja, nl, pl, pt`, *When* `TranslationParityTest` runs, *Then* all 9 `strings_hrv.xml` files pass with zero missing keys.
+- **Invariants**: `0` edits to `AthleteProfileScreen.kt`, `ControlTrackingViewModel.kt`, `ANTHeartRateDevice.java`, and `PolarOnlineStreamingBridge.kt`; `MorningHrvCheckScreen.kt <= 1,450` LoC; `private fun` `@Preview`s; `0` `src/main` reads in tests; 9-locale parity verified.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2044,3 +2080,6 @@
 | `1.0.18` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Added `REQ-HRV-048` (`[Planned]`, `.1`–`.4`) for beat-level artifact/gap flag persistence in `WorkoutRr.db`, 180s causal filter context in `HRVMetricsDevice`, and unified artifact gate threshold plumbing in `HrvPostWorkoutRecomputer`. |
 | `1.0.19` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `REQ-HRV-048` to `[Implemented]` following Stage 4 construction (`RrArtifactFilter.kt`, `WorkoutRrDatabaseManager.kt`, `WorkoutRrRepository.kt`, `HrvPostWorkoutRecomputer.kt`, `HRVMetricsDevice.kt`) and 100% pass across all 10 unit/DB/golden/contract test suites. |
 | `1.0.20` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `REQ-HRV-048` to `[Verified]` in Stage 5 reusing Gate 4 verified `76/76 PASS` evidence across all 10 suites (`Rule 7.5`, `0` `app/` code drift since `f6f7bb41`), clean-checkout `TST-HRV-048` traceability parity, and governance sync. |
+| `1.0.21` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Added `REQ-HRV-049` (`[Planned]`, `.1`–`.4`) for Polar Verity Sense optical PPI support in Morning HRV Check, SQLite v2->v3 provenance persistence, `.attbackup` parity, ECG-vs-optical SWC baseline isolation, `SingleChoiceSegmentedButtonRow` trend selector, and 9-locale localization. |
+| `1.0.22` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `REQ-HRV-049` to `[Implemented]` following Stage 4 construction (`RrBeatEvent.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvSensorModality.kt`, `HrvReadiness*.kt`, `MorningHrv*.kt`, `HrvReadinessTrend*.kt`, 9-locale `strings_hrv.xml`), Rule 8.5 Light/Dark PNG verification (`ATT-9177_morning_hrv_optical_ppi.png`), and 100% pass across all 16 targeted/contract/localization/UI suites (`133/133`). |
+| `1.0.23` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `REQ-HRV-049` to `[Verified]` in Stage 5 reusing Gate 4 verified `133/133 PASS` evidence across all 16 suites (`Rule 7.5`, `0` `app/` code drift since `88c46b60`), Rule 8.5 PNG certification, clean-checkout `TST-HRV-049` traceability parity, and governance sync. |

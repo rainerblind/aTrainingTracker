@@ -321,4 +321,12 @@
     <string name="tuning_cat_morning_check">Ochtendcontroles &amp; welzijn</string>
     <string name="tuning_morning_check_start_short">Startknop (tot %02d:00)</string>
     <string name="tuning_morning_check_none_enabled">Uitgeschakeld</string>
+
+    <!-- Polar Verity Sense Optical PPI Morning HRV & Baseline Isolation (ATT-9177 / REQ-HRV-049) -->
+    <string name="morning_hrv_optical_guidance_title">Optische PPI (Verity Sense)</string>
+    <string name="morning_hrv_optical_guidance_desc">Blijf volledig stil met de armband stevig tegen de huid. Wordt opgeslagen in een aparte optische basislijn zodat ECG-borstbandtrends zuiver blijven.</string>
+    <string name="morning_hrv_optical_artifact_warning_desc">Optisch contact- of bewegingsartefactpercentage overschrijdt 5%% (%1$.1f%%). Houd je arm volledig stil en controleer het stevige huidcontact van de armband.</string>
+    <string name="hrv_modality_ecg_short">ECG</string>
+    <string name="hrv_modality_optical_ppi_short">Optisch (PPI)</string>
+    <string name="hrv_modality_optical_ppi_badge">Optische PPI</string>
 </resources>
