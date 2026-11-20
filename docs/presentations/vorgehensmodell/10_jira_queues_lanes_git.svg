@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-d10">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="74" fill="#0F172A"/>
+  <rect x="0" y="71" width="1600" height="3" fill="#4338CA"/>
+  <rect x="36" y="17" width="213" height="24" rx="12" fill="#4338CA"/>
+  <text x="142.6" y="33" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#FFFFFF" letter-spacing="0.6">10 · QUEUES, LANES &amp; GIT</text>
+  <text x="265" y="36" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="21.5" font-weight="800" fill="#FFFFFF">Deep-Dive: 3-Tier-Jira-Queues, 3-Lane-Parallelisierung &amp; Git-Worktrees</text>
+  <text x="36" y="60" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="500" fill="#94A3B8">Geschützte Human-Pseudo-Sprints (IDs 447 / 453 / 454), disjunkte Epic-Lanes mit POSIX flock &amp; Cross-Worktree Gradle Cache, Git-Strategie A</text>
+  <text x="1564" y="34" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#CBD5E1">aTrainingTracker · Agile Agentic ASPICE (AAA)</text>
+  <text x="1564" y="56" text-anchor="end" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="11" fill="#94A3B8">DOC-GOV-RULES v1.0.5 · DOC-MGT-SCHICHT v1.0.3 · 19.11.2026</text>
+
+  <g class="node" data-node="jira_queues">
+    <rect x="37.5" y="96.5" width="456" height="780" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="36" y="94" width="456" height="780" rx="14" fill="#EEF2FF" stroke="#A5B4FC" stroke-width="1.6"/>
+    <rect x="36" y="94" width="456" height="34" rx="14" fill="#4338CA"/>
+    <rect x="36" y="114" width="456" height="14" fill="#4338CA"/>
+    <text x="52" y="116" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">1. 3-Tier-Jira-Queues &amp; Human-Schutzzonen</text>
+    <text x="478" y="116" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Rule 9.1 · 7.6</text>
+  </g>
+  <g class="node" data-node="jira_queues">
+    <rect x="55.5" y="146.5" width="420" height="86" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="144" width="420" height="86" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+    <rect x="54" y="144" width="5" height="86" rx="2.5" fill="#475569"/>
+    <text x="69" y="167" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E293B">Tier 1 · Product Backlog</text>
+    <rect x="389.6" y="153" width="75.4" height="20" rx="10" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+    <text x="427.3" y="166.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E293B">PO-Vorrat</text>
+    <text x="69" y="186.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Ungeplante Features, Ideen, Bugs &amp; Follow-ups</text>
+    <text x="69" y="202.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Rule 5.1: Nach create-issue sofort stoppen (kein Eigenstart)</text>
+    <text x="69" y="218.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Kuratierung &amp; Priorisierung ausschließlich durch den PO</text>
+  </g>
+  <line x1="264" y1="230" x2="264" y2="272" stroke="#4338CA" stroke-width="2.0" marker-end="url(#arr-indigo)"/>
+  <rect x="131.0" y="243.5" width="266.0" height="16.5" rx="4" fill="#FFFFFF" fill-opacity="0.95" stroke="#A5B4FC" stroke-width="0.8"/>
+  <text x="264.0" y="255.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.6" font-weight="700" fill="#1E3A8A">Nur PO darf freigeben (Agenten verboten)</text>
+  <g class="node" data-node="queue_447">
+    <rect x="55.5" y="276.5" width="420" height="126" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="274" width="420" height="126" rx="10" fill="#FFFFFF" stroke="#4338CA" stroke-width="2.1"/>
+    <rect x="54" y="274" width="5" height="126" rx="2.5" fill="#4338CA"/>
+    <text x="69" y="297" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E3A8A">Tier 2 · Vom PO Freigegeben</text>
+    <rect x="409.4" y="283" width="55.6" height="20" rx="10" fill="#EEF2FF" stroke="#A5B4FC" stroke-width="1"/>
+    <text x="437.2" y="296.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E3A8A">ID 447</text>
+    <text x="69" y="316.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Permanenter Future-Pseudo-Sprint (Position unter Schichten)</text>
+    <text x="69" y="332.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Strikte Reihenfolge: ORDER BY rank ASC (nie fixes top[:X]!)</text>
+    <text x="69" y="348.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• human-execution Tickets werden automatisch übersprungen</text>
+    <text x="69" y="364.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Quelle für pack-sprint --lanes 3 --max-sp-per-lane 8</text>
+    <text x="69" y="380.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Agenten dürfen keine Backlog-Tickets hierher verschieben!</text>
+  </g>
+  <line x1="264" y1="400" x2="264" y2="444" stroke="#0D9488" stroke-width="2.0" marker-end="url(#arr-teal)"/>
+  <rect x="93.2" y="414.5" width="341.6" height="16.5" rx="4" fill="#FFFFFF" fill-opacity="0.95" stroke="#5EEAD4" stroke-width="0.8"/>
+  <text x="264.0" y="426.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.6" font-weight="700" fill="#115E59">pack-sprint (Greedy Bin-Packing · 3 disjunkte Epics)</text>
+  <g class="node" data-node="schicht_core">
+    <rect x="55.5" y="448.5" width="420" height="124" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="446" width="420" height="124" rx="10" fill="#FFFFFF" stroke="#0D9488" stroke-width="2.1"/>
+    <rect x="54" y="446" width="5" height="124" rx="2.5" fill="#0D9488"/>
+    <text x="69" y="469" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#115E59">Tier 3 · Aktive Schicht (YYYY-MM-DD_0x_Schicht)</text>
+    <rect x="415.0" y="455" width="50.0" height="20" rx="10" fill="#F0FDFA" stroke="#5EEAD4" stroke-width="1"/>
+    <text x="440.0" y="468.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#115E59">Aktiv</text>
+    <text x="69" y="488.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Übernimmt laufendes WIP via carryover-wip (Rule 2.3 Vorrang)</text>
+    <text x="69" y="504.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Füllt bis zu 3 disjunkte Epic-Lanes (≤ 8 SP / Lane)</text>
+    <text x="69" y="520.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Enthält pro Schicht genau 1 Schicht-Retro-Ticket</text>
+    <text x="69" y="536.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Übervolle Epics warten fair in ID 447 ohne andere zu blockieren</text>
+    <text x="69" y="552.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Stage-6-geprüfte Tickets warten hier bis Schichtwechsel</text>
+  </g>
+  <path d="M 155 570 L 155 622" fill="none" stroke="#059669" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-emerald)"/>
+  <rect x="81.9" y="590.0" width="146.2" height="17" rx="5" fill="#FFFFFF" fill-opacity="0.96" stroke="#6EE7B7" stroke-width="0.9"/>
+  <text x="155.0" y="602.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.6" font-weight="700" fill="#065F46">archive-po-acceptance</text>
+  <path d="M 373 570 L 373 622" fill="none" stroke="#D97706" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="6,4" marker-end="url(#arr-amber)"/>
+  <rect x="315.4" y="590.0" width="115.2" height="17" rx="5" fill="#FFFFFF" fill-opacity="0.96" stroke="#FCD34D" stroke-width="0.9"/>
+  <text x="373.0" y="602.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.6" font-weight="700" fill="#92400E">defer-systemtest</text>
+  <g class="node" data-node="queue_453">
+    <rect x="55.5" y="628.5" width="202" height="166" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="626" width="202" height="166" rx="10" fill="#FFFFFF" stroke="#059669" stroke-width="2.1"/>
+    <rect x="54" y="626" width="5" height="166" rx="2.5" fill="#059669"/>
+    <text x="69" y="649" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="700" fill="#065F46">PO Abnahme</text>
+    <rect x="191.4" y="635" width="55.6" height="20" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+    <text x="219.2" y="648.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#065F46">ID 453</text>
+    <text x="69" y="668.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Stage-6 PASS Tickets</text>
+    <text x="69" y="683.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Final Review (Human)</text>
+    <text x="69" y="699.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Label sprint-&lt;ID&gt;</text>
+    <text x="69" y="714.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• 0 künstl. WIP-Limit</text>
+    <text x="69" y="730.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Exklusive PO-Hoheit</text>
+    <text x="69" y="745.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Agenten-Zugriff tabu</text>
+  </g>
+  <g class="node" data-node="queue_454">
+    <rect x="273.5" y="628.5" width="202" height="166" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="272" y="626" width="202" height="166" rx="10" fill="#FFFFFF" stroke="#D97706" stroke-width="2.1"/>
+    <rect x="272" y="626" width="5" height="166" rx="2.5" fill="#D97706"/>
+    <text x="287" y="649" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="700" fill="#92400E">PO Systemtest</text>
+    <rect x="409.4" y="635" width="55.6" height="20" rx="10" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1"/>
+    <text x="437.2" y="648.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#92400E">ID 454</text>
+    <text x="287" y="668.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• human-execution</text>
+    <text x="287" y="683.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• SYS.5 Feld-/Outdoor-</text>
+    <text x="287" y="699.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">  &amp; Hardware-Tests</text>
+    <text x="287" y="714.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Nie in autonome</text>
+    <text x="287" y="730.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">  Schichten ziehen!</text>
+    <text x="287" y="745.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">• Agenten: read-only</text>
+  </g>
+  <rect x="54" y="806" width="420" height="52" rx="8" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+  <text x="264" y="827" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#5B21B6">Rollierendes Wochen Review &amp; Retro + Dual-Vendor Audits</text>
+  <text x="264" y="845" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" fill="#334155">Wird bei jedem Schichtwechsel automatisch via post-weekly-rollup gefüttert</text>
+  <g class="node" data-node="lanes">
+    <rect x="515.5" y="96.5" width="542" height="780" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="514" y="94" width="542" height="780" rx="14" fill="#F0FDFA" stroke="#5EEAD4" stroke-width="1.6"/>
+    <rect x="514" y="94" width="542" height="34" rx="14" fill="#0D9488"/>
+    <rect x="514" y="114" width="542" height="14" fill="#0D9488"/>
+    <text x="530" y="116" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">2. Hub-and-Spoke 3-Lane-Ausführung &amp; Worktrees</text>
+    <text x="1042" y="116" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Rule 7.2 · 7.8 · 9.2 · 9.3</text>
+  </g>
+  <g class="node" data-node="coordinator">
+    <rect x="535.5" y="146.5" width="502" height="92" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="534" y="144" width="502" height="92" rx="10" fill="#FFFFFF" stroke="#0D9488" stroke-width="2.1"/>
+    <rect x="534" y="144" width="5" height="92" rx="2.5" fill="#0D9488"/>
+    <text x="549" y="167" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#115E59">Schichtführer / Coordinator (Hub)</text>
+    <rect x="925.2" y="153" width="101.8" height="20" rx="10" fill="#F0FDFA" stroke="#5EEAD4" stroke-width="1"/>
+    <text x="976.1" y="166.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#115E59">Hub-and-Spoke</text>
+    <text x="549" y="186.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Reaktive Turn-Grenzen: Subagent-Dispatch als letzter Tool-Call (Rule 7.8)</text>
+    <text x="549" y="202.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Watchdog-Timer: exakt 1× schedule(1200s) je Dispatch (Rule 7.9)</text>
+    <text x="549" y="218.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Strenges Verbot von Peer-to-Peer-Kommunikation zwischen Subagenten</text>
+  </g>
+  <line x1="614" y1="236" x2="614" y2="268" stroke="#0D9488" stroke-width="1.9" marker-end="url(#arr-teal)"/>
+  <line x1="785" y1="236" x2="785" y2="268" stroke="#0D9488" stroke-width="1.9" marker-end="url(#arr-teal)"/>
+  <line x1="956" y1="236" x2="956" y2="268" stroke="#0D9488" stroke-width="1.9" marker-end="url(#arr-teal)"/>
+  <g class="node" data-node="lanes">
+    <rect x="535.5" y="272.5" width="158" height="214" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="534" y="270" width="158" height="214" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <text x="546" y="293" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="700" fill="#1E40AF">Lane A · ATT-8138</text>
+    <text x="546" y="312.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#1E40AF">ASPICE &amp; Tooling</tspan></text>
+    <text x="546" y="328.5" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#2563EB">Workspace: share</text>
+    <text x="546" y="345.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">Detached HEAD</text>
+    <text x="546" y="361.5" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#2563EB">feature/ATT-A</text>
+    <line x1="546" y1="372.0" x2="680" y2="372.0" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="546" y="384.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">agent1 ⇄ agent2</text>
+    <text x="546" y="400.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">Flash / Pro*</text>
+    <text x="546" y="417.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">≤ 8 SP / Schicht</text>
+  </g>
+  <g class="node" data-node="lanes">
+    <rect x="707.5" y="272.5" width="158" height="214" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="706" y="270" width="158" height="214" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <text x="718" y="293" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="700" fill="#1E40AF">Lane B · Disjunkt</text>
+    <text x="718" y="312.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#1E40AF">Produkt-Epic 1</tspan></text>
+    <text x="718" y="328.5" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#2563EB">Workspace: share</text>
+    <text x="718" y="345.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">Detached HEAD</text>
+    <text x="718" y="361.5" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#2563EB">feature/ATT-B</text>
+    <line x1="718" y1="372.0" x2="852" y2="372.0" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="718" y="384.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">agent1 ⇄ agent2</text>
+    <text x="718" y="400.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">Flash / Pro*</text>
+    <text x="718" y="417.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">≤ 8 SP / Schicht</text>
+  </g>
+  <g class="node" data-node="lanes">
+    <rect x="879.5" y="272.5" width="158" height="214" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="878" y="270" width="158" height="214" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <text x="890" y="293" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="700" fill="#1E40AF">Lane C · Disjunkt</text>
+    <text x="890" y="312.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#1E40AF">Produkt-Epic 2</tspan></text>
+    <text x="890" y="328.5" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#2563EB">Workspace: share</text>
+    <text x="890" y="345.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">Detached HEAD</text>
+    <text x="890" y="361.5" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#2563EB">feature/ATT-C</text>
+    <line x1="890" y1="372.0" x2="1024" y2="372.0" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="890" y="384.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">agent1 ⇄ agent2</text>
+    <text x="890" y="400.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">Flash / Pro*</text>
+    <text x="890" y="417.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">≤ 8 SP / Schicht</text>
+  </g>
+  <rect x="534" y="498" width="502" height="44" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+  <text x="785" y="517" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#1E40AF">Konfliktfreiheits-Invariante: 0 Package-Overlap · 0 Living-Doc-Shard-Overlap</text>
+  <text x="785" y="534" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" fill="#334155">Domain-partitionierte Localization-Dateien: values*/strings_&lt;domain&gt;.xml (Rule 9.4)</text>
+  <line x1="614" y1="542" x2="614" y2="574" stroke="#D97706" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <line x1="785" y1="542" x2="785" y2="574" stroke="#D97706" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <line x1="956" y1="542" x2="956" y2="574" stroke="#D97706" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <g class="node" data-node="flock_cache">
+    <rect x="535.5" y="578.5" width="502" height="138" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="534" y="576" width="502" height="138" rx="10" fill="#FFFFFF" stroke="#D97706" stroke-width="2.1"/>
+    <rect x="534" y="576" width="5" height="138" rx="2.5" fill="#D97706"/>
+    <text x="549" y="599" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#92400E">POSIX flock Serialisierung &amp; Deterministischer Merge</text>
+    <rect x="918.6" y="585" width="108.4" height="20" rx="10" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1"/>
+    <text x="972.8" y="598.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#92400E">Rule 8.6 / 9.3</text>
+    <text x="549" y="618.0" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.6" font-weight="600" fill="#D97706">Lock-Datei: /tmp/att_build_merge.lock (flock -w 600)</text>
+    <text x="549" y="634.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Serialisiert alle ./gradlew-Aufrufe, Emulator-Installs &amp; Merges</text>
+    <text x="549" y="651.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• parallel_sprint_lock.py --merge-ticket führt im Lock automatisch</text>
+    <text x="549" y="667.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">  verify_requirement_governance.py --sync-indexes aus (Rule 9.5)</text>
+    <text x="549" y="684.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">• Garantiert konfliktfreie Master-Index-Tabellen &amp; 1 Commit/Ticket</text>
+  </g>
+  <g class="node" data-node="flock_cache">
+    <rect x="535.5" y="730.5" width="502" height="130" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="534" y="728" width="502" height="130" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="534" y="728" width="5" height="130" rx="2.5" fill="#059669"/>
+    <text x="549" y="751" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#065F46">Cross-Worktree Gradle Build Cache (FROM-CACHE)</text>
+    <rect x="958.2" y="737" width="68.8" height="20" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+    <text x="992.6" y="750.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#065F46">Rule 8.6</text>
+    <text x="549" y="770.0" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.5" font-weight="600" fill="#059669">org.gradle.caching=true · Xmx4096m · Kotlin Daemon Xmx3072m</text>
+    <text x="549" y="786.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• Konstanter Debug versionNameSuffix (5.0.0-dev) ab Werk →</text>
+    <text x="549" y="802.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">  Stage 4, Gate 4 &amp; Stage 6 Cold Worktrees treffen FROM-CACHE!</text>
+    <text x="549" y="818.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• -PstampGitHash=true (5.0.0-dev-&lt;sha&gt;) strikt nur bei Pixel-10-Deploy</text>
+    <text x="549" y="834.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• 30 min warm Daemon · maxParallelForks = 2 · --rerun (nie --rerun-tasks)</text>
+  </g>
+  <g class="node" data-node="git_flow">
+    <rect x="1079.5" y="96.5" width="486" height="780" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="1078" y="94" width="486" height="780" rx="14" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.6"/>
+    <rect x="1078" y="94" width="486" height="34" rx="14" fill="#059669"/>
+    <rect x="1078" y="114" width="486" height="14" fill="#059669"/>
+    <text x="1094" y="116" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">3. Git-Branching-Topologie (Strategie A)</text>
+    <text x="1550" y="116" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">feature → sprint → develop</text>
+  </g>
+  <rect x="1097.5" y="146.5" width="450" height="546" rx="10" fill="#0F172A" fill-opacity="0.05"/>
+  <rect x="1096" y="144" width="450" height="546" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+  <g>
+    <rect x="1110" y="158" width="92" height="24" rx="12.0" fill="#059669" stroke="#059669" stroke-width="1.3"/>
+    <text x="1156.0" y="174.0" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="11" font-weight="700" fill="#FFFFFF">develop</text>
+  </g>
+  <g>
+    <rect x="1224" y="158" width="128" height="24" rx="12.0" fill="#0D9488" stroke="#0D9488" stroke-width="1.3"/>
+    <text x="1288.0" y="173.8" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.5" font-weight="700" fill="#FFFFFF">sprint/&lt;SCHICHT&gt;</text>
+  </g>
+  <g>
+    <rect x="1374" y="158" width="158" height="24" rx="12.0" fill="#2563EB" stroke="#2563EB" stroke-width="1.3"/>
+    <text x="1453.0" y="173.8" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.5" font-weight="700" fill="#FFFFFF">feature/&lt;KEY&gt; (Worktree)</text>
+  </g>
+  <line x1="1156" y1="192" x2="1156" y2="668" stroke="#059669" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="1156" cy="210" r="7" fill="#059669" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="1144" y="214" text-anchor="end" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.5" font-weight="700" fill="#065F46">D0</text>
+  <path d="M 1156 210 C 1156 240, 1288 225, 1288 252 L 1288 510 C 1288 538, 1156 525, 1156 554" fill="none" stroke="#0D9488" stroke-width="3.5"/>
+  <rect x="1298" y="230" width="66" height="20" rx="5" fill="#F0FDFA" stroke="#5EEAD4"/>
+  <text x="1331" y="244" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10" font-weight="700" fill="#115E59">01_Früh</text>
+  <path d="M 1288 264 C 1288 284, 1444 274, 1444 296 L 1444 352 C 1444 374, 1288 364, 1288 384" fill="none" stroke="#2563EB" stroke-width="2.8"/>
+  <circle cx="1444" cy="302" r="5.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1456" y="306" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" fill="#334155">S1–S4 Commits</text>
+  <circle cx="1444" cy="332" r="5.5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1456" y="336" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" fill="#334155">S5 Test (intakt)</text>
+  <circle cx="1444" cy="356" r="6" fill="#E11D48" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1456" y="360" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#9F1239">Stage 6 PASS</text>
+  <circle cx="1288" cy="384" r="7" fill="#0D9488" stroke="#FFFFFF" stroke-width="2.5"/>
+  <rect x="1182" y="372" width="96" height="22" rx="5" fill="#F0FDFA" stroke="#5EEAD4"/>
+  <text x="1230" y="386.5" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="9.8" font-weight="700" fill="#115E59">1 Squash</text>
+  <path d="M 1288 404 C 1288 420, 1444 412, 1444 430 L 1444 480 C 1444 498, 1288 490, 1288 504" fill="none" stroke="#E11D48" stroke-width="2.8"/>
+  <circle cx="1444" cy="442" r="5.5" fill="#E11D48" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1456" y="446" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#9F1239">S6 BOUNCE → Fix</text>
+  <circle cx="1444" cy="472" r="5.5" fill="#059669" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1456" y="476" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#065F46">Re-Audit PASS</text>
+  <circle cx="1288" cy="504" r="7" fill="#0D9488" stroke="#FFFFFF" stroke-width="2.5"/>
+  <circle cx="1156" cy="554" r="8" fill="#059669" stroke="#FFFFFF" stroke-width="2.5"/>
+  <rect x="1172" y="538" width="234" height="32" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.2"/>
+  <text x="1289" y="552" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.3" font-weight="700" fill="#065F46">--no-ff Merge + Tag</text>
+  <text x="1289" y="565" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="9.8" fill="#334155">Lean Tier-2 ✓ · Retro ✓ · Archive → 453</text>
+  <path d="M 1156 574 C 1156 598, 1288 588, 1288 612 L 1288 668" fill="none" stroke="#0D9488" stroke-width="3.5" stroke-dasharray="7,4"/>
+  <circle cx="1288" cy="620" r="6.5" fill="#0D9488" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1302" y="618" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11" font-weight="700" fill="#115E59">Direkter Start: 02_Spät</text>
+  <text x="1302" y="633" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.2" fill="#334155">carryover-wip + pack-sprint</text>
+  <circle cx="1156" cy="656" r="6.5" fill="#7C3AED" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="1170" y="660" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="700" fill="#5B21B6">release/V5.0.0</text>
+  <g class="node" data-node="git_flow">
+    <rect x="1097.5" y="708.5" width="450" height="152" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="1096" y="706" width="450" height="152" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+    <rect x="1096" y="706" width="5" height="152" rx="2.5" fill="#475569"/>
+    <text x="1111" y="729" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E293B">Git-, Hook- &amp; Submodul-Hygiene (SUP.9 / Rule 9.2)</text>
+    <rect x="1448.4" y="715" width="88.6" height="20" rx="10" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+    <text x="1492.7" y="728.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E293B">REQ-PRO-121</text>
+    <text x="1111" y="748.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• .githooks/commit-msg erzwingt ATT-\d+ Referenz je Commit</text>
+    <text x="1111" y="764.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• .githooks/pre-commit &amp; CI blockieren Git-Konfliktmarker</text>
+    <text x="1111" y="781.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• feature/&lt;KEY&gt; wird nach Squash gelöscht (git branch -D)</text>
+    <text x="1111" y="797.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• Keine Symlinks auf ANT-Android-SDKs; kein git add -A darauf</text>
+    <text x="1111" y="814.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• Ungeprüfte/gebouncte Arbeit landet niemals auf sprint/*</text>
+  </g>
+</svg>

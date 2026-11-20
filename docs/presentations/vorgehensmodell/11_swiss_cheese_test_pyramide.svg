@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-d11">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="74" fill="#0F172A"/>
+  <rect x="0" y="71" width="1600" height="3" fill="#7C3AED"/>
+  <rect x="36" y="17" width="190" height="24" rx="12" fill="#7C3AED"/>
+  <text x="130.9" y="33" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#FFFFFF" letter-spacing="0.6">11 · QUALITÄT &amp; TESTS</text>
+  <text x="242" y="36" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="21.5" font-weight="800" fill="#FFFFFF">Deep-Dive: Swiss-Cheese-Abwehr, 3-Stufen-Testpyramide &amp; Gerätepolitik</text>
+  <text x="36" y="60" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="500" fill="#94A3B8">Statistisch dekorrelierte Qualitätsschichten (p₁·…·p₅), zweistufige Emulations-/Hardware-Policy &amp; 100 % Living-Docs-Parität (Rule 3.5, 7.5, 7.6, 8.9)</text>
+  <text x="1564" y="34" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#CBD5E1">aTrainingTracker · Agile Agentic ASPICE (AAA)</text>
+  <text x="1564" y="56" text-anchor="end" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="11" fill="#94A3B8">DOC-GOV-RULES v1.0.5 · DOC-MGT-SCHICHT v1.0.3 · 19.11.2026</text>
+
+  <g class="node" data-node="swiss_cheese">
+    <rect x="37.5" y="96.5" width="746" height="780" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="36" y="94" width="746" height="780" rx="14" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.6"/>
+    <rect x="36" y="94" width="746" height="34" rx="14" fill="#7C3AED"/>
+    <rect x="36" y="114" width="746" height="14" fill="#7C3AED"/>
+    <text x="52" y="116" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">5-Schichten Swiss-Cheese-Verteidigungsmodell</text>
+    <text x="768" y="116" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">P(Escape) = p₁ · p₂ · p₃ · p₄ · p₅</text>
+  </g>
+  <rect x="54" y="140" width="710" height="88" rx="10" fill="#FFFFFF" stroke="#C4B5FD" stroke-width="1.2"/>
+  <text x="68" y="176" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#9F1239">Defekt /</text>
+  <text x="68" y="191" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#9F1239">Blindspot</text>
+  <line x1="130" y1="184" x2="424" y2="184" stroke="#E11D48" stroke-width="2.6" stroke-dasharray="5,3"/>
+  <circle cx="428" cy="184" r="5.5" fill="#E11D48"/>
+  <rect x="179" y="150" width="32" height="54" rx="5" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+  <circle cx="195" cy="184" r="6.5" fill="#FFFFFF" stroke="#2563EB" stroke-width="1.4"/>
+  <text x="195" y="220" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="800" fill="#1E40AF">p₁</text>
+  <rect x="299" y="150" width="32" height="54" rx="5" fill="#FFFBEB" stroke="#D97706" stroke-width="2"/>
+  <circle cx="315" cy="184" r="6.5" fill="#FFFFFF" stroke="#D97706" stroke-width="1.4"/>
+  <text x="315" y="220" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="800" fill="#92400E">p₂</text>
+  <rect x="429" y="150" width="32" height="54" rx="5" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <circle cx="445" cy="162" r="6.5" fill="#FFFFFF" stroke="#E11D48" stroke-width="1.4"/>
+  <text x="445" y="220" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="800" fill="#9F1239">p₃</text>
+  <rect x="549" y="150" width="32" height="54" rx="5" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <circle cx="565" cy="196" r="6.5" fill="#FFFFFF" stroke="#059669" stroke-width="1.4"/>
+  <text x="565" y="220" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="800" fill="#065F46">p₄</text>
+  <rect x="669" y="150" width="32" height="54" rx="5" fill="#F5F3FF" stroke="#7C3AED" stroke-width="2"/>
+  <circle cx="685" cy="164" r="6.5" fill="#FFFFFF" stroke="#7C3AED" stroke-width="1.4"/>
+  <text x="685" y="220" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="800" fill="#5B21B6">p₅</text>
+  <rect x="336" y="146" width="84" height="19" rx="5" fill="#E11D48"/>
+  <text x="378" y="159" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="9.8" font-weight="800" fill="#FFFFFF">ABGEFANGEN!</text>
+  <g class="node" data-node="swiss_cheese">
+    <rect x="55.5" y="242.5" width="710" height="92" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="240" width="710" height="92" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <rect x="54" y="240" width="5" height="92" rx="2.5" fill="#2563EB"/>
+    <text x="69" y="263" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="700" fill="#1E40AF">Schicht 1 (p₁) · Executing Agent (agent1)</text>
+    <rect x="686.2" y="249" width="68.8" height="20" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+    <text x="720.6" y="262.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E40AF">Sub-Task</text>
+    <text x="69" y="282.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Bounded Stage-Skill, Kotlin-Compiler, inkrementelle Tier-1 Unit-Tests (--rerun),</text>
+    <text x="69" y="298.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">4-Punkte Visual Self-Check (Rule 8.5) &amp; Living-Doc-Statuspflege.</text>
+  </g>
+  <g class="node" data-node="swiss_cheese">
+    <rect x="55.5" y="342.5" width="710" height="92" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="340" width="710" height="92" rx="10" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.3"/>
+    <rect x="54" y="340" width="5" height="92" rx="2.5" fill="#D97706"/>
+    <text x="69" y="363" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="700" fill="#92400E">Schicht 2 (p₂) · Unabhängiger Gate Reviewer (agent2)</text>
+    <rect x="679.6" y="349" width="75.4" height="20" rx="10" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1"/>
+    <text x="717.3" y="362.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#92400E">Gates 1–5</text>
+    <text x="69" y="382.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Eigene Jira-Rolle (.env.jira.agent2), kein Self-Review (REQ-PRO-107.1),</text>
+    <text x="69" y="398.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Gate-3 Code Lock, Chesterton&#x27;s Fence &amp; Requirement-Governance-Prüfung.</text>
+  </g>
+  <g class="node" data-node="swiss_cheese">
+    <rect x="55.5" y="442.5" width="710" height="92" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="440" width="710" height="92" rx="10" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+    <rect x="54" y="440" width="5" height="92" rx="2.5" fill="#E11D48"/>
+    <text x="69" y="463" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="700" fill="#9F1239">Schicht 3 (p₃) · Stage 6 Cold Final Review</text>
+    <rect x="659.8" y="449" width="95.2" height="20" rx="10" fill="#FFF1F2" stroke="#FDA4AF" stroke-width="1"/>
+    <text x="707.4" y="462.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#9F1239">Zero-Context</text>
+    <text x="69" y="482.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Frischer Subagent ohne Stage-1–5-Kontext · Anti-Anchoring (Diff zuerst!),</text>
+    <text x="69" y="498.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Live-Verifikation auf emulator-5554 + Simulator + Screenshot-Kritik · 3 Bounces.</text>
+  </g>
+  <g class="node" data-node="swiss_cheese">
+    <rect x="55.5" y="542.5" width="710" height="92" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="540" width="710" height="92" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="54" y="540" width="5" height="92" rx="2.5" fill="#059669"/>
+    <text x="69" y="563" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="700" fill="#065F46">Schicht 4 (p₄) · Schichtwechsel &amp; Human Decision Gate</text>
+    <rect x="679.6" y="549" width="75.4" height="20" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+    <text x="717.3" y="562.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#065F46">PO-Hoheit</text>
+    <text x="69" y="582.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Lean Tier-2 Integration Gate, Best-Effort Pixel-10-Deploy (5.0.0-dev-&lt;sha&gt;),</text>
+    <text x="69" y="598.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">exklusive PO-Abnahme (ID 453) &amp; physische Feld-/Systemtests (ID 454).</text>
+  </g>
+  <g class="node" data-node="swiss_cheese">
+    <rect x="55.5" y="642.5" width="710" height="92" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="640" width="710" height="92" rx="10" fill="#FFFFFF" stroke="#C4B5FD" stroke-width="1.3"/>
+    <rect x="54" y="640" width="5" height="92" rx="2.5" fill="#7C3AED"/>
+    <text x="69" y="663" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="700" fill="#5B21B6">Schicht 5 (p₅) · Weekly Dual-Vendor Cross-Audits (Rule 3.5)</text>
+    <rect x="640.0" y="649" width="115.0" height="20" rx="10" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1"/>
+    <text x="697.5" y="662.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#5B21B6">Gemini + Claude</text>
+    <text x="69" y="682.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Wöchentliche Doppelprüfung durch Google Gemini &amp; Anthropic Claude:</text>
+    <text x="69" y="698.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">ASPICE 4.0 Process Cross-Audit + Holistic Subsystem Code &amp; Architecture Review.</text>
+  </g>
+  <g class="node" data-node="sup9">
+    <rect x="55.5" y="750.5" width="710" height="110" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="748" width="710" height="110" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+    <rect x="54" y="748" width="5" height="110" rx="2.5" fill="#475569"/>
+    <text x="69" y="771" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#1E293B">SUP.9 Problem-Resolution &amp; Escape-Tracking (REQ-PRO-121)</text>
+    <rect x="659.8" y="757" width="95.2" height="20" rx="10" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+    <text x="707.4" y="770.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E293B">ASPICE SUP.9</text>
+    <text x="69" y="790.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E293B">4-Stufen Severity:</tspan> Critical (Release-Blocker) · Major (Sprint-Blocker) · Minor · Cosmetic</text>
+    <text x="69" y="806.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E293B">Crash/ANR-Invariante:</tspan> niemals auf Minor/Cosmetic herabstufen</text>
+    <text x="69" y="823.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.3" font-weight="400" fill="#334155">• Gate-REVISION &amp; CI-Fehler erzeugen deduplizierte process-escape Bugs (jira_util.py)</text>
+  </g>
+  <g class="node" data-node="test_pyramid">
+    <rect x="805.5" y="96.5" width="760" height="418" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="804" y="94" width="760" height="418" rx="14" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.6"/>
+    <rect x="804" y="94" width="760" height="34" rx="14" fill="#2563EB"/>
+    <rect x="804" y="114" width="760" height="14" fill="#2563EB"/>
+    <text x="820" y="116" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">3-Stufen-Test- &amp; Verifikations-Pyramide (Rule 7.5)</text>
+    <text x="1550" y="116" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Schnell im Ticket · Tief im Takt</text>
+  </g>
+  <g class="node" data-node="test_tier3"><polygon points="1034,144 1334,144 1396,254 972,254" fill="#F5F3FF" stroke="#7C3AED" stroke-width="2"/><text x="1184" y="170" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#5B21B6">Tier 3 · Wöchentlich &amp; Release</text><text x="1184" y="191" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="11" font-weight="600" fill="#5B21B6">Voll-Suite · lint · detekt · kover</text><text x="1184" y="211" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11" fill="#334155">Dual-Vendor Reviews (Gemini + Claude)</text><text x="1184" y="229" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" fill="#334155">kover nur als Szenario-Lücken-Diagnose!</text></g>
+  <g class="node" data-node="test_tier2"><polygon points="962,264 1406,264 1474,376 894,376" fill="#F0FDFA" stroke="#0D9488" stroke-width="2"/><text x="1184" y="290" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#115E59">Lean Tier 2 · Pro Schichtwechsel (05:00 / 15:00 / 22:00)</text><text x="1184" y="311" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.8" font-weight="600" fill="#115E59">assembleDebug · compileDebugAndroidTestKotlin · --rerun</text><text x="1184" y="331" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" fill="#334155">Sprint-Touched + build.* (Contracts) + integration.* + localization.*</text><text x="1184" y="350" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" fill="#334155">verify_requirement_governance.py · Python tools/test_*.py · Safety-Linter</text></g>
+  <g class="node" data-node="test_tier1"><polygon points="884,386 1484,386 1546,496 822,496" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/><text x="1184" y="413" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#1E40AF">Tier 1 · Pro Ticket in Stage 4 / Gate 4 / Stage 6 (~15–60 s)</text><text x="1184" y="434" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="11" font-weight="600" fill="#1E40AF">./gradlew :app:testDebugUnitTest --rerun --tests &lt;TicketSuites&gt;</text><text x="1184" y="455" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" fill="#334155">Cross-Worktree FROM-CACHE · NIEMALS --rerun-tasks (spart 6–8 min/Lauf!)</text><text x="1184" y="474" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" fill="#334155">Stage 5 / Gate 5: Null redundante Gradle-Läufe bei unverändertem Code-SHA</text></g>
+  <g class="node" data-node="device_policy">
+    <rect x="805.5" y="534.5" width="760" height="342" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="804" y="532" width="760" height="342" rx="14" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.6"/>
+    <rect x="804" y="532" width="760" height="34" rx="14" fill="#059669"/>
+    <rect x="804" y="552" width="760" height="14" fill="#059669"/>
+    <text x="820" y="554" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">2-Stufen-Gerätepolitik (Rule 7.6) &amp; Living-Docs-Parität</text>
+    <text x="1550" y="554" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Emuliert vs. Physisch · Traceability</text>
+  </g>
+  <g class="node" data-node="device_policy">
+    <rect x="823.5" y="582.5" width="354" height="152" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="822" y="580" width="354" height="152" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <rect x="822" y="580" width="5" height="152" rx="2.5" fill="#2563EB"/>
+    <text x="837" y="603" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#1E40AF">Tier A · Emulator (Agenten)</text>
+    <rect x="1071.8" y="589" width="95.2" height="20" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+    <text x="1119.4" y="602.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E40AF">Phase 2 &amp; S6</text>
+    <text x="837" y="622.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• emulator-5554 (Pixel_8_Android_15)</text>
+    <text x="837" y="638.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Exklusiv für Stages 1–6 (agent_emulator.py)</text>
+    <text x="837" y="655.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Sensor-Simulatoren (BLE Radar, Mock-GPS)</text>
+    <text x="837" y="671.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Deterministische UI-Taps via uiautomator</text>
+    <text x="837" y="688.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Live screencap → read_file Prüfung</text>
+  </g>
+  <g class="node" data-node="device_policy">
+    <rect x="1193.5" y="582.5" width="354" height="152" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="1192" y="580" width="354" height="152" rx="10" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.3"/>
+    <rect x="1192" y="580" width="5" height="152" rx="2.5" fill="#D97706"/>
+    <text x="1207" y="603" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#92400E">Tier B · Pixel 10 (PO-Gerät)</text>
+    <rect x="1441.8" y="589" width="95.2" height="20" rx="10" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1"/>
+    <text x="1489.4" y="602.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#92400E">Schicht / PO</text>
+    <text x="1207" y="622.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#92400E">Agenten-Schreibverbot in Phase 2!</tspan></text>
+    <text x="1207" y="638.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Rule 7.7: Nie uninstall / pm clear ohne</text>
+    <text x="1207" y="655.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">  PO-Bestätigung &amp; .attbackup-Sicherung</text>
+    <text x="1207" y="671.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Schichtwechsel: Best-Effort 5.0.0-dev-&lt;sha&gt;</text>
+    <text x="1207" y="688.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Exklusive PO-Feldtests → Queue ID 454</text>
+  </g>
+  <g class="node" data-node="living_docs">
+    <rect x="823.5" y="748.5" width="724" height="112" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="822" y="746" width="724" height="112" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="822" y="746" width="5" height="112" rx="2.5" fill="#059669"/>
+    <text x="837" y="769" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#065F46">Evidenzbasierte Living-Docs-Parität &amp; Code-Grounding (Rule 8.7 – 8.9)</text>
+    <rect x="1435.2" y="755" width="101.8" height="20" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+    <text x="1486.1" y="768.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#065F46">100 % Parität</text>
+    <text x="837" y="788.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#065F46">Bidirektionale Traceability:</tspan> SYSREQ-<tspan font-style="italic"> (SYS.2) ↔ REQ-</tspan> (16 Shards) ↔ TST-* (SWE.4–6)</text>
+    <text x="837" y="804.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#065F46">Exakte 4-Spalten-Parität:</tspan> Total = [Verified] + [Implemented] + [Planned] (--sync-indexes)</text>
+    <text x="837" y="821.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="400" fill="#334155">• Kontinuierliche SWE.2 Architektur-Pflege in docs/architecture.md · Verifiziert via AspiceSweAuditContractTest</text>
+  </g>
+</svg>

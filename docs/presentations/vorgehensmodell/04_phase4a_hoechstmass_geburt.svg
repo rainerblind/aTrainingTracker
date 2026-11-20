@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-d04">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="74" fill="#0F172A"/>
+  <rect x="0" y="71" width="1600" height="3" fill="#D97706"/>
+  <rect x="36" y="17" width="174" height="24" rx="12" fill="#D97706"/>
+  <text x="123.1" y="33" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="700" fill="#FFFFFF" letter-spacing="0.6">04 · STUFE 4a VON 5</text>
+  <text x="226" y="36" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="21.5" font-weight="800" fill="#FFFFFF">Phase 4a: Höchstmaß — Geburt von Agile Agentic ASPICE (AAA)</text>
+  <text x="36" y="60" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.5" font-weight="500" fill="#94A3B8">September 2026: Der Paradigmenwechsel vom „schnellen Coden“ zu bewussten Stolpersteinen, Gate-3 Code Lock, Chesterton&#x27;s Fence &amp; Zipper-Prinzip</text>
+  <text x="1564" y="34" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12" font-weight="600" fill="#CBD5E1">aTrainingTracker · Agile Agentic ASPICE (AAA)</text>
+  <text x="1564" y="56" text-anchor="end" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="11" fill="#94A3B8">DOC-GOV-RULES v1.0.5 · DOC-MGT-SCHICHT v1.0.3 · 19.11.2026</text>
+
+  <g class="node" data-node="evolution_timeline">
+    <rect x="36" y="86" width="238" height="44" rx="9" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+    <text x="155.0" y="105" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#065F46">✓ 1. Vibe-Coding</text>
+    <text x="155.0" y="121" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#64748B">Bis Jun 2026</text>
+  </g>
+  <line x1="276" y1="108" x2="292" y2="108" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-emerald)"/>
+  <g class="node" data-node="evolution_timeline">
+    <rect x="294" y="86" width="238" height="44" rx="9" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+    <text x="413.0" y="105" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#065F46">✓ 2. Augenmaß</text>
+    <text x="413.0" y="121" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#64748B">Jun 2026</text>
+  </g>
+  <line x1="534" y1="108" x2="550" y2="108" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-emerald)"/>
+  <g class="node" data-node="evolution_timeline">
+    <rect x="552" y="86" width="238" height="44" rx="9" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+    <text x="671.0" y="105" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#065F46">✓ 3. Sorgfältig</text>
+    <text x="671.0" y="121" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#64748B">Jun – Aug 2026</text>
+  </g>
+  <line x1="792" y1="108" x2="808" y2="108" stroke="#059669" stroke-width="1.8" marker-end="url(#arr-emerald)"/>
+  <g class="node" data-node="evolution_timeline">
+    <rect x="810" y="86" width="238" height="44" rx="9" fill="#D97706" stroke="#92400E" stroke-width="2"/>
+    <text x="929.0" y="105" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#FFFFFF">● 4a. Höchstmaß</text>
+    <text x="929.0" y="121" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#E2E8F0">Sep 2026</text>
+  </g>
+  <line x1="1050" y1="108" x2="1066" y2="108" stroke="#D97706" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <g class="node" data-node="evolution_timeline">
+    <rect x="1068" y="86" width="238" height="44" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2"/>
+    <text x="1187.0" y="105" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#64748B">4b. Skalierung</text>
+    <text x="1187.0" y="121" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#64748B">Okt – 15. Nov</text>
+  </g>
+  <line x1="1308" y1="108" x2="1324" y2="108" stroke="#475569" stroke-width="1.8" marker-end="url(#arr-slate)"/>
+  <g class="node" data-node="evolution_timeline">
+    <rect x="1326" y="86" width="238" height="44" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2"/>
+    <text x="1445.0" y="105" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.2" font-weight="700" fill="#64748B">5. Schichtbetrieb</text>
+    <text x="1445.0" y="121" text-anchor="middle" font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-size="10.2" font-weight="600" fill="#64748B">Ab 17. Nov · AKTIV</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="37.5" y="148.5" width="950" height="266" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="36" y="146" width="950" height="266" rx="14" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.6"/>
+    <rect x="36" y="146" width="950" height="34" rx="14" fill="#D97706"/>
+    <rect x="36" y="166" width="950" height="14" fill="#D97706"/>
+    <text x="52" y="168" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">Funktionsprinzip: Die 5-Stage ASPICE-Kaskade + Gate-3 Code Lock (Strategie A)</text>
+    <text x="972" y="168" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Sep 2026 · 1.055 Commits</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="55.5" y="200.5" width="162" height="82" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="198" width="162" height="82" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <text x="66" y="221" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.6" font-weight="700" fill="#1E40AF">S1 Analysis</text>
+    <rect x="157.0" y="207" width="50.0" height="20" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+    <text x="182.0" y="220.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E40AF">G1</text>
+    <text x="66" y="240.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">Root Cause &amp;</text>
+    <text x="66" y="255.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">Chesterton</text>
+  </g>
+  <line x1="217" y1="239" x2="234" y2="239" stroke="#2563EB" stroke-width="1.8" marker-end="url(#arr-blue)"/>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="237.5" y="200.5" width="162" height="82" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="236" y="198" width="162" height="82" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <text x="248" y="221" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.6" font-weight="700" fill="#1E40AF">S2 Test Spec</text>
+    <rect x="339.0" y="207" width="50.0" height="20" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+    <text x="364.0" y="220.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E40AF">G2</text>
+    <text x="248" y="240.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">REQ ↔ TST</text>
+    <text x="248" y="255.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">Given-When</text>
+  </g>
+  <line x1="399" y1="239" x2="416" y2="239" stroke="#2563EB" stroke-width="1.8" marker-end="url(#arr-blue)"/>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="419.5" y="200.5" width="162" height="82" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="418" y="198" width="162" height="82" rx="10" fill="#FFFBEB" stroke="#D97706" stroke-width="2.1"/>
+    <text x="430" y="221" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.6" font-weight="700" fill="#92400E">S3 Impl Plan</text>
+    <rect x="521.0" y="207" width="50.0" height="20" rx="10" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1"/>
+    <text x="546.0" y="220.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#92400E">G3</text>
+    <text x="430" y="240.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">SWE.2 Plan</text>
+    <text x="430" y="255.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#92400E">CODE LOCK</tspan></text>
+  </g>
+  <line x1="581" y1="239" x2="598" y2="239" stroke="#D97706" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="601.5" y="200.5" width="162" height="82" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="600" y="198" width="162" height="82" rx="10" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.3"/>
+    <text x="612" y="221" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.6" font-weight="700" fill="#1E40AF">S4 Impl</text>
+    <rect x="703.0" y="207" width="50.0" height="20" rx="10" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+    <text x="728.0" y="220.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E40AF">G4</text>
+    <text x="612" y="240.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">Code + Tests</text>
+    <text x="612" y="255.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">erst nach G3!</text>
+  </g>
+  <line x1="763" y1="239" x2="780" y2="239" stroke="#2563EB" stroke-width="1.8" marker-end="url(#arr-blue)"/>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="783.5" y="200.5" width="162" height="82" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="782" y="198" width="162" height="82" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <text x="794" y="221" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.6" font-weight="700" fill="#065F46">S5 Test</text>
+    <rect x="885.0" y="207" width="50.0" height="20" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1"/>
+    <text x="910.0" y="220.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#065F46">G5</text>
+    <text x="794" y="240.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">Walkthrough</text>
+    <text x="794" y="255.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.8" font-weight="400" fill="#334155">[Verified]</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="55.5" y="298.5" width="444" height="98" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="54" y="296" width="444" height="98" rx="10" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.3"/>
+    <rect x="54" y="296" width="5" height="98" rx="2.5" fill="#4338CA"/>
+    <text x="69" y="319" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="700" fill="#1E3A8A">Asymmetrisches Zipper-Prinzip (agent1 ⇄ agent2)</text>
+    <text x="69" y="338.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E3A8A">agent1</tspan> erstellt Artefakte (<tspan font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-weight="600" fill="#1E3A8A">submit-stage</tspan>)</text>
+    <text x="69" y="353.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E3A8A">agent2</tspan> prüft streng am Gate (<tspan font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-weight="600" fill="#1E3A8A">gate-verdict PASS|REVISION</tspan>)</text>
+    <text x="69" y="369.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">• Kein Agent prüft jemals seine eigene Arbeit!</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="515.5" y="298.5" width="452" height="98" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="514" y="296" width="452" height="98" rx="10" fill="#FFFFFF" stroke="#5EEAD4" stroke-width="1.3"/>
+    <rect x="514" y="296" width="5" height="98" rx="2.5" fill="#0D9488"/>
+    <text x="529" y="319" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="700" fill="#115E59">Mensch steuert Sprint (Ceremony 1 &amp; 2)</text>
+    <text x="529" y="338.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#115E59">03.09.:</tspan> Dual-Agent Sub-Task Workflow eingeführt</text>
+    <text x="529" y="353.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#115E59">13.09.:</tspan> 4-Pillar Defense gegen vorzeitiges Coden (<tspan font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-weight="600" fill="#115E59">Gate 3</tspan>)</text>
+    <text x="529" y="369.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.0" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#115E59">28.09.:</tspan> Erster <tspan font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-weight="600" fill="#115E59">sprint/2026-40.2</tspan> Branch (Strategie A)</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="1007.5" y="148.5" width="558" height="266" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="1006" y="146" width="558" height="266" rx="14" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.6"/>
+    <rect x="1006" y="146" width="558" height="34" rx="14" fill="#D97706"/>
+    <rect x="1006" y="166" width="558" height="14" fill="#D97706"/>
+    <text x="1022" y="168" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">Steckbrief &amp; reale Zahlen</text>
+    <text x="1550" y="168" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">September 2026</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="1025.5" y="196.5" width="522" height="202" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="1024" y="194" width="522" height="202" rx="10" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.3"/>
+    <rect x="1024" y="194" width="5" height="202" rx="2.5" fill="#D97706"/>
+    <text x="1039" y="217" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.6" font-weight="700" fill="#92400E">Der Durchbruch im September 2026</text>
+    <text x="1039" y="236.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#92400E">Zeitraum:</tspan> 03. – 30. September 2026 (<tspan font-weight="700" fill="#92400E">1.055 Commits</tspan> — 3× Sprung!)</text>
+    <text x="1039" y="258.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#92400E">Requirements:</tspan> Wachstum auf <tspan font-weight="700" fill="#92400E">313 → ~450 REQ-</tspan>*</text>
+    <text x="1039" y="280.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#92400E">Steuerung:</tspan> Mensch plant Sprint (C1) &amp; nimmt ab (C2); Agenten</text>
+    <text x="1039" y="302.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="400" fill="#334155">  arbeiten ganze Sprints autonom über Stages 1–5 ab</text>
+    <text x="1039" y="324.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="400" fill="#334155"><tspan font-weight="700" fill="#92400E">Schlüssel-Konzepte:</tspan> Stolpersteine, Gate-3 Code Lock,</text>
+    <text x="1039" y="346.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.5" font-weight="400" fill="#334155">  Chesterton&#x27;s Fence Archäologie &amp; Artefakt-Langzeitgedächtnis</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="37.5" y="430.5" width="752" height="306" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="36" y="428" width="752" height="306" rx="14" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.6"/>
+    <rect x="36" y="428" width="752" height="34" rx="14" fill="#059669"/>
+    <rect x="36" y="448" width="752" height="14" fill="#059669"/>
+    <text x="52" y="450" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">PROS — Was in dieser Phase hervorragend funktioniert</text>
+    <text x="774" y="450" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Stärken &amp; Gewinne</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="53.5" y="476.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="52" y="474" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="52" y="474" width="5" height="56" rx="2.5" fill="#059669"/>
+    <text x="67" y="497" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#065F46">+ Voreiliges Coden &amp; blinde Altlogik-Brüche gestoppt</text>
+    <text x="67" y="516.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Gate-3 Code Lock und Chesterton&#x27;s Fence zwingen die KI erst zum Verstehen, dann zum Planen, dann zum Coden.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="53.5" y="539.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="52" y="537" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="52" y="537" width="5" height="56" rx="2.5" fill="#059669"/>
+    <text x="67" y="560" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#065F46">+ Echter autonomer Sprint-Durchsatz (3× mehr Commits)</text>
+    <text x="67" y="579.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Statt einzelner Prompts arbeitet das Agenten-Paar ganze Sprint-Backlogs über Nacht sauber ab.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="53.5" y="602.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="52" y="600" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="52" y="600" width="5" height="56" rx="2.5" fill="#059669"/>
+    <text x="67" y="623" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#065F46">+ Reproduzierbares Langzeitgedächtnis in Markdown</text>
+    <text x="67" y="642.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Analysis, Test Spec, Plan und Walkthrough überleben jedes volle Kontextfenster (Infinite Context).</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="53.5" y="665.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="52" y="663" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+    <rect x="52" y="663" width="5" height="56" rx="2.5" fill="#059669"/>
+    <text x="67" y="686" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#065F46">+ Menschliche Energie fließt in Architektur &amp; Abnahme</text>
+    <text x="67" y="705.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Der PO prüft in Ceremony 2 getestete Ergebnisse statt kleinteilige Zwischenschritte zu babysitten.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="813.5" y="430.5" width="752" height="306" rx="14" fill="#0F172A" fill-opacity="0.045"/>
+    <rect x="812" y="428" width="752" height="306" rx="14" fill="#FFF1F2" stroke="#FDA4AF" stroke-width="1.6"/>
+    <rect x="812" y="428" width="752" height="34" rx="14" fill="#E11D48"/>
+    <rect x="812" y="448" width="752" height="14" fill="#E11D48"/>
+    <text x="828" y="450" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.2" font-weight="700" fill="#FFFFFF">CONS &amp; GRENZEN — Wo es knirscht &amp; was fehlt</text>
+    <text x="1550" y="450" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.2" font-weight="500" fill="#E2E8F0">Risiken &amp; Engpässe</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="829.5" y="476.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="828" y="474" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+    <rect x="828" y="474" width="5" height="56" rx="2.5" fill="#E11D48"/>
+    <text x="843" y="497" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#9F1239">− Regel-Wildwuchs über viele Retros (bald 84+ Regeln)</text>
+    <text x="843" y="516.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Jede Retro fügte neue Regeln hinzu — lange Regeldateien erzeugten Context Rot und wurden teils überlesen.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="829.5" y="539.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="828" y="537" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+    <rect x="828" y="537" width="5" height="56" rx="2.5" fill="#E11D48"/>
+    <text x="843" y="560" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#9F1239">− Sequenzielle 1-Lane-Ausführung bremst Durchsatz</text>
+    <text x="843" y="579.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Ein blockiertes oder großes Ticket hielt den gesamten Sprint auf; paralleles Arbeiten war noch konfliktträchtig.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="829.5" y="602.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="828" y="600" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+    <rect x="828" y="600" width="5" height="56" rx="2.5" fill="#E11D48"/>
+    <text x="843" y="623" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#9F1239">− Self-Anchoring im selben Pair über Stages 1–5</text>
+    <text x="843" y="642.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Da das Paar den ganzen Ticket-Verlauf teilte, rutschten subtile Bugs manchmal bis in die PO-Abnahme (C2) durch.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="829.5" y="665.5" width="720" height="56" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="828" y="663" width="720" height="56" rx="10" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+    <rect x="828" y="663" width="5" height="56" rx="2.5" fill="#E11D48"/>
+    <text x="843" y="686" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="12.4" font-weight="700" fill="#9F1239">− Tests &amp; Emulator kollidierten mit dem Produktiv-Handy</text>
+    <text x="843" y="705.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.4" font-weight="400" fill="#334155">Ohne isolierten Emulator und Lock-Dateien blockierten Builds oder störten das persönliche Smartphone.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="37.5" y="752.5" width="752" height="124" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="36" y="750" width="752" height="124" rx="10" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.3"/>
+    <rect x="36" y="750" width="5" height="124" rx="2.5" fill="#4338CA"/>
+    <text x="51" y="773" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E3A8A">Wann ist Stufe 4a (Klassisches Höchstmaß) stark?</text>
+    <rect x="697.0" y="759" width="82.0" height="20" rx="10" fill="#EEF2FF" stroke="#A5B4FC" stroke-width="1"/>
+    <text x="738.0" y="772.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#1E3A8A">Sweet Spot</text>
+    <text x="51" y="792.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E3A8A">Qualitätskritische Features &amp; Bugfixes</tspan>, bei denen man volle Traceability (REQ↔TST) und saubere Architektur braucht.</text>
+    <text x="51" y="809.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E3A8A">Interaktive Tagessprints</tspan>, in denen der PO nach jedem Sprint persönlich durch alle Tickets geht.</text>
+    <text x="51" y="827.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="400" fill="#334155">• <tspan font-weight="700" fill="#1E3A8A">Fundament</tspan> für alles, was danach kam: Alle Kernprinzipien von AAA wurden in diesem Monat geboren.</text>
+  </g>
+  <g class="node" data-node="phase4a_hoechstmass">
+    <rect x="813.5" y="752.5" width="752" height="124" rx="10" fill="#0F172A" fill-opacity="0.06"/>
+    <rect x="812" y="750" width="752" height="124" rx="10" fill="#FFF1F2" stroke="#E11D48" stroke-width="2.1"/>
+    <rect x="812" y="750" width="5" height="124" rx="2.5" fill="#E11D48"/>
+    <text x="827" y="773" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#9F1239">Auslöser für Stufe 4b → Triad, Worktrees &amp; Stage 6 Cold Review</text>
+    <rect x="1420.2" y="759" width="134.8" height="20" rx="10" fill="#FFF1F2" stroke="#FDA4AF" stroke-width="1"/>
+    <text x="1487.6" y="772.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="10.3" font-weight="700" fill="#9F1239">Wendepunkt 4a → 4b</text>
+    <text x="827" y="792.0" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="400" fill="#334155">• Oktober/November 2026: <tspan font-weight="700" fill="#9F1239">2.077 Commits/Monat</tspan>, <tspan font-weight="700" fill="#9F1239">84+ Regeln</tspan> und immer größere Sprints fordern industrielle Härtung!</text>
+    <text x="827" y="809.5" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="11.8" font-weight="400" fill="#334155">• Antwort (<tspan font-family="'DejaVu Sans Mono', 'Liberation Mono', monospace" font-weight="600" fill="#9F1239">Okt – 15.11.</tspan>): <tspan font-weight="700" fill="#9F1239">Document Triad (9 Core Rules)</tspan>, <tspan font-weight="700" fill="#9F1239">parallele Worktrees</tspan>, <tspan font-weight="700" fill="#9F1239">emulator-5554</tspan> &amp; <tspan font-weight="700" fill="#9F1239">Stage 6 Cold Review</tspan>!</text>
+  </g>
+</svg>
