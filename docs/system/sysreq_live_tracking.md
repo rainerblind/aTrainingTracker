@@ -1,7 +1,7 @@
 # System Requirements Specification: Live Tracking with Sensors
 
 **Document ID**: `DOC-SYS-TRK`  
-**Version**: 1.2.12  
+**Version**: 1.2.13  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1–BP3)  
 **Requirement Reference**: `REQ-PRO-054` (`REQ-PRO-054.1`, `REQ-PRO-054.2`)  
 **Test Reference**: `TST-PRO-054` (`TST-PRO-054.1`–`TST-PRO-054.3`)  
@@ -152,13 +152,14 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 
 ### SYSREQ-TRK-012: Live HRV / RR-Interval Streaming & DFA Alpha-1 Threshold Estimation
 * **Title**: Live HRV / RR-Interval Streaming & DFA Alpha-1 Threshold Estimation
-* **Statement**: The system SHALL compute real-time heart rate variability (HRV) and Detrended Fluctuation Analysis (DFA alpha-1) aerobic threshold indicators from RR-interval streams:
-  1. Validate RR-interval signal quality (`HrvSignalQualityAnalyzer.kt`), compute rolling DFA alpha-1 (`DfaCalculator.kt`, `HRVMetricsDevice.kt`, `DfaA1Formatter.kt`), and display live zone indicators (`HrvZoneIndicator.kt`, `HrvInfoBottomSheet.kt`).
+* **Statement**: The system SHALL compute real-time heart rate variability (HRV) and Detrended Fluctuation Analysis (DFA alpha-1) aerobic threshold indicators from RR-interval streams and acquire Polar BLE SDK PMD optical pulse-to-pulse intervals (PPI) for resting HRV while strictly isolating optical PPI from workout DFA alpha-1:
+  1. Validate RR-interval signal quality (`HrvSignalQualityAnalyzer.kt`), compute rolling DFA alpha-1 (`DfaCalculator.kt`, `HrvRollingEngine.kt`, `HRVMetricsDevice.kt`, `DfaA1Formatter.kt`), and display live zone indicators (`HrvZoneIndicator.kt`, `HrvInfoBottomSheet.kt`).
   2. Support guided HRV ramp-test protocols (`HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`) and post-workout threshold/durability estimation (`HrvThresholdEstimator.kt`, `HrvDurabilityCalculator.kt`, `HrvPostWorkoutRecomputer.kt`).
-* **Rationale**: Real-time DFA alpha-1 and RR artifact filtering allow athletes to pace aerobic threshold efforts without invasive lactate sampling.
+  3. Acquire Polar Verity Sense optical PPI over Polar BLE SDK PMD (`PolarOnlineStreamingBridge.kt`, `PolarPpiStreamProcessor.kt`) with hardware motion/skin-contact gating, suppress live `HRV_DFA_A1` on optical PPI streams (`HrvRollingEngine.kt`), and exclude optical PPI from workout RR persistence (`TrackerService.java`).
+* **Rationale**: Real-time DFA alpha-1 and RR artifact filtering allow athletes to pace aerobic threshold efforts without invasive lactate sampling, while isolated optical PPI enables slip-on morning resting `rMSSD` checks without corrupting ECG-only exercise DFA alpha-1 analytics.
 * **Priority**: Medium
 * **Verification Method**: Test (`SystemLiveTrackingRequirementsContractTest.kt`, `DfaCalculator.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvRampTestScreen.kt`)
-* **Traced Software Components**: `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvThresholdEstimator.kt`, `HrvDurabilityCalculator.kt`, `HrvPostWorkoutRecomputer.kt`, `HrvZoneIndicator.kt`
+* **Traced Software Components**: `DfaCalculator.kt`, `HrvRollingEngine.kt`, `HRVMetricsDevice.kt`, `PolarOnlineStreamingBridge.kt`, `PolarPpiStreamProcessor.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvThresholdEstimator.kt`, `HrvDurabilityCalculator.kt`, `HrvPostWorkoutRecomputer.kt`, `HrvZoneIndicator.kt`, `TrackerService.java`
 
 ### SYSREQ-TRK-013: Three-Tier Process-Death Session Recovery & State Restoration
 * **Title**: Three-Tier Process-Death Session Recovery & State Restoration
@@ -187,7 +188,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | `SYSREQ-TRK-009` | GPX follow-me & turn-by-turn audio navigation | `REQ-MAP-003`, `REQ-NAV-043`, `REQ-NAV-056`, `REQ-GEO-001`, `REQ-GEO-002` | `GpxRouteImporter`, `TurnByTurnNavigationEngine`, `RouteDivergenceDetector` |
 | `SYSREQ-TRK-010` | Smartphone IMU kinematics, carriage classification, cadence, odometry & iTPMS | `REQ-FIL-028`, `REQ-FIL-029`, `REQ-FIL-030`, `REQ-FIL-031`, `REQ-FIL-034`, `REQ-FIL-035`, `REQ-FIL-036`, `REQ-TRK-050`, `REQ-TRK-077`, `REQ-SEN-028`, `REQ-SEN-029`, `REQ-SEN-030`, `REQ-SEN-031`, `REQ-SEN-033` | `TYPE_GYROSCOPE`, `TYPE_ROTATION_VECTOR`, `TYPE_LINEAR_ACCELERATION`, `TYPE_ACCELEROMETER`, `TYPE_STEP_DETECTOR` |
 | `SYSREQ-TRK-011` | Pool/open-water swimming telemetry & lap adjust | `REQ-TRK-084`, `REQ-DAT-017` | `SwimWorkoutAdjustCard`, `SwimmingSection`, `Sport.SWIMMING` |
-| `SYSREQ-TRK-012` | Live HRV/RR streaming & DFA alpha-1 thresholds | `REQ-TRK-060`, `REQ-TRK-061`, `REQ-TRK-067`, `REQ-TRK-072`, `REQ-TRK-082`, `REQ-TRK-085` | `DfaCalculator`, `HrvSignalQualityAnalyzer`, `HrvThresholdEstimator` |
+| `SYSREQ-TRK-012` | Live HRV/RR streaming, optical PPI & DFA alpha-1 thresholds | `REQ-HRV-051`, `REQ-TRK-060`, `REQ-TRK-061`, `REQ-TRK-067`, `REQ-TRK-072`, `REQ-TRK-082`, `REQ-TRK-085` | `DfaCalculator`, `HrvRollingEngine`, `PolarOnlineStreamingBridge`, `HrvSignalQualityAnalyzer`, `HrvThresholdEstimator` |
 | `SYSREQ-TRK-013` | Three-tier process-death session recovery | `REQ-TRK-005`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-031`, `REQ-TRK-033`, `REQ-TRK-036`, `REQ-TRK-078` | `MANUAL_PAUSED`, `AUTO_PAUSED`, `TRACKING`, `StartOrResumeDialog` |
 
 ---
@@ -233,3 +234,4 @@ The following matrix establishes bidirectional traceability between system track
 | `1.2.10` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Linked `REQ-FIL-036` (`SpeedAndLocationDevice_ATTFused.kt`, `SpeedAndLocationDevice.java`, `UnicycleOdometryEkf.kt`, `ExtendedRtsOdometrySmoother.kt`, `ErtsPostWorkoutRecomputer.kt`) under `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, and `SYSREQ-TRK-010` in §3/§4 parity. |
 | `1.2.11` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Linked `REQ-FIL-037` (`KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`) under `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, and `SYSREQ-TRK-008` in §3/§4 parity. |
 | `1.2.12` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Linked `REQ-SEN-033` (`EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `EquipmentRepository.kt`, `WheelCircumferenceHistoryChart.kt`) under `SYSREQ-TRK-001` and `SYSREQ-TRK-010` in §3/§4 parity. |
+| `1.2.13` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Refined `SYSREQ-TRK-012` and linked `REQ-HRV-051` (`PolarOnlineStreamingBridge.kt`, `PolarPpiStreamProcessor.kt`, `HrvRollingEngine.kt`, `TrackerService.java`) for Polar Verity Sense optical PPI streaming & workout DFA alpha-1 isolation. |

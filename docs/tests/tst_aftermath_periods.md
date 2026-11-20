@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.29  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 75
+**Total Tests**: 76
 
 ---
 
@@ -1363,6 +1363,34 @@
 
 ---
 
+### TST-HRV-051: **Polar Verity Sense Optical PPI Streaming, Hardware Gating & Workout DFA alpha 1 Isolation Suite** (`ATT-9176`) [Verified]
+- **Requirement(s)**: `REQ-HRV-051` (`REQ-HRV-051.1`..`REQ-HRV-051.4`)
+- **Component**: `PolarPpiStreamProcessor.kt`, `PolarOnlineStreamingBridge.kt`, `HrvRollingEngine.kt`, `HRVMetricsDevice.kt`, `PerDeviceHrvController.kt`, `TrackerService.java`, `PolarPpiStreamProcessorTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `HrvRollingEngineTest.kt`, `HRVMetricsDeviceTest.kt`, `PerDeviceHrvControllerTest.kt`, `HrvGoldenOracleTest.kt`, `HrvSignalQualityAnalyzerTest.kt`, `RrArtifactFilterTest.kt`, `TrackerServiceRrOpticalIsolationTest.kt`, `TrackerServiceRrFlushTest.kt`, `ArchitectureConformanceContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9176`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Pure-JVM Optical PPI Filtering, Hardware Artifact Stamping & Reset (`TST-HRV-051.1`, `PolarPpiStreamProcessorTest.testValidSamples_reconstructMonotonicTimestampsTaggedOpticalPpi_TST_HRV_051_1`, `PolarPpiStreamProcessorTest.testNonPositivePpiDropped_andHardwareArtifactsStampedGapPreservingTimeline_TST_HRV_051_1`, `PolarPpiStreamProcessorTest.testCleanReferenceRrNotMutatedByHardwareArtifact_andGapBeatsAccurateForSubsequentOutOfRange_TST_HRV_051_1`, `PolarPpiStreamProcessorTest.testHardwareArtifactsSurviveRrArtifactFilterAndNeverEnterCleanRmssdPairs_TST_HRV_051_1`)*:
+     • Verify valid `PolarPpiSample` batches (`ppi > 0`, `!blockerBit`, skin contact OK or unsupported) reconstruct monotonic UTC timestamps with `isOpticalPpi = true` and `ARTIFACT_NORMAL`.
+     • Verify `ppi <= 0` samples are dropped completely; verify `blockerBit == true` and `(skinContactSupported && !skinContactStatus)` samples preserve monotonic timeline spacing, are stamped `RrBeatEvent.ARTIFACT_GAP` (`gapBeats = 0` when physiological, `isOpticalPpi = true`), never mutate `lastNormalRrMs`, preserve clean-reference `physGap` for `i > 0` out-of-range beats, survive `RrArtifactFilter.filterLiveCausal` & `filterBidirectionalBeats` as artifacts, and never enter clean `rMSSD` beat pairs.
+     • Verify `PolarPpiStreamProcessor.reset()` clears monotonic timestamp, reference RR, and packet counter state.
+  2. *Decoupled Verity Sense PPI Lifecycle, H10 Guard, Atomic Re-Entrancy & `mRrIntervalSensor` Precision (`TST-HRV-051.2`, `PolarOnlineStreamingBridgeTest.testVeritySensePpiStreaming_decoupledLifecycleAtomicReentrancyAndTeardown_TST_HRV_051_2`, `PolarOnlineStreamingBridgeTest.testPolarH10_neverProbesStartsOrStopsOpticalPpiStreaming_TST_HRV_051_2`, `PolarOnlineStreamingBridgeTest.testVeritySensePpi_lateDisIdentificationAndExceptionIsolation_TST_HRV_051_2`, `PolarOnlineStreamingBridgeTest.testVeritySensePpi_syncAlreadyOpenSessionLaunchesPpiIndependently_TST_HRV_051_2`)*:
+     • Verify Verity Sense probes `getAvailableOnlineStreamDataTypes` and launches `startPpiStreaming` independently of `accJob`/`gyroJob` across all 3 readiness hooks (`bleSdkFeatureReady(FEATURE_POLAR_ONLINE_STREAMING)`, `syncAlreadyOpenSessionIfReady()`, and late DIS/`FEATURE_POLAR_OFFLINE_RECORDING` identification).
+     • Verify Polar H10 (`isVeritySense == false`) NEVER probes or calls `startPpiStreaming` or `stopStreaming(PmdMeasurementType.PPI)`.
+     • Verify rapid duplicate readiness callbacks trigger strictly one `startPpiStreaming` subscription via atomic `isPpiStreamingActive.compareAndSet(false, true)` + `CoroutineStart.LAZY` + job-identity `finally` cleanup (zero PMD `ERROR_ALREADY_IN_STATE` races, full non-cancellation exception isolation).
+     • Verify `ARTIFACT_GAP` optical PPI samples dispatch to `perDeviceHrvController` and `RrBeatListener`s WITHOUT updating `mRrIntervalSensor`; verify `deviceDisconnected`, `blePowerStateChanged(false)`, `onAccumulatorsReset()`, and `shutDown()` cancel `ppiJob`, reset `PolarPpiStreamProcessor`, and invoke `stopStreaming(streamId, PmdMeasurementType.PPI)` on `shutDown()` without disrupting `HR`/`ACC`/`GYRO`.
+  3. *Dual Live Workout `DFA alpha-1` Isolation & Optical Signal Quality Mode (`TST-HRV-051.3`, `HrvRollingEngineTest.testOpticalPpiSuppressesDfaAlpha1_preservesRmssdSdnnOpticalQuality_andRecoversNonStickilyOnEcg_TST_HRV_051_3`, `HRVMetricsDeviceTest.testOpticalPpiSuppressesLiveDfaAlpha1AndResumesOnEcg_TST_HRV_051_3`, `PerDeviceHrvControllerTest.testPerDeviceOpticalPpiSuppressesDfaAlpha1WhileComputingRmssdAndSdnn_TST_HRV_051_3`, `HrvGoldenOracleTest`, `HrvSignalQualityAnalyzerTest`, `RrArtifactFilterTest`)*:
+     • Verify `isOpticalPpi = true` beats suppress `HRV_DFA_A1` to `null` in `HrvRollingEngine`, global `HRVMetricsDevice`, and pinned `PerDeviceHrvController` while `HRV_RMSSD`, `HRV_SDNN`, `HRV_ARTIFACT_RATE`, and optical `HrvSignalQualityAnalyzer` status continue evaluating accurately.
+     • Verify non-sticky recovery: when ECG beats (`isOpticalPpi = false`) replace the active `120 s` window (or after `resetSession()`), `HRV_DFA_A1` resumes computing and emitting normal values; verify `HrvGoldenOracleTest` remains bit-identical.
+  4. *`WorkoutRr.db` Isolation & Architecture/System Governance Contracts (`TST-HRV-051.4`, `TrackerServiceRrOpticalIsolationTest.testOpticalPpiBeatsExcludedFromWorkoutRrQueue_whileEcgBeatsPersistNormally_TST_HRV_051_4`, `TrackerServiceRrFlushTest`, `ArchitectureConformanceContractTest`, `SystemLiveTrackingRequirementsContractTest`, `DeadCodeEliminationContractTest`, `InterfaceSignatureDriftContractTest`, `SourceTextReadingAuditContractTest`)*:
+     • Verify `TrackerService.mRrBeatListener` drops `isOpticalPpi == true` beats during `AutoPauseState.TRACKING` (`mWorkoutID > 0`) while queuing ECG beats (`isOpticalPpi == false`) normally into `WorkoutRr.db`.
+     • Verify all architecture LoC caps (`DeviceManager.java` `1,707/1,708`, `DevicesDatabaseManager.java` `1,669/1,671`, `TrackerService.java` `3,538/3,559`, `PolarOnlineStreamingBridge.kt` `1,301/1,500`), `SystemLiveTrackingRequirementsContractTest`, dead-code/signature/source-read contracts, and hyphenated `TST-HRV-051` tags (`REQ-PRO-099.3`).
+- **Verification Evidence**: Gate 4 (`ATT-9277`) independently verified SHA `13416d59` (`Rule 7.5`, `0` `app/` code drift) — `:app:compileDebugKotlin`, `:app:compileDebugUnitTestKotlin`, and `:app:assembleDebug` PASS with `0` new Kotlin compiler warnings + `121/121 PASS` (`0` failed, `0` errors, `0` skipped) across all 15 suites; `4/4` Python safety linters PASS (`check_secrets_hygiene.py`, `lint_cursor_safety.py`, `lint_lifecycle_safety.py`, `lint_safe_enum.py`); clean-checkout `verify_requirement_governance.py` EXIT `0`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1397,3 +1425,6 @@
 | `1.0.27` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `TST-HRV-050` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9247`) verified `137/137 PASS` evidence across all 17 suites + `:app:assembleDebug` (`Rule 7.5`, `0` `app/` code drift since `7a7b387a`), verbatim test method citations, `4/4` Python safety linters PASS, clean-checkout `TST-HRV-050` traceability parity, and governance sync. |
 | `1.0.28` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Stage 6 Bounce 1 heal: updated `TST-HRV-050` citations & `Verification Evidence` to Gate 4 Bounce 1 (`ATT-9255`) verified SHA `88ed018b` (`140/140 PASS`, `0` Kotlin compiler warnings, `PerDeviceHrvControllerTest` `6/6` adding 3 deterministic race tests). |
 | `1.0.29` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Stage 6 Bounce 2 heal: updated `TST-HRV-050` citations & `Verification Evidence` to Gate 4 Bounce 2 (`ATT-9263`) verified SHA `0f641afc` (`141/141 PASS`, `0` Kotlin compiler warnings, `PerDeviceHrvControllerTest` `7/7` adding `testRacingColdStartOnRrBeatVsOnAccumulatorsReset_neverWedgesSensorsUnregistered_TST_HRV_050_3`). |
+| `1.0.30` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Added `TST-HRV-051` (`[Planned]`, `.1`–`.4`) covering pure-JVM `PolarPpiStreamProcessor` filtering/artifact stamping/reset, decoupled Verity Sense PPI lifecycle/H10 guard/atomic re-entrancy/`mRrIntervalSensor`, dual live `DFA alpha-1` suppression, and `TrackerService` `WorkoutRr.db` optical exclusion + contracts. |
+| `1.0.31` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Promoted `TST-HRV-051` to `[Implemented]` following Stage 4 implementation and 100% PASS across all 15 targeted & contract suites (`PolarPpiStreamProcessorTest`, `PolarOnlineStreamingBridgeTest`, `HrvRollingEngineTest`, `HRVMetricsDeviceTest`, `PerDeviceHrvControllerTest`, `HrvGoldenOracleTest`, `HrvSignalQualityAnalyzerTest`, `RrArtifactFilterTest`, `TrackerServiceRrOpticalIsolationTest`, `TrackerServiceRrFlushTest`, `ArchitectureConformanceContractTest`, `SystemLiveTrackingRequirementsContractTest`, `DeadCodeEliminationContractTest`, `InterfaceSignatureDriftContractTest`, `SourceTextReadingAuditContractTest`) with `0` Kotlin compiler warnings. |
+| `1.0.32` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Promoted `TST-HRV-051` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9277`) verified `121/121 PASS` evidence across all 15 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `13416d59`), exact verbatim method citations, `4/4` Python safety linters PASS, and governance sync. |

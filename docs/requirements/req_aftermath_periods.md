@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.27  
+**Version**: 1.0.28  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 69
+**Total Requirements**: 70
 
 ---
 
@@ -2094,6 +2094,43 @@
 
 ---
 
+### REQ-HRV-051: Polar Verity Sense Optical PPI Streaming & Workout DFA alpha 1 Isolation (`ATT-9176`) [Verified]
+- **System Requirement(s)**: `SYSREQ-TRK-012` (Live HRV / RR-Interval Streaming & DFA Alpha-1 Threshold Estimation — Polar BLE SDK PMD optical PPI acquisition on `SYS-EL-02` and strict isolation of optical PPI from workout `DFA alpha-1`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-051`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarPpiStreamProcessor.kt`, `PolarOnlineStreamingBridge.kt`, `HrvRollingEngine.kt`, `TrackerService.java`
+- **Rationale**: Polar Verity Sense does not transmit RR intervals over standard BLE Heart Rate Service (`0x2A37`), blocking slip-on morning resting HRV checks (`ATT-9177`). Acquiring optical Pulse-to-Pulse Intervals (`PolarOnlineStreamingApi.startPpiStreaming`) via `polar-ble-sdk:8.6.0` enables resting `rMSSD` while hardware artifact gating and strict workout `DFA alpha-1` isolation protect ECG-only exercise threshold analytics from optical PPG pulse-wave damping and motion artifacts (`ATT-9176`).
+- **Description**:
+  1. *Pure-JVM Optical PPI Processing, Hardware Quality Gating & `mRrIntervalSensor` Precision (`REQ-HRV-051.1`)*:
+     - Extract a stateful pure-JVM helper `PolarPpiStreamProcessor` processing `PolarPpiData.PolarPpiSample` batches into monotonically timestamped `RrBeatEvent(..., isOpticalPpi = true)` via `RrBeatNormalization`.
+     - Drop samples with `ppi <= 0` outright; for `ppi > 0` samples where `blockerBit == true` or `(skinContactSupported && !skinContactStatus)`, preserve timeline monotonicity and stamp `artifactFlag = RrBeatEvent.ARTIFACT_GAP`, `gapBeats = 0` (when physiological), and `isOpticalPpi = true` so `RrArtifactFilter.isGapOrOutOfPhysiologicalRange` never overwrites them, `computeBiasFreeRmssd` excludes adjacent pairs from clean `rMSSD`, and hardware motion/contact artifacts count toward `HIGH_ARTIFACTS (> 5.0%)`.
+     - Update `lastNormalRrMs` strictly from clean (`!isHardwareArtifact && !isOutOfPhysiologicalRange`) samples; emit `mRrIntervalSensor?.newValue(...)` ONLY for non-`ARTIFACT_GAP` beats (matching `ANTHeartRateDevice.java:282`); reset processor state in BOTH `unregisterSensors()` and `onAccumulatorsReset()` (`Rule 51`).
+  2. *Decoupled Verity Sense PPI Lifecycle, Atomic Re-Entrancy Guard & PMD Stability (`REQ-HRV-051.2`)*:
+     - In `PolarOnlineStreamingBridge.kt` (`<= 1,310/1,500` LoC), launch PPI streaming ONLY for optical PPI-capable devices (`isVeritySense == true`) when `FEATURE_POLAR_ONLINE_STREAMING` is ready and `api.getAvailableOnlineStreamDataTypes(sessionId).contains(PolarBleApi.PolarDeviceDataType.PPI)`; H10/ECG chest straps (`isVeritySense == false`) SHALL NEVER probe or launch PPI.
+     - Check and launch PPI independently across all 3 readiness hooks (`bleSdkFeatureReady(FEATURE_POLAR_ONLINE_STREAMING)`, `syncAlreadyOpenSessionIfReady()`, and `maybeStartVerityStreamsIfReady()`) — NEVER nested in `else if` behind `accJob`/`gyroJob` or gated on `isGyroStreamingActive`.
+     - Guard launch via atomic `isPpiStreamingActive.compareAndSet(false, true)` **before** `scope.launch` (resetting in `finally`) to prevent duplicate `startPpiStreaming()` / PMD `ERROR_ALREADY_IN_STATE` races; cancel `ppiJob` and reset `isPpiStreamingActive` on `cancelActiveStreamJobs()`/`deviceDisconnected`/`blePowerStateChanged(false)`/`shutDown()`, and invoke `api.stopStreaming(streamId, PmdMeasurementType.PPI)` in `shutDown()` without disrupting `HR`/`ACC`/`GYRO` or `PolarVeritySenseOfflineController`.
+  3. *Dual Live Workout `DFA alpha-1` Isolation & Optical Signal Quality Mode (`REQ-HRV-051.3`)*:
+     - In `HrvRollingEngine.evaluate(nowMs)` (shared by global `HRVMetricsDevice` and per-device `PerDeviceHrvController`), suppress `alpha1Value` to `null` whenever `activeWindowHasOpticalPpi = allBeats.any { it.beatTimestampMs >= dfaCutoff && it.isOpticalPpi }` is true, and forward `isOpticalPpi = activeWindowHasOpticalPpi` to `HrvSignalQualityAnalyzer.analyzeBeats(...)`. Suppression SHALL be non-sticky so switching back to ECG (`isOpticalPpi = false`) automatically resumes `HRV_DFA_A1` once optical beats age out of the active `120 s` window or on `resetSession()`.
+  4. *`WorkoutRr.db` & Post-Workout `HrvPostWorkoutRecomputer` Optical Isolation (`REQ-HRV-051.4`)*:
+     - Guard `TrackerService.mRrBeatListener.onRrBeat(event)` (`TrackerService.java:293`) in-place with `!event.isOpticalPpi()` (`+0` net LoC, `3,538/3,559`) so optical PPI beats are never persisted into `WorkoutRr.db` and `HrvPostWorkoutRecomputer` never computes or plots optical `HRV_DFA_A1` curves on Verity-only workouts while ECG/ANT+ streams remain untouched.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-049`, `REQ-HRV-050`, `REQ-SET-112`, `REQ-CON-045`, `REQ-CON-050`, `REQ-TRK-085`, `REQ-PER-034` targeting `PolarOnlineStreamingBridge.kt`, `HrvRollingEngine.kt`, `HRVMetricsDevice.kt`, `PerDeviceHrvController.kt`, `TrackerService.java`.
+  2. *Historical Origin & Commit Trace*: `ATT-9177` (`b899a864`), `ATT-8990` (`cdc565c0`), `ATT-8714` (`1e7a2f0b`), `ATT-8717` (`9f9e5967`), `ATT-8706` (`7dcca5e7`).
+  3. *Root Reason for Existing Formulation*: Verity Sense previously streamed only `HR`/`ACC`/`GYRO` over PMD; `WorkoutRr.db` assumed all workout RR beats came from ECG/ANT+ straps.
+  4. *Preservation of Core Invariants*: Preserves `DeviceManager.java` (`1,707/1,708`, `0` edits), `DevicesDatabaseManager.java` (`1,669/1,671`, `0` edits), `TrackerService.java` (`3,538/3,559`, `+0` net LoC), `PolarVeritySenseOfflineController.kt` (`0` edits), `ECG > ANT+ > PPG` arbitration, H10 non-PPI path, `180 s` Lipponen context & NeuroKit2 `0.2.10` golden parity, `Rule 51`/`Rule 52`, and zero DB migration.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a Polar Verity Sense connected via `PolarOnlineStreamingBridge` reporting `PolarDeviceDataType.PPI` support, *When* valid `PolarPpiSample` packets arrive (`ppi > 0`, `blockerBit == false`, `skinContactStatus == true` when `skinContactSupported == true`), *Then* monotonically timestamped `RrBeatEvent(..., isOpticalPpi = true)` events dispatch to `perDeviceHrvController` and `RrBeatListener`s alongside `HR`/`ACC`/`GYRO`, and `mRrIntervalSensor` updates on clean beats.
+  • *Given* `PolarPpiSample` packets with `ppi <= 0`, `blockerBit == true`, or `(skinContactSupported && !skinContactStatus)`, *When* processed by `PolarPpiStreamProcessor` & `PolarOnlineStreamingBridge`, *Then* `ppi <= 0` samples are dropped, hardware-flagged samples are stamped `ARTIFACT_GAP` (`gapBeats = 0` when physiological, `isOpticalPpi = true`), never update `lastNormalRrMs` or `mRrIntervalSensor`, never enter clean `rMSSD` pairs, and count toward `HIGH_ARTIFACTS (> 5%)`.
+  • *Given* `HrvRollingEngine` / `HRVMetricsDevice` / `PerDeviceHrvController` receives `isOpticalPpi = true` beats, *When* periodic HRV metrics evaluate, *Then* `HRV_DFA_A1` emits `null` while `HRV_RMSSD`/`HRV_SDNN` and optical signal quality evaluate normally, and `HRV_DFA_A1` resumes automatically once ECG beats replace the active `120 s` window.
+  • *Given* Verity Sense disconnects, reconnects, receives rapid duplicate readiness callbacks, or shuts down (or an H10 connects), *When* `PolarOnlineStreamingBridge` manages streams, *Then* H10 never launches PPI, Verity launches PPI independently of `ACC`/`GYRO` under atomic `compareAndSet` protection, `ppiJob` cancels cleanly, `stopStreaming(PPI)` runs on `shutDown()`, and `PolarPpiStreamProcessor` resets in both `unregisterSensors()` and `onAccumulatorsReset()`.
+  • *Given* an active workout (`AutoPauseState.TRACKING`, `mWorkoutID > 0`), *When* `TrackerService.mRrBeatListener` receives optical PPI vs ECG beats, *Then* optical PPI beats are ignored (zero `WorkoutRr.db` persistence) while ECG beats persist normally.
+- **Invariants**: `0` edits to `DeviceManager.java` (`1,707/1,708`), `DevicesDatabaseManager.java` (`1,669/1,671`), `RrBeatEvent.kt`, `PolarVeritySenseOfflineController.kt`, `DfaCalculator.kt`; `+0` net LoC in `TrackerService.java` (`3,538/3,559`); `PolarOnlineStreamingBridge.kt <= 1,500` LoC; `HrvGoldenOracleTest` bit-identical; `Localization Parity: N/A - no new UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2126,3 +2163,4 @@
 | `1.0.25` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Implemented]` following Stage 4 construction (`DeviceType.java`, `MySensorManager.java`, `HrvRollingEngine.kt`, `HrvTelemetryProvider.kt`, `PerDeviceHrvController.kt`, `HRVMetricsDevice.kt`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `HrvRampTestViewModel.kt`), `:app:assembleDebug`, and `137/137 PASS` across all 17 targeted/contract suites with `0` edits to `DeviceManager.java`, `TrackerService.java`, and `DevicesDatabaseManager.java`. |
 | `1.0.26` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9247`) verified `137/137 PASS` evidence across all 17 suites + `:app:assembleDebug` (`Rule 7.5`, `0` `app/` code drift since `7a7b387a`), `4/4` Python safety linters PASS, clean-checkout `TST-HRV-050` traceability parity, and governance sync. |
 | `1.0.27` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-PER-008` to `[Verified]` (`TST-PER-009` + `TST-UNT-012`, `TST-UNT-013`, Gate 4 `3e20473b`, `Rule 7.5`). |
+| `1.0.28` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Added and promoted `REQ-HRV-051` (`[Verified]`, `.1`–`.4`, `SYSREQ-TRK-012`) for Polar Verity Sense optical PPI streaming and workout DFA alpha-1 isolation (`121/121 PASS` on `13416d59`). |

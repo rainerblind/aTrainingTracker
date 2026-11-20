@@ -1,7 +1,7 @@
 # System-to-Software Requirement Traceability & Tailoring Specification
 
 **Document ID**: `DOC-SYS-TRC`  
-**Version**: 1.2.12  
+**Version**: 1.2.13  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP5), SWE.1 (Software Requirements Analysis, BP5)  
 **Requirement Reference**: `REQ-PRO-076` (`REQ-PRO-076.1`–`REQ-PRO-076.4`)  
 **Test Reference**: `TST-PRO-076` (`TST-PRO-076.1`–`TST-PRO-076.4`)  
@@ -39,7 +39,7 @@ This specification establishes normative, bidirectional traceability between bla
 | `SYSREQ-TRK-009` | GPX Follow-Me & Turn Audio Nav | `REQ-MAP-003`, `REQ-NAV-043`, `REQ-NAV-056`, `REQ-GEO-001`, `REQ-GEO-002` | `GpxRouteImporter.kt`, `TurnByTurnNavigationEngine.kt`, `NavigationAudioAlertManager.kt`, `SystemLiveTrackingRequirementsContractTest.kt` |
 | `SYSREQ-TRK-010` | Smartphone IMU, Carriage, Cadence & Indirect TPMS | `REQ-FIL-028`, `REQ-FIL-029`, `REQ-FIL-030`, `REQ-FIL-031`, `REQ-FIL-034`, `REQ-FIL-035`, `REQ-FIL-036`, `REQ-TRK-050`, `REQ-TRK-077`, `REQ-SEN-028`, `REQ-SEN-029`, `REQ-SEN-030`, `REQ-SEN-031`, `REQ-SEN-033` | `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageClassifier.kt`, `ImuCadenceDsp.kt`, `SmartphoneImuCadenceEstimator.kt`, `KinematicSportTypeDiscriminator.kt`, `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, `MultisportLapCoordinator.kt`, `PolarLiveRunningCadenceEstimator.kt`, `QuaternionGyroProjector.kt`, `IndirectTpmsEstimator.kt`, `DualWheelTpmsEstimator.kt` |
 | `SYSREQ-TRK-011` | Swimming Telemetry & Lap Adjust | `REQ-TRK-084`, `REQ-DAT-017` | `SwimWorkoutAdjustCard.kt`, `SwimmingSection.kt`, `PolarVeritySenseOfflineController.kt`, `FitFileWriter.kt` |
-| `SYSREQ-TRK-012` | Live HRV & DFA Alpha-1 Thresholds | `REQ-TRK-060`, `REQ-TRK-061`, `REQ-TRK-067`, `REQ-TRK-072`, `REQ-TRK-082`, `REQ-TRK-085` | `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvThresholdEstimator.kt` |
+| `SYSREQ-TRK-012` | Live HRV & DFA Alpha-1 Thresholds | `REQ-HRV-051`, `REQ-TRK-060`, `REQ-TRK-061`, `REQ-TRK-067`, `REQ-TRK-072`, `REQ-TRK-082`, `REQ-TRK-085` | `DfaCalculator.kt`, `HrvRollingEngine.kt`, `HRVMetricsDevice.kt`, `PolarOnlineStreamingBridge.kt`, `PolarPpiStreamProcessor.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvThresholdEstimator.kt` |
 | `SYSREQ-TRK-013` | Process-Death Session Recovery | `REQ-TRK-005`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-031`, `REQ-TRK-033`, `REQ-TRK-036`, `REQ-TRK-078` | `TrackerService.java`, `StartOrResumeDialog.kt`, `WorkoutSamplesDatabaseManager.java` |
 
 ### 2.2 Domain 2: Data Exchange, Cloud Integration & Disaster Recovery (`SYSREQ-DEX-*`)
@@ -105,3 +105,4 @@ The integrity of this traceability specification is automatically verified by `t
 | `1.2.10` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Linked `REQ-FIL-036` (`SpeedAndLocationDevice_ATTFused.kt`, `SpeedAndLocationDevice.java`, `UnicycleOdometryEkf.kt`, `ExtendedRtsOdometrySmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `ATT-9158`) under `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, and `SYSREQ-TRK-010`. |
 | `1.2.11` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Linked `REQ-FIL-037` (`KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `ATT-9156`) under `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, and `SYSREQ-TRK-008`. |
 | `1.2.12` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Linked `REQ-SEN-033` (`EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `EquipmentRepository.kt`, `WheelCircumferenceHistoryChart.kt`, `ATT-8422`) under `SYSREQ-TRK-001` and `SYSREQ-TRK-010`. |
+| `1.2.13` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Linked `REQ-HRV-051` (`PolarOnlineStreamingBridge.kt`, `PolarPpiStreamProcessor.kt`, `HrvRollingEngine.kt`) under `SYSREQ-TRK-012` (`Rule 81`). |

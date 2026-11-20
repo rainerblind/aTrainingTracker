@@ -162,9 +162,10 @@ class HrvRollingEngine @JvmOverloads constructor(
         val rmssdBeats = dfaWindowBeats.filter { it.beatTimestampMs >= rmssdCutoff }
         val rmssdValue = computeBiasFreeRmssd(rmssdBeats)
 
-        // 3. DFA alpha 1 over active 120s window with artifact gate suppression (REQ-TRK-060.4)
+        // 3. DFA alpha 1 over active 120s window with optical PPI & artifact gate suppression (REQ-TRK-060.4, REQ-HRV-051.3)
+        val activeWindowHasOpticalPpi = allBeats.any { it.beatTimestampMs >= dfaCutoff && it.isOpticalPpi }
         val effectiveGateThreshold = getEffectiveArtifactGateThreshold()
-        val alpha1Value: Double? = if (dfaWindowBeats.isEmpty() || artifactRate > effectiveGateThreshold) {
+        val alpha1Value: Double? = if (activeWindowHasOpticalPpi || dfaWindowBeats.isEmpty() || artifactRate > effectiveGateThreshold) {
             null
         } else {
             val nnIntervals = dfaWindowBeats.map { it.correctedRrMs }.toDoubleArray()
@@ -179,12 +180,13 @@ class HrvRollingEngine @JvmOverloads constructor(
             effectiveGateThreshold = effectiveGateThreshold
         )
 
-        // 5. Signal quality analysis strictly over active 120s window (REQ-TRK-067, REQ-HRV-048.3)
+        // 5. Signal quality analysis strictly over active 120s window (REQ-TRK-067, REQ-HRV-048.3, REQ-HRV-051.3)
         val quality = HrvSignalQualityAnalyzer.analyzeBeats(
             beats = dfaWindowBeats,
             artifactRatePercent = artifactRate,
             rmssdMs = rmssdValue,
-            dfaAlpha1 = alpha1Value
+            dfaAlpha1 = alpha1Value,
+            isOpticalPpi = activeWindowHasOpticalPpi
         )
         signalQualityResult = quality
 

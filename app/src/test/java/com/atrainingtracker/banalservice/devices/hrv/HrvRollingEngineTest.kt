@@ -125,4 +125,58 @@ class HrvRollingEngineTest {
         assertNull(snap.rmssdMs)
         assertNull(snap.sdnnMs)
     }
+
+    @Test
+    fun testOpticalPpiSuppressesDfaAlpha1_preservesRmssdSdnnOpticalQuality_andRecoversNonStickilyOnEcg_TST_HRV_051_3() {
+        // REQ-HRV-051.3 / TST-HRV-051.3
+        val baseTs = 4_000_000L
+        val engine = HrvRollingEngine(context = null, artifactGateThresholdPercent = 5.0)
+
+        // 1. Feed 110 optical PPI beats (harmonic wave with smooth variability that would compute DFA a1 on ECG)
+        for (i in 0 until 110) {
+            val rr = 800.0 + 35.0 * kotlin.math.sin(2.0 * kotlin.math.PI * i / 16.0) +
+                15.0 * kotlin.math.sin(2.0 * kotlin.math.PI * i / 64.0)
+            engine.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = baseTs + i * 800L,
+                    rrMs = rr,
+                    rawCounter = i,
+                    protocol = ProtocolType.BLE,
+                    isOpticalPpi = true
+                )
+            )
+        }
+        val opticalNow = baseTs + 110 * 800L
+        val opticalSnap = engine.evaluate(opticalNow)
+        assertNotNull(opticalSnap)
+        assertNull("Optical PPI must suppress DFA alpha 1 to null", opticalSnap!!.dfaAlpha1)
+        assertNotNull("Optical PPI must still compute rolling rMSSD", opticalSnap.rmssdMs)
+        assertNotNull("Optical PPI must still compute rolling SDNN", opticalSnap.sdnnMs)
+        assertEquals(0.0, opticalSnap.artifactRatePercent!!, 0.001)
+        assertEquals(
+            "Optical signal quality must bypass ECG-only SMOOTHED_STREAM warnings",
+            HrvSignalQualityStatus.VALID,
+            opticalSnap.signalQualityResult.status
+        )
+
+        // 2. Non-sticky recovery: once ECG beats replace the active 120s window (+130s later), DFA alpha 1 resumes
+        val ecgStart = opticalNow + 130_000L
+        for (i in 0 until 110) {
+            val rr = 800.0 + 35.0 * kotlin.math.sin(2.0 * kotlin.math.PI * i / 16.0) +
+                15.0 * kotlin.math.sin(2.0 * kotlin.math.PI * i / 64.0)
+            engine.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = ecgStart + i * 800L,
+                    rrMs = rr,
+                    rawCounter = 200 + i,
+                    protocol = ProtocolType.BLE,
+                    isOpticalPpi = false
+                )
+            )
+        }
+        val ecgSnap = engine.evaluate(ecgStart + 110 * 800L)
+        assertNotNull(ecgSnap)
+        assertNotNull("ECG stream must automatically resume DFA alpha 1 after optical beats age out", ecgSnap!!.dfaAlpha1)
+        assertTrue(ecgSnap.dfaAlpha1!! > 0.0)
+    }
 }

@@ -62,10 +62,12 @@ import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHealthThermometerData
 import com.polar.sdk.api.model.PolarHrData
+import com.polar.sdk.api.model.PolarPpiData
 import com.polar.sdk.api.model.PolarSensorSetting
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -193,6 +195,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val sessionOpenPendingFeatures = AtomicBoolean(false)
     private val isAccStreamingActive = AtomicBoolean(false)
     private val isGyroStreamingActive = AtomicBoolean(false)
+    private val isPpiStreamingActive = AtomicBoolean(false)
+    private val ppiLifecycleLock = Any()
     private val reconnectLock = Any()
 
     @Volatile
@@ -221,6 +225,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     @Volatile
     private var gyroJob: Job? = null
+
+    @Volatile
+    private var ppiJob: Job? = null
+
+    private val ppiStreamProcessor = PolarPpiStreamProcessor()
 
     @Volatile
     var highRateRunningDynamicsActive: Boolean = false
@@ -389,6 +398,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
+    private fun cancelPpiJob() {
+        val toCancel = synchronized(ppiLifecycleLock) { ppiJob.also { ppiJob = null; isPpiStreamingActive.set(false) } }
+        toCancel?.cancel()
+    }
+
     private fun cancelActiveStreamJobs() {
         hrJob?.cancel()
         hrJob = null
@@ -396,6 +410,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         accJob = null
         gyroJob?.cancel()
         gyroJob = null
+        cancelPpiJob()
     }
 
     private fun markBridgeConnected(notifySearchSuccess: Boolean) {
@@ -551,7 +566,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                     )
                     if (isConnectedFlag.get()) {
                         syncCadenceSensorRegistration()
-                        maybeStartVerityGyroIfReady()
+                        maybeStartVerityStreamsIfReady()
                     }
                 }
                 else -> Unit
@@ -751,6 +766,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             } else if (isVeritySense && gyroJob?.isActive != true) {
                 startGyroCollection(api)
             }
+            if (isVeritySense && !isPpiStreamingActive.get() && ppiJob?.isActive != true) {
+                startPpiCollection(api)
+            }
         }
     }
 
@@ -779,7 +797,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 PolarOfflineCapabilityStore.recordDisMetadata(mContext, macAddress, modelNumber = trimmedValue)
                 if (isConnectedFlag.get()) {
                     syncCadenceSensorRegistration()
-                    maybeStartVerityGyroIfReady()
+                    maybeStartVerityStreamsIfReady()
                 }
             }
             lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.toString() ||
@@ -792,16 +810,16 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
-    private fun maybeStartVerityGyroIfReady() {
+    private fun maybeStartVerityStreamsIfReady() {
         val api = polarApi ?: return
-        if (isShutDown.get() || !isVeritySense || isGyroStreamingActive.get()) return
+        if (isShutDown.get() || !isVeritySense) return
         val streamingReady = findReadySessionIdentifier(
             api,
             PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING
         ) != null
-        if (streamingReady) {
-            startGyroCollection(api)
-        }
+        if (!streamingReady) return
+        if (!isGyroStreamingActive.get()) startGyroCollection(api)
+        if (!isPpiStreamingActive.get()) startPpiCollection(api)
     }
 
     private fun startImuCollection() {
@@ -810,7 +828,34 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         startAccCollection(api)
         if (isVeritySense) {
             startGyroCollection(api)
+            startPpiCollection(api)
         }
+    }
+
+    /** Starts Verity Sense optical PPI streaming with atomic CAS re-entrancy & job-identity cleanup (`REQ-HRV-051.2`). */
+    private fun startPpiCollection(api: PolarBleApi) {
+        val sessionId = sdkSessionId
+        val launchedJob = synchronized(ppiLifecycleLock) {
+            if (isShutDown.get() || !isVeritySense || !isPpiStreamingActive.compareAndSet(false, true)) return
+            scope.launch(start = CoroutineStart.LAZY) {
+                val myJob = coroutineContext[Job]
+                try {
+                    if (!api.getAvailableOnlineStreamDataTypes(sessionId).contains(PolarBleApi.PolarDeviceDataType.PPI)) return@launch
+                    api.startPpiStreaming(sessionId)
+                        .catch { e -> Log.w(TAG, "PPI stream error on $sessionId: ${e.message}") }
+                        .collect { processPpiData(it, System.currentTimeMillis()) }
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to start/collect PPI stream on $sessionId: ${t.message}")
+                } finally {
+                    synchronized(ppiLifecycleLock) {
+                        if (ppiJob === myJob) { ppiJob = null; isPpiStreamingActive.set(false) }
+                    }
+                }
+            }.also { ppiJob = it }
+        }
+        launchedJob.start()
     }
 
     private fun startAccCollection(api: PolarBleApi) {
@@ -950,6 +995,22 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
         lastBeatTimestampMs = bundle.lastBeatTimestampMs
         lastNormalRrMs = bundle.lastNormalRrMs
+    }
+
+    /** Processes Verity Sense optical [PolarPpiData] packets via [PolarPpiStreamProcessor] (`REQ-HRV-051.1`). */
+    fun processPpiData(data: PolarPpiData, packetArrivalMs: Long) {
+        if (isShutDown.get()) return
+        val events = ppiStreamProcessor.processSamples(data.samples, packetArrivalMs)
+        for (event in events) {
+            if (event.artifactFlag == RrBeatEvent.ARTIFACT_NORMAL) {
+                val rrSensor = mRrIntervalSensor ?: MySensor<Int>(this, SensorType.RR_INTERVAL).also {
+                    mRrIntervalSensor = it
+                    addAndRegisterSensor(it)
+                }
+                rrSensor.newValue(Math.round(event.rrMs).toInt())
+            }
+            dispatchRrBeat(event)
+        }
     }
 
     /**
@@ -1117,6 +1178,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     fun isGyroStreamingForTesting(): Boolean = isGyroStreamingActive.get()
 
     @VisibleForTesting
+    fun isPpiStreamingForTesting(): Boolean = isPpiStreamingActive.get()
+
+    @VisibleForTesting
     fun getSearchTimeoutJobForTesting(): Job? = searchTimeoutJob
 
     @VisibleForTesting
@@ -1140,8 +1204,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     @VisibleForTesting
     fun isGyroJobActiveForTesting(): Boolean = gyroJob?.isActive == true
 
+    @VisibleForTesting
+    fun isPpiJobActiveForTesting(): Boolean = ppiJob?.isActive == true
+
     override fun onAccumulatorsReset() {
         super.onAccumulatorsReset()
+        ppiStreamProcessor.reset()
         perDeviceHrvController.onAccumulatorsReset()
     }
 
@@ -1157,6 +1225,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         lastBeatTimestampMs = 0.0
         lastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
         packetCounter = 0
+        ppiStreamProcessor.reset()
     }
 
     override fun shutDown() {
@@ -1194,6 +1263,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             if (isVeritySense) {
                 try {
                     api.stopStreaming(streamId, PmdMeasurementType.GYRO)
+                } catch (_: Throwable) {
+                }
+                try {
+                    api.stopStreaming(streamId, PmdMeasurementType.PPI)
                 } catch (_: Throwable) {
                 }
             }

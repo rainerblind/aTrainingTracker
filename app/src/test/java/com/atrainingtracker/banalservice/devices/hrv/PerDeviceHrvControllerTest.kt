@@ -568,4 +568,41 @@ class PerDeviceHrvControllerTest {
         assertNotNull("Case B: Post-race HRV_SDNN must compute valid value", hostB.getSensor(SensorType.HRV_SDNN)?.value)
         controllerB.shutDown()
     }
+
+    @Test
+    fun testPerDeviceOpticalPpiSuppressesDfaAlpha1WhileComputingRmssdAndSdnn_TST_HRV_051_3() {
+        // REQ-HRV-051.3 / TST-HRV-051.3
+        val host = FakeHrmHost(context, sensorManager, "Polar Sense Optical")
+        val baseTs = 5_000_000L
+        val nowMs = baseTs + 110 * 800L
+        val controller = PerDeviceHrvController(
+            context = context,
+            hostDevice = host,
+            hostCallbacks = host.callbacks(),
+            timeProvider = { nowMs },
+            startScheduler = false,
+            artifactGateThresholdPercent = 5.0
+        )
+
+        for (i in 0 until 110) {
+            val rr = 800.0 + 35.0 * kotlin.math.sin(2.0 * kotlin.math.PI * i / 16.0) +
+                15.0 * kotlin.math.sin(2.0 * kotlin.math.PI * i / 64.0)
+            controller.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = baseTs + i * 800L,
+                    rrMs = rr,
+                    rawCounter = i,
+                    protocol = ProtocolType.BLE,
+                    isOpticalPpi = true
+                )
+            )
+        }
+        controller.calculateMetrics()
+
+        assertNull("Pinned Verity Sense HRV_DFA_A1 must be suppressed to null", host.getSensor(SensorType.HRV_DFA_A1)?.value)
+        assertNotNull("Pinned Verity Sense HRV_RMSSD must still compute", host.getSensor(SensorType.HRV_RMSSD)?.value)
+        assertNotNull("Pinned Verity Sense HRV_SDNN must still compute", host.getSensor(SensorType.HRV_SDNN)?.value)
+        assertEquals(HrvSignalQualityStatus.VALID, controller.signalQualityResult.status)
+        controller.shutDown()
+    }
 }
