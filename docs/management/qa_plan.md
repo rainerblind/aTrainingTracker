@@ -3,8 +3,8 @@
 **Document ID**: `DOC-MGT-QA`  
 **Document Identifier**: `QA-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.1` (Quality Assurance) & `GP 2.1.6` (Ensure independence of quality assurance)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.1  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-17  
+**Target Release**: `V5.0.0` | **Version**: 1.2.2  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-20  
 **Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164), [ATT-8169](https://rainerblind.atlassian.net/browse/ATT-8169) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`  
 
 ---
