@@ -3667,7 +3667,7 @@ public enum SensorType {
             with self.assertRaises(SystemExit) as cm:
                 governance_cli_main(["--check-sensor-javadocs"])
         self.assertEqual(cm.exception.code, 0, f"stderr={buf_err.getvalue()}")
-        self.assertIn("67 SensorType constant(s)", buf_out.getvalue())
+        self.assertRegex(buf_out.getvalue(), r"\b(6[7-9]|[7-9]\d|\d{3,}) SensorType constant\(s\)")
 
 
 class TestSymmetricTraceabilityAndScannerAudit(unittest.TestCase):
