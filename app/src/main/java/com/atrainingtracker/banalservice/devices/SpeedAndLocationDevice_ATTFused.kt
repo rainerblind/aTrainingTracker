@@ -358,6 +358,7 @@ open class SpeedAndLocationDevice_ATTFused(
                     val stepDetector = sm.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
                     if (stepDetector != null) {
                         sm.registerListener(this, stepDetector, SensorManager.SENSOR_DELAY_NORMAL)
+                        carriageClassifier.setStepDetectorRegistered(true)
                     }
                 } catch (secEx: SecurityException) {
                     Log.w(TAG, "Step detector registration denied by platform policy: ${secEx.message}")
@@ -430,6 +431,7 @@ open class SpeedAndLocationDevice_ATTFused(
                         event.values[2].toDouble(),
                         nowMs
                     )
+                    carriageClassifier.ingestAccelerometer(event.values[0].toDouble(), event.values[1].toDouble(), event.values[2].toDouble(), nowMs)
                     processCadenceAccelerometerSample(event.values, nowMs)
                 }
             }
@@ -499,12 +501,17 @@ open class SpeedAndLocationDevice_ATTFused(
         val gpsSpeed = if (hasGpsSpeed) location.speed.toDouble() else Double.NaN
         val gnssDisplacementSpeedMps = computeRawGnssDisplacementSpeedMps(lat, lon, acc, timestampMs)
         val validBearing = if (location.hasBearing() && !location.bearing.isNaN()) location.bearing.toDouble() else null
+        val accValid = acc > 0.0 && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS
+        val hasTrustedGpsSpeed = hasGpsSpeed && accValid
         val speedForClassifier = when {
-            hasGpsSpeed -> gpsSpeed
+            hasTrustedGpsSpeed -> gpsSpeed
             gnssDisplacementSpeedMps != null -> gnssDisplacementSpeedMps
             else -> synchronized(ekf) { ekf.speedMps }
         }
-        carriageClassifier.ingestGnssSpeed(speedForClassifier, validBearing, acc, timestampMs)
+        carriageClassifier.ingestGnssSpeed(
+            speedForClassifier, validBearing, acc, timestampMs,
+            latitude = if (accValid) lat else null, longitude = if (accValid) lon else null
+        )
         publishInferredSportTelemetry(sportDiscriminator.onSpeedSample(speedForClassifier, timestampMs), timestampMs)
         val activeCarriageMode = updateCarriageClassification(timestampMs, forceClassify = true)
         val activeProfile = activeCarriageMode.profile
@@ -514,10 +521,10 @@ open class SpeedAndLocationDevice_ATTFused(
         val isWheelMoving = lastWheelMs > 0L &&
             abs(timestampMs - lastWheelMs) <= 5000L &&
             lastWheelSpeed > SPEED_ZERO_THRESHOLD
-        val isGpsZero = hasGpsSpeed && gpsSpeed <= SPEED_ZERO_THRESHOLD
+        val isGpsZero = hasTrustedGpsSpeed && gpsSpeed <= SPEED_ZERO_THRESHOLD
         val currentEkfSpeed = synchronized(ekf) { ekf.speedMps }
-        val isMovingByGnss = (hasGpsSpeed && gpsSpeed > 0.25) ||
-            (!hasGpsSpeed && (gnssDisplacementSpeedMps ?: 0.0) > 0.25)
+        val isMovingByGnss = (hasTrustedGpsSpeed && gpsSpeed > 0.25) ||
+            (!hasTrustedGpsSpeed && (gnssDisplacementSpeedMps ?: 0.0) > 0.25)
         val isStationaryByClassifier = activeProfile.forceStationaryPinning &&
             !isWheelMoving &&
             !isMovingByGnss
@@ -1420,9 +1427,20 @@ open class SpeedAndLocationDevice_ATTFused(
         }
         mSensorsRegistered = false
         mAccelRegistered = false
+        carriageClassifier.setStepDetectorRegistered(false)
         resetOriginAndEkf()
 
         super.shutDown()
+    }
+
+    @Synchronized
+    override fun triggerDecayTick() {
+        super.triggerDecayTick()
+        if (mSpeed <= SPEED_ZERO_THRESHOLD) {
+            val nowMs = currentTimeMillis()
+            carriageClassifier.ingestGnssSpeed(0.0, null, null, nowMs)
+            updateCarriageClassification(nowMs, forceClassify = true)
+        }
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {

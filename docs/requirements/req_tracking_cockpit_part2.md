@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.60  
+**Version**: 1.0.63  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 76
+**Total Requirements**: 77
 
 ---
 
@@ -3515,6 +3515,41 @@
 
 **Invariants**: Raw device columns immutable (`REQ-FIL-017.3`); `ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`; `BarometricAltitudeFilter.maxSlewRateMps` & 2-arg `filterSlewOnly` unchanged; live `AltitudeAndSlopeDevice_ATTFused` / `KinematicAltitudeSlopeEkf` untouched; `0` DB schema bumps; `0` monolith LoC edits; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-FIL-034: PhoneCarriageClassifier Indoor GNSS-Outage Stationary Transition, Cyclic-Immune Glance Gating, Multipath Speed Gating & Cross-Device Portability [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-034`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifier.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFused.kt`
+- **Rationale**: Field ride `Zum Bäcker #58` (`workoutID = 2411`, `584 s`) exposed three live carriage classification defects: (1) during a `118 s` indoor bakery stop (`v = 0.00 m/s`), GNSS staleness (`> 6 s`) caused `evaluateRawCandidate()` to return `UNKNOWN` and freeze `committedMode = RUN_WAIST_HIP (5)` while `SpeedAndLocationDevice` zero-decay never reached `carriageClassifier`; (2) `SpeedAndLocationDevice_ATTFused.onLocationChanged()` fed raw multipath `location.speed` (`2.89 m/s @ acc = 43.9 m`) directly to `carriageClassifier` and `isMovingByGnss`; and (3) cyclic `0.8–1.8 Hz ±25°` jeans-pocket thigh flexion falsely triggered `detectGlanceShift()` (`+2.2`) alongside speed-only `runningPrior`, misclassifying front-pocket cycling acceleration (`2.5–5.4 m/s`) as `RUN_HANDHELD (7)` (`ATT-9062`, refining `REQ-FIL-028.1`/`.3`, `REQ-FIL-029`, `REQ-FIL-030`).
+- **Description**:
+  1. *Indoor GNSS-Outage, Stagnant-Fix & Low-Speed Quiet-IMU `STATIONARY` Transition (`REQ-FIL-034.1`)*:
+     - `PhoneCarriageClassifier.evaluateRawCandidate()` SHALL classify `PhoneCarriageMode.STATIONARY (0)` (subject to dwell hysteresis) when `(hasOrientation || hasGyro)`, `quietImu` holds (`swingSdDeg < 2.5`, `rawGyroRms < 0.14`, `stepFreqHz == null`, no active accelerometer footstrikes), and `!wheelActiveMoving`, under: (a) stale GNSS (`effectiveSpeed == null`) after prior speed ingestion or non-`UNKNOWN` committed mode (preserving initial `UNKNOWN` for pure IMU-only checks with zero prior speed); (b) `effectiveSpeed <= 1.8 m/s`; or (c) stagnant cached GNSS positions (`>= 4.0 s` span, `>= 3` fixes, `< 2.0 m` spread).
+     - `SpeedAndLocationDevice_ATTFused` SHALL override `triggerDecayTick()` to propagate `0.0 m/s` to `carriageClassifier.ingestGnssSpeed(0.0, null, null, nowMs)` and invoke `updateCarriageClassification(nowMs, forceClassify = true)` using injectable `currentTimeMillis()` when `mSpeed <= SPEED_ZERO_THRESHOLD`.
+  2. *Cyclic-Immune `detectGlanceShift()` & Front-Pocket Cycling (`REQ-FIL-034.2`)*:
+     - `PhoneCarriageClassifier.detectGlanceShift()` SHALL require `prevSpanMs >= 1_200L` (`prevN >= 4`) and MUST reject periodic thigh oscillation whenever `(recSdDeg > 8.0 && deltaDeg < 2.6 * recSdDeg)` OR `(prevSdDeg >= 7.0 && deltaDeg <= 1.25 * prevPeakDeg)`, preventing false glance bonuses during `0.8–1.8 Hz ±25°` front-pocket pedaling while preserving genuine sustained wrist-glance holds (`70° -> 18–20°` and `70° -> 35°`).
+  3. *Degraded Multipath GNSS Speed & `isMovingByGnss` Gating (`REQ-FIL-034.3`)*:
+     - `SpeedAndLocationDevice_ATTFused.onLocationChanged()` SHALL define `hasTrustedGpsSpeed = hasGpsSpeed && acc > 0.0 && acc <= UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS` and gate BOTH `speedForClassifier` and `isMovingByGnss` on `hasTrustedGpsSpeed` (passing `lat`/`lon` for stagnation tracking strictly when `acc > 0.0 && acc <= MAX_GNSS_ACCURACY_METERS`), preventing degraded multipath fixes (`acc = 43.9 m`, `2.89 m/s`) from triggering `RUN_*` or defeating `forceStationaryPinning`.
+  4. *Cross-Device & Cross-Athlete Portability (`REQ-FIL-034.4`)*:
+     - `PhoneCarriageClassifier` SHALL distinguish `stepDetectorUnavailable` from `stepDetectorActiveAndZero` via `setStepDetectorRegistered(Boolean)` (default `false`) and reuse `ImuCadenceDsp` (`50 Hz` time-based `UniformGridResampler`, `BiquadBandPass(50.0, 2.1, 4.2)`, `DoubleRingBuffer(250)`, `findFundamentalLagResult`) via `ingestAccelerometer(ax, ay, az, timestampMs)`, requiring BOTH `2.1–4.2 Hz` bandpass RMS `>= 1.2 m/s²` AND normalized ACF `peakCorrelation >= 0.42` over `2.3..3.8 Hz` (lags `13..22`), plus `>= 2.0 s` active accel span before `hasConfirmedNoFootstrikes = true`.
+     - `effectiveRunStepFreqHz = stepFreqHz ?: accelFootstrikeFreqHz` SHALL award `runningPrior += 5.0` ahead of speed cutoffs (`>= 5.5 m/s`) so `5.6 m/s` interval runners and permission-denied/barometer-free runners classify as `RUN_*`; `confirmedNoFootstrikes = stepDetectorActiveAndZero || hasConfirmedNoFootstrikes` SHALL gate the `WALKING_TRANSITION` short-circuit with `!(confirmedNoFootstrikes && effectiveSpeed >= 1.6)` and award `cyclingPrior` (not `runningPrior += 0.6`) when `confirmedNoFootstrikes && effectiveSpeed >= 1.8` so `2.0 m/s` `60 RPM` uphill MTB climbers classify as `BIKE_*` while step-detector-less walking (`PhoneCarriageClassifierTest:295`) stays `WALKING_TRANSITION`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-034` refining `REQ-FIL-028.1`/`.3`, `REQ-FIL-029`, and `REQ-FIL-030` across `PhoneCarriageClassifier.kt` and `SpeedAndLocationDevice_ATTFused.kt`.
+2. *Historical Origin & Commit Trace*: `fee3e805` (`ATT-8890`), `a3a5942a` (`ATT-8895`), `410240a8` (`ATT-8891`), `a93f3230` (`ATT-8917`).
+3. *Root Reason for Existing Formulation*: `ATT-8890` returned `UNKNOWN` on stale speed to keep IMU-only unit checks neutral and predated `ATT-8895`'s `ImuCadenceDsp` bandpass/ACF primitives and step-detector registration awareness.
+4. *Preservation of Core Invariants*: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS = 3.0` untouched; IMU-only initial `UNKNOWN` state preserved; `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` test reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout entering a bakery (`1.44 m/s`, `acc = 48.5 m`) followed by `120 s` indoor standstill (GNSS outage or stagnant cached fixes) with quiet IMU and zero steps, *When* `PhoneCarriageClassifier.classify()` or `triggerDecayTick()` runs, *Then* mode transitions to and stays in `STATIONARY (0)` instead of freezing on `RUN_WAIST_HIP (5)`.
+• *Given* front-pocket cycling acceleration `2.5 -> 5.4 m/s` (`sportHint == UNKNOWN`, `wheelSpeed == null`, `stepDetectorActiveAndZero`, cyclic `0.8–1.8 Hz ±25°` thigh flexion), *When* `PhoneCarriageClassifier.classify()` evaluates, *Then* `detectGlanceShift()` fires `0` false glances and output is `BIKE_FRONT_POCKET (4)` (while genuine wrist glances still trigger `isGlanceActive == true`).
+• *Given* walking (`ekf.speedMps ~ 1.0 m/s`) encountering an indoor multipath fix (`acc = 43.9 m`, `speed = 2.89 m/s`), *When* `SpeedAndLocationDevice_ATTFused.onLocationChanged()` runs, *Then* `2.89 m/s` is rejected from `speedForClassifier` and `isMovingByGnss` and mode stays `WALKING_TRANSITION (1)` / `STATIONARY (0)`.
+• *Given* (a) a barometer-free `ACTIVITY_RECOGNITION`-denied runner, (b) a `5.6 m/s` interval runner (`3.0 Hz` footstrikes), and (c) a `2.0 m/s` `60 RPM` uphill MTB climber (no footstrikes), *When* `PhoneCarriageClassifier` evaluates each stream, *Then* (a) and (b) classify as `RUN_*` and (c) classifies as `BIKE_*` (never `RUN_*`).
+
+**Invariants**: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `MIN_DOPPLER_SPEED_MPS = 3.0` untouched; `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3580,3 +3615,6 @@
 | `1.0.58` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Added `REQ-FIL-033` `[Planned]` (`REQ-FIL-033.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`) for DEM grid-step slope decoupling, `±35%` forward+backward clamping, low-speed slope damping, contractive OU standstill decay, 3×3 Joseph SPD updates, speed-coupled NaN-safe barometer slew, and barometer-free/leading-null fallback (`N/A - no UI strings`). |
 | `1.0.59` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `REQ-FIL-033` to `[Implemented]` following Stage 4 construction (`ExtendedRtsAltitudeSlopeSmoother.kt` `547` LoC, `BarometricAltitudeFilter.kt` `234` LoC, `ErtsPostWorkoutRecomputer.kt` `1,054` LoC; `0` monolith edits; `109/109` PASS across 11 targeted/contract suites, `0` warnings). |
 | `1.0.60` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `REQ-FIL-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9196`) `109/109` PASS evidence (`Rule 7.5`, zero `app/` diff since `0f4dd34b`), `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9063_walkthrough.md`. |
+| `1.0.61` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Added `REQ-FIL-034` `[Planned]` (`REQ-FIL-034.1`–`.4`, linked to `SYSREQ-TRK-003`/`004`/`010`) for indoor GNSS-outage/stagnant-fix/decay-to-zero `STATIONARY` transition, cyclic-immune `detectGlanceShift()`, accuracy-gated multipath speed & `isMovingByGnss`, and cross-device/athlete `ImuCadenceDsp` footstrike portability (`N/A - no UI strings`). |
+| `1.0.62` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `REQ-FIL-034` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,062` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,459 / 1,500` LoC; `0` monolith edits; `135/135` PASS across 12 executed suites, `0` new warnings). |
+| `1.0.63` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `REQ-FIL-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9208`) `135/135` PASS evidence (`Rule 7.5`, zero `app/` diff since `4b47831a`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9062_walkthrough.md`. |

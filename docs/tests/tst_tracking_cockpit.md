@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.82  
+**Version**: 1.0.85  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 161
+**Total Tests**: 162
 
 ---
 
@@ -3684,6 +3684,26 @@
      • Verify barometer-free DEM/GPS-only stream (`rawAltitudeM = Double.NaN`) learns physically bounded climb/descent slope (`|slopePercent| <= 35%`, zero NaN) without overshoot.
      • Verify leading-null `rawAltitude`/`referenceAltitude` rows (never `0.0 m` injection) and single-sample `n == 1` non-finite input emit finite outputs, and verify `ArchitectureConformanceContractTest` (`0` protected monolith edits, `547`/`234`/`1,054 < 1,500` LoC), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
 
+### TST-FIL-034: **PhoneCarriageClassifier Indoor GNSS-Outage Stationary Transition, Cyclic-Immune Glance Gating, Multipath Speed Gating & Cross-Device Portability Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-9062`
+- **Requirement(s)**: `REQ-FIL-034` (`REQ-FIL-034.1`..`REQ-FIL-034.4`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifierTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicSportTypeDiscriminatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/MultisportTransitionDetectorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/SmartphoneImuCadenceEstimatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Indoor GNSS-Outage, Stagnant-Fix & Decay-to-Zero `STATIONARY` Transition (`TST-FIL-034.1`, `PhoneCarriageClassifierTest`: `testIndoorGnssOutageAndStagnantCachedFixes_transitionToStationaryInsteadOfRunWaistHipFreeze_tstFil034_1`; `SpeedAndLocationDevice_ATTFusedTest`: `testTriggerDecayTick_propagatesZeroSpeedToCarriageClassifierWithInjectableClock_tstFil034_1`)*:
+     • Replay bakery walk-in (`1.44 m/s`, `acc = 48.5 m`) followed by `120 s` GNSS outage with quiet IMU (`swingSd < 2.5°`, `rawGyroRms < 0.14 rad/s`, `0` steps) asserting clean transition to and persistence in `STATIONARY (0)` (never freezing on `RUN_WAIST_HIP (5)`).
+     • Replay stagnant cached indoor fixes (`>= 4 s`, `< 2.0 m` spread, cached `2.0 m/s`, `acc = 5 m`) + quiet IMU asserting `STATIONARY (0)`, verify pure IMU-only startup without prior speed stays `UNKNOWN`, and verify `SpeedAndLocationDevice_ATTFused.triggerDecayTickForTesting()` with injectable `currentTimeMillis()` propagates `0.0 m/s` and commits `STATIONARY (0)`.
+  2. *Cyclic-Immune `detectGlanceShift()` & Front-Pocket Cycling (`TST-FIL-034.2`, `PhoneCarriageClassifierTest`: `testCyclicFrontPocketPedaling_zeroFalseGlancesAndClassifiesBikeFrontPocket_tstFil034_2`; `SpeedAndLocationDevice_ATTFusedTest`: `testHandheldGlanceGatingAndRunningChordHeading_tstFil028_3`)*:
+     • Replay front-pocket cycling acceleration (`2.5 -> 5.4 m/s`, `sportHint == UNKNOWN`, `wheelSpeed == null`, `stepDetectorRegistered = true` with zero steps, cyclic `0.85/1.2/1.5/1.75 Hz ±25°` thigh flexion, `yaw >= 0.45 rad/s`, `baro >= 0.40 m/s`) asserting `0` false glances (including startup `prevSpanMs < 1_200L`) and `BIKE_FRONT_POCKET (4)` output.
+     • Verify genuine sustained wrist glances (`70° ± 22° -> 18–20°` and gentle `70° -> 35°`) still trigger `isGlanceActive == true` and `RUN_HANDHELD`.
+  3. *Degraded Multipath Speed & `isMovingByGnss` Accuracy Gating (`TST-FIL-034.3`, `SpeedAndLocationDevice_ATTFusedTest`: `testDegradedMultipathIndoorSpeed_gatedFromClassifierAndStationaryPinning_tstFil034_3`)*:
+     • Replay walking transition (`ekf.speedMps ~ 1.0 m/s`) encountering indoor multipath fixes (`acc = 43.9 m`, `location.speed = 2.89 m/s`); assert degraded speed is rejected from both `speedForClassifier` and `isMovingByGnss`, `forceStationaryPinning` stays intact, and mode remains `WALKING_TRANSITION (1)` / `STATIONARY (0)`.
+  4. *Cross-Device/Athlete Portability & Contracts (`TST-FIL-034.4`, `PhoneCarriageClassifierTest`: `testCrossDeviceAndAthletePortability_deniedPermissionBaroFreeFastRunnerAndUphillMtb_tstFil034_4`; `ArchitectureConformanceContractTest`, `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`)*:
+     • Verify (a) barometer-free `ACTIVITY_RECOGNITION`-denied runner (`stepDetectorUnavailable`, `2.8 Hz` accel footstrikes, `RMS >= 1.2 m/s²`), (b) `5.6 m/s` (`3:00 min/km`) interval runner (`3.0 Hz` footstrikes, with and without step detector), and (c) `2.0 m/s` uphill `60 RPM` MTB climber (smooth `1.0 Hz` pedaling + low-energy `3.0 Hz` harmonic `< 1.2 m/s²`, zero footstrikes) classify as `RUN_*`, `RUN_*`, and `BIKE_*` respectively while `PhoneCarriageClassifierTest:295` stays `WALKING_TRANSITION`.
+     • Verify `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt = 1,459 / 1,500` LoC, `0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3763,3 +3783,6 @@
 | `1.0.80` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Added `TST-FIL-033` `[Planned]` (`TST-FIL-033.1`–`.3`, strictly symmetric `REQ-FIL-033`) covering `-3 m`/`-10 m` DEM step startup + `20 s` OU standstill closed loop, `18 m/s` `-10%` alpine descent & NaN-safe speed-coupled slew, and barometer-free/leading-null/`n == 1` fallback (`N/A - no UI strings`). |
 | `1.0.81` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `TST-FIL-033` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`109/109` PASS across 11 targeted/contract suites, `0` fail, `0` err, `0` skip, `0` new warnings). |
 | `1.0.82` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `TST-FIL-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9196`) `109/109` PASS evidence (`Rule 7.5`, zero `app/` diff since `0f4dd34b`), `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9063_walkthrough.md`. |
+| `1.0.83` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Added `TST-FIL-034` `[Planned]` (`TST-FIL-034.1`–`.4`, strictly symmetric `REQ-FIL-034`) covering indoor GNSS-outage/stagnant-fix/decay-to-zero `STATIONARY`, cyclic-immune `detectGlanceShift()` & front-pocket cycling, accuracy-gated multipath speed & `isMovingByGnss`, and cross-device/athlete portability (`N/A - no UI strings`). |
+| `1.0.84` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `TST-FIL-034` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`135/135` PASS across 12 suites, `0` fail, `0` err, `0` skip, `0` new warnings). |
+| `1.0.85` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `TST-FIL-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9208`) `135/135` PASS evidence (`Rule 7.5`, zero `app/` diff since `4b47831a`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9062_walkthrough.md`. |
