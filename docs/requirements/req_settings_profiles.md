@@ -1,7 +1,7 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.9  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -30,7 +30,7 @@
 - **Rationale**: Help users monitor gear wear and tear.
 - **Description**: Equipment management (Bikes/Shoes) with odometer.
 
-### REQ-SET-003: Configurable speed thresholds for classification [Implemented]
+### REQ-SET-003: Configurable speed thresholds for classification [Verified]
 - **Tests**: `TST-UNT-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -2826,3 +2826,4 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.7` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `REQ-SET-119` to `[Implemented]` following Stage 4 construction (`PolarRetrySyncCoordinator`, fast-fail, 5s connection bound). |
 | `1.0.8` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `REQ-SET-119` to `[Verified]` following Stage 5 verification (`155/155` unit/Compose/contract tests). |
 | `1.0.9` | 2026-11-20 | AI Agent (`ATT-8328`) | `ATT-8328` | Promoted 39 unblocked `REQ-SET-*` requirements to `[Verified]` following Gate 4 (`2a149eca`, `119/119` PASS); retained `REQ-SET-014`, `019`, `021`, `069` at `[Implemented]`. |
+| `1.0.10` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-SET-003` (`TST-UNT-003`) to `[Verified]` following Gate 4 verification (`3e20473b`, `Rule 7.5`). |

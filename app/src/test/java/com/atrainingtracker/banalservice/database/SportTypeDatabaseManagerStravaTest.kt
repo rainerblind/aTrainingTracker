@@ -1,21 +1,34 @@
 package com.atrainingtracker.banalservice.database
 
+import android.app.Application
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.lang.reflect.Field
 
 /**
- * Unit tests verifying SportTypeDatabaseManager.getSportTypeIdFromStravaName (REQ-EXP-009, TST-EXP-006, ATT-1114).
+ * Unit tests verifying SportTypeDatabaseManager Strava mapping persistence and lookups
+ * (REQ-EXP-006, TST-UNT-006, REQ-EXP-009, TST-EXP-006, ATT-1114).
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class SportTypeDatabaseManagerStravaTest {
 
     private lateinit var mockContext: Context
@@ -110,5 +123,66 @@ class SportTypeDatabaseManagerStravaTest {
 
         val sportId = testManager.getSportTypeIdFromStravaName("Ride")
         assertEquals(2L, sportId)
+    }
+
+    /**
+     * TST-UNT-006 (REQ-EXP-006): Verifies that SportTypeDatabaseManager persists an explicit
+     * null Strava mapping ("No upload") across SQLite updates and fresh instance reloads.
+     */
+    @Test
+    fun testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006() {
+        // TST-UNT-006
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val ctxField: Field = TrainingApplication::class.java.getDeclaredField("cAppContext")
+        ctxField.isAccessible = true
+        val prevContext = ctxField.get(null)
+        ctxField.set(null, appContext)
+
+        val prefsField: Field = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        prefsField.isAccessible = true
+        val prevPrefs = prefsField.get(null)
+        prefsField.set(null, androidx.preference.PreferenceManager.getDefaultSharedPreferences(appContext))
+
+        SportTypeDatabaseManager.resetForTesting(null)
+        appContext.deleteDatabase(SportTypeDatabaseManager.SportTypeDbHelper.DB_NAME)
+
+        try {
+            val realMgr = SportTypeDatabaseManager.getInstance(appContext)
+            val id = realMgr.updateSportType(
+                -1L,
+                "Commute Unsynced",
+                BSportType.BIKE,
+                1.0,
+                12.0,
+                "Ride",
+                "biking",
+                "bike"
+            )
+            assertTrue(id > 0L)
+            assertEquals("Ride", realMgr.getStravaName(id))
+
+            // Explicitly update Strava mapping to null ("No upload")
+            realMgr.updateSportType(
+                id,
+                "Commute Unsynced",
+                BSportType.BIKE,
+                1.0,
+                12.0,
+                null,
+                "biking",
+                "bike"
+            )
+            assertNull(realMgr.getStravaName(id))
+
+            // Force fresh manager instance / DB read
+            SportTypeDatabaseManager.resetForTesting(null)
+            val reloadedMgr = SportTypeDatabaseManager.getInstance(appContext)
+            assertNull(reloadedMgr.getStravaName(id))
+        } finally {
+            SportTypeDatabaseManager.resetForTesting(null)
+            appContext.deleteDatabase(SportTypeDatabaseManager.SportTypeDbHelper.DB_NAME)
+            ctxField.set(null, prevContext)
+            prefsField.set(null, prevPrefs)
+        }
     }
 }

@@ -191,8 +191,13 @@ class InteractivePeriodMapTest {
         assertEquals(LatLng(48.0, 9.0), resolvedTracks[0].path[0].latLng)
     }
 
+    /**
+     * TST-PER-027.4 / TST-UI-041 (REQ-UI-033, REQ-UI-035, REQ-UI-036): Verifies Period Map
+     * spatial tap hit-testing and adaptive peak/peek resolution.
+     */
     @Test
     fun testTstPer027_4_SpatialTapHitTestingResolvesClosestWorkout() {
+        // TST-UI-041
         val pathA = listOf(
             LatLng(48.5000, 9.2000),
             LatLng(48.5010, 9.2010),

@@ -1,7 +1,7 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P1`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -922,7 +922,7 @@
 
 **Invariants**: Spatial geofence matching radius ($200\text{m}$), schema version (V5), locked location altitude immutability (`REQ-DAT-014`), null-safe correction dispatch (`REQ-CON-013`), and cold-start baseline protection (`REQ-CON-011`) MUST NOT be altered.
 
-### REQ-DAT-008: Atomic Database Upgrades [Implemented]
+### REQ-DAT-008: Atomic Database Upgrades [Verified]
 - **Tests**: `TST-UNT-014`
 - **System Requirement(s)**: `SYSREQ-DEX-005`
 - **Priority**: High
@@ -3991,3 +3991,4 @@
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
 | `1.0.2` | 2026-11-19 | AI Agent (`ATT-8325`) | `ATT-8325` | Promoted 24 eligible Data Migration & Export requirements to `[Verified]` after Stage 4 deterministic test verification (holding `REQ-EXP-001` & `REQ-MIG-014` at `[Implemented]` per multi-TST guard). |
+| `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-DAT-008` to `[Verified]` (`TST-UNT-014`, Gate 4 `3e20473b`); preserved `REQ-EXP-006` (`[Verified]`). |

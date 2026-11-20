@@ -1,7 +1,7 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -72,7 +72,7 @@
 - **Rationale**: Standardize map rendering and behavior across screens.
 - **Description**: Declarative Map DSL with modular layers.
 
-### REQ-MAP-007: Lazy coordinate projection for path rendering [Implemented]
+### REQ-MAP-007: Lazy coordinate projection for path rendering [Verified]
 - **Tests**: `TST-UNT-010`
 - **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Medium
@@ -102,7 +102,7 @@
 - **Rationale**: The map SHALL immediately redraw and re-style polylines (Route, Segment, Track) when their underlying selection or visibility state changes in the UI.
 - **Description**: Reactive Map Layer Redraw.
 
-### REQ-MAP-010: Toggleable Grade Legend [Implemented]
+### REQ-MAP-010: Toggleable Grade Legend [Verified]
 - **Tests**: `TST-UI-051`
 - **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Low
@@ -214,7 +214,7 @@
   3. *Root Reason for Existing Formulation*: Menu previously listed `Network` because `TrackType.NETWORK` existed prior to `ATT-5492`.
   4. *Preservation of Core Invariants*: Existing `Icons.Default.Layers` circular surface, checkbox + color swatch row layout, and `enabledTrackTypes` persistence (`REQ-MAP-013`) remain intact with 100% 9-locale parity (`ATT-5400`).
 
-### REQ-MAP-013: Persistent Map Selection [Implemented]
+### REQ-MAP-013: Persistent Map Selection [Verified]
 - **Tests**: `TST-UI-056`
 - **System Requirement(s)**: Derived (SW-only) — Post-workout map visualization, heatmap rendering, and UI styling
 - **Priority**: Medium
@@ -2858,3 +2858,4 @@
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `REQ-MAP-068` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Refined and verified (`[Verified]`) `REQ-MAP-011` and `REQ-MAP-012` for `TrackType.ATT_FUSED`, alias-aware GPS/Fused lookup, `TrackType.NETWORK` removal, and peek bottom-sheet `Layers` wiring. |
 | `1.0.6` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-MAP-017` to `[Verified]` in Stage 5 following `TST-PERF-001` 520-workout memory & vertex-budget verification (`PeriodsRepositoryMemoryTest`, `PeriodVertexBudgetTest`). |
+| `1.0.7` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted 3 unblocked map/navigation requirements (`REQ-MAP-007`, `REQ-MAP-010`, `REQ-MAP-013`) to `[Verified]` (Gate 4 `3e20473b`, `Rule 7.5`). |

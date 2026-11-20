@@ -1,7 +1,7 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P1`  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -170,7 +170,7 @@
 - **Implementation**: `MyAccumulatorSensor.java`, `ANTBikeSpeedDevice.java`, `BTLEBikeDevice.java`
 - **Rationale**: The system SHALL prevent distance accumulation while paused to ensure workout statistics only reflect active movement.
 
-### REQ-PRO-004: Pause Track Isolation [Implemented]
+### REQ-PRO-004: Pause Track Isolation [Verified]
 - **Tests**: `TST-UI-039`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -178,7 +178,7 @@
 - **Implementation**: `BANALServiceRepository.kt`
 - **Rationale**: The system SHALL prevent track and profile accumulation while paused, ensuring they strictly reflect active periods.
 
-### REQ-PRO-005: Database Schema Integrity [Implemented]
+### REQ-PRO-005: Database Schema Integrity [Verified]
 - **Tests**: `TST-UNT-011`
 - **Priority**: High
 - **Type**: Non-Functional
@@ -3977,3 +3977,4 @@ The workflow SHALL mandate that:
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.1` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-PRO-004` (`TST-UI-039`) and `REQ-PRO-005` (`TST-UNT-011`) to `[Verified]` following Gate 4 verification (`3e20473b`, `Rule 7.5`). |

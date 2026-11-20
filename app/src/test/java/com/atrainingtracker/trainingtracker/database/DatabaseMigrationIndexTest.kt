@@ -203,8 +203,14 @@ class DatabaseMigrationIndexTest {
         }
     }
 
+    /**
+     * TST-UNT-014 (REQ-DAT-008): Verifies WorkoutSummariesDbHelper.onUpgrade completes cleanly
+     * inside an active SQLiteOpenHelper-managed transaction without manually calling
+     * setTransactionSuccessful().
+     */
     @Test
     fun testWorkoutSummariesDb_onUpgradeV25ToV26_createsIndexesIdempotently() {
+        // TST-UNT-014
         val dbName = "test_summaries_idx.db"
         context.deleteDatabase(dbName)
         context.openOrCreateDatabase(dbName, Context.MODE_PRIVATE, null).use { db ->

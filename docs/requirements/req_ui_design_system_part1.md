@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 1 of 5)
 
 **Document ID**: `DOC-REQ-UI-P1`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,7 +12,7 @@
 
 ---
 
-### REQ-UI-521: Weekly Period Date Range [Implemented]
+### REQ-UI-521: Weekly Period Date Range [Verified]
 - **Tests**: `TST-UI-074`
 - **Priority**: Medium
 - **Type**: Functional
@@ -38,7 +38,7 @@
 - **Rationale**: The system SHALL link `SHOW_ELEVATION_PROFILE` to map visibility (`showMap ? 1 : 0`), preserving sensor filter presets, view size seeding, and user customization sovereignty across workout views.
 - **Description**: Structured Architecture & Elevation Profile Linking.
 
-### REQ-UI-009: Session Isolation & Workout Transition UI [Implemented]
+### REQ-UI-009: Session Isolation & Workout Transition UI [Verified]
 - **Tests**: `TST-UI-029`, `TST-INT-004`, `TST-STR-003`
 - **Priority**: High
 - **Type**: Functional
@@ -64,7 +64,7 @@
 - **Implementation**: `WorkoutExtrema.kt`, `WorkoutDataMapper.kt`
 - **Rationale**: The workout summary SHALL feature a world-class aesthetic for the min/mean/max table, including optimized core metrics, dual Speed/Pace display for runs, bracketed micro-units, bottom-baseline alignment, mathematical average notation (Ø), context-aware bolding, and strict mathematical ordering.
 
-### REQ-UI-012: Ascent/Descent Priority [Implemented]
+### REQ-UI-012: Ascent/Descent Priority [Verified]
 - **Tests**: `TST-UI-021`
 - **Priority**: Medium
 - **Type**: Functional
@@ -81,7 +81,7 @@
 - **Rationale**: Ensure the Elevation Profile chart and the summary table display identical min/max values to prevent visual inconsistency and user confusion.
 - **Description**: Harmonized Elevation Extrema.
 
-### REQ-UI-014: Authoritative Average Speed [Implemented]
+### REQ-UI-014: Authoritative Average Speed [Verified]
 - **Tests**: `TST-UI-027`
 - **Priority**: Medium
 - **Type**: Functional
@@ -117,7 +117,7 @@
 - **Rationale**: Harmonize the "look and feel" of all list views.
 - **Description**: Standardized list items and placeholders.
 
-### REQ-UI-018: Refined Elevation Terminology [Implemented]
+### REQ-UI-018: Refined Elevation Terminology [Verified]
 - **Tests**: `TST-UI-028`
 - **Priority**: Medium
 - **Type**: Functional
@@ -126,7 +126,7 @@
 - **Rationale**: Distinguish between absolute altitude ("Altitude"/"Höhe") and relative gain ("Elevation"/"Höhenmeter") in all languages.
 - **Description**: Refined Elevation Terminology.
 
-### REQ-UI-020: Consistent Vertical Metric Representation [Implemented]
+### REQ-UI-020: Consistent Vertical Metric Representation [Verified]
 - **Tests**: `TST-UI-030`
 - **Priority**: Medium
 - **Type**: Functional
@@ -135,7 +135,7 @@
 - **Rationale**: Provide a harmonized technical representation of elevation data across all list items using standardized icons and visual lead-ins.
 - **Description**: Consistent Vertical Metric Representation.
 
-### REQ-UI-021: Elevation Section Hierarchy [Implemented]
+### REQ-UI-021: Elevation Section Hierarchy [Verified]
 - **Tests**: `TST-UI-031`
 - **Priority**: Medium
 - **Type**: Functional
@@ -143,7 +143,7 @@
 - **Implementation**: `WorkoutDetails.kt`
 - **Rationale**: In the Workout Summary, the descriptive elevation text SHALL be positioned above the mountain symbol to provide a clear visual hierarchy.
 
-### REQ-UI-024: Optimized Route Identity Layout [Implemented]
+### REQ-UI-024: Optimized Route Identity Layout [Verified]
 - **Tests**: `TST-UI-034`
 - **Priority**: Medium
 - **Type**: Functional
@@ -152,7 +152,7 @@
 - **Rationale**: The Route Name shall be granted maximum horizontal priority. Secondary metadata (Source) must be subordinate. For Strava routes, the text label must be replaced by the official logo to eliminate redundancy. Control elements (Switch) must be positioned in the metrics row to prevent layout conflicts.
 - **Description**: Optimized Route Identity Layout.
 
-### REQ-UI-025: Decoupled Control Positioning [Implemented]
+### REQ-UI-025: Decoupled Control Positioning [Verified]
 - **Tests**: `TST-UI-035`
 - **Priority**: Medium
 - **Type**: Functional
@@ -161,7 +161,7 @@
 - **Rationale**: The visibility switch shall be positioned as an overlay in the bottom-right of the header area to decouple its technical height from the metrics layout, enabling maximum vertical density.
 - **Description**: Decoupled Control Positioning.
 
-### REQ-UI-028: Hierarchical Detailed Metrics [Implemented]
+### REQ-UI-028: Hierarchical Detailed Metrics [Verified]
 - **Tests**: `TST-UI-038`
 - **Priority**: Medium
 - **Type**: Functional
@@ -170,7 +170,7 @@
 - **Rationale**: To establish a clear visual hierarchy in Period Summaries, secondary detailed stats (sub-sports and specific highlights) must be rendered using a reduced scale (14dp icons and bodySmall typography) while maintaining legibility.
 - **Description**: Hierarchical Detailed Metrics.
 
-### REQ-UI-026: Consistent Branding Scaling [Implemented]
+### REQ-UI-026: Consistent Branding Scaling [Verified]
 - **Tests**: `TST-UI-036`
 - **Priority**: Medium
 - **Type**: Functional
@@ -179,7 +179,7 @@
 - **Rationale**: Official third-party logos (e.g., Strava) must be scaled to subordinate heights (10dp-24dp) when used as source metadata or list headers to prevent visual dominance over primary athletic data.
 - **Description**: Consistent Branding Scaling.
 
-### REQ-UI-033: Period Peak Markers [Implemented]
+### REQ-UI-033: Period Peak Markers [Verified]
 - **Tests**: `TST-UI-041`
 - **Priority**: Medium
 - **Type**: Functional
@@ -188,7 +188,7 @@
 - **Rationale**: The `PeriodMapScreen` SHALL display optional and selectable markers for the Start, End, Maximum Altitude, and Maximum Line Distance of each workout in the period.
 - **Description**: Period Peak Markers.
 
-### REQ-UI-035: Peak Marker Alpha Sync [Implemented]
+### REQ-UI-035: Peak Marker Alpha Sync [Verified]
 - **Tests**: `TST-UI-041`
 - **Priority**: Medium
 - **Type**: Functional
@@ -197,7 +197,7 @@
 - **Rationale**: Technical markers in the Period Map SHALL use the same Alpha (opacity) as the workout's polyline (defined by the period type) to ensure visual consistency.
 - **Description**: Peak Marker Alpha Sync.
 
-### REQ-UI-036: Peak Marker Interactivity [Implemented]
+### REQ-UI-036: Peak Marker Interactivity [Verified]
 - **Tests**: `TST-UI-041`
 - **Priority**: Medium
 - **Type**: Functional
@@ -215,7 +215,7 @@
 - **Rationale**: The user interface SHALL reflect real-time updates to the Total Duration of an active workout session while paused, ensuring accurate visibility into the overall elapsed time.
 - **Description**: Live Pause Updates.
 
-### REQ-UI-041: Composable Device Management [Implemented]
+### REQ-UI-041: Composable Device Management [Verified]
 - **Tests**: `TST-UI-043`
 - **Priority**: Medium
 - **Type**: Functional
@@ -233,7 +233,7 @@
 - **Rationale**: Technical troubleshooting options (e.g., "Check ANT+ Installation") SHALL only be displayed when the relevant communication protocol is active in the current view.
 - **Description**: Protocol-Aware Troubleshooting.
 
-### REQ-UI-042: Mappable Device Items [Implemented]
+### REQ-UI-042: Mappable Device Items [Verified]
 - **Tests**: `TST-UI-044`
 - **Priority**: Medium
 - **Type**: Functional
@@ -242,7 +242,7 @@
 - **Rationale**: Individual device items SHALL use the `MappableListItem` foundation. The layout SHALL be organized into a multi-row structure: Header Row (54dp/44dp icon next to technical status LED, Name and Value/Status Icon), Manufacturer Row, Technical Status Row (18dp battery icon, percentage, and connection state in brackets), Equipment Row, and Predicted Sport Type Row. Connected devices SHALL be immediately recognizable via a green status LED dot next to the device name. The Predicted Sport Type Row SHALL use technical subordination visuals (→, labelSmall, 0.7f alpha) to dynamically display the mapping between equipment and evaluation results. The pairing switch SHALL be positioned at the absolute bottom-right corner, using visual offsets and a 0.8f scale. Header icons SHALL use protocol-aware scaling (ANT+: 36dp, BLE: 42dp) to ensure visual parity.
 - **Description**: Mappable Device Items.
 
-### REQ-UI-043: Composable Edit & Selection Dialogs [Implemented]
+### REQ-UI-043: Composable Edit & Selection Dialogs [Verified]
 - **Tests**: `TST-UI-043`
 - **Priority**: Medium
 - **Type**: Functional
@@ -251,7 +251,7 @@
 - **Rationale**: Device configuration and type selection SHALL be handled via Composable dialogs. The selection interface SHALL include device-specific icons (32dp) and high-readability labels. The edit dialog SHALL feature a cohesive identity block for Sensor Name and Manufacturer. The equipment section SHALL include a reactive Predicted Sport Type Row (using →) to clarify the resulting sport evaluation in real-time.
 - **Description**: Composable Edit & Selection Dialogs.
 
-### REQ-UI-046: Unified Stats Summary Block [Implemented]
+### REQ-UI-046: Unified Stats Summary Block [Verified]
 - **Tests**: `TST-UI-046`
 - **Priority**: Medium
 - **Type**: Functional
@@ -269,7 +269,7 @@
 - **Rationale**: The Live Segment bottom sheet SHALL NOT expand to the top of the screen; its maximum height SHALL be limited to display the header and the elevation profile only.
 - **Description**: Live Segment Sheet Height Constraint.
 
-### REQ-UI-048: Clean Sensor Status Header [Implemented]
+### REQ-UI-048: Clean Sensor Status Header [Verified]
 - **Tests**: `TST-UI-048`
 - **Priority**: Medium
 - **Type**: Functional
@@ -277,7 +277,7 @@
 - **Implementation**: `SensorStatus.kt`
 - **Rationale**: The `SensorStatus` header SHALL display only technical icons for active/available sensors. Icons SHALL use a balanced 22dp scale and SHALL NOT include descriptive text labels below them.
 
-### REQ-UI-049: Sensor Source Dialog [Implemented]
+### REQ-UI-049: Sensor Source Dialog [Verified]
 - **Tests**: `TST-UI-049`
 - **Priority**: Medium
 - **Type**: Functional
@@ -286,7 +286,7 @@
 - **Rationale**: Tapping a sensor icon in the `SensorStatus` header SHALL display a dialog showing current telemetry and the sensor redundancy chain grouped into: Source (active), Active Backups, and Not Connected. Values SHALL include localized units. Tapping a device within this dialog SHALL open the `EditDeviceDialog` for that specific hardware.
 - **Description**: Sensor Source Dialog.
 
-### REQ-UI-050: Optimized Sensor Identity Layout [Implemented]
+### REQ-UI-050: Optimized Sensor Identity Layout [Verified]
 - **Tests**: `TST-UI-050`
 - **Priority**: Medium
 - **Type**: Functional
@@ -335,7 +335,7 @@
 
 **Invariants**: Route color palette immutability, sensor connection state truthfulness (`REQ-UI-268`), and 100% clean-room test suite pass rate MUST NOT be broken.
 
-### REQ-UI-052: Longest Workout Navigation [Implemented]
+### REQ-UI-052: Longest Workout Navigation [Verified]
 - **Tests**: `TST-UI-053`
 - **Priority**: Medium
 - **Type**: Functional
@@ -353,7 +353,7 @@
 - **Rationale**: The tracking header SHALL use `SensorType.ACCURACY` as the primary location indicator. Tapping this icon SHALL display the `SensorSourceDialog` focused on technical accuracy (in meters) to provide actionable data quality insights.
 - **Description**: Location Accuracy Auditing.
 
-### REQ-UI-054: Semantic Color Palette [Implemented]
+### REQ-UI-054: Semantic Color Palette [Verified]
 - **Tests**: `TST-UI-059`
 - **Priority**: Medium
 - **Type**: Functional
@@ -362,7 +362,7 @@
 - **Rationale**: The system SHALL use semantic color tokens and standardized alpha constants (`TTAlpha`) instead of hardcoded hex values or magic numbers.
 - **Description**: Semantic Color Palette.
 
-### REQ-UI-055: Primary Metric Highlighting [Implemented]
+### REQ-UI-055: Primary Metric Highlighting [Verified]
 - **Tests**: `TST-UI-060`
 - **Priority**: Medium
 - **Type**: Functional
@@ -371,7 +371,7 @@
 - **Rationale**: Primary performance data (Total Distance, Active Time) SHALL use the `primary` color to establish a clear visual hierarchy.
 - **Description**: Primary Metric Highlighting.
 
-### REQ-UI-056: Project-wide Theme Compliance [Implemented]
+### REQ-UI-056: Project-wide Theme Compliance [Verified]
 - **Tests**: `TST-UI-061`
 - **Priority**: Medium
 - **Type**: Functional
@@ -389,7 +389,7 @@
 - **Rationale**: The system SHALL programmatically apply a subtle 4dp rounded corner clip to all sensor and protocol icons to ensure visual consistency and compatibility with dark mode and non-white backgrounds.
 - **Description**: Global Icon Rounding.
 
-### REQ-UI-058: Conditional Elevation Profile [Implemented]
+### REQ-UI-058: Conditional Elevation Profile [Verified]
 - **Tests**: `TST-UI-066`
 - **Priority**: Medium
 - **Type**: Functional
@@ -558,7 +558,7 @@
 - **Implementation**: `project_protocol.md`
 - **Rationale**: Agents SHALL ask for clarification if instructions are unclear to protect project quality and precision.
 
-### REQ-UI-110: Optionally display the current track on a map and its elevation profile [Implemented]
+### REQ-UI-110: Optionally display the current track on a map and its elevation profile [Verified]
 - **Tests**: `TST-UI-029`, `TST-INT-004`, `TST-STR-003`
 - **Priority**: Medium
 - **Type**: Functional
@@ -592,7 +592,7 @@
 - **Implementation**: `ActivityTypeSelectionDialog.kt`, `SportTypeListFragment.kt`
 - **Rationale**: The system SHALL display sport type icons in their original colors to ensure quick identification and preserve visual identity. These icons SHALL NOT be subject to theme-based tinting unless they are explicitly in a \"muted\" or \"disabled\" state (e.g. background layers).
 
-### REQ-UI-115: Concise Settings Terminology [Implemented]
+### REQ-UI-115: Concise Settings Terminology [Verified]
 - **Tests**: `TST-UI-075`
 - **Priority**: Medium
 - **Type**: Functional
@@ -600,7 +600,7 @@
 - **Implementation**: `strings.xml`, `main_navigation_drawer.xml`
 - **Rationale**: The system SHALL use concise and direct terminology for settings-related navigation items by omitting redundant qualifiers such as \"Settings\", \"Configuration\", \"Einstellungen\", or \"Konfiguration\".
 
-### REQ-UI-116: Weekly Period Date Range [Implemented]
+### REQ-UI-116: Weekly Period Date Range [Verified]
 - **Tests**: `TST-UI-074`
 - **Priority**: Medium
 - **Type**: Functional
@@ -640,7 +640,7 @@
 - **Implementation**: `PeriodsTabsScreen.kt`, `PeriodMapScreen.kt`, `MyPreferenceManager.kt`
 - **Rationale**: The system SHALL ALWAYS display heatmaps within the Periods module to provide a consistent analytical experience.
 
-### REQ-UI-121: Consistent List Item Spacing [Implemented]
+### REQ-UI-121: Consistent List Item Spacing [Verified]
 - **Tests**: `TST-UI-077`
 - **Priority**: Medium
 - **Type**: Functional
@@ -740,7 +740,7 @@
 • *Then* bounds SHALL clamp to [-8.5 m, 11.5 m] (20 m span) enveloping all points.
 **Invariants**: Visual grade legend (`REQ-MAP-010`) and distance step calculation MUST NOT be altered.
 
-### REQ-UI-127: Delete Old Workouts Compose Dialog & Action Trigger [Implemented]
+### REQ-UI-127: Delete Old Workouts Compose Dialog & Action Trigger [Verified]
 - **Tests**: `TST-UI-080`
 - **Priority**: Medium
 - **Type**: Functional
@@ -1697,7 +1697,7 @@ Specifically:
 
 **Invariants**: SharedPreferences keys `numberOfSearchTriesInt`, `startSearchWhenAppStarts`, `startSearchWhenResumeFromPaused`, `startSearchWhenUserChangesSport`, `startSearchWhenTrackingStarts`, `searchOnlyForSportSpecificDevices`, and `changeSportWhenDeviceGetsLost`, and `TrainingApplication` getters MUST NOT be altered.
 
-### REQ-UI-155: Legacy Fragment Retirement, Unused Layout Purge & Obsolete String Resource Cleanup [Implemented]
+### REQ-UI-155: Legacy Fragment Retirement, Unused Layout Purge & Obsolete String Resource Cleanup [Verified]
 - **Tests**: `TST-UI-108`
 - **Priority**: Medium
 - **Type**: Functional
@@ -3962,3 +3962,4 @@ Specifically:
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-UI-120` (`TST-PER-010`) and `REQ-UI-125` (`TST-PER-017`) to `[Verified]` in Stage 5 following Robolectric Compose UI, `PeriodsViewModel`, and 9-locale `TranslationParityTest` verification (`Rule 7.5`). |
+| `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted 32 unblocked UI Design System requirements to `[Verified]` following Gate 4 (`3e20473b`, `129/129` PASS, `Rule 7.5`); retained multi-TST blocked `REQ-UI-011` and Bucket C requirements at `[Implemented]`. |

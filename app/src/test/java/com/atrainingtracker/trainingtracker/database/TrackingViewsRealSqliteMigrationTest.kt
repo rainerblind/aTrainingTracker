@@ -962,12 +962,14 @@ class TrackingViewsRealSqliteMigrationTest {
     }
 
     /**
-     * TST-STR-003 (REQ-UI-110, REQ-UI-009): Verifies TrackingViewsDbHelper.onUpgrade(9 -> 10)
-     * adds SHOW_ELEVATION_PROFILE synchronized with SHOW_MAP, and TrackingViewsDbHelper.onCreate()
-     * + addDefaultTab() create SHOW_ELEVATION_PROFILE with showElevationProfile == showMap.
+     * TST-STR-003 / TST-UNT-011 (REQ-PRO-005, REQ-UI-110, REQ-UI-009): Verifies
+     * TrackingViewsDbHelper.onUpgrade(9 -> 10) adds SHOW_ELEVATION_PROFILE synchronized with
+     * SHOW_MAP, and TrackingViewsDbHelper.onCreate() + addDefaultTab() create
+     * SHOW_ELEVATION_PROFILE with showElevationProfile == showMap.
      */
     @Test
     fun testOnCreateAndOnUpgradeV9ToV10_showElevationProfileIntegrity_TST_STR_003() {
+        // TST-UNT-011
         // 1. Upgrade path v9 -> v10
         val v9Db = db!!
         v9Db.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V9)

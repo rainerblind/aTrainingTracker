@@ -38,11 +38,12 @@ class ThemeColorCentralizationAuditTest {
     }
 
     /**
-     * TST-UI-344.1: Recursively scans all Kotlin files in app/src/main/java and asserts strictly 0 occurrences
-     * of Color(0x outside Color.kt.
+     * TST-UI-344.1 / TST-UI-061 (REQ-UI-056): Recursively scans all Kotlin files in
+     * app/src/main/java and asserts strictly 0 occurrences of Color(0x outside Color.kt.
      */
     @Test
     fun verifyZeroHexColorsOutsideColorKt() {
+        // TST-UI-061
         val srcDir = File(projectRoot, "app/src/main/java")
         assertTrue("app/src/main/java must exist", srcDir.isDirectory)
 

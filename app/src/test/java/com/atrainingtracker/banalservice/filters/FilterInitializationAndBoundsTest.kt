@@ -143,11 +143,13 @@ class FilterInitializationAndBoundsTest {
     }
 
     /**
-     * TST-FIL-015.4: Verifies that ExponentialSmoothingFilter seeds directly from the first
-     * non-null sample without 0.0-bias and that reseed() cleanly updates baseline (REQ-FIL-015.3, REQ-FIL-012.5).
+     * TST-FIL-015.4 / TST-UNT-005 (REQ-FIL-002): Verifies that ExponentialSmoothingFilter seeds
+     * directly from the first non-null sample without 0.0-bias, applies y[k+1] = α*m[k] + (1-α)*y[k],
+     * and that reseed() cleanly updates baseline (REQ-FIL-015.3, REQ-FIL-012.5).
      */
     @Test
     fun exponentialSmoothingFilter_firstSampleSeedingAndReseed_eliminatesZeroBias() {
+        // TST-UNT-005
         val filter = ExponentialSmoothingFilter("test", SensorType.POWER, 0.5)
         assertFalse(filter.isInitialized)
         assertEquals(0.0, filter.filteredValue.toDouble(), 0.001)

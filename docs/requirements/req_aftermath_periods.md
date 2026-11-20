@@ -1,7 +1,7 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.26  
+**Version**: 1.0.27  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -20,7 +20,7 @@
 - **Implementation**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
-### REQ-PER-008: Precise Period Filtering [Implemented]
+### REQ-PER-008: Precise Period Filtering [Verified]
 - **Tests**: `TST-PER-009`, `TST-UNT-012`, `TST-UNT-013`
 - **Priority**: Medium
 - **Type**: Functional
@@ -2125,3 +2125,4 @@
 | `1.0.24` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Added `REQ-HRV-050` (`[Planned]`, `.1`–`.4`) for per-device HRV source selection (`DeviceType.HRM`), `MySensorManager` `HRV_PRIORITY`, shared `HrvRollingEngine` + live rolling `HRV_SDNN`, lazy `PerDeviceHrvController` with disconnect stale-value guard, and isolated cockpit/ramp-test HRV lookup. |
 | `1.0.25` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Implemented]` following Stage 4 construction (`DeviceType.java`, `MySensorManager.java`, `HrvRollingEngine.kt`, `HrvTelemetryProvider.kt`, `PerDeviceHrvController.kt`, `HRVMetricsDevice.kt`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `HrvRampTestViewModel.kt`), `:app:assembleDebug`, and `137/137 PASS` across all 17 targeted/contract suites with `0` edits to `DeviceManager.java`, `TrackerService.java`, and `DevicesDatabaseManager.java`. |
 | `1.0.26` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9247`) verified `137/137 PASS` evidence across all 17 suites + `:app:assembleDebug` (`Rule 7.5`, `0` `app/` code drift since `7a7b387a`), `4/4` Python safety linters PASS, clean-checkout `TST-HRV-050` traceability parity, and governance sync. |
+| `1.0.27` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-PER-008` to `[Verified]` (`TST-PER-009` + `TST-UNT-012`, `TST-UNT-013`, Gate 4 `3e20473b`, `Rule 7.5`). |

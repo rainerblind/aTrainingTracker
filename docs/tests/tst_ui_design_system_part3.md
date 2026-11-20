@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.12  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 40
+**Total Tests**: 45
 
 ---
 
@@ -804,6 +804,97 @@
   4. *Tab-Driven Details Zone Selector, Subtitle, `< 400` LoC & 9-Locale Parity (`TST-UI-2787.4`, `WorkoutMasksAndCardsLayoutTest.kt`, `AdvancedTuningAccordionTest.kt`, `TranslationParityTest.kt`)*:
      - Using `createComposeRule()`, verify `WorkoutMasksAndCardsSection` shows/hides `ZoneDisplayModeSelector` based on `detailTabs` (`ZONES` / `GRADE_DISTRIBUTION`) regardless of `workoutDetailPrefs.showZoneAnalysis`, verify `WorkoutMasksAndCardsSection.kt` `< 400` LoC, verify `TuningSubtitleFormatter.formatWorkoutMatrixSubtitle` (`detailTabs` overload + preserved 3-arg compatibility), and verify `tuning_summary_matrix_tabs_format` across all 9 locales via `TranslationParityTest`.
 
+### TST-UI-250: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-290`
+- **Component**: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification**
+- **Jira**: ``ATT-2625``
+- **Test Description**:
+  1. *Dialog Parameter and Actions Slot Unit & Contract Tests (`DeviceTypeSelectionDialogTest.kt`)*:
+  • Verify `DeviceTypeSelectionDialog` defaults parameter `showAllOption` to `false`.
+  • Verify that when `showAllOption == false`, the dialog renders without the "Alle" (`R.string.device_type_all`) action button and the bottom sheet `actions` slot is null.
+  • Verify that when `showAllOption == true`, the dialog renders the "Alle" button in the bottom sheet actions slot.
+  2. *Hardware Profile Discovery and Selection Unit Tests (`DeviceTypeSelectionDialogTest.kt`)*:
+  • Verify dialog items for `ProtocolType.ANT_PLUS` display all ANT+ remote device types (`DeviceType.getRemoteDeviceTypes(ANT_PLUS)`).
+  • Verify dialog items for `ProtocolType.BLE` display all BLE remote device types (`DeviceType.getRemoteDeviceTypes(BLE)`).
+  • Verify tapping a device profile invokes `onSelected(type)` with the concrete `DeviceType`.
+  • Verify dismissing the dialog invokes `onDismiss()`.
+  3. *Integration Sites Verification (`DevicesTabbedScreenTest.kt`, `ControlTrackingScreenTest.kt`)*:
+  • Verify `DevicesTabbedScreen` invokes `DeviceTypeSelectionDialog` during pairing FAB flow with `showAllOption = false` (or defaulted).
+  • Verify `ControlTrackingScreen` invokes `DeviceTypeSelectionDialog` during pairing button flow with `showAllOption = false` (or defaulted).
+  4. *Full Clean-Room Regression Suite*:
+  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
+
+### TST-UI-251: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-291`
+- **Component**: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification**
+- **Jira**: ``ATT-2626``
+- **Test Description**:
+  1. *ViewModel Decoupling & State Unit Tests (`DevicesTabbedViewModelTest.kt`)*:
+  • Verify `startPairingScan(protocol, deviceType)` dispatches `startSearchingForNewDevices` with targeted protocol and device type.
+  • Verify `startPairingScan` preserves `_uiState` as `UiState.DisplayingTabs(DeviceType.ALL)` and `protocol` as `Protocol.ALL`.
+  • Verify `scanningProtocol` and `scanningDeviceType` emit targeted pairing parameters.
+  • Verify `stopSearching()` resets `scanningProtocol` and `scanningDeviceType` to null.
+  2. *Screen Tab Filter Spec Contract Verification (`DevicesTabbedScreenContractTest.kt`)*:
+  • Verify `DevicesTabbedScreen` configures tabs with unrestrictive filter specs during pairing.
+  • Verify `SearchingHeader` in `DeviceListScreen` receives active scanning target.
+  3. *9-Language Localization Parity Audit (`TranslationParityTest.kt`)*:
+  • Verify `devices_searchingForDevice` format string has matching 2 format specifiers (`%1$s`, `%2$s`) across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+  4. *Full Clean-Room Regression Suite*:
+  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
+
+---
+
+### TST-UI-252: **Sensor Field Style Dynamic Grid Spacing Resolution Verification** [Implemented]
+- **Requirement(s)**: `REQ-UI-292`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Component**: `SensorFieldStyle.kt`
+- **Jira**: `ATT-2624`
+- **Test Description**:
+  1. *Dynamic Inter-Tile Grid Spacing Resolution Test (`TST-UI-252.1`)*:
+  • Verify that `SensorFieldStyle` computes `0.dp` spacing for `CLASSIC_SEAMLESS` preset and expands spacing dynamically for rounded corners or thick borders to prevent visual card clipping.
+
+---
+
+### TST-UI-253: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-293`
+- **Component**: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification**
+- **Jira**: ``ATT-2623` / `ATT-3315``
+- **Test Description**:
+  1. *9-Language Localization Parity Tests (`ImportFormatLocalizationTest.kt`)*:
+  • Verify all format titles, descriptions, button labels, and diagnostic messages exist, are non-empty, and contain no malformed format tokens across all 9 supported locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+  2. *ViewModel Format Scoping Unit Tests (`BackupRestoreViewModelFormatScopingTest.kt`)*:
+  • Verify `bulkRecoverLegacyData` passes `"fit"`, `"tcx"`, and `"gpx"` correctly to `LegacyImportEngine.bulkRecoverFromDropbox`.
+  • Verify `bulkRecoverGoogleDriveData` passes `"fit"`, `"tcx"`, and `"gpx"` correctly to `LegacyImportEngine.bulkRecoverFromGoogleDrive`.
+  • Verify `importWorkoutFiles` processes multiple URIs sequentially with progress callbacks, duplicate skipping, error recording, and cluster reconciliation.
+  3. *UI Contract & Architecture Tests (`ImportFormatCardsContractTest.kt`)*:
+  • Verify `ImportTabContent` renders three distinct format blocks (FIT, TCX, GPX).
+  • Verify each block contains the uniform action triad (Local Multi-Doc, Dropbox, Google Drive).
+  • Verify disconnected cloud styling and dialog dispatch.
+  4. *Full Clean-Room Regression Suite*:
+  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
+
+### TST-UI-254: **Workout File Picker Selectability and Format-Extension Validation Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-294`
+- **Component**: **Workout File Picker Selectability and Format-Extension Validation Verification**
+- **Jira**: ``ATT-2622`, `ATT-2740``
+- **Test Description**:
+  1. *SAF MIME Launcher Contract Tests (`ImportFormatFilePickerContractTest.kt`)*:
+  • Verify `onLocalImportClick("fit")` launches `pickFitFilesLauncher` with `FIT_MIME_TYPES` (`application/vnd.ant.fit`, `application/fit`, `application/octet-stream`).
+  • Verify `onLocalImportClick("tcx")` launches `pickLegacyFileLauncher` with `TCX_MIME_TYPES` (`application/vnd.garmin.tcx+xml`, `application/xml`, `text/xml`, `application/octet-stream`).
+  • Verify `onLocalImportClick("gpx")` launches `pickLegacyFileLauncher` with `GPX_MIME_TYPES` (`application/gpx+xml`, `application/xml`, `text/xml`, `application/octet-stream`).
+  2. *Defensive Extension Validation Unit Tests (`ImportFormatExtensionValidatorTest.kt`)*:
+  • Verify `.fit` files pass for FIT and fail for TCX/GPX.
+  • Verify `.tcx` files pass for TCX and fail for FIT/GPX.
+  • Verify `.gpx` files pass for GPX and fail for FIT/TCX.
+  • Verify unsupported extensions (`.pdf`, `.png`, `.txt`) fail.
+  • Verify files without extension pass through to content parser.
+  3. *9-Language Localization Parity Audit (`ImportFormatFilePickerLocalizationTest.kt`)*:
+  • Verify `invalid_workout_file_format` exists, is non-empty, and has exactly 1 string specifier `%1$s` across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+  4. *Full Clean-Room Regression Suite*:
+  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
+
 ---
 
 ## Change History
@@ -821,3 +912,4 @@
 | `1.0.10` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Added `TST-UI-2787` (`[Planned]`) verifying `REQ-UI-2787` `v3|` persistence, summary toggle decoupling, dynamic header action reservation, and tab-driven settings/subtitle. |
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `TST-UI-2787` to `[Implemented]` in Stage 4 (`WorkoutDetailTabsTest`, `WorkoutDetailSummaryDecouplingTest`, `WorkoutDetailHeaderActionsComposeTest`, `WorkoutMasksAndCardsBehaviorTest`, `AdvancedTuningAccordionTest`). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `TST-UI-2787` to `[Verified]` in Stage 5 (`94/94` Tier 1 JUnit XMLs PASS, `Rule 8.5` PNG inspected). |
+| `1.0.13` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Rebalanced `TST-UI-250..254` from `tst_ui_design_system_part1.md` to satisfy `<= 4,000` line shard limit (`REQ-PRO-093.3`). |
