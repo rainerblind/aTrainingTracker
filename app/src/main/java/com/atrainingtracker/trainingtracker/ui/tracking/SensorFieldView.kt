@@ -289,7 +289,8 @@ fun SensorFieldView(
         com.atrainingtracker.banalservice.sensor.SensorType.HRV_DFA_A1,
         com.atrainingtracker.banalservice.sensor.SensorType.HRV_RMSSD,
         com.atrainingtracker.banalservice.sensor.SensorType.RR_INTERVAL,
-        com.atrainingtracker.banalservice.sensor.SensorType.HRV_ARTIFACT_RATE
+        com.atrainingtracker.banalservice.sensor.SensorType.HRV_ARTIFACT_RATE,
+        com.atrainingtracker.banalservice.sensor.SensorType.HRV_SDNN
     )
 
     Card(

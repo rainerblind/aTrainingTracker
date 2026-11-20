@@ -625,12 +625,13 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // HRV Guidance & Aerobic Threshold Information (ATT-3542, REQ-TRK-061.5)
+            // HRV Guidance & Aerobic Threshold Information (ATT-3542, REQ-TRK-061.5, REQ-HRV-050.4)
             val isHrvMetric = uiState.selectedSensorType in listOf(
                 SensorType.HRV_DFA_A1,
                 SensorType.HRV_RMSSD,
                 SensorType.RR_INTERVAL,
-                SensorType.HRV_ARTIFACT_RATE
+                SensorType.HRV_ARTIFACT_RATE,
+                SensorType.HRV_SDNN
             )
             if (isHrvMetric) {
                 var showHrvInfo by remember { mutableStateOf(false) }
@@ -657,7 +658,16 @@ fun EditSensorFieldDialog(
                     val tuning by tuningFlow.collectAsState(
                         initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
                     )
-                    val signalQualityStatus = com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
+                    val selectedSourceDeviceName = if (uiState.selectedDeviceId == -1L) {
+                        null
+                    } else {
+                        deviceList.find { it.first == uiState.selectedDeviceId }?.second
+                    }
+                    val signalQualityStatus = com.atrainingtracker.banalservice.devices.hrv.HrvDeviceLookup
+                        .resolveProvider(
+                            com.atrainingtracker.banalservice.BANALService.getDeviceManager(),
+                            selectedSourceDeviceName
+                        )?.signalQualityResult?.status
                     com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet(
                         onDismissRequest = { showHrvInfo = false },
                         signalQualityStatus = signalQualityStatus,

@@ -522,7 +522,38 @@ class HRVMetricsDeviceTest {
         assertEquals(0.0, device.getHrvArtifactRateSensor().sensorData.value!!, 0.001)
         assertNull("Empty lookahead-trimmed active window must suppress DFA alpha 1", device.getHrvDfaA1Sensor().sensorData.value)
         assertNull("Empty lookahead-trimmed active window must emit null rMSSD", device.getHrvRmssdSensor().sensorData.value)
+        assertNull("Empty lookahead-trimmed active window must emit null SDNN", device.getHrvSdnnSensor().sensorData.value)
         assertEquals(0, device.signalQualityResult.beatCount)
+        device.shutDown()
+    }
+
+    @Test
+    fun testLiveRollingSdnnAndTelemetryProviderExposure_TST_HRV_050_2() {
+        // REQ-HRV-050.2 / TST-HRV-050.2
+        val baseTs = 1_000_000L
+        var currentTime = baseTs + 40 * 800L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime }, artifactGateThresholdPercent = 5.0)
+
+        // Rule 52: Zero SDNN before RR data
+        device.calculateMetrics()
+        assertNull(device.getHrvSdnnSensor().sensorData.value)
+        assertNull(device.latestArtifactRatePercent)
+
+        for (i in 0 until 40) {
+            val rr = if (i % 2 == 0) 770.0 else 830.0
+            device.onRrBeat(RrBeatEvent(baseTs + i * 800L, rr, i, ProtocolType.BLE))
+        }
+        device.calculateMetrics()
+
+        val sdnn = device.getHrvSdnnSensor().sensorData.value
+        assertTrue("HRVMetricsDevice must emit positive finite live SDNN (was $sdnn)", sdnn != null && sdnn > 25.0 && sdnn < 35.0)
+        assertEquals(0.0, device.latestArtifactRatePercent!!, 0.001)
+
+        // Drain +150s clears SDNN and latestArtifactRatePercent to null
+        currentTime += 150_000L
+        device.calculateMetrics()
+        assertNull("Drained window must clear HRV_SDNN to null", device.getHrvSdnnSensor().sensorData.value)
+        assertNull("Drained window must clear latestArtifactRatePercent", device.latestArtifactRatePercent)
         device.shutDown()
     }
 }

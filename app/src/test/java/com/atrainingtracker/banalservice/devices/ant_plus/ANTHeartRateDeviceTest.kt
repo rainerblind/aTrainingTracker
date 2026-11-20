@@ -354,4 +354,53 @@ class ANTHeartRateDeviceTest {
         assertEquals(2, receivedEvents[4].gapBeats)
         assertTrue("deltaC >= 2 reconstruction must clamp monotonic >= previous beat", receivedEvents[4].beatTimestampMs >= preLossTs)
     }
+
+    @Test
+    fun testPerDeviceHrv_antHeartRateRegistersLazilyCalculatesAndClearsOnDisconnectAndReset_TST_HRV_050_3() {
+        // REQ-HRV-050.3 / TST-HRV-050.3
+        val baseTs = 1_000_000L
+        var nowMs = baseTs + 40_000L
+        val device = object : ANTHeartRateDevice(mockContext, mockSensorManager, 301L, 12345) {
+            override fun notifySensorsChanged() {}
+            override fun createPerDeviceHrvController() =
+                com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController(
+                    mContext, this, createHrvHostCallbacks(), { nowMs },
+                    startScheduler = false, artifactGateThresholdPercent = 5.0
+                )
+            fun triggerReset() = onAccumulatorsReset()
+            fun triggerDisconnect() = unregisterSensors()
+        }
+
+        assertNull(device.getSensor(SensorType.HRV_SDNN))
+
+        // Baseline + 35 beats with alternating 780 / 820 ms
+        var eventTimeSec = 1.0
+        device.parseHeartRateData(baseTs, 75, 0L, BigDecimal.valueOf(eventTimeSec), DataState.LIVE_DATA)
+        for (i in 1..35) {
+            val rrSec = if (i % 2 == 0) 0.78 else 0.82
+            eventTimeSec = (eventTimeSec + rrSec) % 64.0
+            device.parseHeartRateData(baseTs + i * 800L, 75, i.toLong(), BigDecimal.valueOf(eventTimeSec), DataState.LIVE_DATA)
+        }
+
+        device.perDeviceHrvController.calculateMetrics()
+        assertNotNull("ANT+ HRM must expose per-device HRV_RMSSD", device.getSensor(SensorType.HRV_RMSSD)?.value)
+        assertNotNull("ANT+ HRM must expose per-device HRV_SDNN", device.getSensor(SensorType.HRV_SDNN)?.value)
+        assertNotNull("ANT+ HRM must expose per-device HRV_ARTIFACT_RATE", device.getSensor(SensorType.HRV_ARTIFACT_RATE)?.value)
+
+        // Accumulator reset clears to null without removing sensors
+        val sdnnSensor = device.getSensor(SensorType.HRV_SDNN)!!
+        val seen = mutableListOf<Any?>()
+        sdnnSensor.addSensorListener { seen.add(it) }
+        device.triggerReset()
+        assertNull(seen.last())
+        assertNotNull(device.getSensor(SensorType.HRV_SDNN))
+
+        // Disconnect removes all 4 HRV sensors
+        device.triggerDisconnect()
+        assertNull(device.getSensor(SensorType.HRV_DFA_A1))
+        assertNull(device.getSensor(SensorType.HRV_RMSSD))
+        assertNull(device.getSensor(SensorType.HRV_ARTIFACT_RATE))
+        assertNull(device.getSensor(SensorType.HRV_SDNN))
+        device.shutDown()
+    }
 }

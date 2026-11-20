@@ -42,6 +42,9 @@ import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.RrBeatSource
 import com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicy
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
+import com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider
+import com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
@@ -95,7 +98,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val sportTypeProvider: () -> BSportType = { BANALService.getActiveBSportType() },
     private val apiFactory: ((Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi)? = null,
     private val searchTimeoutMsProvider: () -> Long = { TrainingApplication.getBtleSearchPeriodMs() }
-) : MyRemoteDevice(context, mySensorManager, DeviceType.HRM, deviceId), RrBeatSource {
+) : MyRemoteDevice(context, mySensorManager, DeviceType.HRM, deviceId), RrBeatSource, HrvTelemetryProvider {
 
     /**
      * Listener interface for raw live 3-axis accelerometer and gyroscope frames from Polar PMD streams.
@@ -144,6 +147,42 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private var mGroundContactTimeSensor: MySensor<Double>? = null
 
     private val rrBeatListeners = CopyOnWriteArrayList<RrBeatListener>()
+    private val perDeviceHrvController: PerDeviceHrvController = PerDeviceHrvController(
+        context = context,
+        hostDevice = this,
+        hostCallbacks = object : PerDeviceHrvController.HostCallbacks {
+            @Suppress("UNCHECKED_CAST")
+            override fun addAndRegisterSensors(sensors: List<MySensor<*>>) {
+                if (mMySensorManager != null) {
+                    this@PolarOnlineStreamingBridge.addAndRegisterSensors(ArrayList(sensors) as List<MySensor<*>>)
+                } else {
+                    for (sensor in sensors) {
+                        addSensor(sensor)
+                        sensor.activateSensor()
+                    }
+                    notifySensorsChanged()
+                }
+            }
+
+            override fun unregisterSensor(sensor: MySensor<*>) {
+                mMySensorManager?.unregisterSensor(sensor)
+            }
+
+            override fun removeSensor(sensorType: SensorType) {
+                this@PolarOnlineStreamingBridge.removeSensor(sensorType)
+            }
+        }
+    )
+
+    override val signalQualityResult: HrvSignalQualityResult
+        get() = perDeviceHrvController.signalQualityResult
+
+    override val latestArtifactRatePercent: Double?
+        get() = perDeviceHrvController.latestArtifactRatePercent
+
+    @VisibleForTesting
+    fun getPerDeviceHrvController(): PerDeviceHrvController = perDeviceHrvController
+
     private val imuFrameListeners = CopyOnWriteArrayList<ImuFrameListener>()
     private val scope = CoroutineScope(dispatcher + SupervisorJob())
 
@@ -1058,6 +1097,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     private fun dispatchRrBeat(event: RrBeatEvent) {
+        perDeviceHrvController.onRrBeat(event)
         for (listener in rrBeatListeners) {
             try {
                 listener.onRrBeat(event)
@@ -1100,7 +1140,13 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     @VisibleForTesting
     fun isGyroJobActiveForTesting(): Boolean = gyroJob?.isActive == true
 
+    override fun onAccumulatorsReset() {
+        super.onAccumulatorsReset()
+        perDeviceHrvController.onAccumulatorsReset()
+    }
+
     override fun unregisterSensors() {
+        perDeviceHrvController.onDisconnect()
         unregisterImuCadenceSensors()
         mRrIntervalSensor?.let { sensor ->
             mMySensorManager?.unregisterSensor(sensor)
@@ -1171,6 +1217,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         activeBridges.remove(this)
+        perDeviceHrvController.shutDown()
         unregisterSensors()
         rrBeatListeners.clear()
         imuFrameListeners.clear()

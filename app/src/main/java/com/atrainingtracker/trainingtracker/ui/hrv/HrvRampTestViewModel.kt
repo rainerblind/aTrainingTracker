@@ -128,10 +128,14 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                             speedMps = (data.value as? Number)?.toDouble()
                         }
                         SensorType.HRV_DFA_A1 -> {
-                            dfaA1 = (data.value as? Number)?.toDouble()
+                            if (data.deviceName == null) {
+                                dfaA1 = (data.value as? Number)?.toDouble()
+                            }
                         }
                         SensorType.HRV_ARTIFACT_RATE -> {
-                            artifactRate = (data.value as? Number)?.toDouble()
+                            if (data.deviceName == null) {
+                                artifactRate = (data.value as? Number)?.toDouble()
+                            }
                         }
                         else -> { /* Ignore other sensor streams */ }
                     }

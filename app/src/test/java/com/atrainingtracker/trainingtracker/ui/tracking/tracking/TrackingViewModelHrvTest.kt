@@ -228,4 +228,110 @@ class TrackingViewModelHrvTest {
         )
         assertFalse("Rate 1.0% <= 3.0% must clear artifact gate", resultDropped.first().isArtifactGated)
     }
+
+    @Test
+    fun testSideBySidePinnedHrvTiles_isolateSignalQualityZoneColorAndArtifactGatingWithoutCoLocatedArtifactTile_TST_HRV_050_4() {
+        // REQ-HRV-050.4 / TST-HRV-050.4
+        val mockDeviceManager = mockk<com.atrainingtracker.banalservice.devices.DeviceManager>(relaxed = true)
+        val mockH10Device = mockk<com.atrainingtracker.banalservice.devices.MyDevice>(
+            moreInterfaces = arrayOf(com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider::class),
+            relaxed = true
+        )
+        val mockVerityDevice = mockk<com.atrainingtracker.banalservice.devices.MyDevice>(
+            moreInterfaces = arrayOf(com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider::class),
+            relaxed = true
+        )
+
+        val h10Provider = mockH10Device as com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider
+        val verityProvider = mockVerityDevice as com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider
+
+        every { h10Provider.signalQualityResult } returns com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult(
+            status = com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.VALID,
+            details = "ECG clean",
+            beatCount = 140
+        )
+        every { h10Provider.latestArtifactRatePercent } returns 1.0
+
+        every { verityProvider.signalQualityResult } returns com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult(
+            status = com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM,
+            details = "PPG smoothed",
+            beatCount = 140
+        )
+        every { verityProvider.latestArtifactRatePercent } returns 12.0
+
+        every { mockDeviceManager.getMyDeviceByName("Polar H10") } returns mockH10Device
+        every { mockDeviceManager.getMyDeviceByName("Polar Verity Sense") } returns mockVerityDevice
+
+        mockkStatic(com.atrainingtracker.banalservice.BANALService::class)
+        try {
+            every { com.atrainingtracker.banalservice.BANALService.getDeviceManager() } returns mockDeviceManager
+
+            val h10Hash = Objects.hash(SensorType.HRV_DFA_A1, FilterType.INSTANTANEOUS, 1.0, "Polar H10")
+            val verityHash = Objects.hash(SensorType.HRV_DFA_A1, FilterType.INSTANTANEOUS, 1.0, "Polar Verity Sense")
+
+            val h10Field = SensorFieldState(
+                configHash = h10Hash,
+                sensorFieldId = 10L,
+                rowNr = 0,
+                colNr = 0,
+                viewSize = ViewSize.NORMAL,
+                label = "α1",
+                filterDescription = "Polar H10",
+                value = "--.--",
+                units = "",
+                zoneColor = Color.Transparent,
+                sensorType = SensorType.HRV_DFA_A1,
+                sourceDeviceName = "Polar H10"
+            )
+            val verityField = SensorFieldState(
+                configHash = verityHash,
+                sensorFieldId = 11L,
+                rowNr = 0,
+                colNr = 1,
+                viewSize = ViewSize.NORMAL,
+                label = "α1",
+                filterDescription = "Polar Verity Sense",
+                value = "--.--",
+                units = "",
+                zoneColor = Color.Transparent,
+                sensorType = SensorType.HRV_DFA_A1,
+                sourceDeviceName = "Polar Verity Sense"
+            )
+
+            // No co-located HRV_ARTIFACT_RATE tile in allSensorData: Verity Sense must still gate via HrvDeviceLookup!
+            val h10Data = FilteredSensorData<Double>(
+                SensorType.HRV_DFA_A1, 0.85, "0.85", "Polar H10", FilterType.INSTANTANEOUS, 1.0
+            )
+            val verityGatedData = FilteredSensorData<Double>(
+                SensorType.HRV_DFA_A1, null, "--.--", "Polar Verity Sense", FilterType.INSTANTANEOUS, 1.0
+            )
+
+            val updated = callApplySensorData(
+                listOf(h10Field, verityField),
+                listOf(h10Data, verityGatedData),
+                ActivityType.RUN_SPEED_AND_CADENCE
+            )
+
+            val outH10 = updated.first { it.sensorFieldId == 10L }
+            val outVerity = updated.first { it.sensorFieldId == 11L }
+
+            assertEquals("0.85", outH10.value)
+            assertEquals(com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.VALID, outH10.hrvSignalQualityStatus)
+            assertFalse("Polar H10 (1% art) must NOT be artifact-gated", outH10.isArtifactGated)
+
+            assertEquals("--.--", outVerity.value)
+            assertEquals(com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM, outVerity.hrvSignalQualityStatus)
+            assertTrue("Polar Verity Sense (12% art) must be artifact-gated via HrvDeviceLookup fallback", outVerity.isArtifactGated)
+
+            // Sending an explicit null HRV_ARTIFACT_RATE for Polar Verity Sense clears stale entry in latestArtifactRateByDevice
+            every { verityProvider.latestArtifactRatePercent } returns null
+            val clearedArtData = FilteredSensorData<Double>(
+                SensorType.HRV_ARTIFACT_RATE, null, "--", "Polar Verity Sense", FilterType.INSTANTANEOUS, 1.0
+            )
+            val afterClear = callApplySensorData(updated, listOf(clearedArtData, verityGatedData), ActivityType.RUN_SPEED_AND_CADENCE)
+            assertFalse("Clearing artifact rate to null must un-gate tile", afterClear.first { it.sensorFieldId == 11L }.isArtifactGated)
+        } finally {
+            unmockkStatic(com.atrainingtracker.banalservice.BANALService::class)
+        }
+    }
 }

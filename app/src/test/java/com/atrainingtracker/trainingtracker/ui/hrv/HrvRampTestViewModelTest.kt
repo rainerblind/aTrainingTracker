@@ -543,4 +543,31 @@ class HrvRampTestViewModelTest {
 
         assertEquals(18.0, viewModel.uiState.value.currentSpeedKmh!!, 0.001)
     }
+
+    @Test
+    fun testRampTestIgnoresPinnedPerDeviceHrvTelemetry_TST_HRV_050_4() = runTest(testDispatcher) {
+        // REQ-HRV-050.4 / TST-HRV-050.4
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val sensorDataFlow = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
+        every { mockBanalRepo.allFilteredSensorData } returns sensorDataFlow
+
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = mockBanalRepo,
+            dispatcher = testDispatcher
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Emit Best Sensor (deviceName = null) followed by pinned Verity Sense (deviceName != null)
+        sensorDataFlow.value = listOf(
+            FilteredSensorData(SensorType.HRV_DFA_A1, 0.82, "0.82", null, FilterType.INSTANTANEOUS, 1.0),
+            FilteredSensorData(SensorType.HRV_ARTIFACT_RATE, 1.2, "1.2%", null, FilterType.INSTANTANEOUS, 1.0),
+            FilteredSensorData(SensorType.HRV_DFA_A1, 1.45, "1.45", "Polar Verity Sense", FilterType.INSTANTANEOUS, 1.0),
+            FilteredSensorData(SensorType.HRV_ARTIFACT_RATE, 18.0, "18.0%", "Polar Verity Sense", FilterType.INSTANTANEOUS, 1.0)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(0.82, viewModel.uiState.value.currentDfaA1!!, 0.001)
+        assertEquals(1.2, viewModel.uiState.value.currentArtifactRate!!, 0.001)
+    }
 }

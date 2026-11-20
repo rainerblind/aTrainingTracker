@@ -1,0 +1,59 @@
+# Stage 1 Analysis: ATT-8990 - Per-Device HRV Source Selection & Live Calculation
+
+**Ticket**: [ATT-8990](https://rainerblind.atlassian.net/browse/ATT-8990)  
+**Parent Epic**: [ATT-3539](https://rainerblind.atlassian.net/browse/ATT-3539) (*Heart Rate Variability (HRV)*)  
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-11-20_01_Früh` | **Branch**: `feature/ATT-8990`  
+**Author**: AI Agent 1 (`--as agent1`) | **Date**: 2026-11-20
+
+---
+
+## 1. Problem Statement & Motivation
+Athletes comparing multiple concurrent HR sensors in the cockpit (e.g., Polar H10 ECG strap vs. Polar Verity Sense PPG armband) can pin `sourceDeviceId` (`Quelle`) on `SensorType.HR` and `SensorType.RR_INTERVAL`, but cannot select a source for `HRV_DFA_A1`, `HRV_RMSSD`, `HRV_ARTIFACT_RATE`, or `HRV_SDNN`, nor view parallel per-device live HRV metrics (including live rolling `HRV_SDNN`).
+
+---
+
+## 2. Independent Peer Review, Root Cause & Call-Site / LoC Audit
+Audited live `sprint/2026-11-20_01_Früh` @ `6b4ac2c5` (4-Augen verification + Rule 68 side-effect trace):
+1. **Verified Gap 1 — `DeviceType.getDeviceTypeList()` (`DeviceType.java:213-217`, not `207-211`)**: `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE` map to virtual `DeviceType.HRV_METRICS` (never persisted in `Devices` SQLite table where all HR sensors are `HRM`), and `HRV_SDNN` is omitted completely. Thus `DevicesDatabaseManager.getDeviceIdAndNameLists()` (`L413-440`) returns 0 devices, `EditSensorFieldDialog.kt:200` hides the Source spinner, and `SensorSourceDialog.kt:83-112` omits paired HRMs. Existing `SensorTypeHrvTest.kt:45,65,95` asserts `HRV_METRICS` and must be updated.
+2. **Verified Gap 2 — Single Global HRV Engine & Missing Live `HRV_SDNN` (`DeviceManager.java:503-640`, `HRVMetricsDevice.kt:103-216`)**: Only global `HRVMetricsDevice` (`"HRV metrics"`) computes `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE` (omitting `HRV_SDNN`) from arbitrated `onArbitratedRrBeat()`. The 3 `RrBeatSource` devices (`BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`) register `HR` + lazy `RR_INTERVAL`, but no per-device HRV sensors.
+3. **Hidden Side-Effect A — `MySensorManager` EnumMap Priority Inversion (`MySensorManager.java:510-532`)**: Without an explicit priority list, `getBestSensor()` iterates `EnumMap.keySet()` in enum order: `DeviceType.HRM` (ordinal `2`) beats `DeviceType.HRV_METRICS` (ordinal `20`)! Registering per-device HRV sensors on `HRM` devices would hijack `"Bester Sensor"` (`deviceName == null`), `TrackerService`, and `BANALService.getBestSensorData()` away from `ECG > ANT+ > PPG` arbitrated `HRVMetricsDevice` unless `HRV_PRIORITY = { HRV_METRICS, HRM }` is registered in `MySensorManager` (`setPriorityList` + `getPriorityArray`).
+4. **Hidden Side-Effect B — `TrackingViewModel` & `EditSensorFieldDialog` Global HRV State Collision (`TrackingViewModel.kt:273,659,802-816,845,866,981`; `EditSensorFieldDialog.kt:660`)**: Single scalar `latestArtifactRate` and global `hrvMetricsDevice?.signalQualityResult` would cross-contaminate side-by-side pinned tiles (e.g., Polar Verity Sense `SMOOTHED_STREAM` inheriting Polar H10 `VALID` zones or vice-versa). Requires `SensorFieldState.sourceDeviceName: String? = null`, per-device artifact-rate map, and per-device `HrvTelemetryProvider` lookup.
+5. **Hidden Side-Effect C — `HrvRampTestViewModel` Cross-Caller Leak (`HrvRampTestViewModel.kt:119-138`)**: Loops `allFilteredSensorData` without checking `data.deviceName == null`, so a pinned cockpit HRV tile would overwrite ramp-test `currentDfaA1`/`currentArtifactRate`. Must filter to `data.deviceName == null`.
+6. **Hidden Side-Effect D — `HRV_SDNN` Info Disclaimer Parity**: `SensorFieldView.kt:288-293` & `EditSensorFieldDialog.kt:629-634` omit `HRV_SDNN` from `isHrvMetric`; adding it preserves the Epic Medical Disclaimer invariant.
+7. **Monolith LoC Audit (`ArchitectureConformanceContractTest.kt:117-134`)**: `DeviceManager.java` (`1,707 / 1,708`), `TrackerService.java` (`3,538 / 3,559`), `DevicesDatabaseManager.java` (`1,669 / 1,671`) require **0 edits** (zero LoC added). All modified files (`DeviceType.java` `270`, `MySensorManager.java` `677`, `HRVMetricsDevice.kt` `266`, `BTLEHeartRateDevice.java` `284`, `ANTHeartRateDevice.java` `331`, `PolarOnlineStreamingBridge.kt` `1,181`, `TrackingViewModel.kt` `1,350`, `SensorFieldState.kt` `210`, `SensorFieldView.kt` `912`, `EditSensorFieldDialog.kt` `1,269`, `HrvRampTestViewModel.kt` `564`) stay well under `1,500` LoC by extracting shared Kotlin helpers (`HrvRollingEngine.kt`, `PerDeviceHrvController.kt`, `HrvTelemetryProvider.kt`).
+
+---
+
+## 3. User Scope Grounding (`ATT-1250`)
+- **In-Scope (`3 SP` confirmed; no split needed)**: (1) Map `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE`, `HRV_SDNN` to `DeviceType.HRM` in `DeviceType.getDeviceTypeList()`; (2) Extract shared rolling HRV engine + live rolling `HRV_SDNN` (unbiased SD of non-artifact NN intervals in active 120s window, `>= 10` valid beats) and attach per-device HRV sensors (`HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE`, `HRV_SDNN`) lazily to `BTLEHeartRateDevice`, `ANTHeartRateDevice`, and `PolarOnlineStreamingBridge`; (3) Enforce `HRV_PRIORITY = { HRV_METRICS, HRM }` so `"Bester Sensor"` keeps `ECG > ANT+ > PPG` arbitration; (4) Isolate per-device signal quality & artifact gating in `TrackingViewModel`/`EditSensorFieldDialog` and guard `HrvRampTestViewModel` to `deviceName == null`.
+- **Out-of-Scope**: No `WorkoutRr.db`/`WorkoutSamples.db` multi-device schema changes, no `DfaCalculator.kt` algorithm changes, no `TrackerService.java`/`DeviceManager.java` edits, no new string resources or layout redesigns.
+
+---
+
+## 4. Requirement Archaeology & Chesterton's Fence Audit (`REQ-PRO-022`)
+- **Original Requirement ID & Target**: `REQ-TRK-060.1`/`.3`/`.4`/`.5` (`DeviceType.java`, `HRVMetricsDevice.kt`, `SensorTypeHrvTest.kt`), `REQ-HRV-048.3` (`HRVMetricsDevice.kt` 180s context), `REQ-TRK-085` (`DeviceManager.java` `ECG > ANT+ > PPG` RR arbitration), `REQ-TRK-061`/`.2`/`.3` (`TrackingViewModel.kt`, `SensorFieldView.kt`).
+- **Historical Origin & Commit Trace**: `ATT-3541` (`4bad7272`) created virtual `DeviceType.HRV_METRICS` + global `HRVMetricsDevice`; `ATT-8706` (`7dcca5e7`, `6016d5fc`) added `ECG > ANT+ > PPG` RR arbitration and out-of-order `pruneOldBeats`; `ATT-9160` (`bd7d6627`) added `WINDOW_FILTER_CONTEXT_MS = 180_000L` causal filter context and active 120s slicing.
+- **Root Reason for Existing Formulation**: Initially only a single global `HRVMetricsDevice` existed, so `DeviceType.getDeviceTypeList()` pointed to virtual `HRV_METRICS`; `SensorType.HRV_SDNN` was added later for post-workout recomputation only (`HrvPostWorkoutRecomputer.kt:315`).
+- **Preservation of Core Invariants**: Retains `DeviceType.HRV_METRICS` enum value for global `HRVMetricsDevice` (`HRV_PRIORITY` keeps `"Bester Sensor"` + `TrackerService` bound to arbitrated `ECG > ANT+ > PPG`); preserves Rule 51 (`resetSession` parity), Rule 52 (lazy registration / zero pre-RR emission), `180 s` causal context + `120 s` drain-to-null, NeuroKit2 `0.2.10` golden parity, and `@JvmOverloads` Java/Kotlin interop on all public constructors/helpers.
+
+---
+
+## Change-Request Impact Analysis
+- **Affected Requirements**: Net-new candidate **`REQ-HRV-050`** / **`TST-HRV-050`** (not yet reserved; to be authored in Stage 2 in `docs/requirements/req_aftermath_periods.md` & `docs/tests/tst_aftermath_periods.md`, refining `REQ-TRK-060.1`/`.5`, `REQ-TRK-061`, `REQ-HRV-048.3`). **`SYS.2`/`SYS.3` System-Level Impact Check (`REQ-PRO-131.4`)**: **None — Derived SW-only** (no new external hardware profiles, BLE/ANT+ UUIDs, Android FGS/HAL interfaces, or cloud APIs; refines existing `SYSREQ-TRK-012` internal software routing).
+- **Affected Architecture Elements**: New Kotlin helpers `HrvRollingEngine.kt`, `PerDeviceHrvController.kt`, `HrvTelemetryProvider.kt` (`banalservice/devices/hrv/`); updates to `DeviceType.java`, `MySensorManager.java`, `HRVMetricsDevice.kt`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `HrvRampTestViewModel.kt`. Zero edits to `DeviceManager.java`, `TrackerService.java`, `DfaCalculator.kt`, or DB schemas.
+- **Verification Impact & Test Surface**: Update `SensorTypeHrvTest.kt`, `HRVMetricsDeviceTest.kt`, `TrackingViewModelHrvTest.kt`, `HrvRampTestViewModelTest.kt`; add dedicated unit tests for `HrvRollingEngine` (incl. rolling `HRV_SDNN`), `PerDeviceHrvController`, `BTLEHeartRateDevice`/`ANTHeartRateDevice`/`PolarOnlineStreamingBridge` per-device HRV registration & disconnect cleanup, `MySensorManager` `HRV_PRIORITY`, and `FilterManager` pinned-vs-best resolution; verify `HrvGoldenOracleTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, and Rule 8.5 Light/Dark PNG if UI composables are edited.
+- **Risk Assessment & Invariants**: **MEDIUM** — Multi-sensor priority and concurrent lifecycle teardown (BLE/ANT+/Polar bridge) carry hijacking/thread-leak risk if unguarded; mitigated by explicit `HRV_PRIORITY`, shared/cancellable scheduler (`startScheduler = false` in unit tests), Rule 52 lazy init, and `FilterManager` rebind tests.
+
+---
+
+## 6. Architectural Strategy & High-Level Solution
+1. **Shared Engine (`HrvRollingEngine.kt`, `HrvTelemetryProvider.kt`)**: Extract 180s-context causal filtering, 60s bias-free rMSSD, 120s artifact-gated DFA $\alpha_1$, 120s artifact rate, 120s unbiased rolling `HRV_SDNN` (`>= 10` non-artifact beats), and `HrvSignalQualityResult` into `HrvRollingEngine` (`@JvmOverloads`). Expose `HrvTelemetryProvider` + `HrvDeviceLookup.resolveProvider(deviceManager, deviceName)` so `DeviceManager.java` needs 0 lines.
+2. **Global + Per-Device Controllers (`HRVMetricsDevice.kt`, `PerDeviceHrvController.kt`)**: Delegate `HRVMetricsDevice` to `HrvRollingEngine` and add `mHrvSdnnSensor` (`getHrvSdnnSensor()`). Attach lazy `PerDeviceHrvController` (`@JvmOverloads`, Rule 52: creates/registers `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE`, `HRV_SDNN` on first RR beat via host `MyDevice`, clears/unregisters/cancels scheduler on `unregisterSensors()`, `onAccumulatorsReset()`, `shutDown()`) to `BTLEHeartRateDevice`, `ANTHeartRateDevice`, and `PolarOnlineStreamingBridge`.
+3. **Source Mapping & Best-Sensor Arbitration (`DeviceType.java`, `MySensorManager.java`)**: Map all 4 `HRV_*` sensors to `DeviceType.HRM` in `DeviceType.getDeviceTypeList()`; add `HRV_PRIORITY = { DeviceType.HRV_METRICS, DeviceType.HRM }` in `MySensorManager` so `"Bester Sensor"` (`deviceName == null`) stays on arbitrated `HRVMetricsDevice` while pinned tiles resolve via `FilterManager.resolveSensor()` -> `DeviceManager.getMyDeviceByName(name).getSensor(type)`.
+4. **Cockpit Isolation (`SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `HrvRampTestViewModel.kt`)**: Propagate `sourceDeviceName` on `SensorFieldState`, isolate per-device artifact gating and `HrvDeviceLookup` signal quality, include `HRV_SDNN` in `isHrvMetric`, and guard `HrvRampTestViewModel` to `data.deviceName == null`.
+
+---
+
+## 7. System Invariants & Localization Parity
+- **Invariants**: `HRV_PRIORITY` preserves `ECG > ANT+ > PPG` for `"Bester Sensor"` and `TrackerService`; Rule 51/52 + 120s drain-to-null + 180s context preserved; NeuroKit2 `0.2.10` golden parity untouched; `DeviceManager.java` (`1,707/1,708`) & `TrackerService.java` (`3,538/3,559`) untouched; `@JvmOverloads` on all Java-called Kotlin APIs.
+- **Localization Parity**: `N/A - no new UI strings` (`hrv_sdnn`, `hrv_sdnn_short`, `source`, `bestSensor`, `hrv_info_title` already exist across all 9 locales).

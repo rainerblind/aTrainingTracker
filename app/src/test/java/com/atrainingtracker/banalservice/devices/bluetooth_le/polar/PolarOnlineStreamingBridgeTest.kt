@@ -1513,4 +1513,53 @@ class PolarOnlineStreamingBridgeTest {
             TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
         }
     }
+
+    @Test
+    fun testPerDeviceHrv_polarBridgeRegistersLazilyCalculatesAndClearsOnDisconnectAndReset_TST_HRV_050_3() {
+        // REQ-HRV-050.3 / TST-HRV-050.3
+        val mac = "AA:BB:CC:DD:EE:99"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar H10 9900ABCD", "Polar Electro", 90, true)
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            // Rule 52: Zero HRV sensors before first RR sample
+            assertNull(bridge.getSensor(SensorType.HRV_DFA_A1))
+            assertNull(bridge.getSensor(SensorType.HRV_SDNN))
+
+            val now = System.currentTimeMillis()
+            val startTs = now - 35_000L
+            for (i in 0 until 40) {
+                val rr = if (i % 2 == 0) 780 else 820
+                bridge.processHrData(
+                    PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(rr), listOf(rr), true, true, true))),
+                    packetArrivalMs = startTs + i * 800L
+                )
+            }
+
+            bridge.getPerDeviceHrvController().calculateMetrics()
+            assertNotNull("Polar bridge must register per-device HRV_RMSSD", bridge.getSensor(SensorType.HRV_RMSSD)?.value)
+            assertNotNull("Polar bridge must register per-device HRV_SDNN", bridge.getSensor(SensorType.HRV_SDNN)?.value)
+            assertNotNull("Polar bridge must register per-device HRV_ARTIFACT_RATE", bridge.getSensor(SensorType.HRV_ARTIFACT_RATE)?.value)
+            assertNotNull("Polar bridge must expose latestArtifactRatePercent", bridge.latestArtifactRatePercent)
+
+            // Disconnect tears down sensors and pushes null while activated
+            val sdnnSensor = bridge.getSensor(SensorType.HRV_SDNN)!!
+            val seen = mutableListOf<Any?>()
+            sdnnSensor.addSensorListener { seen.add(it) }
+            bridge.shutDown()
+            assertNull("shutDown must push null to listeners before deactivation", seen.last())
+            assertNull(bridge.getSensor(SensorType.HRV_DFA_A1))
+            assertNull(bridge.getSensor(SensorType.HRV_SDNN))
+        } finally {
+            bridge.shutDown()
+        }
+    }
 }

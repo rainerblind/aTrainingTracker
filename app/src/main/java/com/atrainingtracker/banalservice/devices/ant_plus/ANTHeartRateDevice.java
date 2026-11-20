@@ -22,7 +22,9 @@ import android.content.Context;
 import android.os.SystemClock;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -31,6 +33,9 @@ import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult;
+import com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider;
+import com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -42,6 +47,7 @@ import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc;
 import com.dsi.ant.plugins.antplus.pccbase.PccReleaseHandle;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -50,13 +56,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * ANT+ Heart Rate Device.
  * Parses computed heart rate and beat-to-beat RR intervals with strict beat-count continuity guard (REQ-CON-027, ATT-3540).
  */
-public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
+public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource, HrvTelemetryProvider {
     private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = "ANTHeartRateDevice";
 
     protected AntPlusHeartRatePcc hrPcc = null;
     protected MySensor<Number> mHeartRateSensor;
     protected MySensor<Integer> mRrIntervalSensor = null;
+    private final PerDeviceHrvController mPerDeviceHrvController;
 
     private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
     private long mPrevHeartBeatCount = -1L;
@@ -69,9 +76,61 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
      */
     public ANTHeartRateDevice(Context context, MySensorManager mySensorManager, long deviceID, int antDeviceNumber) {
         super(context, mySensorManager, DeviceType.HRM, deviceID, antDeviceNumber);
+        mPerDeviceHrvController = createPerDeviceHrvController();
         if (DEBUG) {
             Log.d(TAG, "creating HR device");
         }
+    }
+
+    protected PerDeviceHrvController createPerDeviceHrvController() {
+        return new PerDeviceHrvController(mContext, this, createHrvHostCallbacks());
+    }
+
+    protected final PerDeviceHrvController.HostCallbacks createHrvHostCallbacks() {
+        return new PerDeviceHrvController.HostCallbacks() {
+            @Override
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            public void addAndRegisterSensors(@NonNull List<MySensor<?>> sensors) {
+                if (mMySensorManager != null) {
+                    ANTHeartRateDevice.this.addAndRegisterSensors(new ArrayList<MySensor>(sensors));
+                } else {
+                    for (MySensor<?> sensor : sensors) {
+                        addSensor(sensor);
+                        sensor.activateSensor();
+                    }
+                    notifySensorsChanged();
+                }
+            }
+
+            @Override
+            public void unregisterSensor(@NonNull MySensor<?> sensor) {
+                if (mMySensorManager != null) {
+                    mMySensorManager.unregisterSensor(sensor);
+                }
+            }
+
+            @Override
+            public void removeSensor(@NonNull SensorType sensorType) {
+                ANTHeartRateDevice.this.removeSensor(sensorType);
+            }
+        };
+    }
+
+    @VisibleForTesting
+    public PerDeviceHrvController getPerDeviceHrvController() {
+        return mPerDeviceHrvController;
+    }
+
+    @NonNull
+    @Override
+    public HrvSignalQualityResult getSignalQualityResult() {
+        return mPerDeviceHrvController.getSignalQualityResult();
+    }
+
+    @Nullable
+    @Override
+    public Double getLatestArtifactRatePercent() {
+        return mPerDeviceHrvController.getLatestArtifactRatePercent();
     }
 
     @Override
@@ -104,6 +163,9 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
     }
 
     protected void dispatchRrBeat(RrBeatEvent event) {
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.onRrBeat(event);
+        }
         for (RrBeatListener listener : mRrBeatListeners) {
             try {
                 listener.onRrBeat(event);
@@ -297,7 +359,18 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
     }
 
     @Override
+    protected void onAccumulatorsReset() {
+        super.onAccumulatorsReset();
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.onAccumulatorsReset();
+        }
+    }
+
+    @Override
     protected void unregisterSensors() {
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.onDisconnect();
+        }
         if (mRrIntervalSensor != null) {
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
@@ -314,6 +387,9 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
 
     @Override
     public void shutDown() {
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.shutDown();
+        }
         if (mRrIntervalSensor != null) {
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
