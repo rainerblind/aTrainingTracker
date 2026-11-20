@@ -105,6 +105,7 @@ class DeviceManagementUiTest {
         val mockEditVm = mockk<EditDeviceViewModel>(relaxed = true).apply {
             every { deviceSnapshot } returns MutableStateFlow(device)
             every { deviceLiveData } returns MutableStateFlow(device)
+            every { wheelCircumferenceHistory } returns MutableStateFlow(emptyList())
             every { deviceNotFound } returns MutableStateFlow(false)
             every { wheelSizeNames } returns listOf("700x25c")
             every { wheelSizeValues } returns listOf("2105")
