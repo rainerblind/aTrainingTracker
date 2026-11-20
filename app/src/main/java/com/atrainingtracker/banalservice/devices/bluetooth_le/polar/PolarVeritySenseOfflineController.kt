@@ -62,6 +62,7 @@ import kotlinx.coroutines.runBlocking
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
 
 /**
@@ -126,6 +127,9 @@ object PolarVeritySenseOfflineController {
     )
 
     private val isArmed = AtomicBoolean(false)
+    private val armedStateLock = Any()
+    private val armedTokenGenerator = AtomicLong(0L)
+    @Volatile private var currentArmedToken: Long = 0L
     private val isArmingInFlight = AtomicBoolean(false)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -168,6 +172,9 @@ object PolarVeritySenseOfflineController {
     fun isRecordingArmed(): Boolean = isArmed.get()
 
     @JvmStatic
+    fun getArmedSessionToken(): Long = currentArmedToken
+
+    @JvmStatic
     fun setSessionStartTimeMs(timeMs: Long) {
         sessionStartTimeMs = timeMs
     }
@@ -188,19 +195,17 @@ object PolarVeritySenseOfflineController {
     fun getLastArmingError(): String? = lastArmingError
 
     @VisibleForTesting
-    fun setArmedForTesting(
-        armed: Boolean,
-        deviceId: String? = armedDeviceId,
-        macAddress: String? = armedMacAddress
-    ) {
-        isArmed.set(armed)
-        armedDeviceId = deviceId
-        armedMacAddress = macAddress
-    }
+    fun setArmedForTesting(armed: Boolean, deviceId: String? = armedDeviceId, macAddress: String? = armedMacAddress) =
+        synchronized(armedStateLock) {
+            isArmed.set(armed)
+            currentArmedToken = if (armed) armedTokenGenerator.incrementAndGet() else 0L
+            armedDeviceId = deviceId
+            armedMacAddress = macAddress
+        }
 
     @VisibleForTesting
     fun resetForTesting() {
-        isArmed.set(false)
+        synchronized(armedStateLock) { isArmed.set(false); currentArmedToken = 0L }
         isArmingInFlight.set(false)
         apiOverride = null
         sdkIntOverride = null
@@ -326,13 +331,15 @@ object PolarVeritySenseOfflineController {
     /**
      * Stops active Verity Sense offline HR recording, evaluates gap continuity, fetches & aligns
      * 1-Hz `HrOfflineRecording` if gaps exist, updates `WorkoutSamples.db` and `WorkoutSummaries.db`
-     * without touching `WorkoutRr.db`, and removes ONLY the matched flash entry strictly post-commit (`REQ-SET-109`).
+     * without touching `WorkoutRr.db`, and removes ONLY the matched flash entry strictly post-commit (`REQ-SET-109`, `REQ-TRK-091.1`).
      */
     suspend fun stopAndBackfillWorkout(
         context: Context,
         workoutId: Long,
         baseFileName: String,
-        startTimeMs: Long = sessionStartTimeMs
+        startTimeMs: Long = sessionStartTimeMs,
+        showOwnNotification: Boolean = true,
+        expectedArmedToken: Long = 0L
     ): Boolean {
         val appContext = context.applicationContext
         val (targetId, targetMac) = if (getEffectiveSdkInt() >= Build.VERSION_CODES.TIRAMISU) {
@@ -341,7 +348,7 @@ object PolarVeritySenseOfflineController {
             null to null
         }
         if (targetId == null) {
-            resetArmedState()
+            resetArmedState(expectedArmedToken)
             return false
         }
 
@@ -353,10 +360,10 @@ object PolarVeritySenseOfflineController {
             if (needsBackfill && workoutId > 0L) {
                 recordPendingSync(appContext, workoutId, targetId, null, windowStartMs, windowEndMs)
             }
-            resetArmedState()
+            resetArmedState(expectedArmedToken)
             return false
         }
-        if (needsBackfill) {
+        if (showOwnNotification && needsBackfill) {
             showSyncNotification(appContext)
         }
 
@@ -390,8 +397,8 @@ object PolarVeritySenseOfflineController {
             }
             false
         } finally {
-            resetArmedState()
-            if (needsBackfill) {
+            resetArmedState(expectedArmedToken)
+            if (showOwnNotification && needsBackfill) {
                 dismissSyncNotification(appContext)
             }
         }
@@ -651,9 +658,12 @@ object PolarVeritySenseOfflineController {
         stopActiveHrIfRunning(api, polarId)
         startOfflineRecordingGuarded(api, polarId, PolarBleApi.PolarDeviceDataType.HR)
 
-        armedDeviceId = polarId
-        armedMacAddress = macAddress
-        isArmed.set(true)
+        synchronized(armedStateLock) {
+            armedDeviceId = polarId
+            armedMacAddress = macAddress
+            currentArmedToken = armedTokenGenerator.incrementAndGet()
+            isArmed.set(true)
+        }
         lastArmingOutcome = ArmingOutcome.ARMED
         lastArmingError = null
         Log.i(TAG, "Armed Polar Verity Sense offline HR recording on $polarId")
@@ -1376,10 +1386,10 @@ object PolarVeritySenseOfflineController {
         return raw.takeIf { it.isNotBlank() }
     }
 
-    private fun resetArmedState() {
-        isArmed.set(false)
-        armedDeviceId = null
-        armedMacAddress = null
+    private fun resetArmedState(expectedToken: Long = 0L) = synchronized(armedStateLock) {
+        if (expectedToken == 0L || currentArmedToken == expectedToken) {
+            isArmed.set(false); armedDeviceId = null; armedMacAddress = null
+        }
     }
 
     private fun showSyncNotification(context: Context) {

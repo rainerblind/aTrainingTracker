@@ -574,51 +574,110 @@ class TrackerServiceStateMachineCharacterisationTest {
     }
 
     /**
-     * Characterisation Test 6: Export Gating Parity (ATT-7918)
-     * Invokes genuine TrackerService.endWorkout() and asserts that Polar H10 backfill and
-     * post-workout HRV recomputation + repository refresh execute synchronously BEFORE
-     * ExportManager.workoutFinished() is invoked, followed by TRACKING_FINISHED_INTENT broadcast.
+     * Characterisation Test 6: Decoupled Post-Processing & Export Gating Parity (`ATT-7918`, `ATT-9154`, `REQ-TRK-091.1`)
+     * Invokes genuine `TrackerService.endWorkout()` and asserts that:
+     * 1. `TRACKING_FINISHED_INTENT` is broadcast immediately after enqueueing `WorkoutPostProcessingCoordinator`
+     *    without blocking synchronously on Polar backfill / HRV / ERTS / ExportManager.
+     * 2. The captured `PostProcessingRequest` carries `h10Armed = true` and the coordinator executes
+     *    Polar H10 backfill -> HRV recompute -> `WorkoutRepository.reloadWorkoutData` -> `ExportManager.workoutFinished`
+     *    in strict order asynchronously.
      */
     @Test
-    fun testExportGatingParity_endWorkoutOrderEnforcement() {
+    fun testExportGatingParity_endWorkoutOrderEnforcement() = kotlinx.coroutines.test.runTest {
         val callSequence = mutableListOf<String>()
+        val testDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
 
-        mockkStatic(PolarH10OfflineController::class)
-        mockkStatic(HrvPostWorkoutRecomputer::class)
-        mockkConstructor(ExportManager::class)
+        PolarH10OfflineController.resetForTesting()
+        com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.resetForTesting()
+        PolarH10OfflineController.setArmedForTesting(true)
+        PolarH10OfflineController.setSessionStartTimeMs(1_700_000_000_000L)
+        val expectedH10Token = PolarH10OfflineController.getArmedSessionToken()
 
-        every { PolarH10OfflineController.isRecordingArmed() } returns true
-        every {
-            PolarH10OfflineController.stopAndBackfillWorkoutBlocking(any(), TEST_WORKOUT_ID, TEST_BASE_FILE_NAME)
-        } answers {
-            callSequence.add("POLAR_BACKFILL")
-            true
+        WorkoutPostProcessingCoordinator.resetForTesting()
+        WorkoutPostProcessingCoordinator.dispatcher = testDispatcher
+        WorkoutPostProcessingCoordinator.hostControllerOverride = object : WorkoutPostProcessingCoordinator.HostController {
+            override fun startForegroundHost(context: Context): Boolean = true
+            override fun stopForegroundHost(context: Context) {}
+            override fun onStageStarted(
+                context: Context,
+                stage: WorkoutPostProcessingNotificationManager.PostProcessingStage,
+                currentStep: Int,
+                totalSteps: Int
+            ) {}
+            override fun onBatchCompleted(context: Context, hadWarning: Boolean) {}
         }
-        every { HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(any(), TEST_WORKOUT_ID) } answers {
-            callSequence.add("HRV_RECOMPUTE")
-            true
-        }
-        every { mockWorkoutRepo.refreshWorkout(TEST_WORKOUT_ID) } answers {
-            callSequence.add("WORKOUT_REFRESH")
-        }
-        every { anyConstructed<ExportManager>().workoutFinished(TEST_BASE_FILE_NAME) } answers {
-            callSequence.add("EXPORT_FINISHED")
-        }
-
-        // Invoke genuine production TrackerService.endWorkout()
-        service.endWorkout()
-
-        assertEquals(
-            listOf("POLAR_BACKFILL", "HRV_RECOMPUTE", "WORKOUT_REFRESH", "EXPORT_FINISHED"),
-            callSequence
-        )
-        verify(exactly = 1) { mockWorkoutRepo.markWorkoutFinishedBlocking(TEST_WORKOUT_ID) }
-        assertTrue(
-            "endWorkout() must broadcast TRACKING_FINISHED_INTENT",
-            service.sentBroadcasts.any {
-                it.action == TrackerService.TRACKING_FINISHED_INTENT &&
-                    it.getLongExtra(TrackerService.WORKOUT_ID, -1L) == TEST_WORKOUT_ID
+        WorkoutPostProcessingCoordinator.stepsOverride = object : WorkoutPostProcessingCoordinator.PostProcessingSteps {
+            override suspend fun runPolarH10Backfill(
+                context: Context,
+                request: WorkoutPostProcessingCoordinator.PostProcessingRequest
+            ): Boolean {
+                assertEquals(TEST_WORKOUT_ID, request.workoutId)
+                assertEquals(TEST_BASE_FILE_NAME, request.baseFileName)
+                assertEquals(expectedH10Token, request.h10ArmedToken)
+                callSequence.add("POLAR_BACKFILL")
+                return true
             }
-        )
+
+            override suspend fun runPolarVerityBackfill(
+                context: Context,
+                request: WorkoutPostProcessingCoordinator.PostProcessingRequest
+            ): Boolean = true
+
+            override suspend fun runHrvRecompute(context: Context, workoutId: Long): Boolean {
+                assertEquals(TEST_WORKOUT_ID, workoutId)
+                callSequence.add("HRV_RECOMPUTE")
+                return true
+            }
+
+            override suspend fun runErtsRecompute(context: Context, workoutId: Long): Boolean = true
+
+            override suspend fun reloadWorkout(context: Context, workoutId: Long) {
+                assertEquals(TEST_WORKOUT_ID, workoutId)
+                callSequence.add("WORKOUT_REFRESH")
+            }
+
+            override suspend fun markExportWorkoutFinished(context: Context, baseFileName: String) {
+                assertEquals(TEST_BASE_FILE_NAME, baseFileName)
+                callSequence.add("EXPORT_FINISHED")
+            }
+
+            override suspend fun loadFreshWorkoutForExport(
+                context: Context,
+                workoutId: Long
+            ): com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData? = null
+
+            override suspend fun triggerDeferredExport(
+                context: Context,
+                workoutData: com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+            ) {}
+        }
+
+        try {
+            // Invoke genuine production TrackerService.endWorkout()
+            service.endWorkout()
+
+            // Immediately after endWorkout() returns, FINISHED=1 & TRACKING_FINISHED_INTENT are already dispatched
+            // while blocking post-processing has NOT run synchronously!
+            verify(exactly = 1) { mockWorkoutRepo.markWorkoutFinishedBlocking(TEST_WORKOUT_ID) }
+            assertTrue(
+                "endWorkout() must broadcast TRACKING_FINISHED_INTENT immediately",
+                service.sentBroadcasts.any {
+                    it.action == TrackerService.TRACKING_FINISHED_INTENT &&
+                        it.getLongExtra(TrackerService.WORKOUT_ID, -1L) == TEST_WORKOUT_ID
+                }
+            )
+            assertTrue("Blocking post-processing must NOT run synchronously inside endWorkout()", callSequence.isEmpty())
+
+            // Drain async post-processing queue and verify strict stage order
+            testScheduler.advanceUntilIdle()
+            assertEquals(
+                listOf("POLAR_BACKFILL", "HRV_RECOMPUTE", "WORKOUT_REFRESH", "EXPORT_FINISHED"),
+                callSequence
+            )
+        } finally {
+            WorkoutPostProcessingCoordinator.resetForTesting()
+            PolarH10OfflineController.resetForTesting()
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.resetForTesting()
+        }
     }
 }

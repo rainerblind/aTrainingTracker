@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.94  
+**Version**: 1.0.95  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 86
+**Total Requirements**: 87
 
 ---
 
@@ -3816,6 +3816,28 @@
   • *Given* an unpaired/deleted compatible BLE HRM still GATT-connected to the phone, *When* BLE search starts, *Then* unpaired Polar sessions release and `getConnectedDevices(GATT)` probes surface the sensor while skipping already-paired and non-matching peripherals.
   • *Given* a connected BLE HRM receiving `0` HR packets for `12 s` (and not GATT-paused), *When* the watchdog fires, *Then* `0x2A37` CCCD / `HR` stream re-enables once and, if still silent, cleanly disconnects/closes and reconnects.
 
+### REQ-TRK-091: Decoupled Stop-Workout Post-Processing, Short-Service Progress Notification & Edit-Safe Refresh (`ATT-9154`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-091`
+- **System Requirement(s)**: `SYSREQ-TRK-005`, `SYSREQ-DEX-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `WorkoutPostProcessingCoordinator.kt`, `WorkoutPostProcessingService.kt`, `WorkoutPostProcessingNotificationManager.kt`, `TrackerService.java`, `WorkoutRepository.kt`, `EditWorkoutViewModel.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `AndroidManifest.xml`, `strings.xml`
+- **Rationale**: Connected armed Polar H10/Verity Sense offline backfill and HRV/ERTS recomputation synchronously block `TrackerService.endWorkout()` before `TRACKING_FINISHED_INTENT`, stalling Stop -> `EditWorkoutScreen` navigation (`ATT-9154`).
+- **Description**:
+  1. *Non-Blocking Stop & Armed-Token Isolation (`REQ-TRK-091.1`)*: `TrackerService.endWorkout()` SHALL commit `FINISHED = 1`, persist devices/RR/sensors/metadata, run `finalizeLiveSession()`, close `PolarRawTelemetryRecorder.stopActiveSession()`, capture armed flags/start timestamps/monotonic armed tokens synchronously, enqueue `WorkoutPostProcessingCoordinator`, and broadcast `TRACKING_FINISHED_INTENT` immediately (`< 1 s`). Async backfill SHALL run sequentially (`H10(showOwnNotification=false)` -> `Verity(showOwnNotification=false)` -> `HrvPostWorkoutRecomputer` -> optional `ErtsPostWorkoutRecomputer` -> `refreshWorkout` -> `ExportManager.workoutFinished` -> deferred `exportWorkout`) with per-stage fault isolation, clearing `isArmed` strictly when the armed token still matches the stopping workout.
+  2. *Atomic Export Deferral Lock & Edit-Safe Refresh (`REQ-TRK-091.2`)*: `WorkoutPostProcessingCoordinator` SHALL coordinate `activeWorkouts` and `deferredExportWorkouts` under a single lock so early `WorkoutRepository.saveWorkout()` persists metadata + updates `_allWorkouts` (incl. `rpe`/`feel`) immediately while deferring `exportManager.exportWorkout(freshWorkoutFromDb)` until post-processing completes. `EditWorkoutViewModel` SHALL observe `repository.allWorkouts` filtered to `workoutId` and merge strictly telemetry/derived fields without overwriting user-editable fields or re-running sport/equipment suggestion rewrites.
+  3. *`shortService` FGS, Progress Notification `8047`/`8048` & 9-Locale Parity (`REQ-TRK-091.3`)*: Declare `WorkoutPostProcessingService` with `android:foregroundServiceType="shortService"` (`0` new manifest permissions, `0` `connectedDevice`), API 34+ `onTimeout()` clean stop, and `ForegroundServiceStartNotAllowedException` in-process fallback. `WorkoutPostProcessingNotificationManager` (`ID 8047` progress, `ID 8048` warning, `NOTIFICATION_CHANNEL__EXPORT`, API 33+ `POST_NOTIFICATIONS` guard) SHALL update localized stage progress across all 9 locales (`0` emojis), cancel `8047` on completion, and cancel `8047` + post an auto-cancel warning on dedicated ID `8048` on failure so stopping the FGS never wipes the warning.
+  4. *LoC & Governance Invariants (`REQ-TRK-091.4`)*: `TrackerService.java < 3,539 / 3,559`, `WorkoutRepository.kt <= 5,117`, `PolarVeritySenseOfflineController.kt <= 1,500`, `0` edits to `DeviceManager.java`/`DevicesDatabaseManager.java`, `0` schema migrations, `0` new `src/main` reads.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-105.2`/`.5`, `REQ-SET-109.1`, preserving `REQ-TRK-022`, `REQ-TRK-030`, `REQ-TRK-033`, `REQ-SET-119`, `REQ-UI-211`.
+  2. *Historical Origin & Commit Trace*: `ATT-3986`/`ATT-4099` (`aa0e9097`), `ATT-3567`, `ATT-7918` (`60ec5c3b`), `ATT-7924`, `ATT-8969` (`8e44039d`).
+  3. *Root Reason for Existing Formulation*: Synchronous `endWorkout()` ordering ensured Polar backfill and HRV/ERTS completed before `ExportManager` export generation.
+  4. *Preservation of Core Invariants*: Preserves isolated `FINISHED = 1` commit first, zero-gap Polar fast paths & `5 s` connect timeout / disconnected fast-fail, Verity `WorkoutRr.db` isolation, export-after-backfill+ERTS ordering, no `connectedDevice`, and hidden-field preservation.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* Polar H10/Verity offline recording is armed, *When* Stop is tapped, *Then* `TRACKING_FINISHED_INTENT` fires in `< 1 s`, async stages run with unified progress notification `8047`, back-to-back armed tokens are isolated, early user edits/saves never lose data or export stale telemetry, and `shortService` + 9-locale parity hold.
+
 ---
 
 ## Change History
@@ -3915,3 +3937,8 @@
 | `1.0.92` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Promoted `REQ-CON-054` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9336` @ `3b81ce09`) `180/180 PASS` across 19 suites + `:app:assembleDebug` + `0` new Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `3b81ce09`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9155_walkthrough.md`. |
 | `1.0.93` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Stage 6 Bounce 1/3 heal: added monotonic watchdog `generation` + `silentHrWatchdogLock` job-identity guard (`BleHrmSilentConnectionWatchdog`, `PolarOnlineStreamingBridge`, `BTLEHeartRateDevice`), stale `gatt != mBluetoothGatt` guard in `onDescriptorWriteCompleted()`, `!posted -> closeRunnable.run()` GATT close fallback in `MyBTLEDevice.disconnectFromGatt()`, and `my_btle_device.md` precision fix; set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
 | `1.0.94` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Promoted `REQ-CON-054` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9351` @ `98a377f6`) `184/184 PASS` across 19 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `98a377f6`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9155_walkthrough.md`. |
+| `1.0.90` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Added `REQ-TRK-091` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-TRK-005`/`SYSREQ-DEX-007`) for decoupled stop-workout post-processing, armed-token isolation, atomic export deferral lock, edit-safe telemetry refresh, `shortService` FGS, and 9-locale progress notification `8047`. |
+| `1.0.91` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Promoted `REQ-TRK-091` to `[Implemented]` (`TrackerService.java` `3,511/3,559`, `WorkoutRepository.kt` `4,953/5,117`, `PolarVeritySenseOfflineController.kt` `1,483/1,500`, `WorkoutPostProcessing{Coordinator,Service,NotificationManager}.kt`, 9-locale `strings.xml`; `200/200` PASS across 23 suites + `:app:assembleDebug` + `0` new Kotlin warnings). |
+| `1.0.92` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Promoted `REQ-TRK-091` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9341` @ `9ca92f78`) `115/115` Bounce 1 (17 suites) + `200/200` full 23-suite (`7d3b0908`) PASS + `:app:assembleDebug` + `0` new Kotlin warnings (`Rule 7.5`, `0` `app/` diff since `9ca92f78`), `4/4` Python safety linters PASS, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9154_walkthrough.md`. |
+| `1.0.93` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Stage 6 Bounce 1/3 heal: overrode both 1-arg `onTimeout(startId)` and 2-arg `onTimeout(startId, fgsType)` in `WorkoutPostProcessingService.kt`, preserved transient `syncToHealthConnect` across deferred export via `MutableMap<Long, Boolean?>` + `DeferredExportDecision`, added `hostLock -> stateLock` TOCTOU protection, propagated `initialHadWarning` on drain restart, exposed `currentProgress` for `onStartCommand()`, and reset to `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
+| `1.0.94` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Promoted `REQ-TRK-091` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9361` @ `7725517b`) `113/113 PASS` (16 suites, `+6` regression tests) layered on full 23+ suite baseline + `:app:assembleDebug` + `0` new Kotlin warnings (`Rule 7.5`, `0` `app/` diff since `7725517b`), `4/4` Python safety linters PASS, `--check-verified-evidence` `exit 0`, and refreshed `ATT-9154_walkthrough.md`. |

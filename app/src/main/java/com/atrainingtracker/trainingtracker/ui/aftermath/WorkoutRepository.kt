@@ -4538,11 +4538,27 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
 
     /**
+     * Reads the authoritative latest [WorkoutData] directly from SQLite for deferred post-processing
+     * export, bypassing conflated in-memory reload guards so both user-saved metadata and backfilled/
+     * smoothed telemetry are guaranteed fresh (`REQ-TRK-091.2`, `ATT-9154`).
+     */
+    suspend fun loadFreshWorkoutForExport(workoutId: Long): WorkoutData? = withContext(Dispatchers.IO) {
+        summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+            if (cursor?.moveToFirst() == true) {
+                mapper.fromCursor(cursor)
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
      * Saves the user-editable state of a WorkoutData object to the databases.
      *
      * Implementation: Performs a surgical database update and triggers a re-export of
-     * the session data. Additionally, it executes the 'Learning Loop' to refine
-     * Workout Cluster centroids and identities based on the new user input.
+     * the session data (or defers export cleanly while asynchronous post-workout processing
+     * is active for [WorkoutData.id] per `REQ-TRK-091.2`). Additionally, it executes the
+     * 'Learning Loop' to refine Workout Cluster centroids and identities based on the new user input.
      *
      * @param userEditedWorkout The modified session data to persist.
      */
@@ -4553,11 +4569,15 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         // Launch a coroutine in the IO dispatcher to perform database operations off the main thread.
         launch(Dispatchers.IO) {
 
-            // 1. Update the Database (this method already only touches editable columns)
+            // 1. Update the Database first (strict happens-before edge for deferred export SQLite reload)
             summariesManager.updateWorkoutData(userEditedWorkout)
 
-            // 2. Trigger export with the new data
-            exportManager.exportWorkout(userEditedWorkout)
+            // 2. Trigger export immediately unless async post-processing is still active (REQ-TRK-091.2)
+            val deferredExport = com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinator
+                .deferExportIfPostProcessing(workoutId, userEditedWorkout.syncToHealthConnect)
+            if (!deferredExport) {
+                exportManager.exportWorkout(userEditedWorkout)
+            }
 
             // --- LEARNING LOOP (SCRUM-44 / ATT-4862, REQ-SET-081) ---
             // Only update cluster learning (centroids / sport) if the workout is already assigned to a cluster (clusterId > 0).
@@ -4598,6 +4618,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             description = userEditedWorkout.description,
                             goal = userEditedWorkout.goal,
                             method = userEditedWorkout.method,
+                            rpe = userEditedWorkout.rpe,
+                            feel = userEditedWorkout.feel,
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,

@@ -1354,4 +1354,34 @@ class PolarVeritySenseOfflineControllerTest {
         }
         assertNotNull(caughtCancellation)
     }
+
+    @Test
+    fun testStopAndBackfillWorkout_staleArmedTokenPreservesNewerWorkoutArmedStateAndSuppressesNotification_tstTrk091_1() = runBlocking {
+        // REQ-TRK-091.1 / TST-TRK-091.1
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+        val workout1Token = PolarVeritySenseOfflineController.getArmedSessionToken()
+
+        // Simulate back-to-back workout 2 arming before workout 1's async backfill exits
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+        val workout2Token = PolarVeritySenseOfflineController.getArmedSessionToken()
+        assertTrue("Monotonic armed token must increment on re-arm", workout2Token > workout1Token)
+
+        every { mockDb.allDevicesForCache } returns emptyList()
+        PolarVeritySenseOfflineController.setArmedForTesting(true, null, null)
+        val workout3Token = PolarVeritySenseOfflineController.getArmedSessionToken()
+
+        val result = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 2200L,
+            baseFileName = "2026-11-20_180000",
+            startTimeMs = 1000L,
+            showOwnNotification = false,
+            expectedArmedToken = workout1Token
+        )
+
+        assertFalse(result)
+        assertTrue("Stale workout 1 exit must NOT disarm newer workout", PolarVeritySenseOfflineController.isRecordingArmed())
+        assertEquals(workout3Token, PolarVeritySenseOfflineController.getArmedSessionToken())
+    }
 }

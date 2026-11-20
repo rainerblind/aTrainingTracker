@@ -1,14 +1,14 @@
 # Detailed Design: WorkoutRepository (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-WKO`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,931 LOC)  
-**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`, `ActivityCarriageTimelineCalculator`, `WorkoutClimbIngestionCoordinator`, `LiveClimbsRepository`  
+**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,953 LOC)  
+**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`, `ActivityCarriageTimelineCalculator`, `WorkoutClimbIngestionCoordinator`, `LiveClimbsRepository`, `WorkoutPostProcessingCoordinator`  
 **SWE.2 Alignment**: `docs/architecture.md` §1, §3.3, §4.1, §5.1 (`IF-SWE-02`, `IF-SWE-05`, `IF-SWE-06`, `IF-SWE-07`)  
-**Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-WKO-016`, `REQ-PER-045`, `REQ-STB-021.3`, `REQ-STB-021.5`
+**Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-WKO-016`, `REQ-PER-045`, `REQ-STB-021.3`, `REQ-STB-021.5`, `REQ-TRK-091`
 
 ---
 
@@ -99,3 +99,4 @@ stateDiagram-v2
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Delegated track alias & multi-source sample discovery (`ATT_FUSED`, `ALTITUDE`, `SPEED_mps`, `SLOPE`) to `WorkoutMultiSourceSampleDiscovery` while retaining `WorkoutRepository` companion delegates (`REQ-PER-044.2`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Documented pre-decimation 1-Hz `ACTIVITY_AND_CARRIAGE_MODE` cursor coalescing via `ActivityCarriageTimelineCalculator` and trailing `WorkoutDetailTelemetry.activityCarriageTimeline` field (`REQ-PER-045`). |
 | `1.0.3` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Delegated climb DEM validation and `Climbs.db` persistence to `WorkoutClimbIngestionCoordinator` (`climbs/`, keeping `WorkoutRepository` at `4,931` LOC), added `extractAndPersistClimbsWithoutRefresh` for `BulkImportBatchContext` & single-refresh `backfillHistoricalClimbs`, and linked `WorkoutClimbIngestionTest` / `WorkoutHistoricalClimbBackfillTest` (`REQ-STB-021.3`, `REQ-STB-021.5`). |
+| `1.0.4` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Added direct SQLite cursor reader `loadFreshWorkoutForExport(workoutId)`, immediate `rpe`/`feel` in-memory parity in `saveWorkout()`, and atomic `WorkoutPostProcessingCoordinator.deferExportIfPostProcessing(workoutId)` gating (`4,953 / 5,117` LOC, `REQ-TRK-091.2`). |

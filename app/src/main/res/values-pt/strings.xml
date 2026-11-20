@@ -2494,4 +2494,11 @@
     <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
     <string name="prefs_volume_keys_switch_cockpit_tabs_title">Botões de volume para abas</string>
     <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Alternar ciclicamente as abas no cockpit com volume +/-</string>
+    <!-- Decoupled Stop-Workout Post-Processing Notification (REQ-TRK-091 / ATT-9154) -->
+    <string name="notification_post_processing_title">Finalizando treino</string>
+    <string name="notification_post_processing_stage_polar_h10">Sincronizando dados do sensor Polar H10…</string>
+    <string name="notification_post_processing_stage_polar_verity">Sincronizando dados do Polar Verity Sense…</string>
+    <string name="notification_post_processing_stage_recompute">Recalculando métricas de VFC e trajeto…</string>
+    <string name="notification_post_processing_stage_export">Finalizando exportações do treino…</string>
+    <string name="notification_post_processing_failed">Processamento em segundo plano concluído com avisos</string>
 </resources>

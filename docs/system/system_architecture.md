@@ -1,7 +1,7 @@
 # System Architectural Design Specification (ASPICE SYS.3)
 
 **Document ID**: `DOC-SYS-ARC`  
-**Version**: 1.2.5  
+**Version**: 1.2.6  
 **ASPICE Process Areas**: SYS.3 (System Architectural Design, BP1–BP6)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) / [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE CL2 – System Level & Remediation*)  
 **Requirement Reference**: `REQ-PRO-056` (`REQ-PRO-056.1`, `REQ-PRO-056.2`)  
@@ -95,7 +95,7 @@ graph LR
 * **Source / Target**: Bidirectional between `SYS-EL-01` (Host App) and `SYS-EL-04` (Android OS)
 * **Transport / Protocol**: Android System Services (`PowerManager`, `NotificationManager`, `AudioManager`, `SensorManager`, `Service`), Google Maps SDK v2 (`play-services-maps`), and PebbleKit (`pebblekit:4.0.1`).
 * **Payload Schema**:
-  - Power & FGS: `PARTIAL_WAKE_LOCK` tokens; `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; `Notification` parcel with `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`.
+  - Power & FGS: `PARTIAL_WAKE_LOCK` tokens; `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; `Notification` parcel with `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`, and post-workout `FOREGROUND_SERVICE_TYPE_SHORT_SERVICE` (`WorkoutPostProcessingService.kt`, `WorkoutPostProcessingCoordinator.kt`, `WorkoutPostProcessingNotificationManager.kt`; API 34+, zero new manifest permissions).
   - Onboard Sensors: Barometer (`Sensor.TYPE_PRESSURE`), Proximity (`Sensor.TYPE_PROXIMITY`), Ambient Light (`Sensor.TYPE_LIGHT`), Smartphone IMU (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`), and opportunistically permission-gated Step Detector (`Sensor.TYPE_STEP_DETECTOR`).
   - Maps, Audio & Watch: Vector/lite-mode map polylines (`ATrainingTrackerMap.kt`), `AudioAttributes.USAGE_ALARM`/`USAGE_MEDIA`, and Pebble dictionary telemetry.
 * **Timing & Rate Bounds**: WakeLock held during ACTIVE tracking; notification at 1-Hz tick; acoustic safety alert latency < 100 ms.
@@ -248,3 +248,4 @@ Every system requirement across both functional domains is allocated to designat
 | `1.2.3` | 2026-11-18 | AI Agent (`ATT-8895`, `--as agent1`) | `ATT-8895` | Allocated `ImuCadenceDsp.kt`, `SmartphoneImuCadenceEstimator.kt`, `PolarLiveRunningCadenceEstimator.kt`, `MySensorManager.java`, and `DeviceType.java` under `SYSREQ-TRK-001` and `SYSREQ-TRK-010` (`REQ-FIL-029`). |
 | `1.2.4` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Allocated `KinematicSportTypeDiscriminator.kt` under `SYSREQ-TRK-010` (`REQ-FIL-030`). |
 | `1.2.5` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Allocated `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, and `MultisportLapCoordinator.kt` under `SYSREQ-TRK-010` (`REQ-FIL-031`). |
+| `1.2.6` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Updated `SYS-IF-04` FGS payload schema to include post-workout `FOREGROUND_SERVICE_TYPE_SHORT_SERVICE` (API 34+, zero new manifest permissions; `REQ-TRK-091`, new `.kt` filenames deferred until Stage 4 per `Rule 81`). |

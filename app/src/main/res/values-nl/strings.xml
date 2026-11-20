@@ -2495,4 +2495,11 @@
     <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
     <string name="prefs_volume_keys_switch_cockpit_tabs_title">Volumeknoppen voor cockpit-tabbladen</string>
     <string name="prefs_volume_keys_switch_cockpit_tabs_summary">In het cockpit met volume +/- cyclisch door tabbladen bladeren</string>
+    <!-- Decoupled Stop-Workout Post-Processing Notification (REQ-TRK-091 / ATT-9154) -->
+    <string name="notification_post_processing_title">Training afronden</string>
+    <string name="notification_post_processing_stage_polar_h10">Polar H10-sensorgegevens synchroniseren…</string>
+    <string name="notification_post_processing_stage_polar_verity">Polar Verity Sense-gegevens synchroniseren…</string>
+    <string name="notification_post_processing_stage_recompute">HRV- en routegegevens herberekenen…</string>
+    <string name="notification_post_processing_stage_export">Trainingsexports afronden…</string>
+    <string name="notification_post_processing_failed">Achtergrondverwerking voltooid met waarschuwingen</string>
 </resources>

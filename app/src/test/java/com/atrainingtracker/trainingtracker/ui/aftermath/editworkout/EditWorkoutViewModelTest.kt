@@ -542,4 +542,132 @@ class EditWorkoutViewModelTest {
         assertNotNull("Updated suggestion must be emitted after sport switch", updatedScore)
         assertTrue("Matching BIKE score must drop below 1.0, was $updatedScore", updatedScore!! < 1.0)
     }
+
+    @Test
+    fun testReactiveTelemetryRefresh_preservesAllUserEditsAndSkipsSuggestionRewrites_tstTrk091_2() {
+        // REQ-TRK-091.2 / TST-TRK-091.2
+        val workoutsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<WorkoutData>>(emptyList())
+        every { mockWorkoutRepository.allWorkouts } returns workoutsFlow
+
+        val initial = createTestWorkout().copy(
+            id = 2414L,
+            workoutName = "Auto Run",
+            totalDistance = 5000.0,
+            avgSpeedMps = 3.0,
+            ascentMeters = 20L,
+            mapPolyline = "raw_poly",
+            polarSyncPending = false,
+            recordingErrors = """["warn"]"""
+        )
+        val viewModel = createViewModel(initial)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // User edits multiple metadata fields while background Polar/ERTS post-processing is running
+        viewModel.updateWorkoutName("Custom Interval Session")
+        viewModel.updateRpe(8)
+        viewModel.updateFeel(4)
+        viewModel.updateDescription("Great negative splits")
+        viewModel.updateGoal("Threshold")
+        viewModel.updateMethod("4x8min")
+        viewModel.updateIsCommute(true)
+        viewModel.updateIsRace(true)
+        viewModel.updateSyncToHealthConnect(true)
+        viewModel.clearRecordingErrors()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val sportBeforeRefresh = viewModel.suggestedSportTypeName
+        val equipBeforeRefresh = viewModel.suggestedEquipmentName
+
+        // Background post-processing completes and refreshes telemetry into repository.allWorkouts
+        val refreshedFromRepo = initial.copy(
+            workoutName = "Auto Run", // stale DB name before user taps Save
+            rpe = null,
+            feel = null,
+            description = "",
+            commute = false,
+            race = false,
+            totalDistance = 5320.5,
+            avgSpeedMps = 3.45,
+            ascentMeters = 68L,
+            mapPolyline = "smoothed_erts_poly",
+            polarSyncPending = true,
+            recordingErrors = """["warn"]"""
+        )
+        workoutsFlow.value = listOf(refreshedFromRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val merged = viewModel.workoutData.value!!
+        // Telemetry fields refreshed reactively
+        assertEquals(5320.5, merged.totalDistance, 0.001)
+        assertEquals(3.45, merged.avgSpeedMps, 0.001)
+        assertEquals(68L, merged.ascentMeters)
+        assertEquals("smoothed_erts_poly", merged.mapPolyline)
+        assertTrue(merged.polarSyncPending)
+
+        // All user edits strictly preserved
+        assertEquals("Custom Interval Session", merged.workoutName)
+        assertEquals(8, merged.rpe)
+        assertEquals(4, merged.feel)
+        assertEquals("Great negative splits", merged.description)
+        assertEquals("Threshold", merged.goal)
+        assertEquals("4x8min", merged.method)
+        assertTrue(merged.commute)
+        assertTrue(merged.race)
+        assertEquals(true, merged.syncToHealthConnect)
+        assertNull("User-cleared recordingErrors must stay cleared", merged.recordingErrors)
+        assertEquals(sportBeforeRefresh, viewModel.suggestedSportTypeName)
+        assertEquals(equipBeforeRefresh, viewModel.suggestedEquipmentName)
+    }
+
+    @Test
+    fun testCreateNewClusterInitialReload_adoptsClusterIdWhileAllWorkoutsRefreshPreservesIt_tstTrk091_2() {
+        // REQ-TRK-091.2 / TST-TRK-091.2 (Gate 4 regression guard for createNewCluster -> Save)
+        val workoutsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<WorkoutData>>(emptyList())
+        every { mockWorkoutRepository.allWorkouts } returns workoutsFlow
+
+        val initial = createTestWorkout().copy(
+            id = 2414L,
+            workoutName = "Evening Ride",
+            clusterId = -1L,
+            clusterName = null,
+            totalDistance = 12000.0
+        )
+        val viewModel = createViewModel(initial)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // User edits RPE/description and triggers createNewCluster() which re-emits initialWorkoutLoaded with new clusterId
+        viewModel.updateRpe(7)
+        viewModel.updateDescription("Windy loop")
+        viewModel.createNewCluster("River Loop", hasCounter = true)
+        initialWorkoutLoadedLiveEvent.value = initial.copy(
+            clusterId = 77L,
+            clusterName = "River Loop",
+            workoutName = "River Loop #1"
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(77L, viewModel.workoutData.value?.clusterId)
+        assertEquals("River Loop", viewModel.workoutData.value?.clusterName)
+        assertEquals(7, viewModel.workoutData.value?.rpe)
+        assertEquals("Windy loop", viewModel.workoutData.value?.description)
+
+        // Subsequent background telemetry refresh arrives on repository.allWorkouts with stale clusterId=-1L
+        workoutsFlow.value = listOf(
+            initial.copy(
+                clusterId = -1L,
+                clusterName = null,
+                totalDistance = 12450.0,
+                ascentMeters = 140L
+            )
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val merged = viewModel.workoutData.value!!
+        assertEquals(12450.0, merged.totalDistance, 0.001)
+        assertEquals(140L, merged.ascentMeters)
+        assertEquals("Adopted clusterId must remain preserved across telemetry refresh", 77L, merged.clusterId)
+        assertEquals("River Loop", merged.clusterName)
+        assertEquals(7, merged.rpe)
+        assertEquals("Windy loop", merged.description)
+    }
 }

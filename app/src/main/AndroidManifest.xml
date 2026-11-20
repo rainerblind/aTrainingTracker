@@ -344,6 +344,10 @@
             android:name=".trainingtracker.tracker.TrackerService"
             android:foregroundServiceType="location|health"
             tools:ignore="ForegroundServicePermission" />
+        <service
+            android:name=".trainingtracker.tracker.WorkoutPostProcessingService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service
