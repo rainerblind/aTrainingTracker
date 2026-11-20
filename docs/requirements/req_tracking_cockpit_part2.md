@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.57  
+**Version**: 1.0.60  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 75
+**Total Requirements**: 76
 
 ---
 
@@ -3480,6 +3480,41 @@
 
 **Invariants**: Raw device columns immutable (`REQ-FIL-017.3`); live `UnicycleOdometryEkf` untouched (`isStationary = false`, `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`); `> 5 s` wall/total pauses & `6 s` batch-flush stall preserved (`TST-FIL-027.1`); `0` DB schema bumps; `0` monolith LoC edits; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-FIL-033: Post-Workout ERTS Altitude/Slope DEM Grid-Step Decoupling, Contractive OU Standstill Decay, Barometer-Free Fallback & Speed-Coupled Slew Limit [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-033`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmoother.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/BarometricAltitudeFilter.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`
+- **Rationale**: Field ride `Zum Bäcker #58` (`workoutID = 2411`, `584 s`) showed post-workout `ExtendedRtsAltitudeSlopeSmoother` producing a `+20.5 m` initial altitude overshoot (`458.48 m` vs. `DEM = 438.00 m`, `BARO = 437.19 m`), `-91%` slope at `t = 4..31 s`, and `21.97 m` of phantom initial descent after an integer DEM grid step (`438 -> 435 m`) during slow startup (`~5 m`), `20 s` frozen-slope standstill, and backward RTS amplification; additionally, fixed `BIKE_FRONT_POCKET` `0.7 m/s` barometric slew clips genuine `-1.8..-2.0 m/s` fast alpine descents (`17–20 m/s` at `-10%`) (`ATT-9063`, refining `REQ-FIL-017.2`/`.3`, `REQ-FIL-023.2`/`.3`, `REQ-FIL-027.5`, `REQ-FIL-028.4`, `REQ-TRK-057.1`).
+- **Description**:
+  1. *DEM Grid-Step Slope Decoupling, Physical Bounds, Low-Speed Damping & Contractive OU Standstill Decay (`REQ-FIL-033.1`)*:
+     - `ExtendedRtsAltitudeSlopeSmoother.smooth()` SHALL clamp slope `x[1]` and backward-smoothed `smoothedStates[k][1]` to `[-MAX_PHYSICAL_SLOPE, +MAX_PHYSICAL_SLOPE]` (`±0.35`, `±35%`), initialize flat-start slope variance `p[1][1] = 0.0025` (`5%` SD), cap moving `p[1][1]` at `MAX_SLOPE_VARIANCE = 0.015` (computing `p00New`/`p01New` from pre-update `p[1][1]` before capping `p11New`), and damp moving slope process noise (`qgVal`) and barometer slope gain (`k1`) via `lowSpeedSlopeGainFactor(speed)` (`0.0` below `0.3 m/s`, quadratic ramp to `1.0` at `1.2 m/s`).
+     - During sustained standstill (`standstillDurationSec >= 2.0 s`), it SHALL apply exact continuous linear Ornstein-Uhlenbeck decay (`alpha = exp(-dtSec / 2.5)`, `x[1] *= alpha`, `fMat[1][1] = alpha`, `p[0][1] *= alpha`, `p[1][2] *= alpha`, `p[1][1] = alpha^2 * p[1][1] + (1 - alpha^2) * max(0.0025, p[1][1])`) with no hard zero-snap discontinuity so `priors[k]` matches `jacobians[k]` identically and backward RTS gain stays strictly contractive ($0 < C_k[1][1] \le \alpha < 1$).
+     - When `hasBaroData` (`samples.any { it.rawAltitudeM.isFinite() }`), Step 3 reference updates MUST set `k1 = 0.0` (decoupling DEM grid steps from slope); all Step 2 (moving and standstill $H=[0,0,1]$) and Step 3 covariance updates MUST use exact 3×3 Joseph form $P^+ = (I - K H) P^- (I - K H)^T + K R K^T$.
+  2. *Speed-Coupled Barometric Slew Limiting (`REQ-FIL-033.2`)*:
+     - `BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps(baseMaxSlewRateMps, speedMps)` SHALL return `max(safeBase, 0.25 * clampedSpeed)`, explicitly returning `safeBase` when `!speedMps.isFinite() || speedMps <= 0.0` (preventing Kotlin `Double.NaN.coerceIn` propagation), sanitizing non-finite/`<= 0` base rates to `DEFAULT_MAX_SLEW_RATE_MPS (1.2)`, and capping finite positive speed at `35.0 m/s`.
+     - `@JvmOverloads BarometricAltitudeFilter.filterSlewOnly(rawAltitude, timestampMs, speedMps = 0.0)` SHALL use the speed-coupled slew limit without mutating `maxSlewRateMps`, and `ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro()` SHALL pass finite non-negative `epochSpeedMps` (`wheelSpeedMps` else `speedMps` else `0.0`, sanitized with `.takeIf { it.isFinite() && it >= 0.0 }`).
+  3. *Barometer-Free Fallback & NaN/Leading-Null Immunity (`REQ-FIL-033.3`)*:
+     - When `!hasBaroData` (barometer-free DEM/GPS-only stream), Step 3 SHALL allow damped, `±0.35`-clamped slope learning (`k1 = if (isStandstill) 0.0 else (p[1][0] / sRef) * gainScale`) via Joseph covariance update.
+     - `ExtendedRtsAltitudeSlopeSmoother.smooth()` SHALL initialize `initialAlt` by sequentially scanning `for (s in samples)` taking `s.referenceAltitudeM?.takeIf { it.isFinite() } ?: s.rawAltitudeM.takeIf { it.isFinite() }` (fallback `0.0`), set `hasInitialRef = (samples[0].referenceAltitudeM?.isFinite() == true)` strictly at `k = 0`, and apply the same finite guard for `n == 1`.
+     - `ErtsPostWorkoutRecomputer` SHALL pass `rawAltitudeM = row.rawAltitude ?: Double.NaN` in `runAltitudeSmoothing()` and gate altitude smoothing on `rawRows.any { it.rawAltitude != null || it.referenceAltitude != null }`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-033` refining `REQ-FIL-017.2`/`.3`, `REQ-FIL-023.2`/`.3`, `REQ-FIL-027.5`, `REQ-FIL-028.4`, and `REQ-TRK-057.1` across `ExtendedRtsAltitudeSlopeSmoother.kt`, `BarometricAltitudeFilter.kt`, and `ErtsPostWorkoutRecomputer.kt`.
+2. *Historical Origin & Commit Trace*: `e079f7a9` (`ATT-6265`), `75c1497e` (`ATT-6279`), `ed6acfee` (`ATT-7750`), `14935efb` (`ATT-8880`), `fee3e805` (`ATT-8890`).
+3. *Root Reason for Existing Formulation*: `ATT-7750` predated `ATT-8576` live slope hardening (`REQ-FIL-023.2`/`.3`), and `ATT-8890` set fixed `0.7 m/s` `BIKE_FRONT_POCKET` slew without horizontal speed coupling.
+4. *Preservation of Core Invariants*: Raw device columns immutable (`REQ-FIL-017.3`), `ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`, `VERTICAL_SPEED` `[-3000, 3000] m/h`, `BarometricAltitudeFilter.maxSlewRateMps` & 2-arg `filterSlewOnly` unchanged, live `AltitudeAndSlopeDevice_ATTFused`/`KinematicAltitudeSlopeEkf` untouched, `0` DB schema bumps, `0` monolith LoC edits (`< 1,500` LoC), `0` new `src/main` test reads (`REQ-PRO-049.1`), and `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a closed-loop workout starting at `438 m` (`BARO ~ 437.5 m`, `DEM = 438 m`) with a `-3 m` or `-10 m` DEM step at `t = 4 s` during slow startup (`~5 m`), followed by `20 s` standstill and flat/hilly return, *When* `ExtendedRtsAltitudeSlopeSmoother.smooth()` runs, *Then* `smoothed[0].altitudeM` stays within `±2.0 m` of `438.0 m`, `|slopePercent| <= 35%` (`< 10%` on flat start), and `|ascentM - descentM| <= 3.0 m`.
+• *Given* an `8–15%` climb and an `18 m/s` `-10%` (`-1.8 m/s`) alpine descent in `BIKE_FRONT_POCKET`, plus slow pocket spikes and non-finite speeds, *When* `BarometricAltitudeFilter.filterSlewOnly(..., speedMps)` and `ErtsPostWorkoutRecomputer` + `ExtendedRtsAltitudeSlopeSmoother.smooth()` run, *Then* `-1.8 m/s` passes unclipped while slow spikes stay clamped, `maxSlewRateMps == 0.7`, and non-finite speeds safely return `safeBase`.
+• *Given* a barometer-free DEM/GPS-only workout (including leading-null rows and `n == 1` non-finite sample), *When* `ErtsPostWorkoutRecomputer` and `ExtendedRtsAltitudeSlopeSmoother.smooth()` run, *Then* elevation, slope (`±35%`), and ascent/descent remain finite and smooth without NaN/overshoot.
+
+**Invariants**: Raw device columns immutable (`REQ-FIL-017.3`); `ASCENT_DESCENT_HYSTERESIS_METERS = 2.0`; `BarometricAltitudeFilter.maxSlewRateMps` & 2-arg `filterSlewOnly` unchanged; live `AltitudeAndSlopeDevice_ATTFused` / `KinematicAltitudeSlopeEkf` untouched; `0` DB schema bumps; `0` monolith LoC edits; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3542,3 +3577,6 @@
 | `1.0.55` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Added `REQ-FIL-032` `[Planned]` (`REQ-FIL-032.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`) for beat-immune 1-Hz ERTS timestamping, authoritative `speedAverage_mps` / `ExtremaType.AVG(SPEED_mps)` parity with matched `activeDist / activeDt` fallback, and stationary `[E, N]` covariance freeze & backward RTS pinning (`N/A - no UI strings`). |
 | `1.0.56` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `REQ-FIL-032` to `[Implemented]` following Stage 4 construction (`ErtsPostWorkoutRecomputer.kt` `1,051` LoC, `ExtendedRtsOdometrySmoother.kt` `742` LoC, `UnicycleOdometryEkf.kt` `810` LoC; `0` monolith edits; `84/84` PASS across 9 targeted/contract suites, `0` warnings, 4 safety linters PASS). |
 | `1.0.57` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `REQ-FIL-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9167`) `84/84` PASS evidence (`Rule 7.5`, zero `app/` diff since `75f3bff9`), 4 safety linters PASS, `verify_requirement_governance.py` `exit 0`, and `docs/engineering/walkthroughs/ATT-9064_walkthrough.md`. |
+| `1.0.58` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Added `REQ-FIL-033` `[Planned]` (`REQ-FIL-033.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`) for DEM grid-step slope decoupling, `±35%` forward+backward clamping, low-speed slope damping, contractive OU standstill decay, 3×3 Joseph SPD updates, speed-coupled NaN-safe barometer slew, and barometer-free/leading-null fallback (`N/A - no UI strings`). |
+| `1.0.59` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `REQ-FIL-033` to `[Implemented]` following Stage 4 construction (`ExtendedRtsAltitudeSlopeSmoother.kt` `547` LoC, `BarometricAltitudeFilter.kt` `234` LoC, `ErtsPostWorkoutRecomputer.kt` `1,054` LoC; `0` monolith edits; `109/109` PASS across 11 targeted/contract suites, `0` warnings). |
+| `1.0.60` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `REQ-FIL-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9196`) `109/109` PASS evidence (`Rule 7.5`, zero `app/` diff since `0f4dd34b`), `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9063_walkthrough.md`. |

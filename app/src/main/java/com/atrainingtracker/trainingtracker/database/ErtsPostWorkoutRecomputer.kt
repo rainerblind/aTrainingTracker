@@ -179,8 +179,8 @@ object ErtsPostWorkoutRecomputer {
                 null
             }
 
-            // 2. Run Kinematic Altitude & Slope ERTS Backward Smoother if altitude present
-            val hasAltitudeData = rawRows.any { it.rawAltitude != null }
+            // 2. Run Kinematic Altitude & Slope ERTS Backward Smoother if altitude or reference present (REQ-FIL-033.3)
+            val hasAltitudeData = rawRows.any { it.rawAltitude != null || it.referenceAltitude != null }
             val smoothedAltitude = if (hasAltitudeData) {
                 runAltitudeSmoothing(rawRows, smoothedOdometry)
             } else {
@@ -396,10 +396,13 @@ object ErtsPostWorkoutRecomputer {
             val row = rows[i]
             val mode = row.recordedCarriageMode?.takeIf { it != PhoneCarriageMode.UNKNOWN }
                 ?: inferLegacyCarriageModeAt(rows, i)
+            val epochSpeedMps = row.wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                ?: row.speedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                ?: 0.0
             val filteredAlt = when {
                 row.rawBaroAltitude != null -> {
                     baroFilter.setFilterParameters(mode.profile.baroMaxSlewRateMps, mode.profile.baroMedianWindowSize)
-                    baroFilter.filterSlewOnly(row.rawBaroAltitude, row.timestampMs).takeIf { it.isFinite() }
+                    baroFilter.filterSlewOnly(row.rawBaroAltitude, row.timestampMs, epochSpeedMps).takeIf { it.isFinite() }
                 }
                 else -> row.rawAltitude
             }
@@ -501,7 +504,7 @@ object ErtsPostWorkoutRecomputer {
             val speed = smoothedOdometry?.getOrNull(idx)?.speedMps ?: row.speedMps ?: 0.0
             RawAltitudeSample(
                 timestampMs = row.timestampMs,
-                rawAltitudeM = row.rawAltitude ?: 0.0,
+                rawAltitudeM = row.rawAltitude ?: Double.NaN,
                 referenceAltitudeM = row.referenceAltitude,
                 smoothedSpeedMps = speed,
                 carriageMode = row.effectiveCarriageMode

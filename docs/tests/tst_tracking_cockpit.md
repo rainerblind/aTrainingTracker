@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.79  
+**Version**: 1.0.82  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 160
+**Total Tests**: 161
 
 ---
 
@@ -3666,6 +3666,24 @@
      • Verify `ExtendedRtsOdometrySmoother.smoothSamples()` and `smoothSnapshots()` yield `0.00 m` Haversine drift and `0.00 m` `deltaDistanceMeters` across a `118 s` (`acc = 48.5 m`) indoor stop with `+35.66 m` departure jump while preserving `TST-FIL-027.3` & canopy Doppler-dropout (`wheelSpeedMps = 10.0`).
      • Verify `ArchitectureConformanceContractTest` (`0` protected monolith edits; all 3 touched files `< 1,500` LoC), `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest` (`0` new `src/main` reads), and `Localization Parity: N/A - no UI strings`.
 
+### TST-FIL-033: **Post-Workout ERTS Altitude/Slope DEM Grid-Step Immunity, Contractive OU Standstill Decay, Speed-Coupled Slew & Barometer-Free Fallback Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-9063`
+- **Requirement(s)**: `REQ-FIL-033` (`REQ-FIL-033.1`..`REQ-FIL-033.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmootherTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/BarometricAltitudeFilterTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceErtsFinalizationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *DEM Grid-Step Immunity, Contractive OU Standstill Decay & Backward RTS Bounds (`TST-FIL-033.1`, `ExtendedRtsAltitudeSlopeSmootherTest`: `testZumBaeckerStartupDemGridStepAndStandstill_noSlopeBlowupOrInitialOvershoot_tstFil033_1`, `testSteepMountainTransientDemStepAndStandstill_staysBoundedWithoutOvershoot_tstFil033_1`, `testHelperGuards_lowSpeedGainClampAndJosephSpd_tstFil033_1`)*:
+     • Replay `Zum Bäcker #58` closed-loop startup (`438 m`, `BARO ~ 437.5 m`) with `-3 m` (`438 -> 435 m`) and steep-mountain transient `-10 m` (`438 -> 428 -> 438 m`) integer DEM steps at `t = 4 s` during slow movement (`~5 m`), followed by `20 s` standstill and normal closed-loop riding at `437–438 m`.
+     • Assert `|smoothed[0].altitudeM - 438.0| <= 2.0`, `|slopePercent| <= 35.0` everywhere (`< 10.0%` on flat start), no backward RTS blowup across the `20 s` stop, exact 3×3 Joseph SPD symmetry/positive determinant, and `|ascentM - descentM| <= 3.0 m`, while preserving delayed-anchor convergence (`TST-FIL-017.2`), `2.0 m` hysteresis (`TST-FIL-027.5`), and carriage baro variance scaling (`TST-FIL-028.4`).
+  2. *Speed-Coupled Barometric Slew, Alpine Descent/Climb & NaN-Safe Speed Sanitization (`TST-FIL-033.2`, `BarometricAltitudeFilterTest`: `testComputeSpeedCoupledSlewRateMps_scalesWithSpeedAndGuardsNonFinite_tstFil033_2`, `testSpeedCoupledFilterSlewOnly_passesAlpineDescentUnclippedWhileRejectingSlowPocketSpikes_tstFil033_2`; `ErtsPostWorkoutRecomputerTest`: `testAlpineClimbAndFastDescentInFrontPocket_speedCoupledSlewUnclippedAndNaNWheelSpeedSafe_tstFil033_2`)*:
+     • Verify `BarometricAltitudeFilter.computeSpeedCoupledSlewRateMps()` across finite (`0.0`, `2.0`, `18.0`, `50.0` capped at `35.0`), negative (`-5.0`), and non-finite (`Double.NaN`, `Double.POSITIVE_INFINITY`) speeds and non-finite base rates.
+     • Verify `18 m/s` `-10%` (`-1.8 m/s`) alpine descent and `10%` climb in `BIKE_FRONT_POCKET` pass unclipped via `filterSlewOnly(..., speedMps)` and `ErtsPostWorkoutRecomputer`, slow-speed `±8 m` pocket spikes stay clamped, `baroFilter.maxSlewRateMps == 0.7`, and NaN wheel speed safely falls back to finite `speedMps`/`0.0`.
+  3. *Barometer-Free Fallback, Sequential Finite-Scan, `n == 1` Guard & Contracts (`TST-FIL-033.3`, `ExtendedRtsAltitudeSlopeSmootherTest`: `testBarometerFreeDemOnlyLeadingNullAndSingleSample_finiteAndPhysicallyBounded_tstFil033_3`; `ErtsPostWorkoutRecomputerTest`: `testBarometerFreeDemOnlyAndLeadingNullAltitudeWorkout_smoothAndFinite_tstFil033_3`; `ArchitectureConformanceContractTest`, `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`)*:
+     • Verify barometer-free DEM/GPS-only stream (`rawAltitudeM = Double.NaN`) learns physically bounded climb/descent slope (`|slopePercent| <= 35%`, zero NaN) without overshoot.
+     • Verify leading-null `rawAltitude`/`referenceAltitude` rows (never `0.0 m` injection) and single-sample `n == 1` non-finite input emit finite outputs, and verify `ArchitectureConformanceContractTest` (`0` protected monolith edits, `547`/`234`/`1,054 < 1,500` LoC), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3742,3 +3760,6 @@
 | `1.0.77` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `TST-FIL-032` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`84/84` PASS across 9 suites: `ErtsPostWorkoutRecomputerTest 17/17`, `ExtendedRtsOdometrySmootherTest 12/12`, `UnicycleOdometryEkfTest 17/17`, `TrackerServiceErtsFinalizationTest 2/2`, `LapsDatabaseManagerTest 10/10`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `DeadCodeEliminationContractTest 5/5`, `SourceTextReadingAuditContractTest 6/6`). |
 | `1.0.78` | 2026-11-19 | AI Agent (`ATT-9064`, `--as agent1`) | `ATT-9064` | Promoted `TST-FIL-032` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9167`) `84/84` PASS evidence (`Rule 7.5`, zero `app/` diff since `75f3bff9`), 4 safety linters PASS, `verify_requirement_governance.py` `exit 0`, and `docs/engineering/walkthroughs/ATT-9064_walkthrough.md`. |
 | `1.0.79` | 2026-11-19 | AI Coordinator (`ATT-9121`) | `ATT-9121` | Cleaned Criterion 4 symmetric `Requirement(s)` scope on `TST-SEN-032` (`REQ-SEN-032` only) and `TST-FIL-032` (`REQ-FIL-032` only) for 100% full-governance parity at Sprint 463 Tier-2 closeout. |
+| `1.0.80` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Added `TST-FIL-033` `[Planned]` (`TST-FIL-033.1`–`.3`, strictly symmetric `REQ-FIL-033`) covering `-3 m`/`-10 m` DEM step startup + `20 s` OU standstill closed loop, `18 m/s` `-10%` alpine descent & NaN-safe speed-coupled slew, and barometer-free/leading-null/`n == 1` fallback (`N/A - no UI strings`). |
+| `1.0.81` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `TST-FIL-033` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`109/109` PASS across 11 targeted/contract suites, `0` fail, `0` err, `0` skip, `0` new warnings). |
+| `1.0.82` | 2026-11-19 | AI Agent (`ATT-9063`, `--as agent1`) | `ATT-9063` | Promoted `TST-FIL-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9196`) `109/109` PASS evidence (`Rule 7.5`, zero `app/` diff since `0f4dd34b`), `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9063_walkthrough.md`. |

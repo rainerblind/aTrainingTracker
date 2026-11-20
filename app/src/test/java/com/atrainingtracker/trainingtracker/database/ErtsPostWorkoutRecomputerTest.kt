@@ -1775,4 +1775,222 @@ class ErtsPostWorkoutRecomputerTest {
             assertEquals(584, rowIdx)
         }
     }
+
+    // TST-FIL-033.2: Alpine climb (+10%) & fast 18 m/s (-10%, -1.8 m/s) descent in BIKE_FRONT_POCKET + NaN wheel speed safety
+    @Test
+    fun testAlpineClimbAndFastDescentInFrontPocket_speedCoupledSlewUnclippedAndNaNWheelSpeedSafe_tstFil033_2() = runBlocking {
+        val baseFileName = "2026-11-19_100000"
+        val workoutId = createWorkout(baseFileName)
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.ACTIVITY_AND_CARRIAGE_MODE
+            )
+        )
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"ALTITUDE (Höhe aus Luftdruck)\" REAL")
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"ALTITUDE (Topografische Höhe (DEM))\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_005_000_000L
+        // 0..59: 10% climb at 4 m/s (+0.4 m/s -> +24 m: 1476 -> 1500 m)
+        // 60..119: -10% alpine descent at 18 m/s (-1.8 m/s -> -108 m: 1500 -> 1392 m)
+        var cumDist = 0.0
+        var lat = 47.0
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 120) {
+                val isClimb = sec < 60
+                val speed = if (isClimb) 4.0 else 18.0
+                val trueAlt = if (isClimb) 1476.0 + sec * 0.4 else 1500.0 - (sec - 59) * 1.8
+                if (sec > 0) {
+                    cumDist += speed
+                    lat += speed / 111_320.0
+                }
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, 11.0)
+                    put(SensorType.SPEED_mps.name, speed)
+                    put(SensorType.PACE_spm.name, 1.0 / speed)
+                    put(SensorType.DISTANCE_m.name, cumDist)
+                    put(SensorType.BEARING.name, 0.0)
+                    put(SensorType.ALTITUDE.name, trueAlt)
+                    put(SensorType.SLOPE.name, if (isClimb) 10.0 else -10.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.ACTIVITY_AND_CARRIAGE_MODE.name, PhoneCarriageMode.BIKE_FRONT_POCKET.code)
+                    put("\"ALTITUDE (Höhe aus Luftdruck)\"", trueAlt + 3.0)
+                    put("\"ALTITUDE (Topografische Höhe (DEM))\"", kotlin.math.round(trueAlt))
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Alpine recomputation should succeed", success)
+
+        val smoothedAlts = mutableListOf<Double>()
+        val smoothedSlopes = mutableListOf<Double>()
+        var finalAscent = 0.0
+        var finalDescent = 0.0
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.ALTITUDE.name, SensorType.SLOPE.name, SensorType.ASCENT.name, SensorType.DESCENT.name),
+            null,
+            null,
+            null,
+            null,
+            "_id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                smoothedAlts.add(cursor.getDouble(0))
+                smoothedSlopes.add(cursor.getDouble(1))
+                finalAscent = cursor.getDouble(2)
+                finalDescent = cursor.getDouble(3)
+            }
+        }
+        assertEquals(120, smoothedAlts.size)
+        assertTrue("Climb ascent (~24 m) must be preserved (was $finalAscent m)", finalAscent >= 18.0)
+        assertTrue(
+            "Fast 18 m/s -10% alpine descent (-108 m) must not be clipped by 0.7 m/s pocket limit (descent=$finalDescent m)",
+            finalDescent >= 90.0
+        )
+        assertTrue(
+            "Mid-descent slope should track ~-10% (was ${smoothedSlopes[95]}%)",
+            smoothedSlopes[95] in -14.0..-6.0
+        )
+        assertTrue(
+            "End altitude must reach ~1392 m without growing lag (was ${smoothedAlts.last()} m)",
+            smoothedAlts.last() <= 1405.0
+        )
+
+        // Direct NaN wheelSpeedMps sanitization check in resolveCarriageModesAndFilterBaro
+        val nanWheelRows = (0..15).map { sec ->
+            ErtsPostWorkoutRecomputer.RawSampleRow(
+                rowId = sec.toLong() + 1L,
+                timestampMs = 1_700_006_000_000L + sec * 1000L,
+                latitude = null,
+                longitude = null,
+                speedMps = 18.0,
+                bearingDeg = null,
+                accuracyM = null,
+                yawRateRadPerSec = null,
+                rawAltitude = 1500.0 - sec * 1.8,
+                referenceAltitude = null,
+                wheelSpeedMps = Double.NaN,
+                recordedCarriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET,
+                rawBaroAltitude = 1500.0 - sec * 1.8
+            )
+        }
+        val resolved = ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro(nanWheelRows)
+        assertTrue("NaN wheelSpeedMps must fall back cleanly to finite speedMps=18.0", resolved.all { it.rawAltitude?.isFinite() == true })
+        assertTrue(
+            "NaN wheelSpeedMps fallback to speedMps=18.0 must track descent unclipped (drop=${1500.0 - resolved.last().rawAltitude!!})",
+            1500.0 - resolved.last().rawAltitude!! >= 18.0
+        )
+    }
+
+    // TST-FIL-033.3: Barometer-free phone with DEM-only & leading-null canonical ALTITUDE stays smooth and finite
+    @Test
+    fun testBarometerFreeDemOnlyAndLeadingNullAltitudeWorkout_smoothAndFinite_tstFil033_3() = runBlocking {
+        val baseFileName = "2026-11-19_101500"
+        val workoutId = createWorkout(baseFileName)
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.BEARING,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT
+            )
+        )
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"ALTITUDE (Topografische Höhe (DEM))\" REAL")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_007_000_000L
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 40) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1000L)))
+                    put(SensorType.LATITUDE.name, 48.65 + sec * 0.00005)
+                    put(SensorType.LONGITUDE.name, 9.05)
+                    put(SensorType.SPEED_mps.name, if (sec < 3) 0.0 else 5.0)
+                    put(SensorType.PACE_spm.name, if (sec < 3) 0.0 else 0.2)
+                    put(SensorType.DISTANCE_m.name, if (sec < 3) 0.0 else (sec - 2) * 5.0)
+                    put(SensorType.BEARING.name, 0.0)
+                    // Leading NULL canonical ALTITUDE on rows 0..39, DEM populated from row 3 onward
+                    putNull(SensorType.ALTITUDE.name)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    if (sec >= 3) {
+                        put("\"ALTITUDE (Topografische Höhe (DEM))\"", 438.0 + (sec - 3) * 0.3)
+                    } else {
+                        putNull("\"ALTITUDE (Topografische Höhe (DEM))\"")
+                    }
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val success = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Barometer-free DEM-only workout with null canonical ALTITUDE should succeed", success)
+
+        val alts = mutableListOf<Double>()
+        val slopes = mutableListOf<Double>()
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.ALTITUDE.name, SensorType.SLOPE.name),
+            null,
+            null,
+            null,
+            null,
+            "_id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                alts.add(cursor.getDouble(0))
+                slopes.add(cursor.getDouble(1))
+            }
+        }
+        assertEquals(40, alts.size)
+        assertTrue("All altitudes must stay near 438..450 m (no 0.0 m sea-level spike! min=${alts.minOrNull()})", alts.all { it.isFinite() && it in 435.0..455.0 })
+        assertTrue("All slopes must stay physically bounded within +-35%", slopes.all { it.isFinite() && kotlin.math.abs(it) <= 35.0 + 1e-6 })
+    }
 }
