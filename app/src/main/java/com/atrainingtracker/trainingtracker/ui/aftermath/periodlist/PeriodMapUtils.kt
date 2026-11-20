@@ -233,16 +233,27 @@ fun getPeriodMapVisuals(
 }
 
 /**
+ * Builds the cache key for [periodCardMapStateCache], incorporating [PeriodSummary.primaryRegionSummary]
+ * so sport-filter toggles that alter primary-region count or multi-region status invalidate stale badges
+ * even when preview polylines are unchanged (REQ-PER-046.3).
+ */
+private fun buildCardMapCacheKey(summary: PeriodSummary): String {
+    return "${summary.periodType}_${summary.sortKey}_${summary.polylines.hashCode()}_" +
+        "${summary.workoutIdToPolylineMap.hashCode()}_${summary.primaryRegionSummary?.hashCode() ?: 0}"
+}
+
+/**
  * Synchronous background computation pipeline for card map previews.
- * Decodes all member polylines, applies Douglas-Peucker decimation, clusters geographic regions,
- * and builds the appropriate line-density heatmap tile provider.
- * (REQ-PER-019)
+ * Decodes all member polylines, applies Douglas-Peucker decimation, clusters geographic regions
+ * (or honors authoritative [PeriodSummary.primaryRegionSummary]), and builds the appropriate
+ * line-density heatmap tile provider.
+ * (REQ-PER-019, REQ-PER-046.3)
  */
 fun prepareCardMapPreviewSync(
     summary: PeriodSummary,
     context: Context? = null
 ): PeriodCardMapState {
-    val cacheKey = "${summary.periodType}_${summary.sortKey}_${summary.polylines.hashCode()}_${summary.workoutIdToPolylineMap.hashCode()}"
+    val cacheKey = buildCardMapCacheKey(summary)
     val cached = periodCardMapStateCache.get(cacheKey)
     if (cached != null) {
         return cached
@@ -295,6 +306,36 @@ fun prepareCardMapPreviewSync(
 
     if (budgetEnforcedPaths.isEmpty()) {
         return PeriodCardMapState(isReady = true)
+    }
+
+    val authoritativePrimary = summary.primaryRegionSummary
+    if (authoritativePrimary != null) {
+        val allPoints = budgetEnforcedPaths.flatten()
+        val activeBounds = if (allPoints.isNotEmpty()) {
+            SpatialRegionEngine.buildNormalizedBounds(allPoints)
+        } else {
+            authoritativePrimary.bounds
+        }
+        val visuals = getPeriodMapVisuals(summary.periodType, budgetEnforcedPaths, isInteractive = false)
+        val renderVectorPolylines = visuals.heatmapProvider == null || budgetEnforcedPaths.size <= MAX_PERIOD_VECTOR_TRACKS
+        val primaryRegionName = if (context != null) {
+            RegionNameResolver.findNearestKnownLocationName(context, authoritativePrimary.center)
+        } else null
+
+        val state = PeriodCardMapState(
+            primaryPaths = budgetEnforcedPaths,
+            bounds = activeBounds,
+            visuals = visuals,
+            regionCount = authoritativePrimary.detectedRegionCount,
+            primaryRegionPathsCount = authoritativePrimary.primaryRegionWorkoutCount,
+            isReady = true,
+            renderVectorPolylines = renderVectorPolylines,
+            activeRegionId = "region_0",
+            maxCorridorPassCount = visuals.maxCorridorPassCount,
+            primaryRegionName = primaryRegionName
+        )
+        periodCardMapStateCache.put(cacheKey, state)
+        return state
     }
 
     val pathRegions = if (summary.minLat < 90.0 && summary.maxLat > -90.0) {
@@ -387,19 +428,21 @@ suspend fun prepareCardMapPreview(
     context: Context? = null,
     dispatcher: CoroutineDispatcher = Dispatchers.Default
 ): PeriodCardMapState = withContext(dispatcher) {
-    val cacheKey = "${summary.periodType}_${summary.sortKey}_${summary.polylines.hashCode()}_${summary.workoutIdToPolylineMap.hashCode()}"
+    val cacheKey = buildCardMapCacheKey(summary)
     val cached = periodCardMapStateCache.get(cacheKey)
     if (cached != null && (cached.primaryRegionName != null || context == null)) {
         return@withContext cached
     }
 
     var state = prepareCardMapPreviewSync(summary, context)
-    if (context != null && state.primaryRegionName == null && state.bounds != null) {
-        val center = LatLng(
-            (state.bounds.southwest.latitude + state.bounds.northeast.latitude) / 2.0,
-            (state.bounds.southwest.longitude + state.bounds.northeast.longitude) / 2.0
+    val geocodeCenter = summary.primaryRegionSummary?.center ?: state.bounds?.let { bounds ->
+        LatLng(
+            (bounds.southwest.latitude + bounds.northeast.latitude) / 2.0,
+            (bounds.southwest.longitude + bounds.northeast.longitude) / 2.0
         )
-        val place = RegionNameResolver.resolvePlaceName(context, center)
+    }
+    if (context != null && state.primaryRegionName == null && geocodeCenter != null) {
+        val place = RegionNameResolver.resolvePlaceName(context, geocodeCenter)
         if (place != null) {
             state = state.copy(primaryRegionName = place)
             periodCardMapStateCache.put(cacheKey, state)

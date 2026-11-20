@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.32  
+**Version**: 1.0.35  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 76
+**Total Tests**: 77
 
 ---
 
@@ -1391,6 +1391,27 @@
 
 ---
 
+### TST-PER-054: **Authoritative Period Primary Region Selection, Sport-Aware Preview Curation & Bounded Caching Verification** (`ATT-8664`) [Verified]
+- **Requirement(s)**: `REQ-PER-046`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodPrimaryRegionSelectionTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepositoryMemoryTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepositorySyncTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodCardMapStateTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModelTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/SpatialRegionEngineTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummaryCardUiTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodVertexBudgetTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapVisualsTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapAdaptiveLayeringTest.kt`
+- **Jira**: `ATT-8664`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Authoritative Primary-Region Ranking & Extrema Outlier Immunity (`TST-PER-054.1`, `PeriodPrimaryRegionSelectionTest#testMultiRegionExtremaOutliers_selectsTrueHomePrimaryRegionWithTrueCount_tstPer054_1`)*:
+     • Enrich a multi-region period (`159` home workouts + `2` outlier vacation workouts defining `northId`/`westId`), pass through `PeriodsViewModel.filterPeriodSummary(..., {BIKE, RUN})` and `PeriodMapUtils.prepareCardMapPreviewSync()`, and assert home region is selected as Primary (`regionCount == 2`, `primaryRegionPathsCount == 159`, `activeRegionId == "region_0"`, `polylines.size == 8` all in home region), matching `SpatialRegionEngine.detectRegions()` 1:1.
+  2. *Sport-Toggle Re-Ranking, Timestamp Ordering & Indoor Isolation (`TST-PER-054.2`, `PeriodPrimaryRegionSelectionTest#testSportToggleRerankingAndIndoorIsolation_updatesPrimaryRegionAndPolylines_tstPer054_2`, `PeriodsViewModelTest.kt`)*:
+     • Verify toggling `{BIKE, RUN}` -> `{BIKE}` -> `{RUN}` -> `{UNKNOWN}` re-ranks surviving regions (`filteredCount > 0`), merges up to `8` newest genuine matching-sport polylines (`startTimeS DESC`), returns `emptyList()` for 100%-indoor sports without leaking tracks, and preserves `workoutIdToAllPolylinesMap == emptyMap()`.
+  3. *Cache Key Invalidation & Geocoding Center Parity (`TST-PER-054.3`, `PeriodPrimaryRegionSelectionTest#testCacheInvalidationOnRegionCountChangeAndCenterGeocodingParity_tstPer054_3`, `PeriodCardMapStateTest.kt`, `PeriodSummaryCardUiTest.kt`)*:
+     • Verify distinct LRU cache entries when `primaryRegionWorkoutCount` or `detectedRegionCount` changes under identical preview polylines, and verify both `prepareCardMapPreviewSync()` and `prepareCardMapPreview()` geocode using `primaryRegionSummary.center`.
+  4. *`REQ-PER-039` Memory Bounds, Legacy Fallback & Governance Contracts (`TST-PER-054.4`, `PeriodPrimaryRegionSelectionTest#testHighVolume520Workouts_preservesReqPer039MemoryBoundsAndLegacyFallback_tstPer054_4`, `PeriodsRepositoryMemoryTest.kt`, `SpatialRegionEngineTest.kt`, Contracts)*:
+     • Verify 520-workout multi-region enrichment preserves `workoutIdToPathMap == emptyMap()`, `workoutIdToAllPolylinesMap == emptyMap()`, `workoutIdToPolylineMap.size <= 5`, `polylines.size <= 8`, legacy synthetic `PeriodSummary` fallback, and all architecture/dead-code/source-read contracts (`0` monolith edits, `0` new `src/main` reads).
+- **Verification Evidence**: Gate 4 (`ATT-9311`) independently verified SHA `a68fb43a` (`Rule 7.5`, `0` `app/` code drift) — `:app:compileDebugKotlin`, `:app:compileDebugUnitTestKotlin`, and `:app:assembleDebug` PASS with `0` new Kotlin compiler warnings + `99/99 PASS` (`0` failed, `0` errors, `0` skipped) across all 13 suites (`PeriodPrimaryRegionSelectionTest` `4/4`, `PeriodsRepositoryMemoryTest` `6/6`, `PeriodsRepositorySyncTest` `8/8`, `PeriodCardMapStateTest` `11/11`, `PeriodsViewModelTest` `16/16`, `SpatialRegionEngineTest` `8/8`, `PeriodSummaryCardUiTest` `1/1`, `PeriodVertexBudgetTest` `6/6`, `PeriodMapVisualsTest` `7/7`, `PeriodMapAdaptiveLayeringTest` `9/9`, `ArchitectureConformanceContractTest` `11/11`, `DeadCodeEliminationContractTest` `6/6`, `SourceTextReadingAuditContractTest` `6/6`); `4/4` Python safety linters PASS (`check_secrets_hygiene.py`, `lint_cursor_safety.py`, `lint_lifecycle_safety.py`, `lint_safe_enum.py`); clean-checkout `verify_requirement_governance.py` EXIT `0`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1428,3 +1449,6 @@
 | `1.0.30` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Added `TST-HRV-051` (`[Planned]`, `.1`–`.4`) covering pure-JVM `PolarPpiStreamProcessor` filtering/artifact stamping/reset, decoupled Verity Sense PPI lifecycle/H10 guard/atomic re-entrancy/`mRrIntervalSensor`, dual live `DFA alpha-1` suppression, and `TrackerService` `WorkoutRr.db` optical exclusion + contracts. |
 | `1.0.31` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Promoted `TST-HRV-051` to `[Implemented]` following Stage 4 implementation and 100% PASS across all 15 targeted & contract suites (`PolarPpiStreamProcessorTest`, `PolarOnlineStreamingBridgeTest`, `HrvRollingEngineTest`, `HRVMetricsDeviceTest`, `PerDeviceHrvControllerTest`, `HrvGoldenOracleTest`, `HrvSignalQualityAnalyzerTest`, `RrArtifactFilterTest`, `TrackerServiceRrOpticalIsolationTest`, `TrackerServiceRrFlushTest`, `ArchitectureConformanceContractTest`, `SystemLiveTrackingRequirementsContractTest`, `DeadCodeEliminationContractTest`, `InterfaceSignatureDriftContractTest`, `SourceTextReadingAuditContractTest`) with `0` Kotlin compiler warnings. |
 | `1.0.32` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Promoted `TST-HRV-051` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9277`) verified `121/121 PASS` evidence across all 15 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `13416d59`), exact verbatim method citations, `4/4` Python safety linters PASS, and governance sync. |
+| `1.0.33` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Added `TST-PER-054` `[Planned]` (`TST-PER-054.1`–`.4`, strictly symmetric `REQ-PER-046`) covering full-period primary-region selection vs extrema outliers, sport-toggle re-ranking & indoor isolation, primary-region-keyed LRU/`produceState` cache invalidation & center geocoding parity, and `REQ-PER-039` memory bounds & contracts (`Localization Parity: N/A - no UI strings`). |
+| `1.0.34` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `TST-PER-054` to `[Implemented]` with exact verbatim `PeriodPrimaryRegionSelectionTest` method citations (`4/4 PASS`) and `99/99 PASS` across all 13 targeted/contract suites + `:app:assembleDebug` + `0` new Kotlin compiler warnings. |
+| `1.0.35` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `TST-PER-054` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9311`) verified `99/99 PASS` evidence across all 13 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `a68fb43a`), verbatim `TestClass#testMethod` citations, `4/4` Python safety linters PASS, and clean-checkout governance sync. |

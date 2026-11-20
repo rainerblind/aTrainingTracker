@@ -977,22 +977,26 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
         val anchorIds = setOf(trueLongestId ?: summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
         val anchorWorkouts = if (groupWorkouts.isNotEmpty()) groupWorkouts.filter { it.id in anchorIds } else emptyList()
 
-        // Curate preview polylines for the card thumbnail up to MAX_SUMMARY_THUMBNAIL_TRACKS (ATT-1151 / REQ-PER-012)
-        val previewWorkouts = if (groupWorkouts.isNotEmpty()) {
-            val selectedWorkouts = anchorWorkouts.filter { it.mapPolyline.isNotEmpty() }.toMutableList()
-            val selectedIds = selectedWorkouts.map { it.id }.toMutableSet()
-            if (selectedWorkouts.size < MAX_SUMMARY_THUMBNAIL_TRACKS) {
-                val remainingWorkouts = groupWorkouts
-                    .filter { it.id !in selectedIds && it.mapPolyline.isNotEmpty() }
-                    .sortedByDescending { it.startTimeS }
-                for (w in remainingWorkouts) {
-                    if (selectedWorkouts.size >= MAX_SUMMARY_THUMBNAIL_TRACKS) break
-                    selectedWorkouts.add(w)
-                    selectedIds.add(w.id)
-                }
-            }
-            selectedWorkouts
-        } else anchorWorkouts
+        // 2. Compute authoritative region summaries across ALL period GPS workouts without decoding polylines
+        // and curate up to MAX_SUMMARY_THUMBNAIL_TRACKS (8) preview tracks from the true Primary Region (REQ-PER-046.1).
+        val regionPreviews = if (groupWorkouts.isNotEmpty()) {
+            buildRegionPreviews(groupWorkouts)
+        } else {
+            summary.regionSummaries
+        }
+        val resolvedPrimary = resolvePrimaryRegionForSports(regionPreviews, sports = null)
+        val curatedPolylines = when {
+            resolvedPrimary != null && resolvedPrimary.second.isNotEmpty() -> resolvedPrimary.second
+            groupWorkouts.isNotEmpty() -> groupWorkouts
+                .asSequence()
+                .filter { it.mapPolyline.isNotEmpty() }
+                .sortedByDescending { it.startTimeS }
+                .take(MAX_SUMMARY_THUMBNAIL_TRACKS)
+                .map { it.mapPolyline }
+                .toList()
+            summary.polylines.isNotEmpty() -> summary.polylines.take(MAX_SUMMARY_THUMBNAIL_TRACKS)
+            else -> emptyList()
+        }
         
         // 3. Scope workoutIdToPolylineMap strictly to spatial anchors (<= 5 workouts) (REQ-PER-021.1)
         val anchorPolylineMap = if (groupWorkouts.isNotEmpty()) {
@@ -1120,19 +1124,15 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
 
         return summary.copy(
             sportStats = enrichedSportStats,
-            polylines = if (previewWorkouts.isNotEmpty()) {
-                previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
-            } else if (summary.polylines.isNotEmpty()) {
-                summary.polylines.take(MAX_SUMMARY_THUMBNAIL_TRACKS)
-            } else {
-                emptyList()
-            },
+            polylines = curatedPolylines,
             workoutIdToPolylineMap = anchorPolylineMap,
             workoutIdToAllPolylinesMap = emptyMap(),
             workoutIdToPathMap = emptyMap(),
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
             yearlySportContributions = yearlyContributions,
             dailySportContributions = dailyContributions,
+            regionSummaries = regionPreviews,
+            primaryRegionSummary = resolvedPrimary?.first ?: summary.primaryRegionSummary,
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }

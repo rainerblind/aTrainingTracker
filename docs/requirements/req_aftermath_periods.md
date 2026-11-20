@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.28  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 70
+**Total Requirements**: 71
 
 ---
 
@@ -2131,6 +2131,39 @@
 
 ---
 
+### REQ-PER-046: Authoritative Full-Period Primary Region Selection, Sport-Aware Preview Curation & Bounded Card Caching (`ATT-8664`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-054`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodData.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapUtils.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummaryCard.kt`
+- **Rationale**: After `ATT-7666` (`REQ-PER-039`) eliminated full-period polyline duplication (`workoutIdToAllPolylinesMap = emptyMap()`), `PeriodsViewModel.filterPeriodSummary()` fell back to the `<= 5` spatial extrema anchors (`workoutIdToPolylineMap`), discarding non-anchor preview tracks and causing `PeriodMapUtils.prepareCardMapPreviewSync()` to crown a 2-workout outlier excursion (holding `northId`/`westId`) as the Primary Region instead of the true dominant home region (`150+` workouts) (`ATT-8664`, refining `REQ-PER-013`, `REQ-PER-019`, `REQ-PER-024.5`, and `REQ-PER-039`).
+- **Description**:
+  1. *Authoritative Full-Period Primary-Region Ranking (`REQ-PER-046.1`)*:
+     - `PeriodsRepository.enrich(summary, groupWorkouts)` SHALL compute compact `regionSummaries: List<PeriodRegionPreview>` via `SpatialRegionEngine.detectRegions(groupWorkouts)` (using `startLatLng`/bounding coordinates with `0` `PolyUtil.decode()` calls) retaining `center`, `bounds`, per-sport `sportCounts`, `sportDistancesMeters`, `sportMostRecentTimestampS`, and bounded timestamp-ordered per-sport preview tracks (`<= MAX_SUMMARY_THUMBNAIL_TRACKS` = 8 per sport per region, `startTimeS DESC`).
+     - Both `PeriodsRepository.enrich()` and `PeriodsViewModel.filterPeriodSummary()` SHALL rank surviving regions (`filteredCount > 0`) by `(workoutCount DESC, totalDistanceMeters DESC, mostRecentTimestampS DESC)` (matching `SpatialRegionEngine.detectRegions()` 1:1), propagate authoritative `primaryRegionSummary` (`detectedRegionCount`, `primaryRegionWorkoutCount`, `center`, `bounds`), and curate `summary.polylines` (`<= 8`) strictly from the winning Primary Region.
+  2. *Sport-Toggle Consistency, Indoor Sport Isolation & `filterPeriodSummary()` Hygiene (`REQ-PER-046.2`)*:
+     - For default `{BIKE, RUN}` and any toggled sport filter, `filterPeriodSummary()` SHALL re-rank surviving regions across `sports`, merge up to `8` genuine matching-sport polylines from the winning region (`startTimeS DESC`), update `primaryRegionSummary`, and return `polylines = emptyList()` when all matching workouts are indoor/no-GPS without leaking other sports' tracks.
+     - `filterPeriodSummary()` MUST keep `workoutIdToAllPolylinesMap = emptyMap()` whenever input `summary.workoutIdToAllPolylinesMap` is empty while preserving backward compatibility for explicitly populated maps.
+  3. *Preview Cache Key, Compose `produceState` Invalidation & Geocoding Center Parity (`REQ-PER-046.3`)*:
+     - When `summary.primaryRegionSummary != null`, `PeriodMapUtils.prepareCardMapPreviewSync()` SHALL render curated primary-region `budgetEnforcedPaths`, set `regionCount = detectedRegionCount`, `primaryRegionPathsCount = primaryRegionWorkoutCount`, `activeRegionId = "region_0"`, and resolve `primaryRegionName` using `primaryRegionSummary.center` in BOTH `findNearestKnownLocationName()` (`prepareCardMapPreviewSync`) and `resolvePlaceName()` (`prepareCardMapPreview`), falling back cleanly to `detectRegionsFromPaths()` when `primaryRegionSummary == null`.
+     - BOTH `periodCardMapStateCache` key (`PeriodMapUtils.kt`) and `PeriodSummaryCard.kt` `produceState` keys MUST incorporate `summary.primaryRegionSummary` so sport-toggle changes refresh badge count, multi-region visibility, and region name immediately.
+  4. *Strict `REQ-PER-039` Memory, LoC & Layering Invariants (`REQ-PER-046.4`)*:
+     - Preserve `workoutIdToPathMap == emptyMap()`, `workoutIdToAllPolylinesMap == emptyMap()`, `workoutIdToPolylineMap.size <= 5`, `polylines.size <= 8`, `periodCardMapStateCache <= 64`, `0` `PolyUtil.decode()` inside `enrich()`, `0` SQLite schema changes, `0` edits to `SpatialRegionEngine.kt`/`PeriodsScreen.kt`/protected monoliths, all modified files `<= 1,500` LoC, `Localization Parity: N/A - no UI strings`, and `0` new `src/main` reads (`REQ-PRO-049.1`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PER-046`, refining `REQ-PER-013`, `REQ-PER-019`, `REQ-PER-024.5`, and `REQ-PER-039` across `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`, `PeriodMapUtils.kt`, and `PeriodSummaryCard.kt`.
+  2. *Historical Origin & Commit Trace*: `074bd857` (`ATT-7666` / `REQ-PER-039`), `ATT-4935` (`REQ-PER-024.5`), `ATT-4477` (`REQ-PER-019`), `ATT-1151` (`REQ-PER-013`).
+  3. *Root Reason for Existing Formulation*: `ATT-7666` bounded heap usage by clearing `workoutIdToAllPolylinesMap`, leaving `filterPeriodSummary()` falling back to `<= 5` spatial extrema anchors.
+  4. *Preservation of Core Invariants*: All `REQ-PER-039` memory bounds, `SpatialRegionEngine` `75 km`/`60 km` thresholds, `PeriodMapScreen` interactive map, and legacy fallback for synthetic `PeriodSummary` fixtures remain intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `159` home-region workouts and `2` outlier vacation workouts holding `northId`/`westId`, *When* enriched, sport-filtered (`{BIKE, RUN}`), and previewed, *Then* Primary Region is home (`regionCount == 2`, `primaryRegionPathsCount == 159`, `activeRegionId == "region_0"`, `<= 8` home preview tracks).
+  • *Given* multi-region `BIKE`/`RUN` + indoor `UNKNOWN` workouts, *When* sport filter toggles `{BIKE, RUN}` -> `{RUN}` -> `{UNKNOWN}`, *Then* `{RUN}` re-ranks to the run-dominant region with `<= 8` newest `RUN` polylines, `{UNKNOWN}` yields `polylines == emptyList()`, and `workoutIdToAllPolylinesMap == emptyMap()`.
+  • *Given* identical preview polylines with differing `primaryRegionWorkoutCount` or `detectedRegionCount`, *When* previewed, *Then* LRU cache & `produceState` refresh immediately and both sync/async geocoding use `primaryRegionSummary.center`.
+- **Invariants**: `workoutIdToPathMap == emptyMap()`; `workoutIdToAllPolylinesMap == emptyMap()`; `workoutIdToPolylineMap.size <= 5`; `polylines.size <= 8`; `0` `PolyUtil.decode()` in `enrich()`; `0` DB schema bumps; `0` monolith edits; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2164,3 +2197,6 @@
 | `1.0.26` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9247`) verified `137/137 PASS` evidence across all 17 suites + `:app:assembleDebug` (`Rule 7.5`, `0` `app/` code drift since `7a7b387a`), `4/4` Python safety linters PASS, clean-checkout `TST-HRV-050` traceability parity, and governance sync. |
 | `1.0.27` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-PER-008` to `[Verified]` (`TST-PER-009` + `TST-UNT-012`, `TST-UNT-013`, Gate 4 `3e20473b`, `Rule 7.5`). |
 | `1.0.28` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Added and promoted `REQ-HRV-051` (`[Verified]`, `.1`–`.4`, `SYSREQ-TRK-012`) for Polar Verity Sense optical PPI streaming and workout DFA alpha-1 isolation (`121/121 PASS` on `13416d59`). |
+| `1.0.29` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Added `REQ-PER-046` `[Planned]` (`REQ-PER-046.1`–`.4`) for authoritative full-period primary region selection (`PeriodRegionPreview`), sport-aware preview track curation (`<= 8` from winning region, indoor isolation, `workoutIdToAllPolylinesMap == emptyMap()`), primary-region-keyed LRU/`produceState` caching & center geocoding parity, and strict `REQ-PER-039` memory bounds (`Localization Parity: N/A - no UI strings`). |
+| `1.0.30` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `REQ-PER-046` to `[Implemented]` following Stage 4 construction (`PeriodData.kt` `288/300`, `PeriodsRepository.kt` `1,211/1,500`, `PeriodsViewModel.kt` `430/1,500`, `PeriodMapUtils.kt` `474/1,500`, `PeriodSummaryCard.kt` `792/1,500`), `:app:assembleDebug`, `0` new Kotlin compiler warnings, and `99/99 PASS` across all 13 targeted/contract suites with `0` edits to `SpatialRegionEngine.kt`, `PeriodsScreen.kt`, and protected monoliths. |
+| `1.0.31` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `REQ-PER-046` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9311`) verified `99/99 PASS` evidence across all 13 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `a68fb43a`), `4/4` Python safety linters PASS, clean-checkout `TST-PER-054` traceability parity, and governance sync. |
