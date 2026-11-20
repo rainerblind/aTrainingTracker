@@ -425,13 +425,15 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         northMeters: Double,
         accuracyMeters: Double,
         timestampMs: Long = currentTimestampMs,
-        isStationary: Boolean = false
+        isStationary: Boolean = false,
+        decoupleVelocity: Boolean = false
     ): Boolean {
         stationaryClusterSnapped = false
         if (accuracyMeters <= 0.0 || accuracyMeters > MAX_GNSS_ACCURACY_METERS) {
             return false
         }
         currentTimestampMs = timestampMs
+        var decoupleSpeedUpdate = isStationary || decoupleVelocity
 
         val outageMs = if (lastAcceptedGnssTimestampMs > 0L && timestampMs >= lastAcceptedGnssTimestampMs) {
             timestampMs - lastAcceptedGnssTimestampMs
@@ -547,8 +549,11 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
                 (consecutiveMovingOutliers >= 2 && postOutageClusterGapMs >= GNSS_OUTAGE_RECOVERY_GAP_MS)
             if (confirmedPostOutage) {
                 // Confirmed moving corridor after outage: inflate position variance to re-converge in 1-2 fixes
+                // without leaking the position snap into scalar speed x[2] (REQ-FIL-036.2).
                 p[0][0] = max(p[0][0], y0 * y0)
                 p[1][1] = max(p[1][1], y1 * y1)
+                decoupleSpeedUpdate = true
+                decoupleVelocityCovariance(p)
                 rVar = rVarBase
                 consecutiveMovingOutliers = 0
                 postOutageClusterGapMs = 0L
@@ -586,7 +591,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
             k[i][0] = p0 * invS00 + p1 * invS10
             k[i][1] = p0 * invS01 + p1 * invS11
         }
-        if (isStationary) {
+        if (decoupleSpeedUpdate) {
             k[2][0] = 0.0
             k[2][1] = 0.0
         }
@@ -607,7 +612,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
                 pNew[i][j] = p[i][j] - (k[i][0] * p[0][j] + k[i][1] * p[1][j])
             }
         }
-        if (isStationary) {
+        if (decoupleSpeedUpdate) {
             decoupleVelocityCovariance(pNew)
         }
         for (i in 0 until STATE_DIM) {
@@ -641,6 +646,35 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
             return false
         }
         return applyHeadingMeasurement(headingRad, varianceRad, timestampMs)
+    }
+
+    /**
+     * One-shot initial heading seed for cold-start movement before Doppler or chord heading has
+     * been anchored (REQ-FIL-036.2, ATT-9158). Snaps `x[3]` directly to [headingRad], sets
+     * `p[3][3] = varianceRad`, and zeroes heading cross-covariances so 180-degree opposite starts
+     * (e.g., South against default North `PI/2`) align cleanly in one step.
+     */
+    @JvmOverloads
+    fun seedInitialHeading(
+        headingRad: Double,
+        varianceRad: Double = 0.16,
+        timestampMs: Long = currentTimestampMs
+    ): Boolean {
+        if (!headingRad.isFinite() || !varianceRad.isFinite() || varianceRad <= 0.0) {
+            return false
+        }
+        currentTimestampMs = timestampMs
+        x[3] = normalizeAngle(headingRad)
+        for (idx in 0 until STATE_DIM) {
+            if (idx != 3) {
+                p[idx][3] = 0.0
+                p[3][idx] = 0.0
+            }
+        }
+        p[3][3] = varianceRad
+        symmetrizeCovariance()
+        commitSnapshot()
+        return true
     }
 
     /**

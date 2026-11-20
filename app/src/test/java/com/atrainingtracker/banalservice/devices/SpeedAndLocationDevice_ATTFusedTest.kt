@@ -2332,6 +2332,126 @@ class SpeedAndLocationDevice_ATTFusedTest {
         }
     }
 
+    // REQ-FIL-036.1 / REQ-FIL-036.2 / TST-FIL-036.1 / TST-FIL-036.2
+    @Test
+    fun testColdStartSouthEasyRun_releasesPinPromptlyWithout23sFreezeOrTeleport_tstFil036_1_2() {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        try {
+            val speedSensor = device.sensors.first { it.sensorType == SensorType.SPEED_mps }
+            val distanceSensor = device.sensors.first { it.sensorType == SensorType.DISTANCE_m }
+            val degPerMeterLat = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+            var lat = 48.6567
+            val lon = 9.0545
+
+            // t = 0: initial cold-start fix at 18.9 m accuracy and 0.0 m/s -> pins immediately
+            device.onLocationChanged(
+                createMutableLocation(lat, lon, acc = 18.9f, timeMs = 1_000L, hasSpeedFlag = true, speedMps = 0.0f, hasBearingFlag = false)
+            )
+            assertTrue("Initial 0.0 m/s fix must pin stationary anchor", device.isStationaryPinned)
+
+            var firstUnpinnedSec = -1
+            var maxStepJumpM = 0.0
+            var prevDistM = 0.0
+
+            // t = 1..25 s: steady Southbound easy run (~1.8 m/s, opposite hardcoded North PI/2)
+            // with cold-start GPS accuracy improving 18.9 m -> 9.2 m and active running IMU motion
+            for (sec in 1..25) {
+                val tMs = 1_000L + sec * 1_000L
+                val acc = (18.9 - (sec - 1) * (9.7 / 24.0)).toFloat()
+                for (sub in 1..10) {
+                    val subMs = tMs - 1_000L + sub * 100L
+                    // Active running accelerometer variance (> 0.05) + gentle IMU sway
+                    device.processAccelerometerMeasurement(
+                        if (sub % 2 == 0) 2.5f else -2.5f,
+                        if (sub % 2 == 0) 1.5f else -1.5f,
+                        if (sub % 2 == 0) 13.5f else 6.2f,
+                        subMs
+                    )
+                    device.ingestImuMeasurement(
+                        floatArrayOf(0f, 0f, 0f, 1f),
+                        floatArrayOf(0f, 0f, 0f),
+                        dtSec = 0.1,
+                        timestampMs = subMs
+                    )
+                }
+                lat -= 1.8 * degPerMeterLat // South!
+                device.onLocationChanged(
+                    createMutableLocation(lat, lon, acc = acc, timeMs = tMs, hasSpeedFlag = true, speedMps = 1.8f, hasBearingFlag = false)
+                )
+                if (!device.isStationaryPinned && firstUnpinnedSec < 0) {
+                    firstUnpinnedSec = sec
+                }
+                val curDistM = (distanceSensor.value as? Number)?.toDouble() ?: 0.0
+                val stepM = curDistM - prevDistM
+                if (stepM > maxStepJumpM) maxStepJumpM = stepM
+                prevDistM = curDistM
+            }
+
+            assertTrue("Cold-start pinning must release within <= 5 s (released at t=$firstUnpinnedSec s)", firstUnpinnedSec in 1..5)
+            assertTrue("Must not teleport >= 10 m on unpin or convergence (maxStep=$maxStepJumpM m)", maxStepJumpM < 10.0)
+            assertTrue("EKF heading must seed South (~ -PI/2, was ${device.ekf.headingRad})", kotlin.math.abs(device.ekf.headingRad + PI / 2.0) < 0.4)
+            val finalSpeed = (speedSensor.value as? Number)?.toDouble() ?: 0.0
+            assertTrue("Published speed must track steady ~1.8 m/s running (was $finalSpeed)", finalSpeed in 1.2..2.5)
+            val totalDist = (distanceSensor.value as? Number)?.toDouble() ?: 0.0
+            assertTrue("Recorded distance over 45 m cold-start run must recover > 32 m (was $totalDist)", totalDist > 32.0)
+        } finally {
+            device.shutDown()
+        }
+    }
+
+    // REQ-FIL-036.1 / TST-FIL-036.1
+    @Test
+    fun testIndoorHandheldOscillatingMultipath_remainsPinnedWithZeroDistanceCreep_tstFil036_1() {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        try {
+            val speedSensor = device.sensors.first { it.sensorType == SensorType.SPEED_mps }
+            val distanceSensor = device.sensors.first { it.sensorType == SensorType.DISTANCE_m }
+            val degPerMeterLon = 1.0 / (Math.toRadians(1.0) * 6371000.0 * kotlin.math.cos(Math.toRadians(48.6567)))
+            val baseLat = 48.6567
+            val baseLon = 9.0545
+
+            // t = 0: initial stationary pin indoors
+            device.onLocationChanged(
+                createMutableLocation(baseLat, baseLon, acc = 16.0f, timeMs = 1_000L, hasSpeedFlag = true, speedMps = 0.0f, hasBearingFlag = false)
+            )
+            assertTrue(device.isStationaryPinned)
+
+            // t = 1..8 s: indoor handheld multipath bouncing ±5 m East/West with fake 1.5 m/s Doppler and handheld sway
+            val offsetsM = doubleArrayOf(5.0, -5.0, 4.8, -4.8, 5.2, -5.2, 4.5, -4.5)
+            for (idx in offsetsM.indices) {
+                val tMs = 2_000L + idx * 1_000L
+                for (sub in 1..5) {
+                    device.processAccelerometerMeasurement(
+                        if (sub % 2 == 0) 1.5f else -1.5f, 0.5f, 9.81f, tMs - 1_000L + sub * 200L
+                    )
+                }
+                val loc = createMutableLocation(
+                    baseLat,
+                    baseLon + offsetsM[idx] * degPerMeterLon,
+                    acc = 16.0f,
+                    timeMs = tMs,
+                    hasSpeedFlag = true,
+                    speedMps = 1.5f,
+                    hasBearingFlag = false
+                )
+                device.onLocationChanged(loc)
+                assertTrue("Oscillating indoor multipath at idx=$idx must stay pinned", device.isStationaryPinned)
+            }
+            assertEquals(0.0, (speedSensor.value as? Number)?.toDouble() ?: -1.0, 1e-6)
+            assertEquals(0.0, (distanceSensor.value as? Number)?.toDouble() ?: -1.0, 1e-6)
+        } finally {
+            device.shutDown()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType

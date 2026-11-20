@@ -772,6 +772,105 @@ class ExtendedRtsOdometrySmootherTest {
         }
     }
 
+    // REQ-FIL-036.3 / TST-FIL-036.3
+    @Test
+    fun testPostUnpinTeleportAnd1TickGlitch_suppresses573MpsCatchUpOvershoot_tstFil036_3() {
+        val samples = mutableListOf<RawOdometrySample>()
+        val baseTs = 8_000_000L
+        var eastM = 0.0
+
+        // t = 0..23 s: 23-second cold-start pinned standstill at origin (0.0 m/s)
+        for (sec in 0..23) {
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(0.0, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = baseTs + sec * 1_000L,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = 0.0,
+                    accuracyMeters = 15.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = PhoneCarriageMode.STATIONARY
+                )
+            )
+        }
+
+        // t = 24..60 s: unpin teleport (+9.34 m at t=24 with isolated 1-tick 9.34 m/s geometric glitch,
+        // +12.20 m teleport at t=31), surrounded by steady ~2.0 m/s easy running
+        for (sec in 24..60) {
+            val stepM = when (sec) {
+                24 -> 9.34
+                31 -> 12.20
+                else -> 2.0
+            }
+            eastM += stepM
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(eastM, 0.0, originLat, originLon)
+            val recordedSpeed = if (sec == 24) 9.34 else 2.0 + (sec % 3) * 0.1
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = baseTs + sec * 1_000L,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = recordedSpeed,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 10.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = PhoneCarriageMode.RUN_WAIST_HIP
+                )
+            )
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples)
+        assertEquals(samples.size, smoothed.size)
+
+        val maxSmoothedSpeed = smoothed.maxOf { it.speedMps }
+        assertTrue(
+            "Post-unpin ERTS must suppress synthetic catch-up spike (< 3.5 m/s, was $maxSmoothedSpeed m/s)",
+            maxSmoothedSpeed < 3.5
+        )
+        // Steady running segment (t=35..60) must remain accurately near ~2.1 m/s
+        val steadyMean = smoothed.subList(35, 61).map { it.speedMps }.average()
+        assertTrue("Steady easy-run speed must remain near 2.1 m/s (was $steadyMean)", steadyMean in 1.7..2.5)
+    }
+
+    // REQ-FIL-036.3 / TST-FIL-036.3
+    @Test
+    fun testGenuineLaunchAndMultiSecondSprint_notClippedByTeleportOrGlitchGates_tstFil036_3() {
+        val samples = mutableListOf<RawOdometrySample>()
+        val baseTs = 9_000_000L
+        var eastM = 0.0
+
+        // 3 s standstill, genuine launch (2.0 -> 2.2 -> 2.3), steady jog, then multi-second sprint (2.0 -> 3.5 -> 5.0 -> 6.0 -> 6.0 -> 5.8 -> 4.5 -> 2.5)
+        val speedProfile = doubleArrayOf(
+            0.0, 0.0, 0.0,
+            2.0, 2.2, 2.3, 2.2, 2.1, 2.0, 2.0,
+            3.5, 5.0, 6.0, 6.0, 6.0, 5.8, 4.5, 3.0, 2.2, 2.0
+        )
+        for (i in speedProfile.indices) {
+            val v = speedProfile[i]
+            eastM += v * 1.0
+            val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(eastM, 0.0, originLat, originLon)
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = baseTs + i * 1_000L,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = v,
+                    bearingDeg = 90.0,
+                    accuracyMeters = 4.0,
+                    worldYawRateRadPerSec = 0.0,
+                    carriageMode = if (v <= 0.05) PhoneCarriageMode.STATIONARY else PhoneCarriageMode.RUN_WAIST_HIP
+                )
+            )
+        }
+
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples)
+        assertEquals(samples.size, smoothed.size)
+        assertTrue("Genuine launch at t=3 must not be clipped (was ${smoothed[3].speedMps})", smoothed[3].speedMps >= 1.6)
+        val peakSprintSpeed = smoothed.maxOf { it.speedMps }
+        assertTrue("Genuine multi-second 6.0 m/s sprint must preserve peak >= 5.5 m/s (was $peakSprintSpeed)", peakSprintSpeed >= 5.5)
+    }
+
     private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)

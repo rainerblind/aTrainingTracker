@@ -425,4 +425,67 @@ class SpeedAndLocationDeviceIndoorAndRestCouplingTest {
         assertFalse("Device must unpin normally on movement when auxiliary sensors absent", device.isStationaryPinned)
         assertEquals(18.0, device.getDistanceSensor().value ?: -1.0, 0.001)
     }
+
+    // =========================================================================
+    // REQ-FIL-036.1 / TST-FIL-036.1: Base-Class Veto Precedence Over Cold-Start Hook
+    // =========================================================================
+
+    @Test
+    fun testColdStartReleaseHook_cannotBypassIndoorExternalWheelOrAccelRestVetoes_tstFil036_1() {
+        var allowColdStartRelease = true
+        val hookDevice = object : SpeedAndLocationDevice(mockContext, mockSensorManager, DeviceType.SPEED_AND_LOCATION_GPS) {
+            override fun shouldReleaseColdStartStationaryPin(location: Location?): Boolean = allowColdStartRelease
+            fun speedVal(): Double = mSpeedSensor.value ?: -1.0
+            fun distVal(): Double = mDistanceSensor.value ?: -1.0
+        }
+        hookDevice.setWatchdogHandler(mockHandler)
+
+        val t0 = 50_000L
+        // 1. Indoor mode veto must block cold-start release hook unconditionally
+        hookDevice.setIndoorMode(true)
+        val indoor1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = t0, speed = 0.0f, accuracy = 15.0f)
+        hookDevice.onNewLocation(indoor1)
+        assertTrue(hookDevice.isStationaryPinned)
+
+        val indoor2 = createMockFix(lat = 48.00004, lon = 11.0, timeMs = t0 + 1000L, speed = 2.0f, accuracy = 15.0f)
+        every { indoor1.distanceTo(indoor2) } returns 4.5f
+        hookDevice.onNewLocation(indoor2)
+        assertTrue("Indoor mode must veto cold-start release hook", hookDevice.isStationaryPinned)
+        assertEquals(0.0, hookDevice.distVal(), 1e-6)
+        hookDevice.setIndoorMode(false)
+
+        // 2. Stationary external wheel sensor veto must block cold-start release hook
+        val mockWheel = mockk<MySensor<Double>>(relaxed = true)
+        every { mockWheel.isActivated } returns true
+        every { mockWheel.value } returns 0.0
+        every { mockWheel.lastUpdateTimestamp } returns t0 + 2000L
+        every { mockSensorManager.getSensorForDeviceType(SensorType.SPEED_mps, DeviceType.BIKE_SPEED) } returns mockWheel
+
+        val wheelFix = createMockFix(lat = 48.00008, lon = 11.0, timeMs = t0 + 2000L, speed = 2.0f, accuracy = 15.0f)
+        every { indoor1.distanceTo(wheelFix) } returns 5.0f
+        hookDevice.onNewLocation(wheelFix)
+        assertTrue("Stationary external wheel must veto cold-start release hook", hookDevice.isStationaryPinned)
+        assertEquals(0.0, hookDevice.distVal(), 1e-6)
+        every { mockSensorManager.getSensorForDeviceType(any(), any()) } returns null
+
+        // 3. Motionless IMU rest-variance veto must block cold-start release hook
+        for (i in 0 until 5) {
+            hookDevice.processAccelerometerMeasurement(0.0f, 0.0f, 9.81f, t0 + 2600L + i * 100L)
+        }
+        val restFix = createMockFix(lat = 48.00010, lon = 11.0, timeMs = t0 + 3000L, speed = 2.0f, accuracy = 15.0f)
+        every { indoor1.distanceTo(restFix) } returns 5.5f
+        hookDevice.onNewLocation(restFix)
+        assertTrue("IMU rest variance must veto cold-start release hook", hookDevice.isStationaryPinned)
+        assertEquals(0.0, hookDevice.speedVal(), 1e-6)
+
+        // 4. Once all vetoes clear (dynamic IMU, outdoor, no stationary wheel), hook releases cleanly within deadband (< 0.6 * 15 = 9 m)
+        for (i in 0 until 5) {
+            hookDevice.processAccelerometerMeasurement(if (i % 2 == 0) 3.0f else -3.0f, 0.0f, 12.0f, t0 + 3600L + i * 100L)
+        }
+        val moveFix = createMockFix(lat = 48.00012, lon = 11.0, timeMs = t0 + 4000L, speed = 2.0f, accuracy = 15.0f)
+        every { indoor1.distanceTo(moveFix) } returns 6.0f
+        hookDevice.onNewLocation(moveFix)
+        assertFalse("Cold-start release hook must unpin once all vetoes clear", hookDevice.isStationaryPinned)
+        assertTrue("Unpinned speed must reflect motion", hookDevice.speedVal() > 0.5)
+    }
 }

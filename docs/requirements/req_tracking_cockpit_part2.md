@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.66  
+**Version**: 1.0.69  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 78
+**Total Requirements**: 79
 
 ---
 
@@ -3583,6 +3583,41 @@
 
 **Invariants**: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `SpeedAndLocationDevice_ATTFused.kt` `0` edits (`1,459 / 1,500` LoC); `PhoneCarriageClassifier.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-FIL-036: ATT Fused Cold-Start Pinning Release, Unanchored Heading/Velocity Decoupling & Post-Unpin ERTS Velocity Overshoot Gating [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-036`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/AttFusedColdStartHelper.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFused.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkf.kt`, `app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmoother.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt`
+- **Rationale**: Pixel 10 field run `Kurze Runde var 2 #53` (`2026-11-19_184953`, `_id = 2414`, `~8:15/km`) exposed (1) a `23 s` cold-start freeze in `att_fused` (`t = 1..23 s`, `0.0 m/s` / `0.0 m`) despite `30–38 m` of `1.0–2.3 m/s` running at `9.2–18.9 m` GPS accuracy caused by unconditional `distFromAnchor > 0.6 * acc` pinning, unanchored `PI/2` North heading crushing `ekf.speedMps`, and unbounded `(acc * 0.25)^2` Doppler variance, followed by `9.34 m` (`t = 24 s`) and `12.20 m` (`t = 31 s`) jumps; (2) post-workout ERTS synthesizing an artificial `5.73 m/s` (`20.6 km/h`) catch-up spike at `t = 30–34 s` overwriting `ExtremumValues.MAX(SPEED_mps)`; and (3) a `119–177 m` canonical distance shortfall (`ATT-9158`, refining `REQ-FIL-023.1`, `REQ-FIL-017.1`/`.3`, `REQ-FIL-025`, `REQ-FIL-027.3`, `REQ-FIL-032.3`, `REQ-TRK-048.2`, and `REQ-TRK-077`).
+- **Description**:
+  1. *Corroborated Cold-Start Pinning Release, Unbypassable Veto Precedence & Anti-Oscillation Guard (`REQ-FIL-036.1`)*:
+     - `SpeedAndLocationDevice.java` SHALL expose `protected boolean shouldReleaseColdStartStationaryPin(Location location)` (default `false` so `GPS`/`GoogleFused` remain identical), evaluated in `onNewLocation()` strictly AFTER `if (mIsIndoorMode)` and strictly BEFORE `if (shouldUnpin && (extStationary || accelAtRest)) { shouldUnpin = false; }` so indoor, wheel-zero, and IMU rest-variance vetoes remain structurally unbypassable.
+     - Pure helper `AttFusedColdStartHelper` (`banalservice.odometry`, keeping `SpeedAndLocationDevice_ATTFused.kt <= 1,485 / 1,500` LoC) SHALL release cold-start pinning under coarse GNSS accuracy (`10–20 m`) ONLY when BOTH `>= 2` consecutive fresh corroborated motion fixes (`hasTrustedGpsSpeed && gpsSpeed >= 0.8 m/s`, OR `isWheelMoving`, OR active running/walking carriage/step evidence) with `!isStationaryByClassifier` AND net directed non-oscillating raw-GNSS progression (`netDist >= 3.0 m` and straightness `netDist / pathDist >= 0.55` across `>= 2` moving intervals) hold, rejecting indoor handheld oscillating multipath while releasing outdoor cold-start running within `<= 5 s` without `10+ m` unpin jumps.
+  2. *Raw-Chord Cold-Start Heading Seeding, Unanchored/Post-Outage Velocity Decoupling & Bounded Doppler Variance (`REQ-FIL-036.2`)*:
+     - While EKF heading is unanchored, `AttFusedColdStartHelper` SHALL seed `UnicycleOdometryEkf` heading via `updateOfflineHeading()` once directed raw-GNSS progression reaches `>= 4.0 m` (or corroborated moving GPS bearing at `gpsSpeed >= 1.0 m/s`, `acc <= 20.0 m`) even below `MIN_DOPPLER_SPEED_MPS (3.0 m/s)`.
+     - `UnicycleOdometryEkf.updateGnssPosition()` SHALL support `@JvmOverloads decoupleVelocity: Boolean = false` and zero `k[2][0..1]` + decouple `P[0..1, 2]` whenever `decoupleVelocity == true` OR `confirmedPostOutage` inflates `p[0][0] = max(p[0][0], y0^2); p[1][1] = max(p[1][1], y1^2)`, preventing unanchored velocity crushing and post-outage velocity spikes while preserving `TST-FIL-023.1` & `REQ-FIL-009`.
+     - For trusted GNSS fixes (`acc > 0.0 && acc <= 20.0 m`), Doppler `speedVar` in `SpeedAndLocationDevice_ATTFused` and `ExtendedRtsOdometrySmoother` SHALL use calibrated bounded variance `((acc * 0.08)^2).coerceIn(0.25, 2.25)`, preserving distrust when `acc > 20.0 m`.
+  3. *Post-Workout ERTS Speed-Before-Position Ordering, `dt_gnss`-Normalized Teleport Decoupling, 1-Tick Glitch Pre-Gate & Backward Catch-Up Bound (`REQ-FIL-036.3`)*:
+     - `ExtendedRtsOdometrySmoother.smoothSamples()` SHALL apply moving speed updates (`validWheelSpeed` / `validSpeed`) BEFORE `ekf.updateGnssPosition()` and pre-gate isolated 1-tick non-wheel geometric speed glitches (`> max(2.0 * localMedianSpeed, localMedianSpeed + 2.5)`) without damping genuine multi-second sprint accelerations (`2.0 -> 3.5 -> 5.0 -> 6.0 m/s`).
+     - `ExtendedRtsOdometrySmoother` SHALL detect GNSS step discontinuities normalized by actual valid-GNSS elapsed time `dt_gnss` (`dt_gnss in (0.0, 5.0]` and `stepDist / dt_gnss > max(6.0, localSpeed * 2.2 + 2.5)`, avoiding false triggers on `45 s` curved tunnels), decouple `[0..1, 2]` position-velocity covariance in BOTH forward `updateGnssPosition(..., decoupleVelocity = true)` and backward `smoothSnapshots()` across discontinuity epochs, and bound backward RTS velocity `smoothedStates[k][2]` against position-driven catch-up overshoot so canonical `SPEED_mps` and `ExtremumValues.MAX(SPEED_mps)` remain free of synthetic `5.73 m/s` spikes while preserving genuine sprints and accurate `DISTANCE_m`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-036` refining `REQ-FIL-023.1`, `REQ-FIL-017.1`/`.3`, `REQ-FIL-025`, `REQ-FIL-027.3`, `REQ-FIL-032.3`, `REQ-TRK-048.2`, and `REQ-TRK-077` across `AttFusedColdStartHelper.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `SpeedAndLocationDevice.java`, `UnicycleOdometryEkf.kt`, `ExtendedRtsOdometrySmoother.kt`, and `ErtsPostWorkoutRecomputer.kt`.
+2. *Historical Origin & Commit Trace*: `eba66320` & `f6715226` (`ATT-8576`), `ed6acfee` (`ATT-7750`), `d96fd52f` (`ATT-8705`), `14935efb` (`ATT-8880`), `c2f48ca1` (`ATT-9064`), `0210b827` (`ATT-9062`).
+3. *Root Reason for Existing Formulation*: `ATT-8576` preserved `location.accuracy >= acc` and gated cold stationary jumps at `0.0 m/s`, while `SpeedAndLocationDevice` relied on `distFromAnchor > 0.6 * acc` for indoor spiderweb suppression; neither addressed cold-start outdoor running with `10–20 m` accuracy and wrong initial `PI/2` heading, nor backward RTS `C_k[2, 0..1]` catch-up velocity overshoot across post-unpin teleports.
+4. *Preservation of Core Invariants*: `SpeedAndLocationDevice_ATTFused.kt <= 1,485 / 1,500` LoC (`0` protected monolith edits); `SpeedAndLocationDevice.java` hook default `false` (`GPS`/`GoogleFused` unchanged); `REQ-TRK-077` indoor/wheel/rest vetoes unbypassable; `REQ-FIL-023.1` cold stationary gating & `location.accuracy >= acc` preserved; `MIN_DOPPLER_SPEED_MPS = 3.0` unchanged; `REQ-FIL-017.3` raw column immutability & `REQ-FIL-032` indoor pinning preserved; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an outdoor running start (`1.0–2.3 m/s`, heading South/East/West) with cold-start GPS accuracy (`9.2–18.9 m`) and active running IMU motion (`!mIsIndoorMode`, `!extStationary`, `!accelAtRest`), *When* `SpeedAndLocationDevice_ATTFused` processes the first `30 s`, *Then* pinning releases in `<= 5 s`, heading seeds from directed raw-GNSS progression without velocity crushing, and no `>= 10 m` teleport jump occurs.
+• *Given* indoor mode, stationary external wheel (`0.0 m/s`), `accelAtRest == true`, cold stationary `25.1 -> 16.0 m` jump at `0.0 m/s`, OR indoor handheld oscillating multipath (`acc = 12–18 m`, fake `1.2–1.8 m/s` bouncing without directed progress), *When* `SpeedAndLocationDevice_ATTFused` processes the fixes, *Then* stationary pinning stays engaged (`0.0 m/s`, `0.0 m` distance creep).
+• *Given* a recorded track with `23 s` pinned standstill followed by `9.34 m` (`t = 24 s`) and `12.20 m` (`t = 31 s`) teleports (normal live speeds `< 3.3 m/s`, with or without a 1-tick geometric glitch), *When* `ExtendedRtsOdometrySmoother` / `ErtsPostWorkoutRecomputer` runs, *Then* canonical `SPEED_mps` and `ExtremumValues.MAX(SPEED_mps)` stay `< 3.5 m/s` (no `5.73 m/s` spike) and raw device columns stay immutable.
+• *Given* a genuine multi-second sprint (`2.0 -> 3.5 -> 5.0 -> 6.0 m/s`), a `45 s` curved tunnel outage, and `acc > 20 m` Doppler dropouts, *When* `ExtendedRtsOdometrySmoother` / `UnicycleOdometryEkf` runs, *Then* the sprint peaks accurately (`>= 5.5 m/s`), tunnel continuity holds without false discontinuity triggers, and `acc > 20 m` fixes remain distrusted.
+
+**Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,485 / 1,500` LoC (`0` protected monolith edits); `SpeedAndLocationDevice.java` hook default `false`; `REQ-TRK-077` indoor/wheel/rest vetoes unbypassable; `REQ-FIL-023.1` & `REQ-FIL-009` preserved; `MIN_DOPPLER_SPEED_MPS = 3.0` unchanged; `REQ-FIL-017.3` & `REQ-FIL-032` preserved; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3654,3 +3689,6 @@
 | `1.0.64` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Added `REQ-FIL-035` `[Planned]` (`REQ-FIL-035.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`010`) for `PhoneCarriageClassifier` sport-context cycling guardrail + non-sticky eviction, easy-pace `walkingStepBand`/`walkingSpeedBand` bypass, front-hip running belt scoring tiers, and chatter-resistant `SCORE_MARGIN = 0.85` + asymmetric dwell (`0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `N/A - no UI strings`). |
 | `1.0.65` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `REQ-FIL-035` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,124 / 1,500` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,459` LoC [`0` edits], `0` monolith edits; `138/138` PASS across 12 suites, `0` new compiler warnings). |
 | `1.0.66` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `REQ-FIL-035` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9224`) `138/138` PASS evidence (`Rule 7.5`, zero `app/` diff since `9b89af95`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9157_walkthrough.md`. |
+| `1.0.67` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Added `REQ-FIL-036` `[Planned]` (`REQ-FIL-036.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`010`) for corroborated cold-start pinning release with unbypassable indoor/wheel/rest vetoes & anti-oscillation guard, raw-chord heading seeding + unanchored/post-outage velocity decoupling + bounded Doppler variance, and `dt_gnss`-normalized ERTS teleport decoupling + 1-tick glitch pre-gate + backward catch-up velocity bound (`SpeedAndLocationDevice_ATTFused.kt <= 1,485 / 1,500` LoC, `N/A - no UI strings`). |
+| `1.0.68` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `REQ-FIL-036` to `[Implemented]` following Stage 4 construction (`AttFusedColdStartHelper.kt` `256` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,481 / 1,500` LoC, `SpeedAndLocationDevice.java` `824` LoC, `UnicycleOdometryEkf.kt` `844` LoC, `ExtendedRtsOdometrySmoother.kt` `920` LoC; `0` monolith edits; `144/144` PASS across 12 suites + `:app:assembleDebug`, `0` new compiler warnings). |
+| `1.0.69` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `REQ-FIL-036` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9246`) `144/144` PASS evidence on `97f49453` (`Rule 7.5`, zero `app/` diff since `97f49453`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9158_walkthrough.md`. |

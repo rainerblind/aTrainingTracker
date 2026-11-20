@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.88  
+**Version**: 1.0.91  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 163
+**Total Tests**: 164
 
 ---
 
@@ -3720,6 +3720,22 @@
      • Verify steady front-hip belt running with transient 2.5 s canopy speed dips and 4.5 s non-glance IMU bursts holds `RUN_WAIST_HIP (5)` (`0` spurious switches via `SCORE_MARGIN = 0.85`, `4.0 s` `RUN -> WALK` dwell, `6.0 s` intra-run non-glance dwell), while verified wrist glance switches in `0 ms` and `WALK -> RUN` / `RUN -> STATIONARY` switch in `2.0 s` (preserving `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` Phase 2 `5.0 s` walk→run).
      • Verify `ATT-9062` (`TST-FIL-034`) & `ATT-8890` (`TST-FIL-028`) regression, `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt = 1,459 / 1,500`, `PhoneCarriageClassifier.kt = 1,124 / 1,500`, `0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
 
+### TST-FIL-036: **ATT Fused Cold-Start Pinning Release, Unanchored Heading/Velocity Decoupling & Post-Unpin ERTS Velocity Overshoot Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-FIL-036` (`REQ-FIL-036.1`..`REQ-FIL-036.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/AttFusedColdStartHelperTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDeviceIndoorAndRestCouplingTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDeviceStationaryJitterTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDeviceDisplacementTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsOdometrySmootherTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Cold-Start Pin Release, Veto Precedence & Indoor Anti-Oscillation Guard (`TST-FIL-036.1`, `AttFusedColdStartHelperTest`: `testDirectedOutdoorMotion_releasesColdStartPinAndSeedsSouthHeading_tstFil036_1`, `testIndoorHandheldOscillatingMultipath_rejectedByAntiOscillationGuard_tstFil036_1`; `SpeedAndLocationDevice_ATTFusedTest`: `testColdStartSouthEasyRun_releasesPinPromptlyWithout23sFreezeOrTeleport_tstFil036_1_2`, `testIndoorHandheldOscillatingMultipath_remainsPinnedWithZeroDistanceCreep_tstFil036_1`; `SpeedAndLocationDeviceIndoorAndRestCouplingTest`: `testColdStartReleaseHook_cannotBypassIndoorExternalWheelOrAccelRestVetoes_tstFil036_1`)*:
+     • Replay Pixel 10 `t = 0..25 s` outdoor South easy run (`1.8 m/s`, cold GPS `acc = 18.9 -> 9.2 m`, active running IMU) verifying pinning releases within `<= 5 s`, no `>= 10 m` unpin teleport jump, and continuous speed/distance progression (`> 32 m` recovered over `45 m`).
+     • Verify structurally unbypassable vetoes (`mIsIndoorMode == true`, stationary external wheel `0.0 m/s`, `accelAtRest == true`, cold stationary `25.1 -> 16.0 m` jump at `0.0 m/s`) AND indoor handheld oscillating multipath (`acc = 15–16 m`, fake `1.5 m/s` bouncing without directed progress, straightness `< 0.55`) all remain pinned (`0.0 m/s`, `0.0 m` distance).
+  2. *Raw-Chord Heading Seed, Unanchored/Post-Outage Velocity Decoupling & Bounded Doppler Variance (`TST-FIL-036.2`, `AttFusedColdStartHelperTest`: `testCalibratedDopplerSpeedVariance_boundsTrustedFixesAndPreservesUntrustedDistrust_tstFil036_2`; `UnicycleOdometryEkfTest`: `testSeedInitialHeadingAndVelocityDecoupling_snaps180DegAndBlocksOutageSpeedKick_tstFil036_2`; `SpeedAndLocationDevice_ATTFusedTest`: `testColdStartSouthEasyRun_releasesPinPromptlyWithout23sFreezeOrTeleport_tstFil036_1_2`)*:
+     • Verify South start (`acc = 18.9 -> 9.2 m`, `speed = 1.8 m/s < 3.0 m/s`) snaps 180° heading via one-shot `seedInitialHeading()` from directed raw-GNSS chord (`>= 4.0 m`, `>= 3` samples) and decouples `K[2][0..1]` while unanchored so `ekf.speedMps` is never crushed toward `0`.
+     • Verify `UnicycleOdometryEkf.updateGnssPosition()` `confirmedPostOutage` snap re-converges `[E, N]` without injecting a velocity spike into `x[2]`, and bounded Doppler `speedVar` (`0.25..2.25` for `acc <= 20 m`) improves cold-start speed tracking while preserving `acc > 20 m` distrust (`TST-FIL-023.1` & `TST-FIL-017` preserved).
+  3. *ERTS `dt_gnss`-Normalized Teleport Decoupling, 1-Tick Glitch Pre-Gate, Backward Catch-Up Bound, Genuine Sprint & Contracts (`TST-FIL-036.3`, `ExtendedRtsOdometrySmootherTest`: `testPostUnpinTeleportAnd1TickGlitch_suppresses573MpsCatchUpOvershoot_tstFil036_3`, `testGenuineLaunchAndMultiSecondSprint_notClippedByTeleportOrGlitchGates_tstFil036_3`; `ErtsPostWorkoutRecomputerTest`: `testPostUnpinTeleportRun_boundsCanonicalSpeedAndMaxExtremaAndPreservesRawColumns_tstFil036_3`; Contracts)*:
+     • Replay `23 s` pinned standstill + `9.34 m` (`t = 24 s`, with isolated 1-tick `9.34 m/s` geometric glitch) and `12.20 m` (`t = 31 s`) teleports through `ExtendedRtsOdometrySmoother` & `ErtsPostWorkoutRecomputer`: assert canonical `SPEED_mps` and `ExtremumValues.MAX(SPEED_mps)` remain `< 3.5 m/s` (no `5.73 m/s` spike) and raw device columns remain byte-identical.
+     • Verify genuine launch (`0, 0, 2.0, 2.2`) & multi-second sprint (`2.0 -> 3.5 -> 5.0 -> 6.0 m/s`) preserve peak speed `>= 5.5 m/s`, `45 s` curved tunnel outage (`dt_gnss = 45 s`) does not false-trigger discontinuity gating, and `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt = 1,481 / 1,500` LoC, `0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings` all pass (`144/144 PASS` verified on `97f49453`, Gate 4 `ATT-9246`).
+
 ---
 
 ## Change History
@@ -3805,3 +3821,6 @@
 | `1.0.86` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Added `TST-FIL-035` `[Planned]` (`TST-FIL-035.1`–`.3`, strictly symmetric `REQ-FIL-035`) covering sport-context cycling guardrail + non-sticky eviction + brick override, easy-pace `walkingStepBand`/`walkingSpeedBand` bypass + front-hip belt 9-profile separation, and `SCORE_MARGIN = 0.85` + asymmetric dwell (`N/A - no UI strings`). |
 | `1.0.87` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `TST-FIL-035` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`138/138` PASS across 12 suites, `0` fail, `0` err, `0` skip, `0` new warnings; `4` static `TST-FIL-035` tags indexed). |
 | `1.0.88` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `TST-FIL-035` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9224`) `138/138` PASS evidence (`Rule 7.5`, zero `app/` diff since `9b89af95`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9157_walkthrough.md`. |
+| `1.0.89` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Added `TST-FIL-036` `[Planned]` (`TST-FIL-036.1`–`.3`, strictly symmetric `REQ-FIL-036`) covering cold-start outdoor release + unbypassable vetoes + indoor oscillating multipath rejection, raw-chord heading seeding + unanchored/post-outage velocity decoupling + bounded Doppler variance, and ERTS `dt_gnss`-normalized teleport decoupling + 1-tick glitch pre-gate + genuine sprint & curved tunnel non-regression (`N/A - no UI strings`). |
+| `1.0.90` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `TST-FIL-036` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`144/144` PASS across 12 suites + `:app:assembleDebug`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; explicit hyphenated `REQ-FIL-036.x / TST-FIL-036.x` tags indexed across 6 test suites). |
+| `1.0.91` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `TST-FIL-036` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9246`) `144/144` PASS evidence on `97f49453` (`Rule 7.5`, zero `app/` diff since `97f49453`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9158_walkthrough.md`. |
