@@ -45,9 +45,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Real SQLite migration verification suite for TrackingViewsDbHelper (TST-MIG-042.5, REQ-MIG-045; TST-DAT-032, REQ-DAT-036).
+ * Real SQLite migration verification suite for TrackingViewsDbHelper (TST-MIG-042.5, REQ-MIG-045; TST-DAT-032, REQ-DAT-036, TST-STR-003).
  * Tests authentic DDL/DML execution in SQLite backed by Robolectric, verifying SectionDividersTable creation and views preservation.
  */
+// Linked test specs: TST-STR-003
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class TrackingViewsRealSqliteMigrationTest {
@@ -958,5 +959,130 @@ class TrackingViewsRealSqliteMigrationTest {
 
         // Verify idempotency
         helper.onUpgrade(database, 17, 18)
+    }
+
+    /**
+     * TST-STR-003 (REQ-UI-110, REQ-UI-009): Verifies TrackingViewsDbHelper.onUpgrade(9 -> 10)
+     * adds SHOW_ELEVATION_PROFILE synchronized with SHOW_MAP, and TrackingViewsDbHelper.onCreate()
+     * + addDefaultTab() create SHOW_ELEVATION_PROFILE with showElevationProfile == showMap.
+     */
+    @Test
+    fun testOnCreateAndOnUpgradeV9ToV10_showElevationProfileIntegrity_TST_STR_003() {
+        // 1. Upgrade path v9 -> v10
+        val v9Db = db!!
+        v9Db.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V9)
+        v9Db.version = 9
+
+        v9Db.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, "RUN")
+            put(TrackingViewsDbHelper.NAME, "Default")
+            put(TrackingViewsDbHelper.LAYOUT_NR, 1)
+            put(TrackingViewsDbHelper.NEXT_POSITION, 1)
+            put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, 0)
+            put(TrackingViewsDbHelper.SHOW_MAP, 0)
+            put(TrackingViewsDbHelper.FULL_SCREEN, 0)
+            put(TrackingViewsDbHelper.SYSTEM_SETTING, 1)
+            put(TrackingViewsDbHelper.DAY, 1)
+            put(TrackingViewsDbHelper.NIGHT, 1)
+            put(TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS, 0)
+        })
+        v9Db.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, "BIKE")
+            put(TrackingViewsDbHelper.NAME, "Map")
+            put(TrackingViewsDbHelper.LAYOUT_NR, 2)
+            put(TrackingViewsDbHelper.NEXT_POSITION, 1)
+            put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, 0)
+            put(TrackingViewsDbHelper.SHOW_MAP, 1)
+            put(TrackingViewsDbHelper.FULL_SCREEN, 0)
+            put(TrackingViewsDbHelper.SYSTEM_SETTING, 1)
+            put(TrackingViewsDbHelper.DAY, 1)
+            put(TrackingViewsDbHelper.NIGHT, 1)
+            put(TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS, 1)
+        })
+
+        // Upgrade from 9 -> 10 (upgrading through current version path)
+        v9Db.execSQL("ALTER TABLE ${TrackingViewsDbHelper.VIEWS_TABLE} ADD COLUMN ${TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE} int")
+        v9Db.execSQL("UPDATE ${TrackingViewsDbHelper.VIEWS_TABLE} SET ${TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE} = ${TrackingViewsDbHelper.SHOW_MAP}")
+
+        val upgradedMapByViewName = mutableMapOf<String, Int>()
+        v9Db.query(
+            TrackingViewsDbHelper.VIEWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.NAME, TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE),
+            null, null, null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                upgradedMapByViewName[cursor.getString(0)] = cursor.getInt(1)
+            }
+        }
+        assertEquals(0, upgradedMapByViewName["Default"])
+        assertEquals(1, upgradedMapByViewName["Map"])
+
+        // Also test helper.onUpgrade(v9, 10) directly on an isolated schema containing all tables up to v10
+        val directDbName = "test_tracking_views_v9_direct.db"
+        context.deleteDatabase(directDbName)
+        val directDb = context.openOrCreateDatabase(directDbName, Context.MODE_PRIVATE, null)
+        try {
+            directDb.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V9)
+            directDb.execSQL(TrackingViewsDbHelper.CREATE_LAYOUTS_TABLE_V8)
+            directDb.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+                put(TrackingViewsDbHelper.ACTIVITY_TYPE, "BIKE")
+                put(TrackingViewsDbHelper.NAME, "MapV9")
+                put(TrackingViewsDbHelper.SHOW_MAP, 1)
+            })
+            directDb.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+                put(TrackingViewsDbHelper.ACTIVITY_TYPE, "BIKE")
+                put(TrackingViewsDbHelper.NAME, "PlainV9")
+                put(TrackingViewsDbHelper.SHOW_MAP, 0)
+            })
+            helper.onUpgrade(directDb, 9, 10)
+
+            val directResults = mutableMapOf<String, Int>()
+            directDb.query(
+                TrackingViewsDbHelper.VIEWS_TABLE,
+                arrayOf(TrackingViewsDbHelper.NAME, TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE),
+                null, null, null, null, null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    directResults[c.getString(0)] = c.getInt(1)
+                }
+            }
+            assertEquals(1, directResults["MapV9"])
+            assertEquals(0, directResults["PlainV9"])
+        } finally {
+            RealSqliteTestHelper.cleanupDatabase(directDb, directDbName)
+        }
+
+        // 2. Fresh onCreate() + addDefaultTab() check
+        val freshDbName = "test_tracking_views_fresh_oncreate.db"
+        context.deleteDatabase(freshDbName)
+        val freshDb = context.openOrCreateDatabase(freshDbName, Context.MODE_PRIVATE, null)
+        try {
+            helper.onCreate(freshDb)
+            val cols = mutableSetOf<String>()
+            freshDb.rawQuery("PRAGMA table_info(${TrackingViewsDbHelper.VIEWS_TABLE})", null).use { c ->
+                val nameIdx = c.getColumnIndexOrThrow("name")
+                while (c.moveToNext()) cols.add(c.getString(nameIdx))
+            }
+            assertTrue("onCreate must create SHOW_ELEVATION_PROFILE column", cols.contains(TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE))
+
+            var foundMapWithElevation = false
+            var foundNonMapWithoutElevation = false
+            freshDb.query(
+                TrackingViewsDbHelper.VIEWS_TABLE,
+                arrayOf(TrackingViewsDbHelper.SHOW_MAP, TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE),
+                null, null, null, null, null
+            ).use { c ->
+                while (c.moveToNext()) {
+                    val showMap = c.getInt(0)
+                    val showElev = c.getInt(1)
+                    if (showMap == 1 && showElev == 1) foundMapWithElevation = true
+                    if (showMap == 0 && showElev == 0) foundNonMapWithoutElevation = true
+                }
+            }
+            assertTrue("Default Map tab must enable SHOW_ELEVATION_PROFILE", foundMapWithElevation)
+            assertTrue("Default non-Map tab must disable SHOW_ELEVATION_PROFILE", foundNonMapWithoutElevation)
+        } finally {
+            RealSqliteTestHelper.cleanupDatabase(freshDb, freshDbName)
+        }
     }
 }

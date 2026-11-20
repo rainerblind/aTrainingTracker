@@ -3998,6 +3998,151 @@ class TestSup9ProblemResolution(unittest.TestCase):
             self.assertIn("N/A (SUP.9 non-code resolution:", md)
 
 
+class TestProcessStabilityLegacyTsts(unittest.TestCase):
+    """Offline unit & protocol verification for TST-PRO-003, 006, 007, 008, 009, 010, 011, 017, 019, 020."""
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_003_and_010_impl_plan_subtask_and_discovery_first(self, mock_request, _mock_cfg):
+        """TST-PRO-003 & TST-PRO-010: [Impl-Plan] subtask creation, description-before-transition sequencing, and discovery-first reuse."""
+        actions = []
+        created = []
+        subtasks_state = []
+
+        def mock_jira(url, method="GET", payload=None, role="agent1"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/sprint?state=active" in url:
+                return {"values": [{"id": 464, "name": "2026-11-19_03_Nacht", "state": "active"}]}
+            elif "/rest/api/2/issue/ATT-501?" in url:
+                return {
+                    "key": "ATT-501",
+                    "fields": {
+                        "summary": "Plan test parent",
+                        "status": {"name": "Implementation Plan"},
+                        "issuetype": {"name": "Verbesserung", "subtask": False},
+                        "parent": {"key": "ATT-8138"},
+                        "subtasks": list(subtasks_state),
+                    },
+                }
+            elif "/rest/api/2/issue/ATT-501" in url and method == "GET" and "fields=" not in url:
+                return {"key": "ATT-501", "fields": {"status": {"name": "Implementation Plan"}, "subtasks": list(subtasks_state)}}
+            elif method == "POST" and url.endswith("/rest/api/2/issue"):
+                st_key = "ATT-502"
+                created.append(payload)
+                actions.append(("create", payload))
+                subtasks_state.append({"key": st_key, "fields": {"summary": payload["fields"]["summary"], "status": {"name": "Zu erledigen"}}})
+                return {"key": st_key}
+            elif "/rest/api/2/issue/ATT-502?" in url:
+                return {"key": "ATT-502", "fields": {"summary": "[Impl-Plan] ATT-501", "status": {"name": "Zu erledigen"}, "issuetype": {"subtask": True}, "parent": {"key": "ATT-501"}, "comment": {"comments": []}}}
+            elif method == "PUT" and url.endswith("/rest/api/2/issue/ATT-502"):
+                actions.append(("update-desc", payload))
+                return {}
+            elif "/transitions" in url and method == "GET":
+                return {"transitions": [
+                    {"id": "11", "name": "Start", "to": {"name": "In Bearbeitung"}},
+                    {"id": "21", "name": "Review", "to": {"name": "In Überprüfung"}},
+                ]}
+            elif "/transitions" in url and method == "POST":
+                actions.append(("transition", payload))
+                return {}
+            return {}
+
+        mock_request.side_effect = mock_jira
+        res_key = jira_util.submit_stage("ATT-501", "3", "Plan body line 1", role="agent1")
+        self.assertEqual(res_key, "ATT-502")
+        self.assertEqual(len(created), 1)
+        self.assertTrue(created[0]["fields"]["summary"].startswith("[Impl-Plan]"))
+        self.assertEqual(created[0]["fields"]["description"], "Plan body line 1")
+        self.assertTrue(any(a[0] == "transition" for a in actions))
+
+        # Second call reuses ATT-502 (discovery-first) and updates description before transitioning
+        actions.clear()
+        res_key_2 = jira_util.submit_stage("ATT-501", "3", "Updated plan body", role="agent1")
+        self.assertEqual(res_key_2, "ATT-502")
+        self.assertEqual(len(created), 1)
+        op_names = [a[0] for a in actions]
+        self.assertIn("update-desc", op_names)
+        self.assertIn("transition", op_names)
+        self.assertLess(op_names.index("update-desc"), op_names.index("transition"))
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://atrainingtracker.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_tst_pro_006_008_009_and_017_workflow_skills_and_human_gate(self, mock_request, _mock_cfg):
+        """TST-PRO-006, TST-PRO-008, TST-PRO-009, TST-PRO-017: Stage workflow, check-gate, FixVersion, verify_skills, and human gate."""
+        import verify_skills
+        self.assertTrue(verify_skills.verify_skills(REPO_ROOT))
+        self.assertEqual(set(jira_util.STAGE_SPECS.keys()), {"1", "2", "3", "4", "5"})
+        self.assertEqual(jira_util.STAGE_SPECS["5"]["parent_stage"], "test")
+        self.assertIn("final review (agent)", jira_util.PARENT_STAGE_ORDER)
+        self.assertIn("final review (human)", jira_util.PARENT_STAGE_ORDER)
+
+        # TST-PRO-009: check-gate returns 0 on Erledigt and exits 1 otherwise; parent Erledigt blocked for agents
+        mock_request.return_value = {"key": "ATT-602", "fields": {"summary": "[Impl-Plan] Task", "status": {"name": "Erledigt"}, "issuetype": {"subtask": True}}}
+        jira_util.check_gate("ATT-602", role="agent1")
+
+        mock_request.return_value = {"key": "ATT-602", "fields": {"summary": "[Impl-Plan] Task", "status": {"name": "In Überprüfung"}, "issuetype": {"subtask": True}}}
+        with self.assertRaises(SystemExit) as cm_gate:
+            jira_util.check_gate("ATT-602", role="agent1")
+        self.assertEqual(cm_gate.exception.code, 1)
+
+        mock_request.return_value = {"key": "ATT-600", "fields": {"summary": "Parent Bug", "status": {"name": "Test"}, "issuetype": {"subtask": False, "name": "Bug"}}}
+        with self.assertRaises(SystemExit) as cm_human:
+            jira_util.transition_issue("ATT-600", "erledigt", role="agent2")
+        self.assertEqual(cm_human.exception.code, 1)
+
+        # TST-PRO-008: FixVersion prohibited on subtasks
+        mock_request.side_effect = lambda url, **kwargs: (
+            [{"name": "V5.0.0"}] if url.endswith("/versions")
+            else {"key": "ATT-602", "fields": {"issuetype": {"subtask": True}}}
+        )
+        with self.assertRaises(SystemExit) as cm_fv:
+            jira_util.set_fix_version("ATT-602", "V5.0.0", role="agent1")
+        self.assertEqual(cm_fv.exception.code, 1)
+
+    def test_tst_pro_007_011_019_020_governance_triad_and_review_agent_shim(self):
+        """TST-PRO-007, TST-PRO-011, TST-PRO-019, TST-PRO-020: Document Triad, AAA, Rule 7.5/8.2, and review_agent shim."""
+        import subprocess
+        import review_agent
+
+        # TST-PRO-011: review_agent.py legacy shim invariants
+        self.assertEqual(review_agent.AUDITOR_ROLE, "agent2")
+        for g in ("Gate 1", "Gate 2", "Gate 3", "Gate 4", "Gate 5"):
+            self.assertIn(g, review_agent.GATE_DEFINITIONS)
+        proc = subprocess.run([sys.executable, os.path.join(REPO_ROOT, "tools", "review_agent.py")], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("gate-verdict", proc.stderr)
+
+        # TST-PRO-007, 019, 020: Document Triad + AAA + Rule 7.5/8.2
+        with open(os.path.join(REPO_ROOT, ".agents", "rules", "aspice_governance.md"), encoding="utf-8") as f:
+            rules = f.read()
+        with open(os.path.join(REPO_ROOT, "docs", "project_protocol.md"), encoding="utf-8") as f:
+            proto = f.read()
+        with open(os.path.join(REPO_ROOT, "docs", "design_guidelines.md"), encoding="utf-8") as f:
+            design = f.read()
+        with open(os.path.join(REPO_ROOT, "docs", "coding_standards.md"), encoding="utf-8") as f:
+            coding = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "stage1-analysis", "SKILL.md"), encoding="utf-8") as f:
+            s1 = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "stage5-verification", "SKILL.md"), encoding="utf-8") as f:
+            s5 = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "sprint-planner", "SKILL.md"), encoding="utf-8") as f:
+            sp = f.read()
+
+        self.assertIn("9 Core Rules", rules)
+        self.assertIn("Rule 8.2", rules)
+        self.assertIn("--merge-ticket", rules)
+        self.assertIn("Rule 7.5", rules)
+        self.assertTrue(os.path.isfile(os.path.join(REPO_ROOT, "docs", "engineering", "rule_history_archive.md")))
+        self.assertIn("Agile Agentic ASPICE (AAA)", proto)
+        self.assertIn("Document Triad", proto)
+        self.assertIn("Component Selection Heuristics", design)
+        self.assertIn("Reuse Before Create", coding)
+        self.assertIn("Independent Hypothesis Verification", s1)
+        self.assertIn("Tier 1", s5)
+        self.assertIn("Ceremony 2", sp)
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -539,4 +539,70 @@ class PeriodSummariesDbTest {
         )
         assertNull("Final migrationStatus must clear to null", repo.migrationStatus.value)
     }
+
+    /**
+     * TST-BUG-002 (REQ-PER-001, REQ-DAT-003): Hierarchical period sync with temporal gaps
+     * (skipping Feb and Mar plus intermediate weeks) preserves all summaries cleanly without
+     * crashes or inflated totals.
+     */
+    @Test
+    fun testHierarchicalResync_withTemporalGapMonthsAndWeeks_aggregatesWithoutCorruption_TST_BUG_002() = runTest {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.getAppContext() } returns context
+        every { TrainingApplication.getMinWalkSpeed_mps() } returns 0.5
+        every { TrainingApplication.getMaxWalkSpeed_mps() } returns 2.0
+        every { TrainingApplication.getMaxRunSpeed_mps() } returns 5.0
+        every { TrainingApplication.getMaxMTBSpeed_mps() } returns 8.0
+        every { TrainingApplication.getMaxBikeSpeed_mps() } returns 12.0
+
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+
+        val periodsDbMgr = PeriodSummariesDatabaseManager.getInstance(context)
+        periodsDbMgr.runInTransaction { db -> periodsDbMgr.setSyncFinished(db, true) }
+        val repo = PeriodsRepository(context.applicationContext as Application)
+        repo.scope.coroutineContext[kotlinx.coroutines.Job]?.let { job ->
+            job.children.forEach { it.cancel() }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                kotlinx.coroutines.runBlocking {
+                    job.children.forEach { it.join() }
+                }
+            }
+        }
+
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context).database
+        listOf(
+            "w_gap_jan" to "2026-01-15 10:00:00",
+            "w_gap_apr" to "2026-04-15 10:00:00"
+        ).forEachIndexed { idx, (baseName, startStr) ->
+            val cv = ContentValues().apply {
+                put(WorkoutSummaries.WORKOUT_NAME, "Gap Workout $idx")
+                put(WorkoutSummaries.FILE_BASE_NAME, baseName)
+                put(WorkoutSummaries.SPORT_ID, 1L)
+                put(WorkoutSummaries.TIME_START, startStr)
+                put(WorkoutSummaries.TIME_ACTIVE_s, 1800)
+                put(WorkoutSummaries.TIME_TOTAL_s, 1800)
+                put(WorkoutSummaries.DISTANCE_TOTAL_m, 10_000.0)
+                put(WorkoutSummaries.SPEED_AVERAGE_mps, 5.5)
+                put(WorkoutSummaries.ASCENDING, 120)
+                put(WorkoutSummaries.DESCENDING, 120)
+                put(WorkoutSummaries.FINISHED, 1)
+            }
+            summariesDb.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
+        }
+
+        repo.resyncAllPeriods()
+
+        val weeks = repo.groupedPeriods.value[1]
+        val months = repo.groupedPeriods.value[2]
+        val years = repo.groupedPeriods.value[3]
+
+        assertEquals("Only populated weeks (Jan + Apr) should exist across gap", 2, weeks.size)
+        assertEquals("Only populated months (Jan + Apr) should exist across gap", 2, months.size)
+        assertEquals(listOf("2026-04", "2026-01"), months.map { it.sortKey })
+        assertEquals(1, years.size)
+        assertEquals(2, years[0].totalWorkouts)
+        assertEquals(20_000.0, years[0].totalDistance, 0.01)
+    }
 }

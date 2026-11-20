@@ -63,8 +63,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Multi-threaded concurrency and stress verification suite for the sensor, device, filter,
- * and live workout session layers (`REQ-TRK-032`, `TST-TRK-024`, `ATT-3988`).
+ * and live workout session layers (`REQ-TRK-032`, `TST-TRK-024`, `REQ-PRO-002`, `REQ-PRO-006`,
+ * `TST-STR-002`, `TST-STR-011`, `ATT-3988`).
  */
+// Linked test specs: TST-STR-002, TST-STR-011
 class SensorAndDeviceConcurrencyStressTest {
 
     private lateinit var mockBanalService: BANALService

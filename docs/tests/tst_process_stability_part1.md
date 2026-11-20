@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-TST-PRO-P1`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -20,12 +20,13 @@
 - **Component**: **Tracking**
 - **Test Description**: Start workout, background app for 10 min, check bearing jitter.
 
-### TST-REG-002: **Branding** [Implemented]
+### TST-REG-002: **Branding** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXT-001`, `REQ-EXT-002`, `REQ-EXT-003`, `REQ-MAP-005`
 - **Component**: **Branding**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::poweredByStrava_rendersAttributionInBothColorVariants_TST_REG_002` (`ATT-8327`)
 - **Test Description**: Navigate to Strava Segments list and Detail map.
 
 ### TST-REG-003: **Cloud** [Implemented]
@@ -36,60 +37,67 @@
 - **Component**: **Cloud**
 - **Test Description**: Complete workout with Strava enabled.
 
-### TST-REG-004: **Pause Logic** [Implemented]
+### TST-REG-004: **Pause Logic** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-PRO-003`
 - **Component**: **Pause Logic**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/sensor/AccumulatorTest.kt::AccumulatorTest::testPauseDiscardLogic` (`ATT-8327`)
 - **Test Description**: Connect hardware distance sensor. Start workout. Record distance. **Pause**. Continue movement (e.g., spin wheel). **Resume**. Record more distance. Repeat for all relevant protocols (ANT+/BTLE).
 
-### TST-INT-002: **UI/Logic** [Implemented]
+### TST-INT-002: **UI/Logic** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXP-006`
 - **Component**: **UI/Logic**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModelTest.kt::EditWorkoutViewModelTest::testOnSportTypeSelected_noUploadStravaMapping_setsUploadToStravaZero_TST_INT_002` + `app/src/test/java/com/atrainingtracker/banalservice/database/SportTypeSwimTemplateTest.kt::SportTypeSwimTemplateTest::testStravaSportTypeMapping_noUploadAndGravelRideRoundTrip_TST_INT_002_TST_INT_003` (`ATT-8327`)
 - **Test Description**: In Sport Type Editor, select "- No upload -". Then create/edit workout with this type.
 
-### TST-INT-003: **Mapping** [Implemented]
+### TST-INT-003: **Mapping** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXP-007`
 - **Component**: **Mapping**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/database/SportTypeSwimTemplateTest.kt::SportTypeSwimTemplateTest::testStravaSportTypeMapping_noUploadAndGravelRideRoundTrip_TST_INT_002_TST_INT_003` (`ATT-8327`)
 - **Test Description**: In Sport Type Editor, select a new Strava type (e.g., Gravel Ride). Save and reopen.
 
-### TST-INT-004: **UI/Logic** [Implemented]
+### TST-INT-004: **UI/Logic** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-UI-110`, `REQ-UI-009`
 - **Component**: **UI/Logic**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::sensorGridConfig_elevationProfileToggleRevealsScopeChips_TST_INT_004` (`ATT-8327`)
 - **Test Description**: In Tracking Tab Configuration, toggle "Show Elevation Profile".
 
-### TST-INT-005: **UI Layout** [Implemented]
+### TST-INT-005: **UI Layout** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-UI-111`
 - **Component**: **UI Layout**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::trackingTabConfigHeader_narrowWidth_allButtonsFitAndTrigger_TST_INT_005` (`ATT-8327`)
 - **Test Description**: Open the Tab Configuration on a narrow device or split-screen.
 
-### TST-INT-006: **UI Layout** [Implemented]
+### TST-INT-006: **UI Layout** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-UI-111`
 - **Component**: **UI Layout**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::configHeaderAndSensorGrid_toggleAndButtonSequenceAudit_TST_INT_006` (`ATT-8327`)
 - **Test Description**: Audit the checkbox sequence in the tab configuration header.
 
-### TST-REG-005: **Map Context** [Implemented]
+### TST-REG-005: **Map Context** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-MAP-008`
 - **Component**: **Map Context**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::mapContextHierarchy_enforcesPrimarySameSportAndMutedAlphaValues_TST_REG_005` (`ATT-8327`)
 - **Test Description**: Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1).
 
 ### TST-INT-007: **Original Sport Icons Visual Identity Verification** [Implemented]
@@ -103,12 +111,13 @@
   2. Verify that sport type icons render in their authentic original colors and are not subject to theme-based tinting in active states.
   3. Verify muted/disabled state icons render with appropriate transparency.
 
-### TST-INT-008: **Settings Cleanup Verification** [Implemented]
+### TST-INT-008: **Settings Cleanup Verification** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-SET-055`
 - **Component**: **Settings Cleanup Verification**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::settingsNavigationDrawer_allCleanupSettingsItemsMapToValidTargets_TST_INT_008` (`ATT-8327`)
 - **Jira**: ``ATT-268``
 - **Test Description**: 1. Gradle Build: Ensure the project compiles successfully after reorganization and deletions. 2. Navigation Test: Verify all settings items in the drawer (Units, Display, Search, Export, Strava, Dropbox, Tracking Tabs) still function correctly.
 
@@ -222,21 +231,23 @@
 - **Jira**: ``ATT-274``
 - **Test Description**: 1. Run `jira_util.py list`. 2. Run `jira_util.py show KEY`.
 
-### TST-PRO-003: **Plan Sub-Task Verification** [Implemented]
+### TST-PRO-003: **Plan Sub-Task Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-010`
 - **Component**: **Plan Sub-Task Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_003_and_010_impl_plan_subtask_and_discovery_first` (`ATT-8327`)
 - **Jira**: ``ATT-327``
 - **Test Description**: 1. Identify a task requires a plan. 2. Verify that the agent creates a Jira sub-task with summary `[Plan] SCRUM-XXX: Summary` and description matching the plan.
 
-### TST-REG-007: **Pause Time Sync** [Implemented]
+### TST-REG-007: **Pause Time Sync** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
 - **Requirement(s)**: `REQ-TRK-009`, `REQ-UI-038`
 - **Component**: **Pause Time Sync**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceStateMachineCharacterisationTest.kt::TrackerServiceStateMachineCharacterisationTest::testSampleAndWriteToDb_paused_updatesTotalTimeAndSuppressesSteadyStateBroadcast_TST_STB_020_1` (`ATT-8327`)
 - **Test Description**: 1. Start workout. 2. Pause after 10s. 3. Wait 20s while paused.
 
 ### TST-REG-008: **Dropbox Auth** [Implemented]
@@ -248,20 +259,22 @@
 - **Jira**: ``ATT-257``
 - **Test Description**: 1. Navigate to 'Dropbox' in Ecosystem. 2. Tap 'Connect to Dropbox'. 3. Complete OAuth flow in browser. 4. Return to app.
 
-### TST-LOG-001: **Logic** [Implemented]
+### TST-LOG-001: **Logic** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Logic**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMappingSymmetryTest.kt::WorkoutDataMappingSymmetryTest::testRunningPaceExtrema_derivesBothSpeedAndPaceWithNumericalOrdering_TST_LOG_001_TST_LOG_002` (`ATT-8327`)
 - **Test Description**: Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column).
 
-### TST-LOG-002: **Logic** [Implemented]
+### TST-LOG-002: **Logic** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Logic**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMappingSymmetryTest.kt::WorkoutDataMappingSymmetryTest::testRunningPaceExtrema_derivesBothSpeedAndPaceWithNumericalOrdering_TST_LOG_001_TST_LOG_002` (`ATT-8327`)
 - **Test Description**: Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source.
 
 ### TST-MAN-001: **General** [Implemented]
@@ -272,12 +285,13 @@
 - **Component**: **General**
 - **Test Description**: Ad-hoc functional testing on a physical device.
 
-### TST-PRO-004: **Decoupled Interaction Queue** [Implemented]
+### TST-PRO-004: **Decoupled Interaction Queue** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-MIG-014`
 - **Component**: **Decoupled Interaction Queue**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/migration/BackupRestoreInteractionQueueTest.kt::BackupRestoreInteractionQueueTest` (`ATT-8327`)
 - **Jira**: ``ATT-333``
 - **Test Description**: 1. Start a bulk TCX import that triggers multiple cluster naming candidates. 2. Verify that while the ClusterNamingDialog is shown, the background progress indicator remains visible. 3. Complete the first naming task.
 
@@ -290,130 +304,145 @@
 - **Jira**: ``ATT-397``
 - **Test Description**: 1. Open the app on a device with a large status bar (e.g. Pixel 10). 2. Navigate to Workouts, Periods, and My Locations.
 
-### TST-BUG-007: **Internal Altitude Source Visibility** [Implemented]
+### TST-BUG-007: **Internal Altitude Source Visibility** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-118`
 - **Component**: **Internal Altitude Source Visibility**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeFromPressureDeviceTest.kt::AltitudeFromPressureDeviceTest` (`ATT-8327`)
 - **Jira**: ``ATT-410``
 - **Test Description**: 1. Open tracking screen on device with pressure sensor. 2. Tap Altitude icon.
 
-### TST-BUG-008: **Self-Healing Pressure Sensor Registration** [Implemented]
+### TST-BUG-008: **Self-Healing Pressure Sensor Registration** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-DAT-006`
 - **Component**: **Self-Healing Pressure Sensor Registration**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/devices/PressureSensorRegistrationAndIconTest.kt::PressureSensorRegistrationAndIconTest::testPressureSensor_deletedDbRowSelfHealsAndInstantiatesOnStartup_TST_BUG_008_TST_BUG_011` (`ATT-8327`)
 - **Jira**: ``ATT-414``
 - **Test Description**: 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'.
 
-### TST-BUG-009: **Internal Sensor Pairing Control** [Implemented]
+### TST-BUG-009: **Internal Sensor Pairing Control** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-CON-010`
 - **Component**: **Internal Sensor Pairing Control**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/devices/PressureSensorRegistrationAndIconTest.kt::PressureSensorRegistrationAndIconTest::testPressureSensor_pairingToggleStopsAndRestartsSensorUpdates_TST_BUG_009` (`ATT-8327`)
 - **Jira**: ``ATT-416``
 - **Test Description**: 1. Navigate to 'My Sensors'. 2. Deactivate the 'Altitude from Pressure' sensor using the toggle switch. 3. Verify that the sensor status LED turns grey and real-time altitude updates from this source stop. 4. Reactivate and verify resumption.
 
-### TST-BUG-011: **Eager Pressure Sensor Visibility** [Implemented]
+### TST-BUG-011: **Eager Pressure Sensor Visibility** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-DAT-006`
 - **Component**: **Eager Pressure Sensor Visibility**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/devices/PressureSensorRegistrationAndIconTest.kt::PressureSensorRegistrationAndIconTest::testPressureSensor_deletedDbRowSelfHealsAndInstantiatesOnStartup_TST_BUG_008_TST_BUG_011` (`ATT-8327`)
 - **Jira**: ``ATT-420``
 - **Test Description**: 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'.
 
-### TST-BUG-010: **Internal Sensor Iconography** [Implemented]
+### TST-BUG-010: **Internal Sensor Iconography** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-119`
 - **Component**: **Internal Sensor Iconography**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/devices/PressureSensorRegistrationAndIconTest.kt::PressureSensorRegistrationAndIconTest::testPressureSensor_usesAltitudeIconResource_TST_BUG_010` (`ATT-8327`)
 - **Test Description**: 1. Open 'My Sensors'. 2. Inspect the 'Altitude from Pressure' entry.
 
-### TST-STR-001: **Stability** [Implemented]
+### TST-STR-001: **Stability** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-EXP-005`, `REQ-UI-109`
 - **Component**: **Stability**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt::ArchitectureConformanceContractTest` (`ATT-8327`)
 - **Test Description**: Static analysis and architectural audit.
 
-### TST-STR-002: **Thread Safety** [Implemented]
+### TST-STR-002: **Thread Safety** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-002`
 - **Component**: **Thread Safety**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/SensorAndDeviceConcurrencyStressTest.kt::SensorAndDeviceConcurrencyStressTest` (`ATT-8327`)
 - **Test Description**: Static analysis of `synchronized` blocks to ensure no nested locks or I/O within locks.
 
-### TST-STR-003: **Data Integrity** [Implemented]
+### TST-STR-003: **Data Integrity** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-110`, `REQ-UI-009`
 - **Component**: **Data Integrity**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/database/TrackingViewsRealSqliteMigrationTest.kt::TrackingViewsRealSqliteMigrationTest::testOnCreateAndOnUpgradeV9ToV10_showElevationProfileIntegrity_TST_STR_003` (`ATT-8327`)
 - **Test Description**:
   1. Static analysis of `onUpgrade` (v9->v10).
   2. Static analysis of `onCreate` and `addDefaultTab`.
 
-### TST-STR-004: **Consistency** [Implemented]
+### TST-STR-004: **Consistency** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TRK-008`
 - **Component**: **Consistency**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt::TrackerServiceIntegrationTest` (`ATT-8327`)
 - **Test Description**: Static analysis of `TrackerService.java`.
 
-### TST-STR-005: **Map DSL** [Implemented]
+### TST-STR-005: **Map DSL** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-MAP-006`
 - **Component**: **Map DSL**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::mapDsl_scopeRegistrationAndThemeProperties_TST_STR_005` (`ATT-8327`)
 - **Test Description**: Static audit of `ATrainingTrackerMap` callers.
 
-### TST-STR-006: **Metric Consistency** [Implemented]
+### TST-STR-006: **Metric Consistency** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-015`
 - **Component**: **Metric Consistency**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::metricBadge_rendersFormattedBadgeText_TST_STR_006` (`ATT-8327`)
 - **Test Description**: Visual audit of Workout, Route, and Segment screens.
 
-### TST-STR-007: **Formatter Sync** [Implemented]
+### TST-STR-007: **Formatter Sync** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-016`
 - **Component**: **Formatter Sync**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::localMetricFormatter_providesSynchronizedFormattersInComposeTree_TST_STR_007` (`ATT-8327`)
 - **Test Description**: Static audit of `LocalMetricFormatter` usages.
 
-### TST-STR-008: **List Foundation** [Implemented]
+### TST-STR-008: **List Foundation** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-017`
 - **Component**: **List Foundation**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::mappableListItemAndEmptyStatePlaceholder_renderAndDispatchClick_TST_STR_008` (`ATT-8327`)
 - **Test Description**: Audit of `MappableListItem` usages.
 
-### TST-STR-011: **Thread-Safe Sensor Management** [Implemented]
+### TST-STR-011: **Thread-Safe Sensor Management** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-006`
 - **Component**: **Thread-Safe Sensor Management**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/banalservice/SensorAndDeviceConcurrencyStressTest.kt::SensorAndDeviceConcurrencyStressTest` (`ATT-8327`)
 - **Test Description**: Static audit of `MySensorManager` and `MyDevice`.
 
-### TST-STR-012: **Sub-Task Automation Verification** [Implemented]
+### TST-STR-012: **Sub-Task Automation Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-007`
 - **Component**: **Sub-Task Automation Verification**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt::AspiceSweAuditContractTest::testSubtaskAutomationContract_jiraUtilAndReqLink_TST_STR_012` (`ATT-8327`)
 - **Test Description**: 1. Define a requirement and a test case in the docs. 2. The agent should be able to create a sub-task in Jira linked to the main ticket with the test ID and summary. 3. Verify the sub-task is created with the correct parent.
 
 ### TST-STR-013: **String Resource Integrity Check** [Verified]
@@ -452,32 +481,35 @@
 - **Jira**: ``ATT-523``
 - **Test Description**: 1. Execute a comprehensive search across all `strings.xml` files in all locales (DE, ES, FR, IT, JA, NL, PL, PT) for positional format specifiers that are incomplete (e.g., `%1` without `$s`, `$d`, or `$f`). 2. Correct any identified issues. 3. Verify that the final resource set contains only syntactically valid `java.util.Formatter` specifiers.
 
-### TST-BUG-001: **Cluster Selection Race Condition** [Implemented]
+### TST-BUG-001: **Cluster Selection Race Condition** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PER-002`
 - **Component**: **Cluster Selection Race Condition**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModelTest.kt::WorkoutClustersViewModelTest::selectCluster_withOver30Workouts_loadsDetailMapAndCancelsSupersededSelection_TST_PERF_002` (`ATT-8327`)
 - **Jira**: ``ATT-364``
 - **Test Description**: 1. Open Workout Cluster list. 2. Tap Cluster A. 3. Immediately go back and tap Cluster B. 4. Wait for loading to complete.
 
-### TST-BUG-002: **Aggregation Gap Stability** [Implemented]
+### TST-BUG-002: **Aggregation Gap Stability** [Verified]
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
 - **Component**: **Aggregation Gap Stability**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummariesDbTest.kt::PeriodSummariesDbTest::testHierarchicalResync_withTemporalGapMonthsAndWeeks_aggregatesWithoutCorruption_TST_BUG_002` (`ATT-8327`)
 - **Jira**: ``ATT-372``
 - **Test Description**: 1. Import training history with temporal gaps (e.g. skip a week/month). 2. Trigger a full hierarchical sync.
 
-### TST-STR-017: **Protocol Integrity Audit** [Implemented]
+### TST-STR-017: **Protocol Integrity Audit** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-012`
 - **Component**: **Protocol Integrity Audit**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt::AspiceSweAuditContractTest::testProtocolIntegrity_positionalFormatHardeningAndParityTest_TST_STR_017` (`ATT-8327`)
 - **Jira**: ``ATT-523``
-- **Test Description**: Verify that the 'Format String Hardening' section is correctly incorporated into 'project_protocol.md'.
+- **Test Description**: Verify that positional format-string hardening rules (originating in `ATT-523` `project_protocol.md` and consolidated into `docs/design_guidelines.md` §4 under `REQ-PRO-026`) are documented and enforced across 9-locale string resources (`TranslationParityTest`).
 
 ### TST-PRO-005: **System Invariant & Impact Protocol Verification** [Verified]
 - **Priority**: High
@@ -488,52 +520,56 @@
 - **Jira**: ``ATT-523``
 - **Test Description**: Verify that 'project_protocol.md' mandates System Invariants, pre-implementation `find_usages` requirement cross-checks, and adversarial self-reviews.
 
-### TST-PRO-006: **Dual-Gate Review Protocol Verification** [Implemented]
+### TST-PRO-006: **Dual-Gate Review Protocol Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-014`
 - **Component**: **Dual-Gate Review Protocol Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_006_008_009_and_017_workflow_skills_and_human_gate` (`ATT-8327`)
 - **Jira**: ``ATT-523``
-- **Test Description**: Verify that 'project_protocol.md' mandates the unified 5-stage sub-task lifecycle using the automated dual-agent review workflow, with autonomous transitions upon passing gate audits and human approval reserved exclusively for parent tickets.
+- **Test Description**: Verify that 'project_protocol.md' mandates the unified 6-stage sub-task lifecycle using the automated dual-agent review workflow, with autonomous transitions upon passing gate audits and human approval reserved exclusively for parent tickets.
 
-### TST-PRO-007: **Agent Git Branch, Commit & Merge Protocol Verification** [Implemented]
+### TST-PRO-007: **Agent Git Branch, Commit & Merge Protocol Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-015`
 - **Component**: **Agent Git Branch, Commit & Merge Protocol Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_007_011_019_020_governance_triad_and_review_agent_shim` (`ATT-8327`)
 - **Jira**: ``ATT-422``
 - **Test Description**:
-  1. Verify `docs/project_protocol.md` and `.cursorrules` explicitly mandate agent-driven creation of feature/bugfix branches off `develop` at ticket start.
-  2. Verify protocol defines rules for agent-driven Conventional Commits with asterisk bullet points and ticket references.
-  3. Verify protocol mandates merging the ticket branch into `develop` using non-fast-forward merge (`git merge --no-ff <branch> -m "Merge branch '<branch>' into develop"`) upon completion and human release approval.
-  4. Validate repository state demonstrates successful branch creation (`feature/ATT-422`), commit adherence, and merge flow.
+  1. Verify `docs/project_protocol.md` and `.agents/rules/aspice_governance.md` (`Rule 8.2`, superseding `.cursorrules`) mandate feature/bugfix branches (`feature/<KEY>`) off the active `sprint/<SPRINT>` (or `develop`) at ticket start.
+  2. Verify protocol defines rules for ticket-keyed commits (`<KEY>: ...` / Conventional Commits).
+  3. Verify `Rule 2.2` and `Rule 8.2` mandate post-Stage-6 `--merge-ticket` squash onto `sprint/<SPRINT>` and non-fast-forward merge (`--no-ff`) of `sprint/<SPRINT>` into `develop` at sprint close.
+  4. Validate git integration tooling (`tools/parallel_sprint_lock.py` / `tools/jira_util.py`) enforces branch isolation and atomic merge commit formatting.
 
-### TST-PRO-008: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification** [Implemented]
+### TST-PRO-008: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-014`
 - **Component**: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_006_008_009_and_017_workflow_skills_and_human_gate` (`ATT-8327`)
 - **Jira**: ``ATT-670` / `ATT-685``
 - **Test Description**:
-  1. Verify `docs/project_protocol.md` defines the unified 5-stage ASPICE lifecycle (`Analysis`, `Test Spec`, `Implementation Plan`, `Implementation`, `Test`, `Erledigt`) across all issue types (Bug, Improvement, Feature).
-  2. Verify protocol mandates automated creation of lifecycle subtasks (`[Analysis]`, `[Test-Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`) by Jira Automation upon entering each stage.
-  3. Verify protocol mandates that Agent 2 *always* conducts an automated independent gate audit whenever a sub-task is moved to `In Überprüfung`, posting the audit report as a Jira comment and transitioning to `Freigabe (Human)`.
-  4. Verify protocol enforces deliverable placement in the sub-task's Description (Agent 1) and audit report placement in Comments (Agent 2).
-  5. Verify protocol enforces the strict Human Decision Gate for `Erledigt` on parent tickets and automated parent transition upon sub-task completion.
+  1. Verify `docs/project_protocol.md` and `.agents/rules/aspice_governance.md` (superseding `.cursorrules`) define the unified 6-stage ASPICE lifecycle (`Analysis`, `Test Spec`, `Implementation Plan`, `Implementation`, `Test`, `Final Review (Agent)`, `Final Review (Human)` -> `Erledigt`) across Bug, Improvement, and Feature issue types (`REQ-PRO-120.3`).
+  2. Verify `submit-stage` / `STAGE_SPECS` creates/updates canonical stage subtasks (`[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`).
+  3. Verify Agent 2 conducts independent gate audits (`gate-verdict PASS|REVISION`) on subtasks in `In Überprüfung`, posting role-attributed audit comments and transitioning passing subtasks via `freigabe` to `Erledigt`.
+  4. Verify deliverable placement in sub-task Description (`agent1`) and audit report placement in Comments (`agent2`).
+  5. Verify strict Human Decision Gate for `Erledigt` on parent tickets and automated parent transition upon sub-task completion.
   6. Verify `tools/jira_util.py` `show` command displays subtasks.
-  7. Verify `.cursorrules` reflects the unified 5-stage workflow and automated Agent 2 audits.
-  8. Verify `tools/jira_util.py` displays `Lösungsversion` on `show` and `list`, supports `versions` and `set-fixversion`, and warns if missing.
-  9. Verify protocol and `.cursorrules` mandate `Lösungsversion` (*Fix Version/s*) and its audit in Gate 5 prior to closure.
+  7. Verify `.agents/rules/aspice_governance.md` reflects the stage workflow and independent Agent 2 audits.
+  8. Verify `tools/jira_util.py` displays `Lösungsversion` on `show` and `list`, supports `versions` and `set-fixversion`, and restricts `FixVersion` on subtasks/unfinished tickets (`Rule 8.3`).
+  9. Verify `.agents/rules/aspice_governance.md` (`Rule 8.3`) and `release-manager/SKILL.md` govern `Lösungsversion` (*Fix Version/s*) assignment upon completion/release.
 
-### TST-PRO-009: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification** [Implemented]
+### TST-PRO-009: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-016`
 - **Component**: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_006_008_009_and_017_workflow_skills_and_human_gate` + `tools/test_jira_epics.py::TestTransitionIssueEpicProtection` (`ATT-8327`)
 - **Jira**: ``ATT-728` / `ATT-941``
 - **Test Description**:
   1. Verify `docs/project_protocol.md` and `.cursorrules` mandate `RequestFeedback: false` on all artifact tool calls.
@@ -542,26 +578,28 @@
   4. Verify `tools/jira_util.py` includes the `check-gate` command that returns exit code 0 when status is `Erledigt` and exit code 1 otherwise.
   5. Verify `.agents/rules/aspice_governance.md` exists and enforces these rules in Antigravity.
 
-### TST-PRO-010: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification** [Implemented]
+### TST-PRO-010: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-017`
 - **Component**: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_003_and_010_impl_plan_subtask_and_discovery_first` (`ATT-8327`)
 - **Jira**: ``ATT-945` / `ATT-1000``
 - **Test Description**:
-  1. Verify `docs/project_protocol.md` explicitly mandates sub-task self-sufficiency (non-empty Description containing full deliverable, concrete audit comments).
-  2. Verify protocol mandates strict tool execution sequencing (`update-desc` and `comment` BEFORE state transitions).
-  3. Verify protocol mandates discovery-first sub-task handling via `tools/jira_util.py show <Parent>` to eliminate duplicate sub-task creation.
-  4. Verify protocol mandates post-completion git finalization (`git checkout develop && git merge --no-ff`) and integration commenting on the parent ticket.
-  5. Validate that ATT-945 deliverables adhere to the hardened protocol with full documentation in `docs/engineering/Sprint_Review_and_Retro_ATT-945.md`.
+  1. Verify `docs/project_protocol.md` and `tools/jira_util.py` (`submit-stage` / `gate-verdict`) enforce sub-task self-sufficiency (non-empty Description containing full deliverable, concrete audit comments).
+  2. Verify strict tool execution sequencing (`update-desc` and `comment` BEFORE state transitions, enforced atomically in `submit-stage` and `gate-verdict`).
+  3. Verify discovery-first sub-task handling via `show` and `submit-stage` reuse of existing subtasks to eliminate duplicate sub-task creation.
+  4. Verify post-completion git finalization (`parallel_sprint_lock.py --merge-ticket` post-Stage-6 + `sprint/*` `--no-ff` merge into `develop` per `Rule 2.2` / `Rule 8.2`).
+  5. Validate `submit-stage` / `gate-verdict` unit tests confirm sequencing and deduplication invariants.
 
-### TST-PRO-011: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification** [Implemented]
+### TST-PRO-011: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-018`
 - **Component**: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_007_011_019_020_governance_triad_and_review_agent_shim` (`ATT-8327`)
 - **Jira**: ``ATT-1122` / `ATT-1194``
 - **Test Description**:
   1. Verify `tools/review_agent.py` exists and implements out-of-process gate auditing using Python 3 standard library (`urllib.request`, `json`, `os`, `sys`, `subprocess`) with zero external pip dependencies.
@@ -659,31 +697,25 @@
   4. *Living Protocol & Sandbox Documentation Inspection*:
   • Verify `docs/project_protocol.md` and `.cursorrules` explicitly document filesystem boundaries for Gradle Daemon caches (`~/.gradle`, `~/.android`) and when to execute with elevated permissions (`BypassSandbox: true`).
 
-### TST-PRO-017: **Modular Skill-Based Agile Architecture & Directory Parity Verification** [Implemented]
+### TST-PRO-017: **Modular Skill-Based Agile Architecture & Directory Parity Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-024`
 - **Component**: **Modular Skill-Based Agile Architecture & Directory Parity Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_006_008_009_and_017_workflow_skills_and_human_gate` (`ATT-8327`)
 - **Jira**: ``ATT-1508` / `ATT-1513``
 - **Test Description**:
   1. *Directory & SKILL.md Parity Verification*:
-  • Programmatically inspect `.agents/skills/` and verify that all 9 skill directories exist: `stage1-analysis`, `stage2-req-test-spec`, `stage3-impl-plan`, `stage4-implementation`, `stage5-verification`, `jira-workflow`, `ui-designer`, `brainstormer`, `sprint-planner`.
-  • Verify each skill directory contains a `SKILL.md` file with valid YAML frontmatter matching regex `^---\ntitle: .+\ndescription: .+\n---` or `^---\nname: .+\ndescription: .+\n---`.
+  • Programmatically inspect `.agents/skills/` via `tools/verify_skills.py` and verify all expected skill directories (`stage1-analysis`..`stage5-verification`, `jira-workflow`, `ui-designer`, `brainstormer`, `sprint-planner`, `regression-bisect`, `release-manager`, plus `stage6-final-review`) exist with valid YAML frontmatter (`name:` + `description:`).
   2. *Deliverable Template Verification*:
-  • Verify existence and completeness of `templates/analysis_template.md` in `stage1-analysis`.
-  • Verify existence and completeness of `templates/test_spec_template.md` in `stage2-req-test-spec`.
-  • Verify existence and completeness of `templates/plan_template.md` in `stage3-impl-plan`.
-  • Verify existence and completeness of `templates/walkthrough_template.md` in `stage5-verification`.
-  • Verify existence and completeness of `templates/backlog_ticket_template.md` in `brainstormer`.
+  • Verify existence and completeness of `templates/analysis_template.md`, `templates/test_spec_template.md`, `templates/plan_template.md`, `templates/walkthrough_template.md`, and `templates/backlog_ticket_template.md` within `.agents/skills/*/templates/` (and repo-root `templates/` where configured).
   3. *Jira Subtask Transition & Parent Final Review Invariant Verification*:
-  • Verify `tools/jira_util.py` allows subtasks to transition directly to `Erledigt` via transition `freigabe` (or ID `4`).
-  • Verify `tools/jira_util.py` transitions parent tickets in `Test` to `Final Review (Human)` and automatically assigns them to `human`.
-  • Verify `tools/jira_util.py` strictly blocks transitioning parent tickets to `Erledigt` for AI agent roles, exiting with error code 1.
+  • Verify `tools/jira_util.py` allows subtasks to transition directly to `Erledigt` via `freigabe` (`gate-verdict PASS`), advances parent tickets in `Test` -> `Final Review (Agent)` -> `Final Review (Human)` (post-`ATT-8207`, assigned to `human`), and strictly blocks AI agents from transitioning parent tickets to `Erledigt` (`exit 1`).
   4. *Sprint Lifecycle & Skill Integration*:
-  • Verify `sprint-planner` defines Phase 1 Sprint-Start interactive screening and Phase 3 Sprint-End joint review procedures.
+  • Verify `sprint-planner/SKILL.md` defines Ceremony 1 (Sprint-Start) and Ceremony 2 (Sprint-End Review & Retro) procedures.
   5. *Living Protocol & Rules Integrity*:
-  • Verify `docs/project_protocol.md` and `.cursorrules` document the modular skill layout, referencing `.agents/skills/` for execution while preserving core invariants and Human Decision Gates.
+  • Verify `docs/project_protocol.md` and `.agents/rules/aspice_governance.md` (superseding `.cursorrules`) reference `.agents/skills/` while preserving Human Decision Gates.
 
 ### TST-PRO-018: **Parallel Unit Test Forking, Worker Recycling, and Performance Benchmarking** [Verified]
 - **Priority**: High
@@ -698,44 +730,25 @@
 - **Jira**: ``ATT-2770``
 - **Test Description**: 1. *Parallel Worker Forking & Multi-Core Utilization Verification (`TST-PRO-018.1`)*: Trigger `./gradlew testDebugUnitTest`. Inspect OS processes via `ps aux
 
-### TST-PRO-019: **Document Triad Architecture, Governance Streamlining, and Invariant Verification** [Implemented]
+### TST-PRO-019: **Document Triad Architecture, Governance Streamlining, and Invariant Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-026`
 - **Component**: **Document Triad Architecture, Governance Streamlining, and Invariant Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_007_011_019_020_governance_triad_and_review_agent_shim` (`ATT-8327`)
 - **Jira**: ``ATT-3323``
 - **Test Description**:
-  1. *ASPICE Governance 4-Tier Structure Audit*:
-  • Verify `.agents/rules/aspice_governance.md` defines exactly 16 consolidated rules structured into 4 descending importance tiers.
-  • Verify Tier 1 (Rules 1–6) contains: Rule 1 (*Obey the Rules & Mandatory Triad Refresh*), Rule 2 (*Autonomous Full-Sprint Execution*), Rule 3 (*Human Decision Gates & Terminal States*), Rule 4 (*Gate 3 Pre-Check Before Production Code*), Rule 5 (*Strict Separation of Ticket Creation vs. Implementation*), Rule 6 (*Autonomous In-Sprint Escalation Protocol*).
-  • Verify Tier 2 (Rules 7–11) contains: Rule 7 (*Strict Sprint Scope & Backlog Rank Authority*), Rule 8 (*Zero Code Changes During Sprint Review*), Rule 9 (*Lean Defect Recording with Immediate Evidence Capture*), Rule 10 (*Mandatory Device Deployment Before Review*), Rule 11 (*Retrospective & Governance Documentation Before Merge*).
-  • Verify Tier 3 (Rules 12–14) contains: Rule 12 (*Standardized Sub-Task Naming Scheme*), Rule 13 (*Clean Ticket Summaries*), Rule 14 (*Fix Version Governance*).
-  • Verify Tier 4 (Rules 15–16) contains: Rule 15 (*Formal GitFlow Hotfix & Dual-Branch Protocol*), Rule 16 (*Human Prerequisites & Deferred Field-Testing*).
-  • Verify consolidation of legacy duplicate pairs: 17+25 -> Rule 9; 7+19 -> Rule 14; 26+27 -> Rule 15; 22+28 -> Rule 16.
-  • Verify absence of obsolete rules (legacy Rule 3 and legacy Rule 24).
-  • Verify presence and completeness of the Historical Mapping Cross-Reference Table for Rules 1–36.
+  1. *ASPICE Governance Rules Structure Audit*:
+  • Verify `.agents/rules/aspice_governance.md` defines the reconciled **9 Core Rules** (`Rules 1–9`, evolved from the original `ATT-3323` 16-rule 4-tier consolidation per `REQ-PRO-120.3`) and references `docs/engineering/rule_history_archive.md` (`Rules 1–85+`).
   2. *UI Design Guidelines Consolidation Audit (`docs/design_guidelines.md`)*:
-  • Verify inclusion of Section 5 (*Visual Consistency Baseline / Rule 23*).
-  • Verify inclusion of Section 3.1 (*Explanatory Scale Direction in Settings Sliders / Rule 31*).
-  • Verify inclusion of Section 2.1 (*Coordinate Space Normalization for Sub-Entity Inspection Charts / Rule 32*).
-  • Verify inclusion of Section 6.1 (*Unified Viewport Anchor Authority for Map Tracking / Rule 33*).
-  • Verify inclusion of Section 4 (*Jetpack Compose @Preview tooling, 9-language localization parity, and positional format specifiers*).
+  • Verify inclusion of Component Selection Matrix, Visual Consistency Baseline, Explanatory Scale Direction, Coordinate Space Normalization, Unified Viewport Anchor Authority, Jetpack Compose `@Preview` tooling, 9-language localization parity, and positional format specifiers.
   3. *Technical Coding Standards Architecture Audit (`docs/coding_standards.md`)*:
-  • Verify existence and completeness of `docs/coding_standards.md`.
-  • Verify Section 1.1 (*Rule 36: Single Source of Truth & DRY — Shared Code Over Duplication*, mandatory reuse of canonical formatters and unit math, prohibition of inline manual formatting).
-  • Verify Section 2.1 (*Rule 20: Database & DTO Mapping Symmetry*).
-  • Verify Section 3.1 (*Rule 21: Specific Direct Platform Intents Over Generic App Settings*).
-  • Verify Section 3.2 (*Rule 29: Defensive Service Lifecycle Finalization & FGS Permission Gating*).
-  • Verify Section 4.1 (*Rule 30: Developer Tool Host Pre-Flight Diagnostics*).
-  • Verify Section 1.2 (*Rule 34: Chesterton's Fence for Empty Callback Lambdas & Gesture Contract Tests*).
-  • Verify Section 3.3 (*Rule 35: Clean Hardware Teardown and Orphan Defense on Persistence Deletion*).
-  • Verify Section 5 (*Test Framework Invariants: Prohibition of returnDefaultValues, Stage 4 unit tests vs Stage 5 clean-room regression*).
+  • Verify existence and completeness of `docs/coding_standards.md` covering DRY/Canonical Formatters, Chesterton's Fence for callbacks, Database/DTO parity, defensive service lifecycle, and test framework invariants.
   4. *Document Triad Cross-Reference Audit*:
-  • Verify `docs/project_protocol.md` and `.agents/skills/` cross-reference the Document Triad without broken links.
-  5. *Clean-Room Governance & Regression Execution*:
+  • Verify `docs/project_protocol.md` and `.agents/rules/aspice_governance.md` cross-reference the Document Triad without broken references.
+  5. *Clean-Room Governance Execution*:
   • Execute `python3 tools/verify_requirement_governance.py` asserting exit code 0.
-  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-STB-001: **Resilient WorkManager Initialization & Startup Protection Verification** [Verified]
 - **Priority**: High
@@ -1768,22 +1781,23 @@
   • Execute `ExceptionHandlingHygieneTest` verifying `FitFileWriter.kt` contains zero unlogged empty catch blocks and zero `catch (Throwable)`.
   • Execute `JavaCoreMigrationStrategyContractTest` verifying Java class count decreases while remaining `<= 149`.
 
-### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Implemented]
+### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-027`
 - **Component**: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification**
+- **Verification Evidence**: `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_007_011_019_020_governance_triad_and_review_agent_shim` (`ATT-8327`)
 - **Jira**: ``ATT-3534``
 - **Test Description**:
   1. *Project Protocol & Governance Preamble Audit*:
-  • Verify `docs/project_protocol.md` and `.agents/rules/aspice_governance.md` define Agile Agentic ASPICE (AAA) and the 3 Automotive SPICE pillars (Tripwires, Infinite Context, Constructive Resistance & Documented Deviations).
+  • Verify `docs/project_protocol.md` and `.agents/rules/aspice_governance.md` define Agile Agentic ASPICE (AAA) and the 3 pillars (Tripwires, Infinite Context, Constructive Resistance & Documented Deviations).
   2. *Stage 1 Hypothesis Verification Audit*:
-  • Verify `.agents/skills/stage1-analysis/SKILL.md` and `templates/analysis_template.md` mandate independent hypothesis verification of ticket-provided problem domains and root causes against the active sprint branch.
-  3. *Stage 5 AAPT2 Fast Resource Gate Audit*:
-  • Verify `.agents/skills/stage5-verification/SKILL.md` mandates `./gradlew processDebugResources` in Stage 5 Tier 1 verification.
+  • Verify `.agents/skills/stage1-analysis/SKILL.md` and `templates/analysis_template.md` mandate independent hypothesis verification against the active sprint branch.
+  3. *Stage 5 Tier 1/Tier 2 Verification Audit*:
+  • Verify `.agents/skills/stage5-verification/SKILL.md` mandates Tier 1 incremental `--rerun` verification (and Tier 2 / resource compilation verification under `Rule 7.5`, superseding per-ticket `processDebugResources`).
   4. *Ceremony 2 Completeness Sweep Audit*:
-  • Verify `.agents/skills/sprint-planner/SKILL.md` Ceremony 2 Step 3 mandates `git show` commit review and codebase completeness sweep (`grep`/`rg`) across `app/src/main` for refactoring/cleanup tickets.
+  • Verify `.agents/skills/sprint-planner/SKILL.md` Ceremony 2 mandates commit/evidence review and completeness verification prior to sprint close.
 
 ### TST-PRO-021: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite** [Verified]
 - **Priority**: High
@@ -2492,3 +2506,6 @@
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Split oversized `tst_process_stability.md` into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`, `REQ-PRO-129.4`). |
+| `1.0.1` | 2026-11-19 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Reconciled legacy superseded wording in `TST-STR-017`, `TST-PRO-007`, `TST-PRO-008`, `TST-PRO-010`, `TST-PRO-017`, `TST-PRO-019`, and `TST-PRO-020` via Chesterton's Fence against `REQ-PRO-120`/`125`/`Rule 7.5` while keeping all `48` TSTs at `[Implemented]` pending Stage 4/5 execution. |
+| `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Stage 5: Promoted `41` executable/reconciled TSTs to `[Verified]` with verification evidence citations (`156/156` Python + `151/151` Kotlin PASS at `d266d87b`); honestly retained `7` Bucket C TSTs at `[Implemented]`. |
+| `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Stage 6 Bounce 1/3 doc-only fix: corrected Python method names in `Verification Evidence`, aligned `TST-PRO-006` wording to `6-stage`, expanded exact file paths across all `41` TSTs, and synced revision history. |

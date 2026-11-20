@@ -34,7 +34,7 @@ import java.io.File
  * 6. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance, autonomous Retro write-allowlist REQ-PRO-117).
  * 7. Software integration verification strategy (SWE.5.BP1) for INT-SWE-01 through INT-SWE-08 (REQ-PRO-045).
  */
-// Linked test specs: TST-PRO-078, TST-PRO-093, TST-PRO-117
+// Linked test specs: TST-PRO-078, TST-PRO-093, TST-PRO-117, TST-STR-012, TST-STR-017
 class AspiceSweAuditContractTest {
 
     private fun findRepoRootFile(relativePath: String): File {
@@ -796,5 +796,38 @@ class AspiceSweAuditContractTest {
         assertTrue("integration_strategy.md must cite 1,119 suites", strategyContent.contains("1,119"))
         assertTrue("integration_strategy.md must cite emulator-5554 policy", strategyContent.contains("emulator-5554"))
         assertTrue("integration_strategy.md must cover INT-SWE-01 through INT-SWE-08", strategyContent.contains("`INT-SWE-01` through `INT-SWE-08`"))
+    }
+
+    /**
+     * TST-STR-012 (REQ-PRO-007): Verifies Jira stage subtask automation tooling (`jira_util.py`)
+     * declares composite stage specs, subtask creation, and parent-linking semantics, and that
+     * `REQ-PRO-007` links symmetrically to `TST-STR-012`.
+     */
+    @Test
+    fun testSubtaskAutomationContract_jiraUtilAndReqLink_TST_STR_012() {
+        val jiraUtilContent = findRepoRootFile("tools/jira_util.py").readText()
+        assertTrue("tools/jira_util.py must define STAGE_SPECS", jiraUtilContent.contains("STAGE_SPECS"))
+        assertTrue("tools/jira_util.py must define submit_stage / create_subtask workflow", jiraUtilContent.contains("submit_stage") && jiraUtilContent.contains("subtask"))
+
+        val reqContent = findRepoRootFile("docs/requirements/req_process_stability_part1.md").readText()
+        assertTrue("REQ-PRO-007 must be documented in req_process_stability_part1.md", reqContent.contains("REQ-PRO-007"))
+        assertTrue("REQ-PRO-007 must link TST-STR-012", reqContent.contains("TST-STR-012"))
+    }
+
+    /**
+     * TST-STR-017 (REQ-PRO-012): Verifies positional format-string hardening guidelines are
+     * preserved in `docs/design_guidelines.md` §4 and enforced across 9 locales by
+     * `TranslationParityTest.kt`.
+     */
+    @Test
+    fun testProtocolIntegrity_positionalFormatHardeningAndParityTest_TST_STR_017() {
+        val guidelinesContent = findRepoRootFile("docs/design_guidelines.md").readText()
+        assertTrue("docs/design_guidelines.md must document positional format specifier rules", guidelinesContent.contains("%1\$s"))
+
+        val parityTestFile = findRepoRootFile("app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt")
+        assertTrue("TranslationParityTest.kt must exist to enforce 9-locale format parity", parityTestFile.exists())
+
+        val reqContent = findRepoRootFile("docs/requirements/req_process_stability_part1.md").readText()
+        assertTrue("REQ-PRO-012 must link TST-STR-017", reqContent.contains("REQ-PRO-012") && reqContent.contains("TST-STR-017"))
     }
 }
