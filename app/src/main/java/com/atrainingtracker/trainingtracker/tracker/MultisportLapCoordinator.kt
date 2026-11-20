@@ -142,6 +142,7 @@ class MultisportLapCoordinator(
         MultisportTelemetryAnchor(0L, 0, 0, 0.0)
     private var activeLegStartTimeUtc: String? = null
     private var activeLegName: String? = null
+    private var pendingUnnamedLapStartUtc: String? = null
 
     @Synchronized
     fun resetForSession(
@@ -159,6 +160,7 @@ class MultisportLapCoordinator(
         )
         activeLegStartTimeUtc = null
         activeLegName = null
+        pendingUnnamedLapStartUtc = null
     }
 
     @Synchronized
@@ -171,9 +173,32 @@ class MultisportLapCoordinator(
     fun getActiveLapName(): String? = activeLegName
 
     /**
+     * Consumes the captured pre-mutation UTC start timestamp for a closing unnamed split if
+     * present; otherwise resolves the active [currentLapStartAnchor] timestamp (or UTC
+     * `now - lapTimeS` fallback when `lapTimeS > 0`) (`REQ-TRK-090`).
+     */
+    @Synchronized
+    fun consumeLapStartTimeUtc(lapTimeS: Int): String? {
+        val pending = pendingUnnamedLapStartUtc
+        if (pending != null) {
+            pendingUnnamedLapStartUtc = null
+            return pending
+        }
+        val anchorMs = currentLapStartAnchor.timestampMs
+        if (anchorMs > 0L) {
+            return formatUtcTimestamp(anchorMs)
+        }
+        if (lapTimeS > 0) {
+            return formatUtcTimestamp(System.currentTimeMillis() - lapTimeS * 1000L)
+        }
+        return null
+    }
+
+    /**
      * Handles `BANALService.LAP_SUMMARY` (manual / pause lap broadcasts), preserving existing
      * `REQ-TRK-002` validation, `onDiscreteEdge` notification, and updating
      * [currentLapStartAnchor] while clearing any multisport active-leg metadata on non-pause laps.
+     * Captures the closing lap's pre-mutation UTC start timestamp for unnamed laps (`REQ-TRK-090.1`).
      */
     fun onLapSummaryIntent(
         intent: Intent,
@@ -193,8 +218,10 @@ class MultisportLapCoordinator(
 
         var closingStartUtc: String? = null
         var closingName: String? = null
+        var previousLapStartMs = 0L
         if (!isPause) {
             synchronized(this) {
+                previousLapStartMs = currentLapStartAnchor.timestampMs
                 closingStartUtc = activeLegStartTimeUtc
                 closingName = activeLegName
                 val safeDist = if (currentDistanceM.isFinite() && currentDistanceM >= 0.0) currentDistanceM else 0.0
@@ -206,11 +233,15 @@ class MultisportLapCoordinator(
                 )
                 activeLegStartTimeUtc = null
                 activeLegName = null
+                pendingUnnamedLapStartUtc = null
             }
         }
 
         // ATT-896 / REQ-TRK-002: Discard empty split summaries
         if (lapTime <= 0 && lapDistance <= 0.0) {
+            synchronized(this) {
+                pendingUnnamedLapStartUtc = null
+            }
             return
         }
 
@@ -220,6 +251,9 @@ class MultisportLapCoordinator(
         }
         val prevLapNr = intent.getIntExtra(BANALService.PREV_LAP_NR, 0).toLong()
         if (closingStartUtc != null || closingName != null) {
+            synchronized(this) {
+                pendingUnnamedLapStartUtc = null
+            }
             workoutRepository.saveLap(
                 workoutId, prevLapNr, closingStartUtc, lapTime, lapDistance, lapSpeed, closingName, null
             )
@@ -227,6 +261,13 @@ class MultisportLapCoordinator(
                 onDiscreteEdge(workoutId)
             }
         } else {
+            synchronized(this) {
+                pendingUnnamedLapStartUtc = if (!isPause && previousLapStartMs > 0L) {
+                    formatUtcTimestamp(previousLapStartMs)
+                } else {
+                    null
+                }
+            }
             saveUnnamedLap(prevLapNr, lapTime, lapDistance, lapSpeed)
         }
     }
@@ -251,6 +292,7 @@ class MultisportLapCoordinator(
             lapName = activeLegName
             activeLegStartTimeUtc = null
             activeLegName = null
+            pendingUnnamedLapStartUtc = null
         }
         if (startUtc != null || lapName != null) {
             workoutRepository.saveLap(
@@ -383,6 +425,7 @@ class MultisportLapCoordinator(
         currentLapStartAnchor = effectiveEnter
         activeLegStartTimeUtc = newLegStartUtc
         activeLegName = newLegName
+        pendingUnnamedLapStartUtc = null
 
         return RetroactiveLapPlan(
             oldLapNr = oldLapNr,

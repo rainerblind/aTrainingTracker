@@ -32,10 +32,17 @@ import androidx.annotation.Nullable;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 public class LapsDatabaseManager {
 
     private static final String TAG = LapsDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
+    private static final DateTimeFormatter UTC_TIMESTAMP_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US).withZone(ZoneOffset.UTC);
 
     // --- Singleton Pattern Implementation ---
 
@@ -146,12 +153,19 @@ public class LapsDatabaseManager {
                 ? ((lapTime > 0) ? (lapDistance / lapTime) : 0.0)
                 : averageSpeed;
 
+        // REQ-TRK-090.2: Derive UTC start timestamp from lap duration when caller omits timeStart
+        String resolvedTimeStart = timeStart;
+        if (resolvedTimeStart == null && lapTime > 0) {
+            long fallbackStartMs = Math.max(0L, System.currentTimeMillis() - (lapTime * 1000L));
+            resolvedTimeStart = UTC_TIMESTAMP_FORMATTER.format(Instant.ofEpochMilli(fallbackStartMs));
+        }
+
         // Create and fill content values
         ContentValues values = new ContentValues();
         values.put(Laps.WORKOUT_ID, workoutId);
         values.put(Laps.LAP_NR, lapNr);
-        if (timeStart != null) {
-            values.put(Laps.TIME_START, timeStart);
+        if (resolvedTimeStart != null) {
+            values.put(Laps.TIME_START, resolvedTimeStart);
         }
         values.put(Laps.TIME_TOTAL_s, lapTime);
         values.put(Laps.DISTANCE_TOTAL_m, lapDistance);

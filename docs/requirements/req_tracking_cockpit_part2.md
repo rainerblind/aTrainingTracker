@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.75  
+**Version**: 1.0.78  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 81
+**Total Requirements**: 82
 
 ---
 
@@ -3683,6 +3683,40 @@
 
 **Invariants**: `RunCalibrationFactorSelector` + `CorrectCalibrationDialog` preserved for `RUN_SPEED`; `EditEquipmentDialog` chart parity preserved; `EditDeviceDialog.kt < 1,843 / 2,004` LoC; `0` direct `*DbHelper` calls in UI/ViewModel; `0` DB schema bumps; 9-locale parity (`values` + `de/es/fr/it/ja/nl/pl/pt`); `0` new `src/main` reads; `0` new reflection-only UI tests.
 
+### REQ-TRK-090: Actual UTC Lap Start Timestamp Persistence in `TrackerService`, `MultisportLapCoordinator` & `LapsDatabaseManager` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-090`
+- **System Requirement(s)**: `SYSREQ-TRK-003`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/MultisportLapCoordinator.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/LapsDatabaseManager.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`
+- **Rationale**: Observed in `Laps.db` on Pixel 10 (`workoutID = 2414`), `TrackerService.saveLap()` delegates through the 5-argument `WorkoutRepository.saveLap()` / `LapsDatabaseManager.saveLap()` overload passing `timeStart = null`, causing SQLite `DATETIME DEFAULT CURRENT_TIMESTAMP` to record the lap's **end/insertion** time instead of its start time (`ATT-9159`, Parent Epic `ATT-826`, extending `REQ-TRK-002` and `REQ-FIL-031.3`).
+- **Description**:
+  1. *Pause-Neutral Wall-Clock Start & Pre-Mutation Anchor Capture (`REQ-TRK-090.1`)*:
+     - `MultisportLapCoordinator.onLapSummaryIntent()` SHALL capture `previousLapStartMs = currentLapStartAnchor.timestampMs` **before** `if (!isPause)` overwrites `currentLapStartAnchor`, and for non-pause laps where `closingStartUtc == null` and `previousLapStartMs > 0L`, SHALL format `previousLapStartMs` as canonical UTC `"yyyy-MM-dd HH:mm:ss"` via `formatUtcTimestamp()` and pass it explicitly to `WorkoutRepository.saveLap(...)`.
+     - `MultisportLapCoordinator.saveFinalLap()` SHALL likewise format `currentLapStartAnchor.timestampMs` via `formatUtcTimestamp()` whenever `activeLegStartTimeUtc == null` and `currentLapStartAnchor.timestampMs > 0L`.
+     - Pause/resume transitions (`IS_PAUSE == true`, `pauseTracking()`, `resumeFromPaused()`) MUST NOT mutate `currentLapStartAnchor` or close/create laps (`REQ-TRK-002` parity). In-process resume preserves the exact in-memory `currentLapStartAnchor`; post-process-death recovery (`TrackerService.applyResumedState`, `TrackerService.java:1906`) anchors `currentLapStartAnchor` at `Math.max(0L, System.currentTimeMillis() - state.timeLap_s * 1000L)`.
+  2. *`TrackerService.saveLap` & `LapsDatabaseManager.saveLap` UTC Fallback + API/LoC Compatibility (`REQ-TRK-090.2`)*:
+     - `TrackerService.saveLap` MUST preserve its 4-argument and 5-argument method signatures (preserving test subclasses/callers) and keep `TrackerService.java <= 3,559` LoC (`3,538` baseline), resolving UTC `timeStart` via `MultisportLapCoordinator.formatUtcTimestamp(anchorMs)` when `anchorMs > 0L` (or `System.currentTimeMillis() - lapTime * 1000L` UTC fallback when `lapTime > 0`) and forwarding through `WorkoutRepository.saveLap(workoutId, lapNr, timeStart, lapTime, lapDistance, averageSpeed)`.
+     - `LapsDatabaseManager.saveLap` MUST preserve its 5-arg, 6-arg, and 8-arg signatures; when invoked with `timeStart == null` and `lapTime > 0` by any legacy caller, it SHALL compute `System.currentTimeMillis() - (lapTime * 1000L)` formatted strictly in **UTC** `"yyyy-MM-dd HH:mm:ss"` (never local timezone), ensuring `Laps.TIME_START` never silently records SQLite `CURRENT_TIMESTAMP` completion time while preserving `REQ-TRK-002` zero-duration/zero-distance rejection (`lapTime <= 0 && lapDistance <= 0.0`) and `NaN`/infinite speed sanitization.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-TRK-090`, extending `REQ-TRK-002` (`docs/requirements/req_tracking_cockpit_part1.md:281-307`) and `REQ-FIL-031.3` (`MultisportLapCoordinator.kt`); targets `MultisportLapCoordinator.kt`, `TrackerService.java`, `LapsDatabaseManager.java`, `WorkoutRepository.kt`.
+2. *Historical Origin & Commit Trace*: `4fca7376` / `e7e02b0e` (`ATT-896`, `REQ-TRK-002` phantom-lap rejection & pause/resume neutrality); `5fb97345` (`ATT-8147`, `SYSREQ-TRK-003` linkage).
+3. *Root Reason for Existing Formulation*: `REQ-TRK-002` preserved the 5-arg `saveLap` call chain and relied on SQLite `DATETIME DEFAULT CURRENT_TIMESTAMP` (`LapsDatabaseManager.java:558`), which inserts UTC write time (lap end) rather than lap start time for single-sport and final laps.
+4. *Preservation of Core Invariants*: Preserves `REQ-TRK-002` zero-phantom rejection (`lapTime <= 0 && lapDistance <= 0.0`), pause/resume neutrality, 4-/5-arg `TrackerService.saveLap` and 5-arg `LapsDatabaseManager.saveLap` API compatibility, `TrackerService.java <= 3,559` LoC, `WorkoutRepository.kt <= 5,117` LoC, and canonical UTC `'yyyy-MM-dd HH:mm:ss'` formatting matching `FitFileWriter.parseUtcTimestamp()`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a tracked workout starting at `T0`, splitting Lap 1 at `T1` (`LAP_SUMMARY` `isPause=false`), and ending Lap 2 at `T2`,
+• *When* `MultisportLapCoordinator` / `TrackerService.saveLap()` persists each lap (under any device timezone, e.g. `Europe/Berlin`),
+• *Then* `Laps.TIME_START` stores `T0` for Lap 1 and `T1` for Lap 2 in UTC `'yyyy-MM-dd HH:mm:ss'` (captured pre-mutation before `currentLapStartAnchor` updates to `T1`), and `IS_PAUSE=true` does not overwrite `currentLapStartAnchor`.
+• *Given* `LapsDatabaseManager.saveLap()` invoked with `timeStart == null` and `lapTime > 0` by any legacy caller,
+• *When* persisted to `Laps.db`,
+• *Then* `Laps.TIME_START` stores UTC `now - lapTime * 1000L` (`'yyyy-MM-dd HH:mm:ss'`) instead of SQLite `CURRENT_TIMESTAMP` end time, while `lapTime <= 0 && lapDistance <= 0.0` still rejects phantom laps.
+
+**Invariants**: UTC `'yyyy-MM-dd HH:mm:ss'` matching `FitFileWriter.parseUtcTimestamp()` (never local TZ); `REQ-TRK-002` phantom-lap rejection & pause/resume neutrality; 4-/5-arg `TrackerService.saveLap` & 5-arg `LapsDatabaseManager.saveLap` signatures preserved; `TrackerService.java <= 3,559` LoC; `WorkoutRepository.kt <= 5,117` LoC; `Laps.db` `DB_VERSION = 3` unchanged; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3763,3 +3797,6 @@
 | `1.0.73` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Added `REQ-SEN-033` `[Planned]` (`REQ-SEN-033.1`–`.3`, linked to `SYSREQ-TRK-001`/`010`) for `EditDeviceDialog` wheel-sensor calibration UI cleanup (removing known-distance calculator for bike sensors while preserving `RUN_SPEED`), initial tire-size preset + localized auto-calibration hint & baseline label, `EquipmentRepository` chronological per-sensor history query & async baseline sync, and embedded `WheelCircumferenceHistoryChart` with `UNSPECIFIED` series/legend fallback, sensor empty state, unified baseline button, and 9-locale parity. |
 | `1.0.74` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Promoted `REQ-SEN-033` to `[Implemented]` following Stage 4 construction (`EditDeviceDialog.kt` shrunk `1,843 -> 1,774 / 2,004` LoC via new `WheelCircumferenceSection.kt` `168` LoC, `EditDeviceViewModel.kt` `429` LoC, `DeviceDataRepository.kt` `738` LoC, `EquipmentRepository.kt` `315` LoC, `WheelCircumferenceHistoryChart.kt` `298` LoC, 18 9-locale XML files; `0` monolith edits; `61/61` PASS across 11 suites + `:app:assembleDebug`, `0` production compiler warnings, Rule 8.5 PNG visually verified). |
 | `1.0.75` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Promoted `REQ-SEN-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9268`) independent `61/61` PASS evidence on `f05ab17b` (`Rule 7.5`, zero `app/` diff since `f05ab17b`), `Rule 8.5` Light/Dark PNG certification (`docs/engineering/walkthroughs/img/ATT-8422_wheel_circumference_edit_device.png`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8422_walkthrough.md`. |
+| `1.0.76` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Added `REQ-TRK-090` `[Planned]` (`REQ-TRK-090.1`–`.2`, linked to `SYSREQ-TRK-003`) for pause-neutral pre-mutation UTC `TIME_START` lap start persistence in `MultisportLapCoordinator`, `TrackerService.saveLap`, and `LapsDatabaseManager.saveLap` (`now - lapTime` UTC fallback, preserving 4-/5-arg APIs and `TrackerService.java <= 3,559` LoC, `N/A - no UI strings`). |
+| `1.0.77` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Promoted `REQ-TRK-090` to `[Implemented]` following Stage 4 construction (`MultisportLapCoordinator.kt`, `TrackerService.java` `3,539 / 3,559` LoC, `LapsDatabaseManager.java`, `tracker_service.md`). |
+| `1.0.78` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Promoted `REQ-TRK-090` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9294`) `103/103 PASS` across 10 targeted/contract suites on `45c3fd9c` (`Rule 7.5`, zero `app/` diff since `45c3fd9c`, `0` new compiler warnings), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9159_walkthrough.md`. |

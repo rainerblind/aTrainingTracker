@@ -25,6 +25,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm
 import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -175,5 +176,25 @@ class TrackerServiceLapTest {
         assertEquals("Lap with NaN speed must be safely saved", 1, service.savedLaps.size)
         val lap = service.savedLaps[0]
         assertEquals(4.0, lap.averageSpeed, 0.001) // 2000m / 500s = 4.0 m/s
+    }
+
+    // REQ-TRK-090 / TST-TRK-090
+    @Test
+    fun testTrackerServiceSaveLap_forwardsUtcStartTimestampFromCoordinator_tstTrk090_2() {
+        val mockRepo = mockk<WorkoutRepository>(relaxed = true)
+        val realService = TrackerService()
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository")
+        repoField.isAccessible = true
+        repoField.set(realService, mockRepo)
+
+        // 2026-10-01 08:00:00 UTC
+        val startMs = 1_790_841_600_000L
+        realService.mMultisportLapCoordinator.resetForSession(startMs, 0, 0, 0.0)
+
+        realService.saveLap(77L, 1L, 600, 2400.0, 4.0)
+
+        verify(exactly = 1) {
+            mockRepo.saveLap(77L, 1L, "2026-10-01 08:00:00", 600, 2400.0, 4.0, null, null)
+        }
     }
 }

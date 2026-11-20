@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.98  
+**Version**: 1.0.101  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 166
+**Total Tests**: 167
 
 ---
 
@@ -3778,6 +3778,27 @@
      • Verify `WheelCircumferenceHistoryChart` renders `UNSPECIFIED` series + `equipment_tpms_unspecified_legend` ONLY when `unspecifiedRecords.isNotEmpty()`, renders sensor-specific `devices_wheel_history_empty` on empty state, and preserves `EditEquipmentDialog` Front/Rear parity.
      • Capture and visually inspect Light & Dark Mode PNG (`docs/engineering/walkthroughs/img/ATT-8422_wheel_circumference_edit_device.png`, `Rule 8.5`) and verify `TranslationParityTest` (all 9 locales: `values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), `ArchitectureConformanceContractTest` (`EditDeviceDialog.kt = 1,774 / 2,004` LoC), `DeadCodeEliminationContractTest`, `UiReflectionOnlyTestAuditContractTest`, `SourceTextReadingAuditContractTest`, and `SystemLiveTrackingRequirementsContractTest`.
 
+### TST-TRK-090: **Actual UTC Lap Start Timestamp Persistence & Anchor Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-9159`
+- **Requirement(s)**: `REQ-TRK-090` (`REQ-TRK-090.1`..`REQ-TRK-090.2`)
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/MultisportLapCoordinatorTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/LapsDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceLapTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceFinalizationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceStateMachineCharacterisationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceResumeTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/FileExportersIntegrationTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DetailedDesignParityContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Verification Result**: PASS (`103/103` PASS across 10 unit/integration/contract suites on `45c3fd9c`, `0` failures, `0` errors, `0` skipped, `0` new compiler warnings; verified at Gate 4 `ATT-9294` with zero `app/` diff post-`45c3fd9c` per `Rule 7.5`; `Localization Parity: N/A - no UI strings`)
+- **Verification Evidence**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/MultisportLapCoordinatorTest.kt`: `MultisportLapCoordinatorTest.singleSportMultiLap_persistsPreMutationUtcTimeStart_withPauseNeutrality_underNonUtcTimezone_tstTrk090_1`, `MultisportLapCoordinatorTest.emptyManualSplit_doesNotLeakPendingStartTimestamp_tstTrk090_1` (`7/7` PASS, `TST-TRK-090.1`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/database/LapsDatabaseManagerTest.kt`: `LapsDatabaseManagerTest.testSaveLap_nullTimeStartWithPositiveLapTime_fallsBackToUtcNowMinusLapTime_tstTrk090_2` (`11/11` PASS, `TST-TRK-090.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceLapTest.kt`: `TrackerServiceLapTest.testTrackerServiceSaveLap_forwardsUtcStartTimestampFromCoordinator_tstTrk090_2` (`7/7` PASS, `TST-TRK-090.2`)
+  - Regression & contracts: `TrackerServiceFinalizationTest` (`29/29`), `TrackerServiceResumeTest` (`18/18`), `TrackerServiceStateMachineCharacterisationTest` (`8/8`), `FileExportersIntegrationTest` (`3/3`), `ArchitectureConformanceContractTest` (`11/11`, `TrackerService.java = 3,539 / 3,559` LoC), `DetailedDesignParityContractTest` (`3/3`), `SourceTextReadingAuditContractTest` (`6/6`, `0` `src/main` reads)
+- **Procedure**:
+  1. *Pre-Mutation Anchor Capture, Multi-Lap UTC `TIME_START` & Pause Neutrality (`TST-TRK-090.1`, `MultisportLapCoordinatorTest.kt`)*:
+     • Initialize `MultisportLapCoordinator.resetForSession(T0, ...)` under non-UTC timezone (`Europe/Berlin`); dispatch `LAP_SUMMARY` (`isPause=true`) verifying `currentLapStartAnchor` stays `T0` with zero lap write; dispatch `LAP_SUMMARY` (`isPause=false`) at `T1` followed by `saveFinalLap()` at `T2`.
+     • Assert Lap 1 `timeStart == formatUtcTimestamp(T0)` and Lap 2 `timeStart == formatUtcTimestamp(T1)` in canonical UTC `yyyy-MM-dd HH:mm:ss` (proving pre-mutation capture before `currentLapStartAnchor` updates to `T1` and matching `FitFileWriter.parseUtcTimestamp()`), and verify in-process resume preserves `currentLapStartAnchor` while post-process-death `applyResumedState` anchors at `max(0L, now - timeLap_s * 1000L)`.
+  2. *`TrackerService.saveLap`, `LapsDatabaseManager` UTC `now - lapTime` Fallback & Contract Hygiene (`TST-TRK-090.2`, `LapsDatabaseManagerTest.kt`, `TrackerServiceLapTest.kt`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `FileExportersIntegrationTest.kt`, Contracts)*:
+     • Invoke `LapsDatabaseManager.saveLap(workoutId, lapNr, null, lapTime = 300, ...)` under non-UTC timezone (`Europe/Berlin`): assert persisted `ContentValues` `TIME_START` equals UTC `yyyy-MM-dd HH:mm:ss` for `now - 300_000 ms` (never `CURRENT_TIMESTAMP` end time); verify explicit `timeStart` is preserved verbatim and `lapTime <= 0 && lapDistance <= 0.0` still rejects phantom laps.
+     • Verify `TrackerServiceLapTest`, `TrackerServiceFinalizationTest`, `TrackerServiceStateMachineCharacterisationTest` (4-/5-arg `saveLap` overrides & broadcasts), `FileExportersIntegrationTest` (FIT `LapMesg.startTime` UTC round-trip), `ArchitectureConformanceContractTest` (`TrackerService.java <= 3,559` LoC, `WorkoutRepository.kt <= 5,117` LoC), and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads; `Localization Parity: N/A - no UI strings`).
+
 ---
 
 ## Change History
@@ -3873,3 +3894,6 @@
 | `1.0.96` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Promoted `TST-SEN-033` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`61/61` PASS across 11 UI/DB/localization/contract suites + `:app:assembleDebug`, `0` fail, `0` err, `0` skip, `0` production compiler warnings; Rule 8.5 Light/Dark PNG visually verified; explicit hyphenated `REQ-SEN-033.x / TST-SEN-033.x` tags indexed in `EditDeviceWheelCircumferenceTest.kt`). |
 | `1.0.97` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Promoted `TST-SEN-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9268`) independent `61/61` PASS evidence on `f05ab17b` (`Rule 7.5`, zero `app/` diff since `f05ab17b`), `Rule 8.5` Light/Dark PNG certification, `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8422_walkthrough.md`. |
 | `1.0.98` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Stage 5 Bounce 1 update: refreshed `TST-SEN-033` `[Verified]` evidence to Gate 4 Bounce 1 (`ATT-9275`) independent `63/63` PASS on `c4bdc03c` (`0` Kotlin compiler warnings across all `ATT-8422` files, zero `app/` diff since `c4bdc03c` per `Rule 7.5`), adding verbatim Bounce 1 regression tests `testBaselineCircumferenceRounding_avoidsIeee754TruncationAt2010mm_tstSen033_1` (`roundToInt()`) and `testNarrow280dpThreeLegendFlowRow_wrapsWithoutClippingOrZeroWidth_tstSen033_3` (`FlowRow` legend wrap). |
+| `1.0.99` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Added `TST-TRK-090` `[Planned]` (`TST-TRK-090.1`–`.2`, strictly symmetric `REQ-TRK-090`) covering pre-mutation UTC `TIME_START` capture, pause neutrality, in-process vs post-process-death resume scoping, `LapsDatabaseManager` UTC `now - lapTime` fallback, FIT export round-trip, and `TrackerService.java <= 3,559` LoC / source-read contracts (`N/A - no UI strings`). |
+| `1.0.100` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Promoted `TST-TRK-090` to `[Implemented]` following Stage 4 unit test construction (`MultisportLapCoordinatorTest.kt`, `LapsDatabaseManagerTest.kt`, `TrackerServiceLapTest.kt`) and incremental Gradle verification. |
+| `1.0.101` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Promoted `TST-TRK-090` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9294`) `103/103 PASS` across 10 suites on `45c3fd9c` (`Rule 7.5`, zero `app/` diff post-`45c3fd9c`, `0` new compiler warnings), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9159_walkthrough.md`. |
