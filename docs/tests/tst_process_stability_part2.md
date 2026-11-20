@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.39  
+**Version**: 1.0.41  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1589,25 +1589,24 @@
   4. *Governance Verifier Compatibility (`TST-PRO-134.5`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`)*:
      • *Given* `N/A (0 merged tickets in sprint)` and `1 / 1` low-completion QA audit markdown fixtures alongside under-sampled `N >= 2` fixtures, *When* `_validate_single_qa_audit()` runs, *Then* valid low/zero-merged audits pass while under-sampled `N >= 2` audits still fail (`Localization Parity: N/A - Python tooling only`). Tag tests with `TST-PRO-134.5`.
 
-### TST-PRO-135: **Weekly & Pre-Release Multi-OS and 9-Language Emulator Sweep Suite** [Verified]
+### TST-PRO-135: **Weekly & Pre-Release Multi-OS and 9-Language Emulator Sweep Suite (ATT-8222, ATT-9319)** [Verified]
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Integration / Review
 - **Requirement(s)**: `REQ-PRO-135` (`REQ-PRO-135.1`–`REQ-PRO-135.5`)
-- **Component**: `tools/run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/androidTest/`, `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `.agents/skills/release-manager/SKILL.md`
-- **Verification Evidence**: `tools/test_run_multi_os_emulator_sweep.py::TestMultiOsEmulatorSweep::test_tst_pro_135_1_serial_multi_os_and_9_locale_sweep_and_cleanup_on_failure` (`TST-PRO-135.1`); `tools/test_run_multi_os_emulator_sweep.py::TestMultiOsEmulatorSweep::test_tst_pro_135_2_physical_device_refusal_and_logcat_and_bounds_defects` (`TST-PRO-135.2`); `tools/test_verify_requirement_governance.py::TestGrandfatheredSysreqsRemoved::test_scenario_89_tst_pro_135_3_emulator_sweeps_allowed_in_engineering_layout` (`TST-PRO-135.3`); `tools/test_jira_accounts.py::TestJiraCliTooling::test_ensure_weekly_reviews_coordinates_both_pillars` & `tools/test_jira_accounts.py::TestProcessStabilityLegacyTsts::test_tst_pro_135_4_weekly_emulator_sweep_cadence_and_gate_docs` (`TST-PRO-135.4`); `app/src/androidTest/java/com/atrainingtracker/trainingtracker/MultiLocaleUiSweepAndroidTest.kt::MultiLocaleUiSweepAndroidTest::sweepCoreScreensAndTrackingLifecycle_withoutCrashing_TST_PRO_135_5` (`TST-PRO-135.5`) (`ATT-8222`)
-- **Jira**: `ATT-8222`
+- **Component**: `tools/run_multi_os_emulator_sweep.py`, `tools/test_run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/androidTest/`, `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `.agents/skills/release-manager/SKILL.md`
+- **Jira**: `ATT-8222`, `ATT-9319`
 - **Test Description**:
-  1. *Serial Multi-OS & 9-Locale Execution + `finally` Cleanup (`TST-PRO-135.1`, `tools/test_run_multi_os_emulator_sweep.py`)*:
-     • *Given* mocked `avdmanager`/`emulator`/`adb` subprocesses across `3+` AVDs (`Pixel_5_Android_12`, `Pixel_8_Android_15`, `Pixel_7_Android_36`) and all `9` locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), *When* `run_sweep()` executes, *Then* AVDs boot strictly serially (never concurrent), `adb emu geo fix` executes, `9` locales sweep on the reference AVD, `adb emu kill` cleanup runs in `finally` even when a mid-run step raises, and `YYYY-MM-DD_sweep.md` report output is written cleanly. Tag with `TST-PRO-135.1`.
-  2. *Physical-Device Refusal & Logcat/Bounds Defect Detection (`TST-PRO-135.2`, `tools/test_run_multi_os_emulator_sweep.py`)*:
-     • *Given* physical USB serial `66020DLCR002FL`, synthetic `logcat` outputs (`FATAL EXCEPTION`, `ANR in`, `IllegalFormatConversionException`), and synthetic `uiautomator dump` XML hierarchies with clipped/zero-size/overlapping text bounds, *When* device guardrail, logcat parser, and bounds analyzer run offline, *Then* physical serial raises `RuntimeError` immediately and defect parsers flag every injected crash and layout defect cleanly. Tag with `TST-PRO-135.2`.
+  1. *Serial Multi-OS, `--test-apk`, Foreground Capture & API-Aware Locale Execution (`TST-PRO-135.1`, `tools/test_run_multi_os_emulator_sweep.py`)*:
+     • *Given* mocked `avdmanager`/`emulator`/`adb` subprocesses across `3+` AVDs (including API < 33 `Pixel_5_Android_12` and API >= 33 `Pixel_8_Android_15`/`Pixel_7_Android_36`), `--apk`, `--test-apk`, and all `9` locales (`en..pt`), *When* `run_sweep()` executes, *Then* `--apk` & `--test-apk` install sequentially, `set_app_locale()` uses `cmd locale set-app-locales`/`get-app-locales` on API >= 33 and `adb root` (`uid=0`) + `persist.sys.locale` + `system_locales` + runtime restart + `am force-stop` on API < 33 (failing transparently on non-rootable API < 33), `am instrument` passes with `OK (`, `am start -W` brings App UI to foreground prior to non-empty non-launcher `uiautomator dump` + non-empty PNG `screencap`, `adb emu kill` runs in `finally` on failure, and `YYYY-MM-DD_sweep.md` is written cleanly. Tag with `TST-PRO-135.1`.
+  2. *Physical-Device Refusal, Fail-Closed ADB/Instrument/Launcher & Logcat/Bounds Defect Detection (`TST-PRO-135.2`, `tools/test_run_multi_os_emulator_sweep.py`)*:
+     • *Given* physical serial `66020DLCR002FL`, failing `adb install`, failing `am instrument` (`returncode != 0`, `FAILURES!!!`, `INSTRUMENTATION_FAILED`, or missing `OK (`), launcher/empty `uiautomator` XML (`nexuslauncher` / `launcher3` / `""`), failed PNG `screencap`, synthetic `logcat` errors, and clipped/overlapping XML bounds, *When* offline helpers/probes execute, *Then* physical serial raises `RuntimeError`, failed install/instrument/launcher/empty-XML/missing-PNG fail closed (`passed == False` / raises `RuntimeError`), and defect parsers flag every crash and layout defect cleanly. Tag with `TST-PRO-135.2`.
   3. *Governance Directory Allow-List & CM Registration (`TST-PRO-135.3`, `tools/test_verify_requirement_governance.py`)*:
      • *Given* `"emulator_sweeps"` under `docs/engineering/` and `docs/management/cm_plan.md`, *When* `verify_engineering_directory_structure()` runs, *Then* `emulator_sweeps` passes without error. Tag with `TST-PRO-135.3`.
   4. *Weekly Cadence, 3-Pillar `ensure_weekly_reviews()`, QA Plan & Release Gate (`TST-PRO-135.4`, `tools/test_jira_accounts.py`)*:
      • *Given* offline mocked Jira API responses, `docs/engineering/emulator_sweeps/` fixtures (`empty`, `> 7 days` with `develop` commits vs fresh `<= 7 days`), and updated `test_ensure_weekly_reviews_coordinates_both_pillars` (mocking all 3 pillars), *When* `is_weekly_emulator_sweep_overdue()`, `ensure_weekly_emulator_sweep_ticket()`, and `ensure_weekly_reviews()` execute, *Then* overdue sweeps create deduplicated `rank_top=True` tickets under `ATT-232`, and `qa_plan.md` + `release-manager/SKILL.md` currency gate checks pass (`Localization Parity: N/A - no UI strings`). Tag with `TST-PRO-135.4`.
-  5. *Instrumented Click-Through Compilation (`TST-PRO-135.5`, `app/src/androidTest/`)*:
-     • *Given* the deterministic multi-screen navigation & tracking click-through `androidTest` class, *When* `./gradlew :app:compileDebugAndroidTestKotlin` runs via `parallel_sprint_lock.py`, *Then* compilation exits `0` with `0` edits under `app/src/main/`. Tag with `TST-PRO-135.5`.
+  5. *Instrumented Click-Through & Local `emulator-5554` Smoke Execution (`TST-PRO-135.5`, `app/src/androidTest/` & `tools/run_multi_os_emulator_sweep.py`)*:
+     • *Given* `MultiLocaleUiSweepAndroidTest.kt` and a booted local `emulator-5554` AVD (`REQ-TST-004`, never physical `66020DLCR002FL`), *When* `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest` and a targeted smoke run of `run_multi_os_emulator_sweep.py` with `--apk` and `--test-apk` execute against `emulator-5554`, *Then* `am instrument` passes with `OK (`, `uiautomator dump` confirms target app package UI (not launcher), and captured PNG screenshot renders active App UI. Tag with `TST-PRO-135.5`.
 
 ---
 
@@ -1655,3 +1654,5 @@
 | `1.0.37` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `TST-PRO-135` (`TST-PRO-135.1`–`TST-PRO-135.5`) to `[Verified]` in Stage 5 with verbatim test citations (`ATT-8222_walkthrough.md`, `Rule 7.5` reused Gate 4 evidence at SHA `de14d362`). |
 | `1.0.38` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Set `TST-PRO-132` (`TST-PRO-132.1`) to `[Planned]` for `ATT-9179`: ratchet `app/ui-reflection-baseline.txt` and `LEGACY_BASELINE_CEILING` `189 -> 188` (`trainingtracker/ui/` `178 -> 177`) upon migrating `ElevationProfileGradeColorTest.kt` to `createComposeRule()`. |
 | `1.0.39` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Promoted `TST-PRO-132` to `[Verified]` in Stage 5 with verbatim test evidence (`ATT-9179_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9342` @ `10bde5ec`, `24/24 PASS` across 5 suites). |
+| `1.0.40` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Set `TST-PRO-135` (`TST-PRO-135.1`, `.2`, `.5`) to `[Planned]` for `ATT-9319`: added `--test-apk`, fail-closed `adb install` / `am instrument` / launcher & empty XML / missing PNG assertions, API < 33 `adb root` + `uid=0` + `persist.sys.locale` tests, and `emulator-5554` smoke verification. |
+| `1.0.41` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Promoted `TST-PRO-135` to `[Verified]` in Stage 5 (`ATT-9319_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9369` @ `06623b57`): `TestMultiOsEmulatorSweep` `4/4` OK (`test_tst_pro_135_1_serial_multi_os_and_9_locale_sweep_and_cleanup_on_failure`, `test_tst_pro_135_1_api31_locale_fallback_and_non_rootable_error`, `test_tst_pro_135_2_fail_closed_install_instrument_launcher_and_screencap`, `test_tst_pro_135_2_physical_device_refusal_and_logcat_and_bounds_defects`), `530/530` `tools/test_*.py` OK, live `Pixel_5_Android_12` smoke verified. |
