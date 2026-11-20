@@ -72,9 +72,7 @@
 
 
     <!-- dialog_set_calibration_factor -->
-    <string name="devices_correct_calibration_factor_title_bike">Correct wheel circumference</string>
     <string name="devices_correct_calibration_factor_title_run">Correct calibration factor</string>
-    <string name="devices_correct_calibration_explanation_bike">Here, you can correct the wheel circumference for this sensor.  The corrected wheel circumference is calculated based on the distance you measured with the current wheel circumference and the correct distance (e.g. you know the exact distance from race report).</string>
     <string name="devices_correct_calibration_explanation_run">Here, you can correct the calibration factor for this sensor.  The corrected value is calculated based on the distance you measured with the current value and the correct distance (e.g. the distance of some race).</string>
     <string name="devices_measuredDistanceText">Measured distance:</string>
     <string name="devices_correctDistanceText">Correct distance:</string>
@@ -112,7 +110,6 @@
     <!-- edit_device_bike -->
     <string name="devices_editDeviceBikeDeviceNameValue">Garmin speed</string>
     <string name="devices_editDeviceBikeDeviceTypeValue">Bike Speed</string>
-    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">Correct wheel circumference</string>
     <string name="editDeviceBikeCalibrationFactorValue" translatable="false">2.01</string>
 
     <!-- edit_device_run -->
@@ -176,7 +173,6 @@
     <string name="devices_dialog_delete_device_message">Do your really want to delete the \'%1$s\' sensor?</string>
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
-    <string name="devices_reset_tire_pressure_baseline">Reset Tire Pressure Baseline (Just Pumped Tires)</string>
 
     <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
     <string name="devices_sort_alphabetical">Alphabetical</string>
@@ -262,4 +258,8 @@
     <string name="prefs_research_period_5m">5 min</string>
     <string name="prefs_research_period_10m">10 min</string>
 
+    <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
+    <string name="devices_wheel_circumference_auto_hint">Starting tire size for new sensors — automatically calibrated via GNSS during rides.</string>
+    <string name="devices_wheel_baseline_format">Baseline: %1$d mm</string>
+    <string name="devices_wheel_history_empty">No calibration history yet. Complete a ride with GNSS and this wheel sensor to view circumference trends.</string>
 </resources>

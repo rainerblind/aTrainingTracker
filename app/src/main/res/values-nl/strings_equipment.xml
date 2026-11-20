@@ -24,4 +24,5 @@
     <string name="equipment_tpms_no_history">Nog geen gegevens vastgelegd. Maak ritten met gekoppelde voor- en achterwielsensor.</string>
     <string name="equipment_tpms_front_legend">Voorwiel</string>
     <string name="equipment_tpms_rear_legend">Achterwiel</string>
+    <string name="equipment_tpms_unspecified_legend">Wielsensor</string>
 </resources>

@@ -24,4 +24,5 @@
     <string name="equipment_tpms_no_history">測定データがありません。前後輪センサーを接続して走行してください。</string>
     <string name="equipment_tpms_front_legend">前輪</string>
     <string name="equipment_tpms_rear_legend">後輪</string>
+    <string name="equipment_tpms_unspecified_legend">ホイールセンサー</string>
 </resources>

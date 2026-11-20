@@ -54,9 +54,7 @@
     <string name="devices_lastSeenText">ostatnio widziano</string>
     <string name="devices_now">teraz</string>
 
-    <string name="devices_correct_calibration_factor_title_bike">Koryguj obwód koła</string>
     <string name="devices_correct_calibration_factor_title_run">Koryguj współczynnik kalibracji</string>
-    <string name="devices_correct_calibration_explanation_bike">Tutaj możesz skorygować obwód koła dla tego czujnika.</string>
     <string name="devices_correct_calibration_explanation_run">Tutaj możesz skorygować współczynnik kalibracji dla tego czujnika.</string>
     <string name="devices_measuredDistanceText">zmierzony dystans:</string>
     <string name="devices_correctDistanceText">poprawny dystans:</string>
@@ -78,7 +76,6 @@
 
     <string name="devices_editDeviceBikeDeviceNameValue">Prędkość Garmin</string>
     <string name="devices_editDeviceBikeDeviceTypeValue">Prędkość roweru</string>
-    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">koryguj obwód koła</string>
 
     <string name="devices_editDeviceRunDeviceNameValue">Bieg Garmin</string>
     <string name="devices_editDeviceRunDeviceTypeValue">Prędkość biegu</string>
@@ -136,7 +133,6 @@
     <string name="devices_equipment_none">- brak -</string>
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
-    <string name="devices_reset_tire_pressure_baseline">Zresetuj ciśnienie bazowe opon (świeżo napompowane)</string>
 
     <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
     <string name="devices_sort_alphabetical">Alfabetycznie</string>
@@ -220,4 +216,8 @@
     <string name="prefs_research_period_5m">5 min</string>
     <string name="prefs_research_period_10m">10 min</string>
 
+    <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
+    <string name="devices_wheel_circumference_auto_hint">Początkowy rozmiar opony dla nowych czujników — kalibrowany automatycznie przez GNSS podczas jazdy.</string>
+    <string name="devices_wheel_baseline_format">Wartość bazowa: %1$d mm</string>
+    <string name="devices_wheel_history_empty">Brak historii kalibracji. Ukończ jazdę z GNSS i tym czujnikiem koła, aby zobaczyć przebieg w czasie.</string>
 </resources>

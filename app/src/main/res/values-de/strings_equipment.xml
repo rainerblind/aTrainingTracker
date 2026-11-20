@@ -24,4 +24,5 @@
     <string name="equipment_tpms_no_history">Noch keine Messdaten aufgezeichnet. Absolviere Fahrten mit gekoppeltem Vorder- und Hinterradsensor.</string>
     <string name="equipment_tpms_front_legend">Vorderrad</string>
     <string name="equipment_tpms_rear_legend">Hinterrad</string>
+    <string name="equipment_tpms_unspecified_legend">Radsensor</string>
 </resources>

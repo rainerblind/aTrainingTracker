@@ -519,9 +519,29 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         }
     }
 
-    suspend fun resetTirePressureBaseline(deviceId: Long) {
+    /**
+     * Resets the persistent tire pressure baseline in `Devices.db` (REQ-TRK-050, REQ-SEN-033.2).
+     * When [circumferenceMm] is provided (`> 0`), also synchronizes `CALIBRATION_FACTOR` and dispatches
+     * [BANALService.CALIBRATION_FACTOR_CHANGED] so draft edits before saving stay consistent with history.
+     */
+    suspend fun resetTirePressureBaseline(deviceId: Long, circumferenceMm: Int? = null) {
         withContext(ioDispatcher) {
-            devicesDatabaseManager.resetBaselineCircumference(deviceId)
+            if (circumferenceMm != null && circumferenceMm > 0) {
+                val circumferenceMeters = circumferenceMm / 1000.0
+                val values = ContentValues().apply {
+                    put(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR, circumferenceMeters)
+                    put(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE, circumferenceMeters)
+                }
+                devicesDatabaseManager.database.update(
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                    values,
+                    "${DevicesDatabaseManager.DevicesDbHelper.C_ID} = ?",
+                    arrayOf(deviceId.toString())
+                )
+                sendCalibrationChangedBroadcast(deviceId, circumferenceMeters)
+            } else {
+                devicesDatabaseManager.resetBaselineCircumference(deviceId)
+            }
             refreshDeviceFromDb(deviceId)
         }
     }

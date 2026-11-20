@@ -101,6 +101,58 @@ open class EquipmentRepository internal constructor(
         equipmentDbHelper.clearCircumferenceHistory(equipmentId)
 
     /**
+     * Returns chronologically sorted wheel circumference history across all bikes linked to [deviceId],
+     * scoped to this sensor's assigned [WheelPosition] per bike (REQ-SEN-033.2, ATT-8422).
+     */
+    open fun getCircumferenceHistoryForDevice(deviceId: Long): List<WheelCircumferenceRecord> {
+        if (deviceId <= 0L) return emptyList()
+        val linkedEquipmentIds = equipmentDbHelper.getLinkedEquipmentIdsFromDeviceId(deviceId)
+        if (linkedEquipmentIds.isEmpty()) return emptyList()
+
+        val merged = mutableListOf<WheelCircumferenceRecord>()
+        for (equipmentId in linkedEquipmentIds) {
+            val assignedPosition = equipmentDbHelper.getWheelPosition(equipmentId, deviceId) ?: WheelPosition.UNSPECIFIED
+            val records = equipmentDbHelper.getCircumferenceHistory(equipmentId)
+            if (assignedPosition == WheelPosition.FRONT || assignedPosition == WheelPosition.REAR) {
+                merged.addAll(records.filter { it.wheelPosition == assignedPosition })
+            } else {
+                merged.addAll(records)
+            }
+        }
+        return merged.sortedBy { it.timestampMs }
+    }
+
+    /**
+     * Records a manual freshly-pumped baseline reset entry in WheelCircumferenceHistory for each
+     * bike linked to [deviceId] using its assigned [WheelPosition] (REQ-SEN-033.2, ATT-8422).
+     */
+    open fun recordManualBaselineResetForDevice(
+        deviceId: Long,
+        circumferenceMm: Int,
+        timestampMs: Long = System.currentTimeMillis()
+    ): List<Long> {
+        if (deviceId <= 0L || circumferenceMm <= 0) return emptyList()
+        val linkedEquipmentIds = equipmentDbHelper.getLinkedEquipmentIdsFromDeviceId(deviceId)
+        if (linkedEquipmentIds.isEmpty()) return emptyList()
+
+        val insertedIds = mutableListOf<Long>()
+        for (equipmentId in linkedEquipmentIds) {
+            val assignedPosition = equipmentDbHelper.getWheelPosition(equipmentId, deviceId) ?: WheelPosition.UNSPECIFIED
+            val rowId = equipmentDbHelper.addCircumferenceHistory(
+                equipmentId,
+                timestampMs,
+                assignedPosition,
+                circumferenceMm,
+                WheelCircumferenceRecord.SOURCE_MANUAL_RESET
+            )
+            if (rowId > 0L) {
+                insertedIds.add(rowId)
+            }
+        }
+        return insertedIds
+    }
+
+    /**
      * REQ-SEN-029.2: Establishes a link for a wheel speed sensor with conflict detection / swap guardrail.
      * If another sensor on the bike is already assigned to the target position (FRONT or REAR),
      * swaps positions or reassigns the existing sensor to prevent duplicate assignments per bike.

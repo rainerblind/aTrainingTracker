@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,7 +57,8 @@ import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 
 /**
- * Historical time-series chart rendering Front and Rear wheel circumferences over time (REQ-SEN-030.4, TST-SEN-030.4, ATT-7753).
+ * Historical time-series chart rendering Front, Rear, and optional Unspecified wheel circumferences
+ * over time (REQ-SEN-030.4, REQ-SEN-033.3, TST-SEN-030.4, TST-SEN-033.3, ATT-7753, ATT-8422).
  *
  * Includes baseline pump reset action ("Reifen gerade aufgepumpt (Baseline setzen)") and zero-clipping Canvas rendering (Rule 84).
  */
@@ -64,8 +66,13 @@ import com.atrainingtracker.trainingtracker.database.WheelPosition
 fun WheelCircumferenceHistoryChart(
     historyRecords: List<WheelCircumferenceRecord>,
     onResetBaseline: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    emptyStateText: String = stringResource(R.string.equipment_tpms_no_history)
 ) {
+    val frontRecords = historyRecords.filter { it.wheelPosition == WheelPosition.FRONT }
+    val rearRecords = historyRecords.filter { it.wheelPosition == WheelPosition.REAR }
+    val unspecifiedRecords = historyRecords.filter { it.wheelPosition == WheelPosition.UNSPECIFIED }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -90,11 +97,11 @@ fun WheelCircumferenceHistoryChart(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Chart Legends (Front & Rear)
-            Row(
+            // Chart Legends (Front, Rear, and conditional Unspecified when present — REQ-SEN-033.3)
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 LegendItem(
                     color = MaterialTheme.colorScheme.primary,
@@ -104,6 +111,12 @@ fun WheelCircumferenceHistoryChart(
                     color = MaterialTheme.colorScheme.secondary,
                     label = stringResource(R.string.equipment_tpms_rear_legend)
                 )
+                if (unspecifiedRecords.isNotEmpty()) {
+                    LegendItem(
+                        color = MaterialTheme.colorScheme.tertiary,
+                        label = stringResource(R.string.equipment_tpms_unspecified_legend)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -122,16 +135,13 @@ fun WheelCircumferenceHistoryChart(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.equipment_tpms_no_history),
+                        text = emptyStateText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
                 // Render Canvas Chart
-                val frontRecords = historyRecords.filter { it.wheelPosition == WheelPosition.FRONT }
-                val rearRecords = historyRecords.filter { it.wheelPosition == WheelPosition.REAR }
-
                 val allCircumferences = historyRecords.map { it.circumferenceMm }
                 val minCirc = (allCircumferences.minOrNull() ?: 2050) - 20
                 val maxCirc = (allCircumferences.maxOrNull() ?: 2150) + 20
@@ -139,6 +149,7 @@ fun WheelCircumferenceHistoryChart(
 
                 val primaryColor = MaterialTheme.colorScheme.primary
                 val secondaryColor = MaterialTheme.colorScheme.secondary
+                val tertiaryColor = MaterialTheme.colorScheme.tertiary
                 val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
                 Canvas(
@@ -213,6 +224,7 @@ fun WheelCircumferenceHistoryChart(
 
                     drawSeries(frontRecords, primaryColor)
                     drawSeries(rearRecords, secondaryColor)
+                    drawSeries(unspecifiedRecords, tertiaryColor)
                 }
             }
 

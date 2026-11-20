@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.72  
+**Version**: 1.0.75  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 80
+**Total Requirements**: 81
 
 ---
 
@@ -3650,6 +3650,39 @@
 
 **Invariants**: `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` unchanged; `REQ-FIL-022` initial weather-offset anchoring preserved; `REQ-FIL-020` & `REQ-FIL-023` & `REQ-FIL-026` preserved; `@Synchronized` thread safety; `0` protected monolith edits; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-SEN-033: EditDeviceDialog Wheel Sensor Calibration UI Cleanup, Initial Tire-Size Preset & Embedded WheelCircumferenceHistoryChart [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-033`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceDialog.kt`, `app/src/main/java/com/atrainingtracker/banalservice/ui/devices/editdevice/WheelCircumferenceSection.kt`, `app/src/main/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceViewModel.kt`, `app/src/main/java/com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/EquipmentRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelCircumferenceHistoryChart.kt`, `app/src/main/res/values*/strings_devices.xml`, `app/src/main/res/values*/strings_equipment.xml`
+- **Rationale**: Wheel circumference is automatically calibrated during rides via GNSS and persisted in `WheelCircumferenceHistory` (`ATT-131`, `ATT-7753`), yet `EditDeviceDialog.kt` still exposed a legacy manual known-distance calculator (`Icons.Default.Calculate` / `CorrectCalibrationDialog`), a hardcoded English baseline label, and no longitudinal circumference history chart (`ATT-8422`, refining `REQ-SEN-030`, `REQ-TRK-050`, `REQ-SEN-031`, `REQ-UI-149`, and `REQ-LOC-001`).
+- **Description**:
+  1. *Bike-Sensor Known-Distance Calculator Removal, Initial Tire-Size Preset & Auto-Calibration Hint (`REQ-SEN-033.1`)*:
+     - For `BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`, and wheel-capable `BIKE_POWER`, `EditDeviceDialog` SHALL remove the manual known-distance calculator button (`Icons.Default.Calculate`) and `CorrectCalibrationDialog` invocation while preserving `RunCalibrationFactorSelector` + `CorrectCalibrationDialog` for `RUN_SPEED` footpods.
+     - The dialog SHALL preserve the tire-size preset dropdown (`700 x 28` etc.) and numeric mm input for initial sensor setup, display a localized GNSS auto-calibration hint (`devices_wheel_circumference_auto_hint`), and replace hardcoded `"Baseline: $baselineMm mm"` with localized `devices_wheel_baseline_format` across all 9 locales.
+  2. *Per-Sensor Chronological History Query, Unlinked Fallback & Async Baseline Sync (`REQ-SEN-033.2`)*:
+     - `EquipmentRepository` SHALL expose `getCircumferenceHistoryForDevice(deviceId)` (scoping each linked bike's records by assigned `WheelPosition` or all bike records when `UNSPECIFIED`, merged and sorted strictly by `timestampMs ASC`, returning `emptyList()` when unlinked) and `recordManualBaselineResetForDevice(deviceId, circumferenceMm, timestampMs)`.
+     - `EditDeviceViewModel` SHALL perform `EquipmentRepository` SQLite reads/writes on an injectable `ioDispatcher` (`Dispatchers.IO`), expose `wheelCircumferenceHistory: StateFlow<List<WheelCircumferenceRecord>>`, and synchronize `Devices.db` (including edited draft circumference) + `EquipmentRepository` + `wheelCircumferenceHistory` on `resetTirePressureBaseline()`.
+  3. *Embedded `WheelCircumferenceHistoryChart` with `UNSPECIFIED` Fallback, Sensor Empty State, Unified Baseline Reset & 9-Locale Parity (`REQ-SEN-033.3`)*:
+     - `WheelCircumferenceHistoryChart` SHALL render `WheelPosition.UNSPECIFIED` records with its localized legend (`equipment_tpms_unspecified_legend`) strictly when `unspecifiedRecords.isNotEmpty()` (leaving `EditEquipmentDialog` Front/Rear charts visually unchanged) and accept an optional `emptyStateText` parameter so `EditDeviceDialog` displays sensor-specific `devices_wheel_history_empty`.
+     - `EditDeviceDialog` SHALL embed `WheelCircumferenceHistoryChart` inside the wheel-circumference section with a single unified baseline reset button (removing the redundant standalone button and obsolete bike-only strings across all 9 locales: `values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-SEN-033`, refining `REQ-SEN-030` (`ATT-7753`), `REQ-TRK-050` (`ATT-4880`), `REQ-SEN-031` (`ATT-8719`), and `REQ-UI-149`.
+2. *Historical Origin & Commit Trace*: `e7cc0f39` (`ATT-4880`), `a5665f9a` (`ATT-7753`), `b08c779e` (`ATT-8719`), `f55c9fee` (`ATT-8206`).
+3. *Root Reason for Existing Formulation*: Legacy known-distance calibration predated GNSS auto-calibration (`ATT-131`); `ATT-7753` mounted `WheelCircumferenceHistoryChart` only in `EditEquipmentDialog`.
+4. *Preservation of Core Invariants*: Initial tire-size presets & manual mm entry preserved; `CorrectCalibrationDialog` preserved for `RUN_SPEED`; `EditEquipmentDialog` visual parity preserved; `EditDeviceDialog.kt` LoC strictly downward-ratcheted (`< 1,843 / 2,004`); `0` direct `*DbHelper` imports in UI/ViewModel (`REQ-PRO-050`); `0` SQLite schema bumps; 9-locale parity (`TranslationParityTest`); `0` new `src/main` reads (`REQ-PRO-049.1`); `0` new reflection-only UI tests.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a wheel-capable bike sensor in `EditDeviceDialog`, *When* rendered, *Then* zero calculator icon / `CorrectCalibrationDialog` trigger exists, tire-size preset dropdown & mm input remain interactive with localized auto-calibration hint & localized baseline label, and `RUN_SPEED` retains its calculator button.
+• *Given* linked bike(s) with `FRONT`/`REAR`/`UNSPECIFIED` records (or `0` linked bikes), *When* `EquipmentRepository` & `EditDeviceViewModel` load history and invoke `resetTirePressureBaseline()`, *Then* records are scoped per linked bike/position and sorted by `timestampMs ASC` (empty list if unlinked), I/O runs on `ioDispatcher`, and baseline reset syncs both `Devices.db` and `WheelCircumferenceHistory`.
+• *Given* populated (`FRONT`/`REAR`/`UNSPECIFIED`) and empty histories in Light & Dark themes, *When* verified via Compose tests and `Rule 8.5` PNG capture, *Then* exactly one baseline reset button renders, `UNSPECIFIED` renders with legend (no blank Canvas), empty state renders cleanly, and all 9 locales pass `TranslationParityTest`.
+
+**Invariants**: `RunCalibrationFactorSelector` + `CorrectCalibrationDialog` preserved for `RUN_SPEED`; `EditEquipmentDialog` chart parity preserved; `EditDeviceDialog.kt < 1,843 / 2,004` LoC; `0` direct `*DbHelper` calls in UI/ViewModel; `0` DB schema bumps; 9-locale parity (`values` + `de/es/fr/it/ja/nl/pl/pt`); `0` new `src/main` reads; `0` new reflection-only UI tests.
+
 ---
 
 ## Change History
@@ -3727,3 +3760,6 @@
 | `1.0.70` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Added `REQ-FIL-037` `[Planned]` (`REQ-FIL-037.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`008`) for live `KinematicAltitudeSlopeEkf` coherent `DEFAULT_VAR_DEM = 25.0 m²` / `DEFAULT_VAR_GPS = 64.0 m²`, baro/standstill slope decoupling (`k1 = 0`) + 3×3 Joseph SPD update, post-anchor baro-vs-DEM step-discrepancy jump gating with reference tracker advancement + quadratic Huber variance inflation + `varRef <= 1.0` high-precision guard (`N/A - no UI strings`). |
 | `1.0.71` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Promoted `REQ-FIL-037` to `[Implemented]` following Stage 4 construction (`KinematicAltitudeSlopeEkf.kt` `614 / 1,500` LoC, `AltitudeAndSlopeDevice_ATTFused.kt` `514 / 1,500` LoC; `0` protected monolith edits; `72/72` PASS across 7 unit & contract suites + `:app:assembleDebug`, `0` new compiler warnings). |
 | `1.0.72` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Promoted `REQ-FIL-037` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9260`) independent `72/72` PASS evidence on `0b792832` (`Rule 7.5`, zero `app/` diff since `0b792832`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9156_walkthrough.md`. |
+| `1.0.73` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Added `REQ-SEN-033` `[Planned]` (`REQ-SEN-033.1`–`.3`, linked to `SYSREQ-TRK-001`/`010`) for `EditDeviceDialog` wheel-sensor calibration UI cleanup (removing known-distance calculator for bike sensors while preserving `RUN_SPEED`), initial tire-size preset + localized auto-calibration hint & baseline label, `EquipmentRepository` chronological per-sensor history query & async baseline sync, and embedded `WheelCircumferenceHistoryChart` with `UNSPECIFIED` series/legend fallback, sensor empty state, unified baseline button, and 9-locale parity. |
+| `1.0.74` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Promoted `REQ-SEN-033` to `[Implemented]` following Stage 4 construction (`EditDeviceDialog.kt` shrunk `1,843 -> 1,774 / 2,004` LoC via new `WheelCircumferenceSection.kt` `168` LoC, `EditDeviceViewModel.kt` `429` LoC, `DeviceDataRepository.kt` `738` LoC, `EquipmentRepository.kt` `315` LoC, `WheelCircumferenceHistoryChart.kt` `298` LoC, 18 9-locale XML files; `0` monolith edits; `61/61` PASS across 11 suites + `:app:assembleDebug`, `0` production compiler warnings, Rule 8.5 PNG visually verified). |
+| `1.0.75` | 2026-11-20 | AI Agent (`ATT-8422`, `--as agent1`) | `ATT-8422` | Promoted `REQ-SEN-033` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9268`) independent `61/61` PASS evidence on `f05ab17b` (`Rule 7.5`, zero `app/` diff since `f05ab17b`), `Rule 8.5` Light/Dark PNG certification (`docs/engineering/walkthroughs/img/ATT-8422_wheel_circumference_edit_device.png`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8422_walkthrough.md`. |

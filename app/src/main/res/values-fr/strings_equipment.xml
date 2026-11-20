@@ -24,4 +24,5 @@
     <string name="equipment_tpms_no_history">Aucune donnée enregistrée. Effectuez des sorties avec capteurs avant et arrière connectés.</string>
     <string name="equipment_tpms_front_legend">Roue avant</string>
     <string name="equipment_tpms_rear_legend">Roue arrière</string>
+    <string name="equipment_tpms_unspecified_legend">Capteur de roue</string>
 </resources>

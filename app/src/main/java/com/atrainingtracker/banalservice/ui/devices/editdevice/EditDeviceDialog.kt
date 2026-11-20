@@ -30,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,6 +61,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSensor
+import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
@@ -82,6 +82,7 @@ fun EditDeviceDialog(
 ) {
     val snapshot by viewModel.deviceSnapshot.collectAsStateWithLifecycle()
     val liveData by viewModel.deviceLiveData.collectAsStateWithLifecycle(initialValue = null)
+    val wheelCircumferenceHistory by viewModel.wheelCircumferenceHistory.collectAsStateWithLifecycle()
     val deviceNotFound by viewModel.deviceNotFound.collectAsStateWithLifecycle()
     var showWheelGuidanceDialog by remember { mutableStateOf(false) }
 
@@ -180,7 +181,7 @@ fun EditDeviceDialog(
                 EquipmentSection(data, viewModel)
 
                 // 3. Specialized Calibration
-                CalibrationSection(data, viewModel)
+                CalibrationSection(data, wheelCircumferenceHistory, viewModel)
 
                 // 4. Power Meter Features
                 if (data.deviceType == DeviceType.BIKE_POWER) {
@@ -539,10 +540,22 @@ internal fun EquipmentSheetListContent(
 }
 
 @Composable
-private fun CalibrationSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+private fun CalibrationSection(
+    data: DeviceUiData,
+    wheelCircumferenceHistory: List<WheelCircumferenceRecord>,
+    viewModel: EditDeviceViewModel
+) {
     when (data.deviceType) {
         DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE -> {
-            WheelCircumferenceSelector(data, viewModel)
+            WheelCircumferenceSection(
+                wheelCircumferenceMm = data.wheelCircumference,
+                baselineCircumferenceMeters = data.baselineCircumference,
+                wheelSizeNames = viewModel.wheelSizeNames,
+                wheelSizeValues = viewModel.wheelSizeValues,
+                historyRecords = wheelCircumferenceHistory,
+                onWheelCircumferenceChanged = viewModel::onWheelCircumferenceChanged,
+                onResetBaseline = viewModel::resetTirePressureBaseline
+            )
         }
         DeviceType.RUN_SPEED -> {
             RunCalibrationFactorSelector(data, viewModel)
@@ -552,117 +565,35 @@ private fun CalibrationSection(data: DeviceUiData, viewModel: EditDeviceViewMode
             if (data.powerFeatures?.wheelRevolutionDataSupported == true ||
                 data.powerFeatures?.wheelSpeedDataSupported == true ||
                 data.powerFeatures?.wheelDistanceDataSupported == true) {
-                WheelCircumferenceSelector(data, viewModel)
+                WheelCircumferenceSection(
+                    wheelCircumferenceMm = data.wheelCircumference,
+                    baselineCircumferenceMeters = data.baselineCircumference,
+                    wheelSizeNames = viewModel.wheelSizeNames,
+                    wheelSizeValues = viewModel.wheelSizeValues,
+                    historyRecords = wheelCircumferenceHistory,
+                    onWheelCircumferenceChanged = viewModel::onWheelCircumferenceChanged,
+                    onResetBaseline = viewModel::resetTirePressureBaseline
+                )
             }
         }
         else -> {}
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDeviceViewModel) {
-    var showCorrectDialog by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) }
-    
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.devices_wheel_circumference),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it },
-                modifier = Modifier.weight(1f)
-            ) {
-                OutlinedTextField(
-                    value = (data.wheelCircumference ?: 0).toString(),
-                    onValueChange = { 
-                        it.toIntOrNull()?.let { valInt -> viewModel.onWheelCircumferenceChanged(valInt) }
-                    },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    viewModel.wheelSizeNames.forEachIndexed { index, name ->
-                        DropdownMenuItem(
-                            text = { Text("$name (${viewModel.wheelSizeValues[index]} mm)") },
-                            onClick = {
-                                viewModel.getWheelCircumferenceForPosition(index)?.let {
-                                    viewModel.onWheelCircumferenceChanged(it)
-                                }
-                                expanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                        )
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            IconButton(onClick = { showCorrectDialog = true }) {
-                Icon(
-                    imageVector = Icons.Default.Calculate,
-                    contentDescription = stringResource(R.string.edit_calibration_factor),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-
-        val baselineMm = data.baselineCircumference?.let { (it * 1000).toInt() }
-        if (baselineMm != null && baselineMm > 0) {
-            Text(
-                text = "Baseline: $baselineMm mm",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        OutlinedButton(
-            onClick = { viewModel.resetTirePressureBaseline() },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.devices_reset_tire_pressure_baseline),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-    }
-
-    if (showCorrectDialog) {
-        CorrectCalibrationDialog(
-            title = stringResource(R.string.devices_correct_calibration_factor_title_bike),
-            explanation = stringResource(R.string.devices_correct_calibration_explanation_bike),
-            fieldName = stringResource(R.string.devices_wheel_circumference),
-            originalFactor = (data.wheelCircumference ?: 2096).toDouble(),
-            roundToInt = true,
-            onFactorCalculated = { viewModel.onWheelCircumferenceChanged(it.toInt()) },
-            onDismiss = { showCorrectDialog = false }
-        )
-    }
+private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+    RunCalibrationFactorContent(
+        calibrationFactor = data.calibrationFactor,
+        onCalibrationFactorChanged = viewModel::onCalibrationFactorChanged
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDeviceViewModel) {
+internal fun RunCalibrationFactorContent(
+    calibrationFactor: Double?,
+    onCalibrationFactorChanged: (Double) -> Unit
+) {
     var showCorrectDialog by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -674,13 +605,13 @@ private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDevi
         )
         
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val formattedValue = remember(data.calibrationFactor) {
-                String.format(java.util.Locale.getDefault(), "%.4f", data.calibrationFactor ?: 1.0)
+            val formattedValue = remember(calibrationFactor) {
+                String.format(java.util.Locale.getDefault(), "%.4f", calibrationFactor ?: 1.0)
             }
             OutlinedTextField(
                 value = formattedValue,
                 onValueChange = { 
-                    it.toDoubleOrNull()?.let { valDbl -> viewModel.onCalibrationFactorChanged(valDbl) }
+                    it.toDoubleOrNull()?.let { valDbl -> onCalibrationFactorChanged(valDbl) }
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -702,9 +633,9 @@ private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDevi
             title = stringResource(R.string.devices_correct_calibration_factor_title_run),
             explanation = stringResource(R.string.devices_correct_calibration_explanation_run),
             fieldName = stringResource(R.string.devices_calibration_factor),
-            originalFactor = data.calibrationFactor ?: 1.0,
+            originalFactor = calibrationFactor ?: 1.0,
             roundToInt = false,
-            onFactorCalculated = { viewModel.onCalibrationFactorChanged(it) },
+            onFactorCalculated = onCalibrationFactorChanged,
             onDismiss = { showCorrectDialog = false }
         )
     }

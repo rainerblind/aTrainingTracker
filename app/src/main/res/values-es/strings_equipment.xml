@@ -24,4 +24,5 @@
     <string name="equipment_tpms_no_history">Aún no hay datos grabados. Complete recorridos con sensores vinculados en ambas ruedas.</string>
     <string name="equipment_tpms_front_legend">Rueda delantera</string>
     <string name="equipment_tpms_rear_legend">Rueda trasera</string>
+    <string name="equipment_tpms_unspecified_legend">Sensor de rueda</string>
 </resources>
