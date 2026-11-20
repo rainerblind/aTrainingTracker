@@ -1,7 +1,7 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.7  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,201 +12,237 @@
 
 ---
 
-### TST-SET-031: **Unified Spatial Markers** [Implemented]
+### TST-SET-031: **Unified Spatial Markers** [Verified]
 - **Requirement(s)**: `REQ-SET-041`
 - **Component**: **Unified Spatial Markers**
 - **Test Description**: 1. Open Workout Details, Period Map, and Route Heatmap. 2. Inspect Start/End markers.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `UnifiedSpatialMarkersTest.kt` (`UnifiedSpatialMarkersTest.createSensorMarker_rendersUnifiedStartEndAndApexMarkers_TST_SET_031`)
 
-### TST-SET-001: **Workout Learning Engine** [Implemented]
+### TST-SET-001: **Workout Learning Engine** [Verified]
 - **Requirement(s)**: `REQ-SET-006`, `REQ-SET-007`, `REQ-SET-008`
 - **Component**: **Workout Learning Engine**
 - **Test Description**: 1. Track a route. 2. Name it \"Park Loop\" and set sport to \"Running\". 3. Track the same route again.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.learnFromWorkout_learnsFingerprintRefinesCentroidAndPreservesCustomName_TST_SET_001`)
 
-### TST-SET-002: **Favorite Tracks Heatmap** [Implemented]
+### TST-SET-002: **Favorite Tracks Heatmap** [Verified]
 - **Requirement(s)**: `REQ-SET-009`
 - **Component**: **Favorite Tracks Heatmap**
 - **Test Description**: 1. Navigate to \"Workout Clusters\" drawer. 2. Select a recurring path.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersViewModelTest.kt` (`WorkoutClustersViewModelTest.selectCluster_whenClusterSelected_updatesClusterWorkoutsState`)
 
-### TST-SET-003: **Cluster Tuning** [Implemented]
+### TST-SET-003: **Cluster Tuning** [Verified]
 - **Requirement(s)**: `REQ-SET-010`, `REQ-SET-011`
-- **Component**: **Cluster Tuning**
-- **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Open Tuning menu. 3. Adjust the master slider. 4. Optionally toggle detailed controls. 5. Tap \"Recalculate\".
+- **Component**: **Cluster Tuning** (`ClusterTuningContent.kt`, `ClusterTuningSection.kt`, `WorkoutClusterRepository.kt`)
+- **Test Description**: 1. Open Route Clustering tuning controls (`ClusterTuningContent` / Advanced Settings `ClusterTuningSection` per `REQ-SET-075`). 2. Adjust the master sensitivity slider. 3. Optionally toggle detailed controls and adjust individual tolerances / score threshold. 4. Tap \"Recalculate All Clusters\" and confirm recalculation.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `ClusterTuningUiBehaviorTest.kt` (`ClusterTuningUiBehaviorTest.clusterTuningSection_masterSliderDetailsToggleAndRecalculateConfirm_TST_SET_003`)
 
-### TST-SET-004: **Workout Cluster Item Map** [Implemented]
+### TST-SET-004: **Workout Cluster Item Map** [Verified]
 - **Requirement(s)**: `REQ-SET-012`
 - **Component**: **Workout Cluster Item Map**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Inspect list items.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `ClusterItemThumbnailComposeTest.kt` (`ClusterItemThumbnailComposeTest.clusterItem_renders175x120ThumbnailWith12dpGapAndHandlesClicksOn411dp`)
 
-### TST-SET-005: **Name-Aware Clustering** [Implemented]
+### TST-SET-005: **Name-Aware Clustering** [Verified]
 - **Requirement(s)**: `REQ-SET-013`
 - **Component**: **Name-Aware Clustering**
 - **Test Description**: 1. Identify two workouts with same name but high spatial drift. 2. Trigger recalculation.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.calculateSimilarity_appliesHalfScoreBonusForMatchingNormalizedName_TST_SET_005`)
 
 ### TST-SET-006: **Auto-Dismiss Tuning** [Implemented]
 - **Requirement(s)**: `REQ-SET-014`
 - **Component**: **Auto-Dismiss Tuning**
-- **Test Description**: 1. Open Tuning screen. 2. Tap \"Recalculate All Clusters\". 3. Wait for completion.
+- **Test Description**: 1. Open Tuning screen. 2. Tap \"Recalculate All Clusters\". 3. Wait for completion. *(Superseded by `REQ-SET-075` / `TST-SET-077` under `ATT-3452`: header tuning removed from Favorite Routes and centralized in Advanced Settings without auto-dismissal; retained `[Implemented]`.)*
 
-### TST-SET-007: **Unique Cluster Naming** [Implemented]
+### TST-SET-007: **Unique Cluster Naming** [Verified]
 - **Requirement(s)**: `REQ-SET-015`
 - **Component**: **Unique Cluster Naming**
 - **Test Description**: 1. Create a cluster named \"Home\". 2. Create a spatially distinct route and also name it \"Home\".
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.learnFromWorkout_appendsVariantCounterForDistinctRoutesWithSameName_TST_SET_007`)
 
-### TST-SET-008: **Edit Cluster Identity** [Implemented]
+### TST-SET-008: **Edit Cluster Identity** [Verified]
 - **Requirement(s)**: `REQ-SET-016`
 - **Component**: **Edit Cluster Identity**
 - **Test Description**: 1. Select a workout cluster. 2. Tap Edit Icon in TopAppBar. 3. Enter new name and select a different sport. 4. Save.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDialogsUiTest.kt` (`WorkoutClusterDialogsUiTest.editWorkoutClusterIdentityDialog_renamesChangesSportAndTogglesCounter_TST_SET_008`)
 
-### TST-SET-009: **Manual Workout Reassignment** [Implemented]
+### TST-SET-009: **Manual Workout Reassignment** [Verified]
 - **Requirement(s)**: `REQ-SET-017`
 - **Component**: **Manual Workout Reassignment**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a specific workout polyline. 3. Select a different cluster from the candidate list. 4. Save.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDialogsUiTest.kt` (`WorkoutClusterDialogsUiTest.workoutClusterSelectionDialog_displaysSyncedHitCountAndSelectsCandidate_TST_SET_009_TST_SET_044`)
 
-### TST-SET-010: **Edit Workout Suggestions** [Implemented]
+### TST-SET-010: **Edit Workout Suggestions** [Verified]
 - **Requirement(s)**: `REQ-SET-018`
 - **Component**: **Edit Workout Suggestions**
 - **Test Description**: 1. Edit a workout. 2. Tap the \"My Locations\" icon in the Name field. 3. Select a suggested cluster.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDialogsUiTest.kt` (`WorkoutClusterDialogsUiTest.editWorkoutClusterDialog_displaysCandidatesAndInvokesOnSelectCluster_TST_SET_010`)
 
 ### TST-SET-011: **Manual Cluster Creation** [Implemented]
 - **Requirement(s)**: `REQ-SET-019`
 - **Component**: **Manual Cluster Creation**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Tap \"+\" FAB. 3. Fill in name and distance. 4. Tap map to set 3 points. 5. Save.
+- **Verification Status Note**: *(Bucket C — retained `[Implemented]` pending instrumented `GoogleMap(onMapClick)` 3-point map tap verification in `ManualClusterScreen`.)*
 
-### TST-SET-012: **Workout Peek & Move** [Implemented]
+### TST-SET-012: **Workout Peek & Move** [Verified]
 - **Requirement(s)**: `REQ-SET-020`
 - **Component**: **Workout Peek & Move**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a specific workout track. 3. Observe the Bottom Sheet peek. 4. Tap the \"Move\" FAB in the peek.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDialogsUiTest.kt` (`WorkoutClusterDialogsUiTest.workoutHeader_onChangeClusterButton_triggersClusterMoveDialog_TST_SET_012`)
 
 ### TST-SET-013: **Manual Fingerprint Edit** [Implemented]
 - **Requirement(s)**: `REQ-SET-021`
 - **Component**: **Manual Fingerprint Edit**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a signature marker (Start/End/Apex). 3. Select \"Edit Position\". 4. Tap map to set new position. 5. Save.
+- **Verification Status Note**: *(Bucket C — retained `[Implemented]` pending instrumented `GoogleMap` `Marker` drag verification in `WorkoutClusterHeatmapScreen`.)*
 
-### TST-SET-014: **Workout Markers in Cluster** [Implemented]
+### TST-SET-014: **Workout Markers in Cluster** [Verified]
 - **Requirement(s)**: `REQ-SET-022`
 - **Component**: **Workout Markers in Cluster**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Observe the distribution of markers for all members. 3. Tap a specific workout track OR any marker. 4. Inspect markers in the peek.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersViewModelTest.kt` (`WorkoutClustersViewModelTest.selectCluster_whenClusterSelected_updatesClusterWorkoutsState`, `WorkoutClustersViewModelTest.selectWorkoutForPeek_afterSelectCluster_resolvesWorkoutAndLoadsTrackAndMarkers`)
 
-### TST-SET-015: **Imperial Units in Clusters** [Implemented]
+### TST-SET-015: **Imperial Units in Clusters** [Verified]
 - **Requirement(s)**: `REQ-SET-023`
 - **Component**: **Imperial Units in Clusters**
 - **Test Description**: 1. Switch to Imperial. 2. Add manual cluster (miles). 3. View tuning details (mile).
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `ClusterImperialAndLocaleUiTest.kt` (`ClusterImperialAndLocaleUiTest.clusterTuningContent_andSubtitleFormatter_renderImperialMiles_TST_SET_015`)
 
-### TST-SET-016: **Cluster Equipment Determination** [Implemented]
+### TST-SET-016: **Cluster Equipment Determination** [Verified]
 - **Requirement(s)**: `REQ-SET-024`
 - **Component**: **Cluster Equipment Determination**
 - **Test Description**: 1. Open a Workout Cluster. 2. Verify the associated equipment list (→).
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClusterDetails_displaysEquipmentArrowNotation_andTriggersHitCountClick_TST_SET_016_TST_SET_041`)
 
-### TST-SET-017: **Workout Cluster Collapsing Header** [Implemented]
+### TST-SET-017: **Workout Cluster Collapsing Header** [Verified]
 - **Requirement(s)**: `REQ-SET-025`
 - **Component**: **Workout Cluster Collapsing Header**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Scroll the list downwards. 3. Observe the TopAppBar behavior.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `CollapsingAppBarNestedScrollConnectionTest.kt` (`CollapsingAppBarNestedScrollConnectionTest.testUpwardScroll_consumesInPreScroll_andCollapses`, `CollapsingAppBarNestedScrollConnectionTest.testDownwardScroll_consumesInPreScroll_andExpandsImmediately`); `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClustersTabsScreen_rendersTabsFabFiltersAndUnclusteredNavigation_TST_SET_017_018_020_029_040`)
 
-### TST-SET-018: **Workout Cluster Tabbed Layout** [Implemented]
+### TST-SET-018: **Workout Cluster Tabbed Layout** [Verified]
 - **Requirement(s)**: `REQ-SET-026`
 - **Component**: **Workout Cluster Tabbed Layout**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe the tabs at the top. 3. Swipe between tabs (All, Bike, Run, Other).
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClustersTabsScreen_rendersTabsFabFiltersAndUnclusteredNavigation_TST_SET_017_018_020_029_040`)
 
-### TST-SET-019: **Workout Cluster Scroll Persistence** [Implemented]
+### TST-SET-019: **Workout Cluster Scroll Persistence** [Verified]
 - **Requirement(s)**: `REQ-SET-027`
 - **Component**: **Workout Cluster Scroll Persistence**
 - **Test Description**: 1. Scroll down the \"All\" tab. 2. Select a cluster to open its heatmap. 3. Navigate back.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClustersTabsScreen_preservesHoistedScrollStateAcrossDetailToggle_TST_SET_019`)
 
-### TST-SET-020: **Unified FAB Layout** [Implemented]
+### TST-SET-020: **Unified FAB Layout** [Verified]
 - **Requirement(s)**: `REQ-SET-028`
 - **Component**: **Unified FAB Layout**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe FAB position and styling. 3. Compare with \"Sport Types\" and \"Equipment\" FABs.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClustersTabsScreen_rendersTabsFabFiltersAndUnclusteredNavigation_TST_SET_017_018_020_029_040`)
 
 ### TST-SET-021: **Identity Arbitration** [Verified]
 - **Requirement(s)**: `REQ-SET-029`, `REQ-SET-030`
 - **Component**: **Identity Arbitration**
 - **Test Description**: 1. Link a specific sensor to a bike. 2. Record a session with that sensor on a route matched to a cluster with a different majority sport.
 
-### TST-SET-022: **Route-to-Cluster Matching** [Implemented]
+### TST-SET-022: **Route-to-Cluster Matching** [Verified]
 - **Requirement(s)**: `REQ-SET-031`
 - **Component**: **Route-to-Cluster Matching**
 - **Test Description**: 1. Import a GPX Route. 2. Navigate to \"Workout Clusters\".
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineRouteSyncTest.kt` (`WorkoutClusterEngineRouteSyncTest.learnFromRoute_andSyncRouteNameChange_createAndRenameLinkedCluster_TST_SET_022`)
 
-### TST-SET-023: **Reference Route in Heatmap** [Implemented]
+### TST-SET-023: **Reference Route in Heatmap** [Verified]
 - **Requirement(s)**: `REQ-SET-032`
 - **Component**: **Reference Route in Heatmap**
 - **Test Description**: 1. Open a Workout Cluster that is linked to an explicit Route. 2. Observe the heatmap visualization.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersViewModelTest.kt` (`WorkoutClustersViewModelTest.selectCluster_withLinkedRoute_populatesLinkedRouteStateFlow_TST_SET_023`)
 
-### TST-SET-024: **Workout Cluster Deletion** [Implemented]
+### TST-SET-024: **Workout Cluster Deletion** [Verified]
 - **Requirement(s)**: `REQ-SET-033`
 - **Component**: **Workout Cluster Deletion**
 - **Test Description**: 1. Open a Workout Cluster detail view. 2. Long-click the header. 3. Select \"Delete\". 4. Confirm deletion.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDeleteTest.kt` (`WorkoutClusterDeleteTest.deleteCluster_clearsWorkoutAndRouteLinksWhilePreservingWorkouts_TST_SET_024`, `WorkoutClusterDeleteTest.summaryHeader_longClickOpensDeleteMenuAndInvokesCallback_TST_SET_024`)
 
-### TST-SET-025: **Stable Cluster Naming** [Implemented]
+### TST-SET-025: **Stable Cluster Naming** [Verified]
 - **Requirement(s)**: `REQ-SET-034`
 - **Component**: **Stable Cluster Naming**
 - **Test Description**: 1. Identify a cluster named \"Park Loop\". 2. Track a workout matching this cluster.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.assignClusterToWorkout_preservesBaseClusterNameWithoutCounterSuffix_TST_SET_025`)
 
-### TST-SET-026: **Preview Heatmap** [Implemented]
+### TST-SET-026: **Preview Heatmap** [Verified]
 - **Requirement(s)**: `REQ-SET-035`
 - **Component**: **Preview Heatmap**
 - **Test Description**: 1. Open the Favorite Tracks list. 2. Observe the mini-map in a list item.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.assignClusterToWorkout_capsPreviewPathsAtFiveTracks_TST_SET_026`); `ClusterItemThumbnailComposeTest.kt` (`ClusterItemThumbnailComposeTest.clusterItem_renders175x120ThumbnailWith12dpGapAndHandlesClicksOn411dp`)
 
-### TST-SET-027: **Persistent DB Connection** [Implemented]
+### TST-SET-027: **Persistent DB Connection** [Verified]
 - **Requirement(s)**: `REQ-SET-036`
-- **Component**: **Persistent DB Connection**
-- **Test Description**: 1. Start the app. 2. Open Android Studio Database Inspector.
+- **Component**: **Persistent DB Connection** (`WorkoutClusterDatabaseManager.kt`)
+- **Test Description**: 1. Exercise `WorkoutClusterDatabaseManager.getDatabase()` across sequential reads and writes (`insertCluster`, `getAllClusters`, `updateCluster`) and verify `isOpen` remains `true` without premature closure, and auto-reopens cleanly if closed externally. 2. (Optional IDE check: open Android Studio Database Inspector while app runs.)
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDatabaseConnectionTest.kt` (`WorkoutClusterDatabaseConnectionTest.getDatabase_remainsOpenAcrossSequentialOperationsAndReopensIfClosed_TST_SET_027`)
 
-### TST-SET-028: **Hit Count Synchronization** [Implemented]
+### TST-SET-028: **Hit Count Synchronization** [Verified]
 - **Requirement(s)**: `REQ-SET-037`
 - **Component**: **Hit Count Synchronization**
 - **Test Description**: 1. Identify a cluster with hit count > 0. 2. Use Database Inspector to manually clear `clusterId` for its workouts. 3. Open Favorite Tracks list.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `EditWorkoutClusterTest.kt` (`EditWorkoutClusterTest.testAssignClusterToWorkout_usesAuthoritativeCountFromWorkoutSummaries`, `EditWorkoutClusterTest.testGetClusterScores_reconcilesStaleHitCountAgainstWorkoutSummaries`)
 
-### TST-SET-029: **Unclustered Tab Verification** [Implemented]
+### TST-SET-029: **Unclustered Tab Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-040`
 - **Component**: **Unclustered Tab Verification**
 - **Test Description**: 1. Navigate to Favorite Tracks. 2. Open 'Offen' tab. 3. Tap a workout.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClustersTabsScreen_rendersTabsFabFiltersAndUnclusteredNavigation_TST_SET_017_018_020_029_040`)
 
-### TST-SET-030: **Locale-Aware Distance Input** [Implemented]
+### TST-SET-030: **Locale-Aware Distance Input** [Verified]
 - **Requirement(s)**: `REQ-SET-039`
 - **Component**: **Locale-Aware Distance Input**
 - **Test Description**: 1. Set device locale to German. 2. Open 'Add Workout Cluster' flow. 3. Enter '5,5' in the distance field.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `ClusterImperialAndLocaleUiTest.kt` (`ClusterImperialAndLocaleUiTest.manualClusterScreen_acceptsGermanCommaDecimalDistanceInput_TST_SET_030`)
 
-### TST-SET-032: **Markers & Framing in Previews** [Implemented]
+### TST-SET-032: **Markers & Framing in Previews** [Verified]
 - **Requirement(s)**: `REQ-SET-042`
 - **Component**: **Markers & Framing in Previews**
 - **Jira**: ``ATT-390``
 - **Test Description**: 1. Open Workout History, Routes, and My Locations lists. 2. Observe the mini-maps.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `PathPreviewMapBoundsTest.kt` (`PathPreviewMapBoundsTest.pathPreviewMap_rendersSafelyInsideIntrinsicSizeMinWithoutSubcomposeCrash`, `PathPreviewMapBoundsTest.resolvePreviewBounds_prioritizesTargetThenPathThenCompositePoints`)
 
-### TST-SET-033: **Fingerprint Parity** [Implemented]
+### TST-SET-033: **Fingerprint Parity** [Verified]
 - **Requirement(s)**: `REQ-SET-043`
 - **Component**: **Fingerprint Parity**
 - **Test Description**: 1. Import a Route. 2. Record a workout on that exact route. 3. Navigate to Favorite Tracks.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.learnFromRoute_andWorkoutOnSamePolyline_produceIdenticalFingerprint_TST_SET_033`)
 
-### TST-SET-034: **Sport-Aware Clustering** [Implemented]
+### TST-SET-034: **Sport-Aware Clustering** [Verified]
 - **Requirement(s)**: `REQ-SET-010`, `REQ-SET-043`
 - **Component**: **Sport-Aware Clustering**
 - **Jira**: ``ATT-399``
 - **Test Description**: 1. Navigate to My Locations -> Tuning. 2. Toggle 'Take Sport Type into account' to ON. 3. Recalculate clusters. 4. Verify that Runs and Rides on the same path remain in separate clusters. 5. Toggle to OFF and recalculate. 6. Verify they merge into one cluster.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.suggestCluster_respectsSportAwareClusteringToggle_TST_SET_034`)
 
-### TST-SET-035: **Sport Mismatch with UNKNOWN** [Implemented]
+### TST-SET-035: **Sport Mismatch with UNKNOWN** [Verified]
 - **Requirement(s)**: `REQ-SET-043`
 - **Component**: **Sport Mismatch with UNKNOWN**
 - **Jira**: ``ATT-427``
 - **Test Description**: 1. Ensure Tuning toggle is ON. 2. Record a 'Running' workout on a path that currently has an 'UNKNOWN' cluster.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.calculateSimilarity_appliesTwoPointPenaltyForRunVsUnknownCluster_TST_SET_035`)
 
-### TST-SET-040: **Unclustered Workout Navigation** [Implemented]
+### TST-SET-040: **Unclustered Workout Navigation** [Verified]
 - **Requirement(s)**: `REQ-SET-056`
 - **Component**: **Unclustered Workout Navigation**
 - **Jira**: ``ATT-278``
 - **Test Description**: 1. Open 'Unclustered' tab in My Locations. 2. Verify layout parity with clusters (mini-map exists). 3. Tap a workout. 4. Verify navigation to map. 5. Tap 'Move to Cluster' icon.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClustersTabsScreen_rendersTabsFabFiltersAndUnclusteredNavigation_TST_SET_017_018_020_029_040`)
 
-### TST-SET-041: **Cluster Member Listing** [Implemented]
+### TST-SET-041: **Cluster Member Listing** [Verified]
 - **Requirement(s)**: `REQ-SET-057`
 - **Component**: **Cluster Member Listing**
 - **Jira**: ``ATT-280``
 - **Test Description**: 1. Open 'Clusters' tab. 2. Click on the \"X recordings\" text for a cluster. 3. Verify navigation to a list containing only those recordings.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersTabsUiTest.kt` (`WorkoutClustersTabsUiTest.workoutClusterDetails_displaysEquipmentArrowNotation_andTriggersHitCountClick_TST_SET_016_TST_SET_041`)
 
-### TST-SET-042: **Workout Session Naming Isolation** [Implemented]
+### TST-SET-042: **Workout Session Naming Isolation** [Verified]
 - **Requirement(s)**: `REQ-SET-034`, `REQ-SET-044`
 - **Component**: **Workout Session Naming Isolation**
 - **Jira**: ``ATT-317``
 - **Test Description**: 1. Track a workout matching cluster 'Park Loop'. 2. Open 'Edit Workout' screen. 3. Change name to 'Morning Run'. 4. Save.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutRepositorySaveClusteringTest.kt` (`WorkoutRepositorySaveClusteringTest.testSaveWorkout_whenClustered_updatesCentroidsWithoutReassigningCluster`)
 
 ### TST-SET-043: **Cluster Visibility & Re-clustering** [Verified]
 - **Requirement(s)**: `REQ-SET-058`, `REQ-SET-059`
@@ -214,29 +250,33 @@
 - **Jira**: ``ATT-395``
 - **Test Description**: 1. Open the Workout History list. 2. Verify each item displays its Cluster Name with the leading route icon at the very left below the workout name. 3. Edit a workout and manually re-assign it to a different cluster. 4. Save and verify the update in the list.
 
-### TST-SET-044: **Selection Dialog Hit Count Accuracy** [Implemented]
+### TST-SET-044: **Selection Dialog Hit Count Accuracy** [Verified]
 - **Requirement(s)**: `REQ-SET-038`
 - **Component**: **Selection Dialog Hit Count Accuracy**
 - **Jira**: ``ATT-429``
 - **Test Description**: 1. Identify a cluster with 5 associated workouts. 2. Open a workout for manual re-clustering or trigger a TCX import interaction. 3. Open the "Select Existing Route" dialog.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterDialogsUiTest.kt` (`WorkoutClusterDialogsUiTest.workoutClusterSelectionDialog_displaysSyncedHitCountAndSelectsCandidate_TST_SET_009_TST_SET_044`)
 
-### TST-SET-045: **Selectable Cluster Markers** [Implemented]
+### TST-SET-045: **Selectable Cluster Markers** [Verified]
 - **Requirement(s)**: `REQ-SET-060`
 - **Component**: **Selectable Cluster Markers**
 - **Jira**: ``ATT-463``
 - **Test Description**: 1. Open a Workout Cluster heatmap. 2. Tap the Marker Options button. 3. Uncheck "Start Point". 4. Verify that all green pins (signature and member distribution) disappear. 5. Re-check and Verify reappearance. 6. Re-check persistence after app restart.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClustersSelectableMarkersTest.kt` (`WorkoutClustersSelectableMarkersTest.setClusterMarkerTypeEnabled_persistsAcrossInstancesAndIsolatesPeriodPrefs_TST_SET_045`)
 
-### TST-SET-046: **Reactive Editor Suggestions** [Implemented]
+### TST-SET-046: **Reactive Editor Suggestions** [Verified]
 - **Requirement(s)**: `REQ-SET-018`
 - **Component**: **Reactive Editor Suggestions**
 - **Jira**: ``ATT-447``
 - **Test Description**: 1. Edit a 'Running' workout on a 'Cycling' path. 2. Observe high similarity score (> 5.0) for 'Cycling' cluster in suggestions. 3. Change workout sport to 'Cycling'. 4. Verify score drops below 1.0 (penalty removed).
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `EditWorkoutViewModelTest.kt` (`EditWorkoutViewModelTest.testUpdateSportName_reactivelyRefreshesClusterSuggestionsAndDropsScore_TST_SET_046`)
 
-### TST-SET-047: **Idempotent Route Cluster Creation** [Implemented]
+### TST-SET-047: **Idempotent Route Cluster Creation** [Verified]
 - **Requirement(s)**: `REQ-SET-061`
 - **Component**: **Idempotent Route Cluster Creation**
 - **Jira**: ``ATT-543``
 - **Test Description**: 1. Import multiple TCX workout files that follow the same route name (e.g. "Route A"). 2. Verify cluster assignment.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `WorkoutClusterEngineLearningTest.kt` (`WorkoutClusterEngineLearningTest.learnFromWorkout_reusesExistingNormalizedNameWithoutCreatingDuplicate_TST_SET_047`)
 
 ### TST-SET-048: **Automatic Zero-Workout Cluster Purging** [Verified]
 - **Requirement(s)**: `REQ-SET-062`
@@ -419,6 +459,7 @@
   • Drag the bottom sheet in `WorkoutClusterHeatmapScreen` all the way to the top: verify the top boundary stops below the status bar.
   4. *Regression Verification*:
   • Run full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
+- **Verification Status Note**: *(Bucket C — retained `[Implemented]` pending real-window inset / `SheetValue.Expanded` drag verification against Android system status bar icons.)*
 
 ### TST-SET-059: **Workout Popup Direct Edit & Header Button Layout Verification** [Verified]
 2. Tapping the edit button or header opens `EditWorkoutScreen` without crashing or losing map state.
@@ -475,7 +516,7 @@
   3. *Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-SET-061: **Edit Workout New Cluster Creation & Name Synchronization Verification** [Implemented]
+### TST-SET-061: **Edit Workout New Cluster Creation & Name Synchronization Verification** [Verified]
 2. Creating a new cluster updates database and UI with the new cluster identity (`forceIdentity = true`).
 3. Non-customized workout names automatically adopt the new cluster name; manually typed custom workout names are safely preserved.]
 - **Requirement(s)**: `REQ-SET-072`
@@ -499,6 +540,7 @@
   • Tap Route field to open `EditWorkoutClusterDialog`. Verify new route text field pre-fills `"Hausrunde"`.
   • Enter `"Neue Abendrunde"`, tap OK.
   • Verify Edit Workout screen immediately displays `"Neue Abendrunde"` in both Workout Name and Selected Route fields.
+- **Verification Evidence**: Verified (`ATT-8328`, SHA `2a149eca`, Gate 4 `119/119` PASS across 22 suites): `EditWorkoutNewClusterSyncTest.kt` (`EditWorkoutNewClusterSyncTest.editWorkoutClusterDialog_prefillsStrippedHitCountOnCreateNew_TST_SET_061`, `EditWorkoutNewClusterSyncTest.createNewClusterFromWorkout_updatesSqliteNameAndDecrementsOldCluster_TST_SET_061`)
 
 ### TST-SET-062: **Advanced Tuning Preferences Clamping, Persistence, and Reset Verification** [Verified]
 2. Atomic factory reset restores all defaults.
@@ -1526,3 +1568,5 @@
 | `1.0.4` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Added `TST-SET-121` (`[Planned]` verification suite for `REQ-SET-119`). |
 | `1.0.6` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `TST-SET-121` to `[Implemented]` following Stage 4 test implementation. |
 | `1.0.7` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `TST-SET-121` to `[Verified]` following Stage 5 verification. |
+| `1.0.8` | 2026-11-20 | AI Agent (`ATT-8328`) | `ATT-8328` | Reconciled legacy test descriptions (`TST-SET-003`, `TST-SET-006`, `TST-SET-027`) via Chesterton's Fence audit; all 43 triage TSTs remain `[Implemented]` pending Stage 4/5 execution. |
+| `1.0.9` | 2026-11-20 | AI Agent (`ATT-8328`) | `ATT-8328` | Promoted 39 verified `TST-SET-*` specifications to `[Verified]` following Gate 4 (`2a149eca`, `119/119` PASS across 22 suites); retained Bucket C (`TST-SET-006`, `011`, `013`, `058`) at `[Implemented]`. |

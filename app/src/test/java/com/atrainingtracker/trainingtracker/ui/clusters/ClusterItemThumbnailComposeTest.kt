@@ -233,6 +233,7 @@ class ClusterItemThumbnailComposeTest {
 
     @Test
     fun clusterItem_renders175x120ThumbnailWith12dpGapAndHandlesClicksOn411dp() {
+        // TST-SET-004, TST-SET-026
         val viewModel = createMockViewModel()
         var cardClicks = 0
         var hitCountClicks = 0

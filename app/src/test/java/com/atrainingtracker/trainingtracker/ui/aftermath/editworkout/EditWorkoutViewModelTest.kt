@@ -453,4 +453,93 @@ class EditWorkoutViewModelTest {
         assertNull("Strava name must be null for '- No upload -'", updated.stravaSportName)
         assertEquals("uploadToStrava must be 0 when Strava mapping is null", 0, updated.uploadToStrava)
     }
+
+    /**
+     * TST-SET-046 (REQ-SET-018): Reactive Editor Suggestions.
+     * Verifies editing a Running workout on a Cycling cluster starts with score > 5.0,
+     * and calling updateSportName("Road Cycling") triggers debounced fetchClusterSuggestions
+     * dropping score below 1.0 (penalty removed).
+     */
+    @Test
+    fun testUpdateSportName_reactivelyRefreshesClusterSuggestionsAndDropsScore_TST_SET_046() {
+        // TST-SET-046
+        every { mockSportTypesRepository.sportTypesList } returns listOf(
+            SimpleSportTypeInfo(1L, "Road Cycling", BSportType.BIKE),
+            SimpleSportTypeInfo(2L, "Running", BSportType.RUN)
+        )
+        every { mockSportTypesRepository.getBSportType(1L) } returns BSportType.BIKE
+        every { mockSportTypesRepository.getBSportType(2L) } returns BSportType.RUN
+        every { mockSportTypesRepository.getStravaName(any()) } returns "Ride"
+        every { mockDiscoveryManager.getLinkedSportTypeIds(any<Long>()) } returns emptySet()
+        every {
+            mockDiscoveryManager.getCandidateBSportTypes(BSportType.UNKNOWN, any<Double>())
+        } returns setOf(BSportType.RUN, BSportType.BIKE)
+
+        val cyclingCluster = WorkoutCluster(
+            id = 88L,
+            name = "River Bike Loop",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.0,
+            endLng = 11.0,
+            maxDispLat = 48.05,
+            maxDispLng = 11.05,
+            refDistance = 10000.0,
+            hitCount = 4,
+            bSportType = BSportType.BIKE
+        )
+
+        every {
+            mockClusterEngine.getClusterScores(
+                any<com.google.android.gms.maps.model.LatLng>(),
+                any<com.google.android.gms.maps.model.LatLng>(),
+                any<com.google.android.gms.maps.model.LatLng>(),
+                any<Double>(),
+                any<String>(),
+                match<Set<BSportType>> { it == setOf(BSportType.RUN) || !it.contains(BSportType.BIKE) },
+                isNull(),
+                isNull()
+            )
+        } returns listOf(cyclingCluster to 5.15)
+        every {
+            mockClusterEngine.getClusterScores(
+                any<com.google.android.gms.maps.model.LatLng>(),
+                any<com.google.android.gms.maps.model.LatLng>(),
+                any<com.google.android.gms.maps.model.LatLng>(),
+                any<Double>(),
+                any<String>(),
+                match<Set<BSportType>> { it.contains(BSportType.BIKE) },
+                isNull(),
+                isNull()
+            )
+        } returns listOf(cyclingCluster to 0.15)
+
+        val runningWorkout = createTestWorkout().copy(
+            sportId = 2L,
+            sportName = "Running",
+            bSportType = BSportType.RUN,
+            avgSpeedMps = 0.0,
+            startLatLng = com.google.android.gms.maps.model.LatLng(48.0, 11.0),
+            endLatLng = com.google.android.gms.maps.model.LatLng(48.0, 11.0),
+            maxDisplacementLatLng = com.google.android.gms.maps.model.LatLng(48.05, 11.05)
+        )
+
+        val viewModel = createViewModel(runningWorkout)
+        testDispatcher.scheduler.advanceTimeBy(600)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val initialScore = viewModel.clusterSuggestions.value.firstOrNull()?.second
+        assertNotNull("Initial suggestion must be emitted", initialScore)
+        assertTrue("Initial mismatched RUN->BIKE score must exceed 5.0, was $initialScore", initialScore!! > 5.0)
+
+        // Switch sport to Road Cycling via updateSportName
+        viewModel.updateSportName("Road Cycling")
+        testDispatcher.scheduler.advanceTimeBy(600)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updatedScore = viewModel.clusterSuggestions.value.firstOrNull()?.second
+        assertNotNull("Updated suggestion must be emitted after sport switch", updatedScore)
+        assertTrue("Matching BIKE score must drop below 1.0, was $updatedScore", updatedScore!! < 1.0)
+    }
 }

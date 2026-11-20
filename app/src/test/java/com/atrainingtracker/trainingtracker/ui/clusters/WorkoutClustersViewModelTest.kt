@@ -66,6 +66,7 @@ import java.time.LocalDateTime
  * Automated unit test suite verifying [WorkoutClustersViewModel] cluster selection,
  * workout list state propagation, and peek selection resolution (REQ-UI-138, TST-UI-091, ATT-818).
  */
+// Linked test specs: TST-SET-002, TST-SET-014, TST-SET-023
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutClustersViewModelTest {
 
@@ -220,6 +221,7 @@ class WorkoutClustersViewModelTest {
 
     @Test
     fun selectCluster_whenClusterSelected_updatesClusterWorkoutsState() = runTest(testDispatcher) {
+        // TST-SET-002, TST-SET-014
         val cluster = createCluster(10L, "Isar Trail")
         val workouts = listOf(createWorkout(101L, 10L), createWorkout(102L, 10L))
 
@@ -237,6 +239,10 @@ class WorkoutClustersViewModelTest {
         assertEquals(2, viewModel.clusterWorkouts.value.size)
         assertEquals(101L, viewModel.clusterWorkouts.value[0].id)
         assertEquals(102L, viewModel.clusterWorkouts.value[1].id)
+        assertEquals(2, viewModel.mapState.value.heatmapPaths.size)
+        assertTrue(viewModel.mapState.value.memberMarkers.any { it.markerType == ClusterMarkerType.START })
+        assertTrue(viewModel.mapState.value.memberMarkers.any { it.markerType == ClusterMarkerType.END })
+        assertTrue(viewModel.mapState.value.memberMarkers.any { it.markerType == ClusterMarkerType.DISTANCE })
     }
 
     @Test
@@ -764,6 +770,48 @@ class WorkoutClustersViewModelTest {
 
         job.cancel()
         statusJob.cancel()
+    }
+
+    /**
+     * TST-SET-023 (REQ-SET-032): Reference Route in Heatmap.
+     * Verifies selectCluster hydrates linkedRoute when the cluster has a linked explicit route.
+     */
+    @Test
+    fun selectCluster_withLinkedRoute_populatesLinkedRouteStateFlow_TST_SET_023() = runTest(testDispatcher) {
+        // TST-SET-023
+        val cluster = createCluster(10L, "Linked Reference Loop")
+        val expectedRoute = com.atrainingtracker.trainingtracker.database.RouteWithPath(
+            summary = com.atrainingtracker.trainingtracker.database.RouteSummary(
+                id = 77L,
+                externalId = "gpx_77",
+                name = "Linked Reference Loop",
+                description = "GPX ref",
+                isSelected = false,
+                distance = 10000.0,
+                elevationGain = 80.0,
+                bSportType = BSportType.RUN,
+                source = com.atrainingtracker.trainingtracker.database.RouteSource.LOCAL_GPX,
+                clusterId = 10L
+            ),
+            path = listOf(
+                PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.5)),
+                PathPoint(distance = 1400.0, latLng = LatLng(48.01, 11.51))
+            ),
+            waypoints = emptyList()
+        )
+
+        coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } returns emptyList()
+        coEvery { mockRoutesRepo.getRouteByClusterId(10L) } returns expectedRoute
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectCluster(cluster)
+        advanceUntilIdle()
+
+        assertEquals(expectedRoute, viewModel.linkedRoute.value)
+        assertEquals(77L, viewModel.linkedRoute.value?.summary?.id)
     }
 }
 
