@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.69  
+**Version**: 1.0.72  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 79
+**Total Requirements**: 80
 
 ---
 
@@ -3618,6 +3618,38 @@
 
 **Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,485 / 1,500` LoC (`0` protected monolith edits); `SpeedAndLocationDevice.java` hook default `false`; `REQ-TRK-077` indoor/wheel/rest vetoes unbypassable; `REQ-FIL-023.1` & `REQ-FIL-009` preserved; `MIN_DOPPLER_SPEED_MPS = 3.0` unchanged; `REQ-FIL-017.3` & `REQ-FIL-032` preserved; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-FIL-037: Live ATT Fused Altitude/Slope EKF DEM Grid-Step Jump Gating, Coherent DEM/GPS Variance Retuning & Joseph SPD Slope Decoupling [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-037`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkf.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFused.kt`
+- **Rationale**: Pixel 10 run `Kurze Runde var 2 #53` (`2026-11-19_184953`, `_id = 2414`) exposed live `att_fused_altitude_slope` reporting `167.1 m` ascent / `166.0 m` descent (vs `~58–64 m` true gain) and `-35%..+34%` slope swings (`253` samples `|Δalt/dt| > 0.5 m/s`) because live `KinematicAltitudeSlopeEkf` used over-confident `DEFAULT_VAR_DEM = 4.0 m²` (`±2 m`), coupled DEM jumps directly into `slope` (`k1Eff`) even with active barometer, and lacked baro-vs-DEM step-discrepancy gating and Huber variance inflation (`ATT-9156`, live counterpart to offline `ATT-9063` / `REQ-FIL-033`, refining `REQ-FIL-016.1`/`.2`, `REQ-FIL-020.1`/`.2`, `REQ-FIL-022`, `REQ-FIL-023.2`/`.3`, and `REQ-FIL-026`).
+- **Description**:
+  1. *Coherent DEM/GPS Variance Retuning, Baro/Standstill Slope Decoupling & 3×3 Joseph SPD Update (`REQ-FIL-037.1`)*:
+     - `KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM` SHALL be retuned to `25.0 m²` (`±5 m` 1σ SRTM/DEM uncertainty) and `DEFAULT_VAR_GPS` SHALL be retuned coherently to `64.0 m²` (`±8 m` 1σ vertical GPS uncertainty, strictly `> DEFAULT_VAR_DEM` preserving `REQ-FIL-020.1` DEM > GPS hierarchy and `testThreeStateGpsBeforeDem` `< 1.0 m` convergence).
+     - In `KinematicAltitudeSlopeEkf.updateReferenceAltitude()`, `k1Eff` SHALL be decoupled to `0.0` whenever `hasBarometerSample || isStandstill` (preserving `k1Eff = (p10 / s) * gainScale` for barometer-free DEM/GPS-only slope tracking), and 3-state reference covariance updates SHALL use the exact symmetric positive-definite 3×3 Joseph form `P^+ = (I - KH)P(I - KH)^T + K R K^T` (`H = [1, 0, 0]`, `R = effectiveVarRef`).
+  2. *Post-Anchor Baro-vs-Reference Step-Discrepancy Jump Gating, Reference Tracker Advancement, Quadratic Huber Variance Inflation & High-Precision Anchor Guard (`REQ-FIL-037.2`)*:
+     - `KinematicAltitudeSlopeEkf.updateReferenceAltitude()` SHALL expose `@JvmOverloads enableStepGating: Boolean = (varRef > 1.0)` so high-precision known-location or manual calibration anchors (`varRef <= 1.0 m²`) bypass DEM step gating completely.
+     - Strictly for post-anchor updates (`hasReferenceAnchor == true`, preserving `REQ-FIL-022` initial `+130.4 m` weather-offset anchoring and `resetAscentDescentAnchor()`), when `enableStepGating && hasBarometerSample`: (a) compute `stepDiscrepancy = abs((refAltM - lastRefAltM) - (lastBaroAltM - lastRefBaroAltM))` and inflate `stepVarRef` quadratically when `stepDiscrepancy > 3.0 m` so `10–21 m` 1–2 s DEM cell bounces produce negligible altitude pull and `0.0 m` false ascent across `2.0 m` hysteresis; (b) advance `lastRefAltM` and `lastRefBaroAltM` to `(refAltM, lastBaroAltM)` even when step inflation triggers so persistent offset corrections (`453 -> 438 m`) converge cleanly on ticks `2..10` while transient bounces (`440 -> 427 -> 440 m`) inflate on both edges; and (c) apply quadratic innovation-based Huber variance inflation `effectiveVarRef = stepVarRef * (normRes / huberK)^2` when `abs(y) / sqrt(p00 + stepVarRef) > huberK` (preserving `p00` on multi-tick outliers while keeping normal GPS->DEM recovery uninflated). `reset()` and `setMode()` SHALL clear all step-gating tracker state.
+  3. *Live Loop Ascent/Descent Accuracy, Slope Plausibility & MSL Loop-Closure Anchoring (`REQ-FIL-037.3`)*:
+     - `AltitudeAndSlopeDevice_ATTFused` SHALL feed retuned DEM (`25.0 m²`) and GPS (`64.0 m²`) reference updates into `KinematicAltitudeSlopeEkf` while preserving `REQ-FIL-020.1` DEM precedence, `REQ-FIL-020.2` `2.0 m` hysteresis, `REQ-FIL-022.3` re-anchor hysteresis reset, and `REQ-FIL-026` 1-Hz barometric bucketing, keeping live `ASCENT`/`DESCENT` within `55–75 m` (not `167 m`), live `SLOPE` free of `±30–35%` DEM bounce spikes, and loop closure anchored near true MSL altitude on synthetic Pixel 10 `Kurze Runde var 2 #53` replay.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-037` refining `REQ-FIL-016.1`/`.2`, `REQ-FIL-020.1`/`.2`, `REQ-FIL-022`, `REQ-FIL-023.2`/`.3`, and `REQ-FIL-026` across `KinematicAltitudeSlopeEkf.kt` and `AltitudeAndSlopeDevice_ATTFused.kt`.
+2. *Historical Origin & Commit Trace*: `75c1497e` & `33e60295` (`ATT-6279`), `8b0eba41` (`ATT-8081`), `23317f58` & `e9766625` (`ATT-8575`), `eba66320` (`ATT-8576`), `60472a32` (`ATT-8881`), `b6a1eaea` (`ATT-9063`).
+3. *Root Reason for Existing Formulation*: `ATT-6279` assumed `±2 m` smooth DEM (`DEFAULT_VAR_DEM = 4.0`) and coupled DEM innovations directly into `slope` without baro step-discrepancy gating or Joseph SPD updates; `ATT-9063` fixed offline ERTS (`ExtendedRtsAltitudeSlopeSmoother.kt`) without modifying live `KinematicAltitudeSlopeEkf`.
+4. *Preservation of Core Invariants*: `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` unchanged; `REQ-FIL-022` `+130.4 m` initial weather-offset snap & `resetAscentDescentAnchor()` preserved; `REQ-FIL-020.1`/`.2` DEM precedence & `2.0 m` hysteresis preserved; `REQ-FIL-023.2`/`.3` standstill slope clearing & low-speed damping preserved; `REQ-FIL-026` 1-Hz bucketing & adaptive jitter preserved; `0` protected monolith edits; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a live 3-state barometer + DEM session on `AltitudeAndSlopeDevice_ATTFused` experiencing `13–21 m` 1–2 s DEM grid jumps (`440 -> 427 -> 440 m`) while barometer changes `< 0.5 m`, *When* `KinematicAltitudeSlopeEkf` processes the updates, *Then* step-discrepancy + Huber variance inflation and `k1 = 0.0` hold `|Δalt/dt| < 0.3 m/s`, flat `|SLOPE| < 3%`, `ASCENT`/`DESCENT = 0.0 m`, and symmetric SPD 3×3 covariance.
+• *Given* coarse GPS anchor (`453 m`, `64.0 m²`) followed by persistent DEM (`438 m`, `25.0 m²`), gradual barometric drift, high-precision calibration (`varRef <= 1.0`), and barometer-free DEM-only climbing, *When* `KinematicAltitudeSlopeEkf` runs, *Then* GPS->DEM converges within `±1.0 m`, weather drift absorbs into `baroBias`, high-precision anchors apply unimpeded, and DEM-only climb estimates positive slope.
+• *Given* a synthetic Pixel 10 `Kurze Runde var 2 #53` loop (`~60 m` true gain/loss with `13–21 m` DEM jumps and gradual baro drift) replayed through `AltitudeAndSlopeDevice_ATTFused`, *When* live metrics are evaluated, *Then* live `ASCENT`/`DESCENT` stay in `55–75 m` (not `167 m`), `|SLOPE|` remains plausible without `±30–35%` DEM artifacts, and loop closure stays anchored near true MSL.
+
+**Invariants**: `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` unchanged; `REQ-FIL-022` initial weather-offset anchoring preserved; `REQ-FIL-020` & `REQ-FIL-023` & `REQ-FIL-026` preserved; `@Synchronized` thread safety; `0` protected monolith edits; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3692,3 +3724,6 @@
 | `1.0.67` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Added `REQ-FIL-036` `[Planned]` (`REQ-FIL-036.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`010`) for corroborated cold-start pinning release with unbypassable indoor/wheel/rest vetoes & anti-oscillation guard, raw-chord heading seeding + unanchored/post-outage velocity decoupling + bounded Doppler variance, and `dt_gnss`-normalized ERTS teleport decoupling + 1-tick glitch pre-gate + backward catch-up velocity bound (`SpeedAndLocationDevice_ATTFused.kt <= 1,485 / 1,500` LoC, `N/A - no UI strings`). |
 | `1.0.68` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `REQ-FIL-036` to `[Implemented]` following Stage 4 construction (`AttFusedColdStartHelper.kt` `256` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,481 / 1,500` LoC, `SpeedAndLocationDevice.java` `824` LoC, `UnicycleOdometryEkf.kt` `844` LoC, `ExtendedRtsOdometrySmoother.kt` `920` LoC; `0` monolith edits; `144/144` PASS across 12 suites + `:app:assembleDebug`, `0` new compiler warnings). |
 | `1.0.69` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `REQ-FIL-036` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9246`) `144/144` PASS evidence on `97f49453` (`Rule 7.5`, zero `app/` diff since `97f49453`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9158_walkthrough.md`. |
+| `1.0.70` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Added `REQ-FIL-037` `[Planned]` (`REQ-FIL-037.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`008`) for live `KinematicAltitudeSlopeEkf` coherent `DEFAULT_VAR_DEM = 25.0 m²` / `DEFAULT_VAR_GPS = 64.0 m²`, baro/standstill slope decoupling (`k1 = 0`) + 3×3 Joseph SPD update, post-anchor baro-vs-DEM step-discrepancy jump gating with reference tracker advancement + quadratic Huber variance inflation + `varRef <= 1.0` high-precision guard (`N/A - no UI strings`). |
+| `1.0.71` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Promoted `REQ-FIL-037` to `[Implemented]` following Stage 4 construction (`KinematicAltitudeSlopeEkf.kt` `614 / 1,500` LoC, `AltitudeAndSlopeDevice_ATTFused.kt` `514 / 1,500` LoC; `0` protected monolith edits; `72/72` PASS across 7 unit & contract suites + `:app:assembleDebug`, `0` new compiler warnings). |
+| `1.0.72` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Promoted `REQ-FIL-037` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9260`) independent `72/72` PASS evidence on `0b792832` (`Rule 7.5`, zero `app/` diff since `0b792832`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9156_walkthrough.md`. |

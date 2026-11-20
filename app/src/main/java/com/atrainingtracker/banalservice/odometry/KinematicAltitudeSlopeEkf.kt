@@ -55,9 +55,14 @@ class KinematicAltitudeSlopeEkf(
         const val DEFAULT_Q_BIAS = 1e-4 // Baro bias process noise per second
         const val DEFAULT_VAR_BARO = 0.25 // (0.5 m)^2
         const val DEFAULT_UNANCHORED_ALT_VAR = 400.0 // (20.0 m)^2 unanchored 3-state baro variance
-        const val DEFAULT_VAR_DEM = 4.0 // (2.0 m)^2
-        const val DEFAULT_VAR_GPS = 16.0 // (4.0 m)^2
+        const val DEFAULT_VAR_DEM = 25.0 // (5.0 m)^2 SRTM/DEM vertical uncertainty (REQ-FIL-037.1)
+        const val DEFAULT_VAR_GPS = 64.0 // (8.0 m)^2 GPS vertical uncertainty > DEFAULT_VAR_DEM (REQ-FIL-037.1)
         const val DEFAULT_HUBER_K = 3.0 // 3-sigma innovation clamp
+        const val DEM_STEP_GATE_THRESHOLD_M = 3.0 // |deltaRef - deltaBaro| DEM step-discrepancy gate (REQ-FIL-037.2)
+        const val DEM_ABRUPT_STEP_THRESHOLD_M = 8.0 // Abrupt DEM grid-step jump threshold (REQ-FIL-037.2)
+        const val DEM_ABRUPT_STEP_FLAT_BARO_M = 1.0 // Flat-baro ceiling for abrupt DEM jumps (REQ-FIL-037.2)
+        const val DEM_INNOVATION_HUBER_K = 2.5 // Innovation-based Huber variance-inflation threshold (REQ-FIL-037.2)
+        const val DEM_HIGH_PRECISION_VAR_THRESHOLD = 1.0 // Bypass DEM step gating for high-precision anchors (REQ-FIL-037.2)
         const val DEFAULT_STANDSTILL_THRESHOLD_MPS = 0.3
         const val LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2 // Low-speed slope damping ceiling (REQ-FIL-023.3)
         const val MAX_PHYSICAL_SLOPE = 0.35 // +/-35% grade clamp (REQ-FIL-023.3)
@@ -110,6 +115,9 @@ class KinematicAltitudeSlopeEkf(
     @Volatile
     private var lastSpeedMps: Double = 0.0
 
+    private var lastBaroAltM: Double = Double.NaN
+    private var lastRefAltM: Double = Double.NaN
+    private var lastRefBaroAltM: Double = Double.NaN
     private var lastMovingBaroAltM: Double = Double.NaN
     private var lastBaroDeltaM: Double = 0.0
     private var hasPrevBaroDelta: Boolean = false
@@ -145,6 +153,9 @@ class KinematicAltitudeSlopeEkf(
         standstillDurationSec = 0.0
         lastSpeedMps = 0.0
         adaptiveBaroJitterVar = 0.0
+        lastBaroAltM = Double.NaN
+        lastRefAltM = Double.NaN
+        lastRefBaroAltM = Double.NaN
         lastMovingBaroAltM = Double.NaN
         lastBaroDeltaM = 0.0
         hasPrevBaroDelta = false
@@ -157,6 +168,8 @@ class KinematicAltitudeSlopeEkf(
         if (is3StateMode == threeState) return
         is3StateMode = threeState
         hasReferenceAnchor = false
+        lastRefAltM = Double.NaN
+        lastRefBaroAltM = Double.NaN
         adaptiveBaroJitterVar = 0.0
         hasPrevBaroDelta = false
         lastBaroResidualM = Double.NaN
@@ -263,7 +276,7 @@ class KinematicAltitudeSlopeEkf(
         isStandstill: Boolean = false,
         speedMps: Double = lastSpeedMps
     ) {
-        if (baroAltM.isNaN() || baroAltM.isInfinite()) return
+        if (!baroAltM.isFinite()) return
 
         if (!isInitialized) {
             altitude = baroAltM
@@ -273,6 +286,7 @@ class KinematicAltitudeSlopeEkf(
             p11 = 0.01
             p22 = 100.0
             hasBarometerSample = true
+            lastBaroAltM = baroAltM
             isInitialized = true
             resetJitterTracker(baroAltM)
             return
@@ -280,12 +294,16 @@ class KinematicAltitudeSlopeEkf(
 
         if (is3StateMode && hasReferenceAnchor && !hasBarometerSample) {
             // Ref-before-Baro: absorb initial weather-pressure offset into baroBias without pulling altitude
+            // and seed step-gating baro reference so the first post-anchor DEM update computes true deltaBaro (REQ-FIL-037.2)
             baroBias = baroAltM - altitude
             hasBarometerSample = true
+            lastBaroAltM = baroAltM
+            lastRefBaroAltM = baroAltM
             resetJitterTracker(baroAltM)
             return
         }
         hasBarometerSample = true
+        lastBaroAltM = baroAltM
 
         if (isStandstill) {
             // In standstill mode: ground altitude is clamped (dh = 0).
@@ -394,14 +412,21 @@ class KinematicAltitudeSlopeEkf(
     }
 
     /**
-     * Ingests an absolute reference altitude (DEM or GPS elevation).
+     * Ingests an absolute reference altitude (DEM or GPS elevation) with post-anchor baro-vs-ref
+     * step-discrepancy jump gating, quadratic Huber variance inflation, baro/standstill slope decoupling,
+     * and exact symmetric Joseph SPD covariance update (REQ-FIL-037.1, REQ-FIL-037.2).
      *
      * @return `true` if this call performed initial 3-state re-anchoring from uncalibrated barometer altitude.
      */
     @Synchronized
     @Suppress("ReturnCount")
-    fun updateReferenceAltitude(refAltM: Double, varRef: Double = rDem): Boolean {
-        if (refAltM.isNaN() || refAltM.isInfinite()) return false
+    @JvmOverloads
+    fun updateReferenceAltitude(
+        refAltM: Double,
+        varRef: Double = rDem,
+        enableStepGating: Boolean = varRef > DEM_HIGH_PRECISION_VAR_THRESHOLD
+    ): Boolean {
+        if (!refAltM.isFinite() || !varRef.isFinite() || varRef <= 0.0) return false
 
         if (!isInitialized) {
             altitude = refAltM
@@ -411,6 +436,8 @@ class KinematicAltitudeSlopeEkf(
             p11 = 0.01
             p22 = 100.0
             hasReferenceAnchor = true
+            lastRefAltM = refAltM
+            lastRefBaroAltM = if (hasBarometerSample) lastBaroAltM else Double.NaN
             isInitialized = true
             return false
         }
@@ -430,54 +457,138 @@ class KinematicAltitudeSlopeEkf(
             p21 = 0.0
             p22 = 100.0
             hasReferenceAnchor = true
+            lastRefAltM = refAltM
+            lastRefBaroAltM = if (hasBarometerSample) lastBaroAltM else Double.NaN
             return true
         }
 
+        val y = refAltM - altitude
+        val stepVarRef = computeStepGatedRefVariance(refAltM, varRef, enableStepGating)
+        val refHuberK = min(huberK, DEM_INNOVATION_HUBER_K)
+        val sStep = p00 + stepVarRef
+        val normRes = abs(y) / sqrt(max(1e-9, sStep))
+        val effectiveVarRef = if (enableStepGating && normRes > refHuberK) {
+            val ratio = normRes / refHuberK
+            stepVarRef * ratio * ratio
+        } else {
+            stepVarRef
+        }
+        val yEff = if (enableStepGating && normRes > refHuberK) {
+            (refHuberK / normRes) * y
+        } else {
+            y
+        }
+        val isStandstill = lastSpeedMps < standstillSpeedThresholdMps
         val gainScale = lowSpeedSlopeGainFactor(lastSpeedMps)
+        val s = p00 + effectiveVarRef
+        val k0 = p00 / s
+        // Decouple DEM/GPS reference innovations from slope whenever barometer is active or stationary (REQ-FIL-037.1)
+        val k1Eff = if (hasBarometerSample || isStandstill) 0.0 else (p10 / s) * gainScale
 
         if (!is3StateMode) {
-            val y = refAltM - altitude
-            val s = p00 + varRef
-            val yH = applyHuber(y, s)
-            val k0 = p00 / s
-            val k1Eff = (p10 / s) * gainScale
-
-            altitude += k0 * yH
-            slope = clampPhysicalSlope(slope + k1Eff * yH)
-
-            p00 = max(1e-6, (1.0 - k0) * p00)
-            p01 = (1.0 - k0) * p01
-            p10 = p01
-            p11 = max(1e-8, p11 - k1Eff * p01)
+            altitude += k0 * yEff
+            slope = clampPhysicalSlope(slope + k1Eff * yEff)
+            josephUpdate2x2(k0, k1Eff, effectiveVarRef)
         } else {
             // In 3-State mode: z = h (H = [1, 0, 0])
-            val y = refAltM - altitude
-            val s = p00 + varRef
-            val yH = applyHuber(y, s)
-
-            val k0 = p00 / s
-            val k1Eff = (p10 / s) * gainScale
             val k2 = p20 / s
-
-            altitude += k0 * yH
-            slope = clampPhysicalSlope(slope + k1Eff * yH)
-            baroBias += k2 * yH
-
-            val v0 = p00
-            val v1 = p01
-            val v2 = p02
-
-            p00 = max(1e-6, p00 - k0 * v0)
-            p01 -= k0 * v1
-            p02 -= k0 * v2
-            p10 = p01
-            p11 = max(1e-8, p11 - k1Eff * v1)
-            p12 -= k1Eff * v2
-            p20 = p02
-            p21 = p12
-            p22 = max(1e-6, p22 - k2 * v2)
+            altitude += k0 * yEff
+            slope = clampPhysicalSlope(slope + k1Eff * yEff)
+            baroBias += k2 * yEff
+            josephUpdate3x3(k0, k1Eff, k2, effectiveVarRef)
         }
         return false
+    }
+
+    private fun computeStepGatedRefVariance(
+        refAltM: Double,
+        varRef: Double,
+        enableStepGating: Boolean
+    ): Double {
+        var stepVarRef = varRef
+        if (enableStepGating &&
+            hasBarometerSample &&
+            !lastRefAltM.isNaN() &&
+            !lastRefBaroAltM.isNaN() &&
+            !lastBaroAltM.isNaN()
+        ) {
+            val deltaRef = refAltM - lastRefAltM
+            val deltaBaro = lastBaroAltM - lastRefBaroAltM
+            val stepDiscrepancy = abs(deltaRef - deltaBaro)
+            if (stepDiscrepancy > DEM_STEP_GATE_THRESHOLD_M) {
+                val baseFactor = 1.0 + stepDiscrepancy * stepDiscrepancy
+                val factor = if (
+                    abs(deltaRef) >= DEM_ABRUPT_STEP_THRESHOLD_M &&
+                    abs(deltaBaro) < DEM_ABRUPT_STEP_FLAT_BARO_M
+                ) {
+                    baseFactor * 4.0
+                } else {
+                    baseFactor
+                }
+                stepVarRef = varRef * factor
+            }
+        }
+        // Always advance reference trackers so persistent corrections converge on subsequent ticks
+        // while transient DEM grid-cell bounces inflate quadratically on both edges (REQ-FIL-037.2).
+        lastRefAltM = refAltM
+        if (hasBarometerSample && !lastBaroAltM.isNaN()) {
+            lastRefBaroAltM = lastBaroAltM
+        }
+        return stepVarRef
+    }
+
+    /**
+     * Exact symmetric 2x2 Joseph SPD covariance update for H = [1, 0], K = [k0, k1]^T, R = rVar (REQ-FIL-037.1).
+     */
+    private fun josephUpdate2x2(k0: Double, k1: Double, rVar: Double) {
+        val a = 1.0 - k0
+        val b = -k1
+        val m00 = a * p00
+        val m01 = a * p01
+        val m10 = b * p00 + p10
+        val m11 = b * p01 + p11
+
+        p00 = max(1e-6, m00 * a + k0 * k0 * rVar)
+        val newP01 = m00 * b + m01 + k0 * k1 * rVar
+        p01 = newP01
+        p10 = newP01
+        p11 = max(1e-8, m10 * b + m11 + k1 * k1 * rVar)
+    }
+
+    /**
+     * Exact symmetric 3x3 Joseph SPD covariance update for H = [1, 0, 0], K = [k0, k1, k2]^T, R = rVar (REQ-FIL-037.1).
+     */
+    private fun josephUpdate3x3(k0: Double, k1: Double, k2: Double, rVar: Double) {
+        val a = 1.0 - k0
+        val b = -k1
+        val c = -k2
+
+        val m00 = a * p00
+        val m01 = a * p01
+        val m02 = a * p02
+        val m10 = b * p00 + p10
+        val m11 = b * p01 + p11
+        val m12 = b * p02 + p12
+        val m20 = c * p00 + p20
+        val m21 = c * p01 + p21
+        val m22 = c * p02 + p22
+
+        val newP00 = max(1e-6, m00 * a + k0 * k0 * rVar)
+        val newP01 = m00 * b + m01 + k0 * k1 * rVar
+        val newP02 = m00 * c + m02 + k0 * k2 * rVar
+        val newP11 = max(1e-8, m10 * b + m11 + k1 * k1 * rVar)
+        val newP12 = m10 * c + m12 + k1 * k2 * rVar
+        val newP22 = max(1e-6, m20 * c + m22 + k2 * k2 * rVar)
+
+        p00 = newP00
+        p01 = newP01
+        p10 = newP01
+        p02 = newP02
+        p20 = newP02
+        p11 = newP11
+        p12 = newP12
+        p21 = newP12
+        p22 = newP22
     }
 
     @Synchronized

@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.91  
+**Version**: 1.0.94  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 164
+**Total Tests**: 165
 
 ---
 
@@ -3736,6 +3736,27 @@
      • Replay `23 s` pinned standstill + `9.34 m` (`t = 24 s`, with isolated 1-tick `9.34 m/s` geometric glitch) and `12.20 m` (`t = 31 s`) teleports through `ExtendedRtsOdometrySmoother` & `ErtsPostWorkoutRecomputer`: assert canonical `SPEED_mps` and `ExtremumValues.MAX(SPEED_mps)` remain `< 3.5 m/s` (no `5.73 m/s` spike) and raw device columns remain byte-identical.
      • Verify genuine launch (`0, 0, 2.0, 2.2`) & multi-second sprint (`2.0 -> 3.5 -> 5.0 -> 6.0 m/s`) preserve peak speed `>= 5.5 m/s`, `45 s` curved tunnel outage (`dt_gnss = 45 s`) does not false-trigger discontinuity gating, and `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt = 1,481 / 1,500` LoC, `0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings` all pass (`144/144 PASS` verified on `97f49453`, Gate 4 `ATT-9246`).
 
+### TST-FIL-037: **Live ATT Fused Altitude/Slope EKF DEM Grid-Step Jump Gating, Coherent Variance Retuning & Joseph SPD Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-FIL-037` (`REQ-FIL-037.1`..`REQ-FIL-037.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmootherTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Verification Result**: PASS (`72/72` PASS across 7 unit & contract suites + `:app:assembleDebug`, `0` failures, `0` errors, `0` skipped, `0` new Kotlin compiler warnings; independently verified at Gate 4 `ATT-9260` on SHA `0b792832`, zero `app/` diff post-Gate 4 per `Rule 7.5`; `4/4` Python safety linters PASS)
+- **Verification Evidence**:
+  - `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkfTest.kt`: `KinematicAltitudeSlopeEkfTest.testCoherentVarianceRetuningAndBaroSlopeDecouplingWithJosephSpd_tstFil037_1` (`TST-FIL-037.1`), `KinematicAltitudeSlopeEkfTest.testStepDiscrepancyGatingTrackerAdvancementHuberAndHighPrecisionGuard_tstFil037_2` (`TST-FIL-037.2`), `KinematicAltitudeSlopeEkfTest.testThreeStateGpsBeforeDem_recoversFromCoarseGpsAnchorWithoutBiasFreeze` (`TST-FIL-037.2` non-regression)
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`: `AltitudeAndSlopeDevice_ATTFusedTest.testSyntheticPixel10KurzeRunde53LoopReplay_gatesDemGridJumpsAndPreservesMslClosure_tstFil037_3` (`TST-FIL-037.3`)
+  - Contracts & regression suites: `ExtendedRtsAltitudeSlopeSmootherTest` (`8/8`), `ArchitectureConformanceContractTest` (`11/11`), `DeadCodeEliminationContractTest` (`5/5`), `SourceTextReadingAuditContractTest` (`6/6`), `SystemLiveTrackingRequirementsContractTest` (`4/4`)
+- **Procedure**:
+  1. *Coherent DEM/GPS Variance Retuning, Baro/Standstill Slope Decoupling & 3×3 Joseph SPD (`TST-FIL-037.1`, `KinematicAltitudeSlopeEkfTest`: `testCoherentVarianceRetuningAndBaroSlopeDecouplingWithJosephSpd_tstFil037_1`)*:
+     • Verify `DEFAULT_VAR_DEM == 25.0`, `DEFAULT_VAR_GPS == 64.0` (`DEFAULT_VAR_GPS > DEFAULT_VAR_DEM`), and `DEFAULT_VAR_BARO == 0.25`, plus invalid `refAltM`/`varRef` input guards.
+     • Feed `-13 m` and `+21 m` DEM grid jumps while barometer is active & flat, asserting `ekf.slope` stays decoupled (`|slopePercent| < 1%`), `|Δaltitude| < 0.5 m`, and 3×3 covariance stays symmetric positive-definite (`p00, p11, p22 > 0`, `pij == pji`, positive principal minors & determinant); also verify barometer-free DEM-only climbing still updates positive slope (`> 3%`).
+  2. *Baro-vs-DEM Step-Discrepancy Gating, Reference Tracker Advancement, Huber Variance Inflation & High-Precision Anchor Guard (`TST-FIL-037.2`, `KinematicAltitudeSlopeEkfTest`: `testStepDiscrepancyGatingTrackerAdvancementHuberAndHighPrecisionGuard_tstFil037_2`, `testThreeStateGpsBeforeDem_recoversFromCoarseGpsAnchorWithoutBiasFreeze`)*:
+     • Verify transient `440 -> 427 -> 440 -> 461 -> 461 -> 440 m` DEM bounces with flat barometer (`|Δbaro| < 0.5 m`) trigger step-discrepancy + Huber variance inflation (`|Δalt| < 0.5 m`, zero `p00` collapse), and `Ref-before-Baro` + standstill baro drift seed/track `Δbaro` accurately on the first post-anchor DEM jump.
+     • Verify persistent coarse GPS (`453 m`) -> DEM (`438 m`) recovery converges within `±1.0 m` (`testThreeStateGpsBeforeDem`), gradual weather drift absorbs into `baroBias`, and high-precision anchors (`varRef = 0.5 <= 1.0`, `enableStepGating = false`) apply unimpeded (`> 6.0 m` single-tick pull).
+  3. *Synthetic Pixel 10 `Kurze Runde var 2 #53` Loop Replay & Contracts (`TST-FIL-037.3`, `AltitudeAndSlopeDevice_ATTFusedTest`: `testSyntheticPixel10KurzeRunde53LoopReplay_gatesDemGridJumpsAndPreservesMslClosure_tstFil037_3`, Contracts)*:
+     • Replay synthetic `~60 m` climb/descent loop (`720 s` at `2.0 m/s`) with repeated `13–21 m` DEM grid jumps and gradual `+3.0 m` barometric weather drift through `AltitudeAndSlopeDevice_ATTFused`: assert live `ASCENT`/`DESCENT` stay in `55–75 m` (not `167 m`), live `|SLOPE| <= 20%` (no `-35%/+34%` artifacts), `|Δalt/dt| < 1.5 m/s`, and closing `ALTITUDE` stays within `±5.0 m` of `440.0 m` MSL.
+     • Verify `ArchitectureConformanceContractTest` (`0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3824,3 +3845,6 @@
 | `1.0.89` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Added `TST-FIL-036` `[Planned]` (`TST-FIL-036.1`–`.3`, strictly symmetric `REQ-FIL-036`) covering cold-start outdoor release + unbypassable vetoes + indoor oscillating multipath rejection, raw-chord heading seeding + unanchored/post-outage velocity decoupling + bounded Doppler variance, and ERTS `dt_gnss`-normalized teleport decoupling + 1-tick glitch pre-gate + genuine sprint & curved tunnel non-regression (`N/A - no UI strings`). |
 | `1.0.90` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `TST-FIL-036` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`144/144` PASS across 12 suites + `:app:assembleDebug`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; explicit hyphenated `REQ-FIL-036.x / TST-FIL-036.x` tags indexed across 6 test suites). |
 | `1.0.91` | 2026-11-20 | AI Agent (`ATT-9158`, `--as agent1`) | `ATT-9158` | Promoted `TST-FIL-036` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9246`) `144/144` PASS evidence on `97f49453` (`Rule 7.5`, zero `app/` diff since `97f49453`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9158_walkthrough.md`. |
+| `1.0.92` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Added `TST-FIL-037` `[Planned]` (`TST-FIL-037.1`–`.3`, strictly symmetric `REQ-FIL-037`) covering coherent `DEFAULT_VAR_DEM = 25.0`/`DEFAULT_VAR_GPS = 64.0`, baro/standstill slope decoupling + 3×3 Joseph SPD, baro-vs-DEM step-discrepancy jump gating with reference tracker advancement + quadratic Huber variance inflation + `varRef <= 1.0` guard, and synthetic Pixel 10 `Kurze Runde var 2 #53` loop replay (`N/A - no UI strings`). |
+| `1.0.93` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Promoted `TST-FIL-037` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`72/72` PASS across 7 unit & contract suites + `:app:assembleDebug`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; explicit hyphenated `REQ-FIL-037.x / TST-FIL-037.x` tags indexed in `KinematicAltitudeSlopeEkfTest` and `AltitudeAndSlopeDevice_ATTFusedTest`). |
+| `1.0.94` | 2026-11-20 | AI Agent (`ATT-9156`, `--as agent1`) | `ATT-9156` | Promoted `TST-FIL-037` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9260`) independent `72/72` PASS evidence on `0b792832` (`Rule 7.5`, zero `app/` diff since `0b792832`), `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9156_walkthrough.md`. |

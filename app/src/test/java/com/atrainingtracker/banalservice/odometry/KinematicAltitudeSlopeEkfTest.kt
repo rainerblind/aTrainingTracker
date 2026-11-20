@@ -466,4 +466,141 @@ class KinematicAltitudeSlopeEkfTest {
         assertEquals("Steady climb altitude must converge without lag", 438.0 + 30 * 0.83, ekf.altitude, 1.5)
         assertTrue("Steady +16.6% climb slope must converge accurately (was ${ekf.slopePercent}%)", ekf.slopePercent in 13.5..19.5)
     }
+
+    // REQ-FIL-037.1 / TST-FIL-037.1: Coherent DEM/GPS variance hierarchy, baro/standstill slope decoupling, 3x3 Joseph SPD, and DEM-only slope preservation
+    @Test
+    fun testCoherentVarianceRetuningAndBaroSlopeDecouplingWithJosephSpd_tstFil037_1() {
+        assertEquals(25.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM, 1e-9)
+        assertEquals(64.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS, 1e-9)
+        assertTrue(
+            "DEFAULT_VAR_GPS must exceed DEFAULT_VAR_DEM to preserve REQ-FIL-020.1 hierarchy",
+            KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS > KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM
+        )
+        assertEquals(0.25, KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, 1e-9)
+
+        // 1. 3-State moving flat road with barometer + DEM: abrupt 13m & 21m DEM jumps decouple slope and preserve symmetric SPD covariance
+        ekf.setMode(true)
+        ekf.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+
+        // Guard against invalid refAltM / varRef inputs
+        assertFalse(ekf.updateReferenceAltitude(Double.NaN, 25.0))
+        assertFalse(ekf.updateReferenceAltitude(440.0, 0.0))
+        assertFalse(ekf.updateReferenceAltitude(440.0, -5.0))
+        assertFalse(ekf.updateReferenceAltitude(440.0, Double.POSITIVE_INFINITY))
+
+        repeat(20) {
+            ekf.predict(1.0, 2.0)
+            ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+            ekf.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        }
+        val altBeforeJump = ekf.altitude
+        val slopeBeforeJump = ekf.slope
+
+        // Inject -13 m and +21 m DEM jumps while barometer stays flat
+        ekf.predict(1.0, 2.0)
+        ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+        ekf.updateReferenceAltitude(427.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertEquals("Slope must stay decoupled from DEM jump when barometer is active", slopeBeforeJump, ekf.slope, 1e-6)
+        assertTrue("Altitude pull on -13 m DEM jump must be heavily damped (delta=${ekf.altitude - altBeforeJump})", kotlin.math.abs(ekf.altitude - altBeforeJump) < 0.5)
+        assertSymmetricSpd3x3(ekf)
+
+        ekf.predict(1.0, 2.0)
+        ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+        ekf.updateReferenceAltitude(448.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertTrue("Slope must stay within +/-1% on flat terrain despite +21 m DEM jump (was ${ekf.slopePercent}%)", kotlin.math.abs(ekf.slopePercent) < 1.0)
+        assertTrue("Altitude must stay within 0.5 m of 440 m (was ${ekf.altitude})", kotlin.math.abs(ekf.altitude - 440.0) < 0.5)
+        assertSymmetricSpd3x3(ekf)
+
+        // 2. Barometer-free DEM-only climb (!hasBarometerSample) must still estimate positive slope
+        ekf.reset()
+        ekf.setMode(true)
+        var demClimb = 440.0
+        ekf.updateReferenceAltitude(demClimb, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        repeat(40) {
+            demClimb += 0.4 // +8% climb at 5.0 m/s
+            ekf.predict(1.0, 5.0)
+            ekf.updateReferenceAltitude(demClimb, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            assertSymmetricSpd3x3(ekf)
+        }
+        assertFalse(ekf.hasBarometerSample)
+        assertTrue("Barometer-free DEM-only climb must produce positive slope > 3% (was ${ekf.slopePercent}%)", ekf.slopePercent > 3.0)
+    }
+
+    // REQ-FIL-037.2 / TST-FIL-037.2: Post-anchor step-discrepancy gating, tracker advancement, Huber variance inflation, Ref-before-Baro/standstill tracking, and high-precision anchor bypass
+    @Test
+    fun testStepDiscrepancyGatingTrackerAdvancementHuberAndHighPrecisionGuard_tstFil037_2() {
+        // 1. Transient 440 -> 427 -> 440 m and 440 -> 461 -> 440 m DEM bounces with flat barometer
+        ekf.setMode(true)
+        ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+        assertTrue(ekf.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM))
+
+        repeat(15) {
+            ekf.predict(1.0, 2.0)
+            ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+            ekf.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        }
+        val p00Baseline = ekf.p00
+
+        // Bounce sequence: -13 m, back to 440, +21 m for 2 ticks (tests both step gate & Huber variance inflation), back to 440
+        val demBounces = listOf(427.0, 440.0, 461.0, 461.0, 440.0)
+        for (demVal in demBounces) {
+            ekf.predict(1.0, 2.0)
+            ekf.updateBarometer(570.4, isStandstill = false, speedMps = 2.0)
+            ekf.updateReferenceAltitude(demVal, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            assertTrue("Bounce DEM=$demVal must keep altitude within 0.5 m of 440 m (was ${ekf.altitude})", kotlin.math.abs(ekf.altitude - 440.0) < 0.5)
+            assertTrue("Bounce DEM=$demVal must not cause slope spike (was ${ekf.slopePercent}%)", kotlin.math.abs(ekf.slopePercent) < 1.0)
+            assertSymmetricSpd3x3(ekf)
+        }
+        assertTrue(
+            "p00 must not collapse during multi-tick DEM outliers (baseline=$p00Baseline, after=${ekf.p00})",
+            ekf.p00 >= p00Baseline * 0.5
+        )
+
+        // 2. Ref-before-Baro seeding & standstill baro drift tracking: first post-anchor DEM jump must gate cleanly
+        ekf.reset()
+        ekf.setMode(true)
+        ekf.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        ekf.updateBarometer(570.4, isStandstill = true, speedMps = 0.0) // Ref-before-Baro seeds lastRefBaroAltM
+        // Standstill baro drifts +0.3 m while stationary
+        repeat(5) { i ->
+            ekf.predict(1.0, 0.0)
+            ekf.updateBarometer(570.4 + 0.06 * (i + 1), isStandstill = true, speedMps = 0.0)
+        }
+        // First post-anchor DEM sample jumps -15 m while baro only moved +0.3 m -> must gate!
+        ekf.predict(1.0, 2.0)
+        ekf.updateBarometer(570.7, isStandstill = false, speedMps = 2.0)
+        ekf.updateReferenceAltitude(425.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertTrue(
+            "Ref-before-Baro first post-anchor -15 m DEM jump must be gated (alt=${ekf.altitude})",
+            kotlin.math.abs(ekf.altitude - 440.0) < 0.5
+        )
+
+        // 3. High-precision known-location/manual calibration anchor (varRef = 0.5 <= 1.0) bypasses step gating
+        val altBeforeCalibration = ekf.altitude
+        ekf.updateReferenceAltitude(452.0, varRef = 0.5)
+        assertTrue(
+            "High-precision anchor (varRef=0.5 <= 1.0) must bypass step gating and pull altitude immediately (before=$altBeforeCalibration, after=${ekf.altitude})",
+            ekf.altitude - altBeforeCalibration > 6.0
+        )
+    }
+
+    private fun assertSymmetricSpd3x3(filter: KinematicAltitudeSlopeEkf) {
+        assertEquals("p01/p10 must be symmetric", filter.p01, filter.p10, 1e-12)
+        assertEquals("p02/p20 must be symmetric", filter.p02, filter.p20, 1e-12)
+        assertEquals("p12/p21 must be symmetric", filter.p12, filter.p21, 1e-12)
+        assertTrue("p00 must be positive (${filter.p00})", filter.p00 > 0.0)
+        assertTrue("p11 must be positive (${filter.p11})", filter.p11 > 0.0)
+        assertTrue("p22 must be positive (${filter.p22})", filter.p22 > 0.0)
+        val minor01 = filter.p00 * filter.p11 - filter.p01 * filter.p10
+        val minor02 = filter.p00 * filter.p22 - filter.p02 * filter.p20
+        val minor12 = filter.p11 * filter.p22 - filter.p12 * filter.p21
+        val det = filter.p00 * (filter.p11 * filter.p22 - filter.p12 * filter.p21) -
+            filter.p01 * (filter.p10 * filter.p22 - filter.p12 * filter.p20) +
+            filter.p02 * (filter.p10 * filter.p21 - filter.p11 * filter.p20)
+        assertTrue("2x2 minor01 must be positive ($minor01)", minor01 > 0.0)
+        assertTrue("2x2 minor02 must be positive ($minor02)", minor02 > 0.0)
+        assertTrue("2x2 minor12 must be positive ($minor12)", minor12 > 0.0)
+        assertTrue("3x3 determinant must be positive ($det)", det > 0.0)
+    }
 }
