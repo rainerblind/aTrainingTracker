@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.14  
+**Version**: 1.0.17  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 65
+**Total Requirements**: 66
 
 ---
 
@@ -1957,6 +1957,37 @@
 
 ---
 
+### REQ-HRV-047: Dynamic Outlier-Resilient Y-Axis Scaling for Workout Details rMSSD Graph (`ATT-9171`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Dynamic, outlier-resilient Y-axis bounds and clean axis labels for `TelemetryMetricGraph` (`HRV_RMSSD`) and aligned marginal histograms (refining `REQ-PER-035.1`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-047`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`
+- **Rationale**: In Workout Details, `TelemetryMetricGraph(HRV_RMSSD)` hardcodes its Y-axis upper bound to `.coerceAtLeast(100.0)`, assuming resting morning HRV scales (`30-100+ ms`). During aerobic/moderate exercise, rMSSD naturally sits at `2-15 ms` (e.g., `1.89-5.64 ms`), flattening the curve along `0` (>94% wasted vertical height) and collapsing the marginal histogram into a single bottom bin, while transient warmup or artifact spikes can similarly squash steady-state exercise traces (`ATT-9171`).
+- **Description**:
+  1. *Dynamic, Outlier-Resilient Y-Axis Bounds (`REQ-HRV-047.1`)*:
+     - `TelemetryZoneMath.calculateHrvRmssdYAxisBounds(values: List<Double>): Pair<Double, Double>` SHALL filter finite values `>= 0.0` (returning `0.0 to 5.0` when empty), evaluate nearest-rank `p95 = sorted[floor(0.95 * (N - 1)).toInt()]` when `N >= 5`, apply spike-ratio gating (`base = if (N >= 5 && p95 > 0.0 && max > p95 * 2.0) p95 else max`), compute `rawUpper = (base * 1.15).coerceAtLeast(5.0)` with finite-overflow protection for extreme `Double` inputs, and round upward to clean nice steps (`1` for `<= 10`, `2` for `<= 20`, `5` for `<= 50`, `10` for `<= 100`, `20` for `> 100`), returning `0.0 to niceCeiling` with zero clipping (`niceCeiling >= max * 1.15`) on genuine non-spike recordings.
+  2. *Artifact Exclusion, Reactive `remember` Keys & Clean Y-Axis Labels (`REQ-HRV-047.2`)*:
+     - `TelemetryMetricGraph.kt` SHALL delegate `HRV_RMSSD` bounds to `TelemetryZoneMath.calculateHrvRmssdYAxisBounds`, excluding primary samples with `hrvArtifactRate > 5.0` via `cleanPrimary.ifEmpty { validValues } + overlayValues`, and MUST include `pathPoints` and `rawValues` in the `(dataMin, dataMax)` `remember(...)` keys so bounds never go stale. `TelemetryZoneMath.formatHrvRmssdAxisLabel(value: Double, locale: Locale): String` SHALL map non-finite values and `-0.0` to `"0"`, format exact integers without decimals, and format fractional values as `%.1f`, wired into `TelemetryMetricGraph.kt` `maxLabel`/`minLabel`.
+  3. *Portrait/Landscape Rescaled Curve, Multi-Bin Histograms & Metric Invariance (`REQ-HRV-047.3`)*:
+     - Both the `HRV_RMSSD` curve/fill and portrait (`nonZonedHistogram`) + landscape (`AlignedMarginalLinearDistribution`) marginal histograms SHALL render against the dynamic `(0.0, dataMax)` domain so exercise ranges (`1.89-5.64 ms`) and spike-guarded streams (`2-6 ms` + `45 ms` spike) span vertical chart height and distribute across multiple histogram bins, while `HRV_DFA_A1`, `HEART_RATE`, `POWER`, `CADENCE`, `SPEED`, `PACE`, `SLOPE`, `ALTITUDE`, `W_PRIME_BAL`, `TelemetryMetricUtils.kt`, and `TelemetryHistogramCalculator.kt` remain untouched.
+  4. *Architecture Ceilings, Private Previews, Rule 8.5 PNG & Asset Integrity (`REQ-HRV-047.4`)*:
+     - `TelemetryMetricGraph.kt` MUST stay `<= 1,965` LoC (`ArchitectureConformanceContractTest`), any added `@Preview` MUST be `private fun` (`DeadCodeEliminationContractTest`), tests MUST perform `0` `src/main` reads (`SourceTextReadingAuditContractTest`), historical `ATT-8710_dfa_a1_zone_graph.png` and `ATT-8953_dfa_a1_inverted_yaxis.png` MUST remain untouched while capturing deterministic Light/Dark PNG strictly to `docs/engineering/walkthroughs/img/ATT-9171_rmssd_dynamic_yaxis.png`, and `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PER-035.1` (`ATT-3544`), targeting `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in `ATT-3544` (`3db57718`, `0.0 to (max * 1.15).coerceAtLeast(100.0)`); palette refreshed in `ATT-7759` (`3ce94b53`).
+  3. *Root Reason for Existing Formulation*: `ATT-3544` copied `CADENCE`'s `100.0` floor assuming resting morning HRV scales (`30-100+ ms`) rather than exercise rMSSD (`2-15 ms`).
+  4. *Preservation of Core Invariants*: Preserves `dataMin = 0.0`, non-inverted upward orientation, `> 5.0%` artifact hatching (`REQ-PER-035.2`), `50.dp`/`52.dp` alignment (`Rule 64`), `TelemetryMetricUtils.formatValue` (`"%.1f ms"`), and all other metric scaling formulas.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an exercise workout with `HRV_RMSSD` spanning `1.89-5.64 ms`, *When* `TelemetryMetricGraph(HRV_RMSSD)` renders in portrait or landscape, *Then* `dataMin = 0.0`, `dataMax = 7.0` (labels `"0"` / `"7"`), the curve occupies vertical chart height, and the marginal histogram distributes across multiple bins.
+  • *Given* steady-state `2-6 ms` exercise rMSSD with a transient warmup or artifact spike (`45 ms`), *When* Y-axis bounds are computed, *Then* artifact exclusion / P95 spike-ratio gating keeps `dataMax = 7.0` without crushing the main trace along `0`.
+  • *Given* a resting or low-intensity recording genuinely reaching `40-120 ms` (or `120-180 ms`), *When* `TelemetryMetricGraph(HRV_RMSSD)` renders, *Then* `dataMax` expands smoothly (`140.0` / `220.0`, `>= max * 1.15`) with zero clipping.
+- **Invariants**: `HRV_DFA_A1`/`HEART_RATE`/`POWER`/`CADENCE`/`SPEED`/`PACE`/`SLOPE`/`ALTITUDE`/`W_PRIME_BAL` unchanged; `TelemetryMetricGraph.kt <= 1,965` LoC; `TelemetryMetricUtils.kt` & `TelemetryHistogramCalculator.kt` untouched; `ATT-8710`/`ATT-8953` PNGs untouched; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1976,3 +2007,6 @@
 | `1.0.12` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Added `REQ-HRV-046` (`[Planned]`, `.1`–`.4`) for inverted DFA alpha 1 Y-axis (`0.20` Anaerob top -> `1.40` Aerob bottom) and reconciled `REQ-HRV-044.1` top/bottom band ordering. |
 | `1.0.13` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `REQ-HRV-046` to `[Implemented]` following Stage 4 construction (`TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`), Rule 8.5 Light/Dark PNG verification, and 100% pass across all 8 test/contract suites. |
 | `1.0.14` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `REQ-HRV-046` to `[Verified]` in Stage 5 reusing Gate 4 verified `56/56 PASS` evidence across all 8 suites (`Rule 7.5`, `0` `app/` code drift since `c152801d`), Rule 8.5 PNG certification, and governance sync atop `2d7f1489`. |
+| `1.0.15` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Added `REQ-HRV-047` (`[Planned]`, `.1`–`.4`) for dynamic, outlier-resilient `HRV_RMSSD` Y-axis scaling, artifact exclusion, reactive `remember` keys, and clean axis label formatting. |
+| `1.0.16` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `REQ-HRV-047` to `[Implemented]` following Stage 4 construction (`TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`), Rule 8.5 Light/Dark PNG verification (`ATT-9171_rmssd_dynamic_yaxis.png`), and 100% pass across all 7 unit/UI/contract test suites (`59/59`). |
+| `1.0.17` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `REQ-HRV-047` to `[Verified]` in Stage 5 reusing Gate 4 verified `59/59 PASS` evidence across all 7 suites (`Rule 7.5`, `0` `app/` code drift since `c2979843`), Rule 8.5 PNG certification, and governance sync. |

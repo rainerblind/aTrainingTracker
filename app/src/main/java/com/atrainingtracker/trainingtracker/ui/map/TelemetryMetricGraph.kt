@@ -280,6 +280,8 @@ fun TelemetryMetricGraph(
     if (validValues.isEmpty()) return
 
     val (dataMin, dataMax) = remember(
+        pathPoints,
+        rawValues,
         validValues,
         metricType,
         paceCeilingMinKm,
@@ -357,7 +359,20 @@ fun TelemetryMetricGraph(
                 0.2 to 1.4
             }
             TelemetryMetricType.HRV_RMSSD -> {
-                0.0 to (max * 1.15).coerceAtLeast(100.0)
+                // Exclude high-artifact primary samples (> 5.0%) with fallback, preserving overlays (REQ-HRV-047.2)
+                val cleanPrimary = pathPoints.indices.mapNotNull { idx ->
+                    val v = rawValues.getOrNull(idx)
+                    val rate = pathPoints[idx].hrvArtifactRate
+                    if (v != null && (rate == null || rate <= 5.0)) v else null
+                }
+                val overlayValues = activeOverlaySeries.flatMap { series ->
+                    series.points.mapNotNull { pt ->
+                        resolveOverlayValueForChart(pt.value, metricType, unit, paceCeilingMinKm)
+                    }
+                }
+                TelemetryZoneMath.calculateHrvRmssdYAxisBounds(
+                    cleanPrimary.ifEmpty { validValues } + overlayValues
+                )
             }
         }
     }
@@ -811,12 +826,14 @@ fun TelemetryMetricGraph(
             val maxLabel = when (metricType) {
                 TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMin)
                 TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMin)
+                TelemetryMetricType.HRV_RMSSD -> TelemetryZoneMath.formatHrvRmssdAxisLabel(dataMax, currentLocale)
                 TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMax).toInt()}%"
                 else -> "${dataMax.toInt()}"
             }
             val minLabel = when (metricType) {
                 TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMax)
                 TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMax)
+                TelemetryMetricType.HRV_RMSSD -> TelemetryZoneMath.formatHrvRmssdAxisLabel(dataMin, currentLocale)
                 TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMin).toInt()}%"
                 else -> "${dataMin.toInt()}"
             }
@@ -1792,6 +1809,26 @@ private fun TelemetryMetricGraphDfaA1InvertedPreview() {
             ),
             metricType = TelemetryMetricType.HRV_DFA_A1,
             currentDistance = 400.0,
+            onDistanceSelected = {},
+            enableGestures = false
+        )
+    }
+}
+
+@Preview(name = "rMSSD Dynamic Y-Axis - Light", widthDp = 360, heightDp = 120, showBackground = true)
+@Composable
+private fun TelemetryMetricGraphRmssdDynamicPreview() {
+    MaterialTheme {
+        val origin = com.google.android.gms.maps.model.LatLng(0.0, 0.0)
+        TelemetryMetricGraph(
+            pathPoints = listOf(
+                PathPoint(distance = 0.0, latLng = origin, timeSec = 0L, hrvRmssd = 5.64),
+                PathPoint(distance = 200.0, latLng = origin, timeSec = 60L, hrvRmssd = 2.85),
+                PathPoint(distance = 400.0, latLng = origin, timeSec = 120L, hrvRmssd = 1.89),
+                PathPoint(distance = 600.0, latLng = origin, timeSec = 180L, hrvRmssd = 4.20)
+            ),
+            metricType = TelemetryMetricType.HRV_RMSSD,
+            currentDistance = 200.0,
             onDistanceSelected = {},
             enableGestures = false
         )

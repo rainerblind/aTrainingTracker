@@ -155,14 +155,15 @@ class TelemetryMetricGraphHrvUiTest {
         assertTrue("Dark DFA α1 graph must render Zone3 orange", bitmapContainsColorNear(darkBmp, TTColor.Zone3))
         assertTrue("Dark DFA α1 graph must render Zone4 red", bitmapContainsColorNear(darkBmp, TTColor.Zone4))
 
-        // Preserve historical ATT-8710_dfa_a1_zone_graph.png untouched; write inverted Rule 8.5 PNG to ATT-8953 asset (TST-HRV-046.3)
+        // Preserve historical ATT-8710 & ATT-8953 PNG assets untouched; verify capture via temp file
         val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
-        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8953_dfa_a1_inverted_yaxis.png")
-        outFile.parentFile?.mkdirs()
-        FileOutputStream(outFile).use { fos ->
+        val legacyAsset = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8953_dfa_a1_inverted_yaxis.png")
+        assertTrue("Historical ATT-8953 Rule 8.5 PNG must remain present and non-empty", legacyAsset.exists() && legacyAsset.length() > 0L)
+        val tempVerifyFile = File.createTempFile("ATT-8953_verify_", ".png").apply { deleteOnExit() }
+        FileOutputStream(tempVerifyFile).use { fos ->
             compositeBmp.compress(Bitmap.CompressFormat.PNG, 100, fos)
         }
-        assertTrue("Rule 8.5 PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
+        assertTrue("In-memory/temp DFA α1 PNG render must succeed", tempVerifyFile.exists() && tempVerifyFile.length() > 0L)
     }
 
     @Test
@@ -287,6 +288,242 @@ class TelemetryMetricGraphHrvUiTest {
 
         val hrBmp = composeTestRule.onNodeWithTag("hr_solid_invariance").captureToImage().asAndroidBitmap()
         assertTrue("HEART_RATE must preserve solid CRIMSON stroke", bitmapContainsColorNear(hrBmp, TelemetryGraphColor.CRIMSON.lightColor))
+    }
+
+    private val rmssdExercisePoints = listOf(
+        PathPoint(distance = 0.0, latLng = LatLng(0.0, 0.0), timeSec = 0L, hrvRmssd = 5.64, hrvArtifactRate = 0.4),
+        PathPoint(distance = 100.0, latLng = LatLng(0.0, 0.0), timeSec = 30L, hrvRmssd = 4.82, hrvArtifactRate = 0.6),
+        PathPoint(distance = 200.0, latLng = LatLng(0.0, 0.0), timeSec = 60L, hrvRmssd = 3.45, hrvArtifactRate = 0.5),
+        PathPoint(distance = 300.0, latLng = LatLng(0.0, 0.0), timeSec = 90L, hrvRmssd = 2.60, hrvArtifactRate = 0.8),
+        PathPoint(distance = 400.0, latLng = LatLng(0.0, 0.0), timeSec = 120L, hrvRmssd = 1.89, hrvArtifactRate = 1.0),
+        PathPoint(distance = 500.0, latLng = LatLng(0.0, 0.0), timeSec = 150L, hrvRmssd = 2.35, hrvArtifactRate = 0.9),
+        PathPoint(distance = 600.0, latLng = LatLng(0.0, 0.0), timeSec = 180L, hrvRmssd = 3.10, hrvArtifactRate = 0.7),
+        PathPoint(distance = 700.0, latLng = LatLng(0.0, 0.0), timeSec = 210L, hrvRmssd = 2.15, hrvArtifactRate = 0.5),
+        PathPoint(distance = 800.0, latLng = LatLng(0.0, 0.0), timeSec = 240L, hrvRmssd = 3.85, hrvArtifactRate = 0.4),
+        PathPoint(distance = 900.0, latLng = LatLng(0.0, 0.0), timeSec = 270L, hrvRmssd = 4.95, hrvArtifactRate = 0.3)
+    )
+
+    @Test
+    fun testRmssdGraph_dynamicYAxisLightDarkPngAndSpatialSpread_TST_HRV_047() {
+        // REQ-HRV-047 (REQ-HRV-047.2, REQ-HRV-047.3, REQ-HRV-047.4) / TST-HRV-047 (TST-HRV-047.2, TST-HRV-047.3)
+        val rmssdWithSpikePoints = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(0.0, 0.0), timeSec = 0L, hrvRmssd = 45.5, hrvArtifactRate = 1.0), // transient warmup spike
+            PathPoint(distance = 100.0, latLng = LatLng(0.0, 0.0), timeSec = 30L, hrvRmssd = 5.4, hrvArtifactRate = 0.6),
+            PathPoint(distance = 200.0, latLng = LatLng(0.0, 0.0), timeSec = 60L, hrvRmssd = 3.8, hrvArtifactRate = 0.5),
+            PathPoint(distance = 300.0, latLng = LatLng(0.0, 0.0), timeSec = 90L, hrvRmssd = 62.0, hrvArtifactRate = 9.0), // high-artifact dropout (>5%)
+            PathPoint(distance = 400.0, latLng = LatLng(0.0, 0.0), timeSec = 120L, hrvRmssd = 2.4, hrvArtifactRate = 0.8),
+            PathPoint(distance = 500.0, latLng = LatLng(0.0, 0.0), timeSec = 150L, hrvRmssd = 4.9, hrvArtifactRate = 0.4),
+            PathPoint(distance = 600.0, latLng = LatLng(0.0, 0.0), timeSec = 180L, hrvRmssd = 3.1, hrvArtifactRate = 0.5),
+            PathPoint(distance = 700.0, latLng = LatLng(0.0, 0.0), timeSec = 210L, hrvRmssd = 5.8, hrvArtifactRate = 0.3),
+            PathPoint(distance = 800.0, latLng = LatLng(0.0, 0.0), timeSec = 240L, hrvRmssd = 2.9, hrvArtifactRate = 0.4),
+            PathPoint(distance = 900.0, latLng = LatLng(0.0, 0.0), timeSec = 270L, hrvRmssd = 4.5, hrvArtifactRate = 0.3)
+        )
+
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val portraitConfig = Configuration(baseConfig).apply {
+                orientation = Configuration.ORIENTATION_PORTRAIT
+            }
+            CompositionLocalProvider(LocalConfiguration provides portraitConfig) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Gray.copy(alpha = 0.2f))
+                    .padding(8.dp)
+                    .testTag("rmssd_light_dark_root")
+            ) {
+                ATrainingTrackerTheme(darkTheme = false, amoled = false, setWindowColors = false) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Light — rMSSD Exercise (1.89–5.64 ms)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        TelemetryMetricGraph(
+                            pathPoints = rmssdExercisePoints,
+                            metricType = TelemetryMetricType.HRV_RMSSD,
+                            currentDistance = 400.0,
+                            onDistanceSelected = {},
+                            enableGestures = false,
+                            modifier = Modifier.testTag("rmssd_exercise_light")
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Light — rMSSD Spike-Guarded (2–6 ms + 45 ms)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        TelemetryMetricGraph(
+                            pathPoints = rmssdWithSpikePoints,
+                            metricType = TelemetryMetricType.HRV_RMSSD,
+                            currentDistance = 500.0,
+                            onDistanceSelected = {},
+                            enableGestures = false,
+                            modifier = Modifier.testTag("rmssd_spike_light")
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                ATrainingTrackerTheme(darkTheme = true, amoled = false, setWindowColors = false) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Dark — rMSSD Exercise (1.89–5.64 ms)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        TelemetryMetricGraph(
+                            pathPoints = rmssdExercisePoints,
+                            metricType = TelemetryMetricType.HRV_RMSSD,
+                            currentDistance = 400.0,
+                            onDistanceSelected = {},
+                            enableGestures = false,
+                            modifier = Modifier.testTag("rmssd_exercise_dark")
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Dark — rMSSD Spike-Guarded (2–6 ms + 45 ms)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        TelemetryMetricGraph(
+                            pathPoints = rmssdWithSpikePoints,
+                            metricType = TelemetryMetricType.HRV_RMSSD,
+                            currentDistance = 500.0,
+                            onDistanceSelected = {},
+                            enableGestures = false,
+                            modifier = Modifier.testTag("rmssd_spike_dark")
+                        )
+                    }
+                }
+            }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val lightExerciseBmp = composeTestRule.onNodeWithTag("rmssd_exercise_light").captureToImage().asAndroidBitmap()
+        val darkExerciseBmp = composeTestRule.onNodeWithTag("rmssd_exercise_dark").captureToImage().asAndroidBitmap()
+        val lightSpikeBmp = composeTestRule.onNodeWithTag("rmssd_spike_light").captureToImage().asAndroidBitmap()
+        val compositeBmp = composeTestRule.onNodeWithTag("rmssd_light_dark_root").captureToImage().asAndroidBitmap()
+
+        val lightTeal = TelemetryGraphColor.TEAL.lightColor
+        val darkTeal = TelemetryGraphColor.TEAL.darkColor
+
+        // Exercise 1.89–5.64 ms inside 0..7 ms: curve and marginal histogram must reach upper half (15%..45%) AND mid/lower band (45%..75%)
+        val plotStart = (lightExerciseBmp.width * 0.14f).toInt()
+        val plotEnd = (lightExerciseBmp.width * 0.84f).toInt()
+        val histStart = (lightExerciseBmp.width * 0.88f).toInt()
+        val upperStart = (lightExerciseBmp.height * 0.14f).toInt()
+        val upperEnd = (lightExerciseBmp.height * 0.45f).toInt()
+        val lowerStart = (lightExerciseBmp.height * 0.45f).toInt()
+        val lowerEnd = (lightExerciseBmp.height * 0.78f).toInt()
+
+        assertTrue("Light rMSSD exercise curve must span upper band (not crushed at y=0)", bitmapRegionContainsColorNear(lightExerciseBmp, lightTeal, plotStart, plotEnd, upperStart, upperEnd, tolerance = 28))
+        assertTrue("Light rMSSD exercise curve must span lower-mid band", bitmapRegionContainsColorNear(lightExerciseBmp, lightTeal, plotStart, plotEnd, lowerStart, lowerEnd, tolerance = 28))
+        assertTrue("Light rMSSD marginal histogram must populate upper bins", bitmapRegionContainsColorNear(lightExerciseBmp, lightTeal, histStart, lightExerciseBmp.width, upperStart, upperEnd, tolerance = 28))
+        assertTrue("Light rMSSD marginal histogram must populate lower-mid bins", bitmapRegionContainsColorNear(lightExerciseBmp, lightTeal, histStart, lightExerciseBmp.width, lowerStart, lowerEnd, tolerance = 28))
+
+        assertTrue("Dark rMSSD exercise curve must span upper band", bitmapRegionContainsColorNear(darkExerciseBmp, darkTeal, plotStart, plotEnd, upperStart, upperEnd, tolerance = 28))
+        assertTrue("Dark rMSSD marginal histogram must populate upper bins", bitmapRegionContainsColorNear(darkExerciseBmp, darkTeal, histStart, darkExerciseBmp.width, upperStart, upperEnd, tolerance = 28))
+
+        // Spike-guarded steady-state curve (after spike & artifact) must still span upper band in x=[45%..84%]
+        val steadyStart = (lightSpikeBmp.width * 0.45f).toInt()
+        assertTrue("Spike-guarded steady-state rMSSD curve must span upper band", bitmapRegionContainsColorNear(lightSpikeBmp, lightTeal, steadyStart, plotEnd, upperStart, upperEnd, tolerance = 28))
+        assertTrue("Spike-guarded marginal histogram must populate upper bins", bitmapRegionContainsColorNear(lightSpikeBmp, lightTeal, histStart, lightSpikeBmp.width, upperStart, upperEnd, tolerance = 28))
+
+        // Capture Rule 8.5 PNG strictly to ATT-9171 asset
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-9171_rmssd_dynamic_yaxis.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { fos ->
+            compositeBmp.compress(Bitmap.CompressFormat.PNG, 100, fos)
+        }
+        assertTrue("ATT-9171 Rule 8.5 PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
+    }
+
+    @Test
+    fun testRmssdGraph_landscapeHistogramAndRestingScaling_TST_HRV_047() {
+        // REQ-HRV-047 (REQ-HRV-047.3) / TST-HRV-047 (TST-HRV-047.2)
+        val restingPoints = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(0.0, 0.0), timeSec = 0L, hrvRmssd = 42.0),
+            PathPoint(distance = 100.0, latLng = LatLng(0.0, 0.0), timeSec = 30L, hrvRmssd = 68.0),
+            PathPoint(distance = 200.0, latLng = LatLng(0.0, 0.0), timeSec = 60L, hrvRmssd = 94.0),
+            PathPoint(distance = 300.0, latLng = LatLng(0.0, 0.0), timeSec = 90L, hrvRmssd = 112.0),
+            PathPoint(distance = 400.0, latLng = LatLng(0.0, 0.0), timeSec = 120L, hrvRmssd = 120.0)
+        )
+
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val portraitConfig = Configuration(baseConfig).apply {
+                orientation = Configuration.ORIENTATION_PORTRAIT
+            }
+            val landscapeConfig = Configuration(baseConfig).apply {
+                orientation = Configuration.ORIENTATION_LANDSCAPE
+            }
+            ATrainingTrackerTheme(darkTheme = false, amoled = false, setWindowColors = false) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(8.dp)
+                ) {
+                    CompositionLocalProvider(LocalConfiguration provides landscapeConfig) {
+                        TelemetryMetricGraph(
+                            pathPoints = rmssdExercisePoints,
+                            metricType = TelemetryMetricType.HRV_RMSSD,
+                            currentDistance = 300.0,
+                            onDistanceSelected = {},
+                            enableGestures = false,
+                            modifier = Modifier.testTag("rmssd_exercise_landscape")
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CompositionLocalProvider(LocalConfiguration provides portraitConfig) {
+                        TelemetryMetricGraph(
+                            pathPoints = restingPoints,
+                            metricType = TelemetryMetricType.HRV_RMSSD,
+                            currentDistance = 200.0,
+                            onDistanceSelected = {},
+                            enableGestures = false,
+                            modifier = Modifier.testTag("rmssd_resting_portrait")
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        val landscapeBmp = composeTestRule.onNodeWithTag("rmssd_exercise_landscape").captureToImage().asAndroidBitmap()
+        val restingBmp = composeTestRule.onNodeWithTag("rmssd_resting_portrait").captureToImage().asAndroidBitmap()
+        val lightTeal = TelemetryGraphColor.TEAL.lightColor
+
+        // Landscape AlignedMarginalLinearDistribution (72/28 split, bars at 0.85f alpha -> tolerance 56)
+        val lHistStart = (landscapeBmp.width * 0.74f).toInt()
+        val lUpperStart = (landscapeBmp.height * 0.14f).toInt()
+        val lUpperEnd = (landscapeBmp.height * 0.45f).toInt()
+        val lLowerStart = (landscapeBmp.height * 0.45f).toInt()
+        val lLowerEnd = (landscapeBmp.height * 0.78f).toInt()
+        assertTrue("Landscape rMSSD marginal histogram must populate upper bins", bitmapRegionContainsColorNear(landscapeBmp, lightTeal, lHistStart, landscapeBmp.width, lUpperStart, lUpperEnd, tolerance = 56))
+        assertTrue("Landscape rMSSD marginal histogram must populate lower-mid bins", bitmapRegionContainsColorNear(landscapeBmp, lightTeal, lHistStart, landscapeBmp.width, lLowerStart, lLowerEnd, tolerance = 56))
+
+        // Resting 42..120 ms inside 0..140 ms spans both upper-mid (18%..48%) and lower-mid (48%..75%) cleanly
+        val rPlotStart = (restingBmp.width * 0.14f).toInt()
+        val rPlotEnd = (restingBmp.width * 0.84f).toInt()
+        val rUpperStart = (restingBmp.height * 0.18f).toInt()
+        val rUpperEnd = (restingBmp.height * 0.48f).toInt()
+        val rLowerStart = (restingBmp.height * 0.48f).toInt()
+        val rLowerEnd = (restingBmp.height * 0.78f).toInt()
+        assertTrue("Resting 42..120 ms curve must span upper band without clipping", bitmapRegionContainsColorNear(restingBmp, lightTeal, rPlotStart, rPlotEnd, rUpperStart, rUpperEnd, tolerance = 28))
+        assertTrue("Resting 42..120 ms curve must span lower-mid band", bitmapRegionContainsColorNear(restingBmp, lightTeal, rPlotStart, rPlotEnd, rLowerStart, rLowerEnd, tolerance = 28))
     }
 
     private fun bitmapContainsColorNear(bitmap: Bitmap, target: Color, tolerance: Int = 18): Boolean {

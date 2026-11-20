@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.15  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 71
+**Total Tests**: 72
 
 ---
 
@@ -1274,6 +1274,27 @@
 
 ---
 
+### TST-HRV-047: **Dynamic Outlier-Resilient rMSSD Y-Axis Bounds, Labels & Spatial Spread Verification Suite** (`ATT-9171`) [Verified]
+- **Requirement(s)**: `REQ-HRV-047` (`REQ-HRV-047.1`..`REQ-HRV-047.4`)
+- **Component**: `TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`, `TelemetryZoneMathTest.kt`, `TelemetryMetricGraphHrvUiTest.kt`, `TelemetryMetricGraphHrvTest.kt`, `TelemetryMetricGraphZoneTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9171`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *Dynamic Bounds, Outlier Guard & Axis Label Unit Tests (`TST-HRV-047.1`, `TelemetryZoneMathTest.testCalculateHrvRmssdYAxisBounds_dynamicOutlierResilientAndEdgeCases_TST_HRV_047`, `TelemetryZoneMathTest.testFormatHrvRmssdAxisLabel_cleanIntegerFractionalAndDefensive_TST_HRV_047`)*:
+     • Verify `calculateHrvRmssdYAxisBounds` across exercise `1.89-5.64 ms -> (0.0, 7.0)`, moderate `8-45 ms -> (0.0, 60.0)`, transient spike `45 ms` over `2-6 ms` steady-state (`N >= 5`) -> `(0.0, 7.0)`, genuine resting `40-120 ms -> (0.0, 140.0)` (`>= max * 1.15`) and `120-180 ms -> (0.0, 220.0)`, empty/zero/single-value `[3.2] -> (0.0, 5.0)` & `[120.0] -> (0.0, 140.0)`, `NaN`/`Infinity`/negative filtering, and `Double.MAX_VALUE` overflow safety.
+     • Verify `formatHrvRmssdAxisLabel` (`0.0 -> "0"`, `-0.0 -> "0"`, `7.0 -> "7"`, `6.5 -> "6.5"`/`"6,5"`, `NaN`/`Infinity -> "0"`).
+  2. *Portrait & Landscape Spatial Spread + Artifact/Spike Resilience Compose UI Verification (`TST-HRV-047.2`, `TelemetryMetricGraphHrvUiTest.testRmssdGraph_dynamicYAxisLightDarkPngAndSpatialSpread_TST_HRV_047`, `TelemetryMetricGraphHrvUiTest.testRmssdGraph_landscapeHistogramAndRestingScaling_TST_HRV_047`)*:
+     • Using `createComposeRule()` (`0` `src/main` reads), render `TelemetryMetricGraph(HRV_RMSSD)` for exercise `1.89-5.64 ms` and spike-contaminated (`2-6 ms` + `45 ms` warmup/artifact spike) streams in portrait (`isLandscape = false`) and landscape (`isLandscape = true` with `AlignedMarginalLinearDistribution`): assert TEAL curve and marginal histogram pixels span upper-middle/upper vertical chart regions (not flattened along bottom 10%) and populate multiple histogram bins, while resting `40-120 ms` renders cleanly with zero clipping.
+  3. *Rule 8.5 Light/Dark PNG Capture & Legacy Asset Integrity (`TST-HRV-047.3`, `TelemetryMetricGraphHrvUiTest.testRmssdGraph_dynamicYAxisLightDarkPngAndSpatialSpread_TST_HRV_047`)*:
+     • Preserve `docs/engineering/walkthroughs/img/ATT-8710_dfa_a1_zone_graph.png` and `ATT-8953_dfa_a1_inverted_yaxis.png` untouched; capture deterministic side-by-side Light & Dark PNG (`1.89-5.64 ms` exercise rMSSD) strictly to `docs/engineering/walkthroughs/img/ATT-9171_rmssd_dynamic_yaxis.png` and inspect via `read_file` against the 4-point Rule 8.5 checklist.
+  4. *Tier 1 Targeted Regression & Architecture Contracts (`TST-HRV-047.4`)*:
+     • Run `./gradlew :app:testDebugUnitTest --rerun --tests "*TelemetryZoneMathTest" --tests "*TelemetryMetricGraphHrvUiTest" --tests "*TelemetryMetricGraphHrvTest" --tests "*TelemetryMetricGraphZoneTest" --tests "*ArchitectureConformanceContractTest" --tests "*DeadCodeEliminationContractTest" --tests "*SourceTextReadingAuditContractTest"` verifying `TelemetryMetricGraph.kt <= 1,965` LoC, `private fun` `@Preview`s, `0` `src/main` reads, and zero regressions on `HRV_DFA_A1` and `HEART_RATE`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1294,3 +1315,6 @@
 | `1.0.13` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Added `TST-HRV-046` (`[Planned]`, `.1`–`.5`) for inverted DFA alpha 1 Y-axis unit math, portrait+landscape spatial pixel verification, Rule 8.5 Light/Dark PNG, and architecture contracts; reconciled `TST-HRV-044.1` top/bottom band order. |
 | `1.0.14` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `TST-HRV-046` to `[Implemented]` with 100% PASS across all 8 suites (`56/56`) and Rule 8.5 Light/Dark PNG (`ATT-8953_dfa_a1_inverted_yaxis.png`) inspected. |
 | `1.0.15` | 2026-11-19 | Lane B Author (`ATT-8953`, `--as agent1`) | `ATT-8953` | Promoted `TST-HRV-046` to `[Verified]` in Stage 5 reusing Gate 4 verified `56/56 PASS` evidence across all 8 suites (`Rule 7.5`, `0` `app/` code drift since `c152801d`), Rule 8.5 PNG certification, and governance sync atop `2d7f1489`. |
+| `1.0.16` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Added `TST-HRV-047` (`[Planned]`, `.1`–`.4`) covering dynamic rMSSD bounds/outlier guard/label unit tests, portrait & landscape spatial spread, Rule 8.5 Light/Dark PNG, and architecture contracts. |
+| `1.0.17` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `TST-HRV-047` to `[Implemented]` with 100% PASS across all 7 targeted/contract suites (`59/59`) and Rule 8.5 Light/Dark PNG (`ATT-9171_rmssd_dynamic_yaxis.png`) inspected. |
+| `1.0.18` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `TST-HRV-047` to `[Verified]` in Stage 5 reusing Gate 4 verified `59/59 PASS` evidence across all 7 suites (`Rule 7.5`, `0` `app/` code drift since `c2979843`), Rule 8.5 PNG certification, and governance sync. |
