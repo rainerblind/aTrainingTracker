@@ -50,6 +50,7 @@ import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHrData
 import com.polar.sdk.api.model.PolarPpiData
 import com.polar.sdk.api.model.PolarSensorSetting
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -2288,6 +2289,426 @@ class PolarOnlineStreamingBridgeTest {
             testScheduler.runCurrent()
             assertEquals("Stale gen2 tick after HR packet must not re-subscribe HR stream", 2, hrFlows.size)
             assertNull("Stale gen2 tick must not leak a follow-up watchdog job", bridge.getSilentHrWatchdogJobForTesting())
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-120.2 / TST-SET-122.2
+    @Test
+    fun testOfflineGattYield_pausesReconnectSearchTimeoutAndSilentWatchdogThenResumes_TST_SET_122_2() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityMac = "24:AC:AC:24:82:56"
+        val verityId = "24825632"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true
+        )
+        val h10Mac = "AA:BB:CC:DD:EE:88"
+        val h10Id = "AABBCC88"
+        val h10DevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, h10Mac, "Polar H10 $h10Id", "Polar Electro", 90, true
+        )
+
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val verityBridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityDevId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> sharedApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+        verityBridge.silentHrWatchdogTimeoutMs = 1_000L
+
+        val h10Bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10DevId,
+            macAddress = h10Mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> sharedApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+
+        try {
+            // Establish session then disconnect so verityBridge enters backoff reconnect loop
+            verityBridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            val verityInfo = PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true)
+            mux.deviceConnected(verityInfo)
+            assertTrue(verityBridge.isReceivingData())
+            mux.deviceDisconnected(verityInfo)
+            assertFalse(verityBridge.isReceivingData())
+            assertNotNull("Disconnected mid-session bridge must arm reconnectJob", verityBridge.getReconnectJobForTesting())
+
+            // Start sibling H10 searching too to prove sibling isolation
+            h10Bridge.startSearching()
+            assertTrue(h10Bridge.isSearching)
+
+            clearMocks(sharedApi, answers = false, recordedCalls = true)
+
+            // Hold offline GATT yield lease for Verity Sense across > 15s (exceeding 1s reconnect, 5s search timeout, and 1s silent watchdog)
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                assertTrue(verityBridge.isOfflineGattYielded())
+                assertFalse("Sibling H10 must NOT be yielded", h10Bridge.isOfflineGattYielded())
+                assertNull("Offline yield must cancel verity reconnectJob", verityBridge.getReconnectJobForTesting())
+                assertNull("Offline yield must cancel verity searchTimeoutJob", verityBridge.getSearchTimeoutJobForTesting())
+                assertNull("Offline yield must cancel verity silentHrWatchdogJob", verityBridge.getSilentHrWatchdogJobForTesting())
+
+                // Calling startSearching while yielded must NOT invoke connectToDevice
+                verityBridge.startSearching()
+                testScheduler.advanceTimeBy(15_000L)
+                testScheduler.runCurrent()
+
+                verify(exactly = 0) { sharedApi.connectToDevice(verityId) }
+                verify(exactly = 0) { sharedApi.disconnectFromDevice(verityId) }
+                verify(exactly = 0) { sharedApi.disconnectFromDevice(verityMac) }
+                // Sibling H10 was unaffected and timed out at 5s normally
+                verify(atLeast = 1) { sharedApi.disconnectFromDevice(h10Id) }
+            }
+
+            // After lease releases, verityBridge cleanly resumes searching/connecting
+            assertFalse(verityBridge.isOfflineGattYielded())
+            testScheduler.runCurrent()
+            verify(atLeast = 1) { sharedApi.connectToDevice(verityId) }
+
+            // Also verify connected silent bridge defers silentHrWatchdog during yield and re-arms on release
+            mux.deviceConnected(verityInfo)
+            testScheduler.runCurrent()
+            assertNotNull(verityBridge.getSilentHrWatchdogJobForTesting())
+            val genBeforeYield = verityBridge.getSilentHrWatchdogGenerationForTesting()
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                assertNull("Silent HR watchdog must be cancelled during offline yield", verityBridge.getSilentHrWatchdogJobForTesting())
+                testScheduler.advanceTimeBy(5_000L)
+                testScheduler.runCurrent()
+                assertTrue("Connected bridge must stay connected without watchdog teardown during yield", verityBridge.isReceivingData())
+            }
+            assertTrue("Watchdog generation must advance cleanly across yield", verityBridge.getSilentHrWatchdogGenerationForTesting() > genBeforeYield)
+            assertNotNull("Silent HR watchdog must re-arm on resume when still silent", verityBridge.getSilentHrWatchdogJobForTesting())
+        } finally {
+            verityBridge.shutDown()
+            h10Bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-120.2 / TST-SET-122.2
+    @Test
+    fun testOfflineGattYield_whenSharedSessionConnectedDuringBackfill_syncsOpenSessionOnResume_TST_SET_122_2() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityMac = "24:AC:AC:24:82:59"
+        val verityId = "24825639"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true
+        )
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        every { sharedApi.isFeatureReady(verityId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR) } returns false
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityDevId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> sharedApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+
+        try {
+            bridge.startSearching()
+            assertTrue(bridge.isSearching)
+            clearMocks(sharedApi, answers = false, recordedCalls = true)
+
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                // Simulate offline backfill establishing SESSION_OPEN with FEATURE_HR ready on sharedApi
+                every { sharedApi.isFeatureReady(verityId, PolarBleApi.PolarBleSdkFeature.FEATURE_HR) } returns true
+            }
+
+            testScheduler.runCurrent()
+            assertTrue("Resume must sync already-open shared session", bridge.isReceivingData())
+            assertNull("Synced open session must not schedule redundant reconnect", bridge.getReconnectJobForTesting())
+            verify(exactly = 0) { sharedApi.connectToDevice(verityId) }
+            verify(atLeast = 1) { sharedApi.startHrStreaming(verityId) }
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-120.3 / TST-SET-122.3
+    @Test
+    fun testDeviceConnecting_extendsSearchTimeoutOnceToHandshakeGraceAndPreserves5sAbsentTimeout_TST_SET_122_3() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityMac = "24:AC:AC:24:82:60"
+        val verityId = "24825640"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityDevId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+        bridge.connectingHandshakeTimeoutMs = 15_000L
+
+        try {
+            // 1. Live handshake: deviceConnecting at t=1_000 ms extends timeout to 15_000 ms so t=5_001 ms does NOT tear down GATT
+            bridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            val info = PolarDeviceInfo(verityId, verityMac, -55, "Polar Sense $verityId", true)
+
+            testScheduler.advanceTimeBy(1_000L)
+            testScheduler.runCurrent()
+            mux.deviceConnecting(info)
+
+            testScheduler.advanceTimeBy(4_500L) // t = 5_500 ms (> 5s scan timeout, within 15s handshake grace)
+            testScheduler.runCurrent()
+            assertTrue("Live handshake must stay searching past 5s once deviceConnecting fired", bridge.isSearching)
+            verify(exactly = 0) { mockApi.disconnectFromDevice(any()) }
+
+            // deviceConnected at t = 8_000 ms completes handshake cleanly
+            testScheduler.advanceTimeBy(2_500L)
+            mux.deviceConnected(info)
+            testScheduler.runCurrent()
+            assertTrue(bridge.isReceivingData())
+            assertNull(bridge.getSearchTimeoutJobForTesting())
+            verify(exactly = 0) { mockApi.disconnectFromDevice(any()) }
+
+            // 2. Absent sensor: no deviceConnecting -> still times out promptly at 5_000 ms (REQ-CON-045.1)
+            mux.deviceDisconnected(info)
+            bridge.startSearching()
+            testScheduler.advanceTimeBy(5_001L)
+            testScheduler.runCurrent()
+            assertFalse("Absent sensor without deviceConnecting must still time out at 5s", bridge.isSearching)
+            verify(atLeast = 1) { mockApi.disconnectFromDevice(verityId) }
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-120.3 / TST-SET-122.3
+    @Test
+    fun testDeviceConnecting_ignoresSiblingAndDuplicateCallbacksAndTimesOutAfterHandshakeGrace_TST_SET_122_3() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityMac = "24:AC:AC:24:82:61"
+        val verityId = "24825641"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityDevId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+        bridge.connectingHandshakeTimeoutMs = 15_000L
+
+        try {
+            // 1. Sibling deviceConnecting must NOT extend this bridge's 5s timeout
+            bridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            mux.deviceConnecting(PolarDeviceInfo("DEADBEEF", "11:22:33:44:55:66", -60, "Polar H10 DEADBEEF", true))
+            testScheduler.advanceTimeBy(5_001L)
+            testScheduler.runCurrent()
+            assertFalse("Sibling deviceConnecting must not extend search timeout", bridge.isSearching)
+            verify(exactly = 1) { mockApi.disconnectFromDevice(verityId) }
+
+            // 2. Duplicate deviceConnecting callbacks extend AT MOST ONCE per attempt, then bounded 15s grace times out cleanly
+            clearMocks(mockApi, answers = false, recordedCalls = true)
+            val targetInfo = PolarDeviceInfo(verityId, verityMac, -55, "Polar Sense $verityId", true)
+            bridge.startSearching()
+            testScheduler.advanceTimeBy(1_000L)
+            mux.deviceConnecting(targetInfo) // arms 15_000 ms deadline at t = 16_000 ms
+
+            // Repeated deviceConnecting at t = 10_000 ms must NOT reset the 15_000 ms deadline
+            testScheduler.advanceTimeBy(9_000L)
+            mux.deviceConnecting(targetInfo)
+            testScheduler.runCurrent()
+            assertTrue(bridge.isSearching)
+
+            // Advancing 6_001 ms (to t = 16_001 ms) must fire bounded timeout despite the duplicate callback at t = 10s
+            testScheduler.advanceTimeBy(6_001L)
+            testScheduler.runCurrent()
+            assertFalse("Stalled handshake must time out after single 15s grace window", bridge.isSearching)
+            verify(exactly = 1) { mockApi.disconnectFromDevice(verityId) }
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-120.2 / TST-SET-122.2
+    @Test
+    fun testOfflineGattYield_deviceConnectedDuringYield_armsSilentWatchdogOnResumeUnlessDisarmedByHr_TST_SET_122_2() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityMac = "24:AC:AC:24:82:62"
+        val verityId = "24825642"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true
+        )
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityDevId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> sharedApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+        bridge.silentHrWatchdogTimeoutMs = 1_000L
+
+        try {
+            bridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            val info = PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true)
+
+            // 1. Sensor connects DURING offline yield (no HR packet yet) -> watchdog timer deferred during yield, armed on resume
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                mux.deviceConnected(info)
+                testScheduler.runCurrent()
+                assertTrue(bridge.isReceivingData())
+                assertNull("Silent HR watchdog timer must stay deferred while yielded", bridge.getSilentHrWatchdogJobForTesting())
+            }
+            assertNotNull("Silent HR watchdog timer MUST arm after yield release when still silent", bridge.getSilentHrWatchdogJobForTesting())
+
+            // 2. Disconnect, reconnect DURING yield, AND receive HR packet during yield -> stays disarmed (null) on resume
+            mux.deviceDisconnected(info)
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                mux.deviceConnected(info)
+                bridge.processHrData(
+                    PolarHrData(listOf(PolarHrData.PolarHrSample(74, 74, 0, emptyList(), emptyList(), false, true, true))),
+                    100_000L
+                )
+                testScheduler.runCurrent()
+            }
+            assertNull("HR packet during yield must disarm watchdog so resume does NOT re-arm it", bridge.getSilentHrWatchdogJobForTesting())
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-120.2 / TST-SET-122.2
+    @Test
+    fun testOfflineGattYield_stalePauseCallDoesNotWedgeAndShouldKeepAliveInWaitingForStartMode_TST_SET_122_2() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val verityMac = "24:AC:AC:24:82:63"
+        val verityId = "24825643"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true
+        )
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = verityDevId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> sharedApi },
+            searchTimeoutMsProvider = { 5_000L }
+        )
+
+        try {
+            assertFalse("Idle WAITING_FOR_START bridge before yield must not keep alive", bridge.shouldKeepAliveOnSearchTimeout())
+
+            // Inside offline yield in WAITING_FOR_START mode, shouldKeepAliveOnSearchTimeout() MUST be true
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                assertTrue(bridge.isOfflineGattYielded())
+                assertTrue(
+                    "Yielded bridge in WAITING_FOR_START mode must keep alive so DeviceManager does not shutDown() mid-backfill",
+                    bridge.shouldKeepAliveOnSearchTimeout()
+                )
+            }
+
+            assertFalse(bridge.isOfflineGattYielded())
+            assertFalse(bridge.shouldKeepAliveOnSearchTimeout())
+
+            // Stale out-of-order pauseForOfflineSync() when no lease is active must NOT wedge bridge or cancel active search
+            bridge.startSearching()
+            assertNotNull(bridge.getSearchTimeoutJobForTesting())
+            bridge.pauseForOfflineSync()
+            assertFalse("Stale pauseForOfflineSync() must NOT wedge isOfflineGattYielded()", bridge.isOfflineGattYielded())
+            assertNotNull("Stale pauseForOfflineSync() must NOT cancel active searchTimeoutJob", bridge.getSearchTimeoutJobForTesting())
+            assertTrue(bridge.isSearching)
         } finally {
             bridge.shutDown()
         }

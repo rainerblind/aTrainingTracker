@@ -1,0 +1,35 @@
+# Stage 3 Implementation Plan: ATT-9175 - Lease-Token Offline Yield Pause/Resume & `deviceConnecting` Handshake Grace
+
+**Ticket**: [ATT-9175](https://rainerblind.atlassian.net/browse/ATT-9175) | **Parent Epic**: [ATT-5910](https://rainerblind.atlassian.net/browse/ATT-5910) | **Target Release**: `V5.0.0`  
+**Requirements / Tests**: `REQ-SET-120` (`REQ-SET-120.1`..`.4`) / `TST-SET-122` (`TST-SET-122.1`..`.4`)  
+**UI / Localization Consistency**: `N/A - no UI changes, no new or modified strings, zero R.jar invalidation`  
+**SQLite / Schema Impact**: `None` (zero DB/schema/migration edits)  
+**Date**: 2026-11-20 | **Author**: AI Agent 1 (`--as agent1`)
+
+---
+
+## 1. Architecture, Threading & Lock DAG (`SWE.2`)
+- **Strict Lock Hierarchy (Deadlock-Free DAG)**:
+  - `PolarOfflineGattCoordinator.offlineYieldLock` is a pure leaf lock protecting only `activeOfflineYieldLeases` (exact lease-token objects) and `offlineYieldListeners`. It NEVER acquires `apiLock` and NEVER invokes listener callbacks while held; matching listeners are snapshotted under `offlineYieldLock` and dispatched strictly outside all coordinator locks.
+  - `PolarOnlineStreamingBridge` keeps `reconnectLock`, `searchTimeoutLock`, and `silentHrWatchdogLock` completely disjoint (no lock nesting across them; `Job.cancel()` always executes outside locks; coroutine entry/finally clears job fields strictly when `coroutineContext[Job] === currentJob`).
+- **Monolith & Lane A Isolation Budgets**:
+  - `PolarOfflineGattCoordinator.kt`: `1,160 -> ~1,225 / 1,500` LoC (`+~65` LoC).
+  - `PolarOnlineStreamingBridge.kt`: `1,382 -> <= 1,467 / 1,500` LoC (`<= +85` net LoC; constructor & public JVM signatures unchanged for `InterfaceSignatureDriftContractTest`).
+  - **Strict `0` Edits**: `PolarVeritySenseOfflineController.kt` (Lane A `ATT-9154`), `PolarH10OfflineController.kt`, `DeviceManager.java` (`1,707/1,708`), `TrackerService.java`, `DevicesDatabaseManager.java`, `docs/tests/tst_tracking_cockpit.md`, and `strings*.xml`.
+
+---
+
+## 2. Bite-Sized Atomic Implementation Steps
+| Step | Target File(s) | Requirement / Test | Atomic Implementation Scope |
+| :---: | :--- | :--- | :--- |
+| **1** | `PolarOfflineGattCoordinator.kt` | `REQ-SET-120.1` / `TST-SET-122.1` | Add `internal interface OfflineYieldListener`, lease-token `OfflineYieldLease(identifiers)`, and leaf `offlineYieldLock` guarding `activeOfflineYieldLeases` + `offlineYieldListeners`. Add `registerOfflineYieldListener()`/`unregisterOfflineYieldListener()` and `isOfflineGattYieldActive(vararg ids)` evaluating live `matchesDeviceIdentifier()`. In `withGattYieldAndPolarApi()`, resolve `DeviceManager` safely via `deviceManagerProvider`, acquire lease token on entry, release exact token in `finally` (normal/timeout/exception/`CancellationException`), and dispatch `onOfflineYieldStarted()`/`onOfflineYieldFinished()` to snapshotted matching listeners strictly outside `offlineYieldLock` & `apiLock` (preserving sibling Polar isolation `REQ-SET-118.3`). Clear lease/listener state in `resetForTesting()`. |
+| **2** | `PolarOnlineStreamingBridge.kt` | `REQ-SET-120.2`, `REQ-SET-120.3` / `TST-SET-122.2`, `TST-SET-122.3` | Keep net additions `<= 85` LoC (`<= 1,467/1,500`) with zero constructor/public JVM signature changes. Register/unregister `OfflineYieldListener` in `init`/`shutDown()` (pausing immediately if a matching lease is already active). Add `pauseForOfflineSync()`/`resumeAfterOfflineSync()` cancelling `reconnectJob`, `searchTimeoutJob`, and `silentHrWatchdogJob` cleanly (preserving generation tokens & zero leaked timers), gating `startSearching()` (advancing search queue via `notifyStopSearching(false)` while flagging resume), `scheduleBackoffReconnect()` (pre- and post-delay), `onSearchTimeout()`, `onSilentHrWatchdogTimeout()`, `deviceDisconnected()`, and `blePowerStateChanged(true)` on `!isOfflineGattYielded()`. On final release (`!isShutDown`), sync an already-open shared session via `syncAlreadyOpenSessionIfReady(api)` or re-arm watchdog / resume searching/backoff reconnect. Add `searchTimeoutLock` + monotonic `searchAttemptGeneration` + identity-checked cleanup (`coroutineContext[Job] === searchTimeoutJob`), and override `sdkCallback.deviceConnecting(polarDeviceInfo)` (filtered via `matchesDeviceInfo`) to extend `searchTimeoutJob` at most once per attempt to `maxOf(searchTimeoutMsProvider(), connectingHandshakeTimeoutMs)` (`15_000L` default, `@VisibleForTesting internal var`). |
+| **3** | `docs/architecture/detailed_design/my_btle_device.md`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarOnlineStreamingBridgeTest.kt` | `REQ-SET-120.1`..`.4` / `TST-SET-122.1`..`.4` | Update SWE.3 interaction table in `my_btle_device.md` to document symmetric `PolarOfflineGattCoordinator` lease-token yield for `PolarOnlineStreamingBridge` (`REQ-PRO-114`). Add 6 deterministic unit tests (`TST-SET-122.1`..`.3`): alias-scoped pause/resume & sibling isolation, nested-lease + exception/`CancellationException` `finally` recovery, offline yield cancelling reconnect/search-timeout/silent-HR-watchdog + post-yield resume, post-yield `syncAlreadyOpenSessionIfReady`, `deviceConnecting` single-shot `15 s` grace vs `5 s` absent-sensor timeout, and sibling/duplicate `deviceConnecting` immunity + bounded `15 s` stalled-handshake timeout. |
+| **4** | `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, `docs/requirements.md`, `docs/tests.md` | `REQ-SET-120.4` / `TST-SET-122.4` | Promote `REQ-SET-120` & `TST-SET-122` to `[Implemented]` with verbatim `TestClass#testMethod` citations; run `--sync-indexes`, `verify_requirement_governance.py`, `4/4` Python safety linters, and locked incremental Gradle (`--rerun`, NO `--rerun-tasks`, NO `-PstampGitHash=true`) across all Polar/BLE/Contract suites + `:app:assembleDebug` (`0` new production Kotlin warnings). |
+
+---
+
+## 3. Non-Negotiable Invariants & Verification Command Plan
+- **Invariants**: `5 s` absent-sensor timeout (`REQ-CON-045.1`); sibling Polar isolation (`REQ-SET-118.3`); `PolarOnlineStreamingBridge` constructor & public JVM signatures unchanged (`InterfaceSignatureDriftContractTest`); `ATT-9155` monotonic `silentHrWatchdog` generation & lock safety; `0` edits to `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, `DeviceManager.java`, `TrackerService.java`, `DevicesDatabaseManager.java`, `docs/tests/tst_tracking_cockpit.md`, and `strings*.xml`; `0` new `src/main` reads (`SourceTextReadingAuditContractTest`).
+- **Stage 4 Targeted Test Command** (under `parallel_sprint_lock.py`, `--rerun`):
+  - `PolarOfflineGattCoordinatorCoexistenceTest`, `PolarOnlineStreamingBridgeTest`, `PolarVeritySenseOfflineControllerTest`, `PolarH10OfflineControllerTest`, `PolarPmdStreamCoordinatorTest`, `BleHrmSilentConnectionWatchdogTest`, `PolarRetrySyncCoordinatorTest`, plus 7 Contract suites (`ArchitectureConformance`, `InterfaceSignatureDrift`, `DeadCodeElimination`, `DetailedDesignParity`, `SourceTextReadingAudit`, `SystemDataExchangeRequirements`, `SystemLiveTrackingRequirements`) + `:app:assembleDebug`.

@@ -89,7 +89,19 @@ object PolarOfflineGattCoordinator {
         val callback: PolarBleApiCallbackProvider
     )
 
+    internal interface OfflineYieldListener {
+        fun matchesDevice(polarId: String?, macAddress: String?): Boolean
+        fun onOfflineYieldStarted()
+        fun onOfflineYieldFinished()
+    }
+
+    private class OfflineYieldLease(
+        val polarId: String,
+        val macAddress: String?
+    )
+
     private val apiLock = Any()
+    private val offlineYieldLock = Any()
 
     @Volatile
     private var sharedApi: PolarBleApi? = null
@@ -107,6 +119,9 @@ object PolarOfflineGattCoordinator {
     private val deviceAliases = ConcurrentHashMap<String, MutableSet<String>>()
     private val connectedDeviceIds = ConcurrentHashMap.newKeySet<String>()
     private val activeAccOwners = ConcurrentHashMap<String, String>()
+    private val activeOfflineYieldLeases = mutableListOf<OfflineYieldLease>()
+    private val offlineYieldListeners = mutableListOf<OfflineYieldListener>()
+    private val pausedOfflineYieldListeners = mutableSetOf<OfflineYieldListener>()
 
     private fun normalizeId(polarId: String): String = polarId.trim().uppercase(Locale.ROOT)
 
@@ -705,6 +720,100 @@ object PolarOfflineGattCoordinator {
         }
     }
 
+    /**
+     * Registers a live Polar streaming bridge listener to receive alias-scoped offline GATT yield
+     * pause/resume transitions strictly outside coordinator locks (`ATT-9175`, `REQ-SET-120.1`).
+     */
+    internal fun registerOfflineYieldListener(listener: OfflineYieldListener) {
+        val shouldPause = synchronized(offlineYieldLock) {
+            if (!offlineYieldListeners.contains(listener)) {
+                offlineYieldListeners.add(listener)
+            }
+            val matchesActive = activeOfflineYieldLeases.any { lease ->
+                listener.matchesDevice(lease.polarId, lease.macAddress)
+            }
+            matchesActive && pausedOfflineYieldListeners.add(listener)
+        }
+        if (shouldPause) {
+            try {
+                listener.onOfflineYieldStarted()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Error notifying newly registered offline yield listener: ${t.message}")
+            }
+        }
+    }
+
+    /**
+     * Unregisters a live Polar streaming bridge offline GATT yield listener on shutdown (`REQ-SET-120.1`).
+     */
+    internal fun unregisterOfflineYieldListener(listener: OfflineYieldListener) {
+        synchronized(offlineYieldLock) {
+            offlineYieldListeners.remove(listener)
+            pausedOfflineYieldListeners.remove(listener)
+        }
+    }
+
+    /**
+     * Returns `true` if any active offline GATT yield lease matches any of [identifiers] via
+     * bidirectional `MAC` <-> `8-hex Polar ID` aliases (`ATT-9175`, `REQ-SET-120.1`).
+     */
+    @JvmStatic
+    fun isOfflineGattYieldActive(vararg identifiers: String?): Boolean {
+        val targets = identifiers.mapNotNull { id ->
+            id?.let(::normalizeId)?.takeIf { it.isNotEmpty() }
+        }
+        if (targets.isEmpty()) return false
+        return synchronized(offlineYieldLock) {
+            activeOfflineYieldLeases.any { lease ->
+                targets.any { target ->
+                    matchesDeviceIdentifier(target, lease.polarId) ||
+                        matchesDeviceIdentifier(target, lease.macAddress)
+                }
+            }
+        }
+    }
+
+    private fun acquireOfflineGattYieldLease(polarId: String, macAddress: String?): OfflineYieldLease {
+        registerDeviceAliases(polarId, macAddress)
+        val lease = OfflineYieldLease(polarId, macAddress)
+        val listenersToPause = synchronized(offlineYieldLock) {
+            activeOfflineYieldLeases.add(lease)
+            offlineYieldListeners.filter { listener ->
+                val matchesAny = activeOfflineYieldLeases.any { active ->
+                    listener.matchesDevice(active.polarId, active.macAddress)
+                }
+                matchesAny && pausedOfflineYieldListeners.add(listener)
+            }
+        }
+        for (listener in listenersToPause) {
+            try {
+                listener.onOfflineYieldStarted()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Error pausing bridge listener during offline GATT yield ($polarId): ${t.message}")
+            }
+        }
+        return lease
+    }
+
+    private fun releaseOfflineGattYieldLease(lease: OfflineYieldLease) {
+        val listenersToResume = synchronized(offlineYieldLock) {
+            activeOfflineYieldLeases.remove(lease)
+            offlineYieldListeners.filter { listener ->
+                val stillMatched = activeOfflineYieldLeases.any { active ->
+                    listener.matchesDevice(active.polarId, active.macAddress)
+                }
+                !stillMatched && pausedOfflineYieldListeners.remove(listener)
+            }
+        }
+        for (listener in listenersToResume) {
+            try {
+                listener.onOfflineYieldFinished()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Error resuming bridge listener after offline GATT yield (${lease.polarId}): ${t.message}")
+            }
+        }
+    }
+
     @VisibleForTesting
     fun getActiveLeaseCountForTesting(): Int = synchronized(apiLock) { activeLeaseCount }
 
@@ -720,6 +829,11 @@ object PolarOfflineGattCoordinator {
             sharedApi = null
             activeLeaseCount = 0
             apiFactoryForTesting = null
+        }
+        synchronized(offlineYieldLock) {
+            activeOfflineYieldLeases.clear()
+            offlineYieldListeners.clear()
+            pausedOfflineYieldListeners.clear()
         }
         deviceManagerProvider = { BANALService.getDeviceManager() }
         activeSessions.clear()
@@ -1076,7 +1190,11 @@ object PolarOfflineGattCoordinator {
         block: suspend (PolarBleApi) -> T
     ): T? {
         registerDeviceAliases(polarId, macAddress)
-        val deviceManager = BANALService.getDeviceManager()
+        val deviceManager = try {
+            deviceManagerProvider.invoke()
+        } catch (_: Throwable) {
+            null
+        }
         val btleDevice = if (!macAddress.isNullOrEmpty()) {
             deviceManager?.getBtleDeviceByAddress(macAddress)
         } else {
@@ -1085,8 +1203,9 @@ object PolarOfflineGattCoordinator {
 
         val activeBridgeSession = if (apiOverride == null) getActiveSession(polarId) else null
         val isSharedPersistentSession = activeBridgeSession != null
-        btleDevice?.pauseGattOperations()
+        val yieldLease = acquireOfflineGattYieldLease(polarId, macAddress)
         return try {
+            btleDevice?.pauseGattOperations()
             withTimeoutOrNull(timeoutMs) {
                 var acquiredSharedApi = false
                 val api = when {
@@ -1120,7 +1239,11 @@ object PolarOfflineGattCoordinator {
                 }
             }
         } finally {
-            btleDevice?.resumeGattOperations()
+            try {
+                btleDevice?.resumeGattOperations()
+            } finally {
+                releaseOfflineGattYieldLease(yieldLease)
+            }
         }
     }
 

@@ -35,6 +35,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -374,5 +375,212 @@ class PolarOfflineGattCoordinatorCoexistenceTest {
         assertTrue(PolarOfflineGattCoordinator.isDeviceConnected(h10Id))
         assertNotNull(PolarOfflineGattCoordinator.getActiveSession(h10Id))
         assertEquals(PolarOfflineGattCoordinator.ACC_OWNER_ONLINE, PolarOfflineGattCoordinator.getAccChannelOwner(h10Id))
+    }
+
+    // REQ-SET-120.1 / TST-SET-122.1
+    @Test
+    fun testWithGattYieldAndPolarApi_pausesAndResumesTargetAliasesWithoutHarmingSibling_TST_SET_122_1() = runBlocking {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val verityMac = "24:AC:AC:24:82:56"
+        val verityId = "24825632"
+        val h10Mac = "AA:BB:CC:DD:EE:01"
+        val h10Id = "1C3B2421"
+        PolarOfflineGattCoordinator.registerDeviceAliases(verityId, verityMac)
+        PolarOfflineGattCoordinator.registerDeviceAliases(h10Id, h10Mac)
+
+        var verityPauseCount = 0
+        var verityResumeCount = 0
+        var h10PauseCount = 0
+        var h10ResumeCount = 0
+        var yieldActiveInsideCallback = false
+
+        val verityListener = object : PolarOfflineGattCoordinator.OfflineYieldListener {
+            override fun matchesDevice(polarId: String?, macAddress: String?): Boolean =
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier(verityId, polarId) ||
+                    PolarOfflineGattCoordinator.matchesDeviceIdentifier(verityMac, macAddress)
+
+            override fun onOfflineYieldStarted() {
+                verityPauseCount++
+                // Re-entering isOfflineGattYieldActive() inside callback proves callback executes outside offlineYieldLock
+                yieldActiveInsideCallback = PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityMac)
+            }
+
+            override fun onOfflineYieldFinished() {
+                verityResumeCount++
+            }
+        }
+        val h10Listener = object : PolarOfflineGattCoordinator.OfflineYieldListener {
+            override fun matchesDevice(polarId: String?, macAddress: String?): Boolean =
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier(h10Id, polarId) ||
+                    PolarOfflineGattCoordinator.matchesDeviceIdentifier(h10Mac, macAddress)
+
+            override fun onOfflineYieldStarted() {
+                h10PauseCount++
+            }
+
+            override fun onOfflineYieldFinished() {
+                h10ResumeCount++
+            }
+        }
+
+        PolarOfflineGattCoordinator.registerOfflineYieldListener(verityListener)
+        PolarOfflineGattCoordinator.registerOfflineYieldListener(h10Listener)
+
+        val result = PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+            context = context,
+            macAddress = verityMac,
+            polarId = verityId,
+            features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+            timeoutMs = 5_000L
+        ) {
+            assertTrue(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityId))
+            assertTrue(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityMac))
+            assertFalse(PolarOfflineGattCoordinator.isOfflineGattYieldActive(h10Id))
+            assertFalse(PolarOfflineGattCoordinator.isOfflineGattYieldActive(h10Mac))
+            assertEquals(1, verityPauseCount)
+            assertEquals(0, verityResumeCount)
+            "ok"
+        }
+
+        assertEquals("ok", result)
+        assertTrue(yieldActiveInsideCallback)
+        assertFalse(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityId))
+        assertFalse(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityMac))
+        assertEquals(1, verityPauseCount)
+        assertEquals(1, verityResumeCount)
+        assertEquals(0, h10PauseCount)
+        assertEquals(0, h10ResumeCount)
+    }
+
+    // REQ-SET-120.1 / TST-SET-122.1
+    @Test
+    fun testWithGattYieldAndPolarApi_nestedLeasesAndExceptionOrCancellationReleaseCleanly_TST_SET_122_1() = runBlocking {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val verityMac = "24:AC:AC:24:82:56"
+        val verityId = "24825632"
+        var pauseCount = 0
+        var resumeCount = 0
+
+        val listener = object : PolarOfflineGattCoordinator.OfflineYieldListener {
+            override fun matchesDevice(polarId: String?, macAddress: String?): Boolean =
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier(verityId, polarId) ||
+                    PolarOfflineGattCoordinator.matchesDeviceIdentifier(verityMac, macAddress)
+
+            override fun onOfflineYieldStarted() {
+                pauseCount++
+            }
+
+            override fun onOfflineYieldFinished() {
+                resumeCount++
+            }
+        }
+        PolarOfflineGattCoordinator.registerOfflineYieldListener(listener)
+
+        // Nested leases: pause fires strictly on 0->1, resume fires strictly on final 1->0 (even when inner throws)
+        try {
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 5_000L
+            ) {
+                assertEquals(1, pauseCount)
+                assertEquals(0, resumeCount)
+                try {
+                    PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                        context = context,
+                        macAddress = verityMac,
+                        polarId = verityId,
+                        features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                        timeoutMs = 5_000L
+                    ) {
+                        assertEquals("Nested lease must NOT double-pause", 1, pauseCount)
+                        assertEquals(0, resumeCount)
+                        throw IllegalStateException("Simulated PFTP failure")
+                    }
+                } catch (_: IllegalStateException) {
+                    // Expected inner exception
+                }
+                assertTrue("Outer lease must remain active after inner failure", PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityId))
+                assertEquals("Nested release 2->1 must NOT prematurely resume", 0, resumeCount)
+                throw kotlinx.coroutines.CancellationException("Simulated coroutine cancel")
+            }
+        } catch (_: kotlinx.coroutines.CancellationException) {
+            // Expected cancellation propagation
+        }
+
+        assertFalse("Final 1->0 release must clear yield even after CancellationException", PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityId))
+        assertEquals(1, pauseCount)
+        assertEquals(1, resumeCount)
+    }
+
+    // REQ-SET-120.1 / TST-SET-122.1
+    @Test
+    fun testWithGattYieldAndPolarApi_aliasExpansionAcrossOverlappingLeases_transitionsPausedSetOnce_TST_SET_122_1() = runBlocking {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val verityMac = "24:AC:AC:24:82:77"
+        val verityId = "24825677"
+        var pauseCount = 0
+        var resumeCount = 0
+
+        // Listener initially knows only MAC (no alias registered yet)
+        val macOnlyListener = object : PolarOfflineGattCoordinator.OfflineYieldListener {
+            override fun matchesDevice(polarId: String?, macAddress: String?): Boolean =
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier(verityMac, polarId) ||
+                    PolarOfflineGattCoordinator.matchesDeviceIdentifier(verityMac, macAddress)
+
+            override fun onOfflineYieldStarted() {
+                pauseCount++
+            }
+
+            override fun onOfflineYieldFinished() {
+                resumeCount++
+            }
+        }
+        PolarOfflineGattCoordinator.registerOfflineYieldListener(macOnlyListener)
+
+        // Lease 1 starts with polarId only (not yet aliased to MAC) -> listener not yet paused
+        PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+            context = context,
+            macAddress = null,
+            polarId = verityId,
+            features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+            timeoutMs = 5_000L
+        ) {
+            assertEquals(0, pauseCount)
+            assertEquals(0, resumeCount)
+
+            // Overlapping Lease 2 introduces polarId <-> MAC alias -> listener transitions into paused set ONCE
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = verityMac,
+                polarId = verityId,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                timeoutMs = 5_000L
+            ) {
+                assertEquals("Alias expansion must pause listener exactly once", 1, pauseCount)
+                assertEquals(0, resumeCount)
+            }
+
+            // Lease 2 released, but Lease 1 still matches via newly registered alias -> MUST NOT resume yet
+            assertTrue(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityMac))
+            assertEquals(1, pauseCount)
+            assertEquals("Listener must stay paused while Lease 1 still matches via alias", 0, resumeCount)
+        }
+
+        // Lease 1 released -> final transition out of paused set resumes listener ONCE
+        assertFalse(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityMac))
+        assertEquals(1, pauseCount)
+        assertEquals(1, resumeCount)
     }
 }
