@@ -24,6 +24,15 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.annotation.VisibleForTesting
 
 /**
+ * Beat-level artifact classification and gap-count update keyed by persisted [beatIndex] (`REQ-HRV-048.2`).
+ */
+data class BeatQualityFlagUpdate(
+    val beatIndex: Int,
+    val artifactFlag: Int,
+    val gapBeats: Int
+)
+
+/**
  * Thread-safe singleton manager for `WorkoutRr.db` (`REQ-PER-034.1`).
  *
  * Persists raw beat-to-beat intervals with high performance batch insertion, indexed
@@ -90,6 +99,42 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
             }
             db.setTransactionSuccessful()
             return count
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Batch-updates `(artifact_flag, gap_beats)` for persisted beats of [workoutId] keyed by
+     * `(workout_id, beat_index)` in a single SQLite transaction (`REQ-HRV-048.2` / `ATT-9160`).
+     *
+     * @return Total number of rows actually modified in `workout_rr_intervals`.
+     */
+    @Synchronized
+    fun updateBeatQualityFlags(workoutId: Long, updates: List<BeatQualityFlagUpdate>): Int {
+        if (updates.isEmpty()) return 0
+        val db = database
+        db.beginTransaction()
+        try {
+            val sql = """
+                UPDATE ${WorkoutRrDbHelper.TABLE_WORKOUT_RR}
+                SET ${WorkoutRrDbHelper.COLUMN_ARTIFACT_FLAG} = ?,
+                    ${WorkoutRrDbHelper.COLUMN_GAP_BEATS} = ?
+                WHERE ${WorkoutRrDbHelper.COLUMN_WORKOUT_ID} = ?
+                  AND ${WorkoutRrDbHelper.COLUMN_BEAT_INDEX} = ?
+            """.trimIndent()
+            var updatedRows = 0
+            db.compileStatement(sql).use { stmt ->
+                for (update in updates) {
+                    stmt.bindLong(1, update.artifactFlag.toLong())
+                    stmt.bindLong(2, update.gapBeats.toLong())
+                    stmt.bindLong(3, workoutId)
+                    stmt.bindLong(4, update.beatIndex.toLong())
+                    updatedRows += stmt.executeUpdateDelete()
+                }
+            }
+            db.setTransactionSuccessful()
+            return updatedRows
         } finally {
             db.endTransaction()
         }

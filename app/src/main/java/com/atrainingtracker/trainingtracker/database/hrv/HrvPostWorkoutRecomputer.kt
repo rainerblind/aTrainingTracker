@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityStatus
@@ -61,19 +62,31 @@ object HrvPostWorkoutRecomputer {
     private const val TAG = "HrvPostWorkoutRecomp"
     const val WINDOW_DFA_HALF_MS = 60000L   // ±60s = 120s centered window
     const val WINDOW_RMSSD_HALF_MS = 30000L // ±30s = 60s centered window
+    const val MIN_ARTIFACT_GATE_THRESHOLD_PERCENT = 3.0
+    const val MAX_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
     const val ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
     const val MIN_DFA_BEATS = 32
     const val MIN_RMSSD_PAIRS = 3
 
     @JvmStatic
-    fun recomputeWorkoutBlocking(context: Context, workoutId: Long): Boolean {
+    @JvmOverloads
+    fun recomputeWorkoutBlocking(
+        context: Context,
+        workoutId: Long,
+        artifactGateThresholdPercent: Double? = null
+    ): Boolean {
         return runBlocking(Dispatchers.IO) {
-            recomputeWorkout(context, workoutId)
+            recomputeWorkout(context, workoutId, artifactGateThresholdPercent)
         }
     }
 
-    suspend fun recomputeWorkout(context: Context, workoutId: Long): Boolean = withContext(Dispatchers.IO) {
+    suspend fun recomputeWorkout(
+        context: Context,
+        workoutId: Long,
+        artifactGateThresholdPercent: Double? = null
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
+            val effectiveGateThreshold = resolveEffectiveArtifactGateThreshold(context, artifactGateThresholdPercent)
             val summariesDbManager = WorkoutSummariesDatabaseManager.getInstance(context)
             val baseFileName = summariesDbManager.getBaseFileName(workoutId) ?: return@withContext false
 
@@ -101,6 +114,31 @@ object HrvPostWorkoutRecomputer {
             // Run post-hoc bidirectional centered artifact filter
             val artifactFilter = RrArtifactFilter()
             val filterResult = artifactFilter.filterBidirectionalBeats(orderedBeats)
+
+            // Persist changed per-beat artifact/gap flags into WorkoutRr.db in an isolated transaction (REQ-HRV-048.2)
+            if (filterResult.inputArtifactFlags.size == orderedBeats.size &&
+                filterResult.inputGapBeats.size == orderedBeats.size
+            ) {
+                val flagUpdates = ArrayList<BeatQualityFlagUpdate>()
+                for (i in orderedBeats.indices) {
+                    val beat = orderedBeats[i]
+                    val newFlag = filterResult.inputArtifactFlags[i]
+                    val newGap = filterResult.inputGapBeats[i]
+                    if (newFlag != beat.artifactFlag || newGap != beat.gapBeats) {
+                        flagUpdates.add(
+                            BeatQualityFlagUpdate(
+                                beatIndex = beat.rawCounter,
+                                artifactFlag = newFlag,
+                                gapBeats = newGap
+                            )
+                        )
+                    }
+                }
+                if (flagUpdates.isNotEmpty()) {
+                    rrRepository.updateBeatQualityFlags(workoutId, flagUpdates)
+                }
+            }
+
             val filteredBeats = filterResult.beats
             val sortedBeats = filteredBeats.sortedBy { it.beatTimestampMs }
             val totalBeats = sortedBeats.size
@@ -193,7 +231,7 @@ object HrvPostWorkoutRecomputer {
                             (artifactCount.toDouble() / dfaBeats.size) * 100.0
                         } else 0.0
 
-                        cachedDfaAlpha1 = if (cachedArtifactRate <= ARTIFACT_GATE_THRESHOLD_PERCENT && dfaBeats.size >= MIN_DFA_BEATS) {
+                        cachedDfaAlpha1 = if (cachedArtifactRate <= effectiveGateThreshold && dfaBeats.size >= MIN_DFA_BEATS) {
                             val nnIntervals = dfaBeats.map { it.correctedRrMs }.toDoubleArray()
                             val calculated = DfaCalculator.computeDfaAlpha1(nnIntervals)
                             if (calculated.isFinite() && calculated > 0.0) calculated else null
@@ -253,7 +291,7 @@ object HrvPostWorkoutRecomputer {
             }
 
             // 3. Update session extrema in WorkoutSummaries.db
-            val sessionSdnn = computeSessionSdnn(sortedBeats)
+            val sessionSdnn = computeSessionSdnn(sortedBeats, effectiveGateThreshold)
             val summariesDb = summariesDbManager.database
             summariesDb.beginTransaction()
             try {
@@ -336,15 +374,44 @@ object HrvPostWorkoutRecomputer {
     }
 
     /**
-     * Computes unbiased whole-session SDNN across valid non-artifact beats pursuant to REQ-PER-034.3.
-     * Requires at least 2 valid beats and overall artifact rate <= 5.0%.
+     * Resolves and clamps the effective artifact suppression threshold to `[3.0, 5.0]` (`REQ-HRV-048.4`).
+     */
+    private fun resolveEffectiveArtifactGateThreshold(context: Context, overridePercent: Double?): Double {
+        val raw = overridePercent ?: try {
+            if (TuningPreferencesDataStore.hasInitializedInstance()) {
+                TuningPreferencesDataStore.getInstance(context).getTuningConfig().hrvArtifactGateThresholdPercent.toDouble()
+            } else {
+                ARTIFACT_GATE_THRESHOLD_PERCENT
+            }
+        } catch (_: Exception) {
+            ARTIFACT_GATE_THRESHOLD_PERCENT
+        }
+        return clampArtifactGateThreshold(raw)
+    }
+
+    private fun clampArtifactGateThreshold(thresholdPercent: Double): Double {
+        return if (thresholdPercent.isFinite()) {
+            thresholdPercent.coerceIn(MIN_ARTIFACT_GATE_THRESHOLD_PERCENT, MAX_ARTIFACT_GATE_THRESHOLD_PERCENT)
+        } else {
+            ARTIFACT_GATE_THRESHOLD_PERCENT
+        }
+    }
+
+    /**
+     * Computes unbiased whole-session SDNN across valid non-artifact beats pursuant to REQ-PER-034.3
+     * and REQ-HRV-048.4. Requires at least 2 valid beats and overall artifact rate <= clamped gate threshold.
      */
     @JvmStatic
-    fun computeSessionSdnn(beats: List<FilteredRrBeat>): Double? {
+    @JvmOverloads
+    fun computeSessionSdnn(
+        beats: List<FilteredRrBeat>,
+        artifactGateThresholdPercent: Double = ARTIFACT_GATE_THRESHOLD_PERCENT
+    ): Double? {
         if (beats.isEmpty()) return null
+        val effectiveGate = clampArtifactGateThreshold(artifactGateThresholdPercent)
         val artifactCount = beats.count { it.isArtifact }
         val artifactRate = (artifactCount.toDouble() / beats.size) * 100.0
-        if (artifactRate > ARTIFACT_GATE_THRESHOLD_PERCENT) {
+        if (artifactRate > effectiveGate) {
             return null
         }
         val validBeats = beats.filter { !it.isArtifact }

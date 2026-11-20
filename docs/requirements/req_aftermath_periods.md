@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.17  
+**Version**: 1.0.20  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 66
+**Total Requirements**: 67
 
 ---
 
@@ -1988,6 +1988,37 @@
 
 ---
 
+### REQ-HRV-048: Beat-Level Artifact Flag Persistence in WorkoutRr.db & Live vs Post-Workout HRV Stream Reconciliation (`ATT-9160`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Post-workout persistence of Lipponen & Tarvainen beat-level `artifact_flag`/`gap_beats` into `WorkoutRr.db`, 180s causal trailing quartile filter context in `HRVMetricsDevice`, and unified artifact gate threshold plumbing in `HrvPostWorkoutRecomputer` (refining `REQ-PER-034.3`, `REQ-TRK-060.2`/`.4`/`.5`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-048`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `RrArtifactFilter.kt`, `WorkoutRrDatabaseManager.kt`, `WorkoutRrRepository.kt`, `HrvPostWorkoutRecomputer.kt`, `HRVMetricsDevice.kt`
+- **Rationale**: Post-workout `HrvPostWorkoutRecomputer` ran Lipponen & Tarvainen Mode B filtering in memory without writing classified `artifact_flag` and `gap_beats` back to `WorkoutRr.db`, leaving all rows at `(0, 0)` even when clear ectopic/missed-beat outliers existed. Concurrently, `HRVMetricsDevice` pruned `mBeatQueue` at `120 s` before `filterLiveCausal` (starving leading beats of their 91-beat quartile window and inflating live edge artifacts) while `HrvPostWorkoutRecomputer` hardcoded a `5.0%` gate threshold rather than honoring `TuningPreferencesDataStore.hrvArtifactGateThresholdPercent` (`ATT-9160`).
+- **Description**:
+  1. *1:1 Per-Input-Beat Artifact & Gap Metadata (`REQ-HRV-048.1`)*:
+     - `RrArtifactFilter`'s `FilterResult` SHALL expose optional `inputArtifactFlags: List<Int> = emptyList()` and `inputGapBeats: List<Int> = emptyList()` aligned 1:1 with the input `beats` list: preserving `max(event.gapBeats, gapCount - 1)` strictly for `ARTIFACT_GAP (5)`, computing `k - 1` freshly for `ARTIFACT_MISSED (4)` and split `ARTIFACT_LONG (3)` (`>= 1.5 * med`), flagging both constituent indices of merged `ARTIFACT_SHORT (2)` pairs with `gap = 0`, and explicitly outputting `gap = 0` for `NORMAL`/`ECTOPIC`/`SHORT`/non-split `LONG` so backfill re-runs clear stale flags. `filterLiveCausal` SHALL precompute `computeMedianDeviationsCentered(rawRrs)` once in $O(N)$.
+  2. *Idempotent Delta-Batched Write-Back in `WorkoutRr.db` (`REQ-HRV-048.2`)*:
+     - `WorkoutRrDatabaseManager` and `WorkoutRrRepository` SHALL expose transactional `updateBeatQualityFlags(workoutId, updates)` updating `(artifact_flag, gap_beats)` by `(workout_id, beat_index)` via existing `idx_workout_rr_workout_beat` (`DB_VERSION = 2` unchanged). `HrvPostWorkoutRecomputer` SHALL write ONLY changed beats (`newFlag != existingFlag || newGap != existingGap`), yielding `0` DB writes on idempotent re-runs while clearing stale flags/gaps when RR data is backfilled clean.
+  3. *180s Causal Filter Context & 120s Active Window Scope in `HRVMetricsDevice` (`REQ-HRV-048.3`)*:
+     - `HRVMetricsDevice` SHALL retain `WINDOW_FILTER_CONTEXT_MS = WINDOW_DFA_MS + 60_000L` (`180_000L`) in `mBeatQueue`, check `mBeatQueue.none { it.beatTimestampMs >= now - WINDOW_DFA_MS }` before filtering (clearing all 3 sensors to `null` and resetting `signalQualityResult` on `120 s` drain), slice `dfaWindowBeats = filteredBeats.filter { it.beatTimestampMs >= now - WINDOW_DFA_MS }` (handling empty `dfaWindowBeats` as `artifactRate = 0.0`, `dfaAlpha1 = null`), evaluate `HRV_ARTIFACT_RATE` & `HRV_DFA_A1` strictly on `dfaWindowBeats`, and pass `dfaWindowBeats` (not the 180s buffer) to `HrvSignalQualityAnalyzer.analyzeBeats(...)`.
+  4. *Unified Artifact Gate Threshold Plumbing & Preserved Invariants (`REQ-HRV-048.4`)*:
+     - `HrvPostWorkoutRecomputer` SHALL accept optional `@JvmOverloads` `artifactGateThresholdPercent: Double? = null` on `recomputeWorkout`/`recomputeWorkoutBlocking` and default `ARTIFACT_GATE_THRESHOLD_PERCENT` on `computeSessionSdnn`, resolving `TuningPreferencesDataStore.hrvArtifactGateThresholdPercent` clamped to `[3.0, 5.0]` with `hasInitializedInstance()` fallback to `5.0`. `DfaCalculator.kt` (NeuroKit2 `0.2.10` golden parity), `TrackerService.java`, `WorkoutRrDbHelper.kt` (`DB_VERSION = 2`), `MIN_RMSSD_PAIRS = 3`, and `values*/strings_*.xml` MUST remain untouched.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PER-034.1`/`.3`, `REQ-TRK-060.2`/`.4`/`.5`, `REQ-TRK-085.2`/`.3` targeting `RrArtifactFilter.kt`, `HRVMetricsDevice.kt`, `HrvPostWorkoutRecomputer.kt`, `WorkoutRrDatabaseManager.kt`, `WorkoutRrRepository.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-3543` (`e87080a3`, `5808179d`), `ATT-3541` (`4bad7272`), `ATT-6714` (`8b2196d9`), `ATT-8706` (`7dcca5e7`, `6016d5fc`).
+  3. *Root Reason for Existing Formulation*: `ATT-3543` computed Mode B classifications only in memory; `ATT-6714`/`ATT-8706` pruned `HRVMetricsDevice` at `120 s` to enforce disconnect clearing and out-of-order eviction; `HrvPostWorkoutRecomputer.MIN_RMSSD_PAIRS = 3` is asserted by `HrvPostWorkoutRecomputerTest.kt:87-104`.
+  4. *Preservation of Core Invariants*: Preserves NeuroKit2 `0.2.10` golden tolerances (`|ΔrMSSD| <= 0.5 ms`, `|Δα1| <= 0.02`/`0.03`), `MIN_RMSSD_PAIRS = 3`, Rule 51/52, `120 s` drain-to-null, `REQ-PER-034.3` centered lag elimination, `REQ-TRK-084.4` conditional `AccumulatedSensors`, `DB_VERSION = 2`, and `0` `TrackerService.java` edits.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `WorkoutRr.db` beats with `275.39 ms` / `779.30 ms` / `5196 ms` outliers initially flagged `(0, 0)`, *When* `HrvPostWorkoutRecomputer.recomputeWorkout` runs, *Then* non-zero `artifact_flag` & `gap_beats` persist in `workout_rr_intervals`, a second run executes `0` writes, and clean backfill resets stale flags to `(0, 0)`.
+  • *Given* a `> 180 s` RR stream, *When* `HRVMetricsDevice` evaluates `[T - 120s, T]` vs `HrvPostWorkoutRecomputer` at phase-aligned center `T - 60s`, *Then* both apply full 91-beat quartile context and clamped `[3.0, 5.0]` gate thresholds without leading-edge artifact inflation.
+  • *Given* `HRVMetricsDevice` drained by `+150 s` (`> 120 s`, `< 180 s` context), *When* `calculateMetrics()` runs, *Then* all 3 sensors emit `null` and `signalQualityResult` resets to `INSUFFICIENT_DATA`.
+- **Invariants**: `HrvGoldenOracleTest` bit-identical; `DfaCalculator.kt`, `TrackerService.java`, `WorkoutRrDbHelper.kt` (`DB_VERSION = 2`) untouched; `MIN_RMSSD_PAIRS = 3` preserved; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2010,3 +2041,6 @@
 | `1.0.15` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Added `REQ-HRV-047` (`[Planned]`, `.1`–`.4`) for dynamic, outlier-resilient `HRV_RMSSD` Y-axis scaling, artifact exclusion, reactive `remember` keys, and clean axis label formatting. |
 | `1.0.16` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `REQ-HRV-047` to `[Implemented]` following Stage 4 construction (`TelemetryZoneMath.kt`, `TelemetryMetricGraph.kt`), Rule 8.5 Light/Dark PNG verification (`ATT-9171_rmssd_dynamic_yaxis.png`), and 100% pass across all 7 unit/UI/contract test suites (`59/59`). |
 | `1.0.17` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `REQ-HRV-047` to `[Verified]` in Stage 5 reusing Gate 4 verified `59/59 PASS` evidence across all 7 suites (`Rule 7.5`, `0` `app/` code drift since `c2979843`), Rule 8.5 PNG certification, and governance sync. |
+| `1.0.18` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Added `REQ-HRV-048` (`[Planned]`, `.1`–`.4`) for beat-level artifact/gap flag persistence in `WorkoutRr.db`, 180s causal filter context in `HRVMetricsDevice`, and unified artifact gate threshold plumbing in `HrvPostWorkoutRecomputer`. |
+| `1.0.19` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `REQ-HRV-048` to `[Implemented]` following Stage 4 construction (`RrArtifactFilter.kt`, `WorkoutRrDatabaseManager.kt`, `WorkoutRrRepository.kt`, `HrvPostWorkoutRecomputer.kt`, `HRVMetricsDevice.kt`) and 100% pass across all 10 unit/DB/golden/contract test suites. |
+| `1.0.20` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `REQ-HRV-048` to `[Verified]` in Stage 5 reusing Gate 4 verified `76/76 PASS` evidence across all 10 suites (`Rule 7.5`, `0` `app/` code drift since `f6f7bb41`), clean-checkout `TST-HRV-048` traceability parity, and governance sync. |

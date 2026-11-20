@@ -159,4 +159,43 @@ class WorkoutRrDatabaseManagerTest {
         val inserted = dbManager.insertIntervals(emptyList())
         assertEquals(0, inserted)
     }
+
+    @Test
+    fun updateBeatQualityFlags_updatesTargetBeatsTransactionallyAndCountsModifiedRows_TST_HRV_048() {
+        // REQ-HRV-048 (REQ-HRV-048.2) / TST-HRV-048 (TST-HRV-048.2)
+        val workoutId = 303L
+        dbManager.insertIntervals(
+            listOf(
+                WorkoutRrInterval(workoutId = workoutId, beatIndex = 0, beatTimestampMs = 1000L, rrMs = 385f, artifactFlag = 0, gapBeats = 0),
+                WorkoutRrInterval(workoutId = workoutId, beatIndex = 1, beatTimestampMs = 1385L, rrMs = 275.39f, artifactFlag = 0, gapBeats = 0),
+                WorkoutRrInterval(workoutId = workoutId, beatIndex = 2, beatTimestampMs = 2164L, rrMs = 779.30f, artifactFlag = 0, gapBeats = 0),
+                WorkoutRrInterval(workoutId = workoutId, beatIndex = 3, beatTimestampMs = 2549L, rrMs = 386f, artifactFlag = 1, gapBeats = 1)
+            )
+        )
+
+        assertEquals(0, dbManager.updateBeatQualityFlags(workoutId, emptyList()))
+
+        val updatedCount = dbManager.updateBeatQualityFlags(
+            workoutId,
+            listOf(
+                BeatQualityFlagUpdate(beatIndex = 1, artifactFlag = 2, gapBeats = 0),
+                BeatQualityFlagUpdate(beatIndex = 2, artifactFlag = 4, gapBeats = 1),
+                BeatQualityFlagUpdate(beatIndex = 3, artifactFlag = 0, gapBeats = 0),
+                BeatQualityFlagUpdate(beatIndex = 999, artifactFlag = 5, gapBeats = 2) // non-existent row
+            )
+        )
+        assertEquals("Only 3 existing rows should report modified", 3, updatedCount)
+
+        val rows = dbManager.getIntervalsForWorkout(workoutId)
+        assertEquals(4, rows.size)
+        assertEquals(0, rows[0].artifactFlag)
+        assertEquals(2, rows[1].artifactFlag)
+        assertEquals(0, rows[1].gapBeats)
+        assertEquals(275.39f, rows[1].rrMs, 0.001f)
+        assertEquals(1385L, rows[1].beatTimestampMs)
+        assertEquals(4, rows[2].artifactFlag)
+        assertEquals(1, rows[2].gapBeats)
+        assertEquals(0, rows[3].artifactFlag)
+        assertEquals(0, rows[3].gapBeats)
+    }
 }

@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.18  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 72
+**Total Tests**: 73
 
 ---
 
@@ -1295,6 +1295,27 @@
 
 ---
 
+### TST-HRV-048: **WorkoutRr.db Beat-Level Artifact Flag Persistence & Live vs Post-Workout HRV Reconciliation Suite** (`ATT-9160`) [Verified]
+- **Requirement(s)**: `REQ-HRV-048` (`REQ-HRV-048.1`..`REQ-HRV-048.4`)
+- **Component**: `RrArtifactFilter.kt`, `WorkoutRrDatabaseManager.kt`, `WorkoutRrRepository.kt`, `HrvPostWorkoutRecomputer.kt`, `HRVMetricsDevice.kt`, `RrArtifactFilterTest.kt`, `HrvGoldenOracleTest.kt`, `WorkoutRrDatabaseManagerTest.kt`, `WorkoutRrRepositoryTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `HRVMetricsDeviceTest.kt`, `DfaCalculatorTest.kt`, `ArchitectureConformanceContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Jira**: `ATT-9160`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no UI strings`
+- **Test Description**:
+  1. *1:1 Input Artifact/Gap Metadata & NeuroKit2 Golden Parity (`TST-HRV-048.1`, `RrArtifactFilterTest.testInputArtifactFlagsAndGapBeats_aligned1To1AcrossArtifactsAndHardwareGaps_TST_HRV_048`, `HrvGoldenOracleTest.kt`, `DfaCalculatorTest.kt`)*:
+     • Verify `inputArtifactFlags`/`inputGapBeats` size equals input `beats.size` across clean, ectopic (`1`, `gap=0`), merged short pair (both indices `2`, `gap=0`), missed `779.3 ms` amidst `385 ms` (`4`, `gap=1`), unflagged `5196 ms` gap (`5`, `gap>=5`), hardware `ARTIFACT_GAP` (`max(event.gapBeats, gapCount - 1)` preserved), and stale-flag reset (`-> 0`); verify `HrvGoldenOracleTest` stays within NeuroKit2 `0.2.10` tolerances (`|ΔrMSSD| <= 0.5 ms`, `|Δα1| <= 0.02`/`0.03`).
+  2. *Delta-Batched DB Flag Persistence, Idempotency & Configurable Gate Threshold (`TST-HRV-048.2`, `WorkoutRrDatabaseManagerTest.updateBeatQualityFlags_updatesTargetBeatsTransactionallyAndCountsModifiedRows_TST_HRV_048`, `WorkoutRrRepositoryTest.repository_updateBeatQualityFlags_persistsAndClearsFlags_TST_HRV_048`, `HrvPostWorkoutRecomputerTest.recomputeWorkout_persistsArtifactFlagsIdempotentlyAndResetsAfterCleanBackfill_TST_HRV_048`, `HrvPostWorkoutRecomputerTest.recomputeWorkout_andComputeSessionSdnn_honorClampedArtifactGateThreshold_TST_HRV_048`)*:
+     • Verify `updateBeatQualityFlags` updates `(artifact_flag, gap_beats)` transactionally by `(workout_id, beat_index)` without mutating `rr_ms`/`beat_timestamp_ms`.
+     • Verify `HrvPostWorkoutRecomputer.recomputeWorkout` persists flags on `275.39 ms`/`779.30 ms`/`5196 ms` outliers, performs `0` DB writes on idempotent re-run, resets stale flags to `(0, 0)` after clean backfill, and honors configurable `artifactGateThresholdPercent` clamped to `[3.0, 5.0]` for DFA $\alpha_1$ and `computeSessionSdnn`.
+  3. *180s Causal Filter Context, Drain-to-Null, Signal Quality Scope & Phase-Aligned Reconciliation (`TST-HRV-048.3`, `HRVMetricsDeviceTest.test180sFilterContext_preservesTrailingQuartileAccuracyAnd120sSignalQualityScope_TST_HRV_048`, `HRVMetricsDeviceTest.testEmptyActiveDfaWindowAfterLookaheadTrim_emitsZeroArtifactRateAndNullDfa_TST_HRV_048`, `HrvPostWorkoutRecomputerTest.recomputeWorkout_phaseAlignedReconciliationWithLive180sContext_TST_HRV_048`)*:
+     • Verify 180s context supplies full 91-beat trailing quartile windows across rolling 120s ticks without inflating leading-edge artifacts; verify `+150 s` drain clears all 3 sensors to `null`; verify empty `dfaWindowBeats` (all active beats in 5-beat lookahead tail) emits `artifactRate = 0.0`, `dfaAlpha1 = null`; verify `signalQualityResult.beatCount` reflects the 120s `dfaWindowBeats` slice; verify phase-aligned live `[T - 120s, T]` vs recomputed `T - 60s` reconcile tightly on steady-state streams.
+  4. *Tier 1 Targeted Regression & Architecture Contracts (`TST-HRV-048.4`)*:
+     • Run locked incremental `./gradlew :app:testDebugUnitTest --rerun --tests "*RrArtifactFilterTest" --tests "*HrvGoldenOracleTest" --tests "*HRVMetricsDeviceTest" --tests "*WorkoutRrDatabaseManagerTest" --tests "*WorkoutRrRepositoryTest" --tests "*HrvPostWorkoutRecomputerTest" --tests "*DfaCalculatorTest" --tests "*ArchitectureConformanceContractTest" --tests "*DeadCodeEliminationContractTest" --tests "*SourceTextReadingAuditContractTest"` with hyphenated `TST-HRV-048` code tags for clean-checkout `REQ-PRO-099.3` parity.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1318,3 +1339,6 @@
 | `1.0.16` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Added `TST-HRV-047` (`[Planned]`, `.1`–`.4`) covering dynamic rMSSD bounds/outlier guard/label unit tests, portrait & landscape spatial spread, Rule 8.5 Light/Dark PNG, and architecture contracts. |
 | `1.0.17` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `TST-HRV-047` to `[Implemented]` with 100% PASS across all 7 targeted/contract suites (`59/59`) and Rule 8.5 Light/Dark PNG (`ATT-9171_rmssd_dynamic_yaxis.png`) inspected. |
 | `1.0.18` | 2026-11-19 | Lane B Author (`ATT-9171`, `--as agent1`) | `ATT-9171` | Promoted `TST-HRV-047` to `[Verified]` in Stage 5 reusing Gate 4 verified `59/59 PASS` evidence across all 7 suites (`Rule 7.5`, `0` `app/` code drift since `c2979843`), Rule 8.5 PNG certification, and governance sync. |
+| `1.0.19` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Added `TST-HRV-048` (`[Planned]`, `.1`–`.4`) covering 1:1 input artifact/gap metadata, idempotent delta DB persistence, 180s causal filter context & phase-aligned reconciliation, and unified artifact gate thresholds. |
+| `1.0.20` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `TST-HRV-048` to `[Implemented]` with 100% PASS across all 10 unit/DB/golden/contract test suites and static `TST-HRV-048` code tag verification. |
+| `1.0.21` | 2026-11-20 | Lane B Author (`ATT-9160`, `--as agent1`) | `ATT-9160` | Promoted `TST-HRV-048` to `[Verified]` in Stage 5 reusing Gate 4 verified `76/76 PASS` evidence across all 10 suites (`Rule 7.5`, `0` `app/` code drift since `f6f7bb41`), clean-checkout `TST-HRV-048` traceability parity, and governance sync. |

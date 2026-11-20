@@ -39,12 +39,19 @@ data class FilteredRrBeat(
 
 /**
  * Summary container for a batch filtered RR series.
+ *
+ * @property inputArtifactFlags Optional 1:1 per-input-beat artifact classification aligned with the
+ * input beat sequence before split/merge expansion (`REQ-HRV-048.1`).
+ * @property inputGapBeats Optional 1:1 per-input-beat missed/gap beat count aligned with the input
+ * beat sequence (`REQ-HRV-048.1`).
  */
 data class FilterResult(
     val beats: List<FilteredRrBeat>,
     val artifactCount: Int,
     val totalCount: Int,
-    val artifactRatePercent: Double
+    val artifactRatePercent: Double,
+    val inputArtifactFlags: List<Int> = emptyList(),
+    val inputGapBeats: List<Int> = emptyList()
 )
 
 /**
@@ -148,6 +155,7 @@ class RrArtifactFilter(
 
         val rawRrs = buffer.map { it.rrMs }
         val dRrs = computeDifferences(rawRrs)
+        val allMRrs = computeMedianDeviationsCentered(rawRrs)
         val evaluateUntil = n - LOOKAHEAD_BEATS
 
         val classifications = IntArray(evaluateUntil)
@@ -164,20 +172,17 @@ class RrArtifactFilter(
             val qdStart = max(0, i - (QD_WINDOW_SIZE - LOOKAHEAD_BEATS))
             val qdEnd = min(n, i + LOOKAHEAD_BEATS + 1)
             val subD = dRrs.subList(qdStart, qdEnd)
-
-            val mRrs = (qdStart until qdEnd).map { idx ->
-                rawRrs[idx] - computeLocalMedianCentered(rawRrs, idx)
-            }
+            val subM = allMRrs.subList(qdStart, qdEnd)
 
             val th1 = max(c1 * computeQuartileDeviation(subD), minThresholdMs)
-            val th2 = max(c2 * computeQuartileDeviation(mRrs), minThresholdMs)
+            val th2 = max(c2 * computeQuartileDeviation(subM), minThresholdMs)
             th2List[i] = th2
 
             val dRR = dRrs[i]
-            val mRR = rawRrs[i] - computeLocalMedianCentered(rawRrs, i)
+            val mRR = allMRrs[i]
             val nextDRR = if (i + 1 < n) dRrs[i + 1] else 0.0
             val prevDRR = if (i > 0) dRrs[i - 1] else 0.0
-            val med = computeLocalMedianCentered(rawRrs, i)
+            val med = rawRrs[i] - mRR
 
             val nextRR = if (i + 1 < n) rawRrs[i + 1] else null
             val prevRR = if (i > 0) rawRrs[i - 1] else null
@@ -196,6 +201,8 @@ class RrArtifactFilter(
         th2List: DoubleArray
     ): FilterResult {
         val filteredList = ArrayList<FilteredRrBeat>(limit)
+        val inputFlags = IntArray(limit)
+        val inputGaps = IntArray(limit)
         var artifactCount = 0
         var i = 0
 
@@ -215,6 +222,8 @@ class RrArtifactFilter(
                     event.rrMs > RrBeatNormalization.MAX_RR_MS -> max(2, (event.rrMs / safeMed).roundToInt())
                     else -> 1
                 }
+                inputFlags[i] = RrBeatEvent.ARTIFACT_GAP
+                inputGaps[i] = max(event.gapBeats, gapCount - 1)
                 val splitRaw = event.rrMs / gapCount
                 for (k in 0 until gapCount) {
                     val beatTime = event.beatTimestampMs - ((gapCount - 1 - k) * safeMed).toLong()
@@ -236,6 +245,10 @@ class RrArtifactFilter(
                     val mergedRr = event.rrMs + nextEvent.rrMs
                     if (nextClass == RrBeatEvent.ARTIFACT_SHORT || abs(mergedRr - med) <= 0.3 * med) {
                         val corrected = if (abs(mergedRr - med) <= th2List[i]) mergedRr else med
+                        inputFlags[i] = RrBeatEvent.ARTIFACT_SHORT
+                        inputGaps[i] = 0
+                        inputFlags[nextIndex] = RrBeatEvent.ARTIFACT_SHORT
+                        inputGaps[nextIndex] = 0
                         filteredList.add(
                             FilteredRrBeat(
                                 nextEvent.beatTimestampMs,
@@ -249,6 +262,8 @@ class RrArtifactFilter(
                         continue
                     }
                 }
+                inputFlags[i] = RrBeatEvent.ARTIFACT_SHORT
+                inputGaps[i] = 0
                 filteredList.add(FilteredRrBeat(event.beatTimestampMs, event.rrMs, med, RrBeatEvent.ARTIFACT_SHORT))
                 artifactCount++
                 i++
@@ -259,6 +274,8 @@ class RrArtifactFilter(
                 (classification == RrBeatEvent.ARTIFACT_LONG && event.rrMs >= 1.5 * med)
             ) {
                 val k = max(2, (event.rrMs / med).roundToInt())
+                inputFlags[i] = classification
+                inputGaps[i] = k - 1
                 val splitRr = event.rrMs / k
                 for (j in 0 until k) {
                     val beatTime = event.beatTimestampMs - ((k - 1 - j) * splitRr).toLong()
@@ -269,6 +286,8 @@ class RrArtifactFilter(
                 continue
             }
 
+            inputFlags[i] = classification
+            inputGaps[i] = 0
             if (classification != RrBeatEvent.ARTIFACT_NORMAL) {
                 filteredList.add(FilteredRrBeat(event.beatTimestampMs, event.rrMs, med, classification))
                 artifactCount++
@@ -280,7 +299,14 @@ class RrArtifactFilter(
 
         val total = filteredList.size
         val rate = if (total > 0) (artifactCount.toDouble() / total.toDouble()) * 100.0 else 0.0
-        return FilterResult(filteredList, artifactCount, total, rate)
+        return FilterResult(
+            beats = filteredList,
+            artifactCount = artifactCount,
+            totalCount = total,
+            artifactRatePercent = rate,
+            inputArtifactFlags = inputFlags.toList(),
+            inputGapBeats = inputGaps.toList()
+        )
     }
 
     private fun isGapOrOutOfPhysiologicalRange(event: RrBeatEvent): Boolean {
