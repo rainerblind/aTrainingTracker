@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.RrBeatListener
@@ -45,6 +46,7 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.tpms.DualWheelTpmsEstimator
 import com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.R
@@ -63,9 +65,13 @@ import com.atrainingtracker.trainingtracker.util.SnapshotChunkedList
 import com.google.android.gms.maps.model.LatLng
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -212,6 +218,27 @@ class BANALServiceRepository private constructor(context: Context) {
     val itpmsEstimator = IndirectTpmsEstimator()
     val perDeviceItpmsEstimators = ConcurrentHashMap<Long, IndirectTpmsEstimator>()
     val dualWheelTpmsEstimator = DualWheelTpmsEstimator()
+    private val cachedBaselineCircumferences = ConcurrentHashMap<Long, Double>()
+    private val pendingBaselineLoads = ConcurrentHashMap.newKeySet<Long>()
+    private val baselineLoadGenerations = ConcurrentHashMap<Long, AtomicLong>()
+    @Volatile
+    private var itpmsIoDispatcher: CoroutineDispatcher = Dispatchers.IO
+    @Volatile
+    private var baselineCircumferenceLoader: suspend (Long) -> Double = { deviceId ->
+        DevicesDatabaseManager.getInstance(appContext).getBaselineCircumference(deviceId)
+    }
+
+    @VisibleForTesting
+    internal fun configureItpmsForTesting(
+        loader: suspend (Long) -> Double,
+        ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    ) {
+        baselineCircumferenceLoader = loader
+        itpmsIoDispatcher = ioDispatcher
+        cachedBaselineCircumferences.clear()
+        pendingBaselineLoads.clear()
+        baselineLoadGenerations.clear()
+    }
 
     // --- Cached Wheel Positions & Active Equipment (REQ-SEN-030.2, ATT-7753 Finding 1 & 2) ---
     private val cachedActiveWheelPositions = ConcurrentHashMap<Long, WheelPosition>()
@@ -264,6 +291,7 @@ class BANALServiceRepository private constructor(context: Context) {
             }
             if (previousMode == TrackingMode.READY && newTrackingMode == TrackingMode.TRACKING) {
                 clearSparklineBuffers()
+                refreshAllItpmsBaselines()
             }
             if (newTrackingMode == TrackingMode.TRACKING || newTrackingMode == TrackingMode.PAUSED) {
                 checkAndTriggerRehydration()
@@ -322,6 +350,24 @@ class BANALServiceRepository private constructor(context: Context) {
     }
 
 
+    // Listens for wheel calibration / iTPMS baseline broadcasts (REQ-SEN-034.1)
+    private val calibrationFactorChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            handleCalibrationFactorChangedBroadcast(intent)
+        }
+    }
+
+    @VisibleForTesting
+    internal fun handleCalibrationFactorChangedBroadcast(intent: Intent?) {
+        val deviceId = intent?.getLongExtra(BANALService.DEVICE_ID, -1L) ?: -1L
+        if (deviceId > 0L) {
+            refreshItpmsBaselineForDevice(deviceId)
+        } else {
+            refreshAllItpmsBaselines()
+        }
+    }
+
+
     private fun registerInternalReceiver(receiver: BroadcastReceiver, filter: IntentFilter) {
         if (android.os.Build.VERSION.SDK_INT == 0) {
             // Plain JVM unit test stub where Process.myPid() inside ContextCompat is not mocked
@@ -359,6 +405,11 @@ class BANALServiceRepository private constructor(context: Context) {
             IntentFilter(BANALService.RESET_ACCUMULATORS_INTENT)
         )
 
+        registerInternalReceiver(
+            calibrationFactorChangedReceiver,
+            IntentFilter(BANALService.CALIBRATION_FACTOR_CHANGED)
+        )
+
         // Initial wheel position cache load off the main thread (ATT-7753 Finding 1 & 2)
         refreshWheelPositionsCache()
 
@@ -366,6 +417,13 @@ class BANALServiceRepository private constructor(context: Context) {
         repositoryScope.launch {
             EquipmentRepository.equipmentLinksChanged.collect {
                 refreshWheelPositionsCache()
+            }
+        }
+
+        // Observe persisted iTPMS baseline updates reactively (REQ-SEN-034.1)
+        repositoryScope.launch {
+            DeviceDataRepository.baselineCircumferenceChanged.collect { deviceId ->
+                refreshItpmsBaselineForDevice(deviceId)
             }
         }
 
@@ -585,124 +643,25 @@ class BANALServiceRepository private constructor(context: Context) {
                             }
                         }
 
-                        // REQ-TRK-050 & REQ-SEN-030: Indirect Tire Pressure Monitoring (iTPMS)
-                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING && location != null) {
+                        // REQ-TRK-050, REQ-SEN-030 & REQ-SEN-034: Indirect Tire Pressure Monitoring (iTPMS)
+                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
                             val activeDevices = binder.activeDevicesIncludingSpeedAndLocationDevices
                             val wheelDevices = activeDevices?.filter {
                                 it.deviceType == DeviceType.BIKE_SPEED || it.deviceType == DeviceType.BIKE_SPEED_AND_CADENCE
                             } ?: emptyList()
 
                             if (wheelDevices.isNotEmpty()) {
-                                val acc = (binder.getBestSensorData(SensorType.ACCURACY)?.value as? Number)?.toDouble() ?: 5.0
+                                val acc = (binder.getBestSensorData(SensorType.ACCURACY)?.value as? Number)?.toDouble()
                                 val currentYawRate = (binder.getBestSensorData(SensorType.WORLD_YAW_RATE_radps)?.value as? Number)?.toDouble() ?: 0.0
-
-                                // 1. Multi-Sensor Per-Device GNSS iTPMS (REQ-SEN-030.2, TST-SEN-030.2)
-                                for (wheelDevice in wheelDevices) {
-                                    val devId = wheelDevice.deviceId
-                                    val wheelDist = (wheelDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
-                                    val calib = (wheelDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
-
-                                    if (wheelDist != null) {
-                                        val estimator = perDeviceItpmsEstimators.getOrPut(devId) { IndirectTpmsEstimator() }
-                                        val alert = estimator.processTelemetry(
-                                            lat = location.latitude,
-                                            lon = location.longitude,
-                                            bearingDeg = _currentBearing.value ?: 0.0,
-                                            accuracyMeters = acc,
-                                            speedMps = currentSpeed ?: 0.0,
-                                            elevationMeters = currentAltitude,
-                                            wheelDistanceMeters = wheelDist,
-                                            calibrationFactorMeters = calib
-                                        )
-                                        if (alert != null) {
-                                            val (titleRes, msgRes, severity) = when (alert) {
-                                                is IndirectTpmsEstimator.TpmsAlertResult.LowPressure -> {
-                                                    Triple(
-                                                        R.string.itpms_low_pressure_reminder_title,
-                                                        R.string.itpms_low_pressure_reminder_message,
-                                                        WorkoutNavigationEvents.TpmsAlertSeverity.WARNING
-                                                    )
-                                                }
-                                                is IndirectTpmsEstimator.TpmsAlertResult.SlowPuncture -> {
-                                                    Triple(
-                                                        R.string.itpms_slow_puncture_alert_title,
-                                                        R.string.itpms_slow_puncture_alert_message,
-                                                        WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL
-                                                    )
-                                                }
-                                            }
-                                            val dropStr = String.format(java.util.Locale.US, "%.1f%%", alert.dropPercentage)
-                                            WorkoutNavigationEvents.triggerTpmsAlert(
-                                                WorkoutNavigationEvents.TpmsAlert(
-                                                    title = appContext.getString(titleRes),
-                                                    message = appContext.getString(msgRes, dropStr),
-                                                    severity = severity,
-                                                    dropPercentage = alert.dropPercentage
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // 2. GPS-Free Dual-Wheel Ratio iTPMS (REQ-SEN-030.1, TST-SEN-030.1)
-                                if (wheelDevices.size >= 2) {
-                                    val currentEqId = activeEquipmentId
-                                    val frontDevice = wheelDevices.firstOrNull { dev ->
-                                        val pos = if (currentEqId != null && currentEqId > 0) {
-                                            cachedScopedWheelPositions[Pair(currentEqId, dev.deviceId)] ?: cachedActiveWheelPositions[dev.deviceId]
-                                        } else {
-                                            cachedActiveWheelPositions[dev.deviceId]
-                                        }
-                                        pos == WheelPosition.FRONT
-                                    }
-                                    val rearDevice = wheelDevices.firstOrNull { dev ->
-                                        val pos = if (currentEqId != null && currentEqId > 0) {
-                                            cachedScopedWheelPositions[Pair(currentEqId, dev.deviceId)] ?: cachedActiveWheelPositions[dev.deviceId]
-                                        } else {
-                                            cachedActiveWheelPositions[dev.deviceId]
-                                        }
-                                        pos == WheelPosition.REAR
-                                    }
-
-                                    if (frontDevice != null && rearDevice != null) {
-                                        val frontDist = (frontDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
-                                        val rearDist = (rearDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
-                                        val frontCalib = (frontDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
-                                        val rearCalib = (rearDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
-
-                                        if (frontDist != null && rearDist != null) {
-                                            val dualAlert = dualWheelTpmsEstimator.processTelemetry(
-                                                frontDistanceMeters = frontDist,
-                                                rearDistanceMeters = rearDist,
-                                                speedMps = currentSpeed ?: 0.0,
-                                                yawRateRadPerSec = currentYawRate,
-                                                frontCalibrationMeters = frontCalib,
-                                                rearCalibrationMeters = rearCalib
-                                            )
-                                            if (dualAlert != null) {
-                                                val (titleRes, msgRes) = when (dualAlert) {
-                                                    is DualWheelTpmsEstimator.DualWheelTpmsAlert.RearPuncture -> Pair(
-                                                        R.string.itpms_dual_puncture_rear_title,
-                                                        R.string.itpms_dual_puncture_rear_message
-                                                    )
-                                                    is DualWheelTpmsEstimator.DualWheelTpmsAlert.FrontPuncture -> Pair(
-                                                        R.string.itpms_dual_puncture_front_title,
-                                                        R.string.itpms_dual_puncture_front_message
-                                                    )
-                                                }
-                                                val dropStr = String.format(java.util.Locale.US, "%.1f%%", dualAlert.dropPercentage)
-                                                WorkoutNavigationEvents.triggerTpmsAlert(
-                                                    WorkoutNavigationEvents.TpmsAlert(
-                                                        title = appContext.getString(titleRes),
-                                                        message = appContext.getString(msgRes, dropStr),
-                                                        severity = WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL,
-                                                        dropPercentage = dualAlert.dropPercentage
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                                processItpmsTelemetryTick(
+                                    wheelDevices = wheelDevices,
+                                    location = location,
+                                    accuracyMeters = acc,
+                                    bearingDeg = _currentBearing.value,
+                                    speedMps = currentSpeed,
+                                    altitudeMeters = currentAltitude,
+                                    yawRateRadPerSec = currentYawRate
+                                )
                             }
                         }
 
@@ -717,6 +676,213 @@ class BANALServiceRepository private constructor(context: Context) {
         }
     }
 
+    /**
+     * Evaluates one 1-Hz iTPMS telemetry tick across active wheel sensors (REQ-TRK-050, REQ-SEN-030, REQ-SEN-034).
+     *
+     * Section 1 (GNSS [IndirectTpmsEstimator]) requires non-null, finite location, accuracy (`>= 0.0`),
+     * and bearing without fabricating synthetic gating values. Section 2 (GPS-free [DualWheelTpmsEstimator])
+     * runs whenever paired FRONT + REAR wheel sensors are active even when GNSS fix, accuracy, or bearing is absent.
+     */
+    @VisibleForTesting
+    internal fun processItpmsTelemetryTick(
+        wheelDevices: List<MyDevice>,
+        location: LatLng?,
+        accuracyMeters: Double?,
+        bearingDeg: Double?,
+        speedMps: Double?,
+        altitudeMeters: Double?,
+        yawRateRadPerSec: Double,
+        timestampMs: Long = System.currentTimeMillis()
+    ) {
+        if (wheelDevices.isEmpty()) return
+
+        // 1. Multi-Sensor Per-Device GNSS iTPMS (REQ-SEN-030.2, REQ-SEN-034.1, REQ-SEN-034.2)
+        if (location != null &&
+            accuracyMeters != null && accuracyMeters.isFinite() && accuracyMeters >= 0.0 &&
+            bearingDeg != null && bearingDeg.isFinite()
+        ) {
+            for (wheelDevice in wheelDevices) {
+                val devId = wheelDevice.deviceId
+                val wheelDist = (wheelDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                val calib = (wheelDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+
+                if (wheelDist != null) {
+                    val estimator = getOrCreateItpmsEstimator(devId)
+                    val alert = estimator.processTelemetry(
+                        lat = location.latitude,
+                        lon = location.longitude,
+                        bearingDeg = bearingDeg,
+                        accuracyMeters = accuracyMeters,
+                        speedMps = speedMps ?: 0.0,
+                        elevationMeters = altitudeMeters,
+                        wheelDistanceMeters = wheelDist,
+                        calibrationFactorMeters = calib,
+                        timestampMs = timestampMs
+                    )
+                    if (alert != null) {
+                        val (titleRes, msgRes, severity) = when (alert) {
+                            is IndirectTpmsEstimator.TpmsAlertResult.LowPressure -> Triple(
+                                R.string.itpms_low_pressure_reminder_title,
+                                R.string.itpms_low_pressure_reminder_message,
+                                WorkoutNavigationEvents.TpmsAlertSeverity.WARNING
+                            )
+                            is IndirectTpmsEstimator.TpmsAlertResult.SlowPuncture -> Triple(
+                                R.string.itpms_slow_puncture_alert_title,
+                                R.string.itpms_slow_puncture_alert_message,
+                                WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL
+                            )
+                        }
+                        emitTpmsAlert(titleRes, msgRes, severity, alert.dropPercentage)
+                    }
+                }
+            }
+        }
+
+        // 2. GPS-Free Dual-Wheel Ratio iTPMS (REQ-SEN-030.1, REQ-SEN-034.2)
+        if (wheelDevices.size >= 2) {
+            val currentEqId = activeEquipmentId
+            fun resolvePos(dev: MyDevice): WheelPosition? = if (currentEqId != null && currentEqId > 0) {
+                cachedScopedWheelPositions[Pair(currentEqId, dev.deviceId)] ?: cachedActiveWheelPositions[dev.deviceId]
+            } else {
+                cachedActiveWheelPositions[dev.deviceId]
+            }
+            val frontDevice = wheelDevices.firstOrNull { resolvePos(it) == WheelPosition.FRONT }
+            val rearDevice = wheelDevices.firstOrNull { resolvePos(it) == WheelPosition.REAR }
+
+            if (frontDevice != null && rearDevice != null) {
+                val frontDist = (frontDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                val rearDist = (rearDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                val frontCalib = (frontDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+                val rearCalib = (rearDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+
+                if (frontDist != null && rearDist != null) {
+                    val dualAlert = dualWheelTpmsEstimator.processTelemetry(
+                        frontDistanceMeters = frontDist,
+                        rearDistanceMeters = rearDist,
+                        speedMps = speedMps ?: 0.0,
+                        yawRateRadPerSec = yawRateRadPerSec,
+                        frontCalibrationMeters = frontCalib,
+                        rearCalibrationMeters = rearCalib
+                    )
+                    if (dualAlert != null) {
+                        val (titleRes, msgRes) = when (dualAlert) {
+                            is DualWheelTpmsEstimator.DualWheelTpmsAlert.RearPuncture ->
+                                R.string.itpms_dual_puncture_rear_title to R.string.itpms_dual_puncture_rear_message
+                            is DualWheelTpmsEstimator.DualWheelTpmsAlert.FrontPuncture ->
+                                R.string.itpms_dual_puncture_front_title to R.string.itpms_dual_puncture_front_message
+                        }
+                        emitTpmsAlert(titleRes, msgRes, WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL, dualAlert.dropPercentage)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun emitTpmsAlert(
+        titleRes: Int,
+        msgRes: Int,
+        severity: WorkoutNavigationEvents.TpmsAlertSeverity,
+        dropPercentage: Double
+    ) {
+        val dropStr = String.format(java.util.Locale.US, "%.1f%%", dropPercentage)
+        WorkoutNavigationEvents.triggerTpmsAlert(
+            WorkoutNavigationEvents.TpmsAlert(
+                title = appContext.getString(titleRes),
+                message = appContext.getString(msgRes, dropStr),
+                severity = severity,
+                dropPercentage = dropPercentage
+            )
+        )
+    }
+
+    private fun nextBaselineLoadGeneration(deviceId: Long): Long {
+        return baselineLoadGenerations
+            .computeIfAbsent(deviceId) { AtomicLong(0L) }
+            .incrementAndGet()
+    }
+
+    private fun getOrCreateItpmsEstimator(deviceId: Long): IndirectTpmsEstimator {
+        val cachedBaseline = cachedBaselineCircumferences[deviceId]
+        val estimator = perDeviceItpmsEstimators.getOrPut(deviceId) {
+            IndirectTpmsEstimator(cachedBaseline ?: 0.0)
+        }
+        if (cachedBaseline != null) {
+            estimator.baselineCircumferenceMeters = cachedBaseline
+        } else if (deviceId > 0L && pendingBaselineLoads.add(deviceId)) {
+            val generation = nextBaselineLoadGeneration(deviceId)
+            repositoryScope.launch {
+                try {
+                    loadAndApplyItpmsBaseline(deviceId, generation)
+                } finally {
+                    pendingBaselineLoads.remove(deviceId)
+                }
+            }
+        }
+        return estimator
+    }
+
+    /**
+     * Reloads the persisted `baselineCircumference` for [deviceId] off the main thread and applies
+     * the result back on [repositoryScope] (Main thread) guarded by a monotonic generation token
+     * so stale out-of-order completions cannot overwrite newer baselines (REQ-SEN-034.1).
+     */
+    fun refreshItpmsBaselineForDevice(deviceId: Long) {
+        if (deviceId <= 0L) return
+        val generation = nextBaselineLoadGeneration(deviceId)
+        repositoryScope.launch {
+            loadAndApplyItpmsBaseline(deviceId, generation)
+        }
+    }
+
+    /**
+     * Reloads persisted `baselineCircumference` values off the main thread for all known/active wheel
+     * devices and pushes them onto live cached [IndirectTpmsEstimator] instances on [repositoryScope]
+     * guarded by per-device monotonic generation tokens (REQ-SEN-034.1).
+     */
+    fun refreshAllItpmsBaselines() {
+        val deviceIds = linkedSetOf<Long>()
+        deviceIds.addAll(perDeviceItpmsEstimators.keys)
+        deviceIds.addAll(cachedBaselineCircumferences.keys)
+        deviceIds.addAll(_activeRemoteDevicesIds.value)
+        val targetGenerations = deviceIds.filter { it > 0L }.associateWith { nextBaselineLoadGeneration(it) }
+        if (targetGenerations.isEmpty()) return
+        repositoryScope.launch {
+            for ((devId, generation) in targetGenerations) {
+                loadAndApplyItpmsBaseline(devId, generation)
+            }
+        }
+    }
+
+    private suspend fun loadAndApplyItpmsBaseline(deviceId: Long, generation: Long) {
+        if (deviceId <= 0L) return
+        val raw = try {
+            withContext(itpmsIoDispatcher) {
+                baselineCircumferenceLoader(deviceId)
+            }
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            try {
+                if (DEBUG) Log.w(TAG, "Failed to load iTPMS baseline for device $deviceId: ${t.message}")
+            } catch (_: Throwable) {
+            }
+            return
+        }
+        // Back on repositoryScope (same thread as processItpmsTelemetryTick): drop stale out-of-order IO results.
+        if (baselineLoadGenerations[deviceId]?.get() != generation) return
+        applyResolvedBaseline(deviceId, raw)
+    }
+
+    private fun applyResolvedBaseline(deviceId: Long, rawBaselineMeters: Double) {
+        val resolved = if (rawBaselineMeters.isFinite() && rawBaselineMeters > 0.0) {
+            rawBaselineMeters
+        } else {
+            0.0
+        }
+        cachedBaselineCircumferences[deviceId] = resolved
+        perDeviceItpmsEstimators[deviceId]?.baselineCircumferenceMeters = resolved
+    }
+
     fun clearBreadcrumbs() {
         if (DEBUG) Log.i(TAG, "clearBreadcrumbs()")
         synchronized(trackLock) {
@@ -726,6 +892,7 @@ class BANALServiceRepository private constructor(context: Context) {
         itpmsEstimator.resetSession()
         perDeviceItpmsEstimators.values.forEach { it.resetSession() }
         dualWheelTpmsEstimator.resetSession()
+        refreshAllItpmsBaselines()
         clearSparklineBuffers()
         cachedRehydrationSamples = null
     }
@@ -1180,6 +1347,7 @@ class BANALServiceRepository private constructor(context: Context) {
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: BANALServiceRepository? = null) {
+            INSTANCE?.repositoryScope?.cancel()
             INSTANCE = newInstance
         }
     }

@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.81  
+**Version**: 1.0.84  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 83
+**Total Requirements**: 84
 
 ---
 
@@ -3735,6 +3735,39 @@
   • *Given* active non-accumulator & accumulator sensors, *When* `deactivateSensor()` or `ProxySensor.setSourceSensor(null)` runs, *Then* non-accumulator listeners receive `null` lock-free while `MyAccumulatorSensor` & `ProxySensor.deactivateSensor()` stay silent.
   • *Given* `ANTHeartRateDevice`/`BTLEHeartRateDevice`/`PolarOnlineStreamingBridge` dynamic sensors, *When* disconnecting/shutting down, *Then* `deactivateSensor()` runs before `unregisterSensor()`/`removeSensor()`, clearing `RR_INTERVAL`/IMU live tiles while keeping `STRIDES`.
   • *Given* device-pinned & `"Bester Sensor"` `InstantaneousFilter`, `TimedMovingAverageFilter`, `NumberedMovingAverageFilter`, `AverageFilter`, `MaxValueFilter`, and `STRIDES` filters, *When* sensors disconnect & repeated `SENSORS_CHANGED` fire, *Then* non-accumulator live filters clear to `null` (`"--"`) and sparkline feeding stops, cumulative/accumulator totals stay intact, `"Bester Sensor"` preserves fallback & `ProxySensor` binding, and reconnect rebinds cleanly.
+### REQ-SEN-034: iTPMS Persisted Baseline Wiring, Live Reset Propagation & Strict Null GNSS Accuracy/Bearing Gating [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-034`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt`, `app/src/main/java/com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepository.kt`
+- **Rationale**: Follow-up defect from Ceremony 2 review of `ATT-4880`: `BANALServiceRepository` instantiated per-device `IndirectTpmsEstimator` instances with default `baselineCircumferenceMeters = 0.0` (never calling `DevicesDatabaseManager.getBaselineCircumference(devId)`), defaulted null GNSS accuracy/bearing to `5.0`/`0.0` (bypassing `<= 6.0 m` and `< 3.0 deg/s` gating), and gated GPS-free `DualWheelTpmsEstimator` inside `location != null` (`ATT-8421`, hardening `REQ-TRK-050`, `REQ-SEN-030.2`, and verifying `REQ-SEN-033.3`).
+- **Description**:
+  1. *Persisted `baselineCircumference` Loading, Live Propagation & Zero-Baseline Overwrite (`REQ-SEN-034.1`)*:
+     - `BANALServiceRepository` SHALL load per-device `DevicesDatabaseManager.getBaselineCircumference(devId)` off the main thread (`Dispatchers.IO`, via an injectable baseline loader for JVM testing) into a `ConcurrentHashMap<Long, Double>` cache and apply the resolved baseline to both newly created and live cached `perDeviceItpmsEstimators[devId]` instances so `IndirectTpmsEstimator.TpmsAlertResult.LowPressure` fires when `C_start` drops `>= 0.6%` below a persisted baseline `> 0.0`.
+     - Async `Dispatchers.IO` baseline loads, `DeviceDataRepository.baselineCircumferenceChanged` events, `BANALService.CALIBRATION_FACTOR_CHANGED` broadcasts (registered strictly via `registerInternalReceiver()` for JVM `SDK_INT == 0` safety), `clearBreadcrumbs()`, and `TrackingMode.READY -> TRACKING` reloads MUST push the resolved baseline onto live cached `perDeviceItpmsEstimators[devId]` instances, explicitly overwriting `baselineCircumferenceMeters = 0.0` when the persisted baseline is `<= 0.0` or non-finite.
+     - `DeviceDataRepository` SHALL expose a buffered `SharedFlow<Long>` (`baselineCircumferenceChanged`, `extraBufferCapacity = 64`, `BufferOverflow.DROP_OLDEST`) emitted on both branches of `resetTirePressureBaseline()` (`circumferenceMm > 0` and `null`) and when `updateDevice()` modifies `baselineCircumference`.
+  2. *Strict Null/Non-Finite GNSS Accuracy & Bearing Gating with GPS-Free Dual-Wheel Isolation (`REQ-SEN-034.2`)*:
+     - `BANALServiceRepository` SHALL remove the synthetic fallback defaults `?: 5.0` (for `SensorType.ACCURACY`) and `?: 0.0` (for `_currentBearing.value`), skipping Section 1 (GNSS `IndirectTpmsEstimator`) whenever `location == null`, `acc == null || !acc.isFinite() || acc < 0.0`, or `bearing == null || !bearing.isFinite()`.
+     - `BANALServiceRepository` SHALL scope `location != null` and GNSS `acc`/`bearing` guards strictly to Section 1 so Section 2 (GPS-free `DualWheelTpmsEstimator`, `REQ-SEN-030.1`) continues running under `TrackingMode.TRACKING` whenever `wheelDevices.size >= 2` even when GNSS `location`, `accuracy`, or `bearing` is `null` or non-finite.
+  3. *Baseline Label 9-Locale Parity Regression & Architectural Guardrails (`REQ-SEN-034.3`)*:
+     - `Localization Parity: N/A - already localized by ATT-8422 (00549967) via R.string.devices_wheel_baseline_format across all 9 active locales (values, de, es, fr, it, ja, nl, pl, pt)` with `0` remaining hardcoded English `"Baseline"` UI labels (regression guarded by `TranslationParityTest` & `EditDeviceWheelCircumferenceTest`).
+     - `BANALServiceRepository.kt` (`<= 1,500` LoC) and `DeviceDataRepository.kt` (`<= 1,500` LoC) MUST respect file-size caps with `0` protected monolith edits (`DevicesDatabaseManager.java`, `EditDeviceDialog.kt`, `DeviceManager.java`, `TrackerService.java`), `0` SQLite schema bumps, and `0` `src/main` file reads in new tests (`REQ-PRO-049.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-SEN-034`, hardening runtime wiring for `REQ-TRK-050` (`ATT-4880`), `REQ-SEN-030.2` (`ATT-7753`), and verifying `REQ-SEN-033.3` (`ATT-8422`).
+2. *Historical Origin & Commit Trace*: `e7cc0f39` (`ATT-4880`), `a5665f9a` (`ATT-7753`), `00549967` (`ATT-8422`).
+3. *Root Reason for Existing Formulation*: `ATT-4880` unit-tested `IndirectTpmsEstimator` directly while `BANALServiceRepository` kept default `IndirectTpmsEstimator()` and `?: 5.0` / `?: 0.0` fallbacks inside its 1-Hz loop; `ATT-7753` nested Section 2 inside `location != null`.
+4. *Preservation of Core Invariants*: `IndirectTpmsEstimator` math/thresholds unchanged; `DualWheelTpmsEstimator` GPS-free behavior preserved; `persistConvergedCircumferences()`, `clearBreadcrumbs()`, `Devices.db` v8 schema, and `CALIBRATION_FACTOR` / wheel accumulators unchanged; `0` monolith edits; `0` `src/main` reads in new tests.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* persisted `baselineCircumference = 2.130 m` in `Devices.db`, *When* `BANALServiceRepository` creates/reloads the device's `IndirectTpmsEstimator` and `C_start` locks at `<= 2.115 m` (`-0.7%`), *Then* `TpmsAlertResult.LowPressure` fires; and *When* reset via `DeviceDataRepository` or cleared to `0.0` and reloaded, *Then* live cached estimators update immediately (including overwriting with `0.0`).
+• *Given* `TrackingMode.TRACKING` with null/non-finite GNSS `accuracy`, `bearing`, or `location`, *When* `BANALServiceRepository` processes a tick, *Then* Section 1 (`IndirectTpmsEstimator`) skips the sample without fabricating `5.0`/`0.0`, while Section 2 (GPS-free `DualWheelTpmsEstimator`) continues detecting punctures uninterrupted.
+• *Given* `ATT-8422` 9-locale `devices_wheel_baseline_format` parity and repository wiring changes, *When* targeted unit, localization, and contract suites run, *Then* all pass with `0` monolith growth and `0` new `src/main` reads.
+
+**Invariants**: `IndirectTpmsEstimator` thresholds unchanged; GPS-free `DualWheelTpmsEstimator` active when GNSS is absent; `BANALServiceRepository.kt <= 1,500` LoC & `DeviceDataRepository.kt <= 1,500` LoC; `0` protected monolith edits; `0` SQLite schema bumps; `Localization Parity: N/A - already localized by ATT-8422`; `0` new `src/main` reads.
 
 ---
 
@@ -3822,3 +3855,6 @@
 | `1.0.79` | 2026-11-20 | Lane B Author (`ATT-8994`, `--as agent1`) | `ATT-8994` | Added `REQ-FIL-038` (`[Planned]`, `.1`–`.4`, Derived SW-only) for lock-free `MySensor.deactivateSensor()` null notification, silent `MyAccumulatorSensor`/`ProxySensor` overrides, dynamic HRM sensor deactivation, `FilterManager` disconnect clearing with accumulator/cumulative immunity & `ProxySensor` retention, and sparkline flat-line termination (`N/A - no UI strings`). |
 | `1.0.80` | 2026-11-20 | Lane B Author (`ATT-8994`, `--as agent1`) | `ATT-8994` | Promoted `REQ-FIL-038` to `[Implemented]` following Stage 4 construction (`MySensor.java`, `MyAccumulatorSensor.java`, `ProxySensor.java`, `FilterManager.kt`, `ANTHeartRateDevice.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`), `:app:assembleDebug`, `0` new Kotlin compiler warnings, and 100% PASS across all 16 unit/concurrency/contract suites. |
 | `1.0.81` | 2026-11-20 | Lane B Author (`ATT-8994`, `--as agent1`) | `ATT-8994` | Promoted `REQ-FIL-038` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9293`) verified `140/140 PASS` evidence across all 16 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `b34c62cc`), `4/4` Python safety linters PASS, clean-checkout `TST-FIL-038` verbatim traceability parity, and `docs/engineering/walkthroughs/ATT-8994_walkthrough.md`. |
+| `1.0.82` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Added `REQ-SEN-034` `[Planned]` (`REQ-SEN-034.1`–`.3`, linked to `SYSREQ-TRK-004`/`010`) for `BANALServiceRepository` persisted `baselineCircumference` IO cache + live reset propagation (`DeviceDataRepository.baselineCircumferenceChanged` buffered `SharedFlow`, `CALIBRATION_FACTOR_CHANGED` via `registerInternalReceiver()`, `clearBreadcrumbs()` / `READY -> TRACKING` reload, explicit `0.0` overwrite), strict null/non-finite GNSS accuracy/bearing skip guard with GPS-free `DualWheelTpmsEstimator` isolation, and `ATT-8422` 9-locale Baseline label parity verification. |
+| `1.0.83` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Promoted `REQ-SEN-034` to `[Implemented]` following Stage 4 construction (`BANALServiceRepository.kt` `1,336 / 1,500` LoC, `DeviceDataRepository.kt` `764 / 1,500` LoC, `0` protected monolith edits, `0` new Kotlin compiler warnings, `75/75` PASS across `12` suites + `:app:assembleDebug`). |
+| `1.0.84` | 2026-11-20 | AI Agent (`ATT-8421`, `--as agent1`) | `ATT-8421` | Promoted `REQ-SEN-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9292`) independent `77/77` PASS evidence on `ba662145` (`Rule 7.5`, zero `app/` diff since `ba662145`, `BANALServiceRepository.kt = 1,354 / 1,500`, `DeviceDataRepository.kt = 769 / 1,500`, `0` protected monolith edits, `0` new Kotlin warnings, `4/4` Python safety linters PASS, clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8421_walkthrough.md`). |
