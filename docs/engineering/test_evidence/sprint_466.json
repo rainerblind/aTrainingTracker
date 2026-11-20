@@ -1,0 +1,313 @@
+{
+  "target": "sprint_466",
+  "type": "sprint",
+  "commit": "1009bf155fdb0b6f78a279fbca67a1ffeb63003e",
+  "timestamp": "2026-11-20T22:14:26.346387+00:00",
+  "unit_tests": {
+    "total": 28,
+    "passed": 28,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time": 15.971
+  },
+  "coverage": {
+    "measured": false,
+    "reason": "Kover skipped for regular Schicht (executed in weekly Code Review / ASPICE Audit and releases)",
+    "global": {
+      "line_percent": null,
+      "branch_percent": null
+    },
+    "critical_packages": {}
+  },
+  "tst_results": {
+    "TST-STB-020": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-036": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-056": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-131": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-091": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-020": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-022": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    }
+  },
+  "nfr_verification": {
+    "measured": true,
+    "suite": "MeasuredNfrBenchmarkTest",
+    "measured_count": 11,
+    "passed_count": 11,
+    "failed_count": 0,
+    "measurements": [
+      {
+        "req_id": "REQ-NFR-001",
+        "tst_id": "TST-NFR-001",
+        "name": "Deterministic EKF Timing",
+        "metric": "ekf_cycle_p95_ms",
+        "measured_value": 0.730376,
+        "unit": "ms",
+        "budget": "<= 2.0 ms",
+        "passed": true,
+        "warmup_iterations": 200,
+        "measured_iterations": 1000,
+        "details": "dt_equiv_error_ms=0.1866, injected_arrival_jitter_ms=41.30, p95_cycle_ms=0.7304, max_cycle_ms=10.0689"
+      },
+      {
+        "req_id": "REQ-NFR-002",
+        "tst_id": "TST-NFR-002",
+        "name": "Stationary Pinning Drift Prevention",
+        "metric": "stationary_drift_m_per_min",
+        "measured_value": 0,
+        "unit": "m/min",
+        "budget": "< 0.5 m/min",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 1800,
+        "details": "total_drift_m=0.000, pinned=true, unpinned_on_motion=true, replay_ms=302.15"
+      },
+      {
+        "req_id": "REQ-NFR-003",
+        "tst_id": "TST-NFR-003",
+        "name": "Periodic Tick Latency Budget",
+        "metric": "tick_p99_ms",
+        "measured_value": 14.415371,
+        "unit": "ms",
+        "budget": "< 50.0 ms",
+        "passed": true,
+        "warmup_iterations": 100,
+        "measured_iterations": 1000,
+        "details": "p50_ms=8.387, p90_ms=9.164, p95_ms=9.928, p99_ms=14.415, max_ms=20.797, min_headroom_ms=985.585"
+      },
+      {
+        "req_id": "REQ-NFR-005",
+        "tst_id": "TST-NFR-005",
+        "name": "Dedicated Heap Footprint Ceiling",
+        "metric": "retained_heap_delta_mb",
+        "measured_value": 0,
+        "unit": "MB",
+        "budget": "< 40.0 MB (total <= 150 MB)",
+        "passed": true,
+        "warmup_iterations": 200,
+        "measured_iterations": 3600,
+        "details": "delta_mb=0.000, baseline_heap_mb=182.959, total_used_heap_mb=182.923, total_ceiling_mb=223.0, stream_increments=180, samples=3600"
+      },
+      {
+        "req_id": "REQ-NFR-007",
+        "tst_id": "TST-NFR-007",
+        "name": "Sensor Dispatch Latency Budget",
+        "metric": "dispatch_p99_ms",
+        "measured_value": 0.000607,
+        "unit": "ms",
+        "budget": "< 25.0 ms",
+        "passed": true,
+        "warmup_iterations": 200,
+        "measured_iterations": 1000,
+        "details": "delivered=1000/1000, banal_hr=149, p99_ms=0.0006, max_ms=0.0190"
+      },
+      {
+        "req_id": "REQ-NFR-008",
+        "tst_id": "TST-NFR-008",
+        "name": "Sensor Connection Failover Timeout",
+        "metric": "watchdog_failover_ms",
+        "measured_value": 3500,
+        "unit": "ms",
+        "budget": "<= 3500 ms",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 1,
+        "details": "final_state=DISCONNECTED_ERROR, btle_const=3500, ant_const=3500"
+      },
+      {
+        "req_id": "REQ-NFR-009",
+        "tst_id": "TST-NFR-009",
+        "name": "Tracking WakeLock Bounding",
+        "metric": "wakelock_release_latency_ms",
+        "measured_value": 111.969147,
+        "unit": "ms",
+        "budget": "0 leaks (immediate release)",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 1,
+        "details": "held_on_create=true, held_tracking=true, held_paused=true, released_after_stop=true, ref_cleared=true, stopped=true"
+      },
+      {
+        "req_id": "REQ-NFR-010",
+        "tst_id": "TST-NFR-010",
+        "name": "Database Sample Write Latency Budget",
+        "metric": "db_write_p99_ms",
+        "measured_value": 0.331786,
+        "unit": "ms",
+        "budget": "< 30.0 ms",
+        "passed": true,
+        "warmup_iterations": 100,
+        "measured_iterations": 1000,
+        "details": "off_main_thread=true, all_inserted=true, p95_ms=0.287, p99_ms=0.332, max_ms=0.577"
+      },
+      {
+        "req_id": "REQ-NFR-011",
+        "tst_id": "TST-NFR-011",
+        "name": "Telemetry Storage Growth Rate Ceiling",
+        "metric": "storage_growth_kb_per_h",
+        "measured_value": 260,
+        "unit": "KB/h",
+        "budget": "<= 360.0 KB/h",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 3600,
+        "details": "delta_bytes=266240, bytes_per_sample=73.96, before=20480, after=286720"
+      },
+      {
+        "req_id": "REQ-NFR-013",
+        "tst_id": "TST-NFR-013",
+        "name": "Map Polyline Update Latency Budget",
+        "metric": "polyline_update_p95_ms",
+        "measured_value": 0.004633,
+        "unit": "ms",
+        "budget": "< 30.0 ms",
+        "passed": true,
+        "warmup_iterations": 10,
+        "measured_iterations": 100,
+        "details": "track_points=10000, p95_ms=0.0046, max_ms=0.2883"
+      },
+      {
+        "req_id": "REQ-NFR-014",
+        "tst_id": "TST-NFR-014",
+        "name": "Cockpit Telemetry Emission Rate Throttling",
+        "metric": "emissions_in_5s",
+        "measured_value": 5,
+        "unit": "emissions",
+        "budget": "<= 5 emissions / 5s (<= 1.0 Hz)",
+        "passed": true,
+        "warmup_iterations": 0,
+        "measured_iterations": 5,
+        "details": "emissions=5, window_ms=5000, poll_delay_ms=1000"
+      }
+    ],
+    "manual_protocol_present": true,
+    "manual_protocols": [
+      {
+        "req_id": "REQ-NFR-004",
+        "tst_id": "TST-NFR-004",
+        "name": "CPU Consumption Ceiling",
+        "budget": "< 5.0% single-core",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-006",
+        "tst_id": "TST-NFR-006",
+        "name": "Tracking Battery Drain Ceiling",
+        "budget": "<= 5.0%/h bg / <= 12.0%/h fg",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-012",
+        "tst_id": "TST-NFR-012",
+        "name": "Cockpit Frame Render Budget",
+        "budget": "< 16.6 ms p95 (60 FPS)",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-015",
+        "tst_id": "TST-NFR-015",
+        "name": "Cold Start Startup Latency Budget",
+        "budget": "TTID <= 1200 ms / TTFD <= 1500 ms",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-016",
+        "tst_id": "TST-NFR-016",
+        "name": "GNSS Horizontal Trajectory Accuracy",
+        "budget": "p95 <= 5.0 m / RMSE <= 3.0 m",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-017",
+        "tst_id": "TST-NFR-017",
+        "name": "Production Crash-Free Session Stability",
+        "budget": ">= 99.5% prod / >= 99.0% staging",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-018",
+        "tst_id": "TST-NFR-018",
+        "name": "Application Not Responding (ANR) Rate Ceiling",
+        "budget": "<= 0.05% ANR / < 100 ms main thread",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      }
+    ]
+  }
+}
