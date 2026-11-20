@@ -23,6 +23,7 @@ import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -212,5 +213,31 @@ class LiveWorkoutSessionTest {
         assertEquals(90.0, cadenceStats.min, 1e-4)
         assertEquals(90.0, cadenceStats.max, 1e-4)
         assertEquals(90.0, cadenceStats.average, 1e-4)
+    }
+
+    /**
+     * TST-UI-029 (REQ-UI-009, REQ-UI-110): Verifies session isolation when starting a fresh
+     * workout session immediately after stopping a previous tracked session.
+     */
+    @Test
+    fun testNewSession_startsCleanWithZeroLeakedTrackOrExtremaFromPriorSession_TST_UI_029() {
+        // TST-UI-029
+        val firstSession = LiveWorkoutSession(100L, setOf(SensorType.HR, SensorType.ALTITUDE))
+        firstSession.rehydrateStreams(
+            listOf(LatLng(48.10, 11.50), LatLng(48.11, 11.51)),
+            listOf(500.0, 520.0),
+            listOf(0.0, 150.0)
+        )
+        firstSession.addSample(SensorType.HR, 165.0, LatLng(48.11, 11.51))
+        assertEquals(2, firstSession.rawLatLngs.size)
+        assertEquals(165.0, firstSession.sensorStats[SensorType.HR]!!.max, 1e-4)
+
+        val secondSession = LiveWorkoutSession(101L, setOf(SensorType.HR, SensorType.ALTITUDE))
+        assertNull(secondSession.startLatLng)
+        assertNull(secondSession.lastLatLng)
+        assertEquals(0, secondSession.rawLatLngs.size)
+        assertEquals(0, secondSession.sampledLatLngs.size)
+        assertNull(secondSession.sensorStats[SensorType.HR])
+        assertTrue(secondSession.sensorStats.isEmpty())
     }
 }

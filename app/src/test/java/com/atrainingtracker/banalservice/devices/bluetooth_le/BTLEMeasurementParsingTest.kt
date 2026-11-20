@@ -652,9 +652,11 @@ class BTLEMeasurementParsingTest {
         pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(pw2))
         assertEquals(120.0, pwrDevice.getCadenceSensor().value, 0.001)
 
-        // Trigger disconnect teardown (resets mLastCrankRevolutionsValid and deactivates sensors)
+        // Trigger disconnect teardown (resets mLastCrankRevolutionsValid and deactivates sensors -> null per REQ-FIL-038.1 / ATT-8994)
         cscDevice.unregisterSensors()
         pwrDevice.unregisterSensors()
+        assertNull(cscDevice.getCadenceSensor().value)
+        assertNull(pwrDevice.getCadenceSensor().value)
 
         // Reconnect establishes session (reactivates sensors)
         cscDevice.registerSensors()
@@ -663,12 +665,12 @@ class BTLEMeasurementParsingTest {
         // After disconnect/reconnect, first packet MUST re-initialize baseline without emitting delta
         val reconnectPacket = byteArrayOf(0x02, 0x14, 0x00, 0xD0.toByte(), 0x07) // revs = 20, time = 2000
         cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(reconnectPacket))
-        // Prior cadence was 120.0; reconnected baseline packet must NOT compute new cadence against pre-disconnect state
-        assertEquals(120.0, cscDevice.getCadenceSensor().value, 0.001)
+        // Disconnect cleared cadence to null (REQ-FIL-038.1); reconnected baseline packet must NOT compute cadence against pre-disconnect state
+        assertNull(cscDevice.getCadenceSensor().value)
 
         val pwReconnect = byteArrayOf(0x20, 0x00, 0xC8.toByte(), 0x00, 0x14, 0x00, 0xD0.toByte(), 0x07)
         pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(pwReconnect))
-        assertEquals(120.0, pwrDevice.getCadenceSensor().value, 0.001)
+        assertNull(pwrDevice.getCadenceSensor().value)
 
         // Subsequent post-reconnect packet computes cadence accurately against new baseline (revs = 22, time = 3024 -> 120 rpm)
         val p4 = byteArrayOf(0x02, 0x16, 0x00, 0xD0.toByte(), 0x0B) // revs = 22, time = 3024

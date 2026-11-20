@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.odometry.AttFusedColdStartHelper
 import com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminator
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
@@ -109,6 +110,9 @@ open class SpeedAndLocationDevice_ATTFused(
     val carriageClassifier = PhoneCarriageClassifier()
     val sportDiscriminator = KinematicSportTypeDiscriminator()
     val multisportDetector = com.atrainingtracker.banalservice.odometry.MultisportTransitionDetector()
+    internal val coldStartHelper = AttFusedColdStartHelper()
+    @Volatile
+    private var mAllowColdStartPinRelease = false
     @Volatile
     private var mLastPublishedInferredSport: BSportType = BSportType.UNKNOWN
     private var mLastMultisportTickMs: Long = Long.MIN_VALUE
@@ -244,6 +248,8 @@ open class SpeedAndLocationDevice_ATTFused(
     }
 
     override fun getName(): String = "att_fused"
+
+    override fun shouldReleaseColdStartStationaryPin(location: Location?): Boolean = mAllowColdStartPinRelease
 
     @Synchronized
     fun registerUpdates() {
@@ -560,7 +566,16 @@ open class SpeedAndLocationDevice_ATTFused(
         val northMeters = dLatRad * EARTH_RADIUS_METERS
         val eastMeters = dLonRad * EARTH_RADIUS_METERS * cos(Math.toRadians(rLat))
 
-        // REQ-FIL-023.1: Apply speed / ZUPT before GNSS position update to block velocity-leak spikes
+        val activeMotionEvidence = activeCarriageMode.isRunningMode() ||
+            activeCarriageMode == PhoneCarriageMode.WALKING_TRANSITION ||
+            activeCarriageMode.isCyclingMode() ||
+            carriageClassifier.currentStepFrequencyHz(timestampMs) != null
+        val coldStart = coldStartHelper.evaluateStep(
+            eastMeters, northMeters, acc, timestampMs, hasTrustedGpsSpeed, gpsSpeed, validBearing,
+            isWheelMoving, isStationary, isStationaryByClassifier, activeMotionEvidence
+        )
+
+        // REQ-FIL-023.1 & REQ-FIL-036.2: Apply speed/ZUPT and cold-start heading seed before GNSS position update
         val gnssAccepted: Boolean
         val clusterSnapped: Boolean
         val fusedEast: Double
@@ -572,15 +587,14 @@ open class SpeedAndLocationDevice_ATTFused(
             if (isStationary) {
                 ekf.applyZeroVelocityUpdate(timestampMs)
             } else if (hasGpsSpeed) {
-                val speedVar = if (location.hasAccuracy() && !location.accuracy.isNaN()) {
-                    max(0.5, (location.accuracy.toDouble() * 0.25).pow(2))
-                } else {
-                    1.0
-                }
-                ekf.updateSpeed(gpsSpeed, speedVar, timestampMs)
+                ekf.updateSpeed(gpsSpeed, AttFusedColdStartHelper.calibratedDopplerSpeedVariance(acc), timestampMs)
             } else if (!isWheelMoving && gnssDisplacementSpeedMps != null) {
-                val speedVar = max(1.0, (acc * 0.35).pow(2))
-                ekf.updateSpeed(gnssDisplacementSpeedMps, speedVar, timestampMs)
+                ekf.updateSpeed(gnssDisplacementSpeedMps, max(1.0, (acc * 0.35).pow(2)), timestampMs)
+            }
+            if (coldStart.seedHeadingRad != null &&
+                ekf.seedInitialHeading(coldStart.seedHeadingRad, coldStart.seedHeadingVarRad2, timestampMs)
+            ) {
+                coldStartHelper.markHeadingAnchored()
             }
 
             gnssAccepted = ekf.updateGnssPosition(
@@ -588,7 +602,8 @@ open class SpeedAndLocationDevice_ATTFused(
                 northMeters = northMeters,
                 accuracyMeters = acc,
                 timestampMs = timestampMs,
-                isStationary = isStationary
+                isStationary = isStationary,
+                decoupleVelocity = coldStart.decouplePositionVelocity
             )
             clusterSnapped = ekf.consumeStationaryClusterSnapped()
             fusedEast = ekf.eastMeters
@@ -612,7 +627,9 @@ open class SpeedAndLocationDevice_ATTFused(
             val cogDeg = location.bearing.toDouble()
             val enuHeadingRad = Math.toRadians((450.0 - cogDeg) % 360.0)
             synchronized(ekf) {
-                ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), timestampMs)
+                if (ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), timestampMs)) {
+                    coldStartHelper.markHeadingAnchored()
+                }
             }
             if (!isStationary && gnssAccepted && acc <= 15.0) {
                 updateChordHeadingAnchor(fusedEast, fusedNorth, timestampMs)
@@ -637,7 +654,9 @@ open class SpeedAndLocationDevice_ATTFused(
                     if ((chordDist / dtChordSec) >= activeProfile.minChordHeadingSpeedMps) {
                         val chordHeadingRad = atan2(dN, dE)
                         synchronized(ekf) {
-                            ekf.updateOfflineHeading(chordHeadingRad, activeProfile.chordHeadingVarianceRad2, timestampMs)
+                            if (ekf.updateOfflineHeading(chordHeadingRad, activeProfile.chordHeadingVarianceRad2, timestampMs)) {
+                                coldStartHelper.markHeadingAnchored()
+                            }
                         }
                     }
                     updateChordHeadingAnchor(fusedEast, fusedNorth, timestampMs)
@@ -707,6 +726,7 @@ open class SpeedAndLocationDevice_ATTFused(
             mFilteredLongitude = fusedLon
         }
 
+        mAllowColdStartPinRelease = coldStart.shouldReleasePin
         onNewLocation(location)
     }
 
@@ -1357,6 +1377,8 @@ open class SpeedAndLocationDevice_ATTFused(
         mHasRotationVector = false
         mLastGyroTimestampNs = 0L
         clearChordHeadingAnchor()
+        coldStartHelper.reset()
+        mAllowColdStartPinRelease = false
         mRecentRawGnssFixes.clear()
         clearYawRateWindow()
         carriageClassifier.reset()

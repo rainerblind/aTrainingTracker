@@ -59,9 +59,7 @@
     <string name="devices_now">Jetzt</string>
 
     <!-- dialog_set_calibration_factor -->
-    <string name="devices_correct_calibration_factor_title_bike">Radumfang anpassen</string>
     <string name="devices_correct_calibration_factor_title_run">Kalibrierungsfaktor anpassen</string>
-    <string name="devices_correct_calibration_explanation_bike">Hier kann der Radumfang für diesen Sensors korrigiert werden.  Diese Korrektur basieret auf einer mit dem aktuellen Radumfang gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
     <string name="devices_correct_calibration_explanation_run">Hier kann der Kalibrierungsfaktor für diesen Sensors korrigiert werden.  Diese Korrektur basiert auf einer mit den aktuellen Einstellungen gemessenen Strecke und deren korrektem Wert (z.B. die Länge eines Rennens).</string>
     <string name="devices_measuredDistanceText">Gemessene Strecke:</string>
     <string name="devices_correctDistanceText">Korrekte Strecke:</string>
@@ -87,7 +85,6 @@
     <!-- edit_device_bike -->
     <string name="devices_editDeviceBikeDeviceNameValue">Garmin Geschwindigkeit</string>
     <string name="devices_editDeviceBikeDeviceTypeValue">Rad Geschwindigkeit</string>
-    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">Radumfang korrigieren</string>
     <!-- edit_device_run -->
     <string name="devices_editDeviceRunDeviceNameValue">Garmin Laufsensor</string>
     <string name="devices_editDeviceRunDeviceTypeValue">Laufsensor</string>
@@ -147,7 +144,6 @@
     <string name="devices_dialog_delete_device_message">Willst Du den Sensor \'%1$s\' wirklich löschen?</string>
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
-    <string name="devices_reset_tire_pressure_baseline">Reifendruck-Basiswert zurücksetzen (Frisch aufgepumpt)</string>
 
     <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
     <string name="devices_sort_alphabetical">Alphabetisch</string>
@@ -194,6 +190,7 @@
     <string name="device_polar_h10_live_imu_desc">Überträgt Live-HF/RR- und Beschleunigungsdaten über eine einzelne Polar-Verbindung für Laufkadenz ohne aktiven Laufsensor.</string>
     <string name="device_polar_verity_live_imu_desc">Überträgt Live-HF- sowie ACC/GYRO-Daten im blauen Sensormodus über eine einzelne Polar-Verbindung für Laufkadenz ohne aktiven Laufsensor.</string>
     <string name="device_polar_live_imu_requires_android_13">Erfordert Android 13 oder neuer.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: Live-IMU (%2$s) durch eine andere App (z. B. Polar Flow) oder einen hängenden Sensorzustand blockiert. Polar Flow schließen oder Sensor neu starten.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">Vertikale Oszillation</string>
@@ -232,4 +229,8 @@
     <string name="prefs_research_period_5m">5 Min.</string>
     <string name="prefs_research_period_10m">10 Min.</string>
 
+    <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
+    <string name="devices_wheel_circumference_auto_hint">Start-Reifengröße für neue Sensoren — wird während der Fahrt automatisch per GNSS kalibriert.</string>
+    <string name="devices_wheel_baseline_format">Basiswert: %1$d mm</string>
+    <string name="devices_wheel_history_empty">Noch kein Verlauf vorhanden. Absolviere eine Fahrt mit GNSS und diesem Radsensor, um den zeitlichen Verlauf zu sehen.</string>
 </resources>

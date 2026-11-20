@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmoother
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.SmoothedAltitudeSlopePoint
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -1992,5 +1993,129 @@ class ErtsPostWorkoutRecomputerTest {
         assertEquals(40, alts.size)
         assertTrue("All altitudes must stay near 438..450 m (no 0.0 m sea-level spike! min=${alts.minOrNull()})", alts.all { it.isFinite() && it in 435.0..455.0 })
         assertTrue("All slopes must stay physically bounded within +-35%", slopes.all { it.isFinite() && kotlin.math.abs(it) <= 35.0 + 1e-6 })
+    }
+
+    // REQ-FIL-036.3 / TST-FIL-036.3
+    @Test
+    fun testPostUnpinTeleportRun_boundsCanonicalSpeedAndMaxExtremaAndPreservesRawColumns_tstFil036_3() = runBlocking {
+        val baseFileName = "test_post_unpin_teleport_erts_036"
+        val workoutId = createWorkout(baseFileName)
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).database
+
+        samplesDb.execSQL(
+            """
+            CREATE TABLE $tableName (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                time TEXT,
+                ${SensorType.TIME_TOTAL.name} INTEGER,
+                ${SensorType.LATITUDE.name} REAL,
+                ${SensorType.LONGITUDE.name} REAL,
+                ${SensorType.SPEED_mps.name} REAL,
+                ${SensorType.PACE_spm.name} REAL,
+                ${SensorType.DISTANCE_m.name} REAL,
+                ${SensorType.BEARING.name} REAL,
+                ${SensorType.ACCURACY.name} REAL,
+                ${SensorType.WORLD_YAW_RATE_radps.name} REAL,
+                ${SensorType.ACTIVITY_AND_CARRIAGE_MODE.name} INTEGER,
+                "SPEED_mps (GPS)" REAL
+            )
+            """.trimIndent()
+        )
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_700_008_000_000L
+        var eastM = 0.0
+        var cumDist = 0.0
+        val expectedRawGpsSpeeds = mutableListOf<Double>()
+
+        samplesDb.beginTransaction()
+        try {
+            // 23 s pinned standstill + unpin jumps (9.34 m @ t=24, 12.20 m @ t=31) + steady 2.1 m/s running to t=120
+            for (sec in 0..120) {
+                val isPinned = sec <= 23
+                val stepM = when {
+                    isPinned -> 0.0
+                    sec == 24 -> 9.34
+                    sec == 31 -> 12.20
+                    else -> 2.1
+                }
+                eastM += stepM
+                cumDist += stepM
+                val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(eastM, 0.0, 48.6567, 9.0545)
+                val liveAttSpeed = when {
+                    isPinned -> 0.0
+                    sec == 24 -> 9.34 // single-tick geometric unpin glitch
+                    else -> 2.1
+                }
+                val rawGpsSpeed = 2.0 + (sec % 3) * 0.1
+                expectedRawGpsSpeeds.add(rawGpsSpeed)
+
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + sec * 1_000L)))
+                    put(SensorType.TIME_TOTAL.name, sec)
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, lon)
+                    put(SensorType.SPEED_mps.name, liveAttSpeed)
+                    put(SensorType.PACE_spm.name, if (liveAttSpeed > 0.1) 1.0 / liveAttSpeed else 0.0)
+                    put(SensorType.DISTANCE_m.name, cumDist)
+                    put(SensorType.BEARING.name, 90.0)
+                    put(SensorType.ACCURACY.name, if (sec < 35) 12.0 else 5.0)
+                    put(SensorType.WORLD_YAW_RATE_radps.name, 0.0)
+                    put(
+                        SensorType.ACTIVITY_AND_CARRIAGE_MODE.name,
+                        if (isPinned) PhoneCarriageMode.STATIONARY.code else PhoneCarriageMode.RUN_WAIST_HIP.code
+                    )
+                    put("\"SPEED_mps (GPS)\"", rawGpsSpeed)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val ok = ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Post-unpin teleport ERTS recomputation must succeed", ok)
+
+        val smoothedSpeeds = mutableListOf<Double>()
+        val postRawGpsSpeeds = mutableListOf<Double>()
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.SPEED_mps.name, "\"SPEED_mps (GPS)\""),
+            null,
+            null,
+            null,
+            null,
+            "_id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                smoothedSpeeds.add(cursor.getDouble(0))
+                postRawGpsSpeeds.add(cursor.getDouble(1))
+            }
+        }
+        assertEquals(121, smoothedSpeeds.size)
+        val maxCanonicalSpeed = smoothedSpeeds.maxOrNull() ?: 0.0
+        assertTrue(
+            "Canonical SPEED_mps must not exhibit 5.73 m/s catch-up overshoot (< 3.5 m/s, was $maxCanonicalSpeed)",
+            maxCanonicalSpeed < 3.5
+        )
+        // Raw device-attributed column must remain 100% byte-for-byte immutable
+        for (i in expectedRawGpsSpeeds.indices) {
+            assertEquals(expectedRawGpsSpeeds[i], postRawGpsSpeeds[i], 1e-12)
+        }
+
+        // ExtremumValues.MAX(SPEED_mps) must stay bounded < 3.5 m/s
+        val maxSpeedExtrema = WorkoutSummariesDatabaseManager.getInstance(context).getExtremaValue(
+            workoutId,
+            SensorType.SPEED_mps,
+            ExtremaType.MAX
+        )
+        assertTrue(
+            "ExtremumValues.MAX(SPEED_mps) must stay < 3.5 m/s (was $maxSpeedExtrema)",
+            maxSpeedExtrema != null && maxSpeedExtrema > 1.8 && maxSpeedExtrema < 3.5
+        )
     }
 }

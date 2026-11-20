@@ -41,8 +41,9 @@ class SensorTypeHrvTest {
         assertEquals(R.drawable.ic_heart_rate, rmssd.iconResId)
         assertTrue(rmssd.filteringPossible)
 
+        // REQ-HRV-050.1 / TST-HRV-050.1: HRV metrics map to DeviceType.HRM for per-device source selection
         val deviceTypes = DeviceType.getDeviceTypeList(rmssd)
-        assertTrue(deviceTypes.contains(DeviceType.HRV_METRICS))
+        assertTrue(deviceTypes.contains(DeviceType.HRM))
 
         // REQ-TRK-061.2: SensorType.HRV_RMSSD uses IntegerFormatter (0 ms)
         assertTrue("HRV_RMSSD must use IntegerFormatter", rmssd.myFormatter is com.atrainingtracker.banalservice.sensor.formater.IntegerFormatter)
@@ -61,8 +62,9 @@ class SensorTypeHrvTest {
         assertEquals(R.drawable.ic_heart_rate, dfa.iconResId)
         assertTrue(dfa.filteringPossible)
 
+        // REQ-HRV-050.1 / TST-HRV-050.1
         val deviceTypes = DeviceType.getDeviceTypeList(dfa)
-        assertTrue(deviceTypes.contains(DeviceType.HRV_METRICS))
+        assertTrue(deviceTypes.contains(DeviceType.HRM))
     }
 
     @Test
@@ -91,12 +93,14 @@ class SensorTypeHrvTest {
         assertEquals(R.drawable.ic_heart_rate, artifactRate.iconResId)
         assertTrue(artifactRate.filteringPossible)
 
+        // REQ-HRV-050.1 / TST-HRV-050.1
         val deviceTypes = DeviceType.getDeviceTypeList(artifactRate)
-        assertTrue(deviceTypes.contains(DeviceType.HRV_METRICS))
+        assertTrue(deviceTypes.contains(DeviceType.HRM))
     }
 
     @Test
     fun testHrvSdnnProperties() {
+        // REQ-HRV-050.1 / TST-HRV-050.1
         val sdnn = SensorType.HRV_SDNN
         assertEquals(SensorCategory.HEART_RATE_AND_ENERGY, sdnn.category)
         assertEquals(SensorSubCategory.HRV_AND_DRIFT, sdnn.subCategory)
@@ -106,5 +110,10 @@ class SensorTypeHrvTest {
         assertEquals(R.string.units_time_ms, sdnn.unitId)
         assertEquals(R.drawable.ic_heart_rate, sdnn.iconResId)
         assertTrue(sdnn.filteringPossible)
+
+        val deviceTypes = DeviceType.getDeviceTypeList(sdnn)
+        assertTrue("HRV_SDNN must map to DeviceType.HRM", deviceTypes.contains(DeviceType.HRM))
+        // Enum constant HRV_METRICS remains intact for global arbitrated HRVMetricsDevice
+        assertEquals(SensorType.HRV_RMSSD, DeviceType.HRV_METRICS.mainSensorType)
     }
 }

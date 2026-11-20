@@ -19,7 +19,10 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import java.time.LocalDate
 
 /**
@@ -127,8 +130,115 @@ data class PeriodSummary(
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
     val yearlySportContributions: Map<BSportType, YearlySportContribution> = emptyMap(),
     val dailySportContributions: Map<BSportType, DailySportContribution> = emptyMap(),
+    val regionSummaries: List<PeriodRegionPreview> = emptyList(),
+    val primaryRegionSummary: PrimaryRegionSummary? = null,
     val sortKey: String // Used for sorting
 )
+
+/**
+ * Timestamped encoded polyline retained inside [PeriodRegionPreview] for sport-aware chronological
+ * preview track merging without eager `LatLng` decoding (REQ-PER-039, REQ-PER-046.1).
+ */
+data class TimestampedPreviewPolyline(
+    val startTimeS: Long,
+    val encodedPolyline: String
+)
+
+/**
+ * Memory-bounded per-region summary computed across all GPS workouts in a period during enrichment
+ * (REQ-PER-046.1, REQ-PER-046.4). Retains zero decoded `LatLng` paths and at most
+ * [MAX_SUMMARY_THUMBNAIL_TRACKS] encoded polylines per sport per region.
+ */
+data class PeriodRegionPreview(
+    val center: LatLng,
+    val bounds: LatLngBounds,
+    val sportCounts: Map<BSportType, Int>,
+    val sportDistancesMeters: Map<BSportType, Double>,
+    val sportMostRecentTimestampS: Map<BSportType, Long>,
+    val sportPreviewPolylines: Map<BSportType, List<TimestampedPreviewPolyline>>
+)
+
+/**
+ * Authoritative primary-region metadata for a [PeriodSummary] (either unfiltered or sport-filtered),
+ * matching `SpatialRegionEngine.detectRegions()` 1:1 (REQ-PER-046.1, REQ-PER-046.3).
+ */
+data class PrimaryRegionSummary(
+    val detectedRegionCount: Int,
+    val primaryRegionWorkoutCount: Int,
+    val center: LatLng,
+    val bounds: LatLngBounds
+)
+
+/**
+ * Builds compact, zero-decoding [PeriodRegionPreview] summaries across all GPS workouts in a period
+ * via [SpatialRegionEngine.detectRegions] (REQ-PER-046.1, REQ-PER-046.4).
+ */
+internal fun buildRegionPreviews(groupWorkouts: List<WorkoutData>): List<PeriodRegionPreview> {
+    if (groupWorkouts.isEmpty()) return emptyList()
+    val detectedRegions = SpatialRegionEngine.detectRegions(groupWorkouts)
+    if (detectedRegions.isEmpty()) return emptyList()
+
+    val workoutsById = groupWorkouts.associateBy { it.id }
+    return detectedRegions.map { region ->
+        val bySport = region.workoutIds.mapNotNull { workoutsById[it] }.groupBy { it.bSportType }
+        PeriodRegionPreview(
+            center = region.center,
+            bounds = region.bounds,
+            sportCounts = bySport.mapValues { it.value.size },
+            sportDistancesMeters = bySport.mapValues { (_, list) -> list.sumOf { it.totalDistance } },
+            sportMostRecentTimestampS = bySport.mapValues { (_, list) -> list.maxOfOrNull { it.startTimeS } ?: 0L },
+            sportPreviewPolylines = bySport.mapValues { (_, list) ->
+                list.asSequence()
+                    .filter { it.mapPolyline.isNotEmpty() }
+                    .sortedByDescending { it.startTimeS }
+                    .take(MAX_SUMMARY_THUMBNAIL_TRACKS)
+                    .map { TimestampedPreviewPolyline(it.startTimeS, it.mapPolyline) }
+                    .toList()
+            }
+        )
+    }
+}
+
+/**
+ * Ranks surviving [regionSummaries] for [sports] (`null` = all sports) using the exact
+ * [SpatialRegionEngine.detectRegions] comparator (`count DESC`, `distance DESC`, `mostRecent DESC`)
+ * and curates up to [MAX_SUMMARY_THUMBNAIL_TRACKS] newest encoded polylines strictly from the
+ * winning Primary Region (REQ-PER-046.1, REQ-PER-046.2). Returns `null` when zero GPS workouts match.
+ */
+internal fun resolvePrimaryRegionForSports(
+    regionSummaries: List<PeriodRegionPreview>,
+    sports: Set<BSportType>? = null
+): Pair<PrimaryRegionSummary, List<String>>? {
+    if (regionSummaries.isEmpty()) return null
+    data class RankedRegion(val preview: PeriodRegionPreview, val count: Int, val distance: Double, val mostRecent: Long)
+
+    val surviving = regionSummaries.mapNotNull { region ->
+        val count = if (sports == null) region.sportCounts.values.sum()
+        else region.sportCounts.filterKeys { it in sports }.values.sum()
+        if (count <= 0) return@mapNotNull null
+        val distance = if (sports == null) region.sportDistancesMeters.values.sum()
+        else region.sportDistancesMeters.filterKeys { it in sports }.values.sum()
+        val mostRecent = if (sports == null) (region.sportMostRecentTimestampS.values.maxOrNull() ?: 0L)
+        else (region.sportMostRecentTimestampS.filterKeys { it in sports }.values.maxOrNull() ?: 0L)
+        RankedRegion(region, count, distance, mostRecent)
+    }
+    if (surviving.isEmpty()) return null
+
+    val ranked = surviving.sortedWith(
+        compareByDescending<RankedRegion> { it.count }
+            .thenByDescending { it.distance }
+            .thenByDescending { it.mostRecent }
+    )
+    val winner = ranked.first()
+    val matchingStreams = if (sports == null) winner.preview.sportPreviewPolylines.values
+    else winner.preview.sportPreviewPolylines.filterKeys { it in sports }.values
+    val curatedPolylines = matchingStreams.flatten()
+        .sortedByDescending { it.startTimeS }
+        .take(MAX_SUMMARY_THUMBNAIL_TRACKS)
+        .map { it.encodedPolyline }
+
+    return PrimaryRegionSummary(ranked.size, winner.count, winner.preview.center, winner.preview.bounds) to curatedPolylines
+}
 
 /**
  * Resolves the localized date range dynamically for weekly periods according to [locale],

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.build
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -238,5 +239,49 @@ class DeadCodeEliminationContractTest {
             "All Compose @Preview functions must have private visibility. Violations: $nonPrivatePreviews",
             nonPrivatePreviews.isEmpty()
         )
+    }
+
+    /**
+     * TST-UI-108 (REQ-UI-155): Verifies legacy full-screen settings fragments are eliminated
+     * from classpath/disk and app/src/main/res/layout/ retains only the 9 active XML layouts.
+     */
+    @Test
+    fun testLegacyFragmentsAndObsoleteLayoutsAreEliminated_TST_UI_108() {
+        // TST-UI-108
+        val retiredClasses = listOf(
+            "com.atrainingtracker.trainingtracker.fragments.preferences.CloudUploadFragment",
+            "com.atrainingtracker.trainingtracker.fragments.preferences.SearchSettingsFragment",
+            "com.atrainingtracker.trainingtracker.fragments.preferences.StravaUploadFragment"
+        )
+        for (className in retiredClasses) {
+            try {
+                Class.forName(className)
+                fail("Retired legacy fragment $className must not exist in classpath")
+            } catch (_: ClassNotFoundException) {
+                // Expected
+            }
+        }
+
+        val mainJavaDir = findDir("app/src/main/java", "src/main/java")
+        val remainingRetiredFiles = mainJavaDir.walkTopDown()
+            .filter { it.isFile && it.name in setOf("CloudUploadFragment.kt", "SearchSettingsFragment.kt", "StravaUploadFragment.kt") }
+            .map { it.name }
+            .toList()
+        assertTrue("Retired fragment sources must not exist: $remainingRetiredFiles", remainingRetiredFiles.isEmpty())
+
+        val layoutDir = findDir("app/src/main/res/layout", "src/main/res/layout")
+        val actualLayouts = layoutDir.listFiles { f -> f.isFile && f.extension == "xml" }?.map { it.name }?.sorted().orEmpty()
+        val expectedActiveLayouts = listOf(
+            "check_ant_installation_dialog.xml",
+            "export_notification__expanded.xml",
+            "export_notification__group.xml",
+            "main_activity_with_navigation.xml",
+            "main_activity_without_navigation.xml",
+            "pebble_config_list_5.xml",
+            "preference_category.xml",
+            "preference_slim.xml",
+            "tabbed_config_views.xml"
+        ).sorted()
+        assertEquals("res/layout must contain only the 9 active layouts", expectedActiveLayouts, actualLayouts)
     }
 }

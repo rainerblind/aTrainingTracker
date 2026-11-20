@@ -552,6 +552,16 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
         // No-op
     }
 
+    /**
+     * REQ-FIL-036.1: Optional subclass hook allowing corroborated cold-start motion to release
+     * coarse-accuracy stationary pinning. Defaults to {@code false} so standalone GPS and Google
+     * Fused devices retain identical behavior; evaluated strictly after {@code mIsIndoorMode}
+     * and before {@code extStationary || accelAtRest} vetoes in {@link #onNewLocation(Location)}.
+     */
+    protected boolean shouldReleaseColdStartStationaryPin(Location location) {
+        return false;
+    }
+
     public void onNewLocation(Location location) {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
 
@@ -620,6 +630,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
                         if (!hasSpeed || rawSpeed > SPEED_ZERO_THRESHOLD || distFromAnchor > escapeRadius) {
                             shouldUnpin = true;
                         }
+                    }
+                    // REQ-FIL-036.1: Cold-start release hook runs strictly after mIsIndoorMode and before extStationary/accelAtRest vetoes
+                    if (!shouldUnpin && shouldReleaseColdStartStationaryPin(location)) {
+                        shouldUnpin = true;
                     }
 
                     // REQ-TRK-077.2 & REQ-TRK-077.3: Block unpinning if external sensor standstill or IMU rest variance holds

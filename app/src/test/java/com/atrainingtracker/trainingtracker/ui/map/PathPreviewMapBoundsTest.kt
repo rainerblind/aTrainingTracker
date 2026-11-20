@@ -233,6 +233,7 @@ class PathPreviewMapBoundsTest {
 
     @Test
     fun pathPreviewMap_rendersSafelyInsideIntrinsicSizeMinWithoutSubcomposeCrash() {
+        // TST-SET-032: Workout preview (Start/End/Apex) vs Route preview (Start/End only) & bounds framing
         val track = sampleTrack()
         composeTestRule.setContent {
             ATrainingTrackerTheme(darkTheme = false) {
@@ -252,6 +253,16 @@ class PathPreviewMapBoundsTest {
                             end = track.latLngs.last(),
                             apex = track.latLngs[2]
                         )
+                        PathPreviewMap(
+                            path = track,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(160.dp)
+                                .testTag("att_8328_route_preview"),
+                            start = track.latLngs.first(),
+                            end = track.latLngs.last(),
+                            apex = null
+                        )
                     }
                 }
             }
@@ -259,9 +270,18 @@ class PathPreviewMapBoundsTest {
 
         val node = composeTestRule.onNodeWithTag(INTRINSIC_PREVIEW_TAG)
         node.assertIsDisplayed()
+        composeTestRule.onNodeWithTag("att_8328_route_preview").assertIsDisplayed()
         val bounds = node.getBoundsInRoot()
         assertTrue("Expected positive preview height inside IntrinsicSize.Min", bounds.height.value > 100f)
         assertTrue("Expected positive preview width inside IntrinsicSize.Min", bounds.width.value > 100f)
+        val resolved = resolvePreviewBounds(
+            targetBounds = null,
+            allPaths = listOf(track),
+            start = track.latLngs.first(),
+            end = track.latLngs.last(),
+            apex = null
+        )
+        assertNotNull("Route preview bounds must frame track without apex", resolved)
     }
 
     @Test

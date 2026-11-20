@@ -103,7 +103,9 @@ data class SensorFieldState(
     val isArtifactGated: Boolean = false,
     val dfaA1ThresholdT1: Float = 0.75f,
     val dfaA1ThresholdT2: Float = 0.50f,
-    val hrvSignalQualityStatus: com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus? = null
+    val hrvSignalQualityStatus: com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus? = null,
+    // Optional pinned source device name (null = Best Sensor; REQ-HRV-050.4)
+    val sourceDeviceName: String? = null
 )
 
 /**

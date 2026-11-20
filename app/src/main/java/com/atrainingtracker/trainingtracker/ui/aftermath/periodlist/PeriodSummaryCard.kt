@@ -258,9 +258,12 @@ fun PeriodSummaryCard(
                 val context = LocalContext.current
                 val mapState by produceState(
                     initialValue = PeriodCardMapState(isReady = false),
-                    key1 = summary.sortKey,
-                    key2 = summary.workoutIdToPolylineMap.hashCode(),
-                    key3 = summary.polylines.hashCode()
+                    keys = arrayOf(
+                        summary.sortKey,
+                        summary.workoutIdToPolylineMap.hashCode(),
+                        summary.polylines.hashCode(),
+                        summary.primaryRegionSummary
+                    )
                 ) {
                     value = prepareCardMapPreview(summary, context)
                 }

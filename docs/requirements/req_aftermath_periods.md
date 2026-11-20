@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.23  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 68
+**Total Requirements**: 71
 
 ---
 
@@ -20,7 +20,7 @@
 - **Implementation**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
-### REQ-PER-008: Precise Period Filtering [Implemented]
+### REQ-PER-008: Precise Period Filtering [Verified]
 - **Tests**: `TST-PER-009`, `TST-UNT-012`, `TST-UNT-013`
 - **Priority**: Medium
 - **Type**: Functional
@@ -2055,6 +2055,115 @@
 
 ---
 
+### REQ-HRV-050: Per-Device HRV Source Selection, Parallel Live Calculation & Rolling SDNN (`ATT-8990`) [Verified]
+- **System Requirement(s)**: Derived (SW-only) — Per-device HRV source mapping (`DeviceType.HRM`), `MySensorManager` best-sensor `HRV_PRIORITY`, lazy per-device live HRV calculation (`HRV_DFA_A1`, `HRV_RMSSD`, `HRV_ARTIFACT_RATE`, rolling `HRV_SDNN`), and isolated cockpit telemetry lookup (refining `SYSREQ-TRK-012`, `REQ-TRK-060.1`/`.5`, `REQ-TRK-061`, and `REQ-HRV-048.3`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-050`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `DeviceType.java`, `MySensorManager.java`, `HrvRollingEngine.kt`, `HrvTelemetryProvider.kt`, `PerDeviceHrvController.kt`, `HRVMetricsDevice.kt`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `HrvRampTestViewModel.kt`
+- **Rationale**: Athletes comparing multiple concurrent HR sensors in the cockpit (e.g., Polar H10 ECG chest strap vs. Polar Verity Sense PPG armband) could select a specific `sourceDeviceId` for `HR` and `RR_INTERVAL`, but could not pick a source for `HRV_DFA_A1`, `HRV_RMSSD`, `HRV_ARTIFACT_RATE`, or `HRV_SDNN` because `DeviceType.getDeviceTypeList()` mapped HRV metrics to virtual `DeviceType.HRV_METRICS` (omitting `HRV_SDNN`) and only a single global `HRVMetricsDevice` computed HRV from the arbitrated primary stream (`ATT-8990`).
+- **Description**:
+  1. *`DeviceType.HRM` Source Mapping & `MySensorManager` Best-Sensor Arbitration (`REQ-HRV-050.1`)*:
+     - `DeviceType.getDeviceTypeList(SensorType)` SHALL map `SensorType.HRV_RMSSD`, `SensorType.HRV_DFA_A1`, `SensorType.HRV_ARTIFACT_RATE`, and `SensorType.HRV_SDNN` to `DeviceType.HRM` (retaining enum constant `DeviceType.HRV_METRICS` for the global arbitrated `HRVMetricsDevice`) so `DevicesDatabaseManager.getDeviceIdAndNameLists()`, `EditSensorFieldDialog`, and `SensorSourceDialog` expose all paired HR sensors alongside `"Bester Sensor"` (`-1` / `null`).
+     - `MySensorManager` SHALL define `HRV_PRIORITY = { DeviceType.HRV_METRICS, DeviceType.HRM }` and register it via `setPriorityList(...)` and `getPriorityArray(...)` for all 4 `HRV_*` types so `"Bester Sensor"` (`deviceName == null`), `BANALService.getBestSensorData()`, and `TrackerService` ALWAYS resolve to `ECG > ANT+ > PPG` arbitrated `HRVMetricsDevice`, while pinned tiles (`deviceName != null`) resolve via `FilterManager.resolveSensor()` -> `DeviceManager.getMyDeviceByName(deviceName).getSensor(sensorType)`.
+  2. *Shared `HrvRollingEngine`, Live Rolling `HRV_SDNN` & `HrvTelemetryProvider` (`REQ-HRV-050.2`)*:
+     - Extract causal 180s-context HRV evaluation (`WINDOW_FILTER_CONTEXT_MS = 180_000L`, `WINDOW_DFA_MS = 120_000L`, `WINDOW_RMSSD_MS = 60_000L`, `120 s` drain-to-null guard, configurable `[3.0, 5.0]%` artifact gate with `5.0%` fallback, `HrvSignalQualityAnalyzer`) into `HrvRollingEngine` (`@JvmOverloads`).
+     - Both `HRVMetricsDevice` (`getHrvSdnnSensor()`) and per-device controllers SHALL compute live rolling `SensorType.HRV_SDNN` over active `120 s` `dfaWindowBeats` as unbiased sample SD (`sqrt(sum((nn_i - mean)^2) / (N - 1))`) of valid non-artifact NN intervals (`!isArtifact`, `correctedRrMs`), requiring `>= 10` valid beats (`MIN_SDNN_VALID_BEATS = 10`) AND `artifactRate <= effectiveGateThreshold` (`[3.0, 5.0]%`, aligned with `HrvPostWorkoutRecomputer.computeSessionSdnn`), emitting `null` when gated, insufficient, or drained.
+     - Expose `HrvTelemetryProvider` (`signalQualityResult: HrvSignalQualityResult`, `latestArtifactRatePercent: Double?`) and `HrvDeviceLookup.resolveProvider(deviceManager, deviceName)` so `DeviceManager.java` (`1,707/1,708`), `TrackerService.java` (`3,538/3,559`), and `DevicesDatabaseManager.java` (`1,669/1,671`) require `0` edits.
+  3. *Lazy Per-Device HRV Sensors, Disconnect Stale-Value Guard & Scheduler Lifecycle (`REQ-HRV-050.3`)*:
+     - `PerDeviceHrvController` (`@JvmOverloads`, injectable `TimeProvider` and `startScheduler: Boolean = true`) SHALL attach to `BTLEHeartRateDevice`, `ANTHeartRateDevice`, and `PolarOnlineStreamingBridge` (all implementing `HrvTelemetryProvider`) via Java-compatible host callbacks (`addAndRegisterSensors`, `unregisterSensor`, `removeSensor`, `notifySensorsChanged`).
+     - Zero HRV sensors and zero scheduler tasks SHALL exist before the first RR beat (`Rule 52`); on first RR beat, batch-register all 4 `MySensor<Double>` instances (`HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE`, `HRV_SDNN`) bound to the host `MyDevice` via a single `addAndRegisterSensors(list)` call (single `SENSORS_CHANGED` broadcast) and lazily start the `5 s` evaluation scheduler.
+     - On `unregisterSensors()`, `onAccumulatorsReset()` (overridden on all 3 HRM devices per `Rule 51`), and `shutDown()`, `PerDeviceHrvController` MUST synchronize mutable state across GATT/ANT+/Polar/scheduler/UI threads, cancel the scheduler task cleanly, push `newValue(null)` to all 4 HRV `MySensor`s **while still activated** *before* `deactivateSensor()`/`unregisterSensor()`/`removeSensor()` so pinned tiles clear immediately to `--`/`--.--`, reset rolling buffers/signal quality, and re-arm cleanly upon reconnect without thread leaks.
+  4. *Per-Device Cockpit Isolation, `HRV_SDNN` Info Disclaimer & Ramp-Test Guard (`REQ-HRV-050.4`)*:
+     - Add `val sourceDeviceName: String? = null` to `SensorFieldState`; replace scalar `latestArtifactRate` in `TrackingViewModel` with per-device tracking (`latestArtifactRateByDevice[deviceName] ?: HrvDeviceLookup.resolveProvider(dm, deviceName)?.latestArtifactRatePercent`) so pinned `HRV_DFA_A1` tiles gate accurately even without a co-located `HRV_ARTIFACT_RATE` tile.
+     - Resolve `HrvSignalQualityStatus` per `deviceName` via `HrvDeviceLookup.resolveProvider(...)` in `TrackingViewModel` and `EditSensorFieldDialog.kt:660` (`deviceName = if (uiState.selectedDeviceId == -1L) null else deviceList.find { it.first == uiState.selectedDeviceId }?.second`).
+     - Include `SensorType.HRV_SDNN` in `isHrvMetric` in `SensorFieldView.kt` and `EditSensorFieldDialog.kt` (Epic Medical Disclaimer invariant); guard `HrvRampTestViewModel` to ignore `FilteredSensorData` where `data.deviceName != null`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-TRK-060.1`/`.5`, `REQ-TRK-061`, `REQ-HRV-048.3`, `REQ-TRK-085` targeting `DeviceType.java`, `MySensorManager.java`, `HRVMetricsDevice.kt`, `TrackingViewModel.kt`, `SensorTypeHrvTest.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-3541` (`4bad7272`), `ATT-8706` (`7dcca5e7`, `6016d5fc`), `ATT-9160` (`bd7d6627`).
+  3. *Root Reason for Existing Formulation*: Originally only global `HRVMetricsDevice` existed; `HRV_SDNN` was added for post-workout recomputation only (`HrvPostWorkoutRecomputer.kt:315`).
+  4. *Preservation of Core Invariants*: Retains `DeviceType.HRV_METRICS` for global `HRVMetricsDevice` under `HRV_PRIORITY`, preserves `ECG > ANT+ > PPG` arbitration for `"Bester Sensor"` and `TrackerService`, Rule 51/52, 180s filter context + 120s drain-to-null, NeuroKit2 `0.2.10` golden parity, `@JvmOverloads`, and `0` LoC added to `DeviceManager.java`, `TrackerService.java`, and `DevicesDatabaseManager.java`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* paired HRMs (`Polar H10`, `Polar Verity Sense`), *When* `DeviceType.getDeviceTypeList` and `DevicesDatabaseManager.getDeviceIdAndNameLists` run for `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE`, `HRV_SDNN`, *Then* `DeviceType.HRM` is returned and both sensors appear alongside `"Bester Sensor"` in `EditSensorFieldDialog` & `SensorSourceDialog`.
+  • *Given* two connected HRMs emitting distinct RR streams concurrently, *When* both compute live HRV via `PerDeviceHrvController` and `FilterManager` resolves pinned tiles vs `"Bester Sensor"`, *Then* pinned tiles receive each device's distinct `HRV_DFA_A1`, `HRV_RMSSD`, `HRV_ARTIFACT_RATE`, and rolling `HRV_SDNN`, while `"Bester Sensor"` (`deviceName == null`) stays bound to `ECG > ANT+ > PPG` arbitrated `HRVMetricsDevice`.
+  • *Given* an active HRM disconnects or `RESET_ACCUMULATORS_INTENT` fires, *When* `unregisterSensors()`/`onAccumulatorsReset()`/`shutDown()` runs, *Then* all 4 per-device HRV sensors emit `null` before deactivation/unregistration, the scheduler cancels cleanly, and reconnecting re-arms fresh calculation.
+  • *Given* side-by-side pinned `HRV_DFA_A1 [Polar H10 (VALID, 1% art)]` and `HRV_DFA_A1 [Verity Sense (SMOOTHED_STREAM, 12% art)]` tiles (with no `HRV_ARTIFACT_RATE` tile) plus active `HrvRampTestViewModel`, *When* telemetry ticks arrive, *Then* Polar H10 displays zones un-gated, Verity Sense suppresses zones and shows artifact gating, and `HrvRampTestViewModel` reads only `deviceName == null`.
+- **Invariants**: `0` edits to `DeviceManager.java` (`1,707/1,708`), `TrackerService.java` (`3,538/3,559`), `DevicesDatabaseManager.java` (`1,669/1,671`), and `DfaCalculator.kt`; `HrvGoldenOracleTest` bit-identical; `Localization Parity: N/A - no new UI strings`; `@JvmOverloads` on all Java-called Kotlin APIs.
+
+---
+
+### REQ-HRV-051: Polar Verity Sense Optical PPI Streaming & Workout DFA alpha 1 Isolation (`ATT-9176`) [Verified]
+- **System Requirement(s)**: `SYSREQ-TRK-012` (Live HRV / RR-Interval Streaming & DFA Alpha-1 Threshold Estimation — Polar BLE SDK PMD optical PPI acquisition on `SYS-EL-02` and strict isolation of optical PPI from workout `DFA alpha-1`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-051`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarPpiStreamProcessor.kt`, `PolarOnlineStreamingBridge.kt`, `HrvRollingEngine.kt`, `TrackerService.java`
+- **Rationale**: Polar Verity Sense does not transmit RR intervals over standard BLE Heart Rate Service (`0x2A37`), blocking slip-on morning resting HRV checks (`ATT-9177`). Acquiring optical Pulse-to-Pulse Intervals (`PolarOnlineStreamingApi.startPpiStreaming`) via `polar-ble-sdk:8.6.0` enables resting `rMSSD` while hardware artifact gating and strict workout `DFA alpha-1` isolation protect ECG-only exercise threshold analytics from optical PPG pulse-wave damping and motion artifacts (`ATT-9176`).
+- **Description**:
+  1. *Pure-JVM Optical PPI Processing, Hardware Quality Gating & `mRrIntervalSensor` Precision (`REQ-HRV-051.1`)*:
+     - Extract a stateful pure-JVM helper `PolarPpiStreamProcessor` processing `PolarPpiData.PolarPpiSample` batches into monotonically timestamped `RrBeatEvent(..., isOpticalPpi = true)` via `RrBeatNormalization`.
+     - Drop samples with `ppi <= 0` outright; for `ppi > 0` samples where `blockerBit == true` or `(skinContactSupported && !skinContactStatus)`, preserve timeline monotonicity and stamp `artifactFlag = RrBeatEvent.ARTIFACT_GAP`, `gapBeats = 0` (when physiological), and `isOpticalPpi = true` so `RrArtifactFilter.isGapOrOutOfPhysiologicalRange` never overwrites them, `computeBiasFreeRmssd` excludes adjacent pairs from clean `rMSSD`, and hardware motion/contact artifacts count toward `HIGH_ARTIFACTS (> 5.0%)`.
+     - Update `lastNormalRrMs` strictly from clean (`!isHardwareArtifact && !isOutOfPhysiologicalRange`) samples; emit `mRrIntervalSensor?.newValue(...)` ONLY for non-`ARTIFACT_GAP` beats (matching `ANTHeartRateDevice.java:282`); reset processor state in BOTH `unregisterSensors()` and `onAccumulatorsReset()` (`Rule 51`).
+  2. *Decoupled Verity Sense PPI Lifecycle, Atomic Re-Entrancy Guard & PMD Stability (`REQ-HRV-051.2`)*:
+     - In `PolarOnlineStreamingBridge.kt` (`<= 1,310/1,500` LoC), launch PPI streaming ONLY for optical PPI-capable devices (`isVeritySense == true`) when `FEATURE_POLAR_ONLINE_STREAMING` is ready and `api.getAvailableOnlineStreamDataTypes(sessionId).contains(PolarBleApi.PolarDeviceDataType.PPI)`; H10/ECG chest straps (`isVeritySense == false`) SHALL NEVER probe or launch PPI.
+     - Check and launch PPI independently across all 3 readiness hooks (`bleSdkFeatureReady(FEATURE_POLAR_ONLINE_STREAMING)`, `syncAlreadyOpenSessionIfReady()`, and `maybeStartVerityStreamsIfReady()`) — NEVER nested in `else if` behind `accJob`/`gyroJob` or gated on `isGyroStreamingActive`.
+     - Guard launch via atomic `isPpiStreamingActive.compareAndSet(false, true)` **before** `scope.launch` (resetting in `finally`) to prevent duplicate `startPpiStreaming()` / PMD `ERROR_ALREADY_IN_STATE` races; cancel `ppiJob` and reset `isPpiStreamingActive` on `cancelActiveStreamJobs()`/`deviceDisconnected`/`blePowerStateChanged(false)`/`shutDown()`, and invoke `api.stopStreaming(streamId, PmdMeasurementType.PPI)` in `shutDown()` without disrupting `HR`/`ACC`/`GYRO` or `PolarVeritySenseOfflineController`.
+  3. *Dual Live Workout `DFA alpha-1` Isolation & Optical Signal Quality Mode (`REQ-HRV-051.3`)*:
+     - In `HrvRollingEngine.evaluate(nowMs)` (shared by global `HRVMetricsDevice` and per-device `PerDeviceHrvController`), suppress `alpha1Value` to `null` whenever `activeWindowHasOpticalPpi = allBeats.any { it.beatTimestampMs >= dfaCutoff && it.isOpticalPpi }` is true, and forward `isOpticalPpi = activeWindowHasOpticalPpi` to `HrvSignalQualityAnalyzer.analyzeBeats(...)`. Suppression SHALL be non-sticky so switching back to ECG (`isOpticalPpi = false`) automatically resumes `HRV_DFA_A1` once optical beats age out of the active `120 s` window or on `resetSession()`.
+  4. *`WorkoutRr.db` & Post-Workout `HrvPostWorkoutRecomputer` Optical Isolation (`REQ-HRV-051.4`)*:
+     - Guard `TrackerService.mRrBeatListener.onRrBeat(event)` (`TrackerService.java:293`) in-place with `!event.isOpticalPpi()` (`+0` net LoC, `3,538/3,559`) so optical PPI beats are never persisted into `WorkoutRr.db` and `HrvPostWorkoutRecomputer` never computes or plots optical `HRV_DFA_A1` curves on Verity-only workouts while ECG/ANT+ streams remain untouched.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-HRV-049`, `REQ-HRV-050`, `REQ-SET-112`, `REQ-CON-045`, `REQ-CON-050`, `REQ-TRK-085`, `REQ-PER-034` targeting `PolarOnlineStreamingBridge.kt`, `HrvRollingEngine.kt`, `HRVMetricsDevice.kt`, `PerDeviceHrvController.kt`, `TrackerService.java`.
+  2. *Historical Origin & Commit Trace*: `ATT-9177` (`b899a864`), `ATT-8990` (`cdc565c0`), `ATT-8714` (`1e7a2f0b`), `ATT-8717` (`9f9e5967`), `ATT-8706` (`7dcca5e7`).
+  3. *Root Reason for Existing Formulation*: Verity Sense previously streamed only `HR`/`ACC`/`GYRO` over PMD; `WorkoutRr.db` assumed all workout RR beats came from ECG/ANT+ straps.
+  4. *Preservation of Core Invariants*: Preserves `DeviceManager.java` (`1,707/1,708`, `0` edits), `DevicesDatabaseManager.java` (`1,669/1,671`, `0` edits), `TrackerService.java` (`3,538/3,559`, `+0` net LoC), `PolarVeritySenseOfflineController.kt` (`0` edits), `ECG > ANT+ > PPG` arbitration, H10 non-PPI path, `180 s` Lipponen context & NeuroKit2 `0.2.10` golden parity, `Rule 51`/`Rule 52`, and zero DB migration.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a Polar Verity Sense connected via `PolarOnlineStreamingBridge` reporting `PolarDeviceDataType.PPI` support, *When* valid `PolarPpiSample` packets arrive (`ppi > 0`, `blockerBit == false`, `skinContactStatus == true` when `skinContactSupported == true`), *Then* monotonically timestamped `RrBeatEvent(..., isOpticalPpi = true)` events dispatch to `perDeviceHrvController` and `RrBeatListener`s alongside `HR`/`ACC`/`GYRO`, and `mRrIntervalSensor` updates on clean beats.
+  • *Given* `PolarPpiSample` packets with `ppi <= 0`, `blockerBit == true`, or `(skinContactSupported && !skinContactStatus)`, *When* processed by `PolarPpiStreamProcessor` & `PolarOnlineStreamingBridge`, *Then* `ppi <= 0` samples are dropped, hardware-flagged samples are stamped `ARTIFACT_GAP` (`gapBeats = 0` when physiological, `isOpticalPpi = true`), never update `lastNormalRrMs` or `mRrIntervalSensor`, never enter clean `rMSSD` pairs, and count toward `HIGH_ARTIFACTS (> 5%)`.
+  • *Given* `HrvRollingEngine` / `HRVMetricsDevice` / `PerDeviceHrvController` receives `isOpticalPpi = true` beats, *When* periodic HRV metrics evaluate, *Then* `HRV_DFA_A1` emits `null` while `HRV_RMSSD`/`HRV_SDNN` and optical signal quality evaluate normally, and `HRV_DFA_A1` resumes automatically once ECG beats replace the active `120 s` window.
+  • *Given* Verity Sense disconnects, reconnects, receives rapid duplicate readiness callbacks, or shuts down (or an H10 connects), *When* `PolarOnlineStreamingBridge` manages streams, *Then* H10 never launches PPI, Verity launches PPI independently of `ACC`/`GYRO` under atomic `compareAndSet` protection, `ppiJob` cancels cleanly, `stopStreaming(PPI)` runs on `shutDown()`, and `PolarPpiStreamProcessor` resets in both `unregisterSensors()` and `onAccumulatorsReset()`.
+  • *Given* an active workout (`AutoPauseState.TRACKING`, `mWorkoutID > 0`), *When* `TrackerService.mRrBeatListener` receives optical PPI vs ECG beats, *Then* optical PPI beats are ignored (zero `WorkoutRr.db` persistence) while ECG beats persist normally.
+- **Invariants**: `0` edits to `DeviceManager.java` (`1,707/1,708`), `DevicesDatabaseManager.java` (`1,669/1,671`), `RrBeatEvent.kt`, `PolarVeritySenseOfflineController.kt`, `DfaCalculator.kt`; `+0` net LoC in `TrackerService.java` (`3,538/3,559`); `PolarOnlineStreamingBridge.kt <= 1,500` LoC; `HrvGoldenOracleTest` bit-identical; `Localization Parity: N/A - no new UI strings`.
+
+---
+
+### REQ-PER-046: Authoritative Full-Period Primary Region Selection, Sport-Aware Preview Curation & Bounded Card Caching (`ATT-8664`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-054`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodData.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodMapUtils.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummaryCard.kt`
+- **Rationale**: After `ATT-7666` (`REQ-PER-039`) eliminated full-period polyline duplication (`workoutIdToAllPolylinesMap = emptyMap()`), `PeriodsViewModel.filterPeriodSummary()` fell back to the `<= 5` spatial extrema anchors (`workoutIdToPolylineMap`), discarding non-anchor preview tracks and causing `PeriodMapUtils.prepareCardMapPreviewSync()` to crown a 2-workout outlier excursion (holding `northId`/`westId`) as the Primary Region instead of the true dominant home region (`150+` workouts) (`ATT-8664`, refining `REQ-PER-013`, `REQ-PER-019`, `REQ-PER-024.5`, and `REQ-PER-039`).
+- **Description**:
+  1. *Authoritative Full-Period Primary-Region Ranking (`REQ-PER-046.1`)*:
+     - `PeriodsRepository.enrich(summary, groupWorkouts)` SHALL compute compact `regionSummaries: List<PeriodRegionPreview>` via `SpatialRegionEngine.detectRegions(groupWorkouts)` (using `startLatLng`/bounding coordinates with `0` `PolyUtil.decode()` calls) retaining `center`, `bounds`, per-sport `sportCounts`, `sportDistancesMeters`, `sportMostRecentTimestampS`, and bounded timestamp-ordered per-sport preview tracks (`<= MAX_SUMMARY_THUMBNAIL_TRACKS` = 8 per sport per region, `startTimeS DESC`).
+     - Both `PeriodsRepository.enrich()` and `PeriodsViewModel.filterPeriodSummary()` SHALL rank surviving regions (`filteredCount > 0`) by `(workoutCount DESC, totalDistanceMeters DESC, mostRecentTimestampS DESC)` (matching `SpatialRegionEngine.detectRegions()` 1:1), propagate authoritative `primaryRegionSummary` (`detectedRegionCount`, `primaryRegionWorkoutCount`, `center`, `bounds`), and curate `summary.polylines` (`<= 8`) strictly from the winning Primary Region.
+  2. *Sport-Toggle Consistency, Indoor Sport Isolation & `filterPeriodSummary()` Hygiene (`REQ-PER-046.2`)*:
+     - For default `{BIKE, RUN}` and any toggled sport filter, `filterPeriodSummary()` SHALL re-rank surviving regions across `sports`, merge up to `8` genuine matching-sport polylines from the winning region (`startTimeS DESC`), update `primaryRegionSummary`, and return `polylines = emptyList()` when all matching workouts are indoor/no-GPS without leaking other sports' tracks.
+     - `filterPeriodSummary()` MUST keep `workoutIdToAllPolylinesMap = emptyMap()` whenever input `summary.workoutIdToAllPolylinesMap` is empty while preserving backward compatibility for explicitly populated maps.
+  3. *Preview Cache Key, Compose `produceState` Invalidation & Geocoding Center Parity (`REQ-PER-046.3`)*:
+     - When `summary.primaryRegionSummary != null`, `PeriodMapUtils.prepareCardMapPreviewSync()` SHALL render curated primary-region `budgetEnforcedPaths`, set `regionCount = detectedRegionCount`, `primaryRegionPathsCount = primaryRegionWorkoutCount`, `activeRegionId = "region_0"`, and resolve `primaryRegionName` using `primaryRegionSummary.center` in BOTH `findNearestKnownLocationName()` (`prepareCardMapPreviewSync`) and `resolvePlaceName()` (`prepareCardMapPreview`), falling back cleanly to `detectRegionsFromPaths()` when `primaryRegionSummary == null`.
+     - BOTH `periodCardMapStateCache` key (`PeriodMapUtils.kt`) and `PeriodSummaryCard.kt` `produceState` keys MUST incorporate `summary.primaryRegionSummary` so sport-toggle changes refresh badge count, multi-region visibility, and region name immediately.
+  4. *Strict `REQ-PER-039` Memory, LoC & Layering Invariants (`REQ-PER-046.4`)*:
+     - Preserve `workoutIdToPathMap == emptyMap()`, `workoutIdToAllPolylinesMap == emptyMap()`, `workoutIdToPolylineMap.size <= 5`, `polylines.size <= 8`, `periodCardMapStateCache <= 64`, `0` `PolyUtil.decode()` inside `enrich()`, `0` SQLite schema changes, `0` edits to `SpatialRegionEngine.kt`/`PeriodsScreen.kt`/protected monoliths, all modified files `<= 1,500` LoC, `Localization Parity: N/A - no UI strings`, and `0` new `src/main` reads (`REQ-PRO-049.1`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PER-046`, refining `REQ-PER-013`, `REQ-PER-019`, `REQ-PER-024.5`, and `REQ-PER-039` across `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`, `PeriodMapUtils.kt`, and `PeriodSummaryCard.kt`.
+  2. *Historical Origin & Commit Trace*: `074bd857` (`ATT-7666` / `REQ-PER-039`), `ATT-4935` (`REQ-PER-024.5`), `ATT-4477` (`REQ-PER-019`), `ATT-1151` (`REQ-PER-013`).
+  3. *Root Reason for Existing Formulation*: `ATT-7666` bounded heap usage by clearing `workoutIdToAllPolylinesMap`, leaving `filterPeriodSummary()` falling back to `<= 5` spatial extrema anchors.
+  4. *Preservation of Core Invariants*: All `REQ-PER-039` memory bounds, `SpatialRegionEngine` `75 km`/`60 km` thresholds, `PeriodMapScreen` interactive map, and legacy fallback for synthetic `PeriodSummary` fixtures remain intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `159` home-region workouts and `2` outlier vacation workouts holding `northId`/`westId`, *When* enriched, sport-filtered (`{BIKE, RUN}`), and previewed, *Then* Primary Region is home (`regionCount == 2`, `primaryRegionPathsCount == 159`, `activeRegionId == "region_0"`, `<= 8` home preview tracks).
+  • *Given* multi-region `BIKE`/`RUN` + indoor `UNKNOWN` workouts, *When* sport filter toggles `{BIKE, RUN}` -> `{RUN}` -> `{UNKNOWN}`, *Then* `{RUN}` re-ranks to the run-dominant region with `<= 8` newest `RUN` polylines, `{UNKNOWN}` yields `polylines == emptyList()`, and `workoutIdToAllPolylinesMap == emptyMap()`.
+  • *Given* identical preview polylines with differing `primaryRegionWorkoutCount` or `detectedRegionCount`, *When* previewed, *Then* LRU cache & `produceState` refresh immediately and both sync/async geocoding use `primaryRegionSummary.center`.
+- **Invariants**: `workoutIdToPathMap == emptyMap()`; `workoutIdToAllPolylinesMap == emptyMap()`; `workoutIdToPolylineMap.size <= 5`; `polylines.size <= 8`; `0` `PolyUtil.decode()` in `enrich()`; `0` DB schema bumps; `0` monolith edits; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2083,3 +2192,11 @@
 | `1.0.21` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Added `REQ-HRV-049` (`[Planned]`, `.1`–`.4`) for Polar Verity Sense optical PPI support in Morning HRV Check, SQLite v2->v3 provenance persistence, `.attbackup` parity, ECG-vs-optical SWC baseline isolation, `SingleChoiceSegmentedButtonRow` trend selector, and 9-locale localization. |
 | `1.0.22` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `REQ-HRV-049` to `[Implemented]` following Stage 4 construction (`RrBeatEvent.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvSensorModality.kt`, `HrvReadiness*.kt`, `MorningHrv*.kt`, `HrvReadinessTrend*.kt`, 9-locale `strings_hrv.xml`), Rule 8.5 Light/Dark PNG verification (`ATT-9177_morning_hrv_optical_ppi.png`), and 100% pass across all 16 targeted/contract/localization/UI suites (`133/133`). |
 | `1.0.23` | 2026-11-20 | Lane B Author (`ATT-9177`, `--as agent1`) | `ATT-9177` | Promoted `REQ-HRV-049` to `[Verified]` in Stage 5 reusing Gate 4 verified `133/133 PASS` evidence across all 16 suites (`Rule 7.5`, `0` `app/` code drift since `88c46b60`), Rule 8.5 PNG certification, clean-checkout `TST-HRV-049` traceability parity, and governance sync. |
+| `1.0.24` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Added `REQ-HRV-050` (`[Planned]`, `.1`–`.4`) for per-device HRV source selection (`DeviceType.HRM`), `MySensorManager` `HRV_PRIORITY`, shared `HrvRollingEngine` + live rolling `HRV_SDNN`, lazy `PerDeviceHrvController` with disconnect stale-value guard, and isolated cockpit/ramp-test HRV lookup. |
+| `1.0.25` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Implemented]` following Stage 4 construction (`DeviceType.java`, `MySensorManager.java`, `HrvRollingEngine.kt`, `HrvTelemetryProvider.kt`, `PerDeviceHrvController.kt`, `HRVMetricsDevice.kt`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `HrvRampTestViewModel.kt`), `:app:assembleDebug`, and `137/137 PASS` across all 17 targeted/contract suites with `0` edits to `DeviceManager.java`, `TrackerService.java`, and `DevicesDatabaseManager.java`. |
+| `1.0.26` | 2026-11-20 | Lane B Author (`ATT-8990`, `--as agent1`) | `ATT-8990` | Promoted `REQ-HRV-050` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9247`) verified `137/137 PASS` evidence across all 17 suites + `:app:assembleDebug` (`Rule 7.5`, `0` `app/` code drift since `7a7b387a`), `4/4` Python safety linters PASS, clean-checkout `TST-HRV-050` traceability parity, and governance sync. |
+| `1.0.27` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-PER-008` to `[Verified]` (`TST-PER-009` + `TST-UNT-012`, `TST-UNT-013`, Gate 4 `3e20473b`, `Rule 7.5`). |
+| `1.0.28` | 2026-11-20 | Lane B Author (`ATT-9176`, `--as agent1`) | `ATT-9176` | Added and promoted `REQ-HRV-051` (`[Verified]`, `.1`–`.4`, `SYSREQ-TRK-012`) for Polar Verity Sense optical PPI streaming and workout DFA alpha-1 isolation (`121/121 PASS` on `13416d59`). |
+| `1.0.29` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Added `REQ-PER-046` `[Planned]` (`REQ-PER-046.1`–`.4`) for authoritative full-period primary region selection (`PeriodRegionPreview`), sport-aware preview track curation (`<= 8` from winning region, indoor isolation, `workoutIdToAllPolylinesMap == emptyMap()`), primary-region-keyed LRU/`produceState` caching & center geocoding parity, and strict `REQ-PER-039` memory bounds (`Localization Parity: N/A - no UI strings`). |
+| `1.0.30` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `REQ-PER-046` to `[Implemented]` following Stage 4 construction (`PeriodData.kt` `288/300`, `PeriodsRepository.kt` `1,211/1,500`, `PeriodsViewModel.kt` `430/1,500`, `PeriodMapUtils.kt` `474/1,500`, `PeriodSummaryCard.kt` `792/1,500`), `:app:assembleDebug`, `0` new Kotlin compiler warnings, and `99/99 PASS` across all 13 targeted/contract suites with `0` edits to `SpatialRegionEngine.kt`, `PeriodsScreen.kt`, and protected monoliths. |
+| `1.0.31` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `REQ-PER-046` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9311`) verified `99/99 PASS` evidence across all 13 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `a68fb43a`), `4/4` Python safety linters PASS, clean-checkout `TST-PER-054` traceability parity, and governance sync. |

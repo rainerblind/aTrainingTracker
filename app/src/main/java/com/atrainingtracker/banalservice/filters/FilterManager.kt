@@ -52,6 +52,9 @@ open class FilterManager(
     protected val mMapFilter2Sensor: ConcurrentHashMap<MyFilter<*>, MySensor<*>> = ConcurrentHashMap()
 
     @JvmField
+    protected val mAccumulatorFilters: MutableSet<MyFilter<*>> = ConcurrentHashMap.newKeySet()
+
+    @JvmField
     protected var mContext: Context = context
 
     @JvmField
@@ -114,25 +117,20 @@ open class FilterManager(
         val hashKey = filterData.hashKey
         mAllFilterData[hashKey] = filterData
 
-        // if the requested filter is already there, check if its sensor changed and rebind (REQ-TRK-055.2)
+        // if the requested filter is already there, check if its sensor changed or disconnected (REQ-TRK-055.2, REQ-FIL-038.3)
         val existingFilter = myFilterMap[hashKey]
         if (existingFilter != null) {
-            if (DEBUG) Log.i(TAG, "filter already exists, checking backing sensor re-binding")
-            val currentSensor = resolveSensor(filterData)
-            if (currentSensor != null) {
-                val boundSensor = mMapFilter2Sensor[existingFilter]
-                if (boundSensor != currentSensor) {
-                    rebindFilter(existingFilter, boundSensor, currentSensor)
-                }
-            }
+            if (DEBUG) Log.i(TAG, "filter already exists, syncing backing sensor binding")
+            syncFilterBinding(filterData, existingFilter)
             return
         }
 
         // first of all, we try to get the sensor
         val mySensor = resolveSensor(filterData)
 
-        if (mySensor == null) { // sensor not (yet) available
-            if (DEBUG) Log.i(TAG, "sensor not (yet) available")
+        // Defer unavailable or inactive device-pinned sensors; never defer retained ProxySensor (REQ-TRK-055.1, REQ-FIL-038.3)
+        if (mySensor == null || (mySensor !is ProxySensor<*> && !mySensor.isActivated)) {
+            if (DEBUG) Log.i(TAG, "sensor not (yet) available or inactive")
             mRequiredButNotAvailableFilters[hashKey] = filterData // save this request for later on..
             return
         }
@@ -142,16 +140,16 @@ open class FilterManager(
 
         val existing = myFilterMap.putIfAbsent(hashKey, myFilter)
         if (existing == null) {
+            if (isAccumulatorSensor(mySensor)) {
+                mAccumulatorFilters.add(myFilter)
+            }
             mMapFilter2Sensor[myFilter] = mySensor
             @Suppress("UNCHECKED_CAST")
             (mySensor as MySensor<Any?>).addSensorListener(myFilter as MySensor.SensorListener<Any?>)
             mRequiredButNotAvailableFilters.remove(hashKey)
             if (DEBUG) Log.i(TAG, "filter $hashKey created")
         } else {
-            val boundSensor = mMapFilter2Sensor[existing]
-            if (boundSensor != mySensor) {
-                rebindFilter(existing, boundSensor, mySensor)
-            }
+            syncFilterBinding(filterData, existing)
         }
     }
 
@@ -192,6 +190,9 @@ open class FilterManager(
     open fun rebindFilter(myFilter: MyFilter<*>?, oldSensor: MySensor<*>?, newSensor: MySensor<*>?) {
         if (myFilter == null) return
         if (DEBUG) Log.i(TAG, "rebindFilter: oldSensor=$oldSensor, newSensor=$newSensor")
+        if (isAccumulatorSensor(oldSensor) || isAccumulatorSensor(newSensor)) {
+            mAccumulatorFilters.add(myFilter)
+        }
         if (oldSensor != null) {
             @Suppress("UNCHECKED_CAST")
             (oldSensor as MySensor<Any?>).removeSensorListener(myFilter as MySensor.SensorListener<Any?>)
@@ -210,17 +211,70 @@ open class FilterManager(
         }
     }
 
+    private fun isAccumulatorSensor(sensor: MySensor<*>?): Boolean {
+        var current = sensor
+        while (current is ProxySensor<*>) {
+            if (current.isAccumulatorBacked) return true
+            current = current.sourceSensor
+        }
+        return current is MyAccumulatorSensor<*>
+    }
+
+    private fun unwrapEffectiveSource(sensor: MySensor<*>?): MySensor<*>? {
+        var current = sensor
+        while (current is ProxySensor<*>) {
+            current = current.sourceSensor
+        }
+        return current
+    }
+
+    private fun clearLiveFilterOnDisconnect(filter: MyFilter<*>, boundSensor: MySensor<*>?) {
+        if (mAccumulatorFilters.contains(filter) || isAccumulatorSensor(boundSensor)) {
+            mAccumulatorFilters.add(filter)
+            return
+        }
+        when (filter) {
+            is InstantaneousFilter<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                (filter as InstantaneousFilter<Any?>).newValue(null)
+            }
+            is MovingAverageFilter -> filter.reset()
+        }
+    }
+
+    private fun syncFilterBinding(filterData: FilterData, filter: MyFilter<*>) {
+        val currentSensor = resolveSensor(filterData)
+        val boundSensor = mMapFilter2Sensor[filter]
+        if (currentSensor is ProxySensor<*>) {
+            if (boundSensor != currentSensor) {
+                rebindFilter(filter, boundSensor, currentSensor)
+            }
+            if (isAccumulatorSensor(currentSensor)) {
+                mAccumulatorFilters.add(filter)
+            }
+            val effectiveSource = unwrapEffectiveSource(currentSensor)
+            if (effectiveSource == null || !effectiveSource.isActivated) {
+                clearLiveFilterOnDisconnect(filter, currentSensor)
+            }
+        } else if (currentSensor == null || !currentSensor.isActivated) {
+            if (boundSensor != null) {
+                if (isAccumulatorSensor(boundSensor)) {
+                    mAccumulatorFilters.add(filter)
+                }
+                rebindFilter(filter, boundSensor, null)
+            }
+            clearLiveFilterOnDisconnect(filter, boundSensor)
+        } else if (boundSensor != currentSensor) {
+            rebindFilter(filter, boundSensor, currentSensor)
+        }
+    }
+
     open fun rebindExistingFilters() {
         if (DEBUG) Log.i(TAG, "rebindExistingFilters()")
         for (filterData in mAllFilterData.values) {
-            val hashKey = filterData.hashKey
-            val filter = myFilterMap[hashKey]
+            val filter = myFilterMap[filterData.hashKey]
             if (filter != null) {
-                val currentSensor = resolveSensor(filterData)
-                val boundSensor = mMapFilter2Sensor[filter]
-                if (currentSensor != null && boundSensor != currentSensor) {
-                    rebindFilter(filter, boundSensor, currentSensor)
-                }
+                syncFilterBinding(filterData, filter)
             }
         }
     }
@@ -232,6 +286,7 @@ open class FilterManager(
         }
         myFilterMap.clear()
         mMapFilter2Sensor.clear()
+        mAccumulatorFilters.clear()
         mRequiredButNotAvailableFilters.clear()
         mAllFilterData.clear()
 

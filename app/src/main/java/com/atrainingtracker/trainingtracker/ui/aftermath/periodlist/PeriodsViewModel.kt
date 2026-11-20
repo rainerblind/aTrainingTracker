@@ -284,18 +284,11 @@ class PeriodsViewModel @JvmOverloads constructor(
         val totalDurationSec = filteredStats.values.sumOf { it.totalDurationSec }
         val totalDistance = filteredStats.values.sumOf { it.totalDistanceMeters }
 
-        // Symmetrically filter all polyline and path collections (REQ-PER-024.5b)
-        // Bidirectional fallback ensures full backward compatibility when input contains only one polyline map
+        // Symmetrically filter all polyline and path collections (REQ-PER-024.5b, REQ-PER-039.2, REQ-PER-046.2)
         val polylineSource = if (summary.workoutIdToPolylineMap.isNotEmpty()) {
             summary.workoutIdToPolylineMap
         } else {
             summary.workoutIdToAllPolylinesMap
-        }
-
-        val allPolylineSource = if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
-            summary.workoutIdToAllPolylinesMap
-        } else {
-            summary.workoutIdToPolylineMap
         }
 
         val filteredPolylineMap = if (polylineSource.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
@@ -304,10 +297,11 @@ class PeriodsViewModel @JvmOverloads constructor(
             polylineSource
         }
 
-        val filteredAllPolylinesMap = if (allPolylineSource.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
-            allPolylineSource.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }
+        // Preserve REQ-PER-039.2: never copy workoutIdToPolylineMap into workoutIdToAllPolylinesMap when input is empty
+        val filteredAllPolylinesMap = if (summary.workoutIdToAllPolylinesMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
+            summary.workoutIdToAllPolylinesMap.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }
         } else {
-            allPolylineSource
+            summary.workoutIdToAllPolylinesMap
         }
 
         val filteredPathMap = if (summary.workoutIdToPathMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
@@ -316,12 +310,24 @@ class PeriodsViewModel @JvmOverloads constructor(
             summary.workoutIdToPathMap
         }
 
-        val filteredPolylines = if (filteredAllPolylinesMap.isNotEmpty()) {
-            filteredAllPolylinesMap.values.toList()
-        } else if (filteredPolylineMap.isNotEmpty()) {
-            filteredPolylineMap.values.toList()
+        // Re-rank authoritative region summaries for active sports and curate <= 8 tracks from the winning Primary Region
+        val hasRegionSummaries = summary.regionSummaries.isNotEmpty()
+        val resolvedRegion = if (hasRegionSummaries) {
+            resolvePrimaryRegionForSports(summary.regionSummaries, sports)
         } else {
-            if (summary.sportStats.keys.any { it in sports }) summary.polylines else emptyList()
+            null
+        }
+        val effectivePolylineMap = if (hasRegionSummaries && resolvedRegion == null) {
+            emptyMap()
+        } else {
+            filteredPolylineMap
+        }
+        val filteredPolylines = when {
+            hasRegionSummaries -> resolvedRegion?.second ?: emptyList()
+            filteredAllPolylinesMap.isNotEmpty() -> filteredAllPolylinesMap.values.toList()
+            filteredPolylineMap.isNotEmpty() -> filteredPolylineMap.values.toList()
+            summary.sportStats.keys.any { it in sports } -> summary.polylines
+            else -> emptyList()
         }
 
         val filteredSportMap = if (summary.workoutIdToSportMap.isNotEmpty()) {
@@ -347,13 +353,14 @@ class PeriodsViewModel @JvmOverloads constructor(
             totalDistance = totalDistance,
             sportStats = filteredStats,
             polylines = filteredPolylines,
-            workoutIdToPolylineMap = filteredPolylineMap,
+            workoutIdToPolylineMap = effectivePolylineMap,
             workoutIdToAllPolylinesMap = filteredAllPolylinesMap,
             workoutIdToPathMap = filteredPathMap,
             workoutIdToSportMap = filteredSportMap,
             extremaMarkers = filteredMarkers,
             yearlySportContributions = filteredContributions,
-            dailySportContributions = filteredDailyContributions
+            dailySportContributions = filteredDailyContributions,
+            primaryRegionSummary = if (hasRegionSummaries) resolvedRegion?.first else summary.primaryRegionSummary
         )
     }
 

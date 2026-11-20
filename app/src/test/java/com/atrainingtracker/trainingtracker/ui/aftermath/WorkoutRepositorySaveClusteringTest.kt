@@ -224,6 +224,7 @@ class WorkoutRepositorySaveClusteringTest {
      */
     @Test
     fun testSaveWorkout_whenClustered_updatesCentroidsWithoutReassigningCluster() = runBlocking(Dispatchers.IO) {
+        // TST-SET-042: Manual workout rename preserves linked WorkoutCluster identity and name.
         val clusteredWorkout = createTestWorkout(42L, "Hausrunde #5", clusterId = 10L, clusterName = "Hausrunde")
         seedWorkouts(listOf(clusteredWorkout))
 

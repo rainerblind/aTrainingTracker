@@ -23,68 +23,75 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
-import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
-import java.util.ArrayDeque
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.math.sqrt
 
 /**
- * Stateful virtual device computing real-time Heart Rate Variability (HRV) metrics:
+ * Stateful virtual device computing real-time Heart Rate Variability (HRV) metrics from the
+ * `ECG > ANT+ > PPG` arbitrated RR stream ("Best Sensor"):
  * - [SensorType.HRV_RMSSD] (60s rolling window, excluding artifact-adjacent pairs to prevent downward bias)
  * - [SensorType.HRV_DFA_A1] (120s rolling window, evaluated every 5s across scales n in [4, 16])
  * - [SensorType.HRV_ARTIFACT_RATE] (120s window artifact percentage)
+ * - [SensorType.HRV_SDNN] (120s rolling unbiased sample SD of non-artifact NN intervals, `REQ-HRV-050.2`)
  *
  * System invariants:
  * - Rule 51: Constructor seeds identical baseline state as [resetSession].
  * - Rule 52: Zero telemetry rows emitted to [MySensor] until valid RR packets arrive ([hasReceivedRrData]).
- * - Gate suppression: Suppresses DFA alpha 1 emission (emits null) when 120s window artifact rate > 5.0%.
+ * - Gate suppression: Suppresses DFA alpha 1 and SDNN emission (emits null) when 120s window artifact rate > threshold.
  *
- * Pursuant to REQ-TRK-060.3, REQ-TRK-060.4, and REQ-TRK-060.5.
+ * Pursuant to REQ-TRK-060.3, REQ-TRK-060.4, REQ-TRK-060.5, REQ-HRV-048.3, and REQ-HRV-050.2.
  */
 open class HRVMetricsDevice @JvmOverloads constructor(
     context: Context,
     mySensorManager: MySensorManager,
     timeProvider: TimeProvider? = null,
-    private val artifactFilter: RrArtifactFilter = RrArtifactFilter(),
+    artifactFilter: RrArtifactFilter = RrArtifactFilter(),
     startScheduler: Boolean = true,
-    var artifactGateThresholdPercent: Double? = null
-) : MyDevice(context, mySensorManager, DeviceType.HRV_METRICS), RrBeatListener {
+    artifactGateThresholdPercent: Double? = null
+) : MyDevice(context, mySensorManager, DeviceType.HRV_METRICS), RrBeatListener, HrvTelemetryProvider {
 
     fun interface TimeProvider {
         fun currentTimeMillis(): Long
     }
 
     companion object {
-        const val WINDOW_RMSSD_MS = 60_000L
-        const val WINDOW_DFA_MS = 120_000L
-        const val WINDOW_FILTER_CONTEXT_MS = WINDOW_DFA_MS + 60_000L
-        const val MIN_RMSSD_VALID_PAIRS = 10
-        const val ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
+        const val WINDOW_RMSSD_MS = HrvRollingEngine.WINDOW_RMSSD_MS
+        const val WINDOW_DFA_MS = HrvRollingEngine.WINDOW_DFA_MS
+        const val WINDOW_FILTER_CONTEXT_MS = HrvRollingEngine.WINDOW_FILTER_CONTEXT_MS
+        const val MIN_RMSSD_VALID_PAIRS = HrvRollingEngine.MIN_RMSSD_VALID_PAIRS
+        const val MIN_SDNN_VALID_BEATS = HrvRollingEngine.MIN_SDNN_VALID_BEATS
+        const val ARTIFACT_GATE_THRESHOLD_PERCENT = HrvRollingEngine.ARTIFACT_GATE_THRESHOLD_PERCENT
         const val EVALUATION_PERIOD_SECONDS = 5L
     }
 
     private val mTimeProvider: TimeProvider = timeProvider ?: TimeProvider { System.currentTimeMillis() }
-    private val mScheduler: ScheduledExecutorService? = if (startScheduler) Executors.newSingleThreadScheduledExecutor() else null
+    private val mEngine = HrvRollingEngine(context, artifactFilter, artifactGateThresholdPercent)
+    private val mScheduler: ScheduledExecutorService? =
+        if (startScheduler) Executors.newSingleThreadScheduledExecutor() else null
 
     private lateinit var mHrvRmssdSensor: MySensor<Double>
     private lateinit var mHrvDfaA1Sensor: MySensor<Double>
     private lateinit var mHrvArtifactRateSensor: MySensor<Double>
+    private lateinit var mHrvSdnnSensor: MySensor<Double>
 
-    // 120s rolling beat queue
-    private val mBeatQueue = ArrayDeque<RrBeatEvent>()
-    @Volatile
-    var hasReceivedRrData: Boolean = false
-        private set
+    var artifactGateThresholdPercent: Double?
+        get() = mEngine.artifactGateThresholdPercent
+        set(value) {
+            mEngine.artifactGateThresholdPercent = value
+        }
 
-    @Volatile
-    var signalQualityResult: HrvSignalQualityResult = createDefaultSignalQualityResult()
-        private set
+    val hasReceivedRrData: Boolean
+        get() = mEngine.hasReceivedRrData
+
+    override val signalQualityResult: HrvSignalQualityResult
+        get() = mEngine.signalQualityResult
+
+    override val latestArtifactRatePercent: Double?
+        get() = mEngine.latestArtifactRatePercent
 
     init {
         registerSensors()
@@ -109,39 +116,17 @@ open class HRVMetricsDevice @JvmOverloads constructor(
 
         mHrvArtifactRateSensor = MySensor(this, SensorType.HRV_ARTIFACT_RATE)
         addSensor(mHrvArtifactRateSensor)
+
+        mHrvSdnnSensor = MySensor(this, SensorType.HRV_SDNN)
+        addSensor(mHrvSdnnSensor)
     }
 
-    @Synchronized
     fun resetSession() {
-        mBeatQueue.clear()
-        hasReceivedRrData = false
-        signalQualityResult = createDefaultSignalQualityResult()
+        mEngine.resetSession()
     }
 
-    private fun createDefaultSignalQualityResult(): HrvSignalQualityResult {
-        return HrvSignalQualityResult(
-            status = HrvSignalQualityStatus.INSUFFICIENT_DATA,
-            details = "Waiting for RR data",
-            beatCount = 0
-        )
-    }
-
-    @Synchronized
     override fun onRrBeat(event: RrBeatEvent) {
-        hasReceivedRrData = true
-        mBeatQueue.addLast(event)
-        pruneOldBeats(event.beatTimestampMs)
-    }
-
-    @Synchronized
-    private fun pruneOldBeats(currentTimestampMs: Long) {
-        val cutoff = currentTimestampMs - WINDOW_FILTER_CONTEXT_MS
-        val iterator = mBeatQueue.iterator()
-        while (iterator.hasNext()) {
-            if (iterator.next().beatTimestampMs < cutoff) {
-                iterator.remove()
-            }
-        }
+        mEngine.onRrBeat(event)
     }
 
     override fun onAccumulatorsReset() {
@@ -149,107 +134,12 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         resetSession()
     }
 
-    @Synchronized
     fun calculateMetrics() {
-        // Rule 52: Zero telemetry rows emitted before physical RR data arrives
-        if (!hasReceivedRrData) {
-            return
-        }
-
-        val now = mTimeProvider.currentTimeMillis()
-        pruneOldBeats(now)
-
-        val dfaCutoff = now - WINDOW_DFA_MS
-        if (mBeatQueue.isEmpty() || mBeatQueue.none { it.beatTimestampMs >= dfaCutoff }) {
-            mHrvRmssdSensor.newValue(null)
-            mHrvDfaA1Sensor.newValue(null)
-            mHrvArtifactRateSensor.newValue(null)
-            signalQualityResult = createDefaultSignalQualityResult()
-            return
-        }
-
-        val allBeats = RrBeatNormalization.sortAndNormalizeChronologically(mBeatQueue.toList())
-        val filterResult = artifactFilter.filterLiveCausal(allBeats)
-        val filteredBeats = filterResult.beats
-        val dfaWindowBeats = filteredBeats.filter { it.beatTimestampMs >= dfaCutoff }
-
-        // 1. Artifact rate over active 120s window (REQ-HRV-048.3)
-        val artifactRate = if (dfaWindowBeats.isNotEmpty()) {
-            (dfaWindowBeats.count { it.isArtifact }.toDouble() / dfaWindowBeats.size) * 100.0
-        } else {
-            0.0
-        }
-        mHrvArtifactRateSensor.newValue(artifactRate)
-
-        // 2. Bias-free rMSSD over 60s sliding window sliced from active 120s beats (REQ-TRK-060.3, REQ-HRV-048.3)
-        val rmssdCutoff = now - WINDOW_RMSSD_MS
-        val rmssdBeats = dfaWindowBeats.filter { it.beatTimestampMs >= rmssdCutoff }
-        val rmssdValue = computeBiasFreeRmssd(rmssdBeats)
-        mHrvRmssdSensor.newValue(rmssdValue)
-
-        // 3. DFA alpha 1 over active 120s window with artifact gate suppression (REQ-TRK-060.4, REQ-HRV-048.3)
-        val alpha1Value: Double?
-        val effectiveGateThreshold = getEffectiveArtifactGateThreshold()
-        if (dfaWindowBeats.isEmpty() || artifactRate > effectiveGateThreshold) {
-            // High artifact rate or empty lookahead-trimmed active window suppresses DFA alpha 1
-            mHrvDfaA1Sensor.newValue(null)
-            alpha1Value = null
-        } else {
-            val nnIntervals = dfaWindowBeats.map { it.correctedRrMs }.toDoubleArray()
-            val alpha1 = DfaCalculator.computeDfaAlpha1(nnIntervals)
-            if (alpha1.isFinite() && alpha1 > 0.0) {
-                mHrvDfaA1Sensor.newValue(alpha1)
-                alpha1Value = alpha1
-            } else {
-                mHrvDfaA1Sensor.newValue(null)
-                alpha1Value = null
-            }
-        }
-
-        // 4. Signal quality analysis strictly over active 120s window (REQ-TRK-067, REQ-HRV-048.3)
-        signalQualityResult = HrvSignalQualityAnalyzer.analyzeBeats(
-            beats = dfaWindowBeats,
-            artifactRatePercent = artifactRate,
-            rmssdMs = rmssdValue,
-            dfaAlpha1 = alpha1Value
-        )
-    }
-
-    private fun getEffectiveArtifactGateThreshold(): Double {
-        artifactGateThresholdPercent?.let { return it }
-        return try {
-            if (TuningPreferencesDataStore.hasInitializedInstance()) {
-                TuningPreferencesDataStore.getInstance(mContext).getTuningConfig().hrvArtifactGateThresholdPercent.toDouble()
-            } else {
-                ARTIFACT_GATE_THRESHOLD_PERCENT
-            }
-        } catch (_: Exception) {
-            ARTIFACT_GATE_THRESHOLD_PERCENT
-        }
-    }
-
-    private fun computeBiasFreeRmssd(beats: List<FilteredRrBeat>): Double? {
-        if (beats.size < 2) return null
-
-        var sumSquaredDiffs = 0.0
-        var validPairCount = 0
-
-        for (i in 0 until beats.size - 1) {
-            val b1 = beats[i]
-            val b2 = beats[i + 1]
-            // Successive interval differences exclude artifact-adjacent pairs
-            if (!b1.isArtifact && !b2.isArtifact) {
-                val diff = b2.rawRrMs - b1.rawRrMs
-                sumSquaredDiffs += diff * diff
-                validPairCount++
-            }
-        }
-
-        if (validPairCount < MIN_RMSSD_VALID_PAIRS) {
-            return null
-        }
-
-        return sqrt(sumSquaredDiffs / validPairCount.toDouble())
+        val snapshot = mEngine.evaluate(mTimeProvider.currentTimeMillis()) ?: return
+        mHrvArtifactRateSensor.newValue(snapshot.artifactRatePercent)
+        mHrvRmssdSensor.newValue(snapshot.rmssdMs)
+        mHrvDfaA1Sensor.newValue(snapshot.dfaAlpha1)
+        mHrvSdnnSensor.newValue(snapshot.sdnnMs)
     }
 
     @Synchronized
@@ -263,4 +153,5 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     fun getHrvRmssdSensor(): MySensor<Double> = mHrvRmssdSensor
     fun getHrvDfaA1Sensor(): MySensor<Double> = mHrvDfaA1Sensor
     fun getHrvArtifactRateSensor(): MySensor<Double> = mHrvArtifactRateSensor
+    fun getHrvSdnnSensor(): MySensor<Double> = mHrvSdnnSensor
 }

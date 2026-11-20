@@ -33,6 +33,8 @@ import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -412,5 +414,46 @@ class TrackOnMapAftermathViewModelTest {
         assertEquals(301L, viewModel.uiState.value.loadedWorkoutId)
         assertEquals(updatedHrZones, viewModel.uiState.value.hrZoneDistribution)
         assertEquals(1, viewModel.uiState.value.tracks.size)
+    }
+
+    /**
+     * TST-UI-056 (REQ-MAP-013): Verifies toggling technical track types persists via
+     * MyPreferenceManager and survives ViewModel recreation.
+     */
+    @Test
+    fun toggleTrackTypeEnabled_persistsSelectionAcrossViewModelRecreation_TST_UI_056() = runTest(testDispatcher) {
+        // TST-UI-056
+        val persistedTrackTypes = MutableStateFlow(setOf(TrackType.BEST.name))
+        every { anyConstructed<MyPreferenceManager>().enabledTrackTypesFlow } returns persistedTrackTypes
+        coEvery { anyConstructed<MyPreferenceManager>().setTrackTypeEnabled(any(), any()) } answers {
+            val typeName = firstArg<String>()
+            val enabled = secondArg<Boolean>()
+            persistedTrackTypes.value = if (enabled) {
+                persistedTrackTypes.value + typeName
+            } else {
+                persistedTrackTypes.value - typeName
+            }
+        }
+
+        val vm1 = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        val collectJob1 = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm1.enabledTrackTypes.collect()
+        }
+        advanceUntilIdle()
+        assertEquals(setOf(TrackType.BEST), vm1.enabledTrackTypes.value)
+
+        vm1.toggleTrackTypeEnabled(TrackType.GPS)
+        advanceUntilIdle()
+        assertTrue(vm1.enabledTrackTypes.value.contains(TrackType.GPS))
+        collectJob1.cancel()
+
+        // Recreate ViewModel simulating workout reopen -> persisted preference restored
+        val vm2 = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        val collectJob2 = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm2.enabledTrackTypes.collect()
+        }
+        advanceUntilIdle()
+        assertEquals(setOf(TrackType.BEST, TrackType.GPS), vm2.enabledTrackTypes.value)
+        collectJob2.cancel()
     }
 }

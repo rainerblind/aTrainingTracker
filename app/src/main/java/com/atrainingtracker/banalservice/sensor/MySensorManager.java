@@ -107,6 +107,19 @@ public class MySensorManager extends MyDevice {
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_GPS
     };
+    /**
+     * Priority hierarchy for HRV metrics ({@link SensorType#HRV_RMSSD}, {@link SensorType#HRV_DFA_A1},
+     * {@link SensorType#HRV_ARTIFACT_RATE}, {@link SensorType#HRV_SDNN}).
+     * <p>
+     * Keeps "Best Sensor" ({@code deviceName == null}) and workout telemetry recording bound to the
+     * ECG &gt; ANT+ &gt; PPG arbitrated {@link DeviceType#HRV_METRICS} virtual device while allowing
+     * per-device {@link DeviceType#HRM} sensors to serve pinned cockpit tiles ({@code REQ-HRV-050.1}).
+     */
+    protected static final DeviceType[] HRV_PRIORITY
+            = new DeviceType[]{
+            DeviceType.HRV_METRICS,
+            DeviceType.HRM
+    };
     private static final String TAG = "MySensorManager";
     // String        mGCData            = EMPTY_GC_DATA;
     // protected int mAccumulatedSensors = 0; 
@@ -147,6 +160,11 @@ public class MySensorManager extends MyDevice {
         setPriorityList(SensorType.LATITUDE, LOCATION_PRIORITY);
         setPriorityList(SensorType.LONGITUDE, LOCATION_PRIORITY);
         setPriorityList(SensorType.LINE_DISTANCE_m, LOCATION_PRIORITY);
+
+        setPriorityList(SensorType.HRV_RMSSD, HRV_PRIORITY);
+        setPriorityList(SensorType.HRV_DFA_A1, HRV_PRIORITY);
+        setPriorityList(SensorType.HRV_ARTIFACT_RATE, HRV_PRIORITY);
+        setPriorityList(SensorType.HRV_SDNN, HRV_PRIORITY);
 
         mInitialValues.put(SensorType.LAP_NR, BANALService.INIT_LAP_NR);
 
@@ -645,6 +663,11 @@ public class MySensorManager extends MyDevice {
             case LONGITUDE:
             case LINE_DISTANCE_m:
                 return LOCATION_PRIORITY;
+            case HRV_RMSSD:
+            case HRV_DFA_A1:
+            case HRV_ARTIFACT_RATE:
+            case HRV_SDNN:
+                return HRV_PRIORITY;
             default:
                 return null;
         }

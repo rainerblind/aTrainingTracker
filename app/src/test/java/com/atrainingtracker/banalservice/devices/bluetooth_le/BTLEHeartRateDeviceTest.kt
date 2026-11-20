@@ -90,6 +90,7 @@ class BTLEHeartRateDeviceTest {
 
         mockkConstructor(Handler::class)
         every { anyConstructed<Handler>().removeCallbacks(any()) } just Runs
+        every { anyConstructed<Handler>().removeCallbacksAndMessages(any()) } just Runs
         every { anyConstructed<Handler>().postDelayed(any(), any()) } returns true
         every { anyConstructed<Handler>().post(any()) } returns true
 
@@ -625,5 +626,107 @@ class BTLEHeartRateDeviceTest {
             PolarOfflineCapabilityStore.resetForTesting()
             PolarOfflineGattCoordinator.resetForTesting()
         }
+    }
+
+    @Test
+    fun testPerDeviceHrv_parallelBtleDevicesComputeDistinctValuesAndClearOnDisconnectAndReset_TST_HRV_050_3() {
+        // REQ-HRV-050.3 / TST-HRV-050.3
+        val baseTs = 1_000_000L
+        var nowMs = baseTs + 40_000L
+
+        val h10 = object : BTLEHeartRateDevice(mockContext, mockSensorManager, 201L, "AA:BB:CC:DD:EE:01") {
+            override fun notifySensorsChanged() {}
+            override fun createPerDeviceHrvController() =
+                com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController(
+                    mContext, this, createHrvHostCallbacks(), { nowMs },
+                    startScheduler = false, artifactGateThresholdPercent = 5.0
+                )
+            fun triggerReset() = onAccumulatorsReset()
+            fun triggerDisconnect() = unregisterSensors()
+        }
+        val verity = object : BTLEHeartRateDevice(mockContext, mockSensorManager, 202L, "AA:BB:CC:DD:EE:02") {
+            override fun notifySensorsChanged() {}
+            override fun createPerDeviceHrvController() =
+                com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController(
+                    mContext, this, createHrvHostCallbacks(), { nowMs },
+                    startScheduler = false, artifactGateThresholdPercent = 5.0
+                )
+        }
+
+        // Rule 52: Zero HRV sensors before first RR packet
+        assertNull(h10.getSensor(SensorType.HRV_DFA_A1))
+        assertNull(h10.getSensor(SensorType.HRV_SDNN))
+
+        // Feed distinct variability streams: H10 has +-40 ms alternation; Verity has +-10 ms alternation
+        for (i in 0 until 40) {
+            val ts = baseTs + i * 800L
+            val rrH10Raw = Math.round((if (i % 2 == 0) 760.0 else 840.0) * 1024.0 / 1000.0).toInt()
+            val rrVerityRaw = Math.round((if (i % 2 == 0) 790.0 else 810.0) * 1024.0 / 1000.0).toInt()
+            h10.parseHeartRateMeasurement(
+                byteArrayOf(0x10, 75, (rrH10Raw and 0xFF).toByte(), ((rrH10Raw shr 8) and 0xFF).toByte()), ts
+            )
+            verity.parseHeartRateMeasurement(
+                byteArrayOf(0x10, 75, (rrVerityRaw and 0xFF).toByte(), ((rrVerityRaw shr 8) and 0xFF).toByte()), ts
+            )
+        }
+
+        h10.perDeviceHrvController.calculateMetrics()
+        verity.perDeviceHrvController.calculateMetrics()
+
+        val h10Sdnn = h10.getSensor(SensorType.HRV_SDNN)?.value as? Double
+        val veritySdnn = verity.getSensor(SensorType.HRV_SDNN)?.value as? Double
+        assertNotNull("Polar H10 must expose per-device HRV_SDNN", h10Sdnn)
+        assertNotNull("Polar Verity Sense must expose per-device HRV_SDNN", veritySdnn)
+        assertTrue("Distinct RR streams must yield distinct per-device SDNN ($h10Sdnn vs $veritySdnn)", h10Sdnn!! > veritySdnn!! * 2.0)
+
+        // Rule 51 accumulator reset pushes null while keeping sensors registered
+        val sdnnBeforeReset = h10.getSensor(SensorType.HRV_SDNN)!!
+        val observed = mutableListOf<Any?>()
+        sdnnBeforeReset.addSensorListener { observed.add(it) }
+        h10.triggerReset()
+        assertNull("onAccumulatorsReset must clear value to null while activated", observed.last())
+        assertNotNull("Sensors remain registered on accumulator reset", h10.getSensor(SensorType.HRV_SDNN))
+
+        // Disconnect clears & unregisters all 4 HRV sensors
+        h10.triggerDisconnect()
+        assertNull(h10.getSensor(SensorType.HRV_DFA_A1))
+        assertNull(h10.getSensor(SensorType.HRV_RMSSD))
+        assertNull(h10.getSensor(SensorType.HRV_ARTIFACT_RATE))
+        assertNull(h10.getSensor(SensorType.HRV_SDNN))
+
+        h10.shutDown()
+        verity.shutDown()
+    }
+
+    @Test
+    fun testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2() {
+        // REQ-FIL-038.2 / TST-FIL-038.2
+        val device = createDevice() as TestBTLEHeartRateDevice
+        val packet = byteArrayOf(0x10.toByte(), 72.toByte(), 0x00.toByte(), 0x04.toByte()) // 1000 ms
+
+        device.parseHeartRateMeasurement(packet, 10_000L)
+        val rrSensor1 = device.rrIntervalSensor
+        assertNotNull(rrSensor1)
+
+        val observed1 = mutableListOf<Any?>()
+        rrSensor1!!.addSensorListener { observed1.add(it) }
+        assertEquals(1000, observed1.last())
+
+        // unregisterSensors must deactivate & push null BEFORE removal
+        device.unregisterSensors()
+        org.junit.Assert.assertFalse("mRrIntervalSensor must be deactivated on BLE unregisterSensors()", rrSensor1.isActivated)
+        assertNull("Listener must receive null immediately on BLE disconnect", observed1.last())
+
+        // Reconnect and verify shutDown also deactivates & pushes null
+        device.parseHeartRateMeasurement(packet, 20_000L)
+        val rrSensor2 = device.rrIntervalSensor
+        assertNotNull(rrSensor2)
+        val observed2 = mutableListOf<Any?>()
+        rrSensor2!!.addSensorListener { observed2.add(it) }
+        assertEquals(1000, observed2.last())
+
+        device.shutDown()
+        org.junit.Assert.assertFalse("mRrIntervalSensor must be deactivated on BLE shutDown()", rrSensor2.isActivated)
+        assertNull("Listener must receive null immediately on BLE shutDown()", observed2.last())
     }
 }

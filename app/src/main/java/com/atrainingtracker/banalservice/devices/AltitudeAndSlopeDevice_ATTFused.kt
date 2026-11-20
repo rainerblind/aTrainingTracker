@@ -357,6 +357,7 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         nowMs: Long = System.currentTimeMillis()
     ) {
         ekf.setMode(isEffectiveDem || isEffectiveGps)
+        // REQ-FIL-037.3: Retuned DEM (25 m^2) / GPS (64 m^2) variance + post-anchor step-discrepancy gating
         val reanchored = ekf.updateReferenceAltitude(
             refAltM,
             if (isDem) KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM else KinematicAltitudeSlopeEkf.DEFAULT_VAR_GPS

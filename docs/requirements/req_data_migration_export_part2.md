@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.1  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 2
+**Total Requirements**: 3
 
 ---
 
@@ -91,9 +91,34 @@
 
 ---
 
+### REQ-MIG-054: Preserve Explicit Strava Upload Opt-Out (`UPLOAD_TO_STRAVA = 0`) During Inferred Identity Application [Verified]
+- **Tests**: `TST-MIG-052`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `TcxImportStravaToggleTest.kt`
+- **Rationale**: During TCX/GPX/FIT import with `uploadToStrava = false`, `insertImportedWorkout()` sets `UPLOAD_TO_STRAVA = 0`, while `refreshClusters()` on an empty `RouteClusters.db` triggers `migrateHistory()` -> `assignClusterToWorkout()` -> `applyInferredIdentity()`. Treating `0` as "not yet decided" (`!= 1`) silently overrides explicit opt-outs to `1`.
+- **Description**:
+  1. *Tri-State Sentinel Guard (`WorkoutSummariesDatabaseManager.applyInferredIdentity()`)*: `applyInferredIdentity()` SHALL query `WorkoutSummaries.UPLOAD_TO_STRAVA` using `try (Cursor ...)` and overwrite `UPLOAD_TO_STRAVA` with `identity.getUploadToStrava()` ONLY when the target row exists AND the cell is undecided (SQL `NULL` via `cursor.isNull(0)` or `-1`, matching DDL `DEFAULT -1`).
+  2. *Explicit Decision Preservation*: Existing explicit decisions (`0` = opt-out, `1` = opt-in) MUST NOT be overwritten, while `SPORT_ID`, `B_SPORT`, and `EQUIPMENT_ID` continue to update normally.
+  3. *Missing Row Safety & LoC Ceiling*: Non-existent `workoutId` values MUST execute as a safe no-op without throwing, and `WorkoutSummariesDatabaseManager.java` MUST remain `<= 3,148` lines.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an empty `RouteClusters.db` and Strava connected, *When* `LegacyImportEngine.importFromTcxResult(..., uploadToStrava = false)` runs without any cluster seed workaround, *Then* `UPLOAD_TO_STRAVA` remains `0` and zero Strava export jobs are scheduled.
+• *Given* a workout row with `UPLOAD_TO_STRAVA = -1` (live default) or SQL `NULL`, *When* `applyInferredIdentity()` runs, *Then* `UPLOAD_TO_STRAVA` updates to `identity.getUploadToStrava()`.
+• *Given* a workout row with explicit `0` or `1`, or a non-existent `workoutId`, *When* `applyInferredIdentity()` runs, *Then* `0`/`1` stays unchanged and missing rows are safe no-ops.
+
+**Invariants**: Live workouts (`DEFAULT -1`) still receive inferred `uploadToStrava` (`1` or `0` per `REQ-EXP-006`); explicit `1` opt-ins stay protected (`ATT-1116`); `getInt()` stays unchanged for all other callers; `WorkoutSummariesDatabaseManager.java <= 3,148` LoC.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
+| `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Added `REQ-MIG-054` (`[Planned]`, `SYSREQ-DEX-004`) preserving explicit `UPLOAD_TO_STRAVA = 0` opt-outs and `1` opt-ins while resolving undecided `-1`/SQL `NULL` rows. |
+| `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `REQ-MIG-054` to `[Implemented]` (`WorkoutSummariesDatabaseManager.applyInferredIdentity()` tri-state SQL `NULL`/`-1` guard, `<= 3,148` LoC). |
+| `1.0.4` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `REQ-MIG-054` to `[Verified]` reusing Gate 4 verified SHA `aa9a407c` (`46/46` PASS across 7 suites, `Rule 7.5`). |

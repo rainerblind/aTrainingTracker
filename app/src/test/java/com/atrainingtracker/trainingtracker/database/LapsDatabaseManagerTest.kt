@@ -29,6 +29,11 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.lang.reflect.Field
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Unit test verifying LapsDatabaseManager, schema upgrade safety (v1 -> v2),
@@ -338,6 +343,47 @@ class LapsDatabaseManagerTest {
         verify(exactly = 1) {
             anyConstructed<ContentValues>().put(LapsDatabaseManager.Laps.SPEED_AVERAGE_mps, 5.0)
             mockDb.insertOrThrow(LapsDatabaseManager.Laps.TABLE, null, any())
+        }
+    }
+
+    // REQ-TRK-090 / TST-TRK-090
+    @Test
+    fun testSaveLap_nullTimeStartWithPositiveLapTime_fallsBackToUtcNowMinusLapTime_tstTrk090_2() {
+        val prevTz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            resetSingleton()
+            val manager = LapsDatabaseManager.getInstance(mockContext)
+            injectMockDatabase(manager, mockDb)
+            every { mockDb.isOpen } returns true
+            every { mockDb.insertOrThrow(LapsDatabaseManager.Laps.TABLE, null, any()) } returns 1L
+
+            val capturedTimeStart = slot<String>()
+            every {
+                anyConstructed<ContentValues>().put(LapsDatabaseManager.Laps.TIME_START, capture(capturedTimeStart))
+            } returns Unit
+
+            val beforeMs = System.currentTimeMillis()
+            manager.saveLap(42L, 1L, null, 300, 1200.0, 4.0)
+            val afterMs = System.currentTimeMillis()
+
+            assertTrue("Expected UTC fallback TIME_START to be populated", capturedTimeStart.isCaptured)
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US).withZone(ZoneOffset.UTC)
+            val parsedEpochMs = java.time.LocalDateTime.parse(capturedTimeStart.captured, formatter)
+                .toInstant(ZoneOffset.UTC)
+                .toEpochMilli()
+            val expectedMinSecMs = ((beforeMs - 300_000L) / 1000L) * 1000L
+            val expectedMaxSecMs = ((afterMs - 300_000L) / 1000L) * 1000L
+            assertTrue(
+                "Fallback TIME_START (${capturedTimeStart.captured}) must match UTC now - 300s (not local TZ or end time)",
+                parsedEpochMs in expectedMinSecMs..expectedMaxSecMs
+            )
+            // Verify explicit non-null timeStart is preserved verbatim
+            val explicitTime = "2026-10-01 08:00:00"
+            manager.saveLap(42L, 2L, explicitTime, 300, 1200.0, 4.0)
+            assertEquals(explicitTime, capturedTimeStart.captured)
+        } finally {
+            TimeZone.setDefault(prevTz)
         }
     }
 }

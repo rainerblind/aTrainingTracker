@@ -50,6 +50,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -155,6 +156,27 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
             _deviceBatteryUpdates.tryEmit(Pair(deviceId, percentage))
         }
 
+        private val _baselineCircumferenceChanged = MutableSharedFlow<Long>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        /**
+         * Reactive event stream emitting the affected device ID whenever `baselineCircumference`
+         * is persisted or reset in `Devices.db` (REQ-SEN-034.1).
+         */
+        @JvmStatic
+        val baselineCircumferenceChanged: SharedFlow<Long> = _baselineCircumferenceChanged.asSharedFlow()
+
+        /**
+         * Notifies observers (such as `BANALServiceRepository`) that the persisted iTPMS baseline
+         * circumference for [deviceId] changed (REQ-SEN-034.1).
+         */
+        @JvmStatic
+        fun notifyBaselineCircumferenceChanged(deviceId: Long) {
+            _baselineCircumferenceChanged.tryEmit(deviceId)
+        }
+
         @JvmStatic
         fun isBikeSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isBikeSensor(deviceType)
 
@@ -174,6 +196,11 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     @androidx.annotation.VisibleForTesting
     fun cancelScopeForTesting() {
         repositoryScope.cancel()
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun seedDevicesForTesting(devices: List<DeviceUiData>) {
+        _allDevices.value = devices
     }
 
     // access to the databases
@@ -433,6 +460,9 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
             if (originalState.polarLiveImuEnabled != finalState.polarLiveImuEnabled) {
                 sendPolarLiveImuChangedBroadcast(finalState.id, finalState.polarLiveImuEnabled)
             }
+            if (originalState.baselineCircumference != finalState.baselineCircumference) {
+                notifyBaselineCircumferenceChanged(finalState.id)
+            }
         }
     }
 
@@ -519,9 +549,30 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         }
     }
 
-    suspend fun resetTirePressureBaseline(deviceId: Long) {
+    /**
+     * Resets the persistent tire pressure baseline in `Devices.db` (REQ-TRK-050, REQ-SEN-033.2).
+     * When [circumferenceMm] is provided (`> 0`), also synchronizes `CALIBRATION_FACTOR` and dispatches
+     * [BANALService.CALIBRATION_FACTOR_CHANGED] so draft edits before saving stay consistent with history.
+     */
+    suspend fun resetTirePressureBaseline(deviceId: Long, circumferenceMm: Int? = null) {
         withContext(ioDispatcher) {
-            devicesDatabaseManager.resetBaselineCircumference(deviceId)
+            if (circumferenceMm != null && circumferenceMm > 0) {
+                val circumferenceMeters = circumferenceMm / 1000.0
+                val values = ContentValues().apply {
+                    put(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR, circumferenceMeters)
+                    put(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE, circumferenceMeters)
+                }
+                devicesDatabaseManager.database.update(
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                    values,
+                    "${DevicesDatabaseManager.DevicesDbHelper.C_ID} = ?",
+                    arrayOf(deviceId.toString())
+                )
+                sendCalibrationChangedBroadcast(deviceId, circumferenceMeters)
+            } else {
+                devicesDatabaseManager.resetBaselineCircumference(deviceId)
+            }
+            notifyBaselineCircumferenceChanged(deviceId)
             refreshDeviceFromDb(deviceId)
         }
     }

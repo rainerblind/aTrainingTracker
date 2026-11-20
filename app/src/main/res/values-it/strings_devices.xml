@@ -54,9 +54,7 @@
     <string name="devices_lastSeenText">visto il</string>
     <string name="devices_now">ora</string>
 
-    <string name="devices_correct_calibration_factor_title_bike">Correggi circonferenza ruota</string>
     <string name="devices_correct_calibration_factor_title_run">Correggi fattore calibrazione</string>
-    <string name="devices_correct_calibration_explanation_bike">Correggi qui la circonferenza della ruota.</string>
     <string name="devices_correct_calibration_explanation_run">Correggi qui il fattore di calibrazione.</string>
     <string name="devices_measuredDistanceText">distanza misurata:</string>
     <string name="devices_correctDistanceText">distanza corretta:</string>
@@ -78,7 +76,6 @@
 
     <string name="devices_editDeviceBikeDeviceNameValue">Velocità Garmin</string>
     <string name="devices_editDeviceBikeDeviceTypeValue">Velocità Bici</string>
-    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">correggi circonferenza</string>
 
     <string name="devices_editDeviceRunDeviceNameValue">Corsa Garmin</string>
     <string name="devices_editDeviceRunDeviceTypeValue">Velocità Corsa</string>
@@ -136,7 +133,6 @@
     <string name="devices_equipment_none">- nessuno -</string>
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
-    <string name="devices_reset_tire_pressure_baseline">Ripristina pressione base pneumatici (appena gonfiati)</string>
 
     <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
     <string name="devices_sort_alphabetical">Alfabetico</string>
@@ -182,6 +178,7 @@
     <string name="device_polar_h10_live_imu_desc">Trasmette FC/RR e accelerometro in tempo reale su una singola connessione Polar per la cadenza di corsa senza footpod attivo.</string>
     <string name="device_polar_verity_live_imu_desc">Trasmette FC e dati ACC/GYRO in modalità sensore blu su una singola connessione Polar per la cadenza di corsa senza footpod attivo.</string>
     <string name="device_polar_live_imu_requires_android_13">Richiede Android 13 o versione successiva.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: IMU live (%2$s) bloccato da un\'altra app (es. Polar Flow) o da uno stato obsoleto del sensore. Chiudi Polar Flow o riavvia il sensore.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">Oscillazione verticale</string>
@@ -220,4 +217,8 @@
     <string name="prefs_research_period_5m">5 min</string>
     <string name="prefs_research_period_10m">10 min</string>
 
+    <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
+    <string name="devices_wheel_circumference_auto_hint">Misura iniziale dello pneumatico per nuovi sensori — calibrata automaticamente via GNSS durante le uscite.</string>
+    <string name="devices_wheel_baseline_format">Base: %1$d mm</string>
+    <string name="devices_wheel_history_empty">Nessuna cronologia di calibrazione. Completa un\'uscita con GNSS e questo sensore ruota per vedere l\'andamento.</string>
 </resources>

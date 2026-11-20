@@ -124,11 +124,12 @@ class FilterNullSafetyTest {
     }
 
     /**
-     * TST-FIL-014.5: Verifies that valid samples within the active time window
-     * compute the correct arithmetic average.
+     * TST-FIL-014.5 / TST-UNT-004 (REQ-FIL-001): Verifies that valid samples within the active
+     * time window compute the correct arithmetic average.
      */
     @Test
     fun timedMovingAverageFilter_freshSamples_shouldCalculateAccurateAverage() {
+        // TST-UNT-004
         val filter = TimedMovingAverageFilter("test", SensorType.POWER, 10)
         
         filter.newValue(100)
@@ -136,6 +137,29 @@ class FilterNullSafetyTest {
 
         assertNotNull(filter.filteredValue)
         assertEquals(150.0, filter.filteredValue?.toDouble() ?: 0.0, 0.01)
+    }
+
+    /**
+     * TST-UNT-004 (REQ-FIL-001): Verifies exact sliding-window arithmetic mean across a
+     * numbered sample sequence for NumberedMovingAverageFilter.
+     */
+    @Test
+    fun numberedMovingAverageFilter_slidingWindowSequence_computesExactMean_TST_UNT_004() {
+        // TST-UNT-004
+        val filter = NumberedMovingAverageFilter("test", SensorType.POWER, 3)
+
+        filter.newValue(100)
+        assertEquals(100.0, filter.filteredValue?.toDouble() ?: 0.0, 0.001)
+
+        filter.newValue(200)
+        assertEquals(150.0, filter.filteredValue?.toDouble() ?: 0.0, 0.001)
+
+        filter.newValue(300)
+        assertEquals(200.0, filter.filteredValue?.toDouble() ?: 0.0, 0.001)
+
+        // Window size 3 drops 100 -> mean(200, 300, 400) = 300.0
+        filter.newValue(400)
+        assertEquals(300.0, filter.filteredValue?.toDouble() ?: 0.0, 0.001)
     }
 
     private class TestableTimedMovingAverageFilter(

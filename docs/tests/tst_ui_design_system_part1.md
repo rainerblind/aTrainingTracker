@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 1 of 3)
 
 **Document ID**: `DOC-TST-UI-P1`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part1`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 249
+**Total Tests**: 244
 
 ---
 
@@ -22,25 +22,29 @@
 - **Component**: `TimeFormatter`
 - **Test Description**: Verify Removal of leading zeros and correct localized string generation for s, m:s, and h:m:s formats.
 
-### TST-UNT-003: EquipmentDiscovery [Implemented]
+### TST-UNT-003: EquipmentDiscovery [Verified]
 - **Requirement(s)**: `REQ-TRK-004`, `REQ-SET-003`
 - **Component**: `EquipmentDiscovery`
 - **Test Description**: Verify sport-type resolution logic based on varied active sensor ID sets and speed.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `EquipmentDiscoveryTest.kt` (`EquipmentDiscoveryTest.testResolveIdentity_UniqueDeviceResolvesLinkedEquipmentAndSport_TST_UNT_003`, `EquipmentDiscoveryTest.testResolveIdentity_NoDeviceUsesSpeedBasedFallbackAndUnlinkedEquipment_TST_UNT_003`)
 
-### TST-UNT-004: MovingAverageFilter [Implemented]
+### TST-UNT-004: MovingAverageFilter [Verified]
 - **Requirement(s)**: `REQ-FIL-001`
 - **Component**: `MovingAverageFilter`
 - **Test Description**: Verify correct averaging of a sequence of numbers (Numbered and Timed variants).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `FilterNullSafetyTest.kt` (`FilterNullSafetyTest.numberedMovingAverageFilter_slidingWindowSequence_computesExactMean_TST_UNT_004`)
 
-### TST-UNT-005: ExponentialSmoothing [Implemented]
+### TST-UNT-005: ExponentialSmoothing [Verified]
 - **Requirement(s)**: `REQ-FIL-002`
 - **Component**: `ExponentialSmoothing`
 - **Test Description**: Verify the recursive smoothing formula: `y[k+1] = α m[k] + (1-α) y[k]`.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `FilterInitializationAndBoundsTest.kt` (`FilterInitializationAndBoundsTest.exponentialSmoothingFilter_firstSampleSeedingAndReseed_eliminatesZeroBias`)
 
-### TST-UNT-006: SportTypeMapping [Implemented]
+### TST-UNT-006: SportTypeMapping [Verified]
 - **Requirement(s)**: `REQ-EXP-006`
 - **Component**: `SportTypeMapping`
 - **Test Description**: Verify that `SportTypeDatabaseManager` correctly handles a `null` Strava mapping as a persistent state.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `SportTypeDatabaseManagerStravaTest.kt` (`SportTypeDatabaseManagerStravaTest.testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006`)
 
 ### TST-UNT-007: EditWorkoutViewModel [Verified]
 - **Requirement(s)**: `REQ-EXP-006`
@@ -52,38 +56,44 @@
 - **Component**: `Accumulator`
 - **Test Description**: Verify that hardware deltas received during a pause are discarded, while deltas received while active are accumulated correctly.
 
-### TST-UNT-009: WorkoutDataMapper [Implemented]
+### TST-UNT-009: WorkoutDataMapper [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: `WorkoutDataMapper`
 - **Test Description**: Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaBigSixMapperTest.kt` (`WorkoutExtremaBigSixMapperTest.fromCursor_mapsBigSixExtremaMetricsAndHarmonizedAverageSpeed_TST_UNT_009_TST_UI_027`)
 
-### TST-UNT-010: MappablePath [Implemented]
+### TST-UNT-010: MappablePath [Verified]
 - **Requirement(s)**: `REQ-MAP-007`
 - **Component**: `MappablePath`
 - **Test Description**: Verify that coordinate projection (latLngs) is lazy and only occurs once.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `MappablePathMemoizationTest.kt` (`MappablePathMemoizationTest.mappablePathImplementations_preserveReferentialLatLngsIdentityAcrossAccesses_TST_UNT_010`)
 
-### TST-UNT-011: TrackingViewsDb [Implemented]
+### TST-UNT-011: TrackingViewsDb [Verified]
 - **Requirement(s)**: `REQ-PRO-005`
 - **Component**: `TrackingViewsDb`
 - **Test Description**: 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `TrackingViewsRealSqliteMigrationTest.kt` (`TrackingViewsRealSqliteMigrationTest.testTrackingViewsDbHelper_v17ToV18Migration_sportDependentBarsAndLegacyGaugeParity`)
 
-### TST-UNT-012: WorkoutSummariesViewModel [Implemented]
+### TST-UNT-012: WorkoutSummariesViewModel [Verified]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: `WorkoutSummariesViewModel`
 - **Jira**: ``ATT-457``
 - **Test Description**: Verify `getFilteredWorkouts` correctly filters by `sportId` (Sub-Sport) when provided.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutSummariesViewModelFilterTest.kt` (`WorkoutSummariesViewModelFilterTest.testGetFilteredWorkouts_filtersBySubSportId_TST_UNT_012`)
 
-### TST-UNT-013: WorkoutSummariesViewModel [Implemented]
+### TST-UNT-013: WorkoutSummariesViewModel [Verified]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: `WorkoutSummariesViewModel`
 - **Jira**: ``ATT-458``
 - **Test Description**: Verify `getFilteredWorkouts` correctly filters by `bSportType` (Base Sport) when `sportId` is null.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutSummariesViewModelFilterTest.kt` (`WorkoutSummariesViewModelFilterTest.testGetFilteredWorkouts_filtersByBSportTypeWhenSportIdNull_TST_UNT_013`)
 
-### TST-UNT-014: WorkoutSummariesDbHelper [Implemented]
+### TST-UNT-014: WorkoutSummariesDbHelper [Verified]
 - **Requirement(s)**: `REQ-DAT-008`
 - **Component**: `WorkoutSummariesDbHelper`
 - **Jira**: ``ATT-476``
 - **Test Description**: Verify that `onUpgrade` does not call `setTransactionSuccessful()` explicitly, which would conflict with `SQLiteOpenHelper`'s internal transaction management.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `DatabaseMigrationIndexTest.kt` (`DatabaseMigrationIndexTest.testWorkoutSummariesDb_freshOnCreate_createsAllThreeIndexes`, `DatabaseMigrationIndexTest.testWorkoutSummariesDb_onUpgradeV25ToV26_createsIndexesIdempotently`)
 
 ### TST-UNT-015: WorkoutClusterEngine [Verified]
 - **Requirement(s)**: `REQ-SET-065`
@@ -91,41 +101,47 @@
 - **Jira**: ``ATT-502``
 - **Test Description**: Verify that 6-term altitude-aware cluster similarity calculation correctly applies displacement weights when altitude positions are present, differentiates routes with distinct peaks/valleys, and cleanly falls back to 4-term matching when altitude coordinates are null or disabled.
 
-### TST-UI-075: **Settings Terminology Audit** [Implemented]
+### TST-UI-075: **Settings Terminology Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-115`
 - **Component**: **Settings Terminology Audit**
 - **Jira**: ``ATT-272``
 - **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Verify items "Display" and "Search". 3. Switch to German. 4. Verify items "Display" and "Suche".
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `UiDesignSystemTerminologyTest.kt` (`UiDesignSystemTerminologyTest.navigationDrawerSettingsTitles_useConciseEnAndDeTerminology_TST_UI_075`)
 
 ### TST-UI-001: **UI Design** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **UI Design**
 - **Test Description**: Inspect the workout summary extrema table on various device themes.
 
-### TST-UI-011: **Formatting** [Implemented]
+### TST-UI-011: **Formatting** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Formatting**
 - **Test Description**: Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
-### TST-UI-012: **Hierarchy** [Implemented]
+### TST-UI-012: **Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Hierarchy**
 - **Test Description**: Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
-### TST-UI-013: **Alignment** [Implemented]
+### TST-UI-013: **Alignment** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Alignment**
 - **Test Description**: Verify that in all data rows, the icon, sensor label, and numeric values are vertically aligned to their bottom edge.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
-### TST-UI-014: **Typography** [Implemented]
+### TST-UI-014: **Typography** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Typography**
 - **Test Description**: Verify that units use a micro font size (e.g., 8-9.sp) and a lighter color (reduced alpha) than the sensor name.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
-### TST-UI-015: **Notation** [Implemented]
+### TST-UI-015: **Notation** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Notation**
 - **Test Description**: Verify that the "Average" header column displays the mathematical symbol (Ø) instead of the word "average".
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
 ### TST-UI-016: **Proportion** [Implemented]
 - **Requirement(s)**: `REQ-UI-011`
@@ -142,77 +158,90 @@
 - **Component**: **Baseline Precision**
 - **Test Description**: Verify that the bottom edge of the icon and the bottom of the text characters are visually perfectly aligned.
 
-### TST-UI-019: **Hierarchy** [Implemented]
+### TST-UI-019: **Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Hierarchy**
 - **Test Description**: Verify context-aware bolding: HR/Power (Avg+Max), Speed/Pace/Cadence (Avg), Alt/Temp (Min+Max).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
-### TST-UI-020: **Contrast** [Implemented]
+### TST-UI-020: **Contrast** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Contrast**
 - **Test Description**: Verify that the "-" placeholder is visually lighter (alpha 0.3) than numeric values.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`)
 
-### TST-UI-021: **Redundancy** [Implemented]
+### TST-UI-021: **Redundancy** [Verified]
 - **Requirement(s)**: `REQ-UI-012`
 - **Component**: **Redundancy**
 - **Test Description**: Verify that Min/Max altitude no longer appear in the Workout Details row, only Ascent and Descent.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutDetailsAndMetricUiTest.kt` (`WorkoutDetailsAndMetricUiTest.workoutDetailsAndSegmentDetails_verifyElevationAscentOmissionHierarchyAndMetricEmphasis_TST_UI_021_030_031_059_060`)
 
 ### TST-UI-026: **Consistency** [Implemented]
 - **Requirement(s)**: `REQ-UI-013`
 - **Component**: **Consistency**
 - **Test Description**: In the Workout Summary card, verify that the altitude labels at the start/end of the chart axes match the Min/Max values shown in the Extrema table.
 
-### TST-UI-027: **Harmonization** [Implemented]
+### TST-UI-027: **Harmonization** [Verified]
 - **Requirement(s)**: `REQ-UI-014`
 - **Component**: **Harmonization**
 - **Test Description**: Start tracking; verify the Speed Average in the extrema table exactly matches the value derived from Total Distance / Active Time (e.g., if distance is 100m and active time is 100s, avg speed must be 1.0 m/s).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaBigSixMapperTest.kt` (`WorkoutExtremaBigSixMapperTest.fromCursor_mapsBigSixExtremaMetricsAndHarmonizedAverageSpeed_TST_UNT_009_TST_UI_027`)
 
-### TST-UI-028: **Localization** [Implemented]
+### TST-UI-028: **Localization** [Verified]
 - **Requirement(s)**: `REQ-UI-018`
 - **Component**: **Localization**
 - **Test Description**: Inspect Workout Summary in various languages. Verify Ascent/Descent uses relative terminology (e.g., "Höhenmeter", "Elevation") and Min/Max uses absolute terminology (e.g., "Höhe", "Altitude").
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `UiDesignSystemTerminologyTest.kt` (`UiDesignSystemTerminologyTest.elevationTerminology_distinguishesRelativeAscentFromAbsoluteAltitude_TST_UI_028`)
 
-### TST-UI-029: **Session Isolation** [Implemented]
+### TST-UI-029: **Session Isolation** [Verified]
 - **Requirement(s)**: `REQ-UI-009`, `REQ-UI-110`
 - **Component**: **Session Isolation**
 - **Test Description**: 1. Start a workout, move, stop workout. 2. Immediately start a new workout.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `LiveWorkoutSessionTest.kt` (`LiveWorkoutSessionTest.testNewSession_startsCleanWithZeroLeakedTrackOrExtremaFromPriorSession_TST_UI_029`)
 
-### TST-UI-030: **Metric Consistency** [Implemented]
+### TST-UI-030: **Metric Consistency** [Verified]
 - **Requirement(s)**: `REQ-UI-020`
 - **Component**: **Metric Consistency**
 - **Test Description**: Audit Workout and Segment items. Verify \"Gain\" uses `ic_ascent` in both. Verify \"Elevation\" label in Workout is bottom-aligned with values. Verify all icons/text share a consistent baseline.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutDetailsAndMetricUiTest.kt` (`WorkoutDetailsAndMetricUiTest.workoutDetailsAndSegmentDetails_verifyElevationAscentOmissionHierarchyAndMetricEmphasis_TST_UI_021_030_031_059_060`)
 
-### TST-UI-031: **Layout Hierarchy** [Implemented]
+### TST-UI-031: **Layout Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-021`
 - **Component**: **Layout Hierarchy**
 - **Test Description**: Open Workout Summary. Inspect the Elevation section header (left column).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutDetailsAndMetricUiTest.kt` (`WorkoutDetailsAndMetricUiTest.workoutDetailsAndSegmentDetails_verifyElevationAscentOmissionHierarchyAndMetricEmphasis_TST_UI_021_030_031_059_060`)
 
-### TST-UI-034: **Identity Branding UI** [Implemented]
+### TST-UI-034: **Identity Branding UI** [Verified]
 - **Requirement(s)**: `REQ-UI-024`
 - **Component**: **Identity Branding UI**
 - **Test Description**: 1. Open Route List. 2. Inspect Strava route: verify logo is below name and no \"Source: Strava\" text exists. 3. Inspect Local route: verify \"Source: Local\" text is below name. 4. Verify no branding logo in metrics row.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `RouteAndSegmentCardsUiTest.kt` (`RouteAndSegmentCardsUiTest.routeSummaryHeader_rendersStravaVsLocalIdentityBrandingAndCompactMetricsRow_TST_UI_034_TST_UI_035`)
 
-### TST-UI-035: **Compact Metric Row** [Implemented]
+### TST-UI-035: **Compact Metric Row** [Verified]
 - **Requirement(s)**: `REQ-UI-025`
 - **Component**: **Compact Metric Row**
 - **Test Description**: 1. Open Route List. 2. Inspect gap between identity row and metrics row.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `RouteAndSegmentCardsUiTest.kt` (`RouteAndSegmentCardsUiTest.routeSummaryHeader_rendersStravaVsLocalIdentityBrandingAndCompactMetricsRow_TST_UI_034_TST_UI_035`)
 
-### TST-UI-036: **Branding Audit** [Implemented]
+### TST-UI-036: **Branding Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-026`
 - **Component**: **Branding Audit**
 - **Test Description**: 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `RouteAndSegmentCardsUiTest.kt` (`RouteAndSegmentCardsUiTest.segmentList_rendersEmptyOrPopulatedItemsWithoutPerCardBrandingNoise_TST_UI_036`)
 
-### TST-UI-038: **Detailed Metric Scale** [Implemented]
+### TST-UI-038: **Detailed Metric Scale** [Verified]
 - **Requirement(s)**: `REQ-UI-028`
 - **Component**: **Detailed Metric Scale**
 - **Test Description**: 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `PeriodSummaryCardUiTest.kt` (`PeriodSummaryCardUiTest.periodSummaryCard_rendersSubSportsDateRangeAndTriggersLongestWorkoutNavigation_TST_UI_038_053_074`)
 
-### TST-UI-039: **Pause Movement Isolation** [Implemented]
+### TST-UI-039: **Pause Movement Isolation** [Verified]
 - **Requirement(s)**: `REQ-PRO-004`
 - **Component**: **Pause Movement Isolation**
 - **Test Description**: 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `BANALServiceRepositoryPauseIsolationTest.kt` (`BANALServiceRepositoryPauseIsolationTest.trackAccumulation_ignoresLocationUpdatesWhilePaused_TST_UI_039`)
 
-### TST-UI-041: **Period Peak Markers Audit** [Implemented]
+### TST-UI-041: **Period Peak Markers Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-033`, `REQ-UI-035`, `REQ-UI-036`
 - **Component**: **Interactive Period Map Peak Markers**
 - **Jira**: `SCRUM-130`
@@ -221,13 +250,15 @@
   2. Verify technical markers for Start, End, Maximum Altitude, and Maximum Line Displacement are present and displayed with subordinate alpha matching the period type.
   3. Tap a peak marker: verify the bottom peek sheet opens displaying the corresponding workout details.
   4. Ensure successful compilation and zero visual regressions.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `InteractivePeriodMapTest.kt` (`InteractivePeriodMapTest.testTstPer027_4_SpatialTapHitTestingResolvesClosestWorkout`)
 
-### TST-UI-043: **Device Management Modernization** [Implemented]
+### TST-UI-043: **Device Management Modernization** [Verified]
 - **Requirement(s)**: `REQ-UI-041`, `REQ-UI-043`
 - **Component**: **Device Management Modernization**
 - **Test Description**: 1. Navigate to Pairing screen. 2. Verify Tabbed layout. 3. Interact with Pair switches. 4. Click device to open Edit Dialog. 5. Modify a setting (e.g. name).
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `DeviceManagementUiTest.kt` (`DeviceManagementUiTest.deviceItem_andEditDeviceDialog_verifyIdentityLayoutSwitchAndSave_TST_UI_043_044_050`, `DeviceManagementUiTest.devicesTabbedScreen_rendersTabBarWithActiveDeviceType_TST_UI_043`)
 
-### TST-UI-044: **Mappable Device Items Layout Verification** [Implemented]
+### TST-UI-044: **Mappable Device Items Layout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-042`
 - **Component**: **High-Density Device Item Layout**
 - **Jira**: `SCRUM-37`
@@ -236,41 +267,47 @@
   2. Verify removal of horizontal divider and unified multi-row structure matching Route/Segment cards.
   3. Verify green/red availability LED icon is positioned to the left of the device metadata.
   4. Confirm pairing switch is positioned at the bottom-right corner with 0.8f scale.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `DeviceManagementUiTest.kt` (`DeviceManagementUiTest.deviceItem_andEditDeviceDialog_verifyIdentityLayoutSwitchAndSave_TST_UI_043_044_050`)
 
 ### TST-UI-045: **Reactive Map Updates** [Implemented]
 - **Requirement(s)**: `REQ-MAP-009`
 - **Component**: **Reactive Map Updates**
 - **Test Description**: Open Route Detail Map. Toggle the \"Active\" switch in the header.
 
-### TST-UI-046: **Stats Summary Block Visual Alignment** [Implemented]
+### TST-UI-046: **Stats Summary Block Visual Alignment** [Verified]
 - **Requirement(s)**: `REQ-UI-046`
 - **Component**: **Stats Summary Block Visual Alignment**
 - **Test Description**: Inspect the `StatsSummaryBlock` in the Equipment or SportType details screen.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `StatsAndSensorStatusUiTest.kt` (`StatsAndSensorStatusUiTest.statsSummaryBlock_alignsMetricsHorizontallyAndInvokesClick_TST_UI_046`)
 
 ### TST-UI-047: **Live Segment Sheet Swipe Limit** [Implemented]
 - **Requirement(s)**: `REQ-UI-047`
 - **Component**: **Live Segment Sheet Swipe Limit**
 - **Test Description**: 1. Start tracking. 2. When a segment is active, swipe up on the bottom sheet.
 
-### TST-UI-048: **Sensor Status Header Visual Audit** [Implemented]
+### TST-UI-048: **Sensor Status Header Visual Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-048`
 - **Component**: **Sensor Status Header Visual Audit**
 - **Test Description**: Inspect the `SensorStatus` row at the top of the tracking screen.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `StatsAndSensorStatusUiTest.kt` (`StatsAndSensorStatusUiTest.sensorStatus_rendersIconsOnly_andOpensSensorSourceDialogWithIdentityOnTap_TST_UI_048_049_050`)
 
-### TST-UI-049: **Sensor Source Dialog Verification** [Implemented]
+### TST-UI-049: **Sensor Source Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-049`
 - **Component**: **Sensor Source Dialog Verification**
 - **Test Description**: 1. Start a session. 2. Tap any sensor icon (active or inactive) in the header.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `StatsAndSensorStatusUiTest.kt` (`StatsAndSensorStatusUiTest.sensorStatus_rendersIconsOnly_andOpensSensorSourceDialogWithIdentityOnTap_TST_UI_048_049_050`)
 
-### TST-UI-051: **Grade Legend Visibility** [Implemented]
+### TST-UI-051: **Grade Legend Visibility** [Verified]
 - **Requirement(s)**: `REQ-MAP-010`
 - **Component**: **Grade Legend Visibility**
 - **Test Description**: 1. Open any Elevation Profile (e.g., in Aftermath). 2. Tap the info icon.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `ElevationProfileOverlayTest.kt` (`ElevationProfileOverlayTest.testElevationProfile_tappingInfoButton_togglesGradeLegendVisibility_TST_UI_051`)
 
-### TST-UI-050: **Sensor Identity Logic** [Implemented]
+### TST-UI-050: **Sensor Identity Logic** [Verified]
 - **Requirement(s)**: `REQ-UI-050`
 - **Component**: **Sensor Identity Logic**
 - **Test Description**: Open `SensorSourceDialog`, `EditDeviceDialog`, and `DeviceItem`.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `DeviceManagementUiTest.kt` (`DeviceManagementUiTest.deviceItem_andEditDeviceDialog_verifyIdentityLayoutSwitchAndSave_TST_UI_043_044_050`); `StatsAndSensorStatusUiTest.kt` (`StatsAndSensorStatusUiTest.sensorStatus_rendersIconsOnly_andOpensSensorSourceDialogWithIdentityOnTap_TST_UI_048_049_050`)
 
 ### TST-UI-071: **Branding** [Implemented]
 - **Requirement(s)**: `REQ-UI-062`
@@ -278,11 +315,12 @@
 - **Jira**: ``ATT-237``
 - **Test Description**: 1. Open the app to the main tracking screen. 2. Inspect the header area.
 
-### TST-UI-074: **Weekly Period Date Range** [Implemented]
+### TST-UI-074: **Weekly Period Date Range** [Verified]
 - **Requirement(s)**: `REQ-UI-116`
 - **Component**: **Weekly Period Date Range**
 - **Jira**: ``ATT-386``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Navigate to the 'Weeks' tab. 3. Inspect the period items.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `PeriodSummaryCardUiTest.kt` (`PeriodSummaryCardUiTest.periodSummaryCard_rendersSubSportsDateRangeAndTriggersLongestWorkoutNavigation_TST_UI_038_053_074`)
 
 ### TST-UI-072: **Progress Notification Neutrality** [Implemented]
 - **Requirement(s)**: `REQ-UI-101`
@@ -296,11 +334,12 @@
 - **Jira**: ``ATT-376``
 - **Test Description**: 1. Clear application data to trigger a Periods migration. 2. Navigate to the 'Periods' screen. 3. Observe the bar graph as the newest months are aggregated first. 4. Scroll the period list.
 
-### TST-UI-077: **Consistent Spacing Audit** [Implemented]
+### TST-UI-077: **Consistent Spacing Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-121`
 - **Component**: **Consistent Spacing Audit**
 - **Jira**: ``ATT-474``
 - **Test Description**: 1. Open Workout List, Route List, and Cluster List. 2. Verify all cards have 12dp horizontal internal padding. 3. Verify vertical spacing between sections (Header, Details, etc.) is uniform (12dp). 4. Verify list items are separated by 8dp.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `UnifiedCardSpacingUiTest.kt` (`UnifiedCardSpacingUiTest.workoutRouteAndClusterCards_enforceUniformTwelveDpHorizontalPadding_TST_UI_077`)
 
 ### TST-UI-052: **SensorSourceDialog Header Color Decoupling & Semantic Green Token Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-051`
@@ -341,10 +380,11 @@
   • *When* route colors are queried,
   • *Then* `RouteSelected` and `RouteUnselected` SHALL remain strictly Royal Blue without regression.
 
-### TST-UI-053: **Longest Workout Navigation** [Implemented]
+### TST-UI-053: **Longest Workout Navigation** [Verified]
 - **Requirement(s)**: `REQ-UI-052`
 - **Component**: **Longest Workout Navigation**
 - **Test Description**: 1. Open a Period Summary with multiple workouts. 2. Tap the "Longest Workout" section.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `PeriodSummaryCardUiTest.kt` (`PeriodSummaryCardUiTest.periodSummaryCard_rendersSubSportsDateRangeAndTriggersLongestWorkoutNavigation_TST_UI_038_053_074`)
 
 ### TST-UI-054: **Location Audit Metric** [Implemented]
 - **Requirement(s)**: `REQ-UI-053`
@@ -356,10 +396,11 @@
 - **Component**: **Multi-Track Visibility Audit**
 - **Test Description**: 1. Open the Workout Details screen (including Period Map / Cluster Heatmap peek sheets) for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Google Fused, ATT Fused; confirming Network is absent).
 
-### TST-UI-056: **Map Preference Persistence** [Implemented]
+### TST-UI-056: **Map Preference Persistence** [Verified]
 - **Requirement(s)**: `REQ-MAP-013`
 - **Component**: **Map Preference Persistence**
 - **Test Description**: 1. Toggle technical tracks in Workout Details. 2. Close and reopen the workout.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `TrackOnMapAftermathViewModelTest.kt` (`TrackOnMapAftermathViewModelTest.toggleTrackTypeEnabled_persistsSelectionAcrossViewModelRecreation_TST_UI_056`)
 
 ### TST-UI-057: **Period FAB Order** [Implemented]
 - **Requirement(s)**: `REQ-MAP-014`
@@ -371,20 +412,23 @@
 - **Component**: **High-Fidelity Period Tracks**
 - **Test Description**: 1. Compare a track in a Period Map overview with the same track in Workout Details.
 
-### TST-UI-059: **Alpha Consistency Audit** [Implemented]
+### TST-UI-059: **Alpha Consistency Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-054`
 - **Component**: **Alpha Consistency Audit**
 - **Test Description**: Static analysis of `WorkoutExtrema.kt` and `MetricItem.kt`.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutExtremaUiTest.kt` (`WorkoutExtremaUiTest.workoutExtrema_verifiesBracketsNotationTypographyHierarchyAlignmentAndAlphas_TST_UI_011_015_019_020_059`); `WorkoutDetailsAndMetricUiTest.kt` (`WorkoutDetailsAndMetricUiTest.workoutDetailsAndSegmentDetails_verifyElevationAscentOmissionHierarchyAndMetricEmphasis_TST_UI_021_030_031_059_060`)
 
-### TST-UI-060: **Primary Metric Hierarchy** [Implemented]
+### TST-UI-060: **Primary Metric Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-055`
 - **Component**: **Primary Metric Hierarchy**
 - **Test Description**: Open Workout Details or Segment Details.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `WorkoutDetailsAndMetricUiTest.kt` (`WorkoutDetailsAndMetricUiTest.workoutDetailsAndSegmentDetails_verifyElevationAscentOmissionHierarchyAndMetricEmphasis_TST_UI_021_030_031_059_060`)
 
-### TST-UI-061: **Theme Audit** [Implemented]
+### TST-UI-061: **Theme Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-056`
 - **Component**: **Theme Audit**
 - **Test Description**: Project-wide grep for `Color(0xFF...)` and `copy(alpha = ...)`.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `ThemeColorCentralizationAuditTest.kt` (`ThemeColorCentralizationAuditTest.verifyZeroHexColorsOutsideColorKt`)
 
 ### TST-UI-062: **Protocol-Aware Menu** [Implemented]
 - **Requirement(s)**: `REQ-UI-044`
@@ -396,10 +440,11 @@
 - **Component**: **Global Icon Clipping**
 - **Test Description**: 1. Open the app in Dark Mode. 2. Inspect sensor and protocol icons.
 
-### TST-UI-066: **Elevation Profile Visibility** [Implemented]
+### TST-UI-066: **Elevation Profile Visibility** [Verified]
 - **Requirement(s)**: `REQ-UI-058`
 - **Component**: **Elevation Profile Visibility**
 - **Test Description**: 1. Open the Recurring Path Heatmap. 2. Inspect the bottom of the screen.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `MapDetailLayoutElevationVisibilityUiTest.kt` (`MapDetailLayoutElevationVisibilityUiTest.mapDetailLayout_hidesElevationProfileWhenDisabledAndShowsWhenEnabled_TST_UI_066`)
 
 ### TST-UI-067: **Robust Sharing Snapshot** [Implemented]
 - **Requirement(s)**: `REQ-UI-059`
@@ -447,7 +492,7 @@
   3. Test with valid mountainous route; verify that full dynamic elevation range is preserved.
   4. Run unit tests in `ElevationProfileBoundsTest.kt`.
 
-### TST-UI-080: **Delete Old Workouts Compose Dialog & Action Trigger Verification** [Implemented]
+### TST-UI-080: **Delete Old Workouts Compose Dialog & Action Trigger Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-127`
 - **Component**: **Delete Old Workouts Compose Dialog & Action Trigger Verification**
 - **Jira**: ``ATT-296``
@@ -461,6 +506,7 @@
   7. Verify confirming dispatches `executeDeleteOldWorkouts(180)` and closes dialog.
   8. Verify dismissing closes dialog without triggering deletion.
   9. Execute automated tests.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `DeleteOldWorkoutsUiTest.kt` (`DeleteOldWorkoutsUiTest.workoutListActions_opensDeleteOldWorkoutsDialogWithDefault365AndConfirmsInput_TST_UI_080`)
 
 ### TST-UI-081: **Bulk Workout Deletion Progress Feedback & Notification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-128`
@@ -966,7 +1012,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) ensuring zero regressions.
 
-### TST-UI-108: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification** [Implemented]
+### TST-UI-108: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-155`
 - **Component**: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification**
 - **Jira**: ``ATT-1018`, `ATT-1068``
@@ -984,6 +1030,7 @@
   • Run `ModalBottomSheetDialogsIntegrityTest` to ensure all modernized bottom sheet and dialog contracts remain intact.
   4. *Device Deployment & Runtime Sanity*:
   • Deploy debug APK to Google Pixel 10 (`./gradlew installDebug`) and verify clean launch without `InflateException` or missing resource crashes.
+- **Verification Evidence**: Verified (`ATT-8330`, SHA `3e20473b`, Gate 4 `129/129` PASS across 30 suites): `DeadCodeEliminationContractTest.kt` (`DeadCodeEliminationContractTest.testLegacyFragmentsAndObsoleteLayoutsAreEliminated_TST_UI_108`)
 
 ### TST-UI-109: **Bottom Popup Single-Window BottomSheetDialogFragment, Decor & Zero-Flicker Dismiss Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-156`
@@ -3884,97 +3931,6 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-250: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification** [Verified]
-- **Requirement(s)**: `REQ-UI-290`
-- **Component**: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification**
-- **Jira**: ``ATT-2625``
-- **Test Description**:
-  1. *Dialog Parameter and Actions Slot Unit & Contract Tests (`DeviceTypeSelectionDialogTest.kt`)*:
-  • Verify `DeviceTypeSelectionDialog` defaults parameter `showAllOption` to `false`.
-  • Verify that when `showAllOption == false`, the dialog renders without the "Alle" (`R.string.device_type_all`) action button and the bottom sheet `actions` slot is null.
-  • Verify that when `showAllOption == true`, the dialog renders the "Alle" button in the bottom sheet actions slot.
-  2. *Hardware Profile Discovery and Selection Unit Tests (`DeviceTypeSelectionDialogTest.kt`)*:
-  • Verify dialog items for `ProtocolType.ANT_PLUS` display all ANT+ remote device types (`DeviceType.getRemoteDeviceTypes(ANT_PLUS)`).
-  • Verify dialog items for `ProtocolType.BLE` display all BLE remote device types (`DeviceType.getRemoteDeviceTypes(BLE)`).
-  • Verify tapping a device profile invokes `onSelected(type)` with the concrete `DeviceType`.
-  • Verify dismissing the dialog invokes `onDismiss()`.
-  3. *Integration Sites Verification (`DevicesTabbedScreenTest.kt`, `ControlTrackingScreenTest.kt`)*:
-  • Verify `DevicesTabbedScreen` invokes `DeviceTypeSelectionDialog` during pairing FAB flow with `showAllOption = false` (or defaulted).
-  • Verify `ControlTrackingScreen` invokes `DeviceTypeSelectionDialog` during pairing button flow with `showAllOption = false` (or defaulted).
-  4. *Full Clean-Room Regression Suite*:
-  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
-
-### TST-UI-251: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification** [Verified]
-- **Requirement(s)**: `REQ-UI-291`
-- **Component**: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification**
-- **Jira**: ``ATT-2626``
-- **Test Description**:
-  1. *ViewModel Decoupling & State Unit Tests (`DevicesTabbedViewModelTest.kt`)*:
-  • Verify `startPairingScan(protocol, deviceType)` dispatches `startSearchingForNewDevices` with targeted protocol and device type.
-  • Verify `startPairingScan` preserves `_uiState` as `UiState.DisplayingTabs(DeviceType.ALL)` and `protocol` as `Protocol.ALL`.
-  • Verify `scanningProtocol` and `scanningDeviceType` emit targeted pairing parameters.
-  • Verify `stopSearching()` resets `scanningProtocol` and `scanningDeviceType` to null.
-  2. *Screen Tab Filter Spec Contract Verification (`DevicesTabbedScreenContractTest.kt`)*:
-  • Verify `DevicesTabbedScreen` configures tabs with unrestrictive filter specs during pairing.
-  • Verify `SearchingHeader` in `DeviceListScreen` receives active scanning target.
-  3. *9-Language Localization Parity Audit (`TranslationParityTest.kt`)*:
-  • Verify `devices_searchingForDevice` format string has matching 2 format specifiers (`%1$s`, `%2$s`) across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
-  4. *Full Clean-Room Regression Suite*:
-  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
-
----
-
-### TST-UI-252: **Sensor Field Style Dynamic Grid Spacing Resolution Verification** [Implemented]
-- **Requirement(s)**: `REQ-UI-292`
-- **Priority**: Medium
-- **Type**: Functional
-- **Verification Method**: Unit
-- **Component**: `SensorFieldStyle.kt`
-- **Jira**: `ATT-2624`
-- **Test Description**:
-  1. *Dynamic Inter-Tile Grid Spacing Resolution Test (`TST-UI-252.1`)*:
-  • Verify that `SensorFieldStyle` computes `0.dp` spacing for `CLASSIC_SEAMLESS` preset and expands spacing dynamically for rounded corners or thick borders to prevent visual card clipping.
-
----
-
-### TST-UI-253: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification** [Verified]
-- **Requirement(s)**: `REQ-UI-293`
-- **Component**: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification**
-- **Jira**: ``ATT-2623` / `ATT-3315``
-- **Test Description**:
-  1. *9-Language Localization Parity Tests (`ImportFormatLocalizationTest.kt`)*:
-  • Verify all format titles, descriptions, button labels, and diagnostic messages exist, are non-empty, and contain no malformed format tokens across all 9 supported locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
-  2. *ViewModel Format Scoping Unit Tests (`BackupRestoreViewModelFormatScopingTest.kt`)*:
-  • Verify `bulkRecoverLegacyData` passes `"fit"`, `"tcx"`, and `"gpx"` correctly to `LegacyImportEngine.bulkRecoverFromDropbox`.
-  • Verify `bulkRecoverGoogleDriveData` passes `"fit"`, `"tcx"`, and `"gpx"` correctly to `LegacyImportEngine.bulkRecoverFromGoogleDrive`.
-  • Verify `importWorkoutFiles` processes multiple URIs sequentially with progress callbacks, duplicate skipping, error recording, and cluster reconciliation.
-  3. *UI Contract & Architecture Tests (`ImportFormatCardsContractTest.kt`)*:
-  • Verify `ImportTabContent` renders three distinct format blocks (FIT, TCX, GPX).
-  • Verify each block contains the uniform action triad (Local Multi-Doc, Dropbox, Google Drive).
-  • Verify disconnected cloud styling and dialog dispatch.
-  4. *Full Clean-Room Regression Suite*:
-  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
-
-### TST-UI-254: **Workout File Picker Selectability and Format-Extension Validation Verification** [Verified]
-- **Requirement(s)**: `REQ-UI-294`
-- **Component**: **Workout File Picker Selectability and Format-Extension Validation Verification**
-- **Jira**: ``ATT-2622`, `ATT-2740``
-- **Test Description**:
-  1. *SAF MIME Launcher Contract Tests (`ImportFormatFilePickerContractTest.kt`)*:
-  • Verify `onLocalImportClick("fit")` launches `pickFitFilesLauncher` with `FIT_MIME_TYPES` (`application/vnd.ant.fit`, `application/fit`, `application/octet-stream`).
-  • Verify `onLocalImportClick("tcx")` launches `pickLegacyFileLauncher` with `TCX_MIME_TYPES` (`application/vnd.garmin.tcx+xml`, `application/xml`, `text/xml`, `application/octet-stream`).
-  • Verify `onLocalImportClick("gpx")` launches `pickLegacyFileLauncher` with `GPX_MIME_TYPES` (`application/gpx+xml`, `application/xml`, `text/xml`, `application/octet-stream`).
-  2. *Defensive Extension Validation Unit Tests (`ImportFormatExtensionValidatorTest.kt`)*:
-  • Verify `.fit` files pass for FIT and fail for TCX/GPX.
-  • Verify `.tcx` files pass for TCX and fail for FIT/GPX.
-  • Verify `.gpx` files pass for GPX and fail for FIT/TCX.
-  • Verify unsupported extensions (`.pdf`, `.png`, `.txt`) fail.
-  • Verify files without extension pass through to content parser.
-  3. *9-Language Localization Parity Audit (`ImportFormatFilePickerLocalizationTest.kt`)*:
-  • Verify `invalid_workout_file_format` exists, is non-empty, and has exactly 1 string specifier `%1$s` across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
-  4. *Full Clean-Room Regression Suite*:
-  • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
-
 ---
 
 ## Change History
@@ -3983,3 +3939,4 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Updated and verified (`[Verified]`) `TST-UI-055` for `ATT Fused` replacement of `Network` and bottom-sheet `Layers` wiring. |
+| `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted 47 verified UI Design System TSTs (`TST-UNT-003..014`, `TST-UI-011..108`) to `[Verified]` using Gate 4 `129/129` PASS evidence (SHA `3e20473b`, `Rule 7.5`); preserved `TST-UI-055` (`[Verified]`) and retained 18 Bucket C TSTs at `[Implemented]`; rebalanced `TST-UI-250..254` to `part3` to comply with `<= 4,000` line shard limit (`REQ-PRO-093.3`). |

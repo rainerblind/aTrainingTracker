@@ -331,16 +331,15 @@ public class WorkoutSummariesDatabaseManager {
             values.put(WorkoutSummaries.EQUIPMENT_ID, equipmentId);
         }
 
-        // Do not downgrade an already enabled Strava upload (ATT-1116)
-        Integer currentUpload = getInt(workoutId, WorkoutSummaries.UPLOAD_TO_STRAVA);
-        if (currentUpload == null || currentUpload != 1) {
-            values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, identity.getUploadToStrava());
+        // Only populate UPLOAD_TO_STRAVA when undecided (SQL NULL or -1); preserve explicit 0 opt-out / 1 opt-in (ATT-9150, ATT-1116)
+        try (Cursor c = getDatabase().query(WorkoutSummaries.TABLE, new String[]{WorkoutSummaries.UPLOAD_TO_STRAVA},
+                WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)}, null, null, null)) {
+            if (!c.moveToFirst()) return;
+            if (c.isNull(0) || c.getInt(0) == -1) {
+                values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, identity.getUploadToStrava());
+            }
         }
-
-        getDatabase().update(WorkoutSummaries.TABLE,
-                values,
-                WorkoutSummaries.C_ID + "=" + workoutId,
-                null);
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
     }
 
     /**

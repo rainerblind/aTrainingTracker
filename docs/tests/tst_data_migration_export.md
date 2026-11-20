@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.2  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 122
+**Total Tests**: 123
 
 ---
 
@@ -2267,10 +2267,26 @@
 
 ---
 
+### TST-MIG-052: **Explicit `UPLOAD_TO_STRAVA = 0` Opt-Out Preservation & Tri-State Identity Inference Verification** [Verified]
+- **Requirement(s)**: `REQ-MIG-054`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `TcxImportStravaToggleTest.kt`, `WorkoutSummariesDatabaseManagerApplyIdentityTest.kt`
+- **Jira**: `ATT-9150`
+- **Test Description**:
+  1. *Empty-DB TCX Import Opt-Out Preservation (`TcxImportStravaToggleTest.kt`)*: Remove the non-empty cluster seed workaround; import a TCX workout with `uploadToStrava = false` into an empty `RouteClusters.db` so `refreshClusters()` triggers self-healing `migrateHistory()` -> `assignClusterToWorkout()` -> `applyInferredIdentity()`. Verify `UPLOAD_TO_STRAVA == 0` and zero `ExportManager.exportWorkoutTo(..., STRAVA)` invocations.
+  2. *Live `DEFAULT -1` Inference (`WorkoutSummariesDatabaseManagerApplyIdentityTest.kt`)*: Insert a workout row with `UPLOAD_TO_STRAVA = -1`, invoke `applyInferredIdentity()` with `uploadToStrava = 1` (and separately `0` for `REQ-EXP-006`), and verify `UPLOAD_TO_STRAVA` updates accordingly alongside `SPORT_ID`, `B_SPORT`, and `EQUIPMENT_ID`.
+  3. *SQL `NULL` Inference (`WorkoutSummariesDatabaseManagerApplyIdentityTest.kt`)*: Insert a workout row with SQL `NULL` `UPLOAD_TO_STRAVA`, invoke `applyInferredIdentity()` with `uploadToStrava = 1`, and verify `cursor.isNull(0)` detection promotes it to `1`.
+  4. *Explicit `0` and `1` Preservation & Non-Existent ID Safety (`WorkoutSummariesDatabaseManagerApplyIdentityTest.kt`)*: Verify explicit `0` stays `0` when identity proposes `1`, explicit `1` stays `1` when identity proposes `0`, and `applyInferredIdentity(999999L, identity)` completes cleanly without throwing.
+- **Verification Evidence**: Verified (`ATT-9150`, SHA `aa9a407c`, Gate 4 `46/46` PASS across 7 suites): `TcxImportStravaToggleTest.kt` (`TcxImportStravaToggleTest.testImportFromTcx_uploadToStravaFalseVsTrue_persistsFlagAndSchedulesExport_TST_MIG_025`); `WorkoutSummariesDatabaseManagerApplyIdentityTest.kt` (`WorkoutSummariesDatabaseManagerApplyIdentityTest.applyInferredIdentity_populatesUploadToStrava_whenSchemaDefaultMinusOne_REQ_MIG_054_TST_MIG_052`, `WorkoutSummariesDatabaseManagerApplyIdentityTest.applyInferredIdentity_populatesUploadToStrava_whenSqlNull_REQ_MIG_054_TST_MIG_052`, `WorkoutSummariesDatabaseManagerApplyIdentityTest.applyInferredIdentity_preservesExplicitOptOutZero_REQ_MIG_054_TST_MIG_052`, `WorkoutSummariesDatabaseManagerApplyIdentityTest.applyInferredIdentity_preservesExplicitOptInOne_REQ_MIG_054_TST_MIG_052`, `WorkoutSummariesDatabaseManagerApplyIdentityTest.applyInferredIdentity_nonExistentWorkoutId_isSafeNoOp_REQ_MIG_054_TST_MIG_052`)
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.5` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `TST-MIG-052` to `[Verified]` reusing Gate 4 verified SHA `aa9a407c` (`46/46` PASS across 7 suites, `Rule 7.5`). |
+| `1.0.4` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `TST-MIG-052` to `[Implemented]` (`TcxImportStravaToggleTest`, `WorkoutSummariesDatabaseManagerApplyIdentityTest`). |
+| `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Added `TST-MIG-052` (`[Planned]`) verifying empty-DB TCX opt-out preservation (`0`), `-1`/SQL `NULL` inference, `1` protection, and non-existent ID safety. |
 | `1.0.2` | 2026-11-19 | AI Agent (`ATT-8325`) | `ATT-8325` | Promoted all 25 Stage 4 verified Data Migration & Export test specs (`TST-EXP-004`, `TST-MIG-001..008`, `TST-MIG-010..019`, `TST-MIG-025`, `TST-DAT-001`, `TST-EXT-001..002`, `TST-DAT-021`, `TST-DAT-032`) to `[Verified]` following deterministic 159/159 test execution. |
 | `1.0.1` | 2026-11-19 | AI Agent (`ATT-8325`) | `ATT-8325` | Aligned `TST-MIG-004`, `TST-MIG-005`, `TST-MIG-008`, `TST-MIG-013`, `TST-MIG-015`, and `TST-DAT-021` with live implementation and `SourceTextReadingAuditContractTest` while keeping `[Implemented]` status pending Stage 5 evidence. |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-TST-MIG` work-product control header and Change History. |

@@ -270,7 +270,7 @@ class TrackingViewModel @JvmOverloads constructor(
     }
 
     private var cachedPowerBenchmarks: Map<Int, Double> = emptyMap()
-    private var latestArtifactRate: Double? = null
+    private val latestArtifactRateByDevice: MutableMap<String?, Double?> = mutableMapOf()
 
     init {
         loadHistoricalPowerBenchmarks()
@@ -656,7 +656,11 @@ class TrackingViewModel @JvmOverloads constructor(
 
                         val currentTuning = _tuningConfig.value
                         val initialSignalQuality = if (config.sensorType == SensorType.HRV_DFA_A1) {
-                            com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
+                            com.atrainingtracker.banalservice.devices.hrv.HrvDeviceLookup
+                                .resolveProvider(
+                                    com.atrainingtracker.banalservice.BANALService.getDeviceManager(),
+                                    config.sourceDeviceName
+                                )?.signalQualityResult?.status
                         } else null
                         val initialSparklineZoneThresholds = if (config.showGraph) {
                             resolveSparklineZoneThresholds(
@@ -694,7 +698,8 @@ class TrackingViewModel @JvmOverloads constructor(
                             colWeight = config.colWeight,
                             dfaA1ThresholdT1 = currentTuning.dfaA1ThresholdT1,
                             dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2,
-                            hrvSignalQualityStatus = initialSignalQuality
+                            hrvSignalQualityStatus = initialSignalQuality,
+                            sourceDeviceName = config.sourceDeviceName
                         )
                     }
                     cachedConfigs = configs
@@ -801,12 +806,20 @@ class TrackingViewModel @JvmOverloads constructor(
 
             if (sensorData.sensorType == SensorType.HRV_ARTIFACT_RATE) {
                 val rate = (sensorData.value as? Number)?.toDouble()
-                latestArtifactRate = rate
+                val deviceKey = sensorData.deviceName
+                if (rate == null) {
+                    latestArtifactRateByDevice.remove(deviceKey)
+                } else {
+                    latestArtifactRateByDevice[deviceKey] = rate
+                }
                 val gateThreshold = _tuningConfig.value.hrvArtifactGateThresholdPercent.toDouble()
                 val isGated = (rate ?: 0.0) > gateThreshold
                 for (i in updatedFields.indices) {
                     val f = updatedFields[i]
-                    if (f.sensorType == SensorType.HRV_DFA_A1 && (f.value == "--" || f.value == "--.--")) {
+                    if (f.sensorType == SensorType.HRV_DFA_A1 &&
+                        f.sourceDeviceName == deviceKey &&
+                        (f.value == "--" || f.value == "--.--")
+                    ) {
                         if (f.isArtifactGated != isGated) {
                             updatedFields[i] = f.copy(isArtifactGated = isGated)
                             hasChanged = true
@@ -842,7 +855,15 @@ class TrackingViewModel @JvmOverloads constructor(
                 } else {
                     calculateZoneGaugeState(zoneType, numericValue)
                 }
-                val isArtifactGated = isDfaA1 && numericValue == null && ((latestArtifactRate ?: 0.0) > tuning.hrvArtifactGateThresholdPercent.toDouble())
+                val effectiveArtifactRate = if (isDfaA1) {
+                    latestArtifactRateByDevice[sensorData.deviceName]
+                        ?: com.atrainingtracker.banalservice.devices.hrv.HrvDeviceLookup
+                            .resolveProvider(
+                                com.atrainingtracker.banalservice.BANALService.getDeviceManager(),
+                                sensorData.deviceName
+                            )?.latestArtifactRatePercent
+                } else null
+                val isArtifactGated = isDfaA1 && numericValue == null && ((effectiveArtifactRate ?: 0.0) > tuning.hrvArtifactGateThresholdPercent.toDouble())
 
                 val isWPrimeBal = (sensorData.sensorType == SensorType.W_PRIME_BAL)
                 val newWPrimeBatteryState = if (isWPrimeBal) {
@@ -863,7 +884,11 @@ class TrackingViewModel @JvmOverloads constructor(
                 // 3. Iterate through every field that needs this update.
                 val isBike = (activityType.sportType == BSportType.BIKE)
                 val currentSignalQuality = if (isDfaA1) {
-                    com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
+                    com.atrainingtracker.banalservice.devices.hrv.HrvDeviceLookup
+                        .resolveProvider(
+                            com.atrainingtracker.banalservice.BANALService.getDeviceManager(),
+                            sensorData.deviceName
+                        )?.signalQualityResult?.status
                 } else null
                 for (fieldToUpdate in fieldsToUpdate) {
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
@@ -978,7 +1003,11 @@ class TrackingViewModel @JvmOverloads constructor(
             val currentValue = sensorData.value
             val alpha1 = if (currentValue is Number) currentValue.toDouble() else null
             val config = _tuningConfig.value
-            val isSmoothed = com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.let {
+            val isSmoothed = com.atrainingtracker.banalservice.devices.hrv.HrvDeviceLookup
+                .resolveProvider(
+                    com.atrainingtracker.banalservice.BANALService.getDeviceManager(),
+                    sensorData.deviceName
+                )?.signalQualityResult?.let {
                 it.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM ||
                 it.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
             } ?: false

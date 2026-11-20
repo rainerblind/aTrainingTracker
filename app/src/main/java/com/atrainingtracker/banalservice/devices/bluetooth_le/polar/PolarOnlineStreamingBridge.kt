@@ -42,6 +42,9 @@ import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.RrBeatSource
 import com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicy
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
+import com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider
+import com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
@@ -59,8 +62,8 @@ import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarGyroData
 import com.polar.sdk.api.model.PolarHealthThermometerData
 import com.polar.sdk.api.model.PolarHrData
+import com.polar.sdk.api.model.PolarPpiData
 import com.polar.sdk.api.model.PolarSensorSetting
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +71,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
@@ -95,7 +97,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val sportTypeProvider: () -> BSportType = { BANALService.getActiveBSportType() },
     private val apiFactory: ((Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi)? = null,
     private val searchTimeoutMsProvider: () -> Long = { TrainingApplication.getBtleSearchPeriodMs() }
-) : MyRemoteDevice(context, mySensorManager, DeviceType.HRM, deviceId), RrBeatSource {
+) : MyRemoteDevice(context, mySensorManager, DeviceType.HRM, deviceId), RrBeatSource, HrvTelemetryProvider {
 
     /**
      * Listener interface for raw live 3-axis accelerometer and gyroscope frames from Polar PMD streams.
@@ -144,6 +146,42 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private var mGroundContactTimeSensor: MySensor<Double>? = null
 
     private val rrBeatListeners = CopyOnWriteArrayList<RrBeatListener>()
+    private val perDeviceHrvController: PerDeviceHrvController = PerDeviceHrvController(
+        context = context,
+        hostDevice = this,
+        hostCallbacks = object : PerDeviceHrvController.HostCallbacks {
+            @Suppress("UNCHECKED_CAST")
+            override fun addAndRegisterSensors(sensors: List<MySensor<*>>) {
+                if (mMySensorManager != null) {
+                    this@PolarOnlineStreamingBridge.addAndRegisterSensors(ArrayList(sensors) as List<MySensor<*>>)
+                } else {
+                    for (sensor in sensors) {
+                        addSensor(sensor)
+                        sensor.activateSensor()
+                    }
+                    notifySensorsChanged()
+                }
+            }
+
+            override fun unregisterSensor(sensor: MySensor<*>) {
+                mMySensorManager?.unregisterSensor(sensor)
+            }
+
+            override fun removeSensor(sensorType: SensorType) {
+                this@PolarOnlineStreamingBridge.removeSensor(sensorType)
+            }
+        }
+    )
+
+    override val signalQualityResult: HrvSignalQualityResult
+        get() = perDeviceHrvController.signalQualityResult
+
+    override val latestArtifactRatePercent: Double?
+        get() = perDeviceHrvController.latestArtifactRatePercent
+
+    @VisibleForTesting
+    fun getPerDeviceHrvController(): PerDeviceHrvController = perDeviceHrvController
+
     private val imuFrameListeners = CopyOnWriteArrayList<ImuFrameListener>()
     private val scope = CoroutineScope(dispatcher + SupervisorJob())
 
@@ -152,9 +190,16 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val isConnectedFlag = AtomicBoolean(false)
     private val hasConnectedInSession = AtomicBoolean(false)
     private val sessionOpenPendingFeatures = AtomicBoolean(false)
-    private val isAccStreamingActive = AtomicBoolean(false)
-    private val isGyroStreamingActive = AtomicBoolean(false)
     private val reconnectLock = Any()
+    private val streamCoordinator = PolarPmdStreamCoordinator(
+        scope = scope,
+        deviceId = deviceId,
+        deviceNameProvider = { deviceNameStr },
+        polarIdProvider = { polarId },
+        macAddress = macAddress,
+        isConnectedProvider = { isConnectedFlag.get() },
+        isShutDownProvider = { isShutDown.get() }
+    )
 
     @Volatile
     private var currentReconnectDelayMs: Long = SensorReconnectBackoffPolicy.INITIAL_DELAY_MS
@@ -174,14 +219,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val sdkSessionId: String
         get() = activeSdkStreamId ?: coordinatorSessionKey ?: polarId
 
-    @Volatile
-    private var hrJob: Job? = null
-
-    @Volatile
-    private var accJob: Job? = null
-
-    @Volatile
-    private var gyroJob: Job? = null
+    private val ppiStreamProcessor = PolarPpiStreamProcessor()
 
     @Volatile
     var highRateRunningDynamicsActive: Boolean = false
@@ -351,12 +389,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     private fun cancelActiveStreamJobs() {
-        hrJob?.cancel()
-        hrJob = null
-        accJob?.cancel()
-        accJob = null
-        gyroJob?.cancel()
-        gyroJob = null
+        streamCoordinator.cancelAllStreams { releaseOnlineAccChannels() }
     }
 
     private fun markBridgeConnected(notifySearchSuccess: Boolean) {
@@ -368,6 +401,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         val wasConnected = isConnectedFlag.getAndSet(true)
         setLastActive()
         if (!wasConnected) {
+            streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
             registerSensors()
         }
         syncCadenceSensorRegistration()
@@ -390,10 +424,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 cancelSearchTimeoutWatchdog()
                 isConnectedFlag.set(false)
                 activeBridges.remove(this@PolarOnlineStreamingBridge)
-                isAccStreamingActive.set(false)
-                isGyroStreamingActive.set(false)
                 cancelActiveStreamJobs()
-                releaseOnlineAccChannels()
+                streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
                 unregisterSensors()
                 PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
                     removeImuFrameListener(recorder)
@@ -432,10 +464,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             sessionOpenPendingFeatures.set(false)
             isConnectedFlag.set(false)
             activeBridges.remove(this@PolarOnlineStreamingBridge)
-            isAccStreamingActive.set(false)
-            isGyroStreamingActive.set(false)
             cancelActiveStreamJobs()
-            releaseOnlineAccChannels()
+            streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
             unregisterSensors()
             PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
                 removeImuFrameListener(recorder)
@@ -512,7 +542,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                     )
                     if (isConnectedFlag.get()) {
                         syncCadenceSensorRegistration()
-                        maybeStartVerityGyroIfReady()
+                        maybeStartVerityStreamsIfReady()
                     }
                 }
                 else -> Unit
@@ -697,7 +727,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
         markBridgeConnected(notifySearchSuccess = true)
 
-        if (hrReadyId != null && hrJob?.isActive != true) {
+        if (hrReadyId != null) {
             startHrCollection()
         }
         if (streamingReadyId != null) {
@@ -707,25 +737,17 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 hasPmdService = true,
                 hasPftpService = PolarOfflineCapabilityStore.hasPftpService(mContext, macAddress)
             )
-            if (accJob?.isActive != true) {
-                startImuCollection()
-            } else if (isVeritySense && gyroJob?.isActive != true) {
-                startGyroCollection(api)
-            }
+            startImuCollection()
         }
     }
 
     private fun startHrCollection() {
         val api = polarApi ?: return
-        if (isShutDown.get()) return
         val sessionId = sdkSessionId
-        hrJob?.cancel()
-        hrJob = scope.launch {
-            api.startHrStreaming(sessionId)
-                .catch { e -> Log.w(TAG, "HR stream error on $sessionId: ${e.message}") }
-                .collect { hrData ->
-                    processHrData(hrData, System.currentTimeMillis())
-                }
+        streamCoordinator.launchStream(PolarPmdStreamCoordinator.StreamSlot.HR) {
+            api.startHrStreaming(sessionId).collect { hrData ->
+                processHrData(hrData, System.currentTimeMillis())
+            }
         }
     }
 
@@ -740,7 +762,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 PolarOfflineCapabilityStore.recordDisMetadata(mContext, macAddress, modelNumber = trimmedValue)
                 if (isConnectedFlag.get()) {
                     syncCadenceSensorRegistration()
-                    maybeStartVerityGyroIfReady()
+                    maybeStartVerityStreamsIfReady()
                 }
             }
             lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.toString() ||
@@ -753,16 +775,16 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
-    private fun maybeStartVerityGyroIfReady() {
+    private fun maybeStartVerityStreamsIfReady() {
         val api = polarApi ?: return
-        if (isShutDown.get() || !isVeritySense || isGyroStreamingActive.get()) return
+        if (isShutDown.get() || !isVeritySense) return
         val streamingReady = findReadySessionIdentifier(
             api,
             PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING
         ) != null
-        if (streamingReady) {
-            startGyroCollection(api)
-        }
+        if (!streamingReady) return
+        startGyroCollection(api)
+        startPpiCollection(api)
     }
 
     private fun startImuCollection() {
@@ -771,57 +793,73 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         startAccCollection(api)
         if (isVeritySense) {
             startGyroCollection(api)
+            startPpiCollection(api)
+        }
+    }
+
+    /** Starts Verity Sense optical PPI streaming with atomic CAS & PMD recovery (`REQ-HRV-051.2`, `REQ-CON-053`). */
+    private fun startPpiCollection(api: PolarBleApi) {
+        if (!isVeritySense) return
+        val sessionId = sdkSessionId
+        streamCoordinator.launchStream(PolarPmdStreamCoordinator.StreamSlot.PPI) {
+            if (!api.getAvailableOnlineStreamDataTypes(sessionId).contains(PolarBleApi.PolarDeviceDataType.PPI)) {
+                return@launchStream
+            }
+            streamCoordinator.collectPmdWithAlreadyInStateRecovery(
+                pmdType = PmdMeasurementType.PPI,
+                sessionId = sessionId,
+                stopStreaming = { api.stopStreaming(sessionId, PmdMeasurementType.PPI) },
+                streamFactory = { api.startPpiStreaming(sessionId) },
+                onSample = { processPpiData(it, System.currentTimeMillis()) }
+            )
         }
     }
 
     private fun startAccCollection(api: PolarBleApi) {
         val accOwnerKey = polarId
-        if (!PolarOfflineGattCoordinator.tryAcquireAccChannel(accOwnerKey, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)) {
-            Log.w(TAG, "Skipping online ACC stream on $accOwnerKey: ACC channel locked by offline recording.")
-            return
-        }
         val sessionId = sdkSessionId
-        highRateRunningDynamicsActive = !isVeritySense && isRunSportActive()
-        accJob?.cancel()
-        accJob = scope.launch {
-            try {
-                val setting = resolveAccSetting(api, sessionId)
-                isAccStreamingActive.set(true)
-                api.startAccStreaming(sessionId, setting)
-                    .catch { e -> Log.w(TAG, "ACC stream error on $sessionId: ${e.message}") }
-                    .collect { accData ->
-                        processAccData(accData)
-                    }
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (t: Throwable) {
-                Log.w(TAG, "Failed to start/collect ACC stream on $sessionId: ${t.message}")
-            } finally {
-                isAccStreamingActive.set(false)
-                PolarOfflineGattCoordinator.releaseAccChannel(accOwnerKey, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
+        streamCoordinator.launchStream(
+            slot = PolarPmdStreamCoordinator.StreamSlot.ACC,
+            preAcquire = {
+                val acquired = PolarOfflineGattCoordinator.tryAcquireAccChannel(
+                    accOwnerKey,
+                    PolarOfflineGattCoordinator.ACC_OWNER_ONLINE
+                )
+                if (!acquired) {
+                    Log.w(TAG, "Skipping online ACC stream on $accOwnerKey: ACC channel locked by offline recording.")
+                }
+                acquired
+            },
+            onFinalCleanup = {
+                PolarOfflineGattCoordinator.releaseAccChannel(
+                    accOwnerKey,
+                    PolarOfflineGattCoordinator.ACC_OWNER_ONLINE
+                )
             }
+        ) {
+            highRateRunningDynamicsActive = !isVeritySense && isRunSportActive()
+            val setting = resolveAccSetting(api, sessionId)
+            streamCoordinator.collectPmdWithAlreadyInStateRecovery(
+                pmdType = PmdMeasurementType.ACC,
+                sessionId = sessionId,
+                stopStreaming = { api.stopStreaming(sessionId, PmdMeasurementType.ACC) },
+                streamFactory = { api.startAccStreaming(sessionId, setting) },
+                onSample = { processAccData(it) }
+            )
         }
     }
 
     private fun startGyroCollection(api: PolarBleApi) {
         val sessionId = sdkSessionId
-        gyroJob?.cancel()
-        gyroJob = scope.launch {
-            try {
-                val setting = resolveGyroSetting(api, sessionId)
-                isGyroStreamingActive.set(true)
-                api.startGyroStreaming(sessionId, setting)
-                    .catch { e -> Log.w(TAG, "GYRO stream error on $sessionId: ${e.message}") }
-                    .collect { gyroData ->
-                        processGyroData(gyroData)
-                    }
-            } catch (ce: CancellationException) {
-                throw ce
-            } catch (t: Throwable) {
-                Log.w(TAG, "Failed to start/collect GYRO stream on $sessionId: ${t.message}")
-            } finally {
-                isGyroStreamingActive.set(false)
-            }
+        streamCoordinator.launchStream(PolarPmdStreamCoordinator.StreamSlot.GYRO) {
+            val setting = resolveGyroSetting(api, sessionId)
+            streamCoordinator.collectPmdWithAlreadyInStateRecovery(
+                pmdType = PmdMeasurementType.GYRO,
+                sessionId = sessionId,
+                stopStreaming = { api.stopStreaming(sessionId, PmdMeasurementType.GYRO) },
+                streamFactory = { api.startGyroStreaming(sessionId, setting) },
+                onSample = { processGyroData(it) }
+            )
         }
     }
 
@@ -911,6 +949,22 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
         lastBeatTimestampMs = bundle.lastBeatTimestampMs
         lastNormalRrMs = bundle.lastNormalRrMs
+    }
+
+    /** Processes Verity Sense optical [PolarPpiData] packets via [PolarPpiStreamProcessor] (`REQ-HRV-051.1`). */
+    fun processPpiData(data: PolarPpiData, packetArrivalMs: Long) {
+        if (isShutDown.get()) return
+        val events = ppiStreamProcessor.processSamples(data.samples, packetArrivalMs)
+        for (event in events) {
+            if (event.artifactFlag == RrBeatEvent.ARTIFACT_NORMAL) {
+                val rrSensor = mRrIntervalSensor ?: MySensor<Int>(this, SensorType.RR_INTERVAL).also {
+                    mRrIntervalSensor = it
+                    addAndRegisterSensor(it)
+                }
+                rrSensor.newValue(Math.round(event.rrMs).toInt())
+            }
+            dispatchRrBeat(event)
+        }
     }
 
     /**
@@ -1010,21 +1064,25 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     private fun unregisterImuCadenceSensors() {
         mCadenceSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.CADENCE)
             mCadenceSensor = null
         }
         mStridesSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.STRIDES)
             mStridesSensor = null
         }
         mVerticalOscillationSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.VERTICAL_OSCILLATION)
             mVerticalOscillationSensor = null
         }
         mGroundContactTimeSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.GROUND_CONTACT_TIME)
             mGroundContactTimeSensor = null
@@ -1058,6 +1116,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     private fun dispatchRrBeat(event: RrBeatEvent) {
+        perDeviceHrvController.onRrBeat(event)
         for (listener in rrBeatListeners) {
             try {
                 listener.onRrBeat(event)
@@ -1071,10 +1130,13 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     fun getSdkCallbackForTesting(): PolarBleApiCallback = sdkCallback
 
     @VisibleForTesting
-    fun isAccStreamingForTesting(): Boolean = isAccStreamingActive.get()
+    fun isAccStreamingForTesting(): Boolean = streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.ACC)
 
     @VisibleForTesting
-    fun isGyroStreamingForTesting(): Boolean = isGyroStreamingActive.get()
+    fun isGyroStreamingForTesting(): Boolean = streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.GYRO)
+
+    @VisibleForTesting
+    fun isPpiStreamingForTesting(): Boolean = streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.PPI)
 
     @VisibleForTesting
     fun getSearchTimeoutJobForTesting(): Job? = searchTimeoutJob
@@ -1092,17 +1154,28 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     fun getCoordinatorSessionKeyForTesting(): String? = coordinatorSessionKey
 
     @VisibleForTesting
-    fun isHrJobActiveForTesting(): Boolean = hrJob?.isActive == true
+    fun isHrJobActiveForTesting(): Boolean = streamCoordinator.isJobActive(PolarPmdStreamCoordinator.StreamSlot.HR)
 
     @VisibleForTesting
-    fun isAccJobActiveForTesting(): Boolean = accJob?.isActive == true
+    fun isAccJobActiveForTesting(): Boolean = streamCoordinator.isJobActive(PolarPmdStreamCoordinator.StreamSlot.ACC)
 
     @VisibleForTesting
-    fun isGyroJobActiveForTesting(): Boolean = gyroJob?.isActive == true
+    fun isGyroJobActiveForTesting(): Boolean = streamCoordinator.isJobActive(PolarPmdStreamCoordinator.StreamSlot.GYRO)
+
+    @VisibleForTesting
+    fun isPpiJobActiveForTesting(): Boolean = streamCoordinator.isJobActive(PolarPmdStreamCoordinator.StreamSlot.PPI)
+
+    override fun onAccumulatorsReset() {
+        super.onAccumulatorsReset()
+        ppiStreamProcessor.reset()
+        perDeviceHrvController.onAccumulatorsReset()
+    }
 
     override fun unregisterSensors() {
+        perDeviceHrvController.onDisconnect()
         unregisterImuCadenceSensors()
         mRrIntervalSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.RR_INTERVAL)
             mRrIntervalSensor = null
@@ -1111,6 +1184,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         lastBeatTimestampMs = 0.0
         lastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
         packetCounter = 0
+        ppiStreamProcessor.reset()
     }
 
     override fun shutDown() {
@@ -1127,8 +1201,6 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         cancelSearchTimeoutWatchdog()
         cancelReconnectJob()
         isConnectedFlag.set(false)
-        isAccStreamingActive.set(false)
-        isGyroStreamingActive.set(false)
 
         LifecycleUtils.safeUnregisterReceiver(mContext, sportChangedReceiver, TAG)
 
@@ -1136,6 +1208,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
         val streamId = sdkSessionId
         val coordKey = coordinatorSessionKey ?: streamId
+        streamCoordinator.resetSessionWarningState(polarId, streamId, coordKey, macAddress)
         activeSdkStreamId = null
         coordinatorSessionKey = null
         val api = polarApi
@@ -1148,6 +1221,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             if (isVeritySense) {
                 try {
                     api.stopStreaming(streamId, PmdMeasurementType.GYRO)
+                } catch (_: Throwable) {
+                }
+                try {
+                    api.stopStreaming(streamId, PmdMeasurementType.PPI)
                 } catch (_: Throwable) {
                 }
             }
@@ -1171,6 +1248,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         activeBridges.remove(this)
+        perDeviceHrvController.shutDown()
         unregisterSensors()
         rrBeatListeners.clear()
         imuFrameListeners.clear()

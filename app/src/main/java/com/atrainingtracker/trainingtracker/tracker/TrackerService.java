@@ -290,7 +290,7 @@ public class TrackerService extends Service {
     private final RrBeatListener mRrBeatListener = new RrBeatListener() {
         @Override
         public void onRrBeat(@NonNull RrBeatEvent event) {
-            if (mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING && mWorkoutID > 0) {
+            if (!event.isOpticalPpi() && mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING && mWorkoutID > 0) {
                 int idx = mRrBeatIndexCounter.getAndIncrement();
                 long monotonicTimestampMs = mLastRrBeatTimestampMs.accumulateAndGet(
                         event.getBeatTimestampMs(),
@@ -2227,7 +2227,8 @@ public class TrackerService extends Service {
         if (DEBUG)
             Log.i(TAG, "saveLap: workoutId=" + workoutId + ", lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", averageSpeed=" + averageSpeed);
 
-        getWorkoutRepository().saveLap(workoutId, lapNr, lapTime, lapDistance, averageSpeed);
+        String timeStart = mMultisportLapCoordinator.consumeLapStartTimeUtc(lapTime); // REQ-TRK-090
+        getWorkoutRepository().saveLap(workoutId, lapNr, timeStart, lapTime, lapDistance, averageSpeed, null, null);
     }
 
     /**

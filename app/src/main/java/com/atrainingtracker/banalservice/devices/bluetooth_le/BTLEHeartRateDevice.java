@@ -24,7 +24,9 @@ import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -35,6 +37,9 @@ import com.atrainingtracker.banalservice.devices.RrBeatNormalization;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator;
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult;
+import com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider;
+import com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -48,12 +53,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Bluetooth Low Energy Heart Rate Device (GATT Service 0x180D, Characteristic 0x2A37).
  * Parses instant heart rate and beat-to-beat RR intervals with cumulative timestamping (REQ-CON-027, ATT-3540).
  */
-public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
+public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, HrvTelemetryProvider {
     private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = "BTLEHeartRateDevice";
 
     protected MySensor<Integer> mHeartRateSensor;
     protected MySensor<Integer> mRrIntervalSensor = null;
+    private final PerDeviceHrvController mPerDeviceHrvController;
 
     private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
     private double mLastBeatTimestampMs = 0.0;
@@ -65,9 +71,61 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
      */
     public BTLEHeartRateDevice(Context context, MySensorManager mySensorManager, long deviceID, String address) {
         super(context, mySensorManager, DeviceType.HRM, deviceID, address);
+        mPerDeviceHrvController = createPerDeviceHrvController();
         if (DEBUG) {
             Log.d(TAG, "creating HR device");
         }
+    }
+
+    protected PerDeviceHrvController createPerDeviceHrvController() {
+        return new PerDeviceHrvController(mContext, this, createHrvHostCallbacks());
+    }
+
+    protected final PerDeviceHrvController.HostCallbacks createHrvHostCallbacks() {
+        return new PerDeviceHrvController.HostCallbacks() {
+            @Override
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            public void addAndRegisterSensors(@NonNull List<MySensor<?>> sensors) {
+                if (mMySensorManager != null) {
+                    BTLEHeartRateDevice.this.addAndRegisterSensors(new ArrayList<MySensor>(sensors));
+                } else {
+                    for (MySensor<?> sensor : sensors) {
+                        addSensor(sensor);
+                        sensor.activateSensor();
+                    }
+                    notifySensorsChanged();
+                }
+            }
+
+            @Override
+            public void unregisterSensor(@NonNull MySensor<?> sensor) {
+                if (mMySensorManager != null) {
+                    mMySensorManager.unregisterSensor(sensor);
+                }
+            }
+
+            @Override
+            public void removeSensor(@NonNull SensorType sensorType) {
+                BTLEHeartRateDevice.this.removeSensor(sensorType);
+            }
+        };
+    }
+
+    @VisibleForTesting
+    public PerDeviceHrvController getPerDeviceHrvController() {
+        return mPerDeviceHrvController;
+    }
+
+    @NonNull
+    @Override
+    public HrvSignalQualityResult getSignalQualityResult() {
+        return mPerDeviceHrvController.getSignalQualityResult();
+    }
+
+    @Nullable
+    @Override
+    public Double getLatestArtifactRatePercent() {
+        return mPerDeviceHrvController.getLatestArtifactRatePercent();
     }
 
     @Override
@@ -100,6 +158,9 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
     }
 
     protected void dispatchRrBeat(RrBeatEvent event) {
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.onRrBeat(event);
+        }
         for (RrBeatListener listener : mRrBeatListeners) {
             try {
                 listener.onRrBeat(event);
@@ -252,8 +313,20 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
     }
 
     @Override
+    protected void onAccumulatorsReset() {
+        super.onAccumulatorsReset();
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.onAccumulatorsReset();
+        }
+    }
+
+    @Override
     protected void unregisterSensors() {
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.onDisconnect();
+        }
         if (mRrIntervalSensor != null) {
+            mRrIntervalSensor.deactivateSensor();
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
             }
@@ -268,7 +341,11 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
 
     @Override
     public void shutDown() {
+        if (mPerDeviceHrvController != null) {
+            mPerDeviceHrvController.shutDown();
+        }
         if (mRrIntervalSensor != null) {
+            mRrIntervalSensor.deactivateSensor();
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
             }

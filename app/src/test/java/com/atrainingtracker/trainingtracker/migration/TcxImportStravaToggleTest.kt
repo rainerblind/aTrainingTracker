@@ -78,7 +78,7 @@ import java.io.OutputStream
  * - `importFromTcx(uploadToStrava = false/true)` persisting `UPLOAD_TO_STRAVA` (`0`/`1`) and gating `ExportManager`
  * - `bulkRecoverFromDropbox(uploadToStrava = false)` forwarding flag
  * - `PreImportTuningBottomSheet` toggle visibility when Strava is connected vs disconnected
- * (REQ-MIG-028, TST-MIG-025).
+ * (REQ-MIG-028, TST-MIG-025, REQ-MIG-054, TST-MIG-052).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -178,23 +178,9 @@ class TcxImportStravaToggleTest {
         TrainingApplication.injectMockStravaAccount()
         TrainingApplication.setUploadImportedWorkoutsToStrava(false)
 
-        // Seed an unrelated far-away cluster so RouteClusters.db is non-empty and refreshClusters()
-        // does not trigger empty-DB migrateHistory() auto-bootstrapping on the first imported workout.
-        WorkoutClusterDatabaseManager.getInstance(context).insertCluster(
-            com.atrainingtracker.trainingtracker.database.WorkoutCluster(
-                name = "Unrelated Far Cluster",
-                probableSportId = 1L,
-                startLat = 0.0,
-                startLng = 0.0,
-                endLat = 0.1,
-                endLng = 0.1,
-                maxDispLat = 0.05,
-                maxDispLng = 0.05,
-                refDistance = 100000.0,
-                hitCount = 1,
-                bSportType = com.atrainingtracker.banalservice.BSportType.RUN
-            )
-        )
+        // REQ-MIG-054, TST-MIG-052: Leave RouteClusters.db empty so refreshClusters() runs migrateHistory() ->
+        // assignClusterToWorkout() -> applyInferredIdentity() and verify explicit UPLOAD_TO_STRAVA = 0 stays 0.
+        assertTrue(WorkoutClusterDatabaseManager.getInstance(context).getAllClusters().isEmpty())
 
         mockkConstructor(ExportManager::class)
         every { anyConstructed<ExportManager>().exportWorkoutTo(any<Long>(), any<FileFormat>()) } returns Unit

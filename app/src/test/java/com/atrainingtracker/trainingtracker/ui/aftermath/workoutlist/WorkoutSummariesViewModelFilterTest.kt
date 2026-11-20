@@ -393,4 +393,58 @@ class WorkoutSummariesViewModelFilterTest {
         assertEquals(6L, filtered.first().id)
         assertEquals(BSportType.BIKE, filtered.first().bSportType)
     }
+
+    /**
+     * TST-UNT-012 (REQ-PER-008): Verifies getFilteredWorkouts filters strictly by explicit sportTypeId
+     * (Sub-Sport) when provided.
+     */
+    @Test
+    fun testGetFilteredWorkouts_filtersBySubSportId_TST_UNT_012() = runTest(testDispatcher) {
+        // TST-UNT-012
+        val roadRide = createWorkout(1L, "Road Ride", 10L, "Road Cycling", BSportType.BIKE, 2025, 40_000.0, 3600L)
+        val mtbRide = createWorkout(2L, "MTB Ride", 11L, "MTB", BSportType.BIKE, 2025, 25_000.0, 3600L)
+        val runWorkout = createWorkout(3L, "Run", 20L, "Running", BSportType.RUN, 2025, 10_000.0, 2400L)
+        allWorkoutsFlow.value = listOf(roadRide, mtbRide, runWorkout)
+
+        val viewModel = WorkoutSummariesViewModel(mockApplication)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.workouts.collect()
+        }
+        advanceUntilIdle()
+
+        val filtered = viewModel.getFilteredWorkouts(
+            bSportType = BSportType.BIKE,
+            sportTypeId = 11L
+        ).first { it.isNotEmpty() }
+
+        assertEquals(1, filtered.size)
+        assertEquals(2L, filtered.first().id)
+        assertEquals(11L, filtered.first().sportId)
+    }
+
+    /**
+     * TST-UNT-013 (REQ-PER-008): Verifies getFilteredWorkouts filters by base BSportType
+     * across all sub-sports when sportTypeId is null.
+     */
+    @Test
+    fun testGetFilteredWorkouts_filtersByBSportTypeWhenSportIdNull_TST_UNT_013() = runTest(testDispatcher) {
+        // TST-UNT-013
+        val roadRide = createWorkout(1L, "Road Ride", 10L, "Road Cycling", BSportType.BIKE, 2025, 40_000.0, 3600L)
+        val mtbRide = createWorkout(2L, "MTB Ride", 11L, "MTB", BSportType.BIKE, 2025, 25_000.0, 3600L)
+        val runWorkout = createWorkout(3L, "Run", 20L, "Running", BSportType.RUN, 2025, 10_000.0, 2400L)
+        allWorkoutsFlow.value = listOf(roadRide, mtbRide, runWorkout)
+
+        val viewModel = WorkoutSummariesViewModel(mockApplication)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.workouts.collect()
+        }
+        advanceUntilIdle()
+
+        val filtered = viewModel.getFilteredWorkouts(
+            bSportType = BSportType.BIKE,
+            sportTypeId = null
+        ).first { it.isNotEmpty() }
+
+        assertEquals(listOf(1L, 2L), filtered.map { it.id }.sorted())
+    }
 }

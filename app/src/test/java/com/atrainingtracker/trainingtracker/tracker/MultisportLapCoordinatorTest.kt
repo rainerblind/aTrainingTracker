@@ -48,6 +48,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
@@ -361,6 +362,91 @@ class MultisportLapCoordinatorTest {
         assertEquals(1, rows[t1799])
         assertEquals(2, rows[t1820])
         assertEquals(3, rows[t1855])
+    }
+
+    // REQ-TRK-090 / TST-TRK-090
+    @Test
+    fun singleSportMultiLap_persistsPreMutationUtcTimeStart_withPauseNeutrality_underNonUtcTimezone_tstTrk090_1() {
+        val prevTz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            val workoutId = 909L
+            val repo = WorkoutRepository.getInstance(context)
+            val lapsDb = LapsDatabaseManager.getInstance(context)
+            val coordinator = MultisportLapCoordinator { _, _, _ -> }
+
+            // Start session at T0 (2026-10-01 08:00:00 UTC == 10:00:00 CEST)
+            coordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+
+            // Pause broadcast (IS_PAUSE = true) must NOT overwrite currentLapStartAnchor
+            val pauseIntent = Intent(BANALService.LAP_SUMMARY)
+                .putExtra(BANALService.IS_PAUSE, true)
+                .putExtra(BANALService.PREV_LAP_NR, 1)
+                .putExtra(BANALService.PREV_LAP_TIME_S, 0)
+                .putExtra(BANALService.PREV_LAP_DISTANCE_m, 0.0)
+            coordinator.onLapSummaryIntent(
+                pauseIntent, workoutId, sessionStartMs + 300_000L, 120, 300, 500.0,
+                false, repo, { _, _, _, _ -> }, {}
+            )
+            assertEquals(sessionStartMs, coordinator.getCurrentLapStartAnchor().timestampMs)
+            assertEquals(0, lapsDb.getLaps(workoutId).size)
+
+            // Manual Lap 1 split at T1 = T0 + 600s (08:10:00 UTC): Lap 1 must store T0, NOT T1!
+            val lap1EndMs = sessionStartMs + 600_000L
+            val lap1Intent = Intent(BANALService.LAP_SUMMARY)
+                .putExtra(BANALService.IS_PAUSE, false)
+                .putExtra(BANALService.PREV_LAP_NR, 1)
+                .putExtra(BANALService.PREV_LAP_TIME_S, 420)
+                .putExtra(BANALService.PREV_LAP_DISTANCE_m, 2000.0)
+                .putExtra(BANALService.PREV_LAP_SPEED_mps, 2000.0 / 420.0)
+            coordinator.onLapSummaryIntent(
+                lap1Intent, workoutId, lap1EndMs, 420, 600, 2000.0,
+                false, repo,
+                { nr, t, d, s ->
+                    repo.saveLap(workoutId, nr, coordinator.consumeLapStartTimeUtc(t), t, d, s, null, null)
+                },
+                {}
+            )
+            assertEquals(lap1EndMs, coordinator.getCurrentLapStartAnchor().timestampMs)
+
+            // Stop workout at T2 = T1 + 300s (08:15:00 UTC): Final Lap 2 must store T1, NOT T2!
+            coordinator.saveFinalLap(repo, workoutId, 2L, 300, 1500.0, 5.0) { wId, nr, t, d, s ->
+                repo.saveLap(wId, nr, coordinator.consumeLapStartTimeUtc(t), t, d, s, null, null)
+            }
+
+            val laps = lapsDb.getLaps(workoutId)
+            assertEquals(2, laps.size)
+            assertEquals("2026-10-01 08:00:00", laps[0].timeStart)
+            assertEquals("2026-10-01 08:10:00", laps[1].timeStart)
+        } finally {
+            TimeZone.setDefault(prevTz)
+        }
+    }
+
+    // REQ-TRK-090 / TST-TRK-090
+    @Test
+    fun emptyManualSplit_doesNotLeakPendingStartTimestamp_tstTrk090_1() {
+        val repo = WorkoutRepository.getInstance(context)
+        val coordinator = MultisportLapCoordinator { _, _, _ -> }
+        coordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+
+        val emptySplitMs = sessionStartMs + 120_000L
+        val emptyIntent = Intent(BANALService.LAP_SUMMARY)
+            .putExtra(BANALService.IS_PAUSE, false)
+            .putExtra(BANALService.PREV_LAP_NR, 1)
+            .putExtra(BANALService.PREV_LAP_TIME_S, 0)
+            .putExtra(BANALService.PREV_LAP_DISTANCE_m, 0.0)
+        var unnamedCalled = 0
+        coordinator.onLapSummaryIntent(
+            emptyIntent, 910L, emptySplitMs, 0, 120, 0.0,
+            false, repo, { _, _, _, _ -> unnamedCalled++ }, {}
+        )
+        assertEquals(0, unnamedCalled)
+        // Must resolve updated anchor (emptySplitMs), never a leaked pre-mutation pending timestamp
+        assertEquals(
+            MultisportLapCoordinator.formatUtcTimestamp(emptySplitMs),
+            coordinator.consumeLapStartTimeUtc(60)
+        )
     }
 
     private fun parseUtcMs(utcText: String): Long {

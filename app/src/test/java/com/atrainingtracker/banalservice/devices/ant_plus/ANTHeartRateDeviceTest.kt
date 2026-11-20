@@ -34,6 +34,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -353,5 +354,93 @@ class ANTHeartRateDeviceTest {
         assertEquals(RrBeatEvent.ARTIFACT_GAP, receivedEvents[4].artifactFlag)
         assertEquals(2, receivedEvents[4].gapBeats)
         assertTrue("deltaC >= 2 reconstruction must clamp monotonic >= previous beat", receivedEvents[4].beatTimestampMs >= preLossTs)
+    }
+
+    @Test
+    fun testPerDeviceHrv_antHeartRateRegistersLazilyCalculatesAndClearsOnDisconnectAndReset_TST_HRV_050_3() {
+        // REQ-HRV-050.3 / TST-HRV-050.3
+        val baseTs = 1_000_000L
+        var nowMs = baseTs + 40_000L
+        val device = object : ANTHeartRateDevice(mockContext, mockSensorManager, 301L, 12345) {
+            override fun notifySensorsChanged() {}
+            override fun createPerDeviceHrvController() =
+                com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController(
+                    mContext, this, createHrvHostCallbacks(), { nowMs },
+                    startScheduler = false, artifactGateThresholdPercent = 5.0
+                )
+            fun triggerReset() = onAccumulatorsReset()
+            fun triggerDisconnect() = unregisterSensors()
+        }
+
+        assertNull(device.getSensor(SensorType.HRV_SDNN))
+
+        // Baseline + 35 beats with alternating 780 / 820 ms
+        var eventTimeSec = 1.0
+        device.parseHeartRateData(baseTs, 75, 0L, BigDecimal.valueOf(eventTimeSec), DataState.LIVE_DATA)
+        for (i in 1..35) {
+            val rrSec = if (i % 2 == 0) 0.78 else 0.82
+            eventTimeSec = (eventTimeSec + rrSec) % 64.0
+            device.parseHeartRateData(baseTs + i * 800L, 75, i.toLong(), BigDecimal.valueOf(eventTimeSec), DataState.LIVE_DATA)
+        }
+
+        device.perDeviceHrvController.calculateMetrics()
+        assertNotNull("ANT+ HRM must expose per-device HRV_RMSSD", device.getSensor(SensorType.HRV_RMSSD)?.value)
+        assertNotNull("ANT+ HRM must expose per-device HRV_SDNN", device.getSensor(SensorType.HRV_SDNN)?.value)
+        assertNotNull("ANT+ HRM must expose per-device HRV_ARTIFACT_RATE", device.getSensor(SensorType.HRV_ARTIFACT_RATE)?.value)
+
+        // Accumulator reset clears to null without removing sensors
+        val sdnnSensor = device.getSensor(SensorType.HRV_SDNN)!!
+        val seen = mutableListOf<Any?>()
+        sdnnSensor.addSensorListener { seen.add(it) }
+        device.triggerReset()
+        assertNull(seen.last())
+        assertNotNull(device.getSensor(SensorType.HRV_SDNN))
+
+        // Disconnect removes all 4 HRV sensors
+        device.triggerDisconnect()
+        assertNull(device.getSensor(SensorType.HRV_DFA_A1))
+        assertNull(device.getSensor(SensorType.HRV_RMSSD))
+        assertNull(device.getSensor(SensorType.HRV_ARTIFACT_RATE))
+        assertNull(device.getSensor(SensorType.HRV_SDNN))
+        device.shutDown()
+    }
+
+    @Test
+    fun testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2() {
+        // REQ-FIL-038.2 / TST-FIL-038.2
+        val device = object : ANTHeartRateDevice(mockContext, mockSensorManager, 302L, 54321) {
+            override fun notifySensorsChanged() {}
+            fun triggerDisconnect() = unregisterSensors()
+        }
+
+        // Seed baseline + single beat to lazily register mRrIntervalSensor
+        device.parseHeartRateData(100_000L, 72, 10L, BigDecimal("1.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(100_827L, 72, 11L, BigDecimal("1.827"), DataState.LIVE_DATA)
+        val rrSensor1 = device.getSensor(SensorType.RR_INTERVAL)
+        assertNotNull(rrSensor1)
+
+        val observed1 = mutableListOf<Any?>()
+        rrSensor1!!.addSensorListener { observed1.add(it) }
+        assertEquals(827, observed1.last())
+
+        // unregisterSensors must deactivate mRrIntervalSensor & push null BEFORE removal
+        device.triggerDisconnect()
+        assertFalse("mRrIntervalSensor must be deactivated on unregisterSensors()", rrSensor1.isActivated)
+        assertNull("Listener must receive null immediately on ANT+ disconnect", observed1.last())
+        assertNull(device.getSensor(SensorType.RR_INTERVAL))
+
+        // Reconnect and verify shutDown also deactivates & pushes null
+        device.parseHeartRateData(110_000L, 74, 20L, BigDecimal("5.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(110_791L, 74, 21L, BigDecimal("5.791"), DataState.LIVE_DATA)
+        val rrSensor2 = device.getSensor(SensorType.RR_INTERVAL)
+        assertNotNull(rrSensor2)
+
+        val observed2 = mutableListOf<Any?>()
+        rrSensor2!!.addSensorListener { observed2.add(it) }
+        assertEquals(791, observed2.last())
+
+        device.shutDown()
+        assertFalse("mRrIntervalSensor must be deactivated on shutDown()", rrSensor2.isActivated)
+        assertNull("Listener must receive null immediately on ANT+ shutDown()", observed2.last())
     }
 }

@@ -54,9 +54,7 @@
     <string name="devices_lastSeenText">laatst gezien</string>
     <string name="devices_now">nu</string>
 
-    <string name="devices_correct_calibration_factor_title_bike">Wielomtrek corrigeren</string>
     <string name="devices_correct_calibration_factor_title_run">Kalibratiefactor corrigeren</string>
-    <string name="devices_correct_calibration_explanation_bike">Hier kunt u de wielomtrek corrigeren voor deze sensor.</string>
     <string name="devices_correct_calibration_explanation_run">Hier kunt u de kalibratiefactor corrigeren voor deze sensor.</string>
     <string name="devices_measuredDistanceText">gemeten afstand:</string>
     <string name="devices_correctDistanceText">correcte afstand:</string>
@@ -78,7 +76,6 @@
 
     <string name="devices_editDeviceBikeDeviceNameValue">Garmin snelheid</string>
     <string name="devices_editDeviceBikeDeviceTypeValue">Fiets Snelheid</string>
-    <string name="devices_editDeviceBikeEditCalibrationFactorBasedOnDistance">wielomtrek corrigeren</string>
 
     <string name="devices_editDeviceRunDeviceNameValue">Garmin loop</string>
     <string name="devices_editDeviceRunDeviceTypeValue">Loopsnelheid</string>
@@ -136,7 +133,6 @@
     <string name="devices_equipment_none">- geen -</string>
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
-    <string name="devices_reset_tire_pressure_baseline">Bandenspanning-basiswaarde resetten (net opgepompt)</string>
 
     <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
     <string name="devices_sort_alphabetical">Alfabetisch</string>
@@ -182,6 +178,7 @@
     <string name="device_polar_h10_live_imu_desc">Streamt live hartslag/RR en versnellingsgegevens via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
     <string name="device_polar_verity_live_imu_desc">Streamt live hartslag en ACC/GYRO-gegevens in de blauwe sensormodus via één Polar-verbinding voor hardloopcadans zonder actieve footpod.</string>
     <string name="device_polar_live_imu_requires_android_13">Vereist Android 13 of nieuwer.</string>
+    <string name="polar_live_imu_stream_blocked_warning">%1$s: Live-IMU (%2$s) geblokkeerd door een andere app (bijv. Polar Flow) of een vastgelopen sensorstatus. Sluit Polar Flow of start de sensor opnieuw op.</string>
 
     <!-- Polar H10 Running Dynamics (ATT-8018, REQ-SET-116) -->
     <string name="vertical_oscillation">Verticale oscillatie</string>
@@ -220,4 +217,8 @@
     <string name="prefs_research_period_5m">5 min</string>
     <string name="prefs_research_period_10m">10 min</string>
 
+    <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
+    <string name="devices_wheel_circumference_auto_hint">Startbandenmaat voor nieuwe sensoren — wordt tijdens ritten automatisch via GNSS gekalibreerd.</string>
+    <string name="devices_wheel_baseline_format">Basiswaarde: %1$d mm</string>
+    <string name="devices_wheel_history_empty">Nog geen kalibratiegeschiedenis. Voltooi een rit met GNSS en deze wielsensor om het verloop te bekijken.</string>
 </resources>

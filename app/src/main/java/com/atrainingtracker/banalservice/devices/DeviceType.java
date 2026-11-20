@@ -202,18 +202,16 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
-            // only HR (and live Polar H10 running dynamics)
+            // only HR (and live Polar H10 running dynamics + per-device HRV metrics, REQ-HRV-050.1)
             case HR:
             case RR_INTERVAL:
             case VERTICAL_OSCILLATION:
             case GROUND_CONTACT_TIME:
-                deviceTypes.add(DeviceType.HRM);
-                break;
-
             case HRV_RMSSD:
             case HRV_DFA_A1:
             case HRV_ARTIFACT_RATE:
-                deviceTypes.add(DeviceType.HRV_METRICS);
+            case HRV_SDNN:
+                deviceTypes.add(DeviceType.HRM);
                 break;
 
             // only in Power

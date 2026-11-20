@@ -468,4 +468,40 @@ class UnicycleOdometryEkfTest {
         assertEquals(6.0, ekf.eastMeters, 1e-6)
         assertTrue("Moving predict must propagate position variance", ekf.positionVariance > preMovingPosVar)
     }
+
+    // REQ-FIL-036.2 / TST-FIL-036.2
+    @Test
+    fun testSeedInitialHeadingAndVelocityDecoupling_snaps180DegAndBlocksOutageSpeedKick_tstFil036_2() {
+        // 1. One-shot seedInitialHeading snaps 180 deg (default North +PI/2 -> South -PI/2) and zeroes cross-covariances
+        val ekf = UnicycleOdometryEkf(initialSpeed = 2.0, initialHeadingRad = Math.PI / 2.0, recordSnapshots = false)
+        ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = 1_000L)
+
+        // While unanchored, decoupleVelocity = true must prevent Southward GNSS update from crushing x[2]
+        val preSpeed = ekf.speedMps
+        assertTrue(ekf.updateGnssPosition(0.0, -4.0, 12.0, timestampMs = 1_000L, isStationary = false, decoupleVelocity = true))
+        assertEquals("Decoupled GNSS update must not crush speed x[2]", preSpeed, ekf.speedMps, 1e-9)
+
+        assertTrue(ekf.seedInitialHeading(-Math.PI / 2.0, varianceRad = 0.20, timestampMs = 2_000L))
+        assertEquals(-Math.PI / 2.0, ekf.headingRad, 1e-9)
+        assertEquals(0.20, ekf.headingVariance, 1e-9)
+        val seededCov = ekf.getCovarianceCopy()
+        for (idx in 0 until UnicycleOdometryEkf.STATE_DIM) {
+            if (idx != 3) {
+                assertEquals("Heading cross-cov [$idx][3] must be zeroed on seed", 0.0, seededCov[idx][3], 1e-12)
+            }
+        }
+
+        // 2. confirmedPostOutage snap (3 consecutive moving outliers) must re-converge [E, N] without velocity spike
+        val snapEkf = UnicycleOdometryEkf(initialEast = 0.0, initialNorth = 0.0, initialSpeed = 2.0, initialHeadingRad = 0.0, recordSnapshots = false)
+        snapEkf.updateGnssPosition(0.0, 0.0, 4.0, timestampMs = 1_000L, isStationary = false)
+        for (step in 1..3) {
+            val tMs = 1_000L + step * 1_000L
+            snapEkf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = tMs)
+            snapEkf.updateSpeed(2.0, 0.5, timestampMs = tMs)
+            // 35 m East offset triggers moving outlier cluster & confirmedPostOutage on step 3
+            snapEkf.updateGnssPosition(35.0 + step * 2.0, 0.0, 5.0, timestampMs = tMs, isStationary = false)
+        }
+        assertTrue("Post-outage snap must pull East toward ~41 m (was ${snapEkf.eastMeters})", snapEkf.eastMeters > 25.0)
+        assertTrue("Post-outage snap must NOT inject synthetic velocity spike into x[2] (was ${snapEkf.speedMps})", snapEkf.speedMps < 3.0)
+    }
 }

@@ -856,4 +856,89 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         device.shutDown()
         assertEquals(KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, device.effectiveRBaroForTest(), 1e-6)
     }
+
+    // REQ-FIL-037.3 / TST-FIL-037.3: Synthetic Pixel 10 Kurze Runde var 2 #53 loop replay with repeated 13-21 m DEM grid jumps and baro weather drift
+    @Test
+    fun testSyntheticPixel10KurzeRunde53LoopReplay_gatesDemGridJumpsAndPreservesMslClosure_tstFil037_3() {
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns true
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 2.0 // ~2.0 m/s running pace
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        var demAlt = 440.0
+        every { demSensor.value } answers { demAlt }
+        var demTs = 1000L
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.calculateMetrics(1000L)
+
+        var maxAbsSlopePct = 0
+        var maxAltRateMps = 0.0
+        var prevAlt = Double.NaN
+        var tMs = 2000L
+
+        // 720 s (~1.44 km loop at 2.0 m/s): +30 m climb, -15 m dip, +30 m climb, -45 m descent => 60 m true ascent & 60 m true descent
+        for (sec in 0 until 720) {
+            val trueAlt = when {
+                sec < 60 -> 440.0
+                sec < 210 -> 440.0 + 30.0 * ((sec - 60) / 150.0) // +30 m -> 470 m (+10% grade)
+                sec < 310 -> 470.0 - 15.0 * ((sec - 210) / 100.0) // -15 m -> 455 m (-7.5% grade)
+                sec < 460 -> 455.0 + 30.0 * ((sec - 310) / 150.0) // +30 m -> 485 m (+10% grade)
+                sec < 660 -> 485.0 - 45.0 * ((sec - 460) / 200.0) // -45 m -> 440 m (-11.25% grade)
+                else -> 440.0
+            }
+
+            // Inject repeated abrupt 13-21 m DEM grid-cell jumps / 1-2 s bounces on top of true elevation
+            val demGridArtifact = when (sec) {
+                25, 26 -> -13.0
+                90 -> 18.0
+                150, 151 -> -21.0
+                260 -> 15.0
+                350, 351 -> -14.0
+                410 -> 21.0
+                520, 521 -> -17.0
+                600 -> 14.0
+                685 -> -13.0
+                else -> 0.0
+            }
+            demAlt = trueAlt + demGridArtifact
+            demTs = tMs
+
+            // Barometer has +130.4 m synoptic offset + gradual +3.0 m weather drift across the 12 min loop
+            val weatherDrift = 3.0 * (sec / 720.0)
+            val baroAlt = trueAlt + 130.4 + weatherDrift
+            val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+            device.handlePressureMeasurement(p, tMs)
+            device.calculateMetrics(tMs)
+
+            if (sec >= 10) {
+                val currAlt = device.ekf.altitude
+                if (!prevAlt.isNaN()) {
+                    maxAltRateMps = maxOf(maxAltRateMps, kotlin.math.abs(currAlt - prevAlt))
+                }
+                prevAlt = currAlt
+                maxAbsSlopePct = maxOf(maxAbsSlopePct, kotlin.math.abs(device.mSlopeSensor?.value ?: 0))
+            }
+            tMs += 1000L
+        }
+
+        val totalAscent = (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val totalDescent = (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val closingAlt = device.ekf.altitude
+
+        assertTrue("Live ascent must stay in 55..75 m despite DEM grid jumps (was $totalAscent m)", totalAscent in 55.0..75.0)
+        assertTrue("Live descent must stay in 55..75 m despite DEM grid jumps (was $totalDescent m)", totalDescent in 55.0..75.0)
+        assertTrue("Live slope must remain physically plausible without +/-35% DEM spikes (max was $maxAbsSlopePct%)", maxAbsSlopePct <= 20)
+        assertTrue("Live |dAlt/dt| must remain smooth without DEM step teleports (max was $maxAltRateMps m/s)", maxAltRateMps < 1.5)
+        assertTrue("Closing altitude must stay anchored near 440.0 m MSL (was $closingAlt m)", kotlin.math.abs(closingAlt - 440.0) <= 5.0)
+    }
 }

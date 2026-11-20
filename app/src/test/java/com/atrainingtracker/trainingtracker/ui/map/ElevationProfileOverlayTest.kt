@@ -25,9 +25,12 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.LatLng
@@ -191,5 +194,39 @@ class ElevationProfileOverlayTest {
         composeTestRule.onNodeWithTag("scrubbing_telemetry_badge").assert(
             hasAnyDescendant(hasText("Barometer: 595 m", substring = true))
         )
+    }
+
+    /**
+     * TST-UI-051 (REQ-MAP-010): Tapping the info icon toggles the GradeLegend visibility.
+     */
+    @Test
+    fun testElevationProfile_tappingInfoButton_togglesGradeLegendVisibility_TST_UI_051() {
+        // TST-UI-051
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val legendDesc = context.getString(R.string.legend)
+        val under2Label = context.getString(R.string.grade_legend_under_2)
+        val over25Label = context.getString(R.string.grade_legend_over_25)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Surface {
+                    ElevationProfile(
+                        pathPoints = buildPath(),
+                        currentDistance = 250.0,
+                        showZoomControls = true,
+                        bSportType = BSportType.BIKE
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText(under2Label).assertDoesNotExist()
+
+        composeTestRule.onNodeWithContentDescription(legendDesc).performClick()
+        composeTestRule.onNodeWithText(under2Label).assertIsDisplayed()
+        composeTestRule.onNodeWithText(over25Label).assertIsDisplayed()
+
+        composeTestRule.onNodeWithContentDescription(legendDesc).performClick()
+        composeTestRule.onNodeWithText(under2Label).assertDoesNotExist()
     }
 }

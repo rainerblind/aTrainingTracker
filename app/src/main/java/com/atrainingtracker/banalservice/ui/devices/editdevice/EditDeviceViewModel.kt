@@ -20,9 +20,9 @@ package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
@@ -30,8 +30,12 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.PowerFeatureDisplay
 import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSensor
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
+import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +44,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for the EditDeviceDialogFragment
@@ -49,11 +54,23 @@ import kotlinx.coroutines.launch
  *
  * @param application The application context, needed to get the repository instance.
  */
-class EditDeviceViewModel(private val application: Application) : AndroidViewModel(application) {
+class EditDeviceViewModel internal constructor(
+    private val application: Application,
+    private val devicesRepository: DeviceDataRepository,
+    private val banalServiceRepository: BANALServiceRepository,
+    private val discoveryManager: EquipmentAndSportTypeDiscoveryManager,
+    private val equipmentRepository: EquipmentRepository,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
-    private val devicesRepository = DeviceDataRepository.Companion.getInstance(application)
-    private val banalServiceRepository = BANALServiceRepository.Companion.getInstance(application)
-    private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
+    constructor(application: Application) : this(
+        application = application,
+        devicesRepository = DeviceDataRepository.getInstance(application),
+        banalServiceRepository = BANALServiceRepository.getInstance(application),
+        discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application),
+        equipmentRepository = EquipmentRepository.getInstance(application),
+        ioDispatcher = Dispatchers.IO
+    )
 
     private val useCase = GetMergedDevicesUseCase(
         devicesRepository,
@@ -76,6 +93,10 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     private val _deviceSnapshot = MutableStateFlow<DeviceUiData?>(null)
     val deviceSnapshot: StateFlow<DeviceUiData?> = _deviceSnapshot.asStateFlow()
 
+    // Longitudinal wheel circumference history scoped to this sensor's linked bikes & positions (REQ-SEN-033.2)
+    private val _wheelCircumferenceHistory = MutableStateFlow<List<WheelCircumferenceRecord>>(emptyList())
+    val wheelCircumferenceHistory: StateFlow<List<WheelCircumferenceRecord>> = _wheelCircumferenceHistory.asStateFlow()
+
     // Indicates if the device could not be found/loaded from the database
     private val _deviceNotFound = MutableStateFlow(false)
     val deviceNotFound: StateFlow<Boolean> = _deviceNotFound.asStateFlow()
@@ -85,6 +106,7 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
      * This should be called once when the edit dialog is created.
      */
     fun loadInitialDeviceData(deviceId: Long) {
+        _wheelCircumferenceHistory.value = emptyList()
         val snapshot = devicesRepository.getDeviceSnapshotById(deviceId)
         if (snapshot == null) {
             _deviceNotFound.value = true
@@ -92,6 +114,29 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
             _deviceNotFound.value = false
             _deviceSnapshot.value = snapshot
             _editingId.value = deviceId
+            if (supportsWheelCircumference(snapshot)) {
+                loadWheelCircumferenceHistory(deviceId)
+            }
+        }
+    }
+
+    private fun supportsWheelCircumference(data: DeviceUiData): Boolean {
+        return isWheelSpeedSensor(data.deviceType) ||
+            (data.deviceType == DeviceType.BIKE_POWER && (
+                data.powerFeatures?.wheelRevolutionDataSupported == true ||
+                    data.powerFeatures?.wheelSpeedDataSupported == true ||
+                    data.powerFeatures?.wheelDistanceDataSupported == true
+                ))
+    }
+
+    private fun loadWheelCircumferenceHistory(deviceId: Long) {
+        viewModelScope.launch {
+            val history = withContext(ioDispatcher) {
+                equipmentRepository.getCircumferenceHistoryForDevice(deviceId)
+            }
+            if (_editingId.value == deviceId) {
+                _wheelCircumferenceHistory.value = history
+            }
         }
     }
 
@@ -328,7 +373,9 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     /**
-     * Resets the persistent tire pressure baseline (iTPMS) to the currently selected wheel circumference.
+     * Resets the persistent tire pressure baseline (iTPMS) to the currently selected wheel circumference,
+     * synchronizing Devices.db and WheelCircumferenceHistory across linked bikes and refreshing the chart
+     * (REQ-TRK-050, REQ-SEN-033.2).
      */
     fun resetTirePressureBaseline() {
         val id = _editingId.value ?: deviceSnapshot.value?.id ?: return
@@ -336,7 +383,16 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         val currentBaselineMeters = currentCircumference?.let { it / 1000.0 } ?: 0.0
         updateState { it.copy(baselineCircumference = currentBaselineMeters) }
         viewModelScope.launch {
-            devicesRepository.resetTirePressureBaseline(id)
+            devicesRepository.resetTirePressureBaseline(id, currentCircumference)
+            val refreshedHistory = withContext(ioDispatcher) {
+                if (currentCircumference != null && currentCircumference > 0) {
+                    equipmentRepository.recordManualBaselineResetForDevice(id, currentCircumference)
+                }
+                equipmentRepository.getCircumferenceHistoryForDevice(id)
+            }
+            if (_editingId.value == id) {
+                _wheelCircumferenceHistory.value = refreshedHistory
+            }
         }
     }
 
