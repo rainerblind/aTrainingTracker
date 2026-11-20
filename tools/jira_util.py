@@ -4323,16 +4323,136 @@ def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
     return new_key
 
 
+def _has_new_develop_commits_since(since_dt, repo_root):
+    """Checks whether `develop` has commits newer than since_dt (fails open to True when unavailable)."""
+    try:
+        res = subprocess.run(
+            ["git", "rev-list", "--count", f"--since={since_dt.strftime('%Y-%m-%d')}", "develop"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if res.returncode == 0 and res.stdout.strip().isdigit():
+            return int(res.stdout.strip()) > 0
+    except Exception:
+        pass
+    return True
+
+
+def is_weekly_emulator_sweep_overdue(
+    sweeps_dir=None,
+    days_threshold=7,
+    repo_root=None,
+    has_new_commits_fn=None,
+):
+    """
+    REQ-PRO-135.4:
+    Returns True if no sweep report exists in docs/engineering/emulator_sweeps/ or more than
+    days_threshold days have elapsed since the latest sweep report and new develop commits landed.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if sweeps_dir is None:
+        sweeps_dir = os.path.join(repo_root, "docs", "engineering", "emulator_sweeps")
+
+    if not os.path.isdir(sweeps_dir):
+        return True
+
+    sweep_files = [
+        f for f in os.listdir(sweeps_dir)
+        if f.endswith("_sweep.md") and not f.startswith("template_")
+    ]
+    if not sweep_files:
+        return True
+
+    latest_date = None
+    for f in sweep_files:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})_", f)
+        if m:
+            try:
+                dt = datetime.strptime(m.group(1), "%Y-%m-%d")
+                if latest_date is None or dt > latest_date:
+                    latest_date = dt
+            except Exception:
+                pass
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    if elapsed < days_threshold:
+        return False
+
+    commits_checker = has_new_commits_fn or _has_new_develop_commits_since
+    return bool(commits_checker(latest_date, repo_root))
+
+
+def ensure_weekly_emulator_sweep_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-135.4 (ATT-8222):
+    Ensures one open Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ticket exists
+    under Epic ATT-232 when overdue (> 7 days with develop commits), ranked at rank-top.
+    """
+    config = get_config()
+    jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Multi-OS & 9-Language" OR summary ~ "Emulator UI Verification Sweep") ORDER BY created DESC'
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        summary = issue.get("fields", {}).get("summary", "")
+        lowered = summary.lower()
+        if "emulator" in lowered and "sweep" in lowered:
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Weekly Multi-OS & 9-Language Emulator Sweep ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    if not force and not is_weekly_emulator_sweep_overdue():
+        print("Weekly Multi-OS & 9-Language Emulator Sweep is not overdue (< 7 days or no new develop commits).")
+        return None
+
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    summary = f"Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ({week_label})"
+    desc = (
+        f"h2. Mandatory Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ({week_label})\n"
+        f"*Cadence*: Weekly serial Multi-OS & 9-locale emulator verification (REQ-PRO-135 / ATT-8222).\n\n"
+        "h3. Execution Protocol (REQ-TST-004 Emulator-Only)\n"
+        "1. Run `python3 tools/run_multi_os_emulator_sweep.py` serially across configured Android API levels "
+        "and all 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) on the reference AVD.\n"
+        "2. Verify zero `FATAL EXCEPTION` / `ANR` / `IllegalFormat*` crashes in `logcat` and zero clipped/overlapping `uiautomator dump` bounds.\n"
+        f"3. Archive sweep report & screenshots under `docs/engineering/emulator_sweeps/{datetime.now().strftime('%Y-%m-%d')}_sweep.md`.\n"
+        "4. File any discovered UI, OS-level, or localization defects as Backlog Bugs under Epic ATT-232 / ATT-8138.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=["process", "emulator-sweep", "localization", "weekly-review"],
+        rank_top=True,
+        points=2.0,
+    )
+    print(f"Created Weekly Multi-OS & 9-Language Emulator Sweep ticket {new_key} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
 def ensure_weekly_reviews(role="coordinator", force=False):
     """
-    REQ-PRO-095.3 / REQ-PRO-096.3:
-    Coordinates both weekly dual-vendor pillars:
+    REQ-PRO-095.3 / REQ-PRO-096.3 / REQ-PRO-135.4:
+    Coordinates all weekly governance & verification pillars:
     1. Weekly Dual-Vendor Code Review ticket (ATT-8213)
     2. Weekly Dual-Vendor ASPICE 4.0 Audit ticket (ATT-8212)
+    3. Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ticket (ATT-8222)
     """
     code_review_key = ensure_weekly_review_ticket(role=role, force=force)
     aspice_audit_key = ensure_weekly_aspice_audit_ticket(role=role, force=force)
-    return {"code_review": code_review_key, "aspice_audit": aspice_audit_key}
+    emulator_sweep_key = ensure_weekly_emulator_sweep_ticket(role=role, force=force)
+    return {
+        "code_review": code_review_key,
+        "aspice_audit": aspice_audit_key,
+        "emulator_sweep": emulator_sweep_key,
+    }
 
 
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator", history=None):

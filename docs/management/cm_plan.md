@@ -33,7 +33,7 @@ All work products subject to formal configuration control are classified as Conf
 | **Management & CM Plans** | `docs/management/*.md` (`cm_plan.md`, `qa_plan.md`, `risk_register.md`) | Git (ASPICE SUP.8 CM Plan & Policies) |
 | **Project Release Plan** | `docs/management/release_plan.md` | Git (V5.0.0 milestone scope, 12h cadence, Pixel 10 verification per REQ-PRO-097) |
 | **Living Requirements & Tests** | `docs/requirements/`, `docs/tests/`, `docs/requirements.md`, `docs/tests.md` | Git (9 domain shards, synchronized master indexes) |
-| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `gates/`, `qa_audits/`, `reviews/`, `code_reviews/`, `aspice_audits/`, `test_evidence/` | Git (Canonical directories per Rule 8.4, `REQ-PRO-059`, `REQ-PRO-061`, `REQ-PRO-062`, `REQ-PRO-100`) |
+| **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/`, `gates/`, `qa_audits/`, `reviews/`, `code_reviews/`, `aspice_audits/`, `emulator_sweeps/`, `test_evidence/` | Git (Canonical directories per Rule 8.4, `REQ-PRO-059`, `REQ-PRO-061`, `REQ-PRO-062`, `REQ-PRO-100`, `REQ-PRO-135`) |
 | **Release & Baseline Dossiers** | `docs/releases/` (`manifest.md`, `sys_verification_record.md`, `verification_summary.md`, `release_dossier.md`) | Git (SUP.8 baseline manifests & SYS.5/SWE.6 evidence per `REQ-PRO-072`, `REQ-PRO-119`) |
 | **Code Review Coverage Matrix** | `docs/engineering/code_reviews/coverage_matrix.md`, review reports | Git (Weekly Dual-Vendor review evidence per REQ-PRO-095) |
 | **ASPICE Audit Records** | `docs/engineering/aspice_audits/` (`YYYY-MM-DD_dual_vendor_aspice_audit.md`) | Git (Weekly Dual-Vendor ASPICE audits per REQ-PRO-096) |

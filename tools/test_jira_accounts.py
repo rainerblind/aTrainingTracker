@@ -1645,14 +1645,19 @@ class TestJiraCliTooling(unittest.TestCase):
         self.assertEqual(key2, "ATT-9201")
         mock_create.assert_not_called()
 
+    @patch("jira_util.ensure_weekly_emulator_sweep_ticket", return_value="ATT-9202")
     @patch("jira_util.ensure_weekly_aspice_audit_ticket", return_value="ATT-9201")
     @patch("jira_util.ensure_weekly_review_ticket", return_value="ATT-9200")
-    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit):
-        """TST-PRO-096.3: ensure_weekly_reviews dispatches both code review and ASPICE audit tickets."""
+    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit, mock_sweep):
+        """TST-PRO-096.3 / TST-PRO-135.4: ensure_weekly_reviews dispatches code review, ASPICE audit, and emulator sweep pillars."""
         res = jira_util.ensure_weekly_reviews(role="coordinator", force=True)
-        self.assertEqual(res, {"code_review": "ATT-9200", "aspice_audit": "ATT-9201"})
+        self.assertEqual(
+            res,
+            {"code_review": "ATT-9200", "aspice_audit": "ATT-9201", "emulator_sweep": "ATT-9202"},
+        )
         mock_review.assert_called_once_with(role="coordinator", force=True)
         mock_audit.assert_called_once_with(role="coordinator", force=True)
+        mock_sweep.assert_called_once_with(role="coordinator", force=True)
 
     def test_select_greedy_bin_pack_tickets_with_capacity_ceiling(self):
         """TST-PRO-097.1: Multi-lane greedy bin-packing accumulates tickets up to max_sp_per_lane."""
@@ -4141,6 +4146,79 @@ class TestProcessStabilityLegacyTsts(unittest.TestCase):
         self.assertIn("Independent Hypothesis Verification", s1)
         self.assertIn("Tier 1", s5)
         self.assertIn("Ceremony 2", sp)
+
+    def test_tst_pro_135_4_weekly_emulator_sweep_cadence_and_gate_docs(self):
+        """TST-PRO-135.4: is_weekly_emulator_sweep_overdue, ensure_weekly_emulator_sweep_ticket, and QA/Release gate docs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sweeps_dir = os.path.join(tmpdir, "docs", "engineering", "emulator_sweeps")
+            # 1. Missing directory -> overdue
+            self.assertTrue(jira_util.is_weekly_emulator_sweep_overdue(sweeps_dir=sweeps_dir, repo_root=tmpdir))
+
+            os.makedirs(sweeps_dir, exist_ok=True)
+            # 2. Fresh sweep (today) -> not overdue even if commits exist
+            today_file = os.path.join(sweeps_dir, f"{datetime.now().strftime('%Y-%m-%d')}_sweep.md")
+            with open(today_file, "w", encoding="utf-8") as f:
+                f.write("# Fresh Sweep\n")
+            self.assertFalse(
+                jira_util.is_weekly_emulator_sweep_overdue(
+                    sweeps_dir=sweeps_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            os.remove(today_file)
+
+            # 3. Stale sweep (10 days old) -> overdue iff new develop commits landed
+            old_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+            old_file = os.path.join(sweeps_dir, f"{old_date}_sweep.md")
+            with open(old_file, "w", encoding="utf-8") as f:
+                f.write("# Stale Sweep\n")
+            self.assertTrue(
+                jira_util.is_weekly_emulator_sweep_overdue(
+                    sweeps_dir=sweeps_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            self.assertFalse(
+                jira_util.is_weekly_emulator_sweep_overdue(
+                    sweeps_dir=sweeps_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: False,
+                )
+            )
+
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.paged_jql_search", return_value=[]) as mock_search, \
+             patch("jira_util.is_weekly_emulator_sweep_overdue", return_value=True), \
+             patch("jira_util.create_issue", return_value="ATT-9250") as mock_create:
+            k1 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
+            self.assertEqual(k1, "ATT-9250")
+            mock_create.assert_called_once()
+            self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+            mock_create.reset_mock()
+            mock_search.return_value = [
+                {
+                    "key": "ATT-9250",
+                    "fields": {
+                        "summary": "Weekly Multi-OS & 9-Language Emulator UI Verification Sweep (2026-KW47)",
+                        "status": {"name": "Zu erledigen"},
+                    },
+                }
+            ]
+            k2 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
+            self.assertEqual(k2, "ATT-9250")
+            mock_create.assert_not_called()
+
+        with open(os.path.join(REPO_ROOT, "docs", "management", "qa_plan.md"), encoding="utf-8") as f:
+            qa_plan = f.read()
+        with open(os.path.join(REPO_ROOT, ".agents", "skills", "release-manager", "SKILL.md"), encoding="utf-8") as f:
+            rel_skill = f.read()
+        self.assertIn("run_multi_os_emulator_sweep.py", qa_plan)
+        self.assertIn("emulator_sweeps/", qa_plan)
+        self.assertIn("is_weekly_emulator_sweep_overdue()", rel_skill)
 
 
 if __name__ == "__main__":

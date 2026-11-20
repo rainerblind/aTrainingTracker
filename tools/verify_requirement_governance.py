@@ -534,6 +534,7 @@ ALLOWED_ENGINEERING_ENTRIES = {
     "analysis",
     "aspice_audits",
     "code_reviews",
+    "emulator_sweeps",
     "gates",
     "metrics",
     "plans",

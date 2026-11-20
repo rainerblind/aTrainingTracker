@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.41  
+**Version**: 1.0.44  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 76
+**Total Requirements**: 77
 
 ---
 
@@ -2530,6 +2530,26 @@
 
 ---
 
+### REQ-PRO-135: Weekly & Pre-Release Serial Multi-OS and 9-Language Emulator UI Verification Sweep (ATT-8222) [Verified]
+- **Tests**: `TST-PRO-135`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration / Review
+- **Implementation**: `tools/run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/androidTest/`, `docs/management/qa_plan.md`, `docs/management/cm_plan.md`, `.agents/skills/release-manager/SKILL.md`
+- **Rationale**: Manual verification relies primarily on a single physical Pixel 10 while `compileSdk`/`targetSdk` is `37` (`minSdk 26`) across 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), risking late OS-version regressions and locale layout/format defects prior to major releases (`ATT-8222`, complementing `REQ-TST-004` and `REQ-PRO-095`):
+- **Description**:
+  1. *Serial Multi-OS + 9-Language Emulator Sweep Runner (`REQ-PRO-135.1`, tools/run_multi_os_emulator_sweep.py)*: The stdlib-only CLI runner SHALL dynamically discover installed AVDs (`>= 3` API levels, overridable via `--avds`), boot strictly `1` AVD at a time via `tools/agent_emulator.py` helpers, install `com.atrainingtracker.debug`, inject mock GPS (`adb emu geo fix`), sweep all `9` supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) on a reference AVD, scan `logcat` (`FATAL EXCEPTION`, `ANR`, `StrictMode`, `IllegalFormat*`) and `uiautomator dump` bounds for clipped/overlapping labels, and guarantee clean `adb emu kill` shutdown in `finally`.
+  2. *Strict Physical-Device Isolation Guard (`REQ-PRO-135.2`, tools/run_multi_os_emulator_sweep.py)*: The sweep runner MUST enforce `REQ-TST-004` device-policy separation by accepting `emulator-*` serials exclusively and aborting before executing any ADB mutation if a non-emulator physical serial is encountered.
+  3. *Sweep Evidence Archive & Registry Governance (`REQ-PRO-135.3`, docs/engineering/emulator_sweeps/, tools/verify_requirement_governance.py, docs/management/cm_plan.md)*: Completed sweeps SHALL archive structured markdown reports (`YYYY-MM-DD_sweep.md`) and screenshots under `docs/engineering/emulator_sweeps/`, registered in `cm_plan.md` and permitted in `ALLOWED_ENGINEERING_ENTRIES`.
+  4. *Weekly Backlog Cadence & Pre-Release Gate (`REQ-PRO-135.4`, tools/jira_util.py, docs/management/qa_plan.md, .agents/skills/release-manager/SKILL.md)*: `tools/jira_util.py` SHALL implement `is_weekly_emulator_sweep_overdue()` (`> 7 days` since latest sweep with new `develop` commits) and `ensure_weekly_emulator_sweep_ticket()` (deduplicated under `ATT-232`, `rank_top=True`), integrated into `ensure_weekly_reviews()`, documented in `qa_plan.md` §7, and enforced (`<= 7 days`) prior to release branch cutting in `release-manager/SKILL.md`.
+  5. *Instrumented Click-Through & Offline Verification (`REQ-PRO-135.5`, app/src/androidTest/, tools/test_*.py)*: An `app/src/androidTest/` UI navigation click-through test SHALL compile cleanly via `:app:compileDebugAndroidTestKotlin` without `app/src/main/` modifications, and all Python tests MUST mock ADB/emulator/Jira subprocesses and HTTP calls offline (`Rule 5`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `>= 3` AVDs and `9` locales (`en..pt`), *When* `run_multi_os_emulator_sweep.py` executes with mocked/real ADB/emulator calls, *Then* AVDs boot serially (max `1` concurrent), `9` locales are verified on the reference AVD, `logcat` fatal/format errors & clipped bounds fail cleanly, `finally` kills any booted emulator, and physical serials raise `RuntimeError`.
+  • *Given* `docs/engineering/emulator_sweeps/` missing or `> 7 days` old with new `develop` commits, *When* `ensure_weekly_reviews()` executes offline (`Rule 5`), *Then* a deduplicated `rank_top=True` weekly sweep ticket is created under `ATT-232` alongside Code Review and ASPICE Audit pillars, and `verify_engineering_directory_structure()` accepts `"emulator_sweeps"`.
+- **Invariants**: Zero `app/src/main/` edits; `REQ-TST-004` physical device `66020DLCR002FL` strictly unreachable; Python 3 stdlib only (`TST-PRO-005.6`); `100%` offline mocked unit tests (`Rule 5`); `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2576,3 +2596,6 @@
 | `1.0.39` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Added `[Planned]` `REQ-PRO-134` (`REQ-PRO-134.1`–`REQ-PRO-134.5`: merged-only `qa-audit` sampling, zero WIP fallback & 0/1-merged handling, SUP.9 `NON_FIX_RESOLUTION_LABELS` exemption + `labels` fetch, `_impl_plan.md` variant, verifier parity) and reconciled `REQ-PRO-091.2/.5/.6`. |
 | `1.0.40` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `REQ-PRO-134` to `[Implemented]` in Stage 4 (`tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, offline unit test suites). |
 | `1.0.41` | 2026-11-19 | Lane A Flash (`ATT-9071`, `--as agent1`) | `ATT-9071` | Promoted `REQ-PRO-134` (`REQ-PRO-134.1`–`REQ-PRO-134.5`) to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5`: `test_jira_accounts.py` `107/107`, `test_hoechstmass_tools.py` `40/40`, `TST-PRO-134.5` PASS, `18/18` QA audits PASS, `ATT-9071_walkthrough.md`). |
+| `1.0.42` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added `[Planned]` `REQ-PRO-135` (`REQ-PRO-135.1`–`REQ-PRO-135.5`: serial Multi-OS & 9-language emulator sweep runner, `REQ-TST-004` physical-phone refusal, `docs/engineering/emulator_sweeps/` archive + `ALLOWED_ENGINEERING_ENTRIES` / `cm_plan.md`, `ensure-weekly-reviews` cadence + `qa_plan.md` / `release-manager` gate, `androidTest` click-through & offline tests). |
+| `1.0.43` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `REQ-PRO-135` to `[Implemented]` in Stage 4 (`tools/run_multi_os_emulator_sweep.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/management/{cm_plan,qa_plan}.md`, `.agents/skills/release-manager/SKILL.md`, `MultiLocaleUiSweepAndroidTest.kt`, offline unit tests). |
+| `1.0.44` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Promoted `REQ-PRO-135` (`REQ-PRO-135.1`–`REQ-PRO-135.5`) to `[Verified]` in Stage 5 reusing Gate 4 verified evidence (`Rule 7.5` SHA `de14d362`: `114/114` Python tests, `11/11` `verify_skills.py`, `:app:compileDebugAndroidTestKotlin` BUILD SUCCESSFUL, `ATT-8222_walkthrough.md`). |

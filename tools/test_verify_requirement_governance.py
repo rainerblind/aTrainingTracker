@@ -3893,6 +3893,20 @@ class TestGrandfatheredSysreqsRemoved(unittest.TestCase):
             ok_bad, _ = verify_qa_audits(sprint_name="sprint/2026-11-19_03_Nacht", repo_root=tmpdir)
             self.assertFalse(ok_bad)
 
+    def test_scenario_89_tst_pro_135_3_emulator_sweeps_allowed_in_engineering_layout(self):
+        """TST-PRO-135.3: ALLOWED_ENGINEERING_ENTRIES permits emulator_sweeps and cm_plan registers it."""
+        self.assertIn("emulator_sweeps", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "emulator_sweeps"), exist_ok=True)
+            ok, errs = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected emulator_sweeps to pass engineering dir check: {errs}")
+
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        with open(os.path.join(repo_root, "docs", "management", "cm_plan.md"), encoding="utf-8") as f:
+            cm_plan = f.read()
+        self.assertIn("emulator_sweeps/", cm_plan)
+
 
 if __name__ == "__main__":
     unittest.main()
