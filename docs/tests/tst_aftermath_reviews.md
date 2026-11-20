@@ -1,14 +1,14 @@
 # Living Test Specification: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-TST-REVIEWS`  
-**Version**: 1.0.5  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 16
+**Total Tests**: 17
 
 ---
 
@@ -199,6 +199,25 @@
      • Trigger `externalSnapshotTrigger = true` (or `isSharing = true`) on `MapDetailLayout(showHeader = false, ...)` inside both a `.clipToBounds()` container and a transparent-foreground root (`showMap = false, showElevationProfile = false, showTelemetryCharts = false`), invoke `onRoot().captureToImage()` to execute the native Compose/Robolectric draw pass (`headerDrawCount > 0`), and assert `measuredHeaderSize > 0` even at off-viewport placement `placeable.place(0, -placeable.height - 10_000)` while tapping top-viewport coordinates over transparent foreground leaves `headerClicks == 0` and zero duplicate `WorkoutHeader` accessibility semantics leak (`.clearAndSetSemantics {}`).
      • Execute `MapDetailLayoutSnapshotContractTest`, `ArchitectureConformanceContractTest` (`MapDetailLayout.kt <= 1,500` LoC), and `SourceTextReadingAuditContractTest` (`0` new `src/main` reads; `Localization Parity: N/A - no new or modified UI strings`).
 
+### TST-REV-017: **Workout Details Map Floating Layers Gesture Isolation & Track Selection Behavioral Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-9067`
+- **Requirement(s)**: `REQ-REV-016` (`REQ-REV-016.1`..`REQ-REV-016.2`)
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapLayersUiTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayoutOffscreenHeaderUiTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContentTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/UiReflectionOnlyTestAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Verification Result**: PASS (`103/103` PASS across 25 UI/contract/ViewModel suites on `1c1df08e`, `0` failures, `0` errors, `0` skipped, `0` compiler warnings on `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, & `TrackOnMapLayersUiTest.kt`, `4/4` Python safety linters PASS; verified at Gate 4 `ATT-9334` with zero `app/` diff post-`1c1df08e` per `Rule 7.5`; `Localization Parity: N/A - no new or modified UI strings`)
+- **Verification Evidence**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapLayersUiTest.kt`: `TrackOnMapLayersUiTest#tabbedMap_trackLayersButtonTapOpensMenuAndTogglesTrackWithoutLockingPager_tstRev017_1`, `TrackOnMapLayersUiTest#mapDetailLayout_isolatesFloatingControlsFromCanvasTouchCallback_tstRev017_1` (`TST-REV-017.1`); `TrackOnMapLayersUiTest#nonTabbedFallback_trackLayersButtonOpensMenuAndTogglesTrack_tstRev017_2` (`TST-REV-017.2`, `3/3` PASS on `1c1df08e`)
+  - Regression & contracts: `MapDetailLayoutOffscreenHeaderUiTest` (`4/4`), `MapDetailLayoutTest` (`12/12`), `MapDetailLayoutCollapsingHeaderContractTest` (`8/8`), `MapDetailLayoutSnapshotContractTest` (`5/5`), `MapDetailLayoutElevationVisibilityUiTest` (`1/1`), `WorkoutDetailTabbedContentTest` (`7/7`), `WorkoutDetailTabsTest` (`1/1`), `WorkoutSectionReorderContractTest` (`1/1`), `WorkoutShareBottomSheetContractTest` (`1/1`), `TracklessAftermathVisualContractTest` (`1/1`), `TelemetryMetricGraphMarginalBarsContractTest` (`1/1`), `TrackOnMap*` (`31/31` across 9 suites), `ArchitectureConformanceContractTest` (`11/11`, `MapDetailLayout.kt = 1,113/1,500`, `TrackOnMapScreen.kt = 1,013/1,500`), `DeadCodeEliminationContractTest` (`6/6`), `SourceTextReadingAuditContractTest` (`6/6`, `0` `src/main` reads), `UiReflectionOnlyTestAuditContractTest` (`4/4`)
+- **Procedure**:
+  1. *Tabbed Map Layers Click, Gesture Isolation & Menu Selection (`TST-REV-017.1`, `TrackOnMapLayersUiTest.kt`, `@GraphicsMode(GraphicsMode.Mode.NATIVE)` `androidx.compose.ui.test.junit4.v2.createComposeRule`)*:
+     • Render `WorkoutDetailTabbedContent` hosting `MapDetailLayout(showMap = true)` with `TrackLayersMenuButton` in `mapTopEndActions` (`showTechnicalTracks = true`, `availableTrackTypes = setOf(TrackType.BEST, TrackType.GPS, TrackType.ATT_FUSED)`).
+     • Tap `track_layers_button` (including inner `< width - 32.dp` coordinates), assert `onInteractiveCanvasTouch(true)` is NOT emitted and `HorizontalPager(userScrollEnabled)` remains stable (while canvas touch outside `FLOATING CONTROLS` emits `onInteractiveCanvasTouch(true)`), assert `track_layers_menu` (`DropdownMenu`) opens displaying all `TrackType.entries` (`BEST`, `GPS`, `FUSED`, `ATT_FUSED`), and click `track_layers_item_GPS` / `track_layers_item_ATT_FUSED` asserting `onToggleTrackType` updates the selected track sources (`0` deprecation warnings, `0` `src/main` reads).
+  2. *Non-Tabbed Fallback & Architecture/Governance Contracts (`TST-REV-017.2`, `TrackOnMapLayersUiTest.kt`, Contracts)*:
+     • Render standalone `TrackLayersMenuButton` inside `MapDetailLayout(showMap = true, showHeader = true)` (`useStatusBarsPadding = true`); verify `track_layers_button` click opens `track_layers_menu` and toggles `TrackType`.
+     • Execute `MapDetailLayoutTest`, `MapDetailLayoutOffscreenHeaderUiTest`, `WorkoutDetailTabbedContentTest`, `ArchitectureConformanceContractTest` (`MapDetailLayout.kt <= 1,500`, `TrackOnMapScreen.kt <= 1,500`), `SourceTextReadingAuditContractTest` (`0` `src/main` reads), and `UiReflectionOnlyTestAuditContractTest` (`Localization Parity: N/A - no new or modified UI strings`).
+
 ---
 
 ## Change History
@@ -211,3 +230,6 @@
 | `1.0.3` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `TST-REV-016` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9302`) `76/76 PASS` across 12 suites on `2251a7de` (`Rule 7.5`, zero `app/` diff post-`2251a7de`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
 | `1.0.4` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Stage 6 Bounce 1 (`Implemented`): added `activeSnapshotWithTransparentForeground_blocksPointerClicksOnOffscreenHeader_tstRev016_2` and `onRoot().captureToImage()` draw-pass verification (`headerDrawCount > 0`), re-verified `77/77 PASS` across 12 suites (`0` compiler warnings, `4/4` linters PASS). |
 | `1.0.5` | 2026-11-20 | AI Agent (`ATT-9168`, `--as agent1`) | `ATT-9168` | Promoted `TST-REV-016` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9314`) `77/77 PASS` across 12 suites on `408d9fb0` (`Rule 7.5`, zero `app/` diff post-`408d9fb0`, `0` compiler warnings, `4/4` linters PASS), clean-checkout `--check-verified-evidence` `exit 0`, and updated `docs/engineering/walkthroughs/ATT-9168_walkthrough.md`. |
+| `1.0.6` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Added `TST-REV-017` `[Planned]` (`TST-REV-017.1`–`.2`, strictly symmetric `REQ-REV-016`) using `@GraphicsMode(NATIVE)` `v2.createComposeRule` for tabbed & fallback `TrackLayersMenuButton` click-through, `FLOATING CONTROLS` `.zIndex(1f)` & `onInteractiveCanvasTouch(false)` gesture isolation, `DropdownMenu` track selection, and contract hygiene (`N/A - no new or modified UI strings`). |
+| `1.0.7` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `TST-REV-017` to `[Implemented]` following Stage 4 construction of `TrackOnMapLayersUiTest.kt`. |
+| `1.0.8` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `TST-REV-017` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9334`) `103/103 PASS` across 25 suites on `1c1df08e` (`0` `app/` diff post-`1c1df08e`, `0` compiler warnings, `4/4` linters PASS), `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9067_walkthrough.md`. |
