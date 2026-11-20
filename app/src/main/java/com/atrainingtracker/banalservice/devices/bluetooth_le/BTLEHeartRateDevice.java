@@ -326,6 +326,7 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
             mPerDeviceHrvController.onDisconnect();
         }
         if (mRrIntervalSensor != null) {
+            mRrIntervalSensor.deactivateSensor();
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
             }
@@ -344,6 +345,7 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
             mPerDeviceHrvController.shutDown();
         }
         if (mRrIntervalSensor != null) {
+            mRrIntervalSensor.deactivateSensor();
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
             }

@@ -83,6 +83,13 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     }
 
     @Override
+    public void deactivateSensor() {
+        // Keep session accumulators silent on transient disconnect so bound cockpit filters
+        // retain accumulated workout totals (REQ-FIL-038.1).
+        mActivated = false;
+    }
+
+    @Override
     public synchronized N getValue() {
         if (mActivated) {
             return add(mInitialValue, mValue);

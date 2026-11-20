@@ -34,6 +34,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -402,5 +403,44 @@ class ANTHeartRateDeviceTest {
         assertNull(device.getSensor(SensorType.HRV_ARTIFACT_RATE))
         assertNull(device.getSensor(SensorType.HRV_SDNN))
         device.shutDown()
+    }
+
+    @Test
+    fun testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2() {
+        // REQ-FIL-038.2 / TST-FIL-038.2
+        val device = object : ANTHeartRateDevice(mockContext, mockSensorManager, 302L, 54321) {
+            override fun notifySensorsChanged() {}
+            fun triggerDisconnect() = unregisterSensors()
+        }
+
+        // Seed baseline + single beat to lazily register mRrIntervalSensor
+        device.parseHeartRateData(100_000L, 72, 10L, BigDecimal("1.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(100_827L, 72, 11L, BigDecimal("1.827"), DataState.LIVE_DATA)
+        val rrSensor1 = device.getSensor(SensorType.RR_INTERVAL)
+        assertNotNull(rrSensor1)
+
+        val observed1 = mutableListOf<Any?>()
+        rrSensor1!!.addSensorListener { observed1.add(it) }
+        assertEquals(827, observed1.last())
+
+        // unregisterSensors must deactivate mRrIntervalSensor & push null BEFORE removal
+        device.triggerDisconnect()
+        assertFalse("mRrIntervalSensor must be deactivated on unregisterSensors()", rrSensor1.isActivated)
+        assertNull("Listener must receive null immediately on ANT+ disconnect", observed1.last())
+        assertNull(device.getSensor(SensorType.RR_INTERVAL))
+
+        // Reconnect and verify shutDown also deactivates & pushes null
+        device.parseHeartRateData(110_000L, 74, 20L, BigDecimal("5.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(110_791L, 74, 21L, BigDecimal("5.791"), DataState.LIVE_DATA)
+        val rrSensor2 = device.getSensor(SensorType.RR_INTERVAL)
+        assertNotNull(rrSensor2)
+
+        val observed2 = mutableListOf<Any?>()
+        rrSensor2!!.addSensorListener { observed2.add(it) }
+        assertEquals(791, observed2.last())
+
+        device.shutDown()
+        assertFalse("mRrIntervalSensor must be deactivated on shutDown()", rrSensor2.isActivated)
+        assertNull("Listener must receive null immediately on ANT+ shutDown()", observed2.last())
     }
 }

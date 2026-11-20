@@ -1110,21 +1110,25 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     private fun unregisterImuCadenceSensors() {
         mCadenceSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.CADENCE)
             mCadenceSensor = null
         }
         mStridesSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.STRIDES)
             mStridesSensor = null
         }
         mVerticalOscillationSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.VERTICAL_OSCILLATION)
             mVerticalOscillationSensor = null
         }
         mGroundContactTimeSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.GROUND_CONTACT_TIME)
             mGroundContactTimeSensor = null
@@ -1217,6 +1221,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         perDeviceHrvController.onDisconnect()
         unregisterImuCadenceSensors()
         mRrIntervalSensor?.let { sensor ->
+            sensor.deactivateSensor()
             mMySensorManager?.unregisterSensor(sensor)
             removeSensor(SensorType.RR_INTERVAL)
             mRrIntervalSensor = null

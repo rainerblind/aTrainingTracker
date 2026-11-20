@@ -48,6 +48,10 @@ public class MySensor<T> {
 
     public void deactivateSensor() {
         mActivated = false;
+        mValue = null;
+        for (SensorListener sensorListener : mSensorListeners) {
+            sensorListener.newValue(null);
+        }
     }
 
     public boolean isActivated() {

@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.78  
+**Version**: 1.0.81  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 82
+**Total Requirements**: 83
 
 ---
 
@@ -3716,6 +3716,25 @@
 • *Then* `Laps.TIME_START` stores UTC `now - lapTime * 1000L` (`'yyyy-MM-dd HH:mm:ss'`) instead of SQLite `CURRENT_TIMESTAMP` end time, while `lapTime <= 0 && lapDistance <= 0.0` still rejects phantom laps.
 
 **Invariants**: UTC `'yyyy-MM-dd HH:mm:ss'` matching `FitFileWriter.parseUtcTimestamp()` (never local TZ); `REQ-TRK-002` phantom-lap rejection & pause/resume neutrality; 4-/5-arg `TrackerService.saveLap` & 5-arg `LapsDatabaseManager.saveLap` signatures preserved; `TrackerService.java <= 3,559` LoC; `WorkoutRepository.kt <= 5,117` LoC; `Laps.db` `DB_VERSION = 3` unchanged; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+### REQ-FIL-038: Sensor Disconnect Filter Reset, Accumulator Preservation & Sparkline Flat-Line Termination (`ATT-8994`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-038`
+- **System Requirement(s)**: Derived (SW-only) — Internal sensor deactivation, `ProxySensor` unbinding, and `FilterManager` disconnect teardown lifecycle fix (refining `REQ-TRK-055` and `REQ-FIL-013`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MySensor.java`, `MyAccumulatorSensor.java`, `ProxySensor.java`, `FilterManager.kt`, `ANTHeartRateDevice.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`
+- **Rationale**: Disconnected device-pinned sensors (`Magene HR ANT+`, `Polar H10 ANT+`) left `InstantaneousFilter`/`MovingAverageFilter` tiles frozen on their last reading and fed horizontal flat-line samples into `LiveSparklineBuffer` because `MySensor.deactivateSensor()` did not notify listeners with `null`, HRM dynamic sensors were removed without deactivation, and `FilterManager.rebindExistingFilters()` ignored `currentSensor == null || !isActivated` (`ATT-8994`).
+- **Description**:
+  1. *Lock-Free Deactivation, Silent Accumulator Override & `ProxySensor` Safety (`REQ-FIL-038.1`)*: `MySensor.deactivateSensor()` SHALL set `mActivated = false`, clear `mValue = null`, and notify `mSensorListeners` (`CopyOnWriteArrayList`, lock-free) with `newValue(null)`. `MyAccumulatorSensor` and `ProxySensor` SHALL override `deactivateSensor()` to set `mActivated = false` silently without notifying `null`. `ProxySensor` SHALL track `mAccumulatorBacked` (`isAccumulatorBacked()`) whenever a `MyAccumulatorSensor` binds, and `ProxySensor.setSourceSensor(null)` SHALL notify `listenersSnapshot` with `newValue(null)` strictly outside `mSourceLock` (`REQ-SEN-021.2`) when `previousSource != null && !(previousSource instanceof MyAccumulatorSensor)`.
+  2. *Dynamic Sensor Deactivation Before Removal (`REQ-FIL-038.2`)*: `ANTHeartRateDevice`, `BTLEHeartRateDevice`, and `PolarOnlineStreamingBridge` SHALL invoke `sensor.deactivateSensor()` prior to `unregisterSensor()`/`removeSensor()` for all dynamic sensors (`mRrIntervalSensor`, `mCadenceSensor`, `mStridesSensor`, `mVerticalOscillationSensor`, `mGroundContactTimeSensor`) across `unregisterSensors()`, `unregisterImuCadenceSensors()`, and `shutDown()`.
+  3. *`FilterManager` Disconnect Clearing, Accumulator/Cumulative Immunity & `createFilter()` Parity (`REQ-FIL-038.3`)*: `FilterManager` SHALL track accumulator-backed filters explicitly via `mAccumulatorFilters` (populated when binding to `MyAccumulatorSensor` or accumulator-backed `ProxySensor`, never querying `MySensorManager.mAccumulatedSensorTypeSet`). In `rebindExistingFilters()` and `createFilter()`, unwrap `ProxySensor`: for device-pinned filters (`deviceName != null`) where `currentSensor == null || !currentSensor.isActivated`, unbind (`rebindFilter(filter, boundSensor, null)`) and clear non-accumulator live filters (`InstantaneousFilter` via `newValue(null)`; `MovingAverageFilter` via `reset()`) while preserving `AverageFilter`, `MaxValueFilter`, and `mAccumulatorFilters`, and defer new device-pinned inactive filters via `mRequiredButNotAvailableFilters`; for `"Bester Sensor"` (`deviceName == null`), keep bound to retained `ProxySensor` (`REQ-TRK-055.1`) and clear live non-accumulator filters only when `effectiveSource == null || !effectiveSource.isActivated`.
+  4. *Sparkline Flat-Line Termination & Invariants (`REQ-FIL-038.4`)*: Clearing live filters to `null` (`"--"`) stops `BANALServiceRepository.updateSparklineBuffers()` from feeding frozen values into `LiveSparklineBuffer` with `0` edits to `BANALServiceRepository.kt`, `SensorFieldView.kt`, `DeviceManager.java`, `TrackerService.java`, and `DevicesDatabaseManager.java`; `Localization Parity: N/A - no new UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**: Refines `REQ-TRK-055` (`ATT-6257`), `REQ-FIL-011` (`ATT-275`), `REQ-FIL-013` (`ATT-3222`), `REQ-SEN-021` (`ATT-4096`), `ATT-7530` (`c54768d2`); preserves lock-free callbacks, retained `ProxySensor` fallback, cumulative `AverageFilter`/`MaxValueFilter` & `MyAccumulatorSensor` session totals, `ExponentialSmoothingFilter` signature parity, and `0` protected monolith edits.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* active non-accumulator & accumulator sensors, *When* `deactivateSensor()` or `ProxySensor.setSourceSensor(null)` runs, *Then* non-accumulator listeners receive `null` lock-free while `MyAccumulatorSensor` & `ProxySensor.deactivateSensor()` stay silent.
+  • *Given* `ANTHeartRateDevice`/`BTLEHeartRateDevice`/`PolarOnlineStreamingBridge` dynamic sensors, *When* disconnecting/shutting down, *Then* `deactivateSensor()` runs before `unregisterSensor()`/`removeSensor()`, clearing `RR_INTERVAL`/IMU live tiles while keeping `STRIDES`.
+  • *Given* device-pinned & `"Bester Sensor"` `InstantaneousFilter`, `TimedMovingAverageFilter`, `NumberedMovingAverageFilter`, `AverageFilter`, `MaxValueFilter`, and `STRIDES` filters, *When* sensors disconnect & repeated `SENSORS_CHANGED` fire, *Then* non-accumulator live filters clear to `null` (`"--"`) and sparkline feeding stops, cumulative/accumulator totals stay intact, `"Bester Sensor"` preserves fallback & `ProxySensor` binding, and reconnect rebinds cleanly.
 
 ---
 
@@ -3800,3 +3819,6 @@
 | `1.0.76` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Added `REQ-TRK-090` `[Planned]` (`REQ-TRK-090.1`–`.2`, linked to `SYSREQ-TRK-003`) for pause-neutral pre-mutation UTC `TIME_START` lap start persistence in `MultisportLapCoordinator`, `TrackerService.saveLap`, and `LapsDatabaseManager.saveLap` (`now - lapTime` UTC fallback, preserving 4-/5-arg APIs and `TrackerService.java <= 3,559` LoC, `N/A - no UI strings`). |
 | `1.0.77` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Promoted `REQ-TRK-090` to `[Implemented]` following Stage 4 construction (`MultisportLapCoordinator.kt`, `TrackerService.java` `3,539 / 3,559` LoC, `LapsDatabaseManager.java`, `tracker_service.md`). |
 | `1.0.78` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Promoted `REQ-TRK-090` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9294`) `103/103 PASS` across 10 targeted/contract suites on `45c3fd9c` (`Rule 7.5`, zero `app/` diff since `45c3fd9c`, `0` new compiler warnings), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9159_walkthrough.md`. |
+| `1.0.79` | 2026-11-20 | Lane B Author (`ATT-8994`, `--as agent1`) | `ATT-8994` | Added `REQ-FIL-038` (`[Planned]`, `.1`–`.4`, Derived SW-only) for lock-free `MySensor.deactivateSensor()` null notification, silent `MyAccumulatorSensor`/`ProxySensor` overrides, dynamic HRM sensor deactivation, `FilterManager` disconnect clearing with accumulator/cumulative immunity & `ProxySensor` retention, and sparkline flat-line termination (`N/A - no UI strings`). |
+| `1.0.80` | 2026-11-20 | Lane B Author (`ATT-8994`, `--as agent1`) | `ATT-8994` | Promoted `REQ-FIL-038` to `[Implemented]` following Stage 4 construction (`MySensor.java`, `MyAccumulatorSensor.java`, `ProxySensor.java`, `FilterManager.kt`, `ANTHeartRateDevice.java`, `BTLEHeartRateDevice.java`, `PolarOnlineStreamingBridge.kt`), `:app:assembleDebug`, `0` new Kotlin compiler warnings, and 100% PASS across all 16 unit/concurrency/contract suites. |
+| `1.0.81` | 2026-11-20 | Lane B Author (`ATT-8994`, `--as agent1`) | `ATT-8994` | Promoted `REQ-FIL-038` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9293`) verified `140/140 PASS` evidence across all 16 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `b34c62cc`), `4/4` Python safety linters PASS, clean-checkout `TST-FIL-038` verbatim traceability parity, and `docs/engineering/walkthroughs/ATT-8994_walkthrough.md`. |

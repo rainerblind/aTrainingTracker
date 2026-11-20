@@ -697,4 +697,36 @@ class BTLEHeartRateDeviceTest {
         h10.shutDown()
         verity.shutDown()
     }
+
+    @Test
+    fun testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2() {
+        // REQ-FIL-038.2 / TST-FIL-038.2
+        val device = createDevice() as TestBTLEHeartRateDevice
+        val packet = byteArrayOf(0x10.toByte(), 72.toByte(), 0x00.toByte(), 0x04.toByte()) // 1000 ms
+
+        device.parseHeartRateMeasurement(packet, 10_000L)
+        val rrSensor1 = device.rrIntervalSensor
+        assertNotNull(rrSensor1)
+
+        val observed1 = mutableListOf<Any?>()
+        rrSensor1!!.addSensorListener { observed1.add(it) }
+        assertEquals(1000, observed1.last())
+
+        // unregisterSensors must deactivate & push null BEFORE removal
+        device.unregisterSensors()
+        org.junit.Assert.assertFalse("mRrIntervalSensor must be deactivated on BLE unregisterSensors()", rrSensor1.isActivated)
+        assertNull("Listener must receive null immediately on BLE disconnect", observed1.last())
+
+        // Reconnect and verify shutDown also deactivates & pushes null
+        device.parseHeartRateMeasurement(packet, 20_000L)
+        val rrSensor2 = device.rrIntervalSensor
+        assertNotNull(rrSensor2)
+        val observed2 = mutableListOf<Any?>()
+        rrSensor2!!.addSensorListener { observed2.add(it) }
+        assertEquals(1000, observed2.last())
+
+        device.shutDown()
+        org.junit.Assert.assertFalse("mRrIntervalSensor must be deactivated on BLE shutDown()", rrSensor2.isActivated)
+        assertNull("Listener must receive null immediately on BLE shutDown()", observed2.last())
+    }
 }

@@ -26,11 +26,23 @@ import com.atrainingtracker.banalservice.devices.MyDevice;
 
 public class ProxySensor<T> extends MySensor<T> {
     protected volatile MySensor<T> mSourceSensor;
+    private volatile boolean mAccumulatorBacked;
     private final String TAG = "ProxySensor";
 
     public ProxySensor(MyDevice myDevice, SensorType sensorType, MySensor<T> sourceSensor) {
         super(myDevice, sensorType);
         mSourceSensor = sourceSensor;
+        mAccumulatorBacked = sourceSensor instanceof MyAccumulatorSensor;
+    }
+
+    @Override
+    public void deactivateSensor() {
+        // Preserve lock discipline and accumulator safety during MySensorManager.shutDown() (REQ-FIL-038.1).
+        mActivated = false;
+    }
+
+    public boolean isAccumulatorBacked() {
+        return mAccumulatorBacked;
     }
 
     @Override
@@ -129,17 +141,25 @@ public class ProxySensor<T> extends MySensor<T> {
                 return;
             }
             mSourceSensor = sourceSensor;
+            if (sourceSensor instanceof MyAccumulatorSensor) {
+                mAccumulatorBacked = true;
+            }
             listenersSnapshot = new java.util.ArrayList<>(mSensorListeners);
         }
 
         // Migrate all SensorListeners to the new source sensor strictly outside mSourceLock
         // to prevent lock-order inversions during initial newValue callbacks (REQ-SEN-021.2).
+        final boolean notifyDisconnectNull = sourceSensor == null
+                && previousSource != null
+                && !(previousSource instanceof MyAccumulatorSensor);
         for (SensorListener sensorListener : listenersSnapshot) {
             if (previousSource != null) {
                 previousSource.removeSensorListener(sensorListener);
             }
             if (sourceSensor != null) {
                 sourceSensor.addSensorListener(sensorListener);
+            } else if (notifyDisconnectNull) {
+                sensorListener.newValue(null);
             }
         }
     }

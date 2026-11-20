@@ -1839,4 +1839,71 @@ class PolarOnlineStreamingBridgeTest {
             bridge.shutDown()
         }
     }
+
+    @Test
+    fun testDynamicRrAndImuSensors_deactivateOnDisconnectWhileStridesPreservesTotal_TST_FIL_038_2() {
+        // REQ-FIL-038.2 / TST-FIL-038.2
+        val mac = "AA:BB:CC:DD:EE:E5"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, mac, "Polar H10 E5F60718", "Polar Electro", 90, true)
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = mac,
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.syncCadenceSensorRegistration(runActive = true)
+            bridge.processHrData(
+                PolarHrData(listOf(PolarHrData.PolarHrSample(75, 75, 0, listOf(805), listOf(805), true, true, true))),
+                packetArrivalMs = 100_000L
+            )
+
+            val rrSensor = bridge.getSensor(SensorType.RR_INTERVAL)!!
+            val cadSensor = bridge.getSensor(SensorType.CADENCE)!!
+            val voSensor = bridge.getSensor(SensorType.VERTICAL_OSCILLATION)!!
+            val gctSensor = bridge.getSensor(SensorType.GROUND_CONTACT_TIME)!!
+            val stridesSensor = bridge.getSensor(SensorType.STRIDES)!!
+
+            @Suppress("UNCHECKED_CAST")
+            (cadSensor as com.atrainingtracker.banalservice.sensor.MySensor<Double>).newValue(88.0)
+            @Suppress("UNCHECKED_CAST")
+            (voSensor as com.atrainingtracker.banalservice.sensor.MySensor<Double>).newValue(8.2)
+            @Suppress("UNCHECKED_CAST")
+            (gctSensor as com.atrainingtracker.banalservice.sensor.MySensor<Double>).newValue(245.0)
+            (stridesSensor as com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor).resetTo(15)
+
+            val rrSeen = mutableListOf<Any?>()
+            val cadSeen = mutableListOf<Any?>()
+            val voSeen = mutableListOf<Any?>()
+            val gctSeen = mutableListOf<Any?>()
+            val stridesSeen = mutableListOf<Any?>()
+
+            rrSensor.addSensorListener { rrSeen.add(it) }
+            cadSensor.addSensorListener { cadSeen.add(it) }
+            voSensor.addSensorListener { voSeen.add(it) }
+            gctSensor.addSensorListener { gctSeen.add(it) }
+            stridesSensor.addSensorListener { stridesSeen.add(it) }
+
+            bridge.shutDown()
+
+            assertFalse(rrSensor.isActivated)
+            assertFalse(cadSensor.isActivated)
+            assertFalse(voSensor.isActivated)
+            assertFalse(gctSensor.isActivated)
+            assertFalse(stridesSensor.isActivated)
+
+            assertNull("RR_INTERVAL must notify null on Polar disconnect", rrSeen.last())
+            assertNull("CADENCE must notify null on Polar disconnect", cadSeen.last())
+            assertNull("VERTICAL_OSCILLATION must notify null on Polar disconnect", voSeen.last())
+            assertNull("GROUND_CONTACT_TIME must notify null on Polar disconnect", gctSeen.last())
+            assertEquals("STRIDES accumulator must NOT push null on disconnect", 15, stridesSeen.last())
+        } finally {
+            bridge.shutDown()
+        }
+    }
 }

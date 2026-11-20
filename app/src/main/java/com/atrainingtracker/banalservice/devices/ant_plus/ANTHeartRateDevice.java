@@ -372,6 +372,7 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource, Hrv
             mPerDeviceHrvController.onDisconnect();
         }
         if (mRrIntervalSensor != null) {
+            mRrIntervalSensor.deactivateSensor();
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
             }
@@ -391,6 +392,7 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource, Hrv
             mPerDeviceHrvController.shutDown();
         }
         if (mRrIntervalSensor != null) {
+            mRrIntervalSensor.deactivateSensor();
             if (mMySensorManager != null) {
                 mMySensorManager.unregisterSensor(mRrIntervalSensor);
             }
