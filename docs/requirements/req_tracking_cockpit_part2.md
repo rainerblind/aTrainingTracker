@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.63  
+**Version**: 1.0.66  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 77
+**Total Requirements**: 78
 
 ---
 
@@ -3550,6 +3550,39 @@
 
 **Invariants**: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `MIN_DOPPLER_SPEED_MPS = 3.0` untouched; `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
 
+### REQ-FIL-035: PhoneCarriageClassifier Front-Hip Running Belt, Easy-Pace Running & Sport-Context Guardrail Calibration [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-035`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifier.kt`
+- **Rationale**: A 44-minute Pixel 10 field run (`2026-11-19_184953`, `Sport = RUN`, phone carried continuously in an elastic front-hip Salomon running belt with one slow obstacle climb at `19:12:54–19:18:04`) logged `RUN_WAIST_HIP (5)` only `0.3%` (`8 s`), `WALKING_TRANSITION (1)` `52.2%` (`1,386 s`), `RUN_HANDHELD (7)` `34.3%` (`911 s`), cycling modes `13.0%` (`BIKE_FRONT_POCKET 343 s`, `BIKE_JERSEY_BACK 3 s`), and `389` mode switches (`6.8 s` mean segment duration) due to (1) soft `runningPrior` allowing `BIKE_*` bleed without wheel/`>= 5.5 m/s` cycling evidence, (2) easy-pace runs (`1.65–2.5 m/s`) getting trapped in `walkingStepBand`/`walkingSpeedBand`, (3) rigid rear-clip penalty cliffs in `scoreRunWaistHip()`, and (4) `SCORE_MARGIN = 0.25` + `2.0 s` `RUN -> WALK` dwell (`ATT-9157`, refining `REQ-FIL-028.1`, `REQ-FIL-029`, `REQ-FIL-030`, `REQ-FIL-031`, `REQ-FIL-034`).
+- **Description**:
+  1. *Sport-Context Cycling Guardrail with Brick Override & Non-Sticky Eviction (`REQ-FIL-035.1`)*:
+     - When `suppressCyclingForRun` holds (`sportHint == SportContextHint.RUNNING && !wheelActiveMoving && (wheelSpeed == null || wheelSpeed <= 0.5) && (effectiveSpeed == null || effectiveSpeed < 5.5)`), `PhoneCarriageClassifier.evaluateRawCandidate()` SHALL exclude `BIKE_HANDLEBAR`, `BIKE_JERSEY_BACK`, and `BIKE_FRONT_POCKET` from candidate scoring and zero-IMU fallback, and map any stale `BIKE_*` `committedMode` to `committedScore = Double.NEGATIVE_INFINITY` so `SCORE_MARGIN` never retains a masked cycling mode.
+     - Once moving wheel speed (`wheelActiveMoving || wheelSpeed > 0.5`) or cycling velocity (`effectiveSpeed >= 5.5 m/s`) occurs, `suppressCyclingForRun` SHALL lift automatically to preserve triathlon/brick transition detection (`REQ-FIL-031`).
+  2. *Easy-Pace Running Walking-Gate Calibration & Front-Hip Running Belt Scoring (`REQ-FIL-035.2`)*:
+     - `AccelFootstrikeEval` SHALL expose `impactRmsMps2: Double?` (`2.1–4.2 Hz` bandpass RMS). Scoped strictly to `sportHint == SportContextHint.RUNNING && effectiveSpeed != null && effectiveSpeed >= 1.65`, `easyRunSuppressWalk` SHALL hold when `impactRmsMps2 >= 1.8`, OR step cadence `>= 2.15 Hz`, OR (`effectiveSpeed >= 1.75` and `impactRmsMps2 == null || impactRmsMps2 >= 1.2`), bypassing BOTH `walkingStepBand` and `walkingSpeedBand` while preserving `< 1.65 m/s` / low-impact obstacle climbs and all non-running dismount flows.
+     - `scoreRunWaistHip` (`swingSd < 10.0 -> +2.6`, `< 15.5 -> +1.8`, `< 22.0 -> -0.5`, else `-2.0`; `yaw <= 0.48 -> +2.2`, `<= 0.68 -> +1.4`, `<= 0.95 -> -0.4`, else `-1.5`; `baro < 0.45 -> +1.2`; `step >= 2.15 -> +0.8`; `glance == 0 -> +1.2`, `>= 1 -> -1.5`), `scoreRunBicepArm` (`swingSd >= 15.5 -> +2.6`, `>= 11.5 -> +0.8`, else `-0.8`), and `scoreRunHandheld` (`swingSd >= 15.0 -> +1.8`, `>= 11.0 -> +0.4`; `yaw >= 0.55 -> +2.6`, `>= 0.42 -> +0.8`; `baro >= 0.45 -> +1.8`; `glance >= 1 -> +2.8`, `== 0 -> -1.4`) SHALL smoothly classify front-hip running belts as `RUN_WAIST_HIP` while preserving rear-clip, bicep armband (`17°`), and handheld/wrist-glance separation.
+  3. *Chatter-Resistant Margin & Asymmetric Running Dwell Hysteresis (`REQ-FIL-035.3`)*:
+     - `PhoneCarriageClassifier.SCORE_MARGIN` SHALL be `0.85`.
+     - Dwell hysteresis SHALL be `0 ms` for verified wrist-glance `RUN_* -> RUN_HANDHELD`, `mountHysteresisMs (4_000L)` for `RUN_* -> WALKING_TRANSITION`, `maxOf(mountHysteresisMs, 6_000L)` for non-glance intra-run `RUN_* -> RUN_*`, and fast `dismountHysteresisMs (2_000L)` for `WALKING_TRANSITION -> RUN_*`, `RUN_* -> STATIONARY`, `STATIONARY <-> *`, and `BIKE_* <-> WALKING_TRANSITION`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-035` refining `REQ-FIL-028.1`, `REQ-FIL-029`, `REQ-FIL-030`, `REQ-FIL-031`, and `REQ-FIL-034` strictly inside `PhoneCarriageClassifier.kt`.
+2. *Historical Origin & Commit Trace*: `fee3e805` (`ATT-8890`), `a3a5942a` (`ATT-8895`), `410240a8` (`ATT-8891`), `a93f3230` (`ATT-8917`), `0210b827` (`ATT-9062`).
+3. *Root Reason for Existing Formulation*: `ATT-8890` calibrated rigid rear-clip thresholds and a soft `+2.5` running prior before elastic front-hip belt field validation and `ATT-8917` brick override triggers.
+4. *Preservation of Core Invariants*: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `SpeedAndLocationDevice_ATTFused.kt = 1,459 / 1,500` LoC (`0` edits); `PhoneCarriageClassifier.kt <= 1,500` LoC (`0` protected monolith edits); all `ATT-9062` (`REQ-FIL-034`) & `ATT-8890` (`REQ-FIL-028`) tests preserved; time-based windows only; `0` DB schema bumps; `0` new `src/main` test reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `sportHint == RUNNING` with `wheelSpeed <= 0.5` (or `null`) and `effectiveSpeed < 5.5 m/s`, *When* `PhoneCarriageClassifier.classify()` evaluates (including from a stale `BIKE_*` committed mode), *Then* `BIKE_*` modes are masked (`0%` output, `committedScore = -Inf`), whereas wheel speed `> 0.5 m/s` or `effectiveSpeed >= 5.5 m/s` lifts the mask for brick transitions.
+• *Given* an easy-pace front-hip running belt workout (`1.8–2.5 m/s`, `2.15–2.30 Hz` or dropped steps, `impactRms >= 1.8 m/s²`, `swingSd 10–15°`, `yaw 0.38–0.65`, `baro < 0.45`, `glance == 0`), *When* `classify()` runs, *Then* `easyRunSuppressWalk` bypasses both `walkingStepBand` and `walkingSpeedBand` and output is `RUN_WAIST_HIP (5)`, while `< 1.55 m/s` / low-impact obstacle stretches still enter `WALKING_TRANSITION (1)` and rear-clip, bicep armband (`17°`), and handheld/wrist-glance profiles retain positive winning margins.
+• *Given* transient 2–3 s canopy speed dips or 4–5 s non-glance IMU bursts during steady running, *When* `classify()` runs, *Then* `SCORE_MARGIN = 0.85` and asymmetric `4 s`/`6 s` dwell hold `RUN_WAIST_HIP (5)` with zero spurious flips, while wrist glance switches in `0 ms` and `WALK -> RUN` / `RUN -> STATIONARY` switch in `2 s`.
+
+**Invariants**: `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` untouched; `SpeedAndLocationDevice_ATTFused.kt` `0` edits (`1,459 / 1,500` LoC); `PhoneCarriageClassifier.kt <= 1,500` LoC (`0` protected monolith edits); time-based windows only; `0` DB schema bumps; `0` new `src/main` reads (`REQ-PRO-049.1`); `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3618,3 +3651,6 @@
 | `1.0.61` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Added `REQ-FIL-034` `[Planned]` (`REQ-FIL-034.1`–`.4`, linked to `SYSREQ-TRK-003`/`004`/`010`) for indoor GNSS-outage/stagnant-fix/decay-to-zero `STATIONARY` transition, cyclic-immune `detectGlanceShift()`, accuracy-gated multipath speed & `isMovingByGnss`, and cross-device/athlete `ImuCadenceDsp` footstrike portability (`N/A - no UI strings`). |
 | `1.0.62` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `REQ-FIL-034` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,062` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,459 / 1,500` LoC; `0` monolith edits; `135/135` PASS across 12 executed suites, `0` new warnings). |
 | `1.0.63` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `REQ-FIL-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9208`) `135/135` PASS evidence (`Rule 7.5`, zero `app/` diff since `4b47831a`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9062_walkthrough.md`. |
+| `1.0.64` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Added `REQ-FIL-035` `[Planned]` (`REQ-FIL-035.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`010`) for `PhoneCarriageClassifier` sport-context cycling guardrail + non-sticky eviction, easy-pace `walkingStepBand`/`walkingSpeedBand` bypass, front-hip running belt scoring tiers, and chatter-resistant `SCORE_MARGIN = 0.85` + asymmetric dwell (`0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `N/A - no UI strings`). |
+| `1.0.65` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `REQ-FIL-035` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,124 / 1,500` LoC, `SpeedAndLocationDevice_ATTFused.kt` `1,459` LoC [`0` edits], `0` monolith edits; `138/138` PASS across 12 suites, `0` new compiler warnings). |
+| `1.0.66` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `REQ-FIL-035` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9224`) `138/138` PASS evidence (`Rule 7.5`, zero `app/` diff since `9b89af95`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9157_walkthrough.md`. |

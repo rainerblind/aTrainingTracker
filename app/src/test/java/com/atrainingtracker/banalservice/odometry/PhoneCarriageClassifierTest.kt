@@ -31,7 +31,7 @@ import kotlin.math.sin
  * 9 [PhoneCarriageMode] states, transition hysteresis, glance detection, `Zum Bäcker`
  * dismount timeline, and missing-sensor fallback (REQ-FIL-028.1, TST-FIL-028.1, ATT-8890).
  */
-// Linked test specs: TST-FIL-028, TST-FIL-034
+// Linked test specs: TST-FIL-028, TST-FIL-034, TST-FIL-035
 class PhoneCarriageClassifierTest {
 
     private fun quaternionFromEulerXDeg(tiltDeg: Double): FloatArray {
@@ -549,6 +549,385 @@ class PhoneCarriageClassifierTest {
         assertTrue(
             "Steep uphill 2.0 m/s 60 RPM MTB climber must classify BIKE_* and never RUN_* (was ${uphillMtb.currentMode})",
             uphillMtb.currentMode.isCyclingMode()
+        )
+    }
+
+    // REQ-FIL-035.1 / TST-FIL-035.1: Sport = RUN cycling guardrail, stale BIKE_* non-sticky eviction & triathlon/brick override
+    @Test
+    fun testRunningSportContextGuardrail_masksCyclingEvictsStaleBikeAndAllowsBrickOverride_tstFil035_1() {
+        // 1. Sport = RUN with cycling-like front-pocket IMU, wheelSpeed <= 0.5 and speed < 5.5 -> 0% BIKE_*
+        val runner = PhoneCarriageClassifier()
+        runner.setSportContext(SportContextHint.RUNNING)
+        runner.setStepDetectorRegistered(true) // zero steps reported
+        for (t in 0L..8_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.25 * sec
+            runner.ingestRotationVector(quaternionFromEulerXDeg(58.0 + 28.0 * sin(phase)), t)
+            runner.ingestGyro(0.75 * sin(phase), 0.75, t)
+            if (t % 200L == 0L) {
+                runner.ingestBarometerAltitude(400.0 + 0.55 * sin(PI * sec), t)
+            }
+            if (t % 1000L == 0L) {
+                if (t >= 4_000L) runner.ingestWheelSpeed(0.15, t) // stationary/noise wheel speed <= 0.2 -> uses GNSS speed
+                runner.ingestGnssSpeed(3.2, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                val mode = runner.classify(t)
+                assertFalse(
+                    "Cycling mode must be masked during Sport=RUN without wheel>0.5 or speed>=5.5 at t=$t (was $mode)",
+                    mode.isCyclingMode()
+                )
+            }
+        }
+        assertTrue(
+            "Running workout with cycling-like IMU must settle in RUN_* (was ${runner.currentMode})",
+            runner.currentMode.isRunningMode()
+        )
+        // Also verify wheelSpeed = 0.4 m/s (<= 0.5) never emits any BIKE_* mode
+        runner.ingestWheelSpeed(0.4, 9_000L)
+        runner.ingestGnssSpeed(3.2, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = 9_000L)
+        assertFalse("wheelSpeed=0.4 <= 0.5 must still mask BIKE_*", runner.classify(9_000L).isCyclingMode())
+
+        // 2. Zero-IMU fallback under Sport = RUN must emit RUN_WAIST_HIP (never BIKE_HANDLEBAR)
+        val zeroImuRunner = PhoneCarriageClassifier()
+        zeroImuRunner.setSportContext(SportContextHint.RUNNING)
+        for (sec in 0L..5L) {
+            zeroImuRunner.ingestGnssSpeed(2.8, bearingDeg = 45.0, accuracyMeters = 4.0, timestampMs = sec * 1000L)
+            zeroImuRunner.classify(sec * 1000L)
+        }
+        assertEquals(PhoneCarriageMode.RUN_WAIST_HIP, zeroImuRunner.currentMode)
+
+        // 3. Stale committed BIKE_FRONT_POCKET must be non-sticky when Sport = RUN activates without cycling evidence
+        val switched = PhoneCarriageClassifier()
+        switched.setSportContext(SportContextHint.CYCLING)
+        switched.setStepDetectorRegistered(true)
+        feedWindow50Hz(
+            classifier = switched,
+            startMs = 0L,
+            durationMs = 5_000L,
+            basePitchDeg = 55.0,
+            pitchAmpDeg = 28.0,
+            oscFreqHz = 1.3,
+            yawAmpRadPerSec = 0.75,
+            baroAmpM = 0.50,
+            speedMps = 7.0,
+            wheelSpeedMps = 7.0
+        )
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, switched.currentMode)
+        switched.setSportContext(SportContextHint.RUNNING)
+        for (t in 5_020L..16_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.3 * sec
+            switched.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 16.0 * sin(phase)), t)
+            switched.ingestGyro(0.45 * sin(phase), 0.45, t)
+            if (t % 200L == 0L) {
+                switched.ingestBarometerAltitude(400.0 + 0.25 * sin(PI * sec), t)
+            }
+            if (t % 1000L == 0L) {
+                switched.ingestGnssSpeed(2.4, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                switched.classify(t)
+            }
+        }
+        assertEquals(
+            "Stale BIKE_FRONT_POCKET must not stay sticky once Sport=RUN activates without wheel/>=5.5 m/s",
+            PhoneCarriageMode.RUN_WAIST_HIP,
+            switched.currentMode
+        )
+
+        // 4. Triathlon/brick override: wheelSpeed > 0.5 OR gnssSpeed >= 5.5 lifts mask and detects BIKE_*
+        for (useWheelTrigger in listOf(true, false)) {
+            val brick = PhoneCarriageClassifier()
+            brick.setSportContext(SportContextHint.RUNNING)
+            brick.setStepDetectorRegistered(true)
+            for (t in 0L..7_000L step 20L) {
+                val sec = t / 1000.0
+                val phase = 2.0 * PI * 1.2 * sec
+                brick.ingestRotationVector(quaternionFromEulerXDeg(14.0 + 1.0 * sin(phase)), t)
+                brick.ingestGyro(0.02, 0.02, t)
+                if (t % 200L == 0L) brick.ingestBarometerAltitude(400.0, t)
+                if (t % 1000L == 0L) {
+                    if (useWheelTrigger) {
+                        brick.ingestWheelSpeed(6.0, t)
+                        brick.ingestGnssSpeed(5.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                    } else {
+                        brick.ingestGnssSpeed(6.5, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                    }
+                    brick.classify(t)
+                }
+            }
+            assertTrue(
+                "Triathlon/brick override (useWheelTrigger=$useWheelTrigger) must lift cycling mask (was ${brick.currentMode})",
+                brick.currentMode.isCyclingMode()
+            )
+        }
+    }
+
+    // REQ-FIL-035.2 / TST-FIL-035.2: Easy-pace walking-band bypass, front-hip running belt tiers, obstacle walk & 9-profile separation
+    @Test
+    fun testFrontHipRunningBeltAndEasyPace_bypassesWalkingBandsPreservesObstacleWalkAndCarrySeparation_tstFil035_2() {
+        // 1. Front-hip running belt profiles (mild, lively, bouncy, low-yaw) at easy pace 1.9–2.3 m/s:
+        //    both with 2.20 Hz in walkingStepBand and with dropped step detector + impactRms >= 1.8 m/s^2
+        data class BeltCase(
+            val label: String,
+            val pitchAmpDeg: Double,
+            val yawAmp: Double,
+            val baroAmp: Double,
+            val speedMps: Double,
+            val stepHz: Double?,
+            val impactAmp: Double
+        )
+        val beltCases = listOf(
+            BeltCase("mild_easy_step_band", 15.5, 0.56, 0.25, 1.95, 2.20, 3.2),
+            BeltCase("lively_dropped_steps", 20.0, 0.78, 0.30, 2.15, null, 3.4),
+            BeltCase("bouncy_belt", 20.5, 0.85, 0.36, 2.30, 2.55, 3.6),
+            BeltCase("low_yaw_belt", 16.5, 0.20, 0.22, 1.85, null, 3.0),
+            // Permission-denied runner with moderate impact (1.5 m/s^2 RMS) + accel footstrike cadence >= 2.15 Hz
+            BeltCase("accel_cadence_moderate_impact", 16.0, 0.50, 0.24, 1.70, null, 2.2)
+        )
+        for (c in beltCases) {
+            val clf = PhoneCarriageClassifier()
+            clf.setSportContext(SportContextHint.RUNNING)
+            clf.setStepDetectorRegistered(c.stepHz != null)
+            val stepIntervalMs = c.stepHz?.let { (1000.0 / it).toLong() } ?: Long.MAX_VALUE
+            var lastStepMs = -stepIntervalMs
+            for (t in 0L..7_000L step 20L) {
+                val sec = t / 1000.0
+                val swingPhase = 2.0 * PI * 1.3 * sec
+                val strikePhase = 2.0 * PI * (c.stepHz ?: 2.65) * sec
+                clf.ingestRotationVector(quaternionFromEulerXDeg(78.0 + c.pitchAmpDeg * sin(swingPhase)), t)
+                clf.ingestGyro(c.yawAmp * sin(swingPhase), c.yawAmp, t)
+                clf.ingestAccelerometer(0.4 * sin(strikePhase), 0.3 * cos(strikePhase), 9.81 + c.impactAmp * sin(strikePhase), t)
+                if (t % 200L == 0L) {
+                    clf.ingestBarometerAltitude(500.0 + c.baroAmp * sin(PI * sec), t)
+                }
+                if (c.stepHz != null && t - lastStepMs >= stepIntervalMs) {
+                    clf.ingestStepEvent(t)
+                    lastStepMs = t
+                }
+                if (t % 1000L == 0L) {
+                    clf.ingestGnssSpeed(c.speedMps, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                    clf.classify(t)
+                }
+            }
+            assertEquals(
+                "Front-hip running belt case '${c.label}' must classify RUN_WAIST_HIP (was ${clf.currentMode})",
+                PhoneCarriageMode.RUN_WAIST_HIP,
+                clf.currentMode
+            )
+        }
+
+        // 2. Slow obstacle climb (< 1.65 m/s, low impact) during Sport = RUN transitions to WALKING_TRANSITION
+        val obstacleRun = PhoneCarriageClassifier()
+        obstacleRun.setSportContext(SportContextHint.RUNNING)
+        obstacleRun.setStepDetectorRegistered(true)
+        var lastStepMs = -400L
+        for (t in 0L..6_000L step 20L) {
+            val sec = t / 1000.0
+            obstacleRun.ingestRotationVector(quaternionFromEulerXDeg(78.0 + 16.0 * sin(2.0 * PI * 1.3 * sec)), t)
+            obstacleRun.ingestGyro(0.45 * sin(2.0 * PI * 1.3 * sec), 0.45, t)
+            obstacleRun.ingestAccelerometer(0.3, 0.2, 9.81 + 3.4 * sin(2.0 * PI * 2.6 * sec), t)
+            if (t - lastStepMs >= 385L) { obstacleRun.ingestStepEvent(t); lastStepMs = t }
+            if (t % 1000L == 0L) {
+                obstacleRun.ingestGnssSpeed(2.2, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                obstacleRun.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.RUN_WAIST_HIP, obstacleRun.currentMode)
+
+        // Fallen-tree obstacle stretch: 1.2 m/s, 1.5 Hz steps, low impact (~0.5 m/s^2 RMS) for 6 s -> WALKING_TRANSITION
+        for (t in 6_020L..14_000L step 20L) {
+            val sec = t / 1000.0
+            obstacleRun.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 9.0 * sin(2.0 * PI * 0.85 * sec)), t)
+            obstacleRun.ingestGyro(0.20 * sin(2.0 * PI * 0.85 * sec), 0.20, t)
+            obstacleRun.ingestAccelerometer(0.2, 0.1, 9.81 + 0.5 * sin(2.0 * PI * 1.5 * sec), t)
+            if (t - lastStepMs >= 667L) { obstacleRun.ingestStepEvent(t); lastStepMs = t }
+            if (t % 1000L == 0L) {
+                obstacleRun.ingestGnssSpeed(1.2, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                obstacleRun.classify(t)
+            }
+        }
+        assertEquals(
+            "Genuine slow fallen-tree obstacle stretch must enter WALKING_TRANSITION",
+            PhoneCarriageMode.WALKING_TRANSITION,
+            obstacleRun.currentMode
+        )
+
+        // 3. Low-impact brisk walking at 1.85 m/s (impactRms < 1.2, 0 steps) must NOT be suppressed as running
+        val briskWalk = PhoneCarriageClassifier()
+        briskWalk.setSportContext(SportContextHint.RUNNING)
+        briskWalk.setStepDetectorRegistered(false)
+        for (t in 0L..6_000L step 20L) {
+            val sec = t / 1000.0
+            briskWalk.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 10.0 * sin(2.0 * PI * 0.9 * sec)), t)
+            briskWalk.ingestGyro(0.22 * sin(2.0 * PI * 0.9 * sec), 0.22, t)
+            briskWalk.ingestAccelerometer(0.1, 0.1, 9.81 + 0.5 * sin(2.0 * PI * 1.8 * sec), t)
+            if (t % 1000L == 0L) {
+                briskWalk.ingestGnssSpeed(1.85, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                briskWalk.classify(t)
+            }
+        }
+        assertEquals(
+            "Low-impact brisk walk (1.85 m/s, impactRms < 1.2) must classify WALKING_TRANSITION",
+            PhoneCarriageMode.WALKING_TRANSITION,
+            briskWalk.currentMode
+        )
+
+        // 4. Handheld without glance (high swing >= 15 deg, high yaw >= 0.55, high baro >= 0.45) still classifies RUN_HANDHELD
+        val handheldNoGlance = PhoneCarriageClassifier()
+        handheldNoGlance.setSportContext(SportContextHint.RUNNING)
+        feedWindow50Hz(
+            classifier = handheldNoGlance,
+            startMs = 0L,
+            durationMs = 5_000L,
+            basePitchDeg = 70.0,
+            pitchAmpDeg = 26.0,
+            oscFreqHz = 1.4,
+            yawAmpRadPerSec = 1.05,
+            baroAmpM = 0.65,
+            speedMps = 3.2,
+            stepFreqHz = 2.8
+        )
+        assertEquals(PhoneCarriageMode.RUN_HANDHELD, handheldNoGlance.currentMode)
+    }
+
+    // REQ-FIL-035.3 / TST-FIL-035.3: SCORE_MARGIN=0.85, 4 s RUN->WALK dwell, 6 s intra-run dwell, 0 ms wrist glance & 2 s WALK->RUN / STATIONARY
+    @Test
+    fun testChatterResistantMarginAndAsymmetricDwell_suppressesTransientDipsWhilePreservingFastGlanceAndWalkToRun_tstFil035_3() {
+        val clf = PhoneCarriageClassifier()
+        clf.setSportContext(SportContextHint.RUNNING)
+        clf.setStepDetectorRegistered(true)
+
+        // 1. Establish steady front-hip belt RUN_WAIST_HIP
+        var lastStepMs = -400L
+        for (t in 0L..6_000L step 20L) {
+            val sec = t / 1000.0
+            clf.ingestRotationVector(quaternionFromEulerXDeg(78.0 + 17.0 * sin(2.0 * PI * 1.3 * sec)), t)
+            clf.ingestGyro(0.55 * sin(2.0 * PI * 1.3 * sec), 0.55, t)
+            clf.ingestAccelerometer(0.4, 0.3, 9.81 + 3.4 * sin(2.0 * PI * 2.6 * sec), t)
+            if (t % 200L == 0L) clf.ingestBarometerAltitude(500.0 + 0.24 * sin(PI * sec), t)
+            if (t - lastStepMs >= 385L) { clf.ingestStepEvent(t); lastStepMs = t }
+            if (t % 1000L == 0L) {
+                clf.ingestGnssSpeed(2.3, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                clf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.RUN_WAIST_HIP, clf.currentMode)
+
+        // 2. Transient 2.5 s canopy GPS speed dip (1.2 m/s, < 4.0 s RUN->WALK dwell) must produce 0 switches
+        var switches = 0
+        var prev = clf.currentMode
+        for (t in 6_020L..8_500L step 20L) {
+            val sec = t / 1000.0
+            clf.ingestRotationVector(quaternionFromEulerXDeg(78.0 + 17.0 * sin(2.0 * PI * 1.3 * sec)), t)
+            clf.ingestGyro(0.55 * sin(2.0 * PI * 1.3 * sec), 0.55, t)
+            clf.ingestAccelerometer(0.2, 0.1, 9.81 + 0.6 * sin(2.0 * PI * 1.5 * sec), t)
+            if (t % 200L == 0L) clf.ingestBarometerAltitude(500.0 + 0.24 * sin(PI * sec), t)
+            if (t - lastStepMs >= 650L) { clf.ingestStepEvent(t); lastStepMs = t }
+            if (t % 500L == 0L) {
+                clf.ingestGnssSpeed(1.2, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                val m = clf.classify(t)
+                if (m != prev) { switches++; prev = m }
+            }
+        }
+        assertEquals("2.5 s canopy GPS dip must not exit RUN_WAIST_HIP (4.0 s dwell)", 0, switches)
+        assertEquals(PhoneCarriageMode.RUN_WAIST_HIP, clf.currentMode)
+
+        // 3. Transient 4.5 s non-glance bicep-like IMU burst (< 6.0 s intra-run dwell) must produce 0 switches
+        for (t in 8_520L..13_000L step 20L) {
+            val sec = t / 1000.0
+            clf.ingestRotationVector(quaternionFromEulerXDeg(75.0 + 25.0 * sin(2.0 * PI * 1.4 * sec)), t)
+            clf.ingestGyro(0.35 * sin(2.0 * PI * 1.4 * sec), 0.35, t)
+            clf.ingestAccelerometer(0.4, 0.3, 9.81 + 3.4 * sin(2.0 * PI * 2.8 * sec), t)
+            if (t % 200L == 0L) clf.ingestBarometerAltitude(500.0 + 0.18 * sin(PI * sec), t)
+            if (t - lastStepMs >= 357L) { clf.ingestStepEvent(t); lastStepMs = t }
+            if (t % 500L == 0L) {
+                clf.ingestGnssSpeed(2.6, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                val m = clf.classify(t)
+                if (m != prev) { switches++; prev = m }
+            }
+        }
+        assertEquals("4.5 s non-glance IMU burst must not chatter out of RUN_WAIST_HIP (6.0 s intra-run dwell)", 0, switches)
+        assertEquals(PhoneCarriageMode.RUN_WAIST_HIP, clf.currentMode)
+
+        // 4. Verified wrist glance switches RUN_WAIST_HIP -> RUN_HANDHELD immediately (0 ms)
+        val glanceClf = PhoneCarriageClassifier()
+        glanceClf.setSportContext(SportContextHint.RUNNING)
+        glanceClf.setStepDetectorRegistered(true)
+        var gStepMs = -400L
+        for (t in 0L..6_000L step 20L) {
+            val sec = t / 1000.0
+            glanceClf.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 16.0 * sin(2.0 * PI * 1.3 * sec)), t)
+            glanceClf.ingestGyro(0.50 * sin(2.0 * PI * 1.3 * sec), 0.50, t)
+            if (t % 200L == 0L) glanceClf.ingestBarometerAltitude(500.0 + 0.25 * sin(PI * sec), t)
+            if (t - gStepMs >= 370L) { glanceClf.ingestStepEvent(t); gStepMs = t }
+            if (t % 500L == 0L) {
+                glanceClf.ingestGnssSpeed(2.6, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                glanceClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.RUN_WAIST_HIP, glanceClf.currentMode)
+        // Pull phone out of front-hip belt and hold steady at 18 deg reading angle -> immediate 0 ms switch to RUN_HANDHELD
+        for (t in 6_020L..7_500L step 20L) {
+            val sec = t / 1000.0
+            val pitch = if (t < 6_700L) 72.0 + 24.0 * sin(2.0 * PI * 1.4 * sec) else 18.0
+            glanceClf.ingestRotationVector(quaternionFromEulerXDeg(pitch), t)
+            glanceClf.ingestGyro(1.10 * sin(2.0 * PI * 1.4 * sec), 1.10, t)
+            if (t % 200L == 0L) glanceClf.ingestBarometerAltitude(500.0 + 0.55 * sin(PI * sec), t)
+            if (t - gStepMs >= 370L) { glanceClf.ingestStepEvent(t); gStepMs = t }
+            if (t % 250L == 0L) {
+                glanceClf.ingestGnssSpeed(2.8, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                glanceClf.classify(t)
+            }
+        }
+        assertEquals(
+            "Verified wrist glance must still immediately switch to RUN_HANDHELD (0 ms)",
+            PhoneCarriageMode.RUN_HANDHELD,
+            glanceClf.currentMode
+        )
+
+        // 5. Fast asymmetric 2.0 s dismount/resume: WALKING_TRANSITION -> RUN_WAIST_HIP and RUN_WAIST_HIP -> STATIONARY
+        val fastResume = PhoneCarriageClassifier()
+        fastResume.setSportContext(SportContextHint.RUNNING)
+        fastResume.setStepDetectorRegistered(true)
+        var stepTs = -700L
+        for (t in 0L..5_000L step 20L) {
+            val sec = t / 1000.0
+            fastResume.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 8.0 * sin(2.0 * PI * 0.85 * sec)), t)
+            fastResume.ingestGyro(0.18 * sin(2.0 * PI * 0.85 * sec), 0.18, t)
+            if (t - stepTs >= 650L) { fastResume.ingestStepEvent(t); stepTs = t }
+            if (t % 500L == 0L) {
+                fastResume.ingestGnssSpeed(1.2, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                fastResume.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.WALKING_TRANSITION, fastResume.currentMode)
+        // Resume running -> must commit RUN_WAIST_HIP within 2.5 s (dismountHysteresisMs = 2.0 s, NOT 4.0/6.0 s)
+        for (t in 5_020L..7_500L step 20L) {
+            val sec = t / 1000.0
+            fastResume.ingestRotationVector(quaternionFromEulerXDeg(78.0 + 14.0 * sin(2.0 * PI * 1.3 * sec)), t)
+            fastResume.ingestGyro(0.42 * sin(2.0 * PI * 1.3 * sec), 0.42, t)
+            if (t - stepTs >= 360L) { fastResume.ingestStepEvent(t); stepTs = t }
+            if (t % 500L == 0L) {
+                fastResume.ingestGnssSpeed(2.8, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                fastResume.classify(t)
+            }
+        }
+        assertEquals(
+            "WALKING_TRANSITION -> RUN_WAIST_HIP must remain fast (2.0 s dismountHysteresisMs)",
+            PhoneCarriageMode.RUN_WAIST_HIP,
+            fastResume.currentMode
+        )
+        // Stop at traffic light -> RUN_WAIST_HIP -> STATIONARY must remain fast (2.0 s dismountHysteresisMs)
+        for (t in 7_520L..12_500L step 20L) {
+            fastResume.ingestRotationVector(quaternionFromEulerXDeg(78.0), t)
+            fastResume.ingestGyro(0.01, 0.01, t)
+            if (t % 500L == 0L) {
+                fastResume.ingestGnssSpeed(0.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                fastResume.classify(t)
+            }
+        }
+        assertEquals(
+            "RUN_WAIST_HIP -> STATIONARY must remain fast (2.0 s dismountHysteresisMs)",
+            PhoneCarriageMode.STATIONARY,
+            fastResume.currentMode
         )
     }
 }

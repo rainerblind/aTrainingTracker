@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Document ID**: `DOC-TST-TRK`  
-**Version**: 1.0.85  
+**Version**: 1.0.88  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 162
+**Total Tests**: 163
 
 ---
 
@@ -3704,6 +3704,22 @@
      • Verify (a) barometer-free `ACTIVITY_RECOGNITION`-denied runner (`stepDetectorUnavailable`, `2.8 Hz` accel footstrikes, `RMS >= 1.2 m/s²`), (b) `5.6 m/s` (`3:00 min/km`) interval runner (`3.0 Hz` footstrikes, with and without step detector), and (c) `2.0 m/s` uphill `60 RPM` MTB climber (smooth `1.0 Hz` pedaling + low-energy `3.0 Hz` harmonic `< 1.2 m/s²`, zero footstrikes) classify as `RUN_*`, `RUN_*`, and `BIKE_*` respectively while `PhoneCarriageClassifierTest:295` stays `WALKING_TRANSITION`.
      • Verify `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt = 1,459 / 1,500` LoC, `0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
 
+### TST-FIL-035: **PhoneCarriageClassifier Front-Hip Running Belt, Easy-Pace Running & Sport-Context Guardrail Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-FIL-035` (`REQ-FIL-035.1`..`REQ-FIL-035.3`)
+- **Component**: `app/src/test/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifierTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFusedTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/SmartphoneImuCadenceEstimatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/KinematicSportTypeDiscriminatorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/MultisportTransitionDetectorTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkfTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/DeadCodeEliminationContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Sport-Context Cycling Guardrail, Non-Sticky Eviction & Brick Override (`TST-FIL-035.1`, `PhoneCarriageClassifierTest`: `testRunningSportContextGuardrail_masksCyclingEvictsStaleBikeAndAllowsBrickOverride_tstFil035_1`)*:
+     • Verify `sportHint == RUNNING` with `wheelSpeed == null` (or `<= 0.5 m/s`), `effectiveSpeed < 5.5 m/s`, and cycling-like front-pocket IMU (plus zero-IMU fallback) emits `0%` `BIKE_*` modes and evicts any stale committed `BIKE_*` mode (`committedScore = Double.NEGATIVE_INFINITY`).
+     • Verify triathlon/brick override: once wheel speed `> 0.5 m/s` or `effectiveSpeed >= 5.5 m/s` arrives without footstrikes, `suppressCyclingForRun` lifts and `BIKE_*` classifies cleanly.
+  2. *Easy-Pace Running Walking-Gate Bypass, Front-Hip Belt Tiers & 9-Profile Carry-Mode Separation (`TST-FIL-035.2`, `PhoneCarriageClassifierTest`: `testFrontHipRunningBeltAndEasyPace_bypassesWalkingBandsPreservesObstacleWalkAndCarrySeparation_tstFil035_2`; `SpeedAndLocationDevice_ATTFusedTest`: `testHandheldGlanceGatingAndRunningChordHeading_tstFil028_3`)*:
+     • Replay easy-pace front-hip running belt (`1.7–2.3 m/s`, `2.20 Hz` in `walkingStepBand`, dropped step detector with `impactRms >= 1.8 m/s²`, and permission-denied moderate-impact accel cadence `>= 2.15 Hz`) asserting both `walkingStepBand` and `walkingSpeedBand` are bypassed and output is `RUN_WAIST_HIP (5)` across mild/lively/bouncy/low-yaw belt profiles.
+     • Verify slow obstacle climbs (`1.2 m/s`, `1.5 Hz`, `impactRms < 1.2 m/s²`, `>= 4.0 s`) and low-impact brisk walks (`1.85 m/s`, `impactRms < 1.2 m/s²`) still enter `WALKING_TRANSITION (1)`, and verify separation of rear clip, bicep armband (`17.0°`), handheld with glance, handheld without glance, and `SpeedAndLocationDevice_ATTFusedTest:testHandheldGlanceGatingAndRunningChordHeading_tstFil028_3`.
+  3. *Chatter-Resistant Margin, Asymmetric Dwell & Regression/Contract Suite (`TST-FIL-035.3`, `PhoneCarriageClassifierTest`: `testChatterResistantMarginAndAsymmetricDwell_suppressesTransientDipsWhilePreservingFastGlanceAndWalkToRun_tstFil035_3`; `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest`, Contracts)*:
+     • Verify steady front-hip belt running with transient 2.5 s canopy speed dips and 4.5 s non-glance IMU bursts holds `RUN_WAIST_HIP (5)` (`0` spurious switches via `SCORE_MARGIN = 0.85`, `4.0 s` `RUN -> WALK` dwell, `6.0 s` intra-run non-glance dwell), while verified wrist glance switches in `0 ms` and `WALK -> RUN` / `RUN -> STATIONARY` switch in `2.0 s` (preserving `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` Phase 2 `5.0 s` walk→run).
+     • Verify `ATT-9062` (`TST-FIL-034`) & `ATT-8890` (`TST-FIL-028`) regression, `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt = 1,459 / 1,500`, `PhoneCarriageClassifier.kt = 1,124 / 1,500`, `0` protected monolith edits), `DeadCodeEliminationContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`, and `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -3786,3 +3802,6 @@
 | `1.0.83` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Added `TST-FIL-034` `[Planned]` (`TST-FIL-034.1`–`.4`, strictly symmetric `REQ-FIL-034`) covering indoor GNSS-outage/stagnant-fix/decay-to-zero `STATIONARY`, cyclic-immune `detectGlanceShift()` & front-pocket cycling, accuracy-gated multipath speed & `isMovingByGnss`, and cross-device/athlete portability (`N/A - no UI strings`). |
 | `1.0.84` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `TST-FIL-034` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`135/135` PASS across 12 suites, `0` fail, `0` err, `0` skip, `0` new warnings). |
 | `1.0.85` | 2026-11-20 | AI Agent (`ATT-9062`, `--as agent1`) | `ATT-9062` | Promoted `TST-FIL-034` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9208`) `135/135` PASS evidence (`Rule 7.5`, zero `app/` diff since `4b47831a`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9062_walkthrough.md`. |
+| `1.0.86` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Added `TST-FIL-035` `[Planned]` (`TST-FIL-035.1`–`.3`, strictly symmetric `REQ-FIL-035`) covering sport-context cycling guardrail + non-sticky eviction + brick override, easy-pace `walkingStepBand`/`walkingSpeedBand` bypass + front-hip belt 9-profile separation, and `SCORE_MARGIN = 0.85` + asymmetric dwell (`N/A - no UI strings`). |
+| `1.0.87` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `TST-FIL-035` to `[Implemented]` following Stage 4 incremental `--rerun` verification (`138/138` PASS across 12 suites, `0` fail, `0` err, `0` skip, `0` new warnings; `4` static `TST-FIL-035` tags indexed). |
+| `1.0.88` | 2026-11-20 | AI Agent (`ATT-9157`, `--as agent1`) | `ATT-9157` | Promoted `TST-FIL-035` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9224`) `138/138` PASS evidence (`Rule 7.5`, zero `app/` diff since `9b89af95`), clean-checkout `verify_requirement_governance.py --check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9157_walkthrough.md`. |
