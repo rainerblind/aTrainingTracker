@@ -194,4 +194,35 @@ class ExportStatusDataProviderTest {
         assertNotNull("Succeeded line must not be null when jobs succeed", groupData.succeededLine)
         assertEquals(2, groupData.details.size)
     }
+
+    @Test
+    fun testCreateGroupDataFromRows_preloadedRows_matchesCreateGroupDataWithoutDbCall_TST_DAT_041_1() {
+        val fileBaseName = "2026-11-21-06-00-00"
+        val rows = listOf(
+            ExportStatusDatabaseManager.ExportRow(
+                ExportType.FILE,
+                FileFormat.FIT,
+                ExportStatus.FINISHED_SUCCESS,
+                "OK"
+            ),
+            ExportStatusDatabaseManager.ExportRow(
+                ExportType.COMMUNITY,
+                FileFormat.STRAVA,
+                ExportStatus.WAITING,
+                null
+            )
+        )
+        every { mockDbManager.getExportRows(fileBaseName) } returns rows
+
+        val expected = provider.createGroupData(fileBaseName, ExportType.FILE)
+        val actual = provider.createGroupDataFromRows(ExportType.FILE, rows)
+        val actualFromEntries = provider.createGroupDataFromEntries(
+            ExportType.FILE,
+            rows.map { ExportStatusEntry(it.type, it.format, it.status, it.answer) }
+        )
+
+        assertEquals(expected, actual)
+        assertEquals(expected, actualFromEntries)
+        verify(exactly = 1) { mockDbManager.getExportRows(fileBaseName) }
+    }
 }

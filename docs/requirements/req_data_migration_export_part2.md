@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.7  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 4
+**Total Requirements**: 5
 
 ---
 
@@ -140,6 +140,39 @@
 
 ---
 
+### REQ-DAT-045: Unified `BatchMetadataLoader`, Chunked Export-Status & Strava Batch Queries, and Lossless `fromCursor` Delegation (`ATT-6038`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-041`
+- **System Requirement(s)**: Derived (SW-only) — Internal SQLite batch metadata & export-status query optimization and cursor-mapper consolidation without external sensor, REST API, or backup schema changes (refining `REQ-DAT-033` and `REQ-DAT-029.6`)
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `BatchMetadataLoader.kt`, `ExportStatusDatabaseManager.java`, `ExportStatusRepository.kt`, `ExportStatusDataProvider.kt`, `StravaUploadDbHelper.java`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `PeriodsRepository.kt`, `WorkoutClusterRepository.kt`
+- **Rationale**: `WorkoutRepository.loadAllWorkouts` triggers `~15–16` SQLite queries per workout (`~750–800` per 50-workout batch): `4x` repeated `healStaleProcessingRows` + `SELECT` via `ExportStatusDataProvider.createGroupData` (`8` queries/workout), plus `fromSnapshot` fallbacks on empty `sportTypes`, `equipmentNames`, `locationNames` (full-table geofence scans), and `athleteMetrics`. Meanwhile `StravaUploadDbHelper.getStravaActivityDataForWorkouts` lacks `<= 999` SQLite bind-arg chunking, `ExportStatusDatabaseManager` retains two dead `getExportStatusMap` overloads, and `WorkoutDataMapper.fromCursor` duplicates `readCursorSnapshot` + `fromSnapshot`.
+- **Description**:
+  1. *Chunked Batch Export-Status Queries & Dead Overload Removal (`REQ-DAT-045.1`)*:
+     - `ExportStatusDatabaseManager` SHALL expose `getExportRowsForWorkouts(Collection<String> fileBaseNames): Map<String, List<ExportRow>>`, executing `healStaleProcessingRows()` at most **once** per batch call and querying `ExportStatusDbHelper.TABLE` via `WHERE file_base_name IN (...)` with SQLite bind-argument chunks `<= 500` (`<= 999` ceiling) and `try (Cursor ...)` safety (`REQ-DAT-043`).
+     - `ExportStatusRepository` SHALL encapsulate `getExportRowsForWorkouts` and `healStaleProcessingRows()` without exposing `*DatabaseManager` or `Cursor` getters (`Rule 8.7`). `ExportStatusDataProvider` SHALL provide a preloaded-rows `createGroupData` path used by `WorkoutRepository.loadAllWorkouts` so `4` export types evaluate in memory with zero per-workout export queries.
+     - Both dead `ExportStatusDatabaseManager.getExportStatusMap` overloads (`0` callers) SHALL be removed.
+  2. *Chunked Strava Batch Query Parity (`REQ-DAT-045.2`)*:
+     - `StravaUploadDbHelper.getStravaActivityDataForWorkouts(Collection<String> fileNames)` SHALL chunk `WHERE file_base_name IN (...)` bind arguments at `<= 500` (`<= 999` SQLite limit) while returning identical `Map<String, String>` results.
+  3. *Shared `BatchMetadataLoader` in `repositories/` (`REQ-DAT-045.3`)*:
+     - `BatchMetadataLoader` SHALL reside in `com.atrainingtracker.trainingtracker.repositories` (preventing net-new `ui/*` DB bindings per `ArchitectureConformanceContractTest` and keeping `WorkoutRepository.kt <= 5,117` LoC) and populate all `WorkoutDataMapper.BatchMetadata` fields (`extrema`, `stravaData`, `clusterNames`, `laps`, `sportTypes`, `equipmentNames`, `locationNames`, `cardioPowerDynamics`, and `athleteMetrics`).
+     - Batch `athleteMetrics` resolution SHALL load `FTP_WATTS` and `WEIGHT_KG` history once per batch (`AthleteMetricsDatabaseManager.getEntriesByType`) and resolve each workout's effective values identically to `SettingsDataStoreJavaHelper.resolveEffectiveFtpAt` / `resolveEffectiveWeightKgAt` (`timestamp_ms <= startTimeMs`, fallback to latest entry, fallback to `SettingsDataStore`).
+     - `WorkoutRepository.loadAllWorkouts`, `PeriodsRepository` (`getWorkoutsForRange`, `performHierarchicalMigration`), and `WorkoutClusterRepository` (`loadWorkoutsWithBatchMetadata`) SHALL delegate metadata loading to `BatchMetadataLoader`.
+  4. *Lossless `fromCursor` -> `fromSnapshot` Delegation (`REQ-DAT-045.4`)*:
+     - `WorkoutDataMapper.fromCursor(Cursor)` SHALL delegate to `readCursorSnapshot(cursor)` + `fromSnapshot(snapshot, singleWorkoutBatch, reconcile = true)` via `BatchMetadataLoader.loadForSingleWorkout(snapshot)` (populating the 5 non-fallback/batch maps `extrema`, `stravaData`, `clusterNames`, `laps`, `cardioPowerDynamics` with `hasCardioPowerDynamics = true` and delegating `sportTypes`, `equipmentNames`, `locationNames`, and `athleteMetrics` to `fromSnapshot`'s indexed single-item resolvers), preserving `REQ-DAT-009` / `REQ-MAP-020` self-healing and `ATT-6170` scope boundaries (`loadWorkout` export-status preservation stays out-of-scope).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `N` workouts (including `N > 999`, e.g. `1,200`) passed to `ExportStatusDatabaseManager.getExportRowsForWorkouts` or `StravaUploadDbHelper.getStravaActivityDataForWorkouts`, *When* queried, *Then* bind arguments execute in `<= 500`-item chunks without `SQLiteException`, `healStaleProcessingRows()` executes at most once, and returned maps match single-item queries.
+• *Given* `WorkoutRepository.loadAllWorkouts` loading a 50-workout batch, *When* executed, *Then* `BatchMetadataLoader` and `getExportRowsForWorkouts` populate all `BatchMetadata` fields (incl. `athleteMetrics`) and `exportStatuses` with `O(1)` batch queries (`<= 12` total auxiliary queries per 50-workout batch instead of `~750`) and `0` per-workout `fromSnapshot` DB fallbacks.
+• *Given* `PeriodsRepository` and `WorkoutClusterRepository` batch workout loads, *When* executed, *Then* both delegate to `BatchMetadataLoader` with all `BatchMetadata` fields populated identically to single-item mapping.
+• *Given* a `WorkoutDataMapper.fromCursor(Cursor)` call, *When* mapped, *Then* it delegates to `fromSnapshot(..., reconcile = true)` with a complete single-workout `BatchMetadata`, producing identical `WorkoutData` fields (`WorkoutDataMappingSymmetryTest`) and preserving `ATT-6170` `loadWorkout` boundaries.
+
+**Invariants**: SQLite `IN (...)` bind-arg chunks strictly `<= 500` (`<= 999`); `try (Cursor ...)` safety (`tools/lint_cursor_safety.py`); zero `*DatabaseManager`/`Cursor` getters exposed by repositories (`Rule 8.7`); `WorkoutRepository.kt <= 5,117` LoC & `0` net-new `ui/*` DB callers (`ArchitectureConformanceContractTest`); `reconcile = true` preserved on `fromCursor`, `reconcile = false` preserved on batch loads; `Localization Parity: N/A - no new or modified UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -152,3 +185,8 @@
 | `1.0.5` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Added `[Planned]` `REQ-MIG-055` (`SYSREQ-DEX-004`) for thread-/DST-safe `java.time` parsing in GPX/TCX parsers, dead `LegacyImportEngine.tcxTimeFormat` removal, and `BaseExporter` `< 0` index-0 fix (`ExportStatusDatabaseManager.getDatabase()` preserved). |
 | `1.0.6` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `REQ-MIG-055` to `[Implemented]` following Stage 4 implementation (`WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `TcxWorkoutParser.kt`, `LegacyImportEngine.kt`, `BaseExporter.java`). |
 | `1.0.7` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `REQ-MIG-055` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9420`) `89/89` PASS across 20 suites + `4/4` linters PASS @ `529a9ee8`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6045_walkthrough.md`. |
+| `1.0.8` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Added `[Planned]` `REQ-DAT-045` for `BatchMetadataLoader` (`repositories/`), `<= 500`-chunked `getExportRowsForWorkouts` & `StravaUploadDbHelper`, dead `getExportStatusMap` removal, and lossless `fromCursor` -> `fromSnapshot` delegation. |
+| `1.0.9` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Implemented]` (`BatchMetadataLoader.kt`, `ExportStatusDatabaseManager.java`, `ExportStatusRepository.kt`, `ExportStatusDataProvider.kt`, `StravaUploadDbHelper.java`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `PeriodsRepository.kt`, `WorkoutClusterRepository.kt`). |
+| `1.0.10` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9452`) `99/99` PASS across 18 suites @ `df4b48ee`. |
+| `1.0.11` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Stage 6 Bounce 1 remediation: aligned `REQ-DAT-045.3`/`.4` with `PeriodsRepository.performHierarchicalMigration` & `BatchMetadataLoader.loadForSingleWorkout`, set `[Implemented]` for Gate 4 Bounce 1 re-verification. |
+| `1.0.12` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 Bounce 1 reusing Gate 4 (`ATT-9463`) `33/33` PASS (`0` warnings) @ `34ef13d5` + `99/99` PASS @ `df4b48ee`. |

@@ -18,6 +18,20 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.export
 
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus
+import com.atrainingtracker.trainingtracker.exporter.ExportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
+
+/**
+ * Repository-encapsulated domain DTO representing a single export status row (`ATT-6038` / `Rule 8.7`).
+ */
+data class ExportStatusEntry(
+    val type: ExportType,
+    val format: FileFormat,
+    val status: ExportStatus,
+    val answer: String?
+)
+
 /**
  * Represents the detailed status for a single file format within an export group.
  */

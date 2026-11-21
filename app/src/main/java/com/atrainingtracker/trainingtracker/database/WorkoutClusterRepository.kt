@@ -94,13 +94,22 @@ class WorkoutClusterRepository internal constructor(
     private val isRecalculatingLock = AtomicBoolean(false)
     private val lightweightLoadMutex = Mutex()
     
+    private val batchMetadataLoader by lazy {
+        com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoader(
+            context = context,
+            summariesManagerProvider = { summariesManager },
+            clusterDbProvider = { clusterDb }
+        )
+    }
+
     private val mapper by lazy {
         WorkoutDataMapper(
             context,
             summariesManager,
             SportTypeDatabaseManager.getInstance(context),
             EquipmentDbHelper.getInstance(context),
-            StravaUploadDbHelper.getInstance(context)
+            StravaUploadDbHelper.getInstance(context),
+            batchMetadataLoader = batchMetadataLoader
         )
     }
 
@@ -714,26 +723,21 @@ class WorkoutClusterRepository internal constructor(
             null, selection, args, null, null, 
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
         ).use { cursor ->
-            // 1. Gather IDs, FileNames, and Cluster IDs for the batch using index-cached mapper
-            val batchKeys = fromCursorBatchKeys(cursor)
-            if (batchKeys.idList.isEmpty()) return@withContext emptyList<WorkoutData>()
+            if (!cursor.moveToFirst()) return@withContext emptyList<WorkoutData>()
 
-            // 2. Perform Batch Metadata Lookups (ATT-359/388)
-            val extremaList = summariesManager.getExtremaForWorkouts(batchKeys.idList)
-            val stravaDataMap = StravaUploadDbHelper.getInstance(context).getStravaActivityDataForWorkouts(batchKeys.fileNameList)
-            val clusterNamesMap = clusterDb.getClusterNamesForIds(batchKeys.clusterIdList)
-            
-            val batchMetadata = WorkoutDataMapper.BatchMetadata(
-                extrema = extremaList.groupBy { it.workoutId },
-                stravaData = stravaDataMap,
-                clusterNames = clusterNamesMap
-            )
-
-            // 3. Map everything using pre-fetched data
-            cursor.moveToFirst()
+            // 1. Gather raw snapshots in a single forward pass (ATT-6038)
+            val snapshots = mutableListOf<WorkoutDataMapper.RawCursorSnapshot>()
             do {
-                workouts.add(mapper.fromCursor(cursor, batchMetadata))
+                snapshots.add(mapper.readCursorSnapshot(cursor))
             } while (cursor.moveToNext())
+
+            // 2. Perform complete Batch Metadata lookup via shared BatchMetadataLoader
+            val batchMetadata = batchMetadataLoader.loadForSnapshots(snapshots)
+
+            // 3. Map everything using pre-fetched metadata without N+1 queries
+            for (snapshot in snapshots) {
+                workouts.add(mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false))
+            }
         }
         workouts
     }

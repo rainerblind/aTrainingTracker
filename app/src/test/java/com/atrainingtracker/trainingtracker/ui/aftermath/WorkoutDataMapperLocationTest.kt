@@ -179,8 +179,10 @@ class WorkoutDataMapperLocationTest {
         val workoutId = 100L
         val cursor = createMockCursor(workoutId)
 
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns startPos
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns endPos
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.START, 0.0, startPos),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.END, 0.0, endPos)
+        )
 
         val startLoc = KnownLocationsDatabaseManager.MyLocation(1L, startPos.latitude, startPos.longitude, "Zuhause", 520.0, 200, 1)
         val endLoc = KnownLocationsDatabaseManager.MyLocation(2L, endPos.latitude, endPos.longitude, "Büro", 515.0, 200, 1)
@@ -203,8 +205,10 @@ class WorkoutDataMapperLocationTest {
         val workoutId = 101L
         val cursor = createMockCursor(workoutId)
 
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns startPos
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns startPos
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.START, 0.0, startPos),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.END, 0.0, startPos)
+        )
 
         val startLoc = KnownLocationsDatabaseManager.MyLocation(1L, startPos.latitude, startPos.longitude, "Zuhause", 520.0, 200, 1)
 
@@ -225,8 +229,10 @@ class WorkoutDataMapperLocationTest {
         val cursor = createMockCursor(workoutId)
 
         val outsidePos = LatLng(49.000, 12.000)
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns startPos
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns outsidePos
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.START, 0.0, startPos),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.END, 0.0, outsidePos)
+        )
 
         val startLoc = KnownLocationsDatabaseManager.MyLocation(1L, startPos.latitude, startPos.longitude, "Zuhause", 520.0, 200, 1)
 
@@ -246,8 +252,7 @@ class WorkoutDataMapperLocationTest {
         val workoutId = 103L
         val cursor = createMockCursor(workoutId)
 
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns null
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns null
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(workoutId)) } returns emptyList()
 
         val workoutData = mapper.fromCursor(cursor)
 
@@ -262,8 +267,10 @@ class WorkoutDataMapperLocationTest {
         val workoutId = 104L
         val cursor = createMockCursor(workoutId)
 
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns startPos
-        every { mockSummariesDb.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns endPos
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.START, 0.0, startPos),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.LATITUDE, ExtremaType.END, 0.0, endPos)
+        )
 
         val nullDbMapper = WorkoutDataMapper(
             context = mockContext,

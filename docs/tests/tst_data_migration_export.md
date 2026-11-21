@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.8  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 124
+**Total Tests**: 125
 
 ---
 
@@ -2303,10 +2303,42 @@
 
 ---
 
+### TST-DAT-041: **BatchMetadataLoader, Chunked Export-Status & Strava Batch Queries, and Lossless `fromCursor` Delegation Verification Suite (`ATT-6038`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-045` (`REQ-DAT-045.1`..`REQ-DAT-045.4`)
+- **Component**: `BatchMetadataLoader.kt`, `ExportStatusDatabaseManager.java`, `ExportStatusRepository.kt`, `ExportStatusDataProvider.kt`, `StravaUploadDbHelper.java`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `PeriodsRepository.kt`, `WorkoutClusterRepository.kt`
+- **Jira**: `ATT-6038`
+- **Test Type**: Unit / Integration
+- **Verification Method**: Unit
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/db/ExportStatusBatchQueryTest.kt`: `testGetExportRowsForWorkouts_chunksOver999BindArgsAndHealsOnce_TST_DAT_041_1`, `testStravaUploadDbHelper_getStravaActivityDataForWorkouts_chunksOver999BindArgs_TST_DAT_041_2` (`TST-DAT-041.1`, `TST-DAT-041.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProviderTest.kt`: `testCreateGroupDataFromRows_preloadedRows_matchesCreateGroupDataWithoutDbCall_TST_DAT_041_1` (`TST-DAT-041.1`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/repositories/BatchMetadataLoaderTest.kt`: `testLoadForSnapshots_populatesAllNineBatchMetadataMapsAndAthleteMetricsParity_TST_DAT_041_3`, `testLoadForSnapshots_emptyList_returnsEmptyBatchWithoutQueryingDbs_TST_DAT_041_3`, `testLoadForSingleWorkout_populatesSingleWorkoutBatchMapsAndSetsCardioFlag_TST_DAT_041_3` (`TST-DAT-041.3`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepositoryBatchLoadTest.kt`: `testLoadAllWorkouts_50WorkoutChunk_executesBoundedBatchQueriesAndZeroPerWorkoutFallbacks_TST_DAT_041_4` (`TST-DAT-041.4`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMappingSymmetryTest.kt`: `testFromCursor_delegatesToFromSnapshotWithReconcileAndFullBatchMetadata_TST_DAT_041_5` (`TST-DAT-041.5`)
+- **Test Description**:
+  1. *Chunked Batch Export-Status & Dead Overload Removal (`TST-DAT-041.1` — `ExportStatusBatchQueryTest.kt`, `ExportStatusDataProviderTest.kt`)*:
+     - Seed `> 999` (`1,200`) workout export rows in real SQLite and invoke `getExportRowsForWorkouts(fileBaseNames)`. Verify `<= 500` bind-arg chunking executes without `SQLiteException`, `healStaleProcessingRows()` executes at most **once** per batch call (`healStaleProcessingRows(null)` once, non-null `0`), returned rows match `getExportRows(fileBaseName)`, and preloaded `ExportStatusDataProvider.createGroupDataFromRows` / `createGroupDataFromEntries` yield identical `ExportStatusGroupData` with `0` extra DB calls; verify `getExportStatusMap` overloads are absent via reflection.
+  2. *Chunked Strava Batch Query Parity (`TST-DAT-041.2` — `ExportStatusBatchQueryTest.kt`)*:
+     - Seed `> 999` (`1,200`) Strava upload entries in real SQLite; invoke `StravaUploadDbHelper.getStravaActivityDataForWorkouts(fileNames)` and verify `<= 500` chunked queries return identical `Map<String, String>` values without `SQLiteException`.
+  3. *`BatchMetadataLoader` Empty-List, Single-Workout & Full Metadata Parity (`TST-DAT-041.3` — `BatchMetadataLoaderTest.kt`)*:
+     - Verify `BatchMetadataLoader` (in `repositories/`) populates all 9 `BatchMetadata` fields (`extrema`, `stravaData`, `clusterNames`, `laps`, `sportTypes`, `equipmentNames`, `locationNames`, `cardioPowerDynamics`, and `athleteMetrics`), verify `athleteMetrics` resolution matches `SettingsDataStoreJavaHelper.resolveEffectiveFtpAt` / `resolveEffectiveWeightKgAt` across historical entries (`timestamp_ms <= startTimeMs`), pre-history fallback (`getLatestEntry`), and `SettingsDataStore` defaults, and verify `loadForSnapshots(emptyList())` (zero DB queries) and `loadForSingleWorkout(snapshot)` (`5` single-workout maps + `hasCardioPowerDynamics = true`).
+  4. *`loadAllWorkouts` Bounded Query Count & Repository Integration (`TST-DAT-041.4` — `WorkoutRepositoryBatchLoadTest.kt`)*:
+     - Load a 50-workout page via `WorkoutRepository.loadAllWorkouts` (and verify `PeriodsRepository` / `WorkoutClusterRepository` batch loads); assert total auxiliary DB/loader calls stay `O(1)` per batch (`<= 12` vs `~750` N+1) with `0` per-workout `getExportRows` / `fromSnapshot` DB fallbacks and preserved `exportStatuses` + `WorkoutData` values.
+  5. *Lossless `fromCursor` Delegation & Architecture Compliance (`TST-DAT-041.5` — `WorkoutDataMappingSymmetryTest.kt`, `ArchitectureConformanceContractTest`)*:
+     - Verify `WorkoutDataMapper.fromCursor(Cursor)` delegates to `fromSnapshot(..., reconcile = true)` via `loadForSingleWorkout` (preserving `extrema`, `stravaData`, `clusterNames`, `laps`, `cardioPowerDynamics`, single-item `sportTypes`/`equipmentNames`/`locationNames`/`athleteMetrics`, and `reconcileAltitudeExtrema`/`resolveAuthoritativeApex` self-healing) and yields identical `WorkoutData` without breaking `ATT-6170` `loadWorkout` boundaries; verify `ArchitectureConformanceContractTest` (`0` net-new `ui/*` DB callers, `WorkoutRepository.kt <= 5,117` LoC) and `python3 tools/lint_cursor_safety.py` exit `0`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.9` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Added `[Planned]` `TST-DAT-041` (`TST-DAT-041.1`..`TST-DAT-041.5`) for `REQ-DAT-045` (`BatchMetadataLoader`, `<= 500`-chunked export/Strava queries, query-count contract, `fromCursor` delegation parity, and `ArchitectureConformanceContractTest`). |
+| `1.0.10` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `TST-DAT-041` to `[Implemented]` with unit tests (`ExportStatusBatchQueryTest.kt`, `ExportStatusDataProviderTest.kt`, `BatchMetadataLoaderTest.kt`, `WorkoutRepositoryBatchLoadTest.kt`, `WorkoutDataMappingSymmetryTest.kt`). |
+| `1.0.11` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `TST-DAT-041` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9452`) `99/99` PASS across 18 suites @ `df4b48ee`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6038_walkthrough.md`. |
+| `1.0.12` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Stage 6 Bounce 1 remediation: aligned `TST-DAT-041` descriptions with `ExportStatusBatchQueryTest.kt`, `createGroupDataFromRows`/`createGroupDataFromEntries`, and added `BatchMetadataLoaderTest` empty-list/single-workout cases (`[Implemented]` for Gate 4 Bounce 1). |
+| `1.0.13` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `TST-DAT-041` to `[Verified]` in Rule 7.5 doc-only Stage 5 Bounce 1 reusing Gate 4 (`ATT-9463`) `33/33` PASS (`0` warnings) @ `34ef13d5` + `99/99` PASS @ `df4b48ee`. |
 | `1.0.8` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `TST-MIG-055` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9420`) `89/89` PASS across 20 suites + `4/4` linters PASS @ `529a9ee8`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6045_walkthrough.md`. |
 | `1.0.7` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `TST-MIG-055` to `[Implemented]` following Stage 4 implementation and test additions (`WorkoutTimestampParserTest.kt`, `GpxWorkoutParserTest.kt`, `TcxWorkoutParserTest.kt`, `BaseExporterTest.kt`). |
 | `1.0.6` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Added `[Planned]` `TST-MIG-055` verification suite (`TST-MIG-055.1`..`TST-MIG-055.3`) for `REQ-MIG-055` (multi-threaded GPX/TCX `java.time` parsing, DST/offset/fractional-second edge cases, and `BaseExporter` index-0 reads). |
