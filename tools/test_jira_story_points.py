@@ -440,5 +440,102 @@ class TestRiskTiers(unittest.TestCase):
         self.assertIn("strictly restricted to 'tier-c'", stderr_capture.getvalue())
 
 
+class TestSecondVendorStage6(unittest.TestCase):
+    """Verifies ATT-9546: Claude Tier A second-vendor enforcement, Gemini quota fallback tracking, and 5-bounce cap."""
+
+    def setUp(self):
+        self.mock_config = {"JIRA_URL": "https://example.atlassian.net"}
+        self.valid_report = (
+            "* *Pros (Was ist gut/gelungen?)*:\n  - Clean fix and tests.\n"
+            "* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n  - None.\n"
+            "* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n  - JA — Freigabe empfohlen."
+        )
+
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    def test_tier_a_requires_anthropic_or_explicit_gemini_quota_fallback_and_rejects_gpt(
+        self, mock_req, mock_comment, mock_trans, mock_assign
+    ):
+        mock_req.return_value = {
+            "fields": {
+                "issuetype": {"subtask": False},
+                "status": {"name": "Final Review (Agent)"},
+                "labels": ["tier-a"],
+                "comment": {"comments": []},
+                "subtasks": [],
+            }
+        }
+        # 1. Missing vendor rejected on tier-a
+        with self.assertRaises(SystemExit) as cm1:
+            jira_util.final_review_verdict("ATT-9600", "PASS", self.valid_report, config=self.mock_config)
+        self.assertEqual(cm1.exception.code, 1)
+
+        # 2. GPT/openai vendor rejected
+        with self.assertRaises(SystemExit) as cm2:
+            jira_util.final_review_verdict(
+                "ATT-9600", "PASS", self.valid_report, config=self.mock_config, vendor="openai", model="gpt-oss-120b"
+            )
+        self.assertEqual(cm2.exception.code, 1)
+
+        # 3. Same-vendor google without explicit fallback flag rejected
+        with self.assertRaises(SystemExit) as cm3:
+            jira_util.final_review_verdict(
+                "ATT-9600", "PASS", self.valid_report, config=self.mock_config, vendor="google", model="gemini-4-neon-high"
+            )
+        self.assertEqual(cm3.exception.code, 1)
+
+        # 4. Independent Anthropic Claude PASS accepted with provenance
+        res = jira_util.final_review_verdict(
+            "ATT-9600", "PASS", self.valid_report, config=self.mock_config,
+            vendor="anthropic", model="claude-sonnet-5-5-high",
+        )
+        self.assertEqual(res, "PASS")
+        self.assertIn(
+            "[STAGE6-PROVENANCE vendor=anthropic model=claude-sonnet-5-5-high author_vendor=google independent=true fallback=none]",
+            mock_comment.call_args[0][1],
+        )
+
+        # 5. Gemini fallback when Claude weekly quota exhausted accepted and explicitly logged
+        mock_comment.reset_mock()
+        res_fb = jira_util.final_review_verdict(
+            "ATT-9600", "PASS", self.valid_report, config=self.mock_config,
+            vendor="google", model="gemini-4-neon-high",
+            allow_same_vendor_fallback=True, fallback_reason="claude_quota_exhausted",
+        )
+        self.assertEqual(res_fb, "PASS")
+        self.assertIn(
+            "vendor=google model=gemini-4-neon-high author_vendor=google independent=false fallback=claude_quota_exhausted",
+            mock_comment.call_args[0][1],
+        )
+
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    def test_stage6_allows_5_bounces_before_escalating(self, mock_req, mock_comment, mock_trans, mock_assign):
+        # 4 prior bounces -> 5th bounce still returns to implementation (BOUNCE 5/5)
+        mock_req.return_value = {
+            "fields": {
+                "issuetype": {"subtask": False},
+                "status": {"name": "Final Review (Agent)"},
+                "labels": ["tier-b"],
+                "comment": {
+                    "comments": [
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 1/5]\n1"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 2/5]\n2"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 3/5]\n3"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 4/5]\n4"},
+                    ]
+                },
+                "subtasks": [],
+            }
+        }
+        res5 = jira_util.final_review_verdict("ATT-9601", "BOUNCE", "Defect 5", config=self.mock_config)
+        self.assertEqual(res5, "BOUNCE_5")
+        self.assertIn("[FINAL REVIEW (AGENT) — BOUNCE 5/5]", mock_comment.call_args[0][1])
+
+
 if __name__ == "__main__":
     unittest.main()

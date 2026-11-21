@@ -420,7 +420,7 @@ class TestStage6FinalReview(unittest.TestCase):
         self.assertEqual(res_b1, "BOUNCE_1")
         mock_transition.assert_called_with("ATT-7101", "implementation", role="agent2", inject_context=False)
 
-        # Case 3: 4th BOUNCE (> 3) -> ESCALATED to Final Review (Human)
+        # Case 3: 6th BOUNCE (> 5) -> ESCALATED to Final Review (Human)
         mock_transition.reset_mock()
         mock_req.return_value = {
             "key": "ATT-7101",
@@ -429,15 +429,17 @@ class TestStage6FinalReview(unittest.TestCase):
                 "status": {"name": "Final Review (Agent)"},
                 "comment": {
                     "comments": [
-                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 1/3]\nFirst"},
-                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 2/3]\nSecond"},
-                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 3/3]\nThird"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 1/5]\nFirst"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 2/5]\nSecond"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 3/5]\nThird"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 4/5]\nFourth"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 5/5]\nFifth"},
                     ]
                 },
             },
         }
         res_esc = root_jira.final_review_verdict(
-            "ATT-7101", "BOUNCE", "Still failing on 4th attempt.", bounce_target="implementation", role="agent2"
+            "ATT-7101", "BOUNCE", "Still failing on 6th attempt.", bounce_target="implementation", role="agent2"
         )
         self.assertEqual(res_esc, "ESCALATED")
         mock_transition.assert_called_with("ATT-7101", "final review (human)", role="agent2", inject_context=False)

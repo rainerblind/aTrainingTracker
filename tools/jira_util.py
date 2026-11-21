@@ -2440,12 +2440,14 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2", file_esc
             )
 
 
+MAX_STAGE6_BOUNCES = 5
+ALLOWED_STAGE6_VENDORS = ("anthropic", "google")
 FINAL_REVIEW_BOUNCE_RE = re.compile(
-    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/3\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/3\)?)",
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/(?:3|5)\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/(?:3|5)\)?)",
     re.IGNORECASE,
 )
 FINAL_REVIEW_PASS_TAG = "[FINAL REVIEW (AGENT) — PASS]"
-FINAL_REVIEW_ESCALATED_TAG = "[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]"
+FINAL_REVIEW_ESCALATED_TAG = f"[FINAL REVIEW (AGENT) — ESCALATED AFTER {MAX_STAGE6_BOUNCES} BOUNCES]"
 
 
 def count_final_review_bounces(comments):
@@ -2525,17 +2527,33 @@ def validate_stage6_review_structure(report_text):
     return len(errors) == 0, errors
 
 
-def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="implementation", role="agent2", config=None):
+def final_review_verdict(
+    parent_key,
+    verdict_arg,
+    text_or_file,
+    bounce_target="implementation",
+    role="agent2",
+    config=None,
+    vendor=None,
+    model=None,
+    author_vendor="google",
+    allow_same_vendor_fallback=False,
+    fallback_reason=None,
+):
     """
-    REQ-PRO-058.2 / REQ-PRO-109.2 / REQ-PRO-109.4:
-    Composite Stage 6 ('Final Review (Agent)') verdict command for the Cold Carbon Reviewer (agent2):
+    REQ-PRO-058.2 / REQ-PRO-109.2 / REQ-PRO-109.4 / ATT-9546:
+    Composite Stage 6 ('Final Review (Agent)') verdict command for the Cold Reviewer (agent2):
     - Strictly rejects execution unless parent is in 'Final Review (Agent)'.
-    - PASS: Validates structured Pros/Cons, posts [FINAL REVIEW (AGENT) — PASS], transitions
-      parent ticket from 'Final Review (Agent)' to 'Final Review (Human)', and assigns to 'human'.
-    - BOUNCE: Tracks 3-bounce healing loop back to bounce_target (implementation/analysis/zu erledigen).
-      * If bounce_count <= 3: Posts [FINAL REVIEW (AGENT) — BOUNCE X/3], transitions to bounce_target,
+    - Tier A Second-Vendor Provenance (ATT-9546): requires controlled --vendor (anthropic | google)
+      and --model. On 'tier-a' tickets, vendor MUST differ from author_vendor (Anthropic Claude
+      for Google Gemini authors) unless --allow-same-vendor-fallback is passed (e.g. Claude weekly
+      quota exhausted -> Gemini 4 Neon High fallback, logged explicitly to measure vendor benefit).
+    - PASS: Validates structured Pros/Cons, posts [FINAL REVIEW (AGENT) — PASS] + provenance,
+      transitions parent ticket from 'Final Review (Agent)' to 'Final Review (Human)', assigns 'human'.
+    - BOUNCE: Tracks 5-bounce healing loop back to bounce_target (implementation/analysis/zu erledigen).
+      * If bounce_count <= 5: Posts [FINAL REVIEW (AGENT) — BOUNCE X/5], transitions to bounce_target,
         and assigns back to 'agent1'.
-      * If bounce_count > 3: Posts [FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES], transitions
+      * If bounce_count > 5: Posts [FINAL REVIEW (AGENT) — ESCALATED AFTER 5 BOUNCES], transitions
         parent ticket to 'Final Review (Human)', and assigns to 'human'.
     """
     auditor_role = "agent2"
@@ -2557,7 +2575,7 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
     if config is None:
         config = get_config()
 
-    issue_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=issuetype,status,summary,comment,subtasks"
+    issue_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=issuetype,status,summary,comment,subtasks,labels"
     issue_info = jira_request(issue_url, role=auditor_role)
     fields_data = issue_info.get("fields", {})
     if fields_data.get("issuetype", {}).get("subtask", False):
@@ -2573,6 +2591,44 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
             file=sys.stderr,
         )
         sys.exit(1)
+
+    # ATT-9546: Controlled vendor/model provenance & Tier A second-vendor independence check (Claude primary, Gemini quota fallback only)
+    norm_vendor = (vendor or "").strip().lower() or None
+    norm_author_vendor = (author_vendor or "google").strip().lower()
+    norm_model = (model or "").strip() or None
+    if norm_vendor and norm_vendor not in ALLOWED_STAGE6_VENDORS:
+        print(
+            f"Error: Unsupported Stage 6 reviewer vendor '{vendor}'. Allowed vendors: {', '.join(ALLOWED_STAGE6_VENDORS)} (ATT-9546).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    ticket_tier = get_issue_risk_tier(fields_data)
+    if ticket_tier == "tier-a":
+        if not norm_vendor or not norm_model:
+            print(
+                f"Error: Tier A ticket '{parent_key}' requires controlled --vendor ({'|'.join(ALLOWED_STAGE6_VENDORS)}) "
+                f"and --model provenance on final-review-verdict (ATT-9546).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if norm_vendor == norm_author_vendor and not allow_same_vendor_fallback:
+            print(
+                f"Error: Tier A ticket '{parent_key}' requires a second-vendor reviewer (vendor '{norm_vendor}' matches author_vendor '{norm_author_vendor}') (ATT-9546).\n"
+                f"Use Anthropic Claude (--vendor anthropic --model claude-sonnet-5-5-high), or if Claude weekly quota is exhausted pass "
+                f"--allow-same-vendor-fallback --fallback-reason=claude_quota_exhausted to record Gemini fallback truthfully.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    provenance_line = ""
+    if norm_vendor or norm_model:
+        independent_str = "true" if (norm_vendor and norm_vendor != norm_author_vendor) else "false"
+        fb_str = (fallback_reason or "claude_quota_exhausted") if (allow_same_vendor_fallback and norm_vendor == norm_author_vendor) else "none"
+        provenance_line = (
+            f"[STAGE6-PROVENANCE vendor={norm_vendor or 'unspecified'} model={norm_model or 'unspecified'} "
+            f"author_vendor={norm_author_vendor} independent={independent_str} fallback={fb_str}]\n\n"
+        )
 
     assign_issue(parent_key, auditor_role, role=auditor_role)
 
@@ -2595,7 +2651,8 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
             )
             sys.exit(1)
 
-        comment_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"
+        base_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"
+        comment_body = f"{provenance_line}{base_body}" if provenance_line else base_body
         add_comment(parent_key, comment_body, role=auditor_role)
         transition_issue(parent_key, "final review (human)", role=auditor_role, inject_context=False)
         assign_issue(parent_key, "human", role=auditor_role)
@@ -2606,9 +2663,10 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
     prior_bounces = count_final_review_bounces(comments)
     next_bounce = prior_bounces + 1
 
-    if next_bounce <= 3:
-        bounce_tag = f"[FINAL REVIEW (AGENT) — BOUNCE {next_bounce}/3]"
-        comment_body = report_text if bounce_tag in report_text else f"{bounce_tag}\n\n{report_text}"
+    if next_bounce <= MAX_STAGE6_BOUNCES:
+        bounce_tag = f"[FINAL REVIEW (AGENT) — BOUNCE {next_bounce}/{MAX_STAGE6_BOUNCES}]"
+        base_body = report_text if bounce_tag in report_text else f"{bounce_tag}\n\n{report_text}"
+        comment_body = f"{provenance_line}{base_body}" if provenance_line else base_body
         add_comment(parent_key, comment_body, role=auditor_role)
 
         norm_bounce_target = (bounce_target or "implementation").strip().lower()
@@ -2659,14 +2717,15 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
                 )
 
         assign_issue(parent_key, "agent1", role=auditor_role)
-        print(f"FINAL_REVIEW_VERDICT: BOUNCE {next_bounce}/3 recorded on {parent_key} by {auditor_role} (returned to {resolved_target}, assigned to agent1).")
+        print(f"FINAL_REVIEW_VERDICT: BOUNCE {next_bounce}/{MAX_STAGE6_BOUNCES} recorded on {parent_key} by {auditor_role} (returned to {resolved_target}, assigned to agent1).")
         return f"BOUNCE_{next_bounce}"
     else:
-        comment_body = report_text if FINAL_REVIEW_ESCALATED_TAG in report_text else f"{FINAL_REVIEW_ESCALATED_TAG}\n\n{report_text}"
+        base_body = report_text if FINAL_REVIEW_ESCALATED_TAG in report_text else f"{FINAL_REVIEW_ESCALATED_TAG}\n\n{report_text}"
+        comment_body = f"{provenance_line}{base_body}" if provenance_line else base_body
         add_comment(parent_key, comment_body, role=auditor_role)
         transition_issue(parent_key, "final review (human)", role=auditor_role, inject_context=False)
         assign_issue(parent_key, "human", role=auditor_role)
-        print(f"FINAL_REVIEW_VERDICT: ESCALATED AFTER 3 BOUNCES on {parent_key} by {auditor_role} (moved to Final Review (Human), assigned to human).")
+        print(f"FINAL_REVIEW_VERDICT: ESCALATED AFTER {MAX_STAGE6_BOUNCES} BOUNCES on {parent_key} by {auditor_role} (moved to Final Review (Human), assigned to human).")
         return "ESCALATED"
 
 
@@ -6502,6 +6561,11 @@ if __name__ == "__main__":
         verdict_a = remaining_argv[2]
         text_a = remaining_argv[3]
         b_target = "implementation"
+        v_arg = None
+        m_arg = None
+        av_arg = "google"
+        allow_fb = False
+        fb_reason = None
         idx = 4
         while idx < len(remaining_argv):
             arg = remaining_argv[idx]
@@ -6510,8 +6574,34 @@ if __name__ == "__main__":
             elif arg == "--bounce-target" and idx + 1 < len(remaining_argv):
                 b_target = remaining_argv[idx + 1]
                 idx += 1
+            elif arg.startswith("--vendor="):
+                v_arg = arg.split("=", 1)[1]
+            elif arg == "--vendor" and idx + 1 < len(remaining_argv):
+                v_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif arg.startswith("--model="):
+                m_arg = arg.split("=", 1)[1]
+            elif arg == "--model" and idx + 1 < len(remaining_argv):
+                m_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif arg.startswith("--author-vendor="):
+                av_arg = arg.split("=", 1)[1]
+            elif arg == "--author-vendor" and idx + 1 < len(remaining_argv):
+                av_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif arg == "--allow-same-vendor-fallback":
+                allow_fb = True
+            elif arg.startswith("--fallback-reason="):
+                fb_reason = arg.split("=", 1)[1]
+            elif arg == "--fallback-reason" and idx + 1 < len(remaining_argv):
+                fb_reason = remaining_argv[idx + 1]
+                idx += 1
             idx += 1
-        final_review_verdict(parent_k, verdict_a, text_a, bounce_target=b_target, role="agent2")
+        final_review_verdict(
+            parent_k, verdict_a, text_a, bounce_target=b_target, role="agent2",
+            vendor=v_arg, model=m_arg, author_vendor=av_arg,
+            allow_same_vendor_fallback=allow_fb, fallback_reason=fb_reason,
+        )
     elif cmd == "versions":
         list_versions(role=active_role)
     elif cmd in ("set-fixversion", "set-fix-version") and len(remaining_argv) == 3:

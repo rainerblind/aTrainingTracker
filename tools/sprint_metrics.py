@@ -43,7 +43,7 @@ STAGE_MAP = {
 }
 
 FINAL_REVIEW_BOUNCE_RE = re.compile(
-    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/3\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/3\)?)",
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/(?:3|5)\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/(?:3|5)\)?)",
     re.IGNORECASE,
 )
 FINAL_REVIEW_PASS_RE = re.compile(
