@@ -82,6 +82,42 @@ ROLE_ACCOUNT_IDS = {
 }
 
 STORY_POINTS_FIELD = "customfield_10016"
+ALLOWED_FIBONACCI_STORY_POINTS = (0, 1, 2, 3, 5, 8, 13, 21)
+MAX_DIRECT_ANALYSIS_SP = 5
+PO_DECISION_ANALYSIS_SP = 8
+DEFAULT_MAX_SP_PER_LANE = 13
+
+
+def validate_story_points(points):
+    """
+    Validates that `points` is a canonical Fibonacci Story Point value from
+    ALLOWED_FIBONACCI_STORY_POINTS = (0, 1, 2, 3, 5, 8, 13, 21), or None when cleared.
+    Returns (float_value_or_None, display_string). Exits with code 1 on invalid input.
+    """
+    if points is None or str(points).lower().strip() in ("none", "clear", "null", ""):
+        return None, "None"
+    allowed_str = ", ".join(str(x) for x in ALLOWED_FIBONACCI_STORY_POINTS)
+    try:
+        pts_float = float(points)
+    except (ValueError, TypeError):
+        print(
+            f"Error: Invalid story points '{points}'. Must be a Fibonacci number ({allowed_str}) or 'none'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if pts_float < 0:
+        print(f"Error: Story points cannot be negative ({pts_float}).", file=sys.stderr)
+        sys.exit(1)
+    if not pts_float.is_integer() or int(pts_float) not in ALLOWED_FIBONACCI_STORY_POINTS:
+        disp = int(pts_float) if pts_float.is_integer() else pts_float
+        print(
+            f"Error: Story points '{disp}' is not an allowed Fibonacci number. "
+            f"Allowed Fibonacci values: {allowed_str} (or 'none').",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    pts_int = int(pts_float)
+    return float(pts_int), f"{pts_int} SP"
 PO_RELEASED_QUEUE_SPRINT_ID = 447
 PO_RELEASED_QUEUE_NAME = "Vom PO Freigegeben"
 PO_REVIEW_QUEUE_SPRINT_ID = 453
@@ -582,21 +618,7 @@ def list_sprint_issues(role="agent1"):
 
 def set_story_points(issue_key, points, role="agent1"):
     config = get_config()
-    val = None
-    if str(points).lower().strip() in ("none", "clear", "null", ""):
-        val = None
-        target_disp = "None"
-    else:
-        try:
-            pts_float = float(points)
-            if pts_float < 0:
-                print(f"Error: Story points cannot be negative ({pts_float}).", file=sys.stderr)
-                sys.exit(1)
-            val = pts_float
-            target_disp = f"{int(pts_float) if pts_float.is_integer() else pts_float} SP"
-        except ValueError:
-            print(f"Error: Invalid story points '{points}'. Must be a number (e.g. 1, 2, 3, 5) or 'none'.", file=sys.stderr)
-            sys.exit(1)
+    val, target_disp = validate_story_points(points)
 
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
     payload = {"fields": {STORY_POINTS_FIELD: val}}
@@ -1164,18 +1186,28 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
             aliases["closed"] = "erledigt"
     normalized_target = aliases.get(normalized_input, normalized_input)
 
-    # Complexity split guardrail on parent tickets: Prohibit moving >= 5 SP tickets to Analysis unless forced
+    # Complexity split guardrail on parent tickets (Fibonacci scale: 0-5 SP direct, 8 SP PO decision, > 8 SP mandatory split)
     if not is_subtask and normalized_target == "analysis":
         sp = fields_data.get(STORY_POINTS_FIELD)
         if sp is not None:
             try:
                 sp_float = float(sp)
-                if sp_float >= 5.0 and "--force" not in sys.argv:
-                    print(f"ERROR: Ticket '{issue_key}' is estimated at {int(sp_float) if sp_float.is_integer() else sp_float} Story Points (>= 5 SP).\n"
-                          f"In the Agile Agentic ASPICE (AAA) workflow, tickets with >= 5 SP must be split into smaller, atomic tickets (1-3 SP) before entering Analysis or an active sprint.\n"
-                          f"Mandatory action: Split '{issue_key}' into atomic child tickets before moving to Analysis (or pass --force if an explicit human exception was granted).",
-                          file=sys.stderr)
+                sp_disp = int(sp_float) if sp_float.is_integer() else sp_float
+                if sp_float > float(PO_DECISION_ANALYSIS_SP) and "--force" not in sys.argv:
+                    print(
+                        f"ERROR: Ticket '{issue_key}' is estimated at {sp_disp} Story Points (> {PO_DECISION_ANALYSIS_SP} SP).\n"
+                        f"In the Agile Agentic ASPICE (AAA) workflow, Story Points follow the Fibonacci scale (0, 1, 2, 3, 5, 8, 13, 21): "
+                        f"0–{MAX_DIRECT_ANALYSIS_SP} SP are allowed directly, {PO_DECISION_ANALYSIS_SP} SP requires a PO decision, "
+                        f"and tickets > {PO_DECISION_ANALYSIS_SP} SP (13, 21 SP) MUST be split into smaller atomic tickets before entering Analysis or an active sprint.\n"
+                        f"Mandatory action: Split '{issue_key}' into smaller Fibonacci child tickets before moving to Analysis (or pass --force if an explicit human exception was granted).",
+                        file=sys.stderr,
+                    )
                     sys.exit(1)
+                elif sp_float > float(MAX_DIRECT_ANALYSIS_SP):
+                    print(
+                        f"NOTE: Ticket '{issue_key}' is estimated at {sp_disp} SP (PO-decision tier; implicit approval via 'Vom PO Freigegeben' / active sprint placement). "
+                        f"If Stage 1 analysis uncovers > {PO_DECISION_ANALYSIS_SP} SP scope, split before Stage 2."
+                    )
             except (ValueError, TypeError):
                 pass
 
@@ -3320,15 +3352,13 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
             labels = [l.strip() for l in labels.split(",") if l.strip()]
         fields["labels"] = labels
     if points is not None:
-        try:
-            pts_float = float(points)
-            if pts_float < 0:
-                print(f"Error: Story points cannot be negative ({pts_float}).", file=sys.stderr)
-                sys.exit(1)
-            fields[STORY_POINTS_FIELD] = pts_float
-        except ValueError:
-            print(f"Error: Invalid story points '{points}'. Must be a number.", file=sys.stderr)
-            sys.exit(1)
+        val, _ = validate_story_points(points)
+        if val is not None:
+            fields[STORY_POINTS_FIELD] = val
+            if val == float(PO_DECISION_ANALYSIS_SP):
+                print(
+                    f"NOTE: Creating an {PO_DECISION_ANALYSIS_SP} SP ticket — per Rule 8.3, 8 SP tickets MUST be discussed with the PO at creation time (keep as 8 SP vs. split)."
+                )
 
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload, role=role)
@@ -3621,12 +3651,14 @@ def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=N
         parent_obj = fields.get("parent") or {}
         epic_key = parent_obj.get("key") or f"__NO_EPIC__:{issue.get('key')}"
 
-        # Story Points extraction (default 3.0 SP per ATT-8162)
+        # Story Points extraction (default 3.0 SP per ATT-8162); skip oversized > 8 SP (13/21 SP) tickets requiring mandatory split
         raw_sp = fields.get(STORY_POINTS_FIELD)
         try:
             issue_sp = float(raw_sp) if raw_sp is not None else 3.0
         except (ValueError, TypeError):
             issue_sp = 3.0
+        if issue_sp > float(PO_DECISION_ANALYSIS_SP):
+            continue
 
         if epic_key in lane_sp:
             # Epic is already assigned to an active lane
@@ -6016,7 +6048,7 @@ USAGE_TEXT = (
     "  list-epics                                            List all project Epics with Done/Open child ticket counts\n"
     "  close-epic KEY                                        Close an Epic after triple guardrail verification (coordinator only)\n"
     "  show KEY                                              Show issue details, description, comments, and subtasks\n"
-    "  set-points KEY POINTS                                 Set story points (customfield_10016) on issue (e.g. 1, 2, 3, 5, or 'none')\n"
+    "  set-points KEY POINTS                                 Set Fibonacci story points (customfield_10016): 0, 1, 2, 3, 5, 8, 13, 21, or 'none'\n"
     "  status KEY                                            Show issue status\n"
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"

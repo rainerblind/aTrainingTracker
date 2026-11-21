@@ -17,6 +17,7 @@ EXPECTED_SKILLS = [
     "jira-workflow",
     "ui-designer",
     "brainstormer",
+    "schicht-orchestrator",
     "sprint-planner",
     "regression-bisect",
     "release-manager",

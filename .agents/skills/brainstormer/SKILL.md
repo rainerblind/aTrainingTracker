@@ -31,7 +31,10 @@ This skill acts as a **Product & Architectural Ideation Partner**. It helps the 
      ```
    - *Strict Invariant*: Report the new Epic key and STOP immediately. Creating an Epic must NEVER trigger implementation.
 4. **Automated Jira Backlog Ticket Creation & Complexity Estimation (`REQ-PRO-029`)**:
-   - Propose an initial Story Point estimate using the AAA scale (`1`, `2`, `3` SP). If an idea is estimated at `\ge 5 SP` (combines multiple screens, migrations, and services), **decompose it immediately into atomic child tickets (1–3 SP)** rather than creating an oversized backlog item.
+   - Propose an initial Story Point estimate using strictly canonical **Fibonacci** numbers **`{0, 1, 2, 3, 5, 8, 13, 21}`** (`Rule 8.3`).
+     - **`0–5 SP`**: Standard atomic tickets — ready to create directly.
+     - **`8 SP` (Mandatory PO Discussion at Ticket Creation)**: Do **NOT** silently file an `8 SP` ticket or auto-split it without asking. Before running `create-issue`, explicitly discuss the `8 SP` estimate with the PO: explain why it is `8 SP`, present a concrete split option (`<= 5 SP` child tickets) alongside the keep-as-`8 SP` option, and wait for the PO's decision.
+     - **`> 8 SP` (`13` or `21 SP`)**: **Mandatory split** — decompose into smaller Fibonacci child tickets (`<= 5 SP`, or `8 SP` only after explicit PO confirmation) rather than scheduling an unsplit oversized backlog item.
    - Format description using `templates/backlog_ticket_template.md`.
    - File the ticket cleanly in Jira via CLI with optional `--points=N` (Rule 18: Summaries MUST NOT contain category prefixes or Epic names in brackets):
      ```bash

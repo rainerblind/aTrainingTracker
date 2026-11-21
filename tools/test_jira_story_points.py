@@ -50,20 +50,49 @@ class TestJiraStoryPoints(unittest.TestCase):
 
     @patch("jira_util.get_config")
     @patch("jira_util.jira_request")
-    def test_set_story_points_float(self, mock_request, mock_get_config):
-        """Setting a fractional story point value formats correctly."""
+    def test_set_story_points_all_allowed_fibonacci(self, mock_request, mock_get_config):
+        """All canonical Fibonacci values (0, 1, 2, 3, 5, 8, 13, 21) are accepted."""
         mock_get_config.return_value = self.mock_config
-        stdout_capture = io.StringIO()
-        with patch("sys.stdout", stdout_capture):
-            jira_util.set_story_points("ATT-1234", 1.5, role="agent2")
+        for fib in (0, 1, 2, 3, 5, 8, 13, 21):
+            mock_request.reset_mock()
+            stdout_capture = io.StringIO()
+            with patch("sys.stdout", stdout_capture):
+                jira_util.set_story_points("ATT-1234", fib, role="agent2")
+            mock_request.assert_called_once_with(
+                "https://example.atlassian.net/rest/api/2/issue/ATT-1234",
+                method="PUT",
+                payload={"fields": {"customfield_10016": float(fib)}},
+                role="agent2"
+            )
+            self.assertIn(f"Updated story points for ATT-1234 to {fib} SP", stdout_capture.getvalue())
 
-        mock_request.assert_called_once_with(
-            "https://example.atlassian.net/rest/api/2/issue/ATT-1234",
-            method="PUT",
-            payload={"fields": {"customfield_10016": 1.5}},
-            role="agent2"
-        )
-        self.assertIn("Updated story points for ATT-1234 to 1.5 SP", stdout_capture.getvalue())
+    @patch("jira_util.get_config")
+    def test_set_story_points_non_fibonacci_rejected(self, mock_get_config):
+        """Fractional and non-Fibonacci story point values must be rejected with exit code 1."""
+        mock_get_config.return_value = self.mock_config
+        for bad_val in (1.5, 2.5, "4", "6", "7", "9", "10", "12", "34"):
+            stderr_capture = io.StringIO()
+            with patch("sys.stderr", stderr_capture):
+                with self.assertRaises(SystemExit) as cm:
+                    jira_util.set_story_points("ATT-1234", bad_val)
+                self.assertEqual(cm.exception.code, 1)
+            self.assertIn("not an allowed Fibonacci number", stderr_capture.getvalue())
+
+    @patch("jira_util.get_config")
+    def test_create_issue_non_fibonacci_rejected(self, mock_get_config):
+        """create_issue rejects non-Fibonacci story point values."""
+        mock_get_config.return_value = self.mock_config
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.create_issue(
+                    summary="Bad SP ticket",
+                    description="Desc",
+                    issuetype_id="10008",
+                    points="4",
+                )
+            self.assertEqual(cm.exception.code, 1)
+        self.assertIn("not an allowed Fibonacci number", stderr_capture.getvalue())
 
     @patch("jira_util.get_config")
     @patch("jira_util.jira_request")
@@ -220,54 +249,81 @@ class TestJiraStoryPoints(unittest.TestCase):
     @patch("jira_util.get_config")
     @patch("jira_util.jira_request")
     def test_complexity_split_guardrail_blocks_oversized_tickets(self, mock_request, mock_get_config):
-        """transition_issue blocks moving >= 5 SP parent tickets to analysis without --force."""
+        """transition_issue blocks moving > 8 SP (13, 21 SP) parent tickets to analysis without --force."""
         mock_get_config.return_value = self.mock_config
-        mock_request.return_value = {
-            "fields": {
-                "issuetype": {"subtask": False},
-                "status": {"name": "Zu erledigen"},
-                "summary": "Massive Epic-Like Ticket",
-                "customfield_10016": 5.0
+        for oversized in (13.0, 21.0):
+            mock_request.return_value = {
+                "fields": {
+                    "issuetype": {"subtask": False},
+                    "status": {"name": "Zu erledigen"},
+                    "summary": "Massive Epic-Like Ticket",
+                    "customfield_10016": oversized
+                }
             }
-        }
 
-        stderr_capture = io.StringIO()
-        with patch("sys.stderr", stderr_capture):
-            with patch("sys.argv", ["jira_util.py", "move", "ATT-5000", "analysis"]):
-                with self.assertRaises(SystemExit) as cm:
-                    jira_util.transition_issue("ATT-5000", "analysis")
-                self.assertEqual(cm.exception.code, 1)
+            stderr_capture = io.StringIO()
+            with patch("sys.stderr", stderr_capture):
+                with patch("sys.argv", ["jira_util.py", "move", "ATT-5000", "analysis"]):
+                    with self.assertRaises(SystemExit) as cm:
+                        jira_util.transition_issue("ATT-5000", "analysis")
+                    self.assertEqual(cm.exception.code, 1)
 
-        err_out = stderr_capture.getvalue()
-        self.assertIn("estimated at 5 Story Points (>= 5 SP)", err_out)
-        self.assertIn("must be split into smaller, atomic tickets (1-3 SP)", err_out)
+            err_out = stderr_capture.getvalue()
+            self.assertIn(f"estimated at {int(oversized)} Story Points (> 8 SP)", err_out)
+            self.assertIn("MUST be split into smaller atomic tickets", err_out)
 
     @patch("jira_util.get_config")
     @patch("jira_util.jira_request")
-    def test_complexity_split_guardrail_permits_split_tickets(self, mock_request, mock_get_config):
-        """transition_issue permits moving <= 3 SP tickets to analysis."""
+    def test_complexity_split_guardrail_permits_up_to_5sp_directly_and_8sp_with_po_notice(self, mock_request, mock_get_config):
+        """transition_issue permits 0-5 SP directly and 8 SP (PO-decision tier) with advisory notice."""
         mock_get_config.return_value = self.mock_config
 
-        def side_effect(url, method="GET", payload=None, role="agent1"):
-            if "/issue/ATT-5001" in url and "transitions" not in url:
-                return {
-                    "fields": {
-                        "issuetype": {"subtask": False},
-                        "status": {"name": "Zu erledigen"},
-                        "summary": "Atomic Feature",
-                        "customfield_10016": 2.0
+        def make_side_effect(sp_val):
+            def side_effect(url, method="GET", payload=None, role="agent1"):
+                if "/issue/ATT-5001" in url and "transitions" not in url:
+                    return {
+                        "fields": {
+                            "issuetype": {"subtask": False},
+                            "status": {"name": "Zu erledigen"},
+                            "summary": "Scoped Feature",
+                            "customfield_10016": sp_val
+                        }
                     }
-                }
-            if "transitions" in url:
-                if method == "POST":
-                    return {}
-                return {"transitions": [{"id": "21", "name": "Start Analysis", "to": {"name": "Analysis"}}]}
-            return {}
+                if "transitions" in url:
+                    if method == "POST":
+                        return {}
+                    return {"transitions": [{"id": "21", "name": "Start Analysis", "to": {"name": "Analysis"}}]}
+                return {}
+            return side_effect
 
-        mock_request.side_effect = side_effect
-        with patch("sys.argv", ["jira_util.py", "move", "ATT-5001", "analysis"]):
-            with patch("jira_util.inject_stage_context"):
-                jira_util.transition_issue("ATT-5001", "analysis", inject_context=False)
+        for sp_val in (0.0, 2.0, 5.0):
+            mock_request.side_effect = make_side_effect(sp_val)
+            stdout_capture = io.StringIO()
+            with patch("sys.stdout", stdout_capture):
+                with patch("sys.argv", ["jira_util.py", "move", "ATT-5001", "analysis"]):
+                    with patch("jira_util.inject_stage_context"):
+                        jira_util.transition_issue("ATT-5001", "analysis", inject_context=False)
+            self.assertNotIn("PO-decision tier", stdout_capture.getvalue())
+
+        # 8 SP is permitted (implicit PO decision via Vom PO Freigegeben / sprint placement) with advisory notice
+        mock_request.side_effect = make_side_effect(8.0)
+        stdout_capture = io.StringIO()
+        with patch("sys.stdout", stdout_capture):
+            with patch("sys.argv", ["jira_util.py", "move", "ATT-5001", "analysis"]):
+                with patch("jira_util.inject_stage_context"):
+                    jira_util.transition_issue("ATT-5001", "analysis", inject_context=False)
+        self.assertIn("8 SP (PO-decision tier", stdout_capture.getvalue())
+
+    def test_greedy_bin_packing_13sp_lane_and_skips_oversized(self):
+        """select_greedy_bin_pack_tickets packs 0-8 SP up to 13 SP per lane and skips > 8 SP (13/21 SP)."""
+        ranked = [
+            {"key": "ATT-BIG", "fields": {"issuetype": {"name": "Feature"}, "summary": "Too Big", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 13.0}},
+            {"key": "ATT-A1", "fields": {"issuetype": {"name": "Feature"}, "summary": "A1", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 8.0}},
+            {"key": "ATT-A2", "fields": {"issuetype": {"name": "Feature"}, "summary": "A2", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 5.0}},
+            {"key": "ATT-A3", "fields": {"issuetype": {"name": "Feature"}, "summary": "A3", "status": {"name": "Zu erledigen"}, "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 2.0}},
+        ]
+        packed = jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3, max_sp_per_lane=13.0)
+        self.assertEqual([i["key"] for i in packed], ["ATT-A1", "ATT-A2"])
 
 
 if __name__ == "__main__":
