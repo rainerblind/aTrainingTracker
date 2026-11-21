@@ -170,7 +170,11 @@ Jointly review all completed sprint tickets with the human user against expectat
      1. Your explicit verdict recommendation (e.g., **Accept as `i.O.`**, **Accept with Follow-Up Ticket**, or **Deferred Field Test**) and the technical rationale why.
      2. Whether the ticket has an **on-device UI/behavioral touchpoint** (giving the exact screen/navigation path on the phone if the user wants to test it) or is a **pure backend/unit-test ticket** already 100% verified by the automated test suite.
    * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>` and deployed to real physical hardware per Two-Tier Device Policy `ATT-6506` / `REQ-TST-004`: `ANDROID_SERIAL=<physical_serial> ./gradlew installDebug -PstampGitHash=true`) and inspects the code review and recommendation.
-   * **Evaluation Decision**:
+   * **Evaluation Decision (Mandatory PO Comment Persistence — `Rule 3.1`)**:
+     * **Always Record PO Review Comment on the Reviewed Ticket**: For **every** evaluation decision below (`i.O.`, `i.O. + follow-up`, `Deferred Field Test`, or `n.i.O.`), whenever the human PO gives a review comment or remark to the agent, immediately post it verbatim/faithfully as a Jira comment on `<KEY>` before advancing to the next ticket:
+       ```bash
+       python3 tools/jira_util.py --as coordinator comment <KEY> "PO Review (<YYYY-MM-DD>): <PO comment & verdict>"
+       ```
      * **In Ordnung (i.O. / Accepted)**:
        1. Set the active unreleased Fix Version (`Lösungsversion`) on the parent ticket (Rule 14):
           ```bash
