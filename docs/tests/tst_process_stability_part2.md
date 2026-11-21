@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.49  
+**Version**: 1.0.50  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 97
+**Total Tests**: 98
 
 **Total Tests**: 94
 
@@ -1681,6 +1681,25 @@
 
 ---
 
+### TST-STB-026: **`ANTBikePowerDevice.onNewCalculatedWheelSpeed` Null Guard & Standstill Pace Verification (`ATT-6176`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-STB-026` (`REQ-STB-026.1`, `REQ-STB-026.2`)
+- **Component**: `ANTBikePowerDevice.java`
+- **Jira**: `ATT-6176`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Test Description**:
+  1. *Null Callback Early-Return Before Sensor/DB Creation (`TST-STB-026.1` — `ANTBikePowerDeviceTest.testANTBikePower_nullCalculatedWheelSpeed_returnsWithoutCreatingSensorsOrMutatingDb`)*:
+     - Capture `CalculatedWheelSpeedReceiver` via `mockPcc.subscribeCalculatedWheelSpeedEvent(...)`; invoke `onNewCalculatedWheelSpeed(..., null)` on a freshly subscribed `TestANTBikePowerDevice`. Verify zero exceptions, `getSpeedSensor() == null`, `getPaceSensor() == null`, and `mockDevicesDb.putBikePowerSensorFlags(...)` is never called (`verify(exactly = 0)`).
+  2. *Standstill `null` Pace, Finite Positive Pace & `SPEED_THRESHOLD` Decay (`TST-STB-026.2` — `ANTBikePowerDeviceTest.testANTBikePower_initialZeroWheelSpeed_setsZeroSpeedAndNullPace`, `testANTBikePower_positiveWheelSpeed_computesMetersPerSecondAndFinitePace`, `testANTBikePower_zeroWheelSpeedAfterMotion_decaysPaceToNullAtThreshold`)*:
+     - Invoke `onNewCalculatedWheelSpeed(..., BigDecimal.ZERO)` initially; verify `getSpeedSensor()?.value == 0.0` and `getPaceSensor()?.value == null` (never `Double.POSITIVE_INFINITY`).
+     - Invoke `onNewCalculatedWheelSpeed(..., BigDecimal("36.0"))` (`10.0 m/s`); verify `getSpeedSensor()?.value == 10.0` and `getPaceSensor()?.value == 0.1` (finite `1.0 / 10.0`).
+     - Deliver `8` (`SPEED_THRESHOLD`) consecutive `BigDecimal.ZERO` updates; verify `getSpeedSensor()?.value == 0.0` and `getPaceSensor()?.value == null` (never `Double.POSITIVE_INFINITY`).
+  3. *Architecture Contract & Parity (`TST-STB-026.3` — `ArchitectureConformanceContractTest`)*:
+     - Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` (`ANTBikePowerDevice.java <= 1,500` LoC); confirm `0` string edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1735,3 +1754,6 @@
 | `1.0.47` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `TST-STB-023` (`TST-STB-023.1`–`TST-STB-023.4`, `141/141` PASS across 11 suites incl. `PolarDualImuBoundedHeapStressTest` @ `344ad639`, Stage 6 PASS). |
 | `1.0.48` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `TST-STB-024` (`TST-STB-024.1`–`TST-STB-024.4`, `PebbleServiceLifecycleTest` + `PebbleDatabaseManagerTest`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |
 | `1.0.49` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Added and verified `TST-STB-025` (`TST-STB-025.1`–`TST-STB-025.4`, `130/130` PASS across 18 suites @ `a98d0157`, live `am crash` recovery verified on `emulator-5554`, Stage 6 PASS). |
+| `1.0.50` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Added `[Planned]` `TST-STB-026` (`TST-STB-026.1`..`TST-STB-026.3`) for `REQ-STB-026` verifying `ANTBikePowerDevice.onNewCalculatedWheelSpeed` null early-return, standstill `null` pace + `SPEED_THRESHOLD = 8` decay, finite positive pace, and `ArchitectureConformanceContractTest` parity. |
+| `1.0.51` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `TST-STB-026` to `[Implemented]` in Stage 4 (`ANTBikePowerDeviceTest`: `testANTBikePower_nullCalculatedWheelSpeed_returnsWithoutCreatingSensorsOrMutatingDb`, `testANTBikePower_initialZeroWheelSpeed_setsZeroSpeedAndNullPace`, `testANTBikePower_positiveWheelSpeed_computesMetersPerSecondAndFinitePace`, `testANTBikePower_zeroWheelSpeedAfterMotion_decaysPaceToNullAtThreshold`). |
+| `1.0.52` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `TST-STB-026` to `[Verified]` in Stage 5 (`Rule 7.5` doc-only fast path reusing Gate 4 `ATT-9566` @ `8d76a1f4`: `21/21` targeted Gradle tests PASS [`ANTBikePowerDeviceTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`], `4/4` linters PASS; `ATT-6176_walkthrough.md`). |

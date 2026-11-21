@@ -297,6 +297,10 @@ public class ANTBikePowerDevice extends MyANTDevice {
                 public void onNewCalculatedWheelSpeed(long estTimestamp, EnumSet<EventFlag> eventFlags, AntPlusBikePowerPcc.DataSource dataSource, BigDecimal calculatedWheelSpeed) {
                     if (DEBUG) Log.i(TAG, "got new speed: " + calculatedWheelSpeed);
 
+                    if (calculatedWheelSpeed == null) {
+                        return;
+                    }
+
                     if (mSpeedSensor == null) {
                         createWheelSpeedSensors();
                     }
@@ -304,9 +308,7 @@ public class ANTBikePowerDevice extends MyANTDevice {
                     double speed_mps = calculatedWheelSpeed.doubleValue() / 3.6;
 
                     mSpeedSensor.newValue(speed_mps);
-                    if (calculatedWheelSpeed != null) {
-                        mPaceSensor.newValue(1 / speed_mps);
-                    }
+                    mPaceSensor.newValue(speed_mps > 0.0 ? 1.0 / speed_mps : null);
                 }
             });
 

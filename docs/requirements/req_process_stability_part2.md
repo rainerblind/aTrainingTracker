@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.56  
+**Version**: 1.0.57  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 81
+**Total Requirements**: 82
 
 **Total Requirements**: 78
 
@@ -2665,6 +2665,28 @@
 
 ---
 
+### REQ-STB-026: Pre-Dereference Null Guard and Standstill `null` Pace in `ANTBikePowerDevice.onNewCalculatedWheelSpeed` (`ATT-6176`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-STB-026`
+- **System Requirement(s)**: Derived (SW-only) — Internal defensive null/zero guard in `ANTBikePowerDevice.onNewCalculatedWheelSpeed` without external ANT+ protocol, FGS, or API changes (aligning with `REQ-CON-022.2` / `BTLEBikeDevice` standstill pace parity).
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ANTBikePowerDevice.java`
+- **Rationale**: In `ANTBikePowerDevice.onNewCalculatedWheelSpeed` (`:297-310`), `createWheelSpeedSensors()` and `calculatedWheelSpeed.doubleValue() / 3.6` execute before `if (calculatedWheelSpeed != null)`, causing `null` ANT+ events to initialize wheel sensors / mutate DB flags and throw `NullPointerException`. Additionally, `1 / speed_mps` emits `Double.POSITIVE_INFINITY` to `mPaceSensor` when `speed_mps == 0.0`.
+- **Description**:
+  1. *Early Return on `null` Before Sensor Creation (`REQ-STB-026.1`)*:
+     - `ANTBikePowerDevice.onNewCalculatedWheelSpeed` SHALL execute `if (calculatedWheelSpeed == null) return;` prior to calling `createWheelSpeedSensors()` and prior to dereferencing `calculatedWheelSpeed.doubleValue()`, throwing zero `NullPointerException`s and performing zero sensor/DB-flag creation on `null` callbacks.
+  2. *Finite Pace vs. Standstill `null` Dispatch (`REQ-STB-026.2`)*:
+     - For non-null `calculatedWheelSpeed`, `double speed_mps = calculatedWheelSpeed.doubleValue() / 3.6;` SHALL be published to `mSpeedSensor.newValue(speed_mps)`, and `mPaceSensor.newValue(speed_mps > 0.0 ? 1.0 / speed_mps : null)` SHALL emit finite `1.0 / speed_mps` when `speed_mps > 0.0` and `null` (never `Double.POSITIVE_INFINITY`) at standstill (`speed_mps <= 0.0`), allowing `ThresholdSensor` (`SPEED_THRESHOLD = 8`) to preserve initial `null` and clear prior pace to `null` after `8` consecutive standstill ticks.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `calculatedWheelSpeed == null`, *When* `onNewCalculatedWheelSpeed` executes, *Then* it returns immediately without NPE, `mSpeedSensor == null`, `mPaceSensor == null`, and `DevicesDatabaseManager.putBikePowerSensorFlags` is never invoked.
+  • *Given* `calculatedWheelSpeed == BigDecimal.ZERO` (`speed_mps == 0.0`), *When* `onNewCalculatedWheelSpeed` executes, *Then* `mSpeedSensor` receives `0.0`, `mPaceSensor` receives `null` (never `Double.POSITIVE_INFINITY`), and after `SPEED_THRESHOLD = 8` standstill ticks any prior pace decays to `null`.
+  • *Given* `calculatedWheelSpeed == 36.0` (`speed_mps == 10.0`), *When* `onNewCalculatedWheelSpeed` executes, *Then* `mSpeedSensor` receives `10.0` and `mPaceSensor` receives `0.1`.
+- **Invariants**: `ANTBikePowerDevice.java <= 1,500` LoC (`395`); `ThresholdSensor` (`SPEED_THRESHOLD = 8`) smoothing preserved; existing `onNewPedalPowerBalance` & `onNewPedalSmoothness` contracts untouched; `0` `strings*.xml` edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2726,3 +2748,6 @@
 | `1.0.54` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `REQ-STB-023` (`REQ-STB-023.1`–`REQ-STB-023.5`: live EKF `recordSnapshots = false` & bounded `MAX_SNAPSHOTS = 4096` ring, throttled `setLastActive()`, Polar SDK `BleLogger.setLoggerInterface(null)`, `DROP_OLDEST` backpressure + zero-`String.format` CSV + `scope.cancel()`; Gate 4 `ATT-9406` & Stage 6 PASS @ `344ad639`, `141/141` PASS). |
 | `1.0.55` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `REQ-STB-024` (`REQ-STB-024.1`–`REQ-STB-024.4`: immediate `PebbleService` stopSelf/START_NOT_STICKY when appMessages unsupported, guarded teardown, `PebbleDatabaseManager` reopen guard + `closeIfInitialized()`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |
 | `1.0.56` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Added and verified `REQ-STB-025` (`REQ-STB-025.1`–`REQ-STB-025.4`: crash-recovery `LAP_NR` continuity via `MyAccumulatorSensor` `mZeroValue` normalization, `PolarRawSidecarRecovery` `.tmp` salvage & export fallback, silent barometer re-anchor, and pre-slew ERTS sustained-step compensation; `130/130` PASS @ `a98d0157`, live `am crash` verified, Stage 6 PASS). |
+| `1.0.57` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Added `[Planned]` `REQ-STB-026` (`Derived (SW-only)`) specifying pre-dereference null guard before `createWheelSpeedSensors()` and finite/`null` standstill pace in `ANTBikePowerDevice.onNewCalculatedWheelSpeed`. |
+| `1.0.58` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `REQ-STB-026` (`REQ-STB-026.1`–`.2`) to `[Implemented]` in Stage 4 (`ANTBikePowerDevice.java`, `ANTBikePowerDeviceTest.kt`). |
+| `1.0.59` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `REQ-STB-026` (`REQ-STB-026.1`–`.2`) to `[Verified]` in Stage 5 (`Rule 7.5` doc-only fast path reusing Gate 4 `ATT-9566` @ `8d76a1f4`: `ANTBikePowerDeviceTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`, `4/4` linters PASS; `ATT-6176_walkthrough.md`). |
