@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.31  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 123
+**Total Requirements**: 124
 
 ---
 
@@ -2951,6 +2951,31 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-125: Workout Details Polar Retry Sync Unpaired Sensor Detection, Action Guard & Localized Hint (`ATT-9509`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-127`
+- **System Requirement(s)**: `SYSREQ-DEX-007`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `DeviceDataRepository.kt`, `PolarH10RetrySyncBanner.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `strings_devices.xml`
+- **Localization Parity**: 9/9 locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) via `app/src/main/res/values*/strings_devices.xml` (`polar_h10_retry_sync_unpaired_hint`, `polar_verity_retry_sync_unpaired_hint`)
+- **Rationale**: During PO testing of `ATT-9175` (Pixel 10, `2026-11-21`), unpairing a Polar Verity Sense or H10 before/during post-workout sync left *"Jetzt synchronisieren"* enabled on the Aftermath retry banner; tapping it triggered a futile BLE sync and failed with a generic error instead of explaining that the target sensor is currently unpaired (refining `REQ-SET-106.2`, `REQ-SET-109.3`, `REQ-SET-119.1`).
+- **Description**:
+  1. *Encapsulated Live Paired-State Query (`REQ-SET-125.1`)*: `DeviceDataRepository` SHALL expose `isPolarRetrySensorPaired(polarDeviceId: String?, isVeritySense: Boolean): Boolean` performing a live query against its private `devicesDatabaseManager` that explicitly verifies `isPaired(dev.id)` (`PAIRED > 0`, never trusting unfiltered cache rows with `PAIRED = 0`) across `DeviceType.HRM` + `Protocol.BLUETOOTH_LE` sensors. When `polarDeviceId` is non-blank, matching SHALL evaluate MAC address, `PolarOfflineCapabilityStore.getPolarDeviceId(context, mac)`, `PolarOfflineGattCoordinator.extractPolarId(...)`, and device name so an unpaired Verity Sense is never masked by a paired H10 (and vice versa). Strictly when `polarDeviceId.isNullOrBlank()`, family fallback SHALL evaluate `isPolarVeritySenseDevice` / `isPolarH10Device` passing `manufacturer` alongside `name` and `macAddress`. `DeviceDataRepository` MUST NOT expose `*DatabaseManager` or `Cursor` getters (`Rule 8.7`), and `DevicesDatabaseManager.java` & `WorkoutRepository.kt` MUST remain untouched.
+  2. *Aftermath `polarDeviceId` Forwarding & Reactive Re-Evaluation (`REQ-SET-125.2`)*: Both `TrackOnMapScreen.kt` and `WorkoutDetailTabbedContent.kt` SHALL forward `workoutData.polarDeviceId` to `PolarPendingRetrySyncSection`. `PolarPendingRetrySyncSection` SHALL observe `DeviceDataRepository.allDevices` AND `Lifecycle.Event.ON_RESUME` ticks with `initialValue = null` (preventing Frame-0 false-unpaired flicker before async I/O completes per `docs/coding_standards.md` §5.10) and MUST NOT unmount `WorkoutDetailTabbedContent` (§5.9).
+  3. *Unpaired Banner Guard, Semantic Hint & Re-Pair Recovery (`REQ-SET-125.3`)*: While `isSensorPaired == false`, `PolarH10RetrySyncBanner` SHALL disable *"Jetzt synchronisieren"* (`enabled = !isSyncing && isSensorPaired`), keep *"Ignorieren"* (`Dismiss`) enabled (`enabled = !isSyncing`), and render a clear localized unpaired hint (semantic warning/error styling with a Material vector icon, zero inline Unicode emojis per `docs/design_guidelines.md` §5.4 & `ATT-5400`) taking precedence over any stale generic `errorMessage`. Once the target sensor is re-paired (detected via `allDevices` or `ON_RESUME`), the unpaired hint SHALL clear and *"Jetzt synchronisieren"* SHALL re-enable automatically.
+  4. *9-Locale Localization Parity & Monolith Ceilings (`REQ-SET-125.4`)*: `polar_h10_retry_sync_unpaired_hint` and `polar_verity_retry_sync_unpaired_hint` SHALL be localized across all 9 `app/src/main/res/values*/strings_devices.xml` locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`) with zero inline emojis and verified by `TranslationParityTest`. All modified files MUST stay strictly within `ArchitectureConformanceContractTest` monolith caps with zero direct `DevicesDatabaseManager` imports under `ui/aftermath/`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with `polarSyncPending == true` whose target Polar Verity Sense or H10 is unpaired (`PAIRED = 0`) or deleted in `DevicesDatabaseManager` (even if a sibling Polar model remains paired), *When* the athlete opens Workout Details, *Then* *"Jetzt synchronisieren"* is disabled, *"Ignorieren"* remains enabled, and the model-specific localized unpaired hint is displayed (taking precedence over any stale generic error).
+• *Given* the same Workout Details banner showing the unpaired hint, *When* the athlete pairs the target Polar sensor again and returns (`allDevices` update or `ON_RESUME`), *Then* the unpaired hint disappears, *"Jetzt synchronisieren"* re-enables, and tapping it launches `PolarRetrySyncCoordinator.startSync(...)` normally.
+• *Given* a workout opening before the initial async pairing query completes (`initialValue = null`), *When* Frame 0 renders, *Then* no false unpaired hint or disabled-button flicker occurs.
+
+**Invariants**: `PolarRetrySyncCoordinator` non-composition scope (`REQ-SET-119.1`) intact; sibling Polar isolation (`REQ-SET-118.3`) preserved; `Dismiss` enabled whenever `!isSyncing` (`REQ-SET-106.4`); `DevicesDatabaseManager.java` (`1,669/1,671`) and `WorkoutRepository.kt` (`4,986/5,117`) untouched; `0` direct DB calls in `ui/aftermath/`; `0` DB schema bumps; `9/9` locale parity (`TranslationParityTest`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2986,3 +3011,6 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.29` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Added `REQ-SET-124` `[Planned]` (`SYSREQ-TRK-002`) for shared pure-JVM `CscRevolutionTracker` extraction and modular `UINT16` event-time rollover preservation across `BTLEBikeDevice` (`1024 Hz`) and `BTLEBikePowerDevice` (`2048 Hz`). |
 | `1.0.30` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `REQ-SET-124` to `[Implemented]` following Stage 4 construction (`CscRevolutionTracker.kt` `209` LoC, `BTLEBikeDevice.java` `258` LoC, `BTLEBikePowerDevice.java` `425` LoC; zero `android.*` dependencies in tracker, zero string edits). |
 | `1.0.31` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `REQ-SET-124` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9493` @ `a49ad12d`, `Rule 7.5`, `0` `app/` drift): Stage 4 `55/55 PASS` across 6 suites + Gate 4 independent `35/35 PASS` (`0` new warnings), safety & baseline checks PASS, and `docs/engineering/walkthroughs/ATT-6042_walkthrough.md`. |
+| `1.0.32` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Added `REQ-SET-125` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-DEX-007`) for Workout Details Polar retry sync unpaired sensor detection (`DeviceDataRepository.isPolarRetrySensorPaired`), disabled sync button + localized hint across 9 locales, `allDevices`/`ON_RESUME` reactivity (`initialValue = null`), and sibling isolation. |
+| `1.0.33` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Promoted `REQ-SET-125` to `[Implemented]` following Stage 4 construction (`DeviceDataRepository.kt` `834/1,500`, `PolarH10RetrySyncBanner.kt` `470/1,500`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, 9/9 `strings_devices.xml`; `45/45 PASS` across 6 suites + `Rule 8.5` Light/Dark PNG verified). |
+| `1.0.34` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Promoted `REQ-SET-125` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9562` @ `a336463f`, `Rule 7.5`, `0` `app/` drift): `45/45 PASS` across 6 Tier-1 suites (`0` new warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, `Rule 8.5` Light/Dark PNG certified, and `docs/engineering/walkthroughs/ATT-9509_walkthrough.md`. |

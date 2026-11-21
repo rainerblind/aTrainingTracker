@@ -155,6 +155,7 @@
     <string name="polar_h10_retry_sync_dismiss">Descartar</string>
     <string name="polar_h10_retry_syncing">Sincronizando Polar H10…</string>
     <string name="polar_h10_retry_sync_failed">No se pudo conectar con Polar H10. Active el sensor e inténtelo de nuevo.</string>
+    <string name="polar_h10_retry_sync_unpaired_hint">Polar H10 no está vinculado actualmente. Vincule primero el sensor en Dispositivos antes de sincronizar.</string>
 
     <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
     <string name="device_polar_verity_backup_recording_title">Grabación de respaldo de Polar Verity Sense</string>
@@ -167,6 +168,7 @@
     <string name="polar_verity_retry_sync_desc">El sensor óptico no estaba accesible al finalizar el entrenamiento. Encienda su Polar Verity Sense en modo sensor azul y pulse Sincronizar ahora.</string>
     <string name="polar_verity_retry_syncing">Sincronizando Polar Verity Sense…</string>
     <string name="polar_verity_retry_sync_failed">No se pudo conectar con Polar Verity Sense. Enciéndalo en modo sensor azul e inténtelo de nuevo.</string>
+    <string name="polar_verity_retry_sync_unpaired_hint">Polar Verity Sense no está vinculado actualmente. Vincule primero el sensor en Dispositivos antes de sincronizar.</string>
 
     <!-- Polar Verity Sense Swim Mode & SYSTEM_BUSY Guidance (ATT-8000, REQ-SET-110) -->
     <string name="polar_verity_swim_busy_title">Polar Verity Sense en modo natación</string>

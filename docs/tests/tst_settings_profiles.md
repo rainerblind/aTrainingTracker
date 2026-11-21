@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.30  
+**Version**: 1.0.33  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 112
+**Total Tests**: 113
 
 ---
 
@@ -1649,6 +1649,33 @@
 
 ---
 
+### TST-SET-127: **Workout Details Polar Retry Sync Unpaired Sensor Guard, Hint & Reactivity Verification Suite** (`ATT-9509`) [Verified]
+- **Requirement(s)**: `REQ-SET-125` (`REQ-SET-125.1`–`REQ-SET-125.4`)
+- **Component**: `DeviceDataRepository.kt`, `PolarH10RetrySyncBanner.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `DeviceDataRepositoryPolarPairingTest.kt`, `PolarH10RetrySyncBannerTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-9509` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration, On-Device Manual
+- **Test Description**:
+  1. *Encapsulated `DeviceDataRepository.isPolarRetrySensorPaired(...)` Unit Tests (`TST-SET-127.1`, `DeviceDataRepositoryPolarPairingTest#pairedTargetVeritySensor_returnsTrue_byPolarIdAndMac`, `DeviceDataRepositoryPolarPairingTest#unpairedTargetSensor_withRetainedRowPairedZero_returnsFalse`, `DeviceDataRepositoryPolarPairingTest#deletedTargetSensor_returnsFalse`, `DeviceDataRepositoryPolarPairingTest#renamedPairedSensor_matchesPersistedPolarIdInCapabilityStore`, `DeviceDataRepositoryPolarPairingTest#siblingPolarIsolation_pairedH10DoesNotMaskUnpairedVeritySense`, `DeviceDataRepositoryPolarPairingTest#nullOrBlankPolarDeviceId_usesManufacturerAwareFamilyFallback`, `DeviceDataRepositoryPolarPairingTest#rePairingFlip_transitionsFromFalseToTrueImmediately`)*:
+     • Verify paired target Polar Verity Sense / H10 (matched by 8-hex ID via `PolarOfflineCapabilityStore`, `extractPolarId`, MAC address, or device name) returns `true`.
+     • Verify unpaired target (`PAIRED = 0`, row retained in `DevicesDatabaseManager`) returns `false` (explicitly checking `isPaired(dev.id)` rather than unfiltered cache rows).
+     • Verify deleted target sensor (no matching row) returns `false`.
+     • Verify sibling sensor isolation: unpaired Verity Sense + paired H10 returns `false` for the Verity Sense `polarDeviceId` (and vice versa).
+     • Verify `null`/blank `polarDeviceId` falls back strictly to matching paired family passing `manufacturer` to `isPolarVeritySenseDevice`/`isPolarH10Device`.
+     • Verify re-pairing flip (`PAIRED: 0 -> 1`) immediately transitions `isPolarRetrySensorPaired(...)` from `false` to `true`.
+  2. *Behavioral Compose UI & Reactivity Tests (`TST-SET-127.2`, `PolarH10RetrySyncBannerTest#unpairedVeritySensor_disablesSyncNowKeepsDismissEnabledAndShowsHintOverStaleError`, `PolarH10RetrySyncBannerTest#unpairedH10Sensor_disablesSyncNowAndShowsH10UnpairedHint`, `PolarH10RetrySyncBannerTest#initialAsyncPairingCheck_avoidsFrame0FalseUnpairedFlicker_thenDisablesWhenUnpaired`, `PolarH10RetrySyncBannerTest#rePairingSensorOnResume_clearsHintReEnablesSyncNowAndLaunchesSync`, `PolarH10RetrySyncBannerTest#rePairingViaDeviceDataRepositoryAllDevices_reactivelyReEnablesSyncNow`, `PolarH10RetrySyncBannerTest#captureLightDarkUnpairedAndPairedBannerPng_rule85`)*:
+     • Verify unpaired state (`isSensorPaired = false`) disables *"Jetzt synchronisieren"*, keeps *"Ignorieren"* (`Dismiss`) enabled, displays the model-specific localized unpaired hint (`polar_verity_retry_sync_unpaired_hint` / `polar_h10_retry_sync_unpaired_hint`), and gives the unpaired hint precedence over any stale generic `errorMessage`.
+     • Verify paired state (`isSensorPaired = true`) enables *"Jetzt synchronisieren"* and hides the unpaired hint.
+     • Verify `initialValue = null` async loading avoids Frame-0 false-unpaired flicker before the initial pairing check completes.
+     • Verify re-pairing reactivity (`allDevices` update and `ON_RESUME` tick flipping `false -> true`) clears the unpaired hint, re-enables *"Jetzt synchronisieren"*, and executes `PolarRetrySyncCoordinator.startSync(...)` on tap.
+     • Verify existing `PolarH10RetrySyncBannerTest` tests (`syncNow_survivesBannerLeavingAndReenteringCompositionWithoutForgottenScopeException`, `syncNow_failureDisplaysLocalizedErrorMessage`, `syncNow_completionEmitsWorkoutIdForTelemetryRefresh`) pass cleanly with explicit paired state (`isSensorPairedOverride = true`).
+  3. *9-Locale Parity & Architecture Contracts (`TST-SET-127.3`)*:
+     • Run `TranslationParityTest` verifying `polar_h10_retry_sync_unpaired_hint` & `polar_verity_retry_sync_unpaired_hint` across all 9 `values*/strings_devices.xml` locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`, zero inline emojis).
+     • Run `ArchitectureConformanceContractTest`, `UiReflectionOnlyTestAuditContractTest`, and `verify_requirement_governance.py --check-repo-encapsulation` confirming zero direct DB imports in `ui/aftermath/`, zero `*DatabaseManager`/`Cursor` getters, and untouched monoliths (`DevicesDatabaseManager.java`, `WorkoutRepository.kt`).
+  4. *Visual Screenshot & Live Emulator Verification (`TST-SET-127.4`, `Rule 8.5` & `emulator-5554`)*:
+     • Capture Light & Dark mode PNG screenshots of the unpaired Polar Verity Sense & H10 retry sync banner states (`/tmp/att9509_verify/ATT-9509_unpaired_retry_banner_light_dark.png`), inspect via `read_file` against the 4-point Visual Self-Inspection Checklist, and verify live re-pair re-enabling on `emulator-5554` (`com.atrainingtracker.debug`).
+- **Verification Evidence**: Gate 4 (`ATT-9562` @ `a336463f`, `Rule 7.5`, `0` `app/` drift) — `45/45 PASS` (`0` fail, `0` err, `0` skip) across 6 Tier-1 suites (`DeviceDataRepositoryPolarPairingTest` `7/7`, `PolarH10RetrySyncBannerTest` `9/9`, `PolarRetrySyncCoordinatorTest` `3/3`, `TranslationParityTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`, `UiReflectionOnlyTestAuditContractTest` `4/4`; `0` new production warnings); `4/4` Python safety linters & governance checks PASS; `--check-verified-evidence` EXIT `0`; `Rule 8.5` Light/Dark PNG (`/tmp/att9509_verify/ATT-9509_unpaired_retry_banner_light_dark.png`) certified via `read_file`; live `emulator-5554` deployment & screencap audit scheduled in Stage 6 Cold Neon Visual Review (`Rule 3.3`); `docs/engineering/walkthroughs/ATT-9509_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1683,3 +1710,6 @@
 | `1.0.28` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Added `TST-SET-126` `[Planned]` covering pure-JVM `CscRevolutionTracker` wrap/coasting/reset math, `BTLEBikeDevice` (`1024 Hz`) & `BTLEBikePowerDevice` (`2048 Hz`) rollover delegation, null-sensor guards, and `ATT-6162` parity. |
 | `1.0.29` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `TST-SET-126` to `[Implemented]` with all `11/11` `CscRevolutionTrackerTest` + `4/4` new `BTLEMeasurementParsingTest` verbatim method citations. |
 | `1.0.30` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `TST-SET-126` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9493` @ `a49ad12d`, `Rule 7.5`, `0` `app/` drift): Stage 4 `55/55 PASS` across 6 suites + Gate 4 independent `35/35 PASS`, safety/baseline checks PASS, and `docs/engineering/walkthroughs/ATT-6042_walkthrough.md`. |
+| `1.0.31` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Added `TST-SET-127` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-125`) covering `DeviceDataRepository` pairing detection (paired, `PAIRED=0`, deleted, sibling isolation, `manufacturer` fallback, re-pair flip), `PolarH10RetrySyncBannerTest` Compose UI & reactivity, 9-locale `TranslationParityTest`, architecture contracts, and `Rule 8.5` Light/Dark PNG + `emulator-5554` verification. |
+| `1.0.32` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Promoted `TST-SET-127` to `[Implemented]` with all `13/13` verbatim `TestClass#testMethod` citations (`DeviceDataRepositoryPolarPairingTest` `7/7`, `PolarH10RetrySyncBannerTest` `9/9`, total `45/45 PASS` across 6 Tier-1 suites + `Rule 8.5` Light/Dark PNG verified). |
+| `1.0.33` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Promoted `TST-SET-127` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9562` @ `a336463f`, `Rule 7.5`, `0` `app/` drift): `45/45 PASS` across 6 Tier-1 suites (`13/13` verbatim methods verified), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, `Rule 8.5` Light/Dark PNG certified, and `docs/engineering/walkthroughs/ATT-9509_walkthrough.md`. |

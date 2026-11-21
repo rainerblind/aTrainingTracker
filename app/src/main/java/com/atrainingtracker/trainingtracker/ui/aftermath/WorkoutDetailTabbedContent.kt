@@ -725,12 +725,13 @@ fun WorkoutDetailTabbedContent(
                     }
                 }
 
-                // 1c. Polar H10 Retry Sync Banner (REQ-SET-106.2, ATT-7919)
+                // 1c. Polar H10 Retry Sync Banner (REQ-SET-106.2, ATT-7919, REQ-SET-125, ATT-9509)
                 if (workoutData.polarSyncPending) {
                     val repo = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
                     PolarPendingRetrySyncSection(
                         workoutId = workoutData.id,
                         polarExerciseId = workoutData.polarExerciseId,
+                        polarDeviceId = workoutData.polarDeviceId,
                         onDismiss = {
                             repo.dismissPolarSyncPending(workoutData.id)
                         }
