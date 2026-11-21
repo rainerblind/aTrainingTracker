@@ -25,6 +25,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice
+import com.polar.androidcommunications.api.ble.BleLogger
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.model.PolarDeviceInfo
@@ -582,5 +583,51 @@ class PolarOfflineGattCoordinatorCoexistenceTest {
         assertFalse(PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityMac))
         assertEquals(1, pauseCount)
         assertEquals(1, resumeCount)
+    }
+
+    // REQ-STB-023.2 / TST-STB-023.2
+    @Test
+    fun testAcquirePolarApi_disablesDefaultBleLoggerOnSingletonCreation_TST_STB_023_2() {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+
+        // Install a synthetic BleLoggerInterface to verify default bleLoggerDisabler actually clears it
+        var hexLogCalls = 0
+        BleLogger.setLoggerInterface(object : BleLogger.BleLoggerInterface {
+            override fun d(tag: String, msg: String) { hexLogCalls++ }
+            override fun e(tag: String, msg: String) {}
+            override fun w(tag: String, msg: String) {}
+            override fun i(tag: String, msg: String) {}
+            override fun d_hex(tag: String, msg: String, data: ByteArray) { hexLogCalls++ }
+        })
+        BleLogger.d_hex("BlePMDClient", "pmd data:", byteArrayOf(0x01, 0x02))
+        assertEquals("Pre-condition: installed logger must receive d_hex before acquirePolarApi", 1, hexLogCalls)
+
+        // First lease creates singleton -> invokes bleLoggerDisabler -> BleLogger.setLoggerInterface(null)
+        val lease1 = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        assertSame(sharedApi, lease1)
+
+        // Subsequent d_hex calls must short-circuit with zero callbacks (zero hex serialization churn)
+        BleLogger.d_hex("BlePMDClient", "pmd data:", byteArrayOf(0x03, 0x04, 0x05))
+        assertEquals("BleLogger.d_hex must not invoke logger after acquirePolarApi clears it", 1, hexLogCalls)
+
+        // Second lease reuses singleton without re-invoking disabler
+        var customDisablerCalls = 0
+        PolarOfflineGattCoordinator.bleLoggerDisabler = { customDisablerCalls++ }
+        val lease2 = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        assertSame(sharedApi, lease2)
+        assertEquals("Reused singleton lease must not re-invoke bleLoggerDisabler", 0, customDisablerCalls)
+
+        // Releasing both leases tears down singleton cleanly; next creation invokes disabler once even if it throws
+        PolarOfflineGattCoordinator.releasePolarApi(lease1)
+        PolarOfflineGattCoordinator.releasePolarApi(lease2)
+        PolarOfflineGattCoordinator.bleLoggerDisabler = {
+            customDisablerCalls++
+            throw IllegalStateException("Simulated logger error")
+        }
+        val lease3 = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        assertSame(sharedApi, lease3)
+        assertEquals("Fresh singleton creation must invoke bleLoggerDisabler once", 1, customDisablerCalls)
+        PolarOfflineGattCoordinator.releasePolarApi(lease3)
     }
 }

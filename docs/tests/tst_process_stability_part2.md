@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.46  
+**Version**: 1.0.47  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 94
+**Total Tests**: 95
 
 ---
 
@@ -1625,6 +1625,23 @@
   4. *Backup Exclusion XMLs, Agent Hygiene Rules & Emulator Live Smoke (`TST-STB-022.4`, `BackupRulesXmlValidationTest.kt`, `tools/verify_skills.py`, `tools/test_*.py`, `emulator-5554`)*:
      • *Given* `data_extraction_rules.xml`, `full_backup_content.xml`, `.agents/rules/aspice_governance.md`, and `.agents/skills/sprint-planner/SKILL.md`, *When* `BackupRulesXmlValidationTest`, `verify_skills.py`, `test_agent_emulator.py`, `test_jira_accounts.py`, and a live `emulator-5554` tracking smoke check execute, *Then* both backup XMLs exclude `debug_heap` and `debug_hprof` (preserving `auth_credentials_prefs.xml`), rules/skills document Pixel 10 inspect/Bug-file/delete hygiene, and `emulator-5554` creates `<fileBaseName>.heap.csv` cleanly (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-022.4`.
 
+### TST-STB-023: **Dual Polar Live-IMU & ATT Fused Bounded-Heap / Drop-Oldest Backpressure Suite (`ATT-9343`)** [Verified]
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-STB-023` (`REQ-STB-023.1`–`REQ-STB-023.5`)
+- **Component**: `SpeedAndLocationDevice_ATTFused.kt`, `UnicycleOdometryEkf.kt`, `PolarOfflineGattCoordinator.kt`, `PolarPmdStreamCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarRawTelemetryRecorder.kt`, `RawTelemetryRow.kt`, `UnicycleOdometryEkfTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarRawTelemetryRecorderTest.kt`, `PolarPmdStreamCoordinatorTest.kt`, `PolarDualImuBoundedHeapStressTest.kt`
+- **Jira**: `ATT-9343`
+- **Test Description**:
+  1. *Zero Live EKF Snapshot Leak, Bounded `UnicycleOdometryEkf` Ring & Throttled `setLastActive()` (`TST-STB-023.1`, `UnicycleOdometryEkfTest`, `SpeedAndLocationDevice_ATTFusedTest`)*:
+     • *Given* `SpeedAndLocationDevice_ATTFused` receiving `60 min` of `50 Hz` gyro + `1 Hz` GNSS updates (`180,000` predicts) and a standalone `UnicycleOdometryEkf(recordSnapshots = true)` receiving `> 4,096` predicts, *When* executed, *Then* `device.ekf.getSnapshots()` remains empty (`0`), `setLastActive()` DB updates are throttled to `>= 5,000 ms`, and the snapshot-recording EKF caps `getSnapshots().size` at `MAX_SNAPSHOTS` (`4096`) retaining newest entries while preserving `@JvmOverloads` & small-run snapshot tests. Tag with `TST-STB-023.1`.
+  2. *Polar SDK `BleLogger` Hex Churn Elimination (`TST-STB-023.2`, `PolarOfflineGattCoordinatorCoexistenceTest`)*:
+     • *Given* `PolarOfflineGattCoordinator.acquirePolarApi()` creating a new shared `PolarBleApi` singleton, *When* acquired, *Then* `BleLogger.setLoggerInterface(null)` is invoked once per newly created singleton (preventing `BleLogger.d_hex` hex serialization & mutex contention) while preserving ref-counting and `ATT-9175` offline yield. Tag with `TST-STB-023.2`.
+  3. *`DROP_OLDEST` Backpressure, `onUndeliveredElement` Drop Accounting, Zero-`String.format` CSV & Scope Teardown (`TST-STB-023.3`, `PolarRawTelemetryRecorderTest`, `PolarPmdStreamCoordinatorTest`)*:
+     • *Given* `PolarRawTelemetryRecorder` receiving `> 8,192` rows while drain is stalled and `PolarPmdStreamCoordinator` under slow downstream collection (`> 64` bursts), *When* executed, *Then* `DROP_OLDEST` retains newest frames, `getDroppedFrameCount()` matches exact evicted count via `onUndeliveredElement`, `RawTelemetryRow.appendCsvLine()` matches `toCsvLine()` byte-for-byte across ACC/GYRO/HR/RR edge cases, `stop()` cancels the internal `CoroutineScope`, and `ATT-9161` recovery remains intact. Tag with `TST-STB-023.3`.
+  4. *60-Min Dual Polar Live-IMU Stress & Architecture Contracts (`TST-STB-023.4`, `PolarDualImuBoundedHeapStressTest`, `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`)*:
+     • *Given* `60 min` simulated dual Polar streaming (`200 Hz` H10 ACC + `52 Hz` Verity ACC/GYRO + `1 Hz` PPI + `PolarRawTelemetryRecorder` + `HrvRollingEngine`), *When* replayed end-to-end, *Then* retained estimator/HRV/recorder footprint stays strictly flat/bounded without OOM, `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC, `PolarOnlineStreamingBridge.kt <= 1,500` LoC, and `InterfaceSignatureDriftContractTest` passes (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-023.4`.
+
 ---
 
 ## Change History
@@ -1678,3 +1695,4 @@
 | `1.0.44` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9402` @ `7feb5c06`): `41/41` targeted Gradle tests across 7 suites (`DebugHeapWatchdogTest` `7/7`, `TrackerServiceHeapWatchdogTest` `2/2`, `TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
 | `1.0.45` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Stage 6 Bounce 1/3 heal: added `DebugHeapWatchdogTest.onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds` (`TST-STB-022.2`); reset `TST-STB-022` to `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.46` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 Bounce 1 `ATT-9404` @ `c4035319`): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
+| `1.0.47` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `TST-STB-023` (`TST-STB-023.1`–`TST-STB-023.4`, `141/141` PASS across 11 suites incl. `PolarDualImuBoundedHeapStressTest` @ `344ad639`, Stage 6 PASS). |

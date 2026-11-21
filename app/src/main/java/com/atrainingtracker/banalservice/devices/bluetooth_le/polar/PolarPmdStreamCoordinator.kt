@@ -29,14 +29,18 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * User-visible status warning emitted when a Polar PMD stream remains blocked by
@@ -75,6 +79,8 @@ class PolarPmdStreamCoordinator(
         private const val TAG = "PolarOnlineImuBridge"
         private const val MAX_CAUSE_DEPTH = 6
         const val MAX_ALREADY_IN_STATE_RETRIES = 3
+        /** Bounded drop-oldest flow buffer capacity for Polar BLE streams (`REQ-STB-023.3`). */
+        const val PMD_STREAM_BUFFER_CAPACITY = 64
         val RETRY_BACKOFF_MS: LongArray = longArrayOf(500L, 1_000L, 2_000L)
 
         private val _streamWarning = MutableStateFlow<PolarPmdStreamWarning?>(null)
@@ -240,6 +246,23 @@ class PolarPmdStreamCoordinator(
     }
 
     /**
+     * Collects [flow] with explicit bounded [BufferOverflow.DROP_OLDEST] backpressure so bursty
+     * Polar BLE notifications never stall GATT dispatch or grow unboundedly (`REQ-STB-023.3`).
+     */
+    suspend fun <T> collectBounded(
+        flow: Flow<T>,
+        capacity: Int = PMD_STREAM_BUFFER_CAPACITY,
+        onSample: (T) -> Unit
+    ) {
+        val terminalFailure = AtomicReference<Throwable?>(null)
+        flow
+            .catch { err -> terminalFailure.set(err) }
+            .buffer(capacity = capacity, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+            .collect { sample -> onSample(sample) }
+        terminalFailure.get()?.let { throw it }
+    }
+
+    /**
      * Collects a Polar PMD stream ([PmdMeasurementType.ACC], `GYRO`, or `PPI`) with bounded
      * `ERROR_ALREADY_IN_STATE` recovery: issues [stopStreaming] + short exponential backoff up to
      * [MAX_ALREADY_IN_STATE_RETRIES] times, resets retry state on first packet, and emits a single
@@ -255,7 +278,7 @@ class PolarPmdStreamCoordinator(
         var retryAttempt = 0
         while (true) {
             val streamError = try {
-                streamFactory().collect { sample ->
+                collectBounded(streamFactory()) { sample ->
                     retryAttempt = 0
                     onSample(sample)
                 }

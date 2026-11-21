@@ -939,7 +939,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         val api = polarApi ?: return
         val sessionId = sdkSessionId
         streamCoordinator.launchStream(PolarPmdStreamCoordinator.StreamSlot.HR) {
-            api.startHrStreaming(sessionId).collect { hrData ->
+            streamCoordinator.collectBounded(api.startHrStreaming(sessionId)) { hrData ->
                 processHrData(hrData, System.currentTimeMillis())
             }
         }

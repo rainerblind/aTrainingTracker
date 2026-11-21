@@ -99,12 +99,13 @@ open class SpeedAndLocationDevice_ATTFused(
         private const val CLUSTER_STOP_MIN_SPAN_SEC = 3.0
         private const val MAX_PLAUSIBLE_GNSS_SPEED_MPS = 70.0
         private const val MAX_CLOCK_DOMAIN_SKEW_MS = 60_000L
+        private const val LAST_ACTIVE_THROTTLE_MS = 5_000L
     }
 
     private data class YawRateSample(val yawRateRadPerSec: Double, val dtSec: Double)
     private data class RawGnssFix(val lat: Double, val lon: Double, val accuracyMeters: Double, val timestampMs: Long)
 
-    val ekf = UnicycleOdometryEkf()
+    val ekf = UnicycleOdometryEkf(recordSnapshots = false)
     val gyroProjector = QuaternionGyroProjector()
     val wheelCalibrator = WheelCircumferenceCalibrator()
     val carriageClassifier = PhoneCarriageClassifier()
@@ -187,6 +188,7 @@ open class SpeedAndLocationDevice_ATTFused(
     private var mLastChordNorthM: Double? = null
     private var mLastChordTimestampMs: Long = 0L
     private val mRecentRawGnssFixes = java.util.ArrayDeque<RawGnssFix>()
+    private var mLastActiveWriteMs: Long = Long.MIN_VALUE
     private var mExplicitSportHintForTest: SportContextHint? = null
 
     // Tangent plane reference coordinates
@@ -823,7 +825,12 @@ open class SpeedAndLocationDevice_ATTFused(
         if (!isGlanceSpike) {
             recordWorldYawRate(worldYawRate, dtSec)
         }
-        setLastActive()
+        if (mLastActiveWriteMs == Long.MIN_VALUE || timestampMs < mLastActiveWriteMs ||
+            (timestampMs - mLastActiveWriteMs) >= LAST_ACTIVE_THROTTLE_MS
+        ) {
+            mLastActiveWriteMs = timestampMs
+            setLastActive()
+        }
     }
 
     private fun updateCarriageClassification(
@@ -1412,6 +1419,7 @@ open class SpeedAndLocationDevice_ATTFused(
         mLastCalibLon = null
         mLastCalibAlt = null
         mLastCalibRevolutions = null
+        mLastActiveWriteMs = Long.MIN_VALUE
         synchronized(ekf) {
             ekf.reset()
         }

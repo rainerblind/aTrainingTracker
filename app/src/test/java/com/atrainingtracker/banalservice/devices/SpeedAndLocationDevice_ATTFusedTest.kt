@@ -2452,6 +2452,51 @@ class SpeedAndLocationDevice_ATTFusedTest {
         }
     }
 
+    // REQ-STB-023.1 / TST-STB-023.1: Live ATT Fused EKF retains zero snapshots across 60 min & throttles 50-Hz setLastActive() DB writes
+    @Test
+    fun liveAttFused_disablesEkfSnapshotRetentionAndThrottlesGyroSetLastActive_TST_STB_023_1() {
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            fun callAccumulatorsReset() = onAccumulatorsReset()
+        }
+        try {
+            io.mockk.clearMocks(mockDevicesDbManager, answers = false, recordedCalls = true)
+            val identityQuat = floatArrayOf(0f, 0f, 0f, 1f)
+            val gyro = floatArrayOf(0f, 0f, 0.05f)
+
+            // 1. 20 s of 50 Hz gyro (1,000 ticks) -> setLastActive() throttled to >= 5,000 ms (4 writes: t=0, 5s, 10s, 15s)
+            for (step in 0 until 1_000) {
+                val tMs = 10_000L + step * 20L
+                device.ingestImuMeasurement(identityQuat, gyro, dtSec = 0.02, timestampMs = tMs)
+            }
+            verify(exactly = 4) { mockDevicesDbManager.setLastActive(any()) }
+
+            // 2. Clock rewind (timestampMs < mLastActiveWriteMs) safely re-anchors and writes once
+            device.ingestImuMeasurement(identityQuat, gyro, dtSec = 0.02, timestampMs = 5_000L)
+            verify(exactly = 5) { mockDevicesDbManager.setLastActive(any()) }
+
+            // 3. onAccumulatorsReset() -> resetOriginAndEkf() resets mLastActiveWriteMs so next tick records activity
+            device.callAccumulatorsReset()
+            device.ingestImuMeasurement(identityQuat, gyro, dtSec = 0.02, timestampMs = 5_020L)
+            verify(exactly = 6) { mockDevicesDbManager.setLastActive(any()) }
+
+            // 4. 60 min of 50 Hz EKF predict + 1 Hz GNSS updates -> strictly 0 retained OdometrySnapshots
+            for (step in 1..180_000) {
+                val tMs = 100_000L + step * 20L
+                device.ekf.predict(0.02, 0.01, tMs, 1.0)
+                if (step % 50 == 0) {
+                    device.ekf.updateSpeed(3.0, 0.5, tMs)
+                    device.ekf.updateGnssPosition(step * 0.06, 0.0, 5.0, tMs)
+                }
+            }
+            assertTrue(
+                "Live SpeedAndLocationDevice_ATTFused.ekf must retain 0 snapshots across 60 min",
+                device.ekf.getSnapshots().isEmpty()
+            )
+        } finally {
+            device.shutDown()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType

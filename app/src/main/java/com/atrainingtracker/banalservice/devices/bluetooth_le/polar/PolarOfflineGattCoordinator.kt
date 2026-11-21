@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.polar.androidcommunications.api.ble.BleLogger
 import com.polar.androidcommunications.api.ble.model.DisInfo
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
@@ -109,6 +110,9 @@ object PolarOfflineGattCoordinator {
 
     @VisibleForTesting
     internal var apiFactoryForTesting: ((Context, Set<PolarBleApi.PolarBleSdkFeature>) -> PolarBleApi)? = null
+
+    @VisibleForTesting
+    internal var bleLoggerDisabler: () -> Unit = { BleLogger.setLoggerInterface(null) }
 
     @VisibleForTesting
     internal var deviceManagerProvider: () -> DeviceManager? = { BANALService.getDeviceManager() }
@@ -316,9 +320,15 @@ object PolarOfflineGattCoordinator {
                 created
             }
         }
-        // Install global multiplexer outside apiLock to prevent lock-ordering inversion when
-        // BDBleApiImpl.setApiCallback() synchronously fires blePowerStateChanged().
+        // Install global multiplexer and silence Polar SDK default BleLogger hex churn outside
+        // apiLock to prevent lock-ordering inversion when setApiCallback() synchronously fires
+        // blePowerStateChanged() and eliminate ~850 KB/s Binder-thread byteArrayToHex allocations (`REQ-STB-023.2`).
         if (newlyCreatedApi != null) {
+            try {
+                bleLoggerDisabler.invoke()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Error disabling Polar BleLogger interface: ${t.message}")
+            }
             try {
                 newlyCreatedApi.setApiCallback(multiplexerCallback)
             } catch (t: Throwable) {
@@ -829,6 +839,7 @@ object PolarOfflineGattCoordinator {
             sharedApi = null
             activeLeaseCount = 0
             apiFactoryForTesting = null
+            bleLoggerDisabler = { BleLogger.setLoggerInterface(null) }
         }
         synchronized(offlineYieldLock) {
             activeOfflineYieldLeases.clear()

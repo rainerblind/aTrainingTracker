@@ -23,11 +23,18 @@ import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdControlP
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -442,5 +449,62 @@ class PolarPmdStreamCoordinatorTest {
         }
         testScheduler.runCurrent()
         assertNull(PolarOfflineGattCoordinator.getAccChannelOwner(polarId))
+    }
+
+    // REQ-STB-023.3 / TST-STB-023.3
+    @Test
+    fun testCollectBounded_dropsOldestFramesWhenConsumerSlow_TST_STB_023_3() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val coordinator = PolarPmdStreamCoordinator(
+                scope = scope,
+                deviceId = 13L,
+                deviceNameProvider = { "Polar H10 AABBCCDD" },
+                polarIdProvider = { "AABBCCDD" },
+                macAddress = "AA:BB:CC:DD:EE:FF",
+                isConnectedProvider = { true },
+                isShutDownProvider = { false }
+            )
+
+            val capacity = 8
+            val totalEmitted = 200
+            val firstReceived = CountDownLatch(1)
+            val releaseConsumer = CountDownLatch(1)
+            val collected = java.util.Collections.synchronizedList(mutableListOf<Int>())
+
+            val source = flow {
+                for (i in 1..totalEmitted) {
+                    emit(i)
+                }
+            }
+
+            val job = launch(Dispatchers.Default) {
+                coordinator.collectBounded(source, capacity = capacity) { value ->
+                    collected.add(value)
+                    if (value == 1) {
+                        firstReceived.countDown()
+                        releaseConsumer.await(5L, TimeUnit.SECONDS)
+                    }
+                }
+            }
+
+            assertTrue("First frame must reach collector", firstReceived.await(5L, TimeUnit.SECONDS))
+            // Allow producer coroutine to flood and overflow bounded DROP_OLDEST buffer before releasing consumer
+            delay(50L)
+            releaseConsumer.countDown()
+            job.join()
+
+            assertTrue(
+                "DROP_OLDEST must drop intermediate frames under consumer stall (collected=${collected.size})",
+                collected.size < totalEmitted
+            )
+            assertEquals("Newest emitted frame must be preserved at tail", totalEmitted, collected.last())
+            assertTrue(
+                "Retained post-stall batch must stay bounded by capacity + in-flight element",
+                collected.size <= capacity + 2
+            )
+        } finally {
+            scope.cancel()
+        }
     }
 }
