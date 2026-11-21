@@ -35,6 +35,7 @@ This skill acts as a **Product & Architectural Ideation Partner**. It helps the 
      - **`0–5 SP`**: Standard atomic tickets — ready to create directly.
      - **`8 SP` (Mandatory PO Discussion at Ticket Creation)**: Do **NOT** silently file an `8 SP` ticket or auto-split it without asking. Before running `create-issue`, explicitly discuss the `8 SP` estimate with the PO: explain why it is `8 SP`, present a concrete split option (`<= 5 SP` child tickets) alongside the keep-as-`8 SP` option, and wait for the PO's decision.
      - **`> 8 SP` (`13` or `21 SP`)**: **Mandatory split** — decompose into smaller Fibonacci child tickets (`<= 5 SP`, or `8 SP` only after explicit PO confirmation) rather than scheduling an unsplit oversized backlog item.
+   - **Assign Initial Risk-Tier Label (`ATT-9540`, `Rule 8.3`)**: Always pass `--labels=tier-a`, `--labels=tier-b`, or `--labels=tier-c` (or follow with `set-tier`): `tier-a` (sensors/BLE/ANT+, fusion/EKF, concurrency, persistence/migrations, data loss, crash/ANR, release), `tier-b` (normal features & bugs), `tier-c` (UI-only tweaks, docs, tooling, test-only). Overridable by PO; silent downgrade prohibited.
    - Format description using `templates/backlog_ticket_template.md`.
    - File the ticket cleanly in Jira via CLI with optional `--points=N` (Rule 18: Summaries MUST NOT contain category prefixes or Epic names in brackets):
      ```bash

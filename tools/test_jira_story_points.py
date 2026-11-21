@@ -326,5 +326,75 @@ class TestJiraStoryPoints(unittest.TestCase):
         self.assertEqual([i["key"] for i in packed], ["ATT-A1", "ATT-A2"])
 
 
+class TestRiskTiers(unittest.TestCase):
+    """Verifies ATT-9540: Risk Tiers A/B/C classification, pack-sprint refusal, escalation & PO override."""
+
+    def setUp(self):
+        self.mock_config = {"JIRA_URL": "https://example.atlassian.net"}
+
+    def test_pack_refuses_unlabeled_ticket_when_require_tier_true(self):
+        ranked = [
+            {"key": "ATT-9001", "fields": {"issuetype": {"name": "Feature"}, "summary": "Labeled", "status": {"name": "Zu erledigen"}, "labels": ["tier-b"], "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 2.0}},
+            {"key": "ATT-9002", "fields": {"issuetype": {"name": "Bug"}, "summary": "Unlabeled", "status": {"name": "Zu erledigen"}, "labels": [], "parent": {"key": "EPIC-B"}, jira_util.STORY_POINTS_FIELD: 2.0}},
+        ]
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.select_greedy_bin_pack_tickets(ranked, max_lanes=3, max_sp_per_lane=13.0, require_tier=True)
+            self.assertEqual(cm.exception.code, 1)
+        self.assertIn("ATT-9002", stderr_capture.getvalue())
+        self.assertIn("tier-a / tier-b / tier-c", stderr_capture.getvalue())
+
+    @patch("jira_util.move_issues_to_sprint_guarded")
+    @patch("jira_util.paged_jql_search")
+    @patch("jira_util.get_config")
+    def test_pack_sprint_prints_tier_mix(self, mock_cfg, mock_search, mock_move):
+        mock_cfg.return_value = self.mock_config
+        mock_search.return_value = [
+            {"key": "ATT-1", "fields": {"issuetype": {"name": "Bug"}, "summary": "BLE", "status": {"name": "Zu erledigen"}, "labels": ["tier-a"], "parent": {"key": "EPIC-A"}, jira_util.STORY_POINTS_FIELD: 5.0}},
+            {"key": "ATT-2", "fields": {"issuetype": {"name": "Feature"}, "summary": "UI", "status": {"name": "Zu erledigen"}, "labels": ["tier-c"], "parent": {"key": "EPIC-B"}, jira_util.STORY_POINTS_FIELD: 1.0}},
+        ]
+        stdout_capture = io.StringIO()
+        with patch("sys.stdout", stdout_capture):
+            keys = jira_util.pack_sprint_from_po_queue(470, max_lanes=3, max_sp_per_lane=13.0, role="coordinator")
+        self.assertEqual(keys, ["ATT-1", "ATT-2"])
+        self.assertIn("Packed Tier Mix: tier-a=1, tier-b=0, tier-c=1", stdout_capture.getvalue())
+        mock_move.assert_called_once()
+
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_set_risk_tier_escalation_logged_and_silent_downgrade_blocked(self, mock_cfg, mock_req, mock_comment):
+        mock_cfg.return_value = self.mock_config
+        # 1. Escalate tier-b -> tier-a: allowed and logged in Jira
+        mock_req.side_effect = [
+            {"fields": {"labels": ["tier-b", "backend"], "summary": "TrackerService concurrency"}},
+            {},
+        ]
+        res = jira_util.set_risk_tier("ATT-7777", "tier-a", reason="Touches TrackerService concurrency", role="coordinator")
+        self.assertEqual(res, "tier-a")
+        put_payload = mock_req.call_args_list[1][1]["payload"]
+        self.assertEqual(put_payload["fields"]["labels"], ["backend", "tier-a"])
+        mock_comment.assert_called_once()
+        self.assertIn("escalated", mock_comment.call_args[0][1])
+
+        # 2. Silent downgrade tier-a -> tier-b without --po-override: rejected
+        mock_req.side_effect = [{"fields": {"labels": ["tier-a"], "summary": "BLE"}}]
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.set_risk_tier("ATT-7777", "tier-b", po_override=False, role="coordinator")
+            self.assertEqual(cm.exception.code, 1)
+        self.assertIn("Silent risk-tier downgrade", stderr_capture.getvalue())
+
+        # 3. Downgrade with --po-override: permitted and logged
+        mock_comment.reset_mock()
+        mock_req.side_effect = [{"fields": {"labels": ["tier-a"], "summary": "UI only"}}, {}]
+        res2 = jira_util.set_risk_tier("ATT-7777", "tier-c", po_override=True, reason="PO confirmed UI-only", role="coordinator")
+        self.assertEqual(res2, "tier-c")
+        mock_comment.assert_called_once()
+        self.assertIn("PO override", mock_comment.call_args[0][1])
+
+
 if __name__ == "__main__":
     unittest.main()

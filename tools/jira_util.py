@@ -86,6 +86,76 @@ ALLOWED_FIBONACCI_STORY_POINTS = (0, 1, 2, 3, 5, 8, 13, 21)
 MAX_DIRECT_ANALYSIS_SP = 5
 PO_DECISION_ANALYSIS_SP = 8
 DEFAULT_MAX_SP_PER_LANE = 13
+VALID_RISK_TIERS = ("tier-a", "tier-b", "tier-c")
+RISK_TIER_RANK = {"tier-a": 3, "tier-b": 2, "tier-c": 1}
+
+
+def normalize_risk_tier(tier):
+    """Normalize 'a'|'tier-a'|'Tier A' etc. to canonical 'tier-a'|'tier-b'|'tier-c'; exit(1) if invalid."""
+    raw = str(tier or "").strip().lower().replace("_", "-").replace(" ", "-")
+    aliases = {
+        "a": "tier-a", "tier-a": "tier-a", "tiera": "tier-a",
+        "b": "tier-b", "tier-b": "tier-b", "tierb": "tier-b",
+        "c": "tier-c", "tier-c": "tier-c", "tierc": "tier-c",
+    }
+    norm = aliases.get(raw)
+    if not norm:
+        print(
+            f"Error: Invalid risk tier '{tier}'. Allowed tiers: {', '.join(VALID_RISK_TIERS)} (ATT-9540).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return norm
+
+
+def get_issue_risk_tier(issue_or_fields):
+    """Extract the highest-risk canonical tier-* label from a Jira issue or fields dict, or None."""
+    fields = issue_or_fields.get("fields", issue_or_fields) if isinstance(issue_or_fields, dict) else {}
+    labels = [str(l).strip().lower() for l in (fields.get("labels") or [])]
+    found = [t for t in VALID_RISK_TIERS if t in labels]
+    if not found:
+        return None
+    return max(found, key=lambda t: RISK_TIER_RANK[t])
+
+
+def set_risk_tier(issue_key, target_tier, po_override=False, reason=None, role="coordinator"):
+    """
+    Assign or escalate a ticket's risk tier label (tier-a / tier-b / tier-c) per ATT-9540.
+    Upward escalation is permitted and logged in Jira; silent downgrade is prohibited unless --po-override.
+    """
+    config = get_config()
+    norm_target = normalize_risk_tier(target_tier)
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=labels,summary"
+    issue = jira_request(url, role=role)
+    fields = issue.get("fields") or {}
+    existing_labels = list(fields.get("labels") or [])
+    current_tier = get_issue_risk_tier(fields)
+
+    if current_tier and RISK_TIER_RANK[norm_target] < RISK_TIER_RANK[current_tier] and not po_override:
+        print(
+            f"Error: Silent risk-tier downgrade on {issue_key} from '{current_tier}' to '{norm_target}' is prohibited (ATT-9540).\n"
+            f"Pass --po-override only after explicit PO authorization.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    new_labels = [l for l in existing_labels if str(l).strip().lower() not in VALID_RISK_TIERS]
+    new_labels.append(norm_target)
+    put_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    jira_request(put_url, method="PUT", payload={"fields": {"labels": new_labels}}, role=role)
+
+    if current_tier and current_tier != norm_target:
+        direction = "escalated" if RISK_TIER_RANK[norm_target] > RISK_TIER_RANK[current_tier] else "downgraded (PO override)"
+        reason_suffix = f" Rationale: {reason}" if reason else ""
+        add_comment(
+            issue_key,
+            f"Risk tier {direction}: `{current_tier}` -> `{norm_target}` (ATT-9540).{reason_suffix}",
+            role=role,
+        )
+        print(f"Risk tier for {issue_key} {direction}: {current_tier} -> {norm_target}.")
+    else:
+        print(f"Set risk tier for {issue_key} to {norm_target}.")
+    return norm_target
 
 
 def validate_story_points(points):
@@ -3615,20 +3685,56 @@ def move_issues_to_sprint_guarded(target_sprint_id, issue_keys, role="coordinato
     return keys_list
 
 
-def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=None):
+def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=None, require_tier=False):
     """
-    Multi-Lane Greedy Bin-Packing (ATT-8030, ATT-8162, REQ-PRO-097.2):
+    Multi-Lane Greedy Bin-Packing (ATT-8030, ATT-8162, REQ-PRO-097.2, ATT-9540):
     Iterates ranked issues in strict ORDER BY rank ASC (never top[:X]) and packs tickets
     into up to `max_lanes` disjoint Parent Epic lanes in `Zu erledigen`.
 
-    If `max_sp_per_lane` is specified (e.g. 10 SP), each lane accumulates tickets belonging to its
+    If `max_sp_per_lane` is specified (e.g. 13 SP), each lane accumulates tickets belonging to its
     designated Epic up to `max_sp_per_lane`. When a lane reaches capacity, excess tickets of that Epic
     remain in the queue without blocking subsequent disjoint Epics from filling remaining lanes.
     If `max_sp_per_lane` is None, exactly one ticket is chosen per disjoint Epic lane.
 
+    If `require_tier=True` (enforced by `pack_sprint_from_po_queue`), any eligible candidate lacking a
+    canonical `tier-a`/`tier-b`/`tier-c` label causes refusal with an actionable classification prompt.
+
     Issues without an explicit Parent Epic use their own key as a synthetic lane group so unrelated
     standalone items never collide with named Epics.
     """
+    if require_tier:
+        unlabeled = []
+        for issue in ranked_issues:
+            fields = issue.get("fields", {})
+            itype = fields.get("issuetype", {}).get("name", "").lower()
+            if itype in ("sub-task", "subtask"):
+                continue
+            if "review & retro" in (fields.get("summary", "") or "").lower():
+                continue
+            if (fields.get("status", {}).get("name", "") or "").strip().lower() != "zu erledigen":
+                continue
+            labels = [str(l).strip().lower() for l in (fields.get("labels") or [])]
+            if "human-execution" in labels:
+                continue
+            raw_sp = fields.get(STORY_POINTS_FIELD)
+            try:
+                issue_sp = float(raw_sp) if raw_sp is not None else 3.0
+            except (ValueError, TypeError):
+                issue_sp = 3.0
+            if issue_sp > float(PO_DECISION_ANALYSIS_SP):
+                continue
+            if get_issue_risk_tier(fields) is None:
+                unlabeled.append(issue.get("key", "?"))
+        if unlabeled:
+            print(
+                f"ERROR: Refusing to pack sprint — {len(unlabeled)} eligible ticket(s) in '{PO_RELEASED_QUEUE_NAME}' "
+                f"lack a mandatory risk-tier label (tier-a / tier-b / tier-c) per ATT-9540:\n"
+                f"  Unclassified: {', '.join(unlabeled)}\n"
+                f"Classify each ticket first via: python3 tools/jira_util.py --as coordinator set-tier <KEY> <tier-a|tier-b|tier-c>",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     selected = []
     lane_epics = []
     lane_sp = {}
@@ -3677,7 +3783,7 @@ def select_greedy_bin_pack_tickets(ranked_issues, max_lanes=3, max_sp_per_lane=N
     return selected
 
 
-def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=None, role="coordinator"):
+def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=None, role="coordinator", require_tier=True):
     """Pulls PO-approved tickets out of 'Vom PO Freigegeben' (ID 447) into target sprint via greedy bin-packing."""
     if role != "coordinator":
         print("Error: pack-sprint is restricted to '--as coordinator'.", file=sys.stderr)
@@ -3689,11 +3795,22 @@ def pack_sprint_from_po_queue(target_sprint_id, max_lanes=3, max_sp_per_lane=Non
     base = config['JIRA_URL'].rstrip('/')
     jql = f"project = ATT AND sprint = {PO_RELEASED_QUEUE_SPRINT_ID} AND issuetype != Sub-task ORDER BY rank ASC"
     ranked = paged_jql_search(jql, ["summary", "status", "issuetype", "parent", "labels", STORY_POINTS_FIELD], role=role, config=config)
-    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane)
+    chosen = select_greedy_bin_pack_tickets(ranked, max_lanes=max_lanes, max_sp_per_lane=max_sp_per_lane, require_tier=require_tier)
     keys = [c["key"] for c in chosen]
     if not keys:
         print(f"No eligible 'Zu erledigen' tickets found in '{PO_RELEASED_QUEUE_NAME}' (ID {PO_RELEASED_QUEUE_SPRINT_ID}).")
         return []
+    tier_counts = {"tier-a": 0, "tier-b": 0, "tier-c": 0, "unclassified": 0}
+    total_sp = 0.0
+    for c in chosen:
+        t = get_issue_risk_tier(c) or "unclassified"
+        tier_counts[t] += 1
+        sp_raw = (c.get("fields") or {}).get(STORY_POINTS_FIELD)
+        total_sp += float(sp_raw) if sp_raw is not None else 3.0
+    print(
+        f"Packed Tier Mix: tier-a={tier_counts['tier-a']}, tier-b={tier_counts['tier-b']}, "
+        f"tier-c={tier_counts['tier-c']} (total {len(keys)} tickets, {total_sp:g} SP)."
+    )
     move_issues_to_sprint_guarded(int(target_sprint_id), keys, role=role, source_sprint_id=PO_RELEASED_QUEUE_SPRINT_ID)
     return keys
 
@@ -6049,6 +6166,8 @@ USAGE_TEXT = (
     "  close-epic KEY                                        Close an Epic after triple guardrail verification (coordinator only)\n"
     "  show KEY                                              Show issue details, description, comments, and subtasks\n"
     "  set-points KEY POINTS                                 Set Fibonacci story points (customfield_10016): 0, 1, 2, 3, 5, 8, 13, 21, or 'none'\n"
+    "  set-tier KEY <tier-a|tier-b|tier-c> [--po-override] [--reason TEXT]\n"
+    "                                                        Set or escalate risk-tier label (ATT-9540; silent downgrade blocked)\n"
     "  status KEY                                            Show issue status\n"
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
@@ -6195,6 +6314,23 @@ if __name__ == "__main__":
         show_issue(remaining_argv[1], role=active_role)
     elif cmd in ("set-points", "set_points") and len(remaining_argv) == 3:
         set_story_points(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd in ("set-tier", "set_tier") and len(remaining_argv) >= 3:
+        t_key = remaining_argv[1]
+        t_val = remaining_argv[2]
+        po_ov = False
+        reason = None
+        idx = 3
+        while idx < len(remaining_argv):
+            arg = remaining_argv[idx]
+            if arg == "--po-override":
+                po_ov = True
+            elif arg.startswith("--reason="):
+                reason = arg.split("=", 1)[1]
+            elif arg == "--reason" and idx + 1 < len(remaining_argv):
+                reason = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        set_risk_tier(t_key, t_val, po_override=po_ov, reason=reason, role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:
         print_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
