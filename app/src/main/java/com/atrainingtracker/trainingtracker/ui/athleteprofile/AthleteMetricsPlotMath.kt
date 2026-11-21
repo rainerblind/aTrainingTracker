@@ -24,6 +24,11 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.log10
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -60,11 +65,21 @@ data class MetricPlotPoint(
 )
 
 /**
+ * Clean rounded Y-axis bounds and ordered tick values for the PMC multi-curve chart (`REQ-UI-2791.4`).
+ */
+data class PmcYAxisScale(
+    val yMin: Float,
+    val yMax: Float,
+    val ticks: List<Float>
+)
+
+/**
  * Pure math and canonical formatting utilities for Athlete Profile time-series plots and derived `W/kg` (`REQ-UI-391.4`, `REQ-UI-399.1`).
  */
 object AthleteMetricsPlotMath {
 
     private const val MILLIS_PER_DAY = 86_400_000L
+    private val NICE_PMC_STEP_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2f, 2.5f, 5f, 10f)
 
     /**
      * Computes the chronological derived Power-to-Weight (`W/kg`) time series from raw [entries].
@@ -240,6 +255,120 @@ object AthleteMetricsPlotMath {
         } else {
             points
         }
+    }
+
+    /**
+     * Computes clean human-readable rounded Y-axis bounds and ordered tick values for the PMC
+     * multi-curve chart (`REQ-UI-2791.4`, `ATT-9357`).
+     *
+     * Picks nice step intervals (`5, 10, 15, 20, 25, 50, 100, ...` scaled by powers of 10),
+     * guarantees `0f` is explicitly included as a single labeled tick whenever the data spans
+     * or touches zero, and keeps tick density clean (`3..6` ticks for typical ranges).
+     */
+    fun computePmcYAxisScale(rawMin: Float, rawMax: Float): PmcYAxisScale {
+        if (!rawMin.isFinite() || !rawMax.isFinite()) {
+            return PmcYAxisScale(0f, 10f, listOf(0f, 5f, 10f))
+        }
+        val minInput = minOf(rawMin, rawMax)
+        val maxInput = maxOf(rawMin, rawMax)
+
+        if (minInput == 0f && maxInput == 0f) {
+            return PmcYAxisScale(0f, 10f, listOf(0f, 5f, 10f))
+        }
+
+        val spansOrTouchesZero = (minInput <= 0f && maxInput >= 0f) || (minInput >= 0f && minInput <= 5f)
+        var domainMin = if (spansOrTouchesZero) minOf(minInput, 0f) else minInput
+        var domainMax = if (spansOrTouchesZero) maxOf(maxInput, 0f) else maxInput
+
+        if (domainMax - domainMin < 1f) {
+            domainMin = if (domainMin >= 0f) (domainMin - 5f).coerceAtLeast(0f) else domainMin - 5f
+            domainMax += 5f
+        }
+
+        val span = (domainMax - domainMin).coerceAtLeast(10f)
+        var step = nextNicePmcStep(span / 4f)
+        var yMin = (floor((domainMin / step).toDouble()) * step).toFloat()
+        var yMax = (ceil((domainMax / step).toDouble()) * step).toFloat()
+        if (yMax <= yMin) {
+            yMax = yMin + step * 2f
+        }
+
+        while (((yMax - yMin) / step).roundToInt() + 1 > 6) {
+            step = nextNicePmcStep(step * 1.01f)
+            yMin = (floor((domainMin / step).toDouble()) * step).toFloat()
+            yMax = (ceil((domainMax / step).toDouble()) * step).toFloat()
+            if (yMax <= yMin) {
+                yMax = yMin + step * 2f
+            }
+        }
+
+        val rawIntervals = ((yMax - yMin) / step).roundToInt()
+        if (rawIntervals < 2) {
+            if (yMax <= 0f) {
+                yMin = yMax - step * 2f
+            } else {
+                yMax = yMin + step * 2f
+            }
+        }
+
+        val tickIntervals = ((yMax - yMin) / step).roundToInt().coerceAtLeast(2)
+        val ticks = ArrayList<Float>(tickIntervals + 1)
+        for (i in 0..tickIntervals) {
+            val rawTick = yMin + i * step
+            val cleanTick = if (abs(rawTick) < 1e-4f) 0f else rawTick
+            if (ticks.isEmpty() || cleanTick > ticks.last() + 1e-4f) {
+                ticks.add(cleanTick)
+            }
+        }
+        val cleanMin = ticks.first()
+        val cleanMax = ticks.last()
+        return PmcYAxisScale(yMin = cleanMin, yMax = cleanMax, ticks = ticks)
+    }
+
+    /**
+     * Convenience overload computing [PmcYAxisScale] directly across CTL, ATL, and TSB in [points].
+     */
+    fun computePmcYAxisScale(
+        points: List<com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint>
+    ): PmcYAxisScale {
+        if (points.isEmpty()) {
+            return PmcYAxisScale(0f, 10f, listOf(0f, 5f, 10f))
+        }
+        val minVal = points.minOf { minOf(it.ctl, it.atl, it.tsb) }.toFloat()
+        val maxVal = points.maxOf { maxOf(it.ctl, it.atl, it.tsb) }.toFloat()
+        return computePmcYAxisScale(minVal, maxVal)
+    }
+
+    private fun nextNicePmcStep(targetStep: Float): Float {
+        val safeTarget = targetStep.coerceAtLeast(5f)
+        val exponent = floor(log10(safeTarget.toDouble())).toInt()
+        val magnitude = 10.0.pow(exponent.toDouble()).toFloat()
+        for (mult in NICE_PMC_STEP_MULTIPLIERS) {
+            val candidate = mult * magnitude
+            if (candidate >= safeTarget - 1e-4f && candidate >= 5f) {
+                return candidate
+            }
+        }
+        return (10f * magnitude).coerceAtLeast(5f)
+    }
+
+    /**
+     * Computes the vertical pixel coordinate of the `y = 0` baseline for the PMC CTL area fill,
+     * clamped strictly into `[topPad, topPad + plotH]` (`REQ-UI-2791.3`, `ATT-9357`).
+     *
+     * Returns `topPad + plotH` when `yMin >= 0f`, an interior coordinate when `yMin < 0f < yMax`,
+     * and `topPad` when `yMax <= 0f`.
+     */
+    fun computePmcZeroBaselineY(
+        yMin: Float,
+        yMax: Float,
+        topPad: Float,
+        plotH: Float
+    ): Float {
+        val safePlotH = plotH.coerceAtLeast(1f)
+        val yRange = (yMax - yMin).coerceAtLeast(1f)
+        val zeroNorm = ((0f - yMin) / yRange).coerceIn(0f, 1f)
+        return (topPad + safePlotH * (1f - zeroNorm)).coerceIn(topPad, topPad + safePlotH)
     }
 }
 

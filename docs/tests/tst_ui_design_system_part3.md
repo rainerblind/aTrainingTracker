@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.17  
+**Version**: 1.0.23  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 47
+**Total Tests**: 48
 
 ---
 
@@ -923,6 +923,24 @@
 
 ---
 
+### TST-UI-2791: **PMC Chart Box-to-Curve Mapping, Zero-Baseline CTL Fill, Rounded Y-Axis Ticks & Unclipped Badge Suite (`ATT-9357`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2791` (`REQ-UI-2791.1`–`REQ-UI-2791.6`)
+- **Component**: `PerformanceManagementChartCard.kt`, `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`, `AthleteMetricsDtoAndMathTest.kt`, `PerformanceManagementChartCardTest.kt`, `AthleteProfileContractAndLocalizationTest.kt`, `ArchitectureConformanceContractTest.kt`, `UiReflectionOnlyTestAuditContractTest.kt`
+- **Jira**: `ATT-9357` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Pure Rounded Y-Axis Tick & `zeroY` Clamping Unit Tests (`TST-UI-2791.1`, `AthleteMetricsDtoAndMathTest#computePmcYAxisScale produces clean rounded ticks including single explicit zero across ranges (TST-UI-2791_1)`, `AthleteMetricsDtoAndMathTest#computePmcYAxisScale synchronizes yMin and yMax with tick bounds for narrow ranges (TST-UI-2791_1)`, `AthleteMetricsDtoAndMathTest#computePmcZeroBaselineY clamps CTL area baseline to zeroY or plot bounds (TST-UI-2791_1)`)*:
+     - Verify `AthleteMetricsPlotMath.computePmcYAxisScale` produces clean rounded step multiples (`5, 10, 15, 20, 25, 50, ...`), strictly ascending unique ticks, unconditional `yMin == ticks.first()` / `yMax == ticks.last()` synchronization across narrow ranges (`[0, 2.86]`, `[0, 5]`, `[-4, 0]`, `[21, 24]`), and explicit `0` inclusion with zero duplicate zero lines across Pixel 10 `[-21, +25]`, flat all-zero `[0, 0]`, all-positive `[10, 85]`, negative-dominant `[-45, 5]`, wide elite `[-60, 140]`, and all-negative `[-40, -10]`.
+     - Verify `AthleteMetricsPlotMath.computePmcZeroBaselineY` clamps strictly into `[topPad, topPad + plotH]`, yielding interior `zeroY` when `yMin < 0 < yMax`, `topPad + plotH` when `yMin >= 0`, and `topPad` when `yMax <= 0`.
+  2. *Behavioral Compose UI, Swatch/Legend, Truncation & Locale Tests (`TST-UI-2791.2`, `PerformanceManagementChartCardTest#testGerman360dpViewport_optimalerAufbauUnclippedSwatchesLegendAndUniformRowHeights_tstUi2791_2`, `PerformanceManagementChartCardTest#testAcwrFormatting_respectsCurrentLocaleOverrideIndependentOfJvmDefault_tstUi2791_2`)*:
+     - Using Robolectric `v2.createComposeRule()` under German (`de-DE`) `360 dp` mobile width with `TsbReadinessZone.OPTIMAL_OVERLOAD` (`Optimaler Aufbau`), verify `Optimaler Aufbau` and all 3 Row 1 curve headers (`Fitness (42d)`, `Ermüdung (7d)`, `Form (Balance)`) render with `isLineEllipsized == false` & `didOverflowHeight == false`, decorative Row 1 swatches & 3-curve `FlowRow` legend display without duplicate TalkBack `contentDescription`, Row 1 cards share equal aligned heights (`IntrinsicSize.Min`), `ACWR` & X-axis dates format via `currentLocale` (`"3,26"` in `de-DE` vs `"3.26"` in `en-US` independent of JVM `Locale.getDefault()`), and empty state renders `athlete_profile_pmc_empty`.
+  3. *`Rule 8.5` Light & Dark/AMOLED PNG Visual Screenshot & Live Emulator Verification (`TST-UI-2791.3`, `PerformanceManagementChartCardTest#testCapturePmcChartLightAndDarkComparisonPng_tstUi2791_3`, `emulator-5554`)*:
+     - Capture Light and Dark/AMOLED PNG screenshot (`/tmp/att9357_verify/ATT-9357_pmc_chart_light_dark.png`) reproducing the Pixel 10 zero-CTL / negative-TSB / DE `Optimaler Aufbau` scenario and inspect via `read_file` against the 4-point Visual Self-Inspection Checklist (zero blue CTL shading below `0`, clean rounded Y-axis `30, 20, 10, 0, -10, -20` with single emphasized `0`, flush `3.dp` top color bars & matching borders on Row 1, neutral Row 2 borders, unclipped `Optimaler Aufbau`); verify live on `emulator-5554` (`com.atrainingtracker.debug`) in Stage 5/6.
+  4. *Updated Contract, Monolith Ratchet & Governance Checks (`TST-UI-2791.4`, `AthleteProfileContractAndLocalizationTest`, `ArchitectureConformanceContractTest`, `UiReflectionOnlyTestAuditContractTest`)*:
+     - Verify updated `AthleteProfileContractAndLocalizationTest` (`8/8`) covers `PerformanceManagementChartCard.kt` alongside `AthleteProfileScreen.kt`, `ArchitectureConformanceContractTest` (`11/11`) confirms `AthleteProfileScreen.kt` (`1,596` LoC) cleanly inside `(1500, 1975]` LoC and `PerformanceManagementChartCard.kt` (`611` LoC `<= 1,500`), `UiReflectionOnlyTestAuditContractTest` (`4/4`) passes, and `verify_requirement_governance.py --check-living-doc-layout` exits `0` (`Localization Parity: N/A - 0 new strings`).
+- **Verified Evidence (`4fe0f4af`, `ATT-9512` PASS, `36/36` Bounce 1 + `55/55` Stage 4 PASS)**: `AthleteMetricsDtoAndMathTest#computePmcYAxisScale produces clean rounded ticks including single explicit zero across ranges (TST-UI-2791_1)`, `AthleteMetricsDtoAndMathTest#computePmcYAxisScale synchronizes yMin and yMax with tick bounds for narrow ranges (TST-UI-2791_1)`, `AthleteMetricsDtoAndMathTest#computePmcZeroBaselineY clamps CTL area baseline to zeroY or plot bounds (TST-UI-2791_1)`, `PerformanceManagementChartCardTest#testGerman360dpViewport_optimalerAufbauUnclippedSwatchesLegendAndUniformRowHeights_tstUi2791_2`, `PerformanceManagementChartCardTest#testAcwrFormatting_respectsCurrentLocaleOverrideIndependentOfJvmDefault_tstUi2791_2`, `PerformanceManagementChartCardTest#testCapturePmcChartLightAndDarkComparisonPng_tstUi2791_3`, `AthleteProfileContractAndLocalizationTest#AthleteProfileScreen adheres to REQ-UI-495 layout, localization, and PMC height contracts (TST-UI-495)`, `ArchitectureConformanceContractTest#testMonolithLocRatchet_noNewOrGrowingGodClasses`, `UiReflectionOnlyTestAuditContractTest`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -945,3 +963,7 @@
 | `1.0.17` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Added `TST-UI-2790` `[Planned]` covering sealed dialog/pre-import Compose UI behavior, `MapPeekSelection.Saver` round-trip & `StateRestorationTester` rotation survival, sheet/modal mutual exclusion, and monolith LoC ratchet. |
 | `1.0.18` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Promoted `TST-UI-2790` to `[Implemented]` following Stage 4 implementation and Tier-1 unit/Compose verification. |
 | `1.0.19` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Promoted `TST-UI-2790` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9485` @ `cd809943`: `886/886 PASS` across 172 suites, `8/8` verbatim `TestClass#testMethod` citations, `--check-verified-evidence` `exit 0`). |
+| `1.0.20` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Added `TST-UI-2791` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-UI-2791`) covering pure rounded Y-axis scale & `zeroY` unit tests, Robolectric `createComposeRule()` DE `Optimaler Aufbau` / `currentLocale` / swatch & legend tests, `Rule 8.5` Light/Dark PNG + `emulator-5554` verification, and monolith/contract checks (`0` new strings). |
+| `1.0.21` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `TST-UI-2791` to `[Implemented]` with exact test method citations (`55/55 PASS` across 7 Tier-1 suites, `0` new compiler warnings, `3/3` Python safety linters PASS, `Rule 8.5` Light/Dark PNG `/tmp/att9357_verify/ATT-9357_pmc_chart_light_dark.png` inspected). |
+| `1.0.22` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `TST-UI-2791` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9506` @ `04271fff`: `55/55` Stage 4 + `35/35` Gate 4 PASS, `0` `app/` drift, `3/3` safety linters PASS, `Rule 8.5` PNG certified, `--check-verified-evidence` `exit 0`, `docs/engineering/walkthroughs/ATT-9357_walkthrough.md`). |
+| `1.0.23` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Re-promoted `TST-UI-2791` to `[Verified]` in Stage 5 Bounce 1 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 Bounce 1 `ATT-9512` @ `4fe0f4af`: `36/36 PASS` incl. narrow-range Y-axis bound sync test, `0` `app/` drift, `3/3` safety linters PASS, `Rule 8.5` PNG re-certified, `--check-verified-evidence` `exit 0`). |

@@ -1,0 +1,51 @@
+# Stage 1 Analysis: ATT-9357 — Fix Fitness & Fatigue Chart Box-to-Curve Color Matching, Negative CTL Area Fill, Y-Axis Ticks & Badge Truncation
+
+**Ticket**: `ATT-9357` (`2 SP`, `Bug`, `severity-minor`, confirmed Standard — no split per `REQ-PRO-029`) | **Parent Epic**: `ATT-5910`  
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-11-21_01_Früh` (Sprint 468) | **Base SHA**: `6bb13e4b` (`feature/ATT-9357`) | **Author**: AI Agent 1 (`--as agent1`, Neon) | **Date**: 2026-11-21
+
+---
+
+## Context & Problem Statement
+Visual inspection of the attached Pixel 10 screenshot (`pixel10_screen.png`, inspected via `read_file` per `Rule 8.5`) on **Fitness & Physiologie -> Fitness & Ermüdung -> Belastungssteuerung (Fitness / Ermüdung / Form)** confirms 5 user-visible defects in `PerformanceManagementChartCard`, `PmcStatBadge`, and `PerformanceManagementChartCanvas` (`AthleteProfileScreen.kt:1554-1921`):
+1. **Box-to-curve mismatch & missing legend**: Only Row 1 (`Fitness (42d)`=`PmcCtlBlue`, `Ermüdung (7d)`=`PmcAtlMagenta`, `Form (Balance)`=`PmcTsbAmber`) plots on the chart, yet `Form (Balance)` uses readiness color `PmcOptimalBlue` for its border (`:1589-1622`) so no card is amber/orange; Row 2 non-plotted KPIs (`ACWR` red error border, `7T-Steigerung` primary blue border, `:1633-1670`) collide with `PmcAtlMagenta` and `PmcCtlBlue`; no curve swatch or legend links cards to curves.
+2. **Readiness label truncation**: `Optimaler Aufbau` clips to `Optimaler Auf...` in the 3-column `PmcStatBadge` (`:1740-1749`, `maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis`).
+3. **Negative CTL area fill**: `fillPath` closes at `topPad + plotH` (`:1860-1873`) instead of clamped `zeroY`, shading the entire negative region (`0` down to `-26`) pale blue during flat `CTL = 0` periods.
+4. **Awkward Y-axis ticks & double zero line**: Raw ±12% padded `min/max` split into `gridSteps = 2` (`:1793-1841`) renders `30`, `2`, `-26` with an unlabeled zero line squeezed directly beneath `2`.
+5. **Locale inconsistency**: `ACWR` (`:1648`) formats with `Locale.getDefault()` instead of `currentLocale` (`LocalConfiguration.current.locales[0]`).
+
+---
+
+## Root Cause & Forensics
+### Independent Peer Review & Verification (`Rules 69 & 70`)
+Audited live `sprint/2026-11-21_01_Früh` (`6bb13e4b`) against `pixel10_screen.png` (`Rule 8.5`), `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`, `Color.kt`, `ArchitectureConformanceContractTest.kt`, and `AthleteProfileContractAndLocalizationTest.kt`:
+
+| Finding / Hypothesis | Verdict | Verified Symbol / Line Evidence |
+| :--- | :---: | :--- |
+| **1. `PmcStatBadge` conflates curve identity color with readiness status color & lacks swatch/legend** | **CONFIRMED** | `AthleteProfileScreen.kt:1589-1622, 1633-1670, 1706-1752`: single `accentColor` drives both border (`accentColor.copy(alpha = 0.45f)`) and `badgeText` color. Passing `tsbColor` (`TTColor.PmcOptimalBlue`) hijacks `Form (Balance)`'s border; Row 2 uses `error`/`primary` borders colliding with `PmcAtlMagenta`/`PmcCtlBlue`. |
+| **2. Single-line `badgeText` clips multi-word localized readiness labels** | **CONFIRMED** | `AthleteProfileScreen.kt:1741-1749`: `maxLines = 1, softWrap = false` clips DE `Optimaler Aufbau` (`Optimaler Auf...`), ES `Sobrecarga óptima`, FR `Surcharge optimale`, IT `Sovraccarico ottimale`. Allowing `maxLines = 2, softWrap = true` preserves `IntrinsicSize.Min` row alignment. |
+| **3. CTL `fillPath` & gradient anchor to canvas bottom (`topPad + plotH`)** | **CONFIRMED** | `AthleteProfileScreen.kt:1860-1873`: `moveTo(..., topPad + plotH)` / `lineTo(..., topPad + plotH)` and `endY = topPad + plotH`. Must anchor to `zeroY = (topPad + plotH * (1f - ((0.0 - yMin) / yRange).toFloat())).coerceIn(topPad, topPad + plotH)`. |
+| **4. Unrounded `gridSteps = 2` Y-axis ticks & separate zero line** | **CONFIRMED** | `AthleteProfileScreen.kt:1793-1841`: raw `minValRaw - pad` / `maxValRaw + pad` with `gridSteps = 2` yields `30, 2, -26` plus a duplicate line at `zeroY`. Pure rounded tick calculator in `AthleteMetricsPlotMath.kt` resolves both cleanly. |
+| **5. `ACWR` uses `Locale.getDefault()` instead of `currentLocale`** | **CONFIRMED** | `AthleteProfileScreen.kt:1648` vs `currentLocale` at `:1561, 1604, 1611, 1618`. Note: `AthleteProfileScreen.kt` retains `Locale.getDefault()` at `:877, 878, 1101, 1103, 1440`, so `AthleteProfileContractAndLocalizationTest.kt:341` stays green. |
+| **6. CRITICAL Monolith Ceiling on `AthleteProfileScreen.kt`** | **CONFIRMED (0 LoC HEADROOM)** | `ArchitectureConformanceContractTest.kt:125` hard-pins `AthleteProfileScreen.kt <= 1,975` LoC, and current `wc -l` is **`1,975 / 1,975` LoC**! Extracting `PerformanceManagementChartCard`, `PmcStatBadge`, and `PerformanceManagementChartCanvas` into sibling `PerformanceManagementChartCard.kt` (modeled on `CardioPowerTrendsCard.kt`, `500` LoC) reduces `AthleteProfileScreen.kt` to `~1,600` LoC (`-375` LoC headroom) while updating `AthleteProfileContractAndLocalizationTest.kt:287-290, 345-359` to check the extracted file cleanly. |
+
+---
+
+## Requirements Archaeology (Chesterton's Fence)
+* **Original Requirement ID & Target**: `REQ-UI-401` (`REQ-UI-401.3`/`.4`, `docs/requirements/req_ui_design_system_part4.md:508-543`, `TST-UI-364` in `tst_ui_design_system_part2.md:2129`), `REQ-UI-495` (`AthleteProfileContractAndLocalizationTest.kt:316-366`), and `ATT-5678` trademark-free PMC labels (`req_ui_design_system_part4.md:3212-3235`).
+* **Historical Origin & Commit Trace**: `ATT-3859` introduced `PerformanceManagementChartCard`/`PerformanceManagementChartCanvas`; `ATT-5678` replaced proprietary Peaksware trademarks (`CTL`/`ATL`/`TSB`/`PMC`) across all 9 locales with descriptive labels (`Fitness (42d)`, `Ermüdung (7d)`, `Form (Balance)`); `ATT-4927`/sprint `REQ-UI-495` added `IntrinsicSize.Min` + `fillMaxHeight()` uniform badge heights and dedicated `selectedPmcTimeRange`.
+* **Root Reason for Existing Formulation**: Initial PMC UI reused a single `accentColor` parameter on `PmcStatBadge` for both border and status text and closed CTL fill to `topPad + plotH` assuming non-negative series before negative `TSB` + zero-`CTL` sparse histories were inspected on-device.
+* **Preservation of Core Invariants**: (1) Banister/Coggan equations (`TSB_t = CTL_{t-1} - ATL_{t-1}`, `CTL`, `ATL`, `ACWR`, `RampRate`) in `PowerPhysiologyCalculator.kt` untouched; (2) `ATT-9360` (`ACWR` `CTL >= 15` gate & Tier-4 `sRPE` scaling) strictly out of scope; (3) trademark-free 9-locale `athlete_profile_pmc_*` strings (`ATT-5678`) reused with `0` new string keys; (4) `IntrinsicSize.Min` + `fillMaxHeight()` uniform Row 1/Row 2 heights and `CompactSelectorPill` time-range selector preserved; (5) `AthleteProfileScreen.kt <= 1,975` LoC (`ArchitectureConformanceContractTest`) and `HrvRampTestScreenTest` `AthleteProfileScreenKt` class preserved.
+
+---
+
+## Proposed Scope & Invariants
+* **In-Scope**: (1) Extract PMC card/badge/canvas to `PerformanceManagementChartCard.kt` (`~430` LoC) shrinking `AthleteProfileScreen.kt` to `~1,600 / 1,975` LoC; (2) decouple `PmcStatBadge` `borderColor`/`curveSwatchColor` from `statusColor` so Row 1 anchors to `PmcCtlBlue`/`PmcAtlMagenta`/`PmcTsbAmber` with curve swatches + compact horizontal curve legend reusing existing 9-locale labels, and Row 2 (`ACWR`, `7T-Steigerung`) uses neutral borders (`outlineVariant`) with semantic status text only; (3) allow `PmcStatBadge` `badgeText` up to `2` lines (`softWrap = true`) preserving `IntrinsicSize.Min`; (4) clamp CTL `fillPath` & gradient `endY` to `zeroY`; (5) add pure rounded Y-axis tick/bound calculator (`computePmcYAxisScale`) in `AthleteMetricsPlotMath.kt` explicitly including `0` when spanning/touching zero (no duplicate zero line); (6) format `ACWR` with `currentLocale`.
+* **Out-of-Scope**: `PowerPhysiologyCalculator.kt` math (`TSB`, `ACWR`, Tier-4 `sRPE` / `ATT-9360`), `AthleteProfileViewModel.kt`, `WorkoutSummariesDatabaseManager.java`, `strings*.xml` edits (`0` new strings), or SQLite migrations.
+
+---
+
+## Change-Request Impact Analysis
+* **Affected Requirements**: Reserve net-new `REQ-UI-*` / `TST-UI-*` in roomy shards **`docs/requirements/req_ui_design_system_part5.md`** (`1,916 / 4,000` LoC, `+2,084` headroom) and **`docs/tests/tst_ui_design_system_part3.md`** (`947 / 4,000` LoC, `+3,053` headroom) — strictly avoiding near-cap `req_ui_design_system_part4.md` (`3,966/4,000`), `req_ui_design_system_part2.md` (`3,983/4,000`), and `tst_ui_design_system_part2.md` (`3,993/4,000`). **SYS.2/SYS.3 Impact (`REQ-PRO-131.4`)**: `None` — pure UI/Compose chart presentation refinement (`SWE-Derived`); zero external sensors, HALs, FGS types, or cloud APIs affected. `Localization Parity: N/A - 0 new strings (existing 9-locale trademark-free strings reused)`.
+* **Affected Architecture Elements**: New `app/src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/PerformanceManagementChartCard.kt` (`~430` LoC, extracted from `AthleteProfileScreen.kt` reducing it from `1,975/1,975` to `~1,600` LoC), `AthleteProfileScreen.kt` (calls `PerformanceManagementChartCard(...)` identically), `AthleteMetricsPlotMath.kt` (`245 -> ~310` LoC: pure Y-axis scale/tick helper). No new subsystems/repositories (`docs/architecture.md` unchanged).
+* **Verification Impact & Test Surface**: Pure JVM unit tests in `AthleteMetricsDtoAndMathTest.kt` for Y-axis tick/bound generation (spanning zero, all-zero, all-positive, narrow/wide ranges) & `zeroY` clamping; behavioral Robolectric `createComposeRule()` UI & Light/Dark PNG screenshot tests (`Rule 8.5` 4-point visual inspection via `read_file` by both `agent1` and `agent2`, plus `emulator-5554` verification in Stage 5/6) in `PerformanceManagementChartCardTest.kt`; update `AthleteProfileContractAndLocalizationTest.kt` for extracted file parity; run `ArchitectureConformanceContractTest` (`AthleteProfileScreen.kt <= 1,975`).
+* **Risk Assessment & Invariants**: **LOW** (`2 SP`, pure UI/chart presentation & pure math helper; **graphical task** requiring `Neon`/`Pro` & mandatory `Rule 8.5` PNG visual self-inspection). Mitigated by preserving `PowerPhysiologyCalculator` formulas, `AthleteProfileScreen.kt` monolith ceiling, `IntrinsicSize.Min` uniform card heights, trademark-free 9-locale strings, and Light/Dark/AMOLED Compose visual verification.
