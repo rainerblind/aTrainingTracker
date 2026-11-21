@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.24  
+**Version**: 1.0.27  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 110
+**Total Tests**: 111
 
 ---
 
@@ -1610,6 +1610,29 @@
 
 ---
 
+### TST-SET-125: **Never-Connected BLE Passive Workout Convergence, Scan-Assist Gating & Queue Retry Deduplication Suite (`ATT-9243`)** [Verified]
+- **Requirement(s)**: `REQ-SET-123` (`REQ-SET-123.1`..`REQ-SET-123.4`)
+- **Component**: `MyBTLEDevice.java`, `DeviceSearchPeriodicRetryCoordinator.kt`, `BLEReconnectRobustnessTest.kt`, `DeviceSearchPeriodicRetryCoordinatorTest.kt`, `DeviceManagerSearchQueueTest.kt`, `MyBTLEDeviceAddressAndSearchTest.kt`, `MyBTLEDeviceLifecycleTest.kt`, `BTLEHeartRateDeviceTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9243`
+- **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Never-Connected Workout Passive Convergence, Multi-Sensor Quota & `READY -> TRACKING` Edge (`TST-SET-125.1`, `BLEReconnectRobustnessTest#testSearchTimeout_duringTrackingAndPaused_clearsSearchingAndReleasesQueueWhilePersistingReconnect`, `BLEReconnectRobustnessTest#testNeverConnectedThreeAbsentSensors_duringWorkout_convergePassiveAndUpgradeOnWakeUp_TST_SET_125_1`, `BLEReconnectRobustnessTest#testSearchTimeout_readyToTrackingEdge_replacesNonAutoConnectGattAndGuardsConcurrentRaces_TST_SET_125_1`)*:
+     • Verify for `3` absent never-connected paired BLE sensors (`!mHasConnectedInSession`) during `TrackingMode.TRACKING` and `PAUSED` that initial `startSearching()` consumes `1` scan per device (`3 <= MAX_SCANS_IN_WINDOW = 4`, `0` scan-quota throttles), and upon `mSearchTimeoutRunnable` each sensor transitions `mState = State.DISCONNECTED`, clears `isSearching`, sets `mIsBackgroundReconnecting = true`, holds passive `connectGatt(..., autoConnect = true, ..., TRANSPORT_LE)`, cancels and does NOT schedule `mReconnectRunnable`, and broadcasts `SEARCHING_STOPPED_FOR_ONE_INTENT(false)`.
+     • Verify the `READY -> TRACKING` transition edge: Try 1 starts in `TrackingMode.READY` (opening a direct `autoConnect = false` `BluetoothGatt`), `TrackingMode` changes to `TRACKING` before timeout, and `mSearchTimeoutRunnable` atomically closes/replaces the non-`autoConnect` handle with passive `connectGatt(..., autoConnect = true, ..., TRANSPORT_LE)` without scheduling `mReconnectRunnable` and guarding against concurrent `shutDown` / `STATE_CONNECTED`.
+     • Verify mid-ride passive wake-up: once OS-managed `autoConnect = true` delivers `STATE_CONNECTED (GATT_SUCCESS)`, `mHasConnectedInSession` flips to `true`, `mCurrentReconnectDelayMs` resets to `1,000 ms`, and a subsequent mid-workout drop triggers full fast `1s -> 2s -> 4s -> 8s -> 16s` reconnect + active scan-assist.
+  2. *Scan-Assist Gating, `attemptBackgroundReconnect` Timeout Skipping, Never-Connected Disconnect Floor & Silent-HR Preservation (`TST-SET-125.2`, `BLEReconnectRobustnessTest#testNeverConnectedWorkoutDisconnect_floorsDelay60sAndSkipsScanAssistAndTimeout_TST_SET_125_2`, `MyBTLEDeviceAddressAndSearchTest#testScanAssistance_onScanResult_connectsDuringDecoupledBackgroundReconnect`, `MyBTLEDeviceLifecycleTest#testResumeGattOperations_whileBackgroundReconnecting_preservesNonBlockingState`, `BTLEHeartRateDeviceTest`)*:
+     • Verify a spurious `onConnectionStateChange(STATE_DISCONNECTED, status = 133/8)` on a never-connected sensor during `TRACKING`/`PAUSED` floors `mReconnectRunnable` delay at `>= 60_000 ms`, and running `attemptBackgroundReconnect()` (including via `resumeGattOperations()`) sets `mIsBackgroundReconnecting = true`, stays `State.DISCONNECTED` (`isSearching == false`), skips `mSearchTimeoutRunnable`, adds `0` scans to `sScanTimestamps`, and opens passive `connectGatt(..., autoConnect = true, ..., TRANSPORT_LE)`.
+     • Verify a previously connected sensor (`mHasConnectedInSession == true`, including `BTLEHeartRateDevice` `BleHrmSilentConnectionWatchdog` `triggerSilentConnectionReconnect()`) retains `mSearchTimeoutRunnable`, active `startScanAssistance()`, and fast `1s -> 2s -> 4s -> 8s -> 16s -> ...` backoff.
+     • Verify `TrackingMode.READY` (`!mHasConnectedInSession && !isMidSessionOrWorkoutActive()`) retains `mSearchTimeoutRunnable` in `attemptBackgroundReconnect()`, `1s -> 2s -> 4s -> ...` disconnect backoff, and clean `disconnectFromGatt()` termination on search timeout without scheduling `mReconnectRunnable`.
+  3. *`DeviceSearchPeriodicRetryCoordinator` Keep-Alive Skip & `deviceTries` Cleanup (`TST-SET-125.3`, `DeviceSearchPeriodicRetryCoordinatorTest#testHandleSearchStopped_keepAliveDevice_removesDeviceTriesAndSkipsTries2ToN_TST_SET_125_3`, `DeviceManagerSearchQueueTest#testThreeAbsentKeepAliveDevices_withTries3_searchedOnceAndDeviceTriesCleared_TST_SET_125_3`)*:
+     • Verify when `!success && current.shouldKeepAliveOnSearchTimeout() == true` with `tries = 3` (or `tries = 1`), `handleSearchStoppedForCurrentDevice()` removes `current` from `deviceTries`, does NOT re-enqueue `current` into `searchQueue`, does NOT schedule periodic re-search, does NOT call `detachAndGiveUpDevice`, and advances the queue immediately (`3` absent keep-alive BLE devices perform strictly `1` search per device, `0` tries `2..3` re-enqueues).
+     • Verify when `current.shouldKeepAliveOnSearchTimeout() == false` (`READY` startup), `tries = 3 -> 2 -> 1` re-enqueue and `tries <= 1` periodic re-search / `detachAndGiveUpDevice` invariants remain unchanged.
+  4. *Detailed Design Parity, System Traceability & Architecture Contracts (`TST-SET-125.4`, `DetailedDesignParityContractTest`, `SystemLiveTrackingRequirementsContractTest`, `ArchitectureConformanceContractTest`)*:
+     • Verify `DetailedDesignParityContractTest` (`3/3`), `SystemLiveTrackingRequirementsContractTest` (`4/4`), `ArchitectureConformanceContractTest` (`11/11`; `DeviceManager.java <= 1,708` LoC and `PolarOnlineStreamingBridge.kt <= 1,500` LoC untouched; `MyBTLEDevice.MAX_RECONNECT_DELAY_MS == 16000L` and `isMidSessionOrWorkoutActive()` preserved), and `verify_requirement_governance.py --check-living-doc-layout` exit `0` (`Localization Parity: N/A`).
+- **Verification Evidence**: Gate 4 (`ATT-9483` @ `85386e63`, `Rule 7.5`, `0` `app/` drift) — `88/88 PASS` (`0` fail, `0` err, `0` skip) across 9 Tier-1 targeted suites (`BLEReconnectRobustnessTest` `16/16`, `MyBTLEDeviceAddressAndSearchTest` `11/11`, `MyBTLEDeviceLifecycleTest` `14/14`, `BTLEHeartRateDeviceTest` `16/16`, `DeviceSearchPeriodicRetryCoordinatorTest` `6/6`, `DeviceManagerSearchQueueTest` `7/7`, `DetailedDesignParityContractTest` `3/3`, `SystemLiveTrackingRequirementsContractTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`; `0` new production compiler warnings); `3/3` Python safety linters PASS; `--check-verified-evidence` EXIT `0`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1638,3 +1661,6 @@
 | `1.0.22` | 2026-11-21 | Lane A Author (`ATT-9346`, `--as agent1`) | `ATT-9346` | Promoted `TST-SET-124` to `[Verified]` in Stage 5 Bounce 2 reusing Gate 4 Bounce 2 (`ATT-9459` @ `8d7a449f`, `Rule 7.5`, `0` `app/` drift) `92/92 PASS` across 8 suites (`9/9` verbatim `TST-SET-124` methods verified), `3/3` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9346_walkthrough.md`. |
 | `1.0.23` | 2026-11-21 | Lane A Author (`ATT-9346`, `--as agent1`) | `ATT-9346` | Stage 6 Bounce 3/3 final heal: added 2 regression tests (`testLaunchStream_doesNotSpeculativelyActivateSlotDuringPreAcquire_TST_SET_124_2` and `testH10StaleAbortedRenegotiationAndConcurrentYieldResume_respectsReplacementAndLinearizesPreAcquire_TST_SET_124_2`; `11/11` verbatim `TST-SET-124` methods, `94/94 PASS` across 8 suites) and set `[Implemented]` pending Gate 4 / Stage 5 Bounce 3 re-verification. |
 | `1.0.24` | 2026-11-21 | Lane A Author (`ATT-9346`, `--as agent1`) | `ATT-9346` | Promoted `TST-SET-124` to `[Verified]` in Stage 5 Bounce 3 reusing Gate 4 Bounce 3 (`ATT-9462` @ `939725f4`, `Rule 7.5`, `0` `app/` drift) `94/94 PASS` across 8 suites (`11/11` verbatim `TST-SET-124` methods verified), `3/3` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9346_walkthrough.md`. |
+| `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Added `TST-SET-125` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-123`) covering never-connected BLE passive workout convergence (`READY -> TRACKING` edge), scan-assist gating & `attemptBackgroundReconnect` timeout skipping, `>= 60 s` disconnect floor, `DeviceSearchPeriodicRetryCoordinator` keep-alive `deviceTries` cleanup, and design/governance parity (`N/A - no UI strings`). |
+| `1.0.26` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Promoted `TST-SET-125` to `[Implemented]` with verbatim `TestClass#testMethod` citations (`88/88 PASS` across 9 Tier-1 suites including `DetailedDesignParityContractTest` `3/3`, `SystemLiveTrackingRequirementsContractTest` `4/4`, and `ArchitectureConformanceContractTest` `11/11`; `3/3` Python safety linters PASS). |
+| `1.0.27` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Promoted `TST-SET-125` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9483` @ `85386e63`, `Rule 7.5`, `0` `app/` drift) `88/88 PASS` across 9 Tier-1 suites (`0` new production compiler warnings), `3/3` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9243_walkthrough.md`. |

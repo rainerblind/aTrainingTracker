@@ -163,4 +163,61 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         assertEquals(1, retries)
         assertFalse(coordinator.hasPendingRetryForTesting(55L))
     }
+
+    /**
+     * TST-SET-125.3: When !success && current.shouldKeepAliveOnSearchTimeout() is true, coordinator
+     * checks keep-alive BEFORE tries <= 1, removes current from deviceTries, skips re-enqueue for
+     * tries 2..N, schedules no periodic retry, and preserves multi-try re-enqueue when keep-alive is false.
+     */
+    @Test
+    fun testHandleSearchStopped_keepAliveDevice_removesDeviceTriesAndSkipsTries2ToN_TST_SET_125_3() {
+        val coordinator = newCoordinator()
+        val keepAliveDevice = io.mockk.mockk<MyRemoteDevice>(relaxed = true)
+        io.mockk.every { keepAliveDevice.shouldKeepAliveOnSearchTimeout() } returns true
+
+        val remoteDevices = mutableMapOf<Long, MyRemoteDevice>(101L to keepAliveDevice)
+        val deviceTries = mutableMapOf<MyRemoteDevice, Int>(keepAliveDevice to 3)
+        val searchQueue = java.util.ArrayDeque<MyRemoteDevice>()
+        var detachCount = 0
+
+        coordinator.handleSearchStoppedForCurrentDevice(
+            current = keepAliveDevice,
+            deviceId = 101L,
+            success = false,
+            remoteDevices = remoteDevices,
+            deviceTries = deviceTries,
+            searchQueue = searchQueue,
+            currentlySearchingSupplier = { null },
+            detachAndGiveUpDevice = { detachCount++ },
+            searchNextRunnable = {}
+        )
+
+        assertFalse("Keep-alive device must be removed from deviceTries", deviceTries.containsKey(keepAliveDevice))
+        assertTrue("Keep-alive device must NOT be re-enqueued for tries 2..N", searchQueue.isEmpty())
+        assertFalse("Keep-alive device must NOT schedule periodic retry", coordinator.hasPendingRetryForTesting(101L))
+        assertEquals("Keep-alive device must NOT be detached", 0, detachCount)
+
+        // Contrast: non-keep-alive device (READY startup) with tries = 3 still decrements & re-enqueues
+        val readyDevice = io.mockk.mockk<MyRemoteDevice>(relaxed = true)
+        io.mockk.every { readyDevice.shouldKeepAliveOnSearchTimeout() } returns false
+        remoteDevices[102L] = readyDevice
+        deviceTries[readyDevice] = 3
+
+        coordinator.handleSearchStoppedForCurrentDevice(
+            current = readyDevice,
+            deviceId = 102L,
+            success = false,
+            remoteDevices = remoteDevices,
+            deviceTries = deviceTries,
+            searchQueue = searchQueue,
+            currentlySearchingSupplier = { null },
+            detachAndGiveUpDevice = { detachCount++ },
+            searchNextRunnable = {}
+        )
+
+        assertEquals(2, deviceTries[readyDevice])
+        assertEquals(1, searchQueue.size)
+        assertTrue(searchQueue.contains(readyDevice))
+        assertEquals(0, detachCount)
+    }
 }

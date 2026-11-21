@@ -73,10 +73,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     private static final int READ_BATTERY_PERCENTAGE_PERIOD = 5 * 60 * 1000; // 5 minutes
     private static final long INITIAL_RECONNECT_DELAY_MS = 1000L;
     private static final long MAX_RECONNECT_DELAY_MS = 16000L;
+    private static final long NEVER_CONNECTED_WORKOUT_RECONNECT_FLOOR_MS = 60_000L;
     protected String mAddress; // the MAC Address
     // private static final int READ_BATTERY_PERCENTAGE_PERIOD = 10 * 1000; // 10 seconds (just for testing)
     private final Object mGattLock = new Object();
     protected volatile BluetoothGatt mBluetoothGatt;
+    private boolean mCurrentGattAutoConnect = false;
     protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<BluetoothGattCharacteristic>();
     protected volatile State mState = State.DISCONNECTED;
     Handler mHandler;
@@ -289,6 +291,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                     if (mBluetoothGatt == null && (mState == State.SEARCHING || (mIsBackgroundReconnecting && mState == State.DISCONNECTED))) {
                         if (DEBUG) Log.i(TAG, "Connecting GATT (autoConnect=" + autoConnect + ")");
                         mBluetoothGatt = dev.connectGatt(mContext, autoConnect, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                        mCurrentGattAutoConnect = (mBluetoothGatt != null) && autoConnect;
                     }
                 }
             }
@@ -363,9 +366,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                             if (mState == State.SEARCHING || (mIsBackgroundReconnecting && mState == State.DISCONNECTED)) {
                                 gattToClose = mBluetoothGatt;
                                 mBluetoothGatt = null;
+                                mCurrentGattAutoConnect = false;
                                 if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                                     if (DEBUG) Log.i(TAG, "Connecting GATT using scan-resolved device handle");
                                     mBluetoothGatt = dev.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                                    mCurrentGattAutoConnect = false;
                                 }
                             } else {
                                 gattToClose = null;
@@ -480,8 +485,8 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 }
             }
             if (DEBUG) Log.i(TAG, "device is not receiving data, so this search failed");
-            if (isMidSessionOrWorkoutActive()) {
-                Log.i(TAG, "Search timed out for session-connected or active-workout device: persisting reconnect");
+            if (mHasConnectedInSession) {
+                Log.i(TAG, "Search timed out for session-connected device: persisting reconnect");
                 long delay;
                 synchronized (mGattLock) {
                     if (mIsShutDown || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
@@ -504,6 +509,67 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
                         BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
                         BluetoothDevice dev = getBluetoothDevice(btAdapter);
+                        triggerGattConnect(dev, true);
+                    }
+                }
+                if (isSearching()) {
+                    notifyStopSearching(false);
+                }
+            } else if (isMidSessionOrWorkoutActive()) {
+                Log.i(TAG, "Search timed out for never-connected active-workout device: converging to passive autoConnect");
+                boolean needOpenPassiveGatt = false;
+                boolean needReplaceNonAutoConnectGatt = false;
+                synchronized (mGattLock) {
+                    if (mIsShutDown || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
+                        return;
+                    }
+                    if (mState == State.SEARCHING) {
+                        mState = State.DISCONNECTED;
+                    }
+                    mIsBackgroundReconnecting = true;
+                    if (mBluetoothGatt == null) {
+                        needOpenPassiveGatt = true;
+                    } else if (!mCurrentGattAutoConnect) {
+                        needReplaceNonAutoConnectGatt = true;
+                    }
+                }
+                mHandler.removeCallbacks(mReconnectRunnable);
+
+                if (needReplaceNonAutoConnectGatt) {
+                    disconnectFromGattInternal(new Runnable() {
+                        @Override
+                        public void run() {
+                            final BluetoothDevice dev;
+                            synchronized (mGattLock) {
+                                if (mIsShutDown
+                                        || mIsGattPaused
+                                        || mState != State.DISCONNECTED
+                                        || mBluetoothGatt != null
+                                        || !isMidSessionOrWorkoutActive()) {
+                                    return;
+                                }
+                                mIsBackgroundReconnecting = true;
+                                BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+                                BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
+                                dev = getBluetoothDevice(btAdapter);
+                            }
+                            if (dev != null) {
+                                triggerGattConnect(dev, true);
+                            }
+                        }
+                    }, true);
+                } else if (needOpenPassiveGatt) {
+                    final BluetoothDevice dev;
+                    synchronized (mGattLock) {
+                        if (!mIsShutDown && !mIsGattPaused && mState == State.DISCONNECTED && mBluetoothGatt == null) {
+                            BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+                            BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
+                            dev = getBluetoothDevice(btAdapter);
+                        } else {
+                            dev = null;
+                        }
+                    }
+                    if (dev != null) {
                         triggerGattConnect(dev, true);
                     }
                 }
@@ -615,6 +681,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                     long delay;
                     synchronized (mGattLock) {
                         delay = SensorReconnectBackoffPolicy.effectiveDelayMs(mCurrentReconnectDelayMs, mContext);
+                        if (!mHasConnectedInSession && isMidSessionOrWorkoutActive()) {
+                            delay = Math.max(delay, NEVER_CONNECTED_WORKOUT_RECONNECT_FLOOR_MS);
+                        }
                         mCurrentReconnectDelayMs = SensorReconnectBackoffPolicy.nextDelayMs(delay, mContext);
                     }
                     Log.i(TAG, "Scheduling reconnect in " + delay + " ms (next backoff: " + mCurrentReconnectDelayMs + " ms)");
@@ -820,15 +889,21 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.postDelayed(mSearchTimeoutRunnable, timeoutMs);
         }
 
-        initiateScanAndConnect();
+        initiateScanAndConnect(true);
     }
 
     /**
      * Executes a decoupled background reconnect cycle without re-entering {@link State#SEARCHING}
      * or {@code MyRemoteDevice.mSearching} so {@link com.atrainingtracker.banalservice.devices.DeviceManager}
-     * queue scans never deadlock ({@code REQ-CON-051.2}).
+     * queue scans never deadlock ({@code REQ-CON-051.2}, {@code REQ-SET-123.2}).
+     *
+     * <p>For never-connected paired devices during active workouts ({@code !mHasConnectedInSession &&
+     * isMidSessionOrWorkoutActive()}), skips active scan-assist and {@link #mSearchTimeoutRunnable}
+     * to converge passively on OS-managed {@code autoConnect = true} without consuming Android's
+     * 30-second BLE scan quota.</p>
      */
     protected void attemptBackgroundReconnect() {
+        final boolean allowScanAssist;
         synchronized (mGattLock) {
             if (mIsShutDown || mIsGattPaused) {
                 return;
@@ -837,15 +912,18 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 return;
             }
             mIsBackgroundReconnecting = true;
+            allowScanAssist = mHasConnectedInSession;
             mHandler.removeCallbacks(mSearchTimeoutRunnable);
             mHandler.removeCallbacks(mReconnectRunnable);
-            mHandler.postDelayed(mSearchTimeoutRunnable, TrainingApplication.getBtleSearchPeriodMs());
+            if (allowScanAssist || !isMidSessionOrWorkoutActive()) {
+                mHandler.postDelayed(mSearchTimeoutRunnable, TrainingApplication.getBtleSearchPeriodMs());
+            }
         }
 
-        initiateScanAndConnect();
+        initiateScanAndConnect(allowScanAssist);
     }
 
-    private void initiateScanAndConnect() {
+    private void initiateScanAndConnect(boolean allowScanAssist) {
         final BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
         final BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
 
@@ -859,7 +937,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
         final BluetoothDevice device = getBluetoothDevice(btAdapter);
 
-        startScanAssistance(btAdapter);
+        if (allowScanAssist) {
+            startScanAssistance(btAdapter);
+        }
 
         boolean autoConnect = isMidSessionOrWorkoutActive();
         if (!mIsScanning || autoConnect) {
@@ -876,26 +956,40 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
      * {@code mHandler}, and invokes {@code onGattClosed} strictly after close completes ({@code REQ-CON-050.1}).
      */
     protected void disconnectFromGatt(@Nullable final Runnable onGattClosed) {
+        disconnectFromGattInternal(onGattClosed, false);
+    }
+
+    private void disconnectFromGattInternal(@Nullable final Runnable onGattClosed, final boolean onlyIfNotAutoConnectDisconnected) {
         if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
-
-        stopScanAssistance();
-        mHandler.removeCallbacks(mSearchTimeoutRunnable);
-        mHandler.removeCallbacks(mBatteryReadRunnable);
-        mHandler.removeCallbacks(mGattTimeoutRunnable);
-        mReadCharacteristicQueue.clear();
-
-        synchronized (mGattLock) {
-            mGattQueue.clear();
-            mGattOperationPending = false;
-        }
 
         final BluetoothGatt gattToClose;
         synchronized (mGattLock) {
+            if (onlyIfNotAutoConnectDisconnected) {
+                if (mIsShutDown
+                        || mState != State.DISCONNECTED
+                        || mBluetoothGatt == null
+                        || mCurrentGattAutoConnect) {
+                    return;
+                }
+            }
+            mGattQueue.clear();
+            mGattOperationPending = false;
             mState = State.DISCONNECTED;
-            mIsBackgroundReconnecting = false;
+            if (!onlyIfNotAutoConnectDisconnected) {
+                mIsBackgroundReconnecting = false;
+            }
             gattToClose = mBluetoothGatt;
             mBluetoothGatt = null;
+            mCurrentGattAutoConnect = false;
         }
+
+        stopScanAssistance();
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mSearchTimeoutRunnable);
+            mHandler.removeCallbacks(mBatteryReadRunnable);
+            mHandler.removeCallbacks(mGattTimeoutRunnable);
+        }
+        mReadCharacteristicQueue.clear();
 
         if (gattToClose != null) {
             final Runnable closeRunnable = new Runnable() {
@@ -1040,6 +1134,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
     boolean isBackgroundReconnectingForTesting() {
         return mIsBackgroundReconnecting;
+    }
+
+    boolean isCurrentGattAutoConnectForTesting() {
+        synchronized (mGattLock) {
+            return mCurrentGattAutoConnect;
+        }
     }
 
     public static void clearScanTimestampsForTesting() {

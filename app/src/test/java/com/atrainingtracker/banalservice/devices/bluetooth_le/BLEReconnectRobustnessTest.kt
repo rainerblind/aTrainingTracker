@@ -92,6 +92,7 @@ class BLEReconnectRobustnessTest {
         fun getScanCallback(): ScanCallback? = scanCallbackForTesting
         fun getState(): State = mState
         fun isBackgroundReconnecting(): Boolean = isBackgroundReconnectingForTesting
+        fun isCurrentGattAutoConnect(): Boolean = isCurrentGattAutoConnectForTesting
     }
 
     @Before
@@ -476,9 +477,10 @@ class BLEReconnectRobustnessTest {
     }
 
     /**
-     * TST-CON-051.1: During TrackingMode.TRACKING or PAUSED (even with mHasConnectedInSession == false),
+     * TST-CON-051.1 / TST-SET-125.1: During TrackingMode.TRACKING or PAUSED with mHasConnectedInSession == false,
      * mSearchTimeoutRunnable must transition mState out of SEARCHING, clear isSearching(), broadcast
-     * SEARCHING_STOPPED_FOR_ONE_INTENT(false), and still persist background reconnect + autoConnect=true.
+     * SEARCHING_STOPPED_FOR_ONE_INTENT(false), converge to passive autoConnect=true without scheduling
+     * aggressive mReconnectRunnable retries (ATT-9243).
      */
     @Test
     fun testSearchTimeout_duringTrackingAndPaused_clearsSearchingAndReleasesQueueWhilePersistingReconnect() {
@@ -486,6 +488,7 @@ class BLEReconnectRobustnessTest {
             MyBTLEDevice.clearScanTimestampsForTesting()
             TrainingApplication.setTrackingModeForTesting(mode)
             postedDelayedRunnables.clear()
+            every { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) } returns mockGatt
 
             val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 301L, "AA:BB:CC:DD:EE:31")
             injectTrackingHandler(device, runPosted = true)
@@ -508,10 +511,11 @@ class BLEReconnectRobustnessTest {
             assertEquals("mState must leave SEARCHING on timeout ($mode)", MyBTLEDevice.State.DISCONNECTED, device.getState())
             assertFalse("MyRemoteDevice.mSearching must be cleared on timeout ($mode)", device.isSearching)
             assertTrue("mIsBackgroundReconnecting must arm on timeout ($mode)", device.isBackgroundReconnecting())
-            assertTrue(
-                "mReconnectRunnable must be scheduled ($mode)",
+            assertFalse(
+                "Never-connected workout device must NOT schedule aggressive mReconnectRunnable ($mode)",
                 postedDelayedRunnables.any { it.first == device.reconnectRunnable }
             )
+            assertTrue("Passive autoConnect=true flag must be recorded ($mode)", device.isCurrentGattAutoConnect())
             verify { mockContext.sendBroadcast(any()) }
             verify { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) }
         }
@@ -613,5 +617,190 @@ class BLEReconnectRobustnessTest {
         assertFalse(device.isSearching)
         verify(exactly = 1) { mockGatt.discoverServices() }
         verify(exactly = 1) { mockContext.sendBroadcast(any()) }
+    }
+
+    /**
+     * TST-SET-125.1: 3 absent never-connected paired BLE sensors during TRACKING/PAUSED consume at most
+     * 3 initial scans (<= 4 in 30s, 0 quota throttles), converge to passive autoConnect=true with 0
+     * mReconnectRunnable retries, and upgrade to fast reconnect + scan-assist once passively connected.
+     */
+    @Test
+    fun testNeverConnectedThreeAbsentSensors_duringWorkout_convergePassiveAndUpgradeOnWakeUp_TST_SET_125_1() {
+        MyBTLEDevice.clearScanTimestampsForTesting()
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        every { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) } returns mockGatt
+
+        val devices = listOf(
+            TestReconnectBTLEDevice(mockContext, mockSensorManager, 401L, "AA:BB:CC:DD:EE:41"),
+            TestReconnectBTLEDevice(mockContext, mockSensorManager, 402L, "AA:BB:CC:DD:EE:42"),
+            TestReconnectBTLEDevice(mockContext, mockSensorManager, 403L, "AA:BB:CC:DD:EE:43")
+        )
+        devices.forEach { injectTrackingHandler(it, runPosted = true) }
+
+        for (device in devices) {
+            device.startSearching()
+            assertTrue("Initial discovery scan must succeed without throttling", device.isScanning())
+            postedDelayedRunnables.clear()
+            device.searchTimeoutRunnable.run()
+
+            assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
+            assertFalse(device.isSearching)
+            assertTrue(device.isBackgroundReconnecting())
+            assertTrue(device.isCurrentGattAutoConnect())
+            assertFalse(
+                "Never-connected workout sensor must not schedule mReconnectRunnable",
+                postedDelayedRunnables.any { it.first == device.reconnectRunnable }
+            )
+        }
+        assertEquals("3 absent paired sensors must consume strictly 3 scans (<= 4 quota)", 3, MyBTLEDevice.getScanTimestampsCountForTesting())
+
+        // Sensor #1 wakes up mid-ride via passive autoConnect=true -> upgrades to session-connected
+        val awakened = devices.first()
+        awakened.gattCallbackForTesting.onConnectionStateChange(
+            mockGatt,
+            BluetoothGatt.GATT_SUCCESS,
+            BluetoothProfile.STATE_CONNECTED
+        )
+        assertTrue(awakened.hasConnectedInSession())
+        assertEquals(1000L, awakened.currentReconnectDelayMs)
+
+        // Subsequent mid-workout drop on awakened sensor gets fast 1s reconnect + active scan-assist
+        MyBTLEDevice.clearScanTimestampsForTesting()
+        postedDelayedRunnables.clear()
+        awakened.gattCallbackForTesting.onConnectionStateChange(
+            mockGatt,
+            8,
+            BluetoothProfile.STATE_DISCONNECTED
+        )
+        assertEquals(1000L, postedDelayedRunnables.last { it.first == awakened.reconnectRunnable }.second)
+
+        postedDelayedRunnables.clear()
+        awakened.reconnectRunnable.run()
+        assertEquals("Session-connected reconnect must use active scan-assist", 1, MyBTLEDevice.getScanTimestampsCountForTesting())
+        assertTrue(
+            "Session-connected reconnect must arm mSearchTimeoutRunnable",
+            postedDelayedRunnables.any { it.first == awakened.searchTimeoutRunnable }
+        )
+    }
+
+    /**
+     * TST-SET-125.1: Try 1 starts in READY (autoConnect=false GATT) and times out after transitioning
+     * to TRACKING -> atomically closes non-autoConnect GATT and opens passive autoConnect=true GATT
+     * without scheduling mReconnectRunnable, while guarding against concurrent STATE_CONNECTED or shutDown.
+     */
+    @Test
+    fun testSearchTimeout_readyToTrackingEdge_replacesNonAutoConnectGattAndGuardsConcurrentRaces_TST_SET_125_1() {
+        // 1. Happy path: Try 1 in READY (quota full -> direct connectGatt(autoConnect=false)), then TRACKING before timeout
+        MyBTLEDevice.clearScanTimestampsForTesting()
+        val now = System.currentTimeMillis()
+        repeat(4) { MyBTLEDevice.addScanTimestampForTesting(now - it * 500L) }
+
+        val readyGatt = mockk<BluetoothGatt>(relaxed = true)
+        val passiveGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { mockRemoteDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) } returns readyGatt
+        every { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) } returns passiveGatt
+
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 404L, "AA:BB:CC:DD:EE:44")
+        injectTrackingHandler(device, runPosted = true)
+
+        device.startSearching()
+        assertFalse("READY direct connect must have autoConnect=false", device.isCurrentGattAutoConnect())
+        verify(exactly = 1) { mockRemoteDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) }
+
+        // User starts workout before Try 1 timeout fires
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        postedDelayedRunnables.clear()
+        device.searchTimeoutRunnable.run()
+
+        verify(exactly = 1) { readyGatt.disconnect() }
+        verify(exactly = 1) { readyGatt.close() }
+        verify(exactly = 1) { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) }
+        assertTrue("Replaced GATT must track passive autoConnect=true", device.isCurrentGattAutoConnect())
+        assertTrue("mIsBackgroundReconnecting must stay true across replacement", device.isBackgroundReconnecting())
+        assertFalse(device.isSearching)
+        assertFalse(postedDelayedRunnables.any { it.first == device.reconnectRunnable })
+
+        // 2. Race guard: shutDown before posted replacement closeRunnable completes must NOT open passive GATT
+        val raceGatt = mockk<BluetoothGatt>(relaxed = true)
+        clearMocks(mockRemoteDevice, answers = false, recordedCalls = true)
+        every { mockRemoteDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) } returns raceGatt
+        every { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) } returns passiveGatt
+
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        val raceDevice = TestReconnectBTLEDevice(mockContext, mockSensorManager, 405L, "AA:BB:CC:DD:EE:45")
+        val postedQueue = mutableListOf<Runnable>()
+        val handler = injectTrackingHandler(raceDevice, runPosted = false)
+        every { handler.post(any()) } answers {
+            postedQueue.add(firstArg())
+            true
+        }
+
+        raceDevice.startSearching()
+        // Run triggerGattConnect posted runnable from READY
+        postedQueue.forEach { it.run() }
+        postedQueue.clear()
+        assertFalse(raceDevice.isCurrentGattAutoConnect())
+
+        // Transition to TRACKING -> timeout posts closeRunnable + onGattClosed, while mIsBackgroundReconnecting stays true
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        raceDevice.searchTimeoutRunnable.run()
+        assertTrue("mIsBackgroundReconnecting must remain true while closeRunnable is pending", raceDevice.isBackgroundReconnecting())
+        assertEquals(1, postedQueue.size)
+
+        // shutDown arrives before posted closeRunnable finishes -> onGattClosed MUST NOT call connectGatt(true)
+        raceDevice.shutDown()
+        postedQueue.forEach { it.run() }
+        verify(exactly = 0) { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) }
+    }
+
+    /**
+     * TST-SET-125.2: Spurious STATE_DISCONNECTED (133/8) on a never-connected workout sensor floors
+     * reconnect delay >= 60,000 ms, attemptBackgroundReconnect & resumeGattOperations skip both
+     * mSearchTimeoutRunnable and startScanAssistance (0 scan quota), while READY retains mSearchTimeoutRunnable.
+     */
+    @Test
+    fun testNeverConnectedWorkoutDisconnect_floorsDelay60sAndSkipsScanAssistAndTimeout_TST_SET_125_2() {
+        MyBTLEDevice.clearScanTimestampsForTesting()
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        every { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) } returns mockGatt
+
+        val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 406L, "AA:BB:CC:DD:EE:46")
+        injectTrackingHandler(device, runPosted = true)
+        assertFalse(device.hasConnectedInSession())
+
+        // Spurious GATT 133 disconnect during active workout -> delay floored at >= 60_000 ms
+        postedDelayedRunnables.clear()
+        device.gattCallbackForTesting.onConnectionStateChange(mockGatt, 133, BluetoothProfile.STATE_DISCONNECTED)
+        val scheduledDisconnectRetry = postedDelayedRunnables.last { it.first == device.reconnectRunnable }
+        assertTrue("Never-connected workout disconnect delay must be >= 60_000 ms", scheduledDisconnectRetry.second >= 60_000L)
+
+        // Executing mReconnectRunnable -> attemptBackgroundReconnect skips scan-assist & mSearchTimeoutRunnable
+        MyBTLEDevice.clearScanTimestampsForTesting()
+        postedDelayedRunnables.clear()
+        scheduledDisconnectRetry.first.run()
+
+        assertEquals("Never-connected attemptBackgroundReconnect must consume 0 scan quota", 0, MyBTLEDevice.getScanTimestampsCountForTesting())
+        assertFalse("Never-connected attemptBackgroundReconnect must NOT schedule mSearchTimeoutRunnable", postedDelayedRunnables.any { it.first == device.searchTimeoutRunnable })
+        assertTrue(device.isBackgroundReconnecting())
+        assertFalse(device.isSearching)
+        assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
+        verify(atLeast = 1) { mockRemoteDevice.connectGatt(mockContext, true, any(), BluetoothDevice.TRANSPORT_LE) }
+
+        // Pause -> resumeGattOperations while never-connected & mIsBackgroundReconnecting=true -> passive resume (0 scans, 0 timeout)
+        postedDelayedRunnables.clear()
+        device.pauseGattOperations()
+        device.resumeGattOperations()
+        assertEquals("Passive resumeGattOperations must consume 0 scan quota", 0, MyBTLEDevice.getScanTimestampsCountForTesting())
+        assertFalse("Passive resumeGattOperations must NOT schedule mSearchTimeoutRunnable", postedDelayedRunnables.any { it.first == device.searchTimeoutRunnable })
+        assertFalse(device.isSearching)
+
+        // Contrast: in READY mode (!isMidSessionOrWorkoutActive), attemptBackgroundReconnect MUST retain mSearchTimeoutRunnable
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        val readyDevice = TestReconnectBTLEDevice(mockContext, mockSensorManager, 407L, "AA:BB:CC:DD:EE:47")
+        injectTrackingHandler(readyDevice, runPosted = true)
+        postedDelayedRunnables.clear()
+        readyDevice.reconnectRunnable.run()
+        assertTrue("READY attemptBackgroundReconnect must retain mSearchTimeoutRunnable", postedDelayedRunnables.any { it.first == readyDevice.searchTimeoutRunnable })
     }
 }
