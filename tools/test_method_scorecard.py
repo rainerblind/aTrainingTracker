@@ -172,6 +172,23 @@ class TestMethodScorecard(unittest.TestCase):
             self.assertFalse(posted2)
             mock_comment.assert_called_once()
 
+    def test_classify_po_acceptance_buckets_distinguishes_clean_refinement_bug_and_ignores_beifang(self):
+        accepted = [
+            {"key": "ATT-1", "fields": {"issuelinks": []}},
+            {"key": "ATT-2", "fields": {"issuelinks": [{"inwardIssue": {"key": "ATT-20", "fields": {"issuetype": {"name": "Verbesserung"}}}}]}},
+            {"key": "ATT-3", "fields": {"issuelinks": [{"inwardIssue": {"key": "ATT-30", "fields": {"issuetype": {"name": "Bug"}}}}]}},
+            # ATT-4 has an unrelated non-followup link (e.g. Epic/Beifang not in po-review-followup) -> still clean
+            {"key": "ATT-4", "fields": {"issuelinks": [{"inwardIssue": {"key": "ATT-40", "fields": {"issuetype": {"name": "Bug"}}}}]}},
+        ]
+        followup_types = {"ATT-20": "Verbesserung", "ATT-30": "Bug"}
+        split = method_scorecard.classify_po_acceptance_buckets(accepted, followup_types)
+        self.assertEqual(split, {
+            "total_accepted": 4,
+            "clean_accepted": 2,
+            "accepted_with_refinement": 1,
+            "accepted_with_bug_escape": 1,
+        })
+
 
 if __name__ == "__main__":
     unittest.main()

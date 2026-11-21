@@ -239,8 +239,53 @@ def read_po_minutes(po_sessions_path, iso_week):
     return round(total, 1) if found else None
 
 
+def classify_po_acceptance_buckets(accepted_issues, followup_issue_types_by_key=None):
+    """
+    Split PO-accepted ('Erledigt') issues into 3 truthful buckets based on linked PO review follow-ups:
+      - clean_accepted: 0 linked follow-up issues (unrelated Beifang is never linked!)
+      - accepted_with_refinement: >= 1 linked Verbesserung/Feature follow-up and 0 linked Bug follow-ups
+      - accepted_with_bug_escape: >= 1 linked Bug follow-up (true PO-caught implementation escape)
+    """
+    followup_types = followup_issue_types_by_key or {}
+    buckets = {
+        "total_accepted": len(accepted_issues),
+        "clean_accepted": 0,
+        "accepted_with_refinement": 0,
+        "accepted_with_bug_escape": 0,
+    }
+    for issue in accepted_issues:
+        fields = issue.get("fields") or {}
+        links = fields.get("issuelinks") or []
+        linked_bug = False
+        linked_refinement = False
+        for lk in links:
+            other = lk.get("outwardIssue") or lk.get("inwardIssue") or {}
+            other_key = other.get("key")
+            if not other_key:
+                continue
+            other_fields = other.get("fields") or {}
+            other_type = (
+                followup_types.get(other_key)
+                or (other_fields.get("issuetype") or {}).get("name", "")
+            ).strip().lower()
+            # Count only if linked issue is tracked in followup_types (po-review-followup) OR explicitly flagged
+            if followup_issue_types_by_key is not None and other_key not in followup_types:
+                continue
+            if other_type == "bug":
+                linked_bug = True
+            elif other_type in ("verbesserung", "improvement", "feature"):
+                linked_refinement = True
+        if linked_bug:
+            buckets["accepted_with_bug_escape"] += 1
+        elif linked_refinement:
+            buckets["accepted_with_refinement"] += 1
+        else:
+            buckets["clean_accepted"] += 1
+    return buckets
+
+
 def collect_jira_metrics(start_date, end_date, role="coordinator"):
-    """Query Jira for process-escape bugs, field bugs, and tier breakdown in [start_date, end_date]."""
+    """Query Jira for process-escape bugs, field bugs, tier breakdown, and 3-way PO acceptance split."""
     tools_dir = os.path.dirname(os.path.abspath(__file__))
     if tools_dir not in sys.path:
         sys.path.insert(0, tools_dir)
@@ -261,9 +306,10 @@ def collect_jira_metrics(start_date, end_date, role="coordinator"):
         f"AND updated >= '{start_s}' AND updated < '{end_plus_one}'"
     )
     tier_issues = jira_util.paged_jql_search(
-        tier_jql, ["labels", jira_util.STORY_POINTS_FIELD], role=role, config=config
+        tier_jql, ["labels", "status", "issuelinks", jira_util.STORY_POINTS_FIELD], role=role, config=config
     )
     tiers = {t: {"tickets": 0, "story_points": 0.0} for t in ("tier-a", "tier-b", "tier-c", "unclassified")}
+    accepted_issues = []
     for issue in tier_issues:
         fields = issue.get("fields") or {}
         labels = {str(l).strip().lower() for l in (fields.get("labels") or [])}
@@ -272,6 +318,16 @@ def collect_jira_metrics(start_date, end_date, role="coordinator"):
         sp_val = float(sp_raw) if sp_raw is not None else 0.0
         tiers[tier_key]["tickets"] += 1
         tiers[tier_key]["story_points"] = round(tiers[tier_key]["story_points"] + sp_val, 1)
+        if ((fields.get("status") or {}).get("name") or "").strip().lower() == "erledigt":
+            accepted_issues.append(issue)
+
+    followup_jql = "project = ATT AND labels = po-review-followup"
+    followups = jira_util.paged_jql_search(followup_jql, ["issuetype"], role=role, config=config)
+    followup_types = {
+        i["key"]: ((i.get("fields") or {}).get("issuetype") or {}).get("name", "")
+        for i in followups
+    }
+    po_acceptance_split = classify_po_acceptance_buckets(accepted_issues, followup_types)
 
     return {
         "process_escape_bugs_count": len(escapes),
@@ -279,6 +335,7 @@ def collect_jira_metrics(start_date, end_date, role="coordinator"):
         "field_escape_bugs_count": len(field_bugs),
         "field_escape_bug_keys": [i["key"] for i in field_bugs],
         "tiers": tiers,
+        "po_acceptance_split": po_acceptance_split,
     }
 
 
@@ -415,6 +472,7 @@ def compute_scorecard(
             "field_escape_bug_keys": jira_stats["field_escape_bug_keys"],
         },
         "tiers": jira_stats["tiers"],
+        "po_acceptance_split": jira_stats.get("po_acceptance_split"),
         "human_po_minutes": po_minutes,
         "comparisons": comparisons,
     }
@@ -461,6 +519,14 @@ def render_scorecard_markdown(card):
             for t, v in card["tiers"].items()
         ),
     ]
+    po_split = card.get("po_acceptance_split")
+    if po_split:
+        lines.append(
+            f"**PO Acceptance Split**: `clean`: {po_split['clean_accepted']} | "
+            f"`with_refinement`: {po_split['accepted_with_refinement']} | "
+            f"`with_bug_escape`: {po_split['accepted_with_bug_escape']} "
+            f"(total accepted: {po_split['total_accepted']})"
+        )
     return "\n".join(lines)
 
 

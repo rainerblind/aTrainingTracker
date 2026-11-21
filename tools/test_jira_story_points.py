@@ -536,6 +536,47 @@ class TestSecondVendorStage6(unittest.TestCase):
         self.assertEqual(res5, "BOUNCE_5")
         self.assertIn("[FINAL REVIEW (AGENT) — BOUNCE 5/5]", mock_comment.call_args[0][1])
 
+    @patch("jira_util.add_comment")
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_create_issue_follow_up_links_and_beifang_does_not_link(self, mock_cfg, mock_req, mock_rank, mock_comment):
+        """PO review follow-up links via Relates + po-review-followup; Beifang (follow_up_of=None) creates zero links."""
+        mock_cfg.return_value = self.mock_config
+        mock_req.side_effect = [{"key": "ATT-9950"}, {}]
+        new_key = jira_util.create_issue(
+            summary="Fix broken edge case",
+            description="Existing REQ unchanged",
+            issuetype_id="10006",
+            severity="major",
+            follow_up_of="ATT-9100",
+        )
+        self.assertEqual(new_key, "ATT-9950")
+        post_issue_fields = mock_req.call_args_list[0][1]["payload"]["fields"]
+        self.assertIn("po-review-followup", post_issue_fields["labels"])
+        link_call_url = mock_req.call_args_list[1][0][0]
+        link_payload = mock_req.call_args_list[1][1]["payload"]
+        self.assertTrue(link_call_url.endswith("/rest/api/2/issueLink"))
+        self.assertEqual(link_payload["type"]["name"], "Relates")
+        self.assertEqual(link_payload["outwardIssue"]["key"], "ATT-9950")
+        self.assertEqual(link_payload["inwardIssue"]["key"], "ATT-9100")
+        mock_comment.assert_called_once()
+        self.assertEqual(mock_comment.call_args[0][0], "ATT-9100")
+
+        # Beifang (follow_up_of=None): strictly 1 POST (no issueLink, no po-review-followup label, no comment)
+        mock_req.reset_mock()
+        mock_comment.reset_mock()
+        mock_req.side_effect = [{"key": "ATT-9951"}]
+        beifang_key = jira_util.create_issue(
+            summary="Unrelated Beifang tweak",
+            description="Spotted on another screen",
+            issuetype_id="10008",
+        )
+        self.assertEqual(beifang_key, "ATT-9951")
+        self.assertEqual(len(mock_req.call_args_list), 1)
+        self.assertNotIn("po-review-followup", mock_req.call_args_list[0][1]["payload"]["fields"].get("labels", []))
+        mock_comment.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

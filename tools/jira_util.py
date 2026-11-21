@@ -3426,7 +3426,21 @@ def create_process_escape_bug(summary, description, severity="major", source="ti
     return new_key, True
 
 
-def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True, points=None, severity=None):
+def link_issues(from_key, to_key, link_type="Relates", role="coordinator"):
+    """Create a native Jira issueLink (default 'Relates') connecting from_key to to_key."""
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issueLink"
+    payload = {
+        "type": {"name": link_type},
+        "outwardIssue": {"key": from_key},
+        "inwardIssue": {"key": to_key},
+    }
+    jira_request(url, method="POST", payload=payload, role=role)
+    print(f"Linked {from_key} -> {to_key} ({link_type}).")
+    return True
+
+
+def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True, points=None, severity=None, follow_up_of=None):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
@@ -3492,6 +3506,10 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
             if sev_label not in labels_list:
                 labels_list.append(sev_label)
 
+    if follow_up_of:
+        if "po-review-followup" not in labels_list:
+            labels_list.append("po-review-followup")
+
     labels = labels_list if labels_list else None
 
     config = get_config()
@@ -3532,6 +3550,15 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
 
     if rank_top:
         rank_at_top_of_backlog(new_key, role=role)
+
+    if follow_up_of:
+        link_issues(new_key, follow_up_of, link_type="Relates", role=role)
+        itype_label = {"10006": "Bug", "10007": "Feature", "10008": "Verbesserung"}.get(str(issuetype_id), str(issuetype_id))
+        add_comment(
+            follow_up_of,
+            f"PO Review Follow-Up linked: {new_key} [{itype_label}] — {summary} (po-review-followup).",
+            role=role,
+        )
 
     if add_to_sprint:
         if role in ("agent1", "agent2", "coordinator"):
@@ -6293,6 +6320,7 @@ USAGE_TEXT = (
     "                                                        Idempotently post Schicht Retro insights, proposals & QA findings to rolling Wochen Review & Retro\n"
     "  ensure-weekly-reviews [--force]                       Check/create mandatory Weekly Dual-Vendor Code Review ticket\n"
     "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
+    "  link-issue FROM_KEY TO_KEY [LINK_TYPE]                Create Jira issueLink (default: Relates; NEVER link unrelated Beifang)\n"
     "  pack-sprint TARGET_SPRINT_ID [--lanes N] [--max-sp-per-lane SP]\n"
     "                                                        Pull disjoint-Epic tickets from Vom PO Freigegeben (447) in rank order\n"
     "  return-unstarted [SPRINT_ARG]                         Return untouched Zu erledigen sprint tickets to Vom PO Freigegeben (447)\n"
@@ -6397,6 +6425,9 @@ if __name__ == "__main__":
         ensure_weekly_reviews(role=active_role, force=force)
     elif cmd in ("add-label", "add_label") and len(remaining_argv) == 3:
         add_label(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd in ("link-issue", "link_issue") and len(remaining_argv) in (3, 4):
+        lt = remaining_argv[3] if len(remaining_argv) == 4 else "Relates"
+        link_issues(remaining_argv[1], remaining_argv[2], link_type=lt, role=active_role)
     elif cmd in ("pack-sprint", "pack_sprint") and len(remaining_argv) >= 2:
         t_sprint = remaining_argv[1]
         max_lanes = 3
@@ -6666,6 +6697,7 @@ if __name__ == "__main__":
         labels_arg = None
         points_arg = None
         severity_arg = None
+        follow_up_arg = None
         explicit_type = None
         explicit_parent = None
         explicit_summary = None
@@ -6722,6 +6754,11 @@ if __name__ == "__main__":
             elif arg in ("--parent", "--epic") and idx + 1 < len(remaining_argv):
                 explicit_parent = remaining_argv[idx + 1]
                 idx += 1
+            elif arg.startswith("--follow-up-of="):
+                follow_up_arg = arg.split("=", 1)[1]
+            elif arg == "--follow-up-of" and idx + 1 < len(remaining_argv):
+                follow_up_arg = remaining_argv[idx + 1]
+                idx += 1
             else:
                 filtered_args.append(arg)
             idx += 1
@@ -6729,13 +6766,13 @@ if __name__ == "__main__":
         summary = explicit_summary if explicit_summary else (filtered_args[0] if len(filtered_args) >= 1 else None)
         desc = explicit_desc if explicit_desc else (filtered_args[1] if len(filtered_args) >= 2 else (filtered_args[0] if explicit_summary and len(filtered_args) >= 1 else None))
         if not summary or not desc:
-            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2] [--points=N] [--severity=critical|major|minor|cosmetic]", file=sys.stderr)
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--follow-up-of=KEY] [--bottom] [--priority=PRIORITY] [--labels=L1,L2] [--points=N] [--severity=critical|major|minor|cosmetic]", file=sys.stderr)
             sys.exit(1)
 
         pos_offset = (0 if explicit_summary else 1) + (0 if explicit_desc else 1)
         type_id = explicit_type if explicit_type else (filtered_args[pos_offset] if len(filtered_args) > pos_offset else "10008")
         parent = explicit_parent if explicit_parent else (filtered_args[pos_offset + 1] if len(filtered_args) > pos_offset + 1 else None)
-        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg, severity=severity_arg)
+        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg, severity=severity_arg, follow_up_of=follow_up_arg)
     elif cmd in ("recalculate-living-docs", "recalc-docs"):
         recalculate_master_index_tables()
     elif cmd in ("sprint-metrics", "sprint_metrics"):
