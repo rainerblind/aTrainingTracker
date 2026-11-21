@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.33  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 113
+**Total Tests**: 114
 
 ---
 
@@ -1676,6 +1676,32 @@
 
 ---
 
+### TST-SET-128: **Polar Verity Sense Workout PPI Gating, Stale/Flatline HR/RR Clearing & Primary HR Arbitration Verification Suite** (`ATT-9345`) [Verified]
+- **Requirement(s)**: `REQ-SET-126` (`REQ-SET-126.1`–`REQ-SET-126.4`)
+- **Component**: `PolarHrStreamHealthMonitor.kt`, `PrimaryHrSensorArbitrator.kt`, `HrSensorHealthProvider.kt`, `PolarOnlineStreamingBridge.kt`, `PolarPmdStreamCoordinator.kt`, `MySensorManager.java`, `BTLEHeartRateDevice.java`, `my_btle_device.md`, `PolarHrStreamHealthMonitorTest.kt`, `PrimaryHrSensorArbitratorTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `MySensorManagerPriorityTest.kt`, `BTLEHeartRateDeviceTest.kt`
+- **Jira**: `ATT-9345` | **Priority**: Critical | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Pure-JVM `PolarHrStreamHealthMonitorTest` (`TST-SET-128.1`)*:
+     • Verify `hr <= 0` or lost contact (`contactStatusSupported && !contactStatus`) NEVER counts as a valid HR packet (does not disarm `silentHrWatchdog`) and transitions to `shouldClearHr = true` (`null`) after the bounded zero/no-contact window (`10 s`).
+     • Verify HR staleness timeout (`> 15 s` since last valid `hr > 0`) clears HR & RR to `null` (no infinite latching of `79 bpm` or `659 ms`).
+     • Verify sustained `ARTIFACT_GAP`-only PPI/RR bursts (`>= 10 s` without `ARTIFACT_NORMAL`) signal `shouldClearRr = true` (`null`).
+     • Verify constant-value HR flatline (`>= 60 s` identical `hr > 0`, e.g., `79 bpm`) and rolling `>= 95%` optical artifact saturation mark the sensor degraded, emit cooldown-bounded recovery action (stop Verity PPI + re-subscribe HR), and automatically recover to `HEALTHY` as soon as dynamic HR (`±1 bpm` change) resumes.
+  2. *Pure-JVM `PrimaryHrSensorArbitratorTest` & `MySensorManager` Arbitration (`TST-SET-128.2`, `PrimaryHrSensorArbitratorTest`, `MySensorManagerPriorityTest`)*:
+     • Verify healthy Polar H10 (ECG) beats healthy Polar Verity Sense (optical PPG) regardless of registration order (including Verity Sense registering first).
+     • Verify healthy Polar Verity Sense (optical PPG) beats stale, null, or degraded Polar H10 (failover on H10 drop/staleness).
+     • Verify healthy Polar H10 beats frozen/flatlined (`79 bpm`) or `100%`-artifact-rate Polar Verity Sense, and re-arbitrates immediately via `MySensorManager.reevaluatePrimaryHrSensor()` without holding `MySensorManager.this` during `ProxySensor.setSourceSensor(...)` (`REQ-SEN-021.3`).
+     • Verify when ALL registered HR sensors are `STALE_OR_NULL`, the highest-modality sensor remains bound to `ProxySensor` (preventing spurious `mSensorsSensor` drop while emitting `null`).
+     • Verify ANT+ HRM ranks between ECG BLE and Optical PPG (`ECG < ANT+ < Optical PPG < Other`).
+  3. *`PolarOnlineStreamingBridgeTest` & `BTLEHeartRateDeviceTest` Lifecycle Integration (`TST-SET-128.3`)*:
+     • Verify Verity Sense `startPpiStreaming` runs in `TrackingMode.READY`/`IDLE` (`ATT-9176` regression preserved), is skipped when connecting in `TRACKING`/`PAUSED`, and is explicitly stopped via `api.stopStreaming(sessionId, PmdMeasurementType.PPI)` on `READY -> TRACKING` (`TRACKING_STATE_CHANGED`) without interrupting `HR`, `ACC`, or `GYRO`.
+     • Verify `processHrData` with `sample.hr == 0` / lost contact does NOT disarm `silentHrWatchdog`, clears `mHeartRateSensor` to `null` after bounded persistence, and triggers `reevaluatePrimaryHrSensor()`.
+     • Verify `BTLEHeartRateDevice` `heartRate == 0` does not disarm `mSilentHrWatchdog` and clears stale HR cleanly.
+  4. *Monolith, Signature, Detailed-Design Parity & Emulator Verification (`TST-SET-128.4`)*:
+     • Run `ArchitectureConformanceContractTest` (`PolarOnlineStreamingBridge.kt <= 1,500`, `DeviceManager.java`/`TrackerService.java`/`DevicesDatabaseManager.java`/`PolarVeritySenseOfflineController.kt` untouched), `InterfaceSignatureDriftContractTest`, `DetailedDesignParityContractTest` (`my_btle_device.md`), `BleHrmSilentConnectionWatchdogTest`, `PolarPpiStreamProcessorTest`, and verify APK install/runtime stability on `emulator-5554` (`Localization Parity: N/A - 0 string changes`).
+- **Verification Evidence**: Gate 4 Bounce 1 (`ATT-9575` @ `1099f4a9`, `Rule 7.5`, `0` `app/` drift) — `130/130 PASS` (`0` fail, `0` err, `0` skip) across 11 Tier-1 suites (`PolarHrStreamHealthMonitorTest` `7/7` [`shouldStreamVerityPpi_allowsRestingModesAndBlocksWorkoutModes`, `onHrSample_zeroAndLostContactRejectedAndClearedAfterTenSeconds`, `evaluateStaleness_clearsHrAndRrAfterFifteenSecondsSilenceWithBoundedRecovery`, `onRrSample_clearsLatchedRrAfterTenSecondsOfArtifactOnlyBeatsAndResetsOnCleanBeat`, `onHrSample_flatlineRequiresBothDurationAndMinSamplesAndSuppressesRestingSteadyHr`, `resetRrAndOpticalArtifactState_clearsPreRunOpticalSaturation`, `nextCheckDelayMs_shrinksAcrossConsecutiveInvalidPacketsWithoutDrift`], `PrimaryHrSensorArbitratorTest` `6/6` [`selectBestHrSensor_prefersHealthyEcgOverHealthyOpticalRegardlessOfRegistrationOrder`, `selectBestHrSensor_failsOverToHealthyVerityWhenH10IsStaleOrDegraded`, `selectBestHrSensor_prefersHealthyH10OverDegradedOrFlatlinedVerity`, `selectBestHrSensor_enforcesFullModalityOrderEcgAntOpticalOther`, `selectBestHrSensor_retainsHighestModalityWhenAllCandidatesAreStaleOrNull`, `selectBestHrSensor_handlesNonRelaxedMockStubsWithoutThrowing`], `PolarOnlineStreamingBridgeTest` `56/56` [`testVeritySensePpi_gatedToRestingAndExplicitlyStoppedOnWorkoutEntryWithoutInterruptingImu`, `testProcessHrData_zeroOrLostContactDoesNotDisarmWatchdogAndClearsAfterTenSeconds`, `testProcessPpiData_sustainedArtifactGapClearsLatchedRrSensor`, `testProcessPpiData_droppedInTrackingModeWithoutReLatchingRr`, `testRecoverHrStreamAndWorkoutConnect_forceStopsOrphanedFirmwarePpiEvenWhenNotLocallyStreaming`, `testStartPpiCollection_abortsIfTrackingStartsAcrossGetAvailableOnlineStreamDataTypes`, `testHrStalenessTimer_rearmsAfterOfflineYieldResume`], `PolarPmdStreamCoordinatorTest` `11/11` [`testOneShotTimer_supersededTimerNeverInvokesStaleOnElapsed`], `MySensorManagerPriorityTest` `8/8` [`hrPriority_prefersHealthyEcgOverOpticalRegardlessOfRegistrationAndSwitchesDynamicallyOutsideLock`], `BTLEHeartRateDeviceTest` `18/18` [`testParseHeartRateMeasurement_zeroAndLostContactPreserveWatchdogClearAfterTenSecondsAndReevaluatePrimaryHr`, `testParseHeartRateMeasurement_lostContactOrZeroWithRrFlagClearsRrAndDoesNotDispatchRrBeats`], `BleHrmSilentConnectionWatchdogTest` `3/3`, `PolarPpiStreamProcessorTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`, `DetailedDesignParityContractTest` `3/3`; `0` new production warnings); `4/4` Python safety linters PASS; `--check-verified-evidence` EXIT `0`; independent live `emulator-5554` verification scheduled in Stage 6 Cold Neon Review (`Rule 3.3`); `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1713,3 +1739,8 @@
 | `1.0.31` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Added `TST-SET-127` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-125`) covering `DeviceDataRepository` pairing detection (paired, `PAIRED=0`, deleted, sibling isolation, `manufacturer` fallback, re-pair flip), `PolarH10RetrySyncBannerTest` Compose UI & reactivity, 9-locale `TranslationParityTest`, architecture contracts, and `Rule 8.5` Light/Dark PNG + `emulator-5554` verification. |
 | `1.0.32` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Promoted `TST-SET-127` to `[Implemented]` with all `13/13` verbatim `TestClass#testMethod` citations (`DeviceDataRepositoryPolarPairingTest` `7/7`, `PolarH10RetrySyncBannerTest` `9/9`, total `45/45 PASS` across 6 Tier-1 suites + `Rule 8.5` Light/Dark PNG verified). |
 | `1.0.33` | 2026-11-21 | Lane 1 Author (`ATT-9509`, `--as agent1`) | `ATT-9509` | Promoted `TST-SET-127` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9562` @ `a336463f`, `Rule 7.5`, `0` `app/` drift): `45/45 PASS` across 6 Tier-1 suites (`13/13` verbatim methods verified), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, `Rule 8.5` Light/Dark PNG certified, and `docs/engineering/walkthroughs/ATT-9509_walkthrough.md`. |
+| `1.0.34` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Added `TST-SET-128` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-126`) covering `PolarHrStreamHealthMonitorTest`, `PrimaryHrSensorArbitratorTest`, `PolarOnlineStreamingBridgeTest` (Verity workout PPI gating & explicit `stopStreaming(PPI)` + `hr=0`/stale/flatline clearing), `MySensorManagerPriorityTest`, `BTLEHeartRateDeviceTest`, and monolith/signature/detailed-design contracts (`N/A - 0 string changes`). |
+| `1.0.35` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `TST-SET-128` to `[Implemented]` with all `17/17` new verbatim `TestClass#testMethod` citations (`123/123 PASS` across 11 Tier-1 suites including `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`, `DetailedDesignParityContractTest` `3/3`; aligned resting mode prose to `READY`/`IDLE`). |
+| `1.0.36` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `TST-SET-128` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9573` @ `36870006`, `Rule 7.5`, `0` `app/` drift): `123/123 PASS` across 11 Tier-1 suites (`17/17` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
+| `1.0.37` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Stage 6 Bounce 1/3 heal: added `+7` regression tests (`24/24` verbatim new methods, `130/130 PASS` across 11 Tier-1 suites) covering `BTLEHeartRateDevice` `0x10` RR gate on lost contact/zero HR, `PolarOnlineStreamingBridge` Verity PPI TOCTOU + `processPpiData` workout drop + `forceStopFirmwarePpi` on workout connect & recovery + `resumeAfterOfflineSync`/`evaluateHrStaleness` re-arming, `OneShotTimer` superseding guard, and drift-free `nextCheckDelayMs` + optical reset tier re-sync; set `[Implemented]` pending Gate 4 / Stage 5 Bounce 1 re-verification. |
+| `1.0.38` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `TST-SET-128` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9575` @ `1099f4a9`, `Rule 7.5`, `0` `app/` drift): `130/130 PASS` across 11 Tier-1 suites (`24/24` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |

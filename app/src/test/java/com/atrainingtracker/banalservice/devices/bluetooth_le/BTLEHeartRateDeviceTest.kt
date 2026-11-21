@@ -829,4 +829,76 @@ class BTLEHeartRateDeviceTest {
         device.onDescriptorWriteCompleted(activeGatt, hrDescriptor, BluetoothGatt.GATT_FAILURE)
         io.mockk.verify(exactly = 1) { activeGatt.setCharacteristicNotification(hrChar, true) }
     }
+
+    @Test
+    fun testParseHeartRateMeasurement_zeroAndLostContactPreserveWatchdogClearAfterTenSecondsAndReevaluatePrimaryHr() {
+        // Verifies REQ-SET-126 / TST-SET-128
+        val device = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 303L, "24:AC:AC:24:82:59")
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val hrService = mockk<BluetoothGattService>(relaxed = true)
+        val hrChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val hrDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+        every { hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)) } returns hrChar
+        every { hrChar.uuid } returns BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
+        every { hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns hrDescriptor
+        every { hrDescriptor.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG
+        every { hrDescriptor.characteristic } returns hrChar
+
+        device.setBluetoothGattForTesting(mockGatt)
+        device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        device.callConfigureServices(mockGatt)
+        assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+
+        // HR == 0 packet must NOT disarm watchdog
+        device.parseHeartRateMeasurement(byteArrayOf(0x00.toByte(), 0.toByte()), 1_000L)
+        assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+
+        // Contact supported (Bit 2 = 0x04) with no contact (Bit 1 = 0x00) must NOT disarm watchdog
+        device.parseHeartRateMeasurement(byteArrayOf(0x04.toByte(), 79.toByte()), 2_000L)
+        assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+
+        // Valid HR with contact detected (0x06) disarms watchdog and updates sensor
+        device.parseHeartRateMeasurement(byteArrayOf(0x06.toByte(), 144.toByte()), 5_000L)
+        assertEquals(BleHrmSilentConnectionWatchdog.State.DISARMED, device.silentHrWatchdogStateForTesting)
+        assertEquals(144, device.heartRateSensor.value)
+
+        // Persistent lost contact for 10s clears mHeartRateSensor to null and calls reevaluatePrimaryHrSensor()
+        device.parseHeartRateMeasurement(byteArrayOf(0x04.toByte(), 0.toByte()), 6_000L)
+        assertEquals(144, device.heartRateSensor.value)
+
+        device.parseHeartRateMeasurement(byteArrayOf(0x04.toByte(), 0.toByte()), 16_000L)
+        assertNull("10s of lost-contact / zero HR must clear mHeartRateSensor to null", device.heartRateSensor.value)
+        io.mockk.verify(atLeast = 1) { mockSensorManager.reevaluatePrimaryHrSensor() }
+    }
+
+    @Test
+    fun testParseHeartRateMeasurement_lostContactOrZeroWithRrFlagClearsRrAndDoesNotDispatchRrBeats() {
+        // Verifies REQ-SET-126 / TST-SET-128
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // Valid HR + contact + RR (flag = 0x16: Bit 4 RR present, Bit 2 contact supported, Bit 1 contact detected)
+        // HR = 140 bpm, RR = 512 raw = 500 ms
+        val validPacket = byteArrayOf(0x16.toByte(), 140.toByte(), 0x00.toByte(), 0x02.toByte())
+        device.parseHeartRateMeasurement(validPacket, 1_000L)
+        assertEquals(140, device.heartRateSensor.value)
+        assertEquals(500, device.rrIntervalSensor?.value)
+        assertEquals(1, receivedEvents.size)
+
+        receivedEvents.clear()
+
+        // Lost contact (flag = 0x14: Bit 4 RR present, Bit 2 contact supported, Bit 1 = 0) with bogus RR bytes
+        val lostContactWithRr = byteArrayOf(0x14.toByte(), 79.toByte(), 0x00.toByte(), 0x03.toByte())
+        device.parseHeartRateMeasurement(lostContactWithRr, 2_000L)
+        assertEquals("Lost-contact packet must NEVER dispatch RR beats", 0, receivedEvents.size)
+
+        // Zero HR (flag = 0x16, HR = 0) with RR flag after 10s clears BOTH HR & RR and dispatches 0 RR beats
+        val zeroHrWithRr = byteArrayOf(0x16.toByte(), 0.toByte(), 0x00.toByte(), 0x03.toByte())
+        device.parseHeartRateMeasurement(zeroHrWithRr, 12_000L)
+        assertNull("10s invalid HR must clear mHeartRateSensor to null", device.heartRateSensor.value)
+        assertNull("10s invalid HR with 0x10 bit must clear mRrIntervalSensor to null and never overwrite", device.rrIntervalSensor?.value)
+        assertEquals("Zero/lost-contact packets with 0x10 must NEVER dispatch RR beats", 0, receivedEvents.size)
+    }
 }

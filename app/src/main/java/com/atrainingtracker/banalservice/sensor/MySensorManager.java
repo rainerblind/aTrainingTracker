@@ -525,7 +525,21 @@ public class MySensorManager extends MyDevice {
         }
     }
 
+    /**
+     * Re-evaluates canonical primary {@link SensorType#HR} arbitration across registered Heart Rate
+     * devices when a sensor's health transitions (valid HR arrival, staleness, flatline, or artifact
+     * saturation), dispatching {@link ProxySensor#setSourceSensor} outside {@code synchronized (this)}
+     * ({@code REQ-SET-126.3}, {@code REQ-SEN-021.3}, {@code ATT-9345}).
+     */
+    public void reevaluatePrimaryHrSensor() {
+        setBestSensorForProxySensor(SensorType.HR);
+    }
+
     protected synchronized MySensor getBestSensor(SensorType sensorType) {
+        if (sensorType == SensorType.HR) {
+            return getBestHrSensorLocked();
+        }
+
         MySensor bestSensor = null;
 
         Collection<DeviceType> priorityList = getPriorityList(sensorType);
@@ -547,6 +561,25 @@ public class MySensorManager extends MyDevice {
         }
 
         return bestSensor;
+    }
+
+    private MySensor getBestHrSensorLocked() {
+        EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(SensorType.HR);
+        if (deviceMap == null || deviceMap.isEmpty()) {
+            return null;
+        }
+        List<MySensor<?>> candidates = new ArrayList<>();
+        Collection<DeviceType> priorityList = getPriorityList(SensorType.HR);
+        Collection<DeviceType> orderedTypes = priorityList != null ? priorityList : deviceMap.keySet();
+        for (DeviceType deviceType : orderedTypes) {
+            LinkedList<MySensor> sensorList = deviceMap.get(deviceType);
+            if (sensorList != null) {
+                for (MySensor sensor : sensorList) {
+                    candidates.add(sensor);
+                }
+            }
+        }
+        return PrimaryHrSensorArbitrator.selectBestHrSensor(candidates);
     }
 
     protected synchronized MySensor getFirstSensor(SensorType sensorType, DeviceType deviceType) {
