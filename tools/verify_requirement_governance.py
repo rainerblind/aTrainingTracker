@@ -575,6 +575,60 @@ def verify_tier_b_ticket_deliverable(ticket_key, repo_root=None):
     return True, [f"PASS: Combined Tier B deliverable verified at docs/engineering/tickets/{ticket_key}.md."]
 
 
+def verify_ticket_evidence_bundle(ticket_key, repo_root=None):
+    """
+    ATT-9544: Verify a per-ticket machine-generated evidence bundle at
+    docs/engineering/test_evidence/tickets/<KEY>/ (manifest.json SHA-256 hashes,
+    commit_sha, run_started_utc, evidence_summary.json, and screenshots for UI tickets).
+    """
+    import hashlib
+    root = repo_root or os.getcwd()
+    bundle_dir = os.path.join(root, "docs", "engineering", "test_evidence", "tickets", ticket_key)
+    manifest_path = os.path.join(bundle_dir, "manifest.json")
+    if not os.path.isfile(manifest_path):
+        return False, [f"ERROR: Per-ticket evidence manifest missing: docs/engineering/test_evidence/tickets/{ticket_key}/manifest.json"]
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except Exception as exc:
+        return False, [f"ERROR: Failed to parse {manifest_path}: {exc}"]
+
+    errors = []
+    if not manifest.get("commit_sha") or manifest.get("commit_sha") == "UNKNOWN":
+        errors.append("manifest.json missing valid commit_sha")
+    if not manifest.get("run_started_utc"):
+        errors.append("manifest.json missing run_started_utc")
+    files = manifest.get("files") or {}
+    if "evidence_summary.json" not in files:
+        errors.append("manifest.json missing evidence_summary.json entry")
+
+    for rel, expected_hash in files.items():
+        full = os.path.join(bundle_dir, rel)
+        if not os.path.isfile(full):
+            errors.append(f"Listed evidence artifact missing: {rel}")
+            continue
+        h = hashlib.sha256()
+        with open(full, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                h.update(chunk)
+        if h.hexdigest() != expected_hash:
+            errors.append(f"SHA-256 mismatch on evidence artifact: {rel}")
+
+    summary_path = os.path.join(bundle_dir, "evidence_summary.json")
+    if os.path.isfile(summary_path):
+        try:
+            with open(summary_path, "r", encoding="utf-8") as sf:
+                summary = json.load(sf)
+            if summary.get("ui_touching") and not summary.get("screenshots"):
+                errors.append("UI ticket evidence bundle contains zero screenshots")
+        except Exception as exc:
+            errors.append(f"Invalid evidence_summary.json: {exc}")
+
+    if errors:
+        return False, [f"ERROR: Ticket evidence bundle verification failed for {ticket_key}: " + "; ".join(errors)]
+    return True, [f"PASS: Per-ticket evidence bundle verified for {ticket_key} ({len(files)} SHA-256 hashed files)."]
+
+
 def verify_gate_records(sprint_name=None, repo_root=None):
     """
     REQ-PRO-059.4 / TST-PRO-059.2:

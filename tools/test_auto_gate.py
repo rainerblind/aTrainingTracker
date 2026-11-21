@@ -109,6 +109,66 @@ class TestAutoGate(unittest.TestCase):
             self.assertIn("[auto-gate:ATT-9902:abcdef12:PASS]", mock_comment.call_args[0][1])
             mock_trans.assert_called_once_with("ATT-9902", "final review (agent)", role="agent1", inject_context=False)
 
+    def test_evidence_bundle_junit_sha_manifest_and_tamper_detection(self):
+        """ATT-9544 Criterion 1: Evidence bundle binds JUnit XML to commit SHA + run time + SHA-256 manifest."""
+        import verify_requirement_governance as vrg
+        with tempfile.TemporaryDirectory() as tmp:
+            xml_src = os.path.join(tmp, "TEST-com.example.DemoTest.xml")
+            with open(xml_src, "w", encoding="utf-8") as f:
+                f.write('<testsuite name="com.example.DemoTest" tests="1" failures="0"><testcase classname="com.example.DemoTest" name="ok"/></testsuite>')
+            result = {
+                "ticket_key": "ATT-9910",
+                "risk_tier": "tier-b",
+                "commit_sha": "deadbeef12345678",
+                "run_started_utc": "2026-11-21T20:42:00+00:00",
+                "ui_touching": False,
+                "verdict": "PASS",
+                "android_xml_files": [xml_src],
+                "android_test_summary": {"passed": True, "ran": 1},
+                "python_test_summary": {"passed": True, "ran": 0},
+                "checks": [{"name": "dependent_unit_tests", "passed": True, "details": "1 passed"}],
+            }
+            ok, bundle_rel, msgs = auto_gate.build_evidence_bundle(result, repo_root=tmp, ci_run_url="https://github.com/example/runs/42")
+            self.assertTrue(ok, msgs)
+            self.assertEqual(bundle_rel, os.path.join("docs", "engineering", "test_evidence", "tickets", "ATT-9910"))
+
+            v_ok, v_msgs = vrg.verify_ticket_evidence_bundle("ATT-9910", repo_root=tmp)
+            self.assertTrue(v_ok, v_msgs)
+
+            # Tampering with archived XML must break SHA-256 verification
+            archived_xml = os.path.join(tmp, bundle_rel, "junit", "TEST-com.example.DemoTest.xml")
+            with open(archived_xml, "a", encoding="utf-8") as f:
+                f.write("<!-- tampered -->")
+            v_ok2, v_msgs2 = vrg.verify_ticket_evidence_bundle("ATT-9910", repo_root=tmp)
+            self.assertFalse(v_ok2)
+            self.assertTrue(any("SHA-256 mismatch" in m for m in v_msgs2))
+
+    def test_evidence_bundle_requires_screenshot_for_ui_ticket(self):
+        """ATT-9544 Criterion 2: UI ticket bundle fails if zero screenshots, passes when screenshot attached."""
+        with tempfile.TemporaryDirectory() as tmp:
+            result = {
+                "ticket_key": "ATT-9911",
+                "risk_tier": "tier-b",
+                "commit_sha": "cafebabe9999",
+                "run_started_utc": "2026-11-21T20:43:00+00:00",
+                "ui_touching": True,
+                "verdict": "PASS",
+                "android_xml_files": [],
+                "android_test_summary": {"passed": True, "ran": 0},
+                "python_test_summary": {"passed": True, "ran": 0},
+                "checks": [],
+            }
+            ok_missing, _, msgs_missing = auto_gate.build_evidence_bundle(result, repo_root=tmp)
+            self.assertFalse(ok_missing)
+            self.assertTrue(any("screenshot" in m.lower() for m in msgs_missing))
+
+            shot = os.path.join(tmp, "after.png")
+            with open(shot, "wb") as f:
+                f.write(b"\x89PNG\r\n\x1a\nfake")
+            ok_present, bundle_rel, msgs_present = auto_gate.build_evidence_bundle(result, repo_root=tmp, screenshots=[shot])
+            self.assertTrue(ok_present, msgs_present)
+            self.assertTrue(os.path.isfile(os.path.join(tmp, bundle_rel, "screenshots", "after.png")))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -335,6 +335,128 @@ def run_automated_gates(
     }
 
 
+def _sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def build_evidence_bundle(
+    result,
+    repo_root=REPO_ROOT,
+    screenshots=None,
+    ci_run_url=None,
+    require_ui_screenshot=True,
+):
+    """
+    ATT-9544: Produce a machine-generated per-ticket evidence bundle under
+    docs/engineering/test_evidence/tickets/<KEY>/ containing:
+      - Copied JUnit XML results (junit/)
+      - UI screenshots (screenshots/) — mandatory (>= 1) when result['ui_touching'] is True
+      - evidence_summary.json bound to commit_sha, run_started_utc, ci_run_url, test counts
+      - manifest.json with SHA-256 hashes of every artifact in the bundle
+    Returns (ok, bundle_rel_dir, messages).
+    """
+    ticket_key = result["ticket_key"]
+    bundle_rel = os.path.join("docs", "engineering", "test_evidence", "tickets", ticket_key)
+    bundle_dir = os.path.join(repo_root, bundle_rel)
+    if os.path.isdir(bundle_dir):
+        shutil.rmtree(bundle_dir)
+    os.makedirs(bundle_dir, exist_ok=True)
+
+    # 1. Copy JUnit XML files
+    copied_xmls = []
+    xml_files = result.get("android_xml_files") or []
+    if xml_files:
+        junit_dir = os.path.join(bundle_dir, "junit")
+        os.makedirs(junit_dir, exist_ok=True)
+        for src in xml_files:
+            if os.path.isfile(src):
+                dst = os.path.join(junit_dir, os.path.basename(src))
+                shutil.copy2(src, dst)
+                copied_xmls.append(os.path.relpath(dst, bundle_dir).replace(os.sep, "/"))
+
+    # 2. Collect screenshots (explicit + auto-discovered docs/engineering/walkthroughs/img/<KEY>_*.png)
+    shot_sources = []
+    for s in (screenshots or []):
+        full_s = s if os.path.isabs(s) else os.path.join(repo_root, s)
+        if os.path.isfile(full_s):
+            shot_sources.append(full_s)
+    wt_img_dir = os.path.join(repo_root, "docs", "engineering", "walkthroughs", "img")
+    if os.path.isdir(wt_img_dir):
+        for fname in sorted(os.listdir(wt_img_dir)):
+            if fname.startswith(f"{ticket_key}_") and fname.lower().endswith((".png", ".jpg", ".jpeg")):
+                full_s = os.path.join(wt_img_dir, fname)
+                if full_s not in shot_sources:
+                    shot_sources.append(full_s)
+
+    copied_shots = []
+    if shot_sources:
+        shot_dir = os.path.join(bundle_dir, "screenshots")
+        os.makedirs(shot_dir, exist_ok=True)
+        for src in shot_sources:
+            dst = os.path.join(shot_dir, os.path.basename(src))
+            shutil.copy2(src, dst)
+            copied_shots.append(os.path.relpath(dst, bundle_dir).replace(os.sep, "/"))
+
+    if require_ui_screenshot and result.get("ui_touching") and not copied_shots:
+        return False, bundle_rel, [
+            f"ERROR: UI ticket {ticket_key} requires at least one before/after screenshot in the evidence bundle (ATT-9544)."
+        ]
+
+    # 3. Write evidence_summary.json bound to commit SHA & run timestamp
+    resolved_ci = ci_run_url
+    if not resolved_ci and os.environ.get("GITHUB_SERVER_URL") and os.environ.get("GITHUB_REPOSITORY") and os.environ.get("GITHUB_RUN_ID"):
+        resolved_ci = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+
+    summary = {
+        "schema_version": "1.0.0",
+        "ticket_key": ticket_key,
+        "risk_tier": result.get("risk_tier"),
+        "commit_sha": result.get("commit_sha"),
+        "run_started_utc": result.get("run_started_utc"),
+        "ci_run_url": resolved_ci,
+        "verdict": result.get("verdict"),
+        "ui_touching": bool(result.get("ui_touching")),
+        "junit_xml_files": copied_xmls,
+        "screenshots": copied_shots,
+        "android_test_summary": result.get("android_test_summary"),
+        "python_test_summary": result.get("python_test_summary"),
+        "checks": result.get("checks"),
+    }
+    summary_path = os.path.join(bundle_dir, "evidence_summary.json")
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, sort_keys=True)
+
+    # 4. Write SHA-256 manifest.json over all artifacts in bundle_dir
+    file_hashes = {}
+    for dirpath, _, filenames in os.walk(bundle_dir):
+        for fname in sorted(filenames):
+            if fname == "manifest.json":
+                continue
+            full = os.path.join(dirpath, fname)
+            rel = os.path.relpath(full, bundle_dir).replace(os.sep, "/")
+            file_hashes[rel] = _sha256_file(full)
+
+    manifest = {
+        "schema_version": "1.0.0",
+        "ticket_key": ticket_key,
+        "commit_sha": result.get("commit_sha"),
+        "run_started_utc": result.get("run_started_utc"),
+        "ci_run_url": resolved_ci,
+        "files": file_hashes,
+    }
+    manifest_path = os.path.join(bundle_dir, "manifest.json")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, sort_keys=True)
+
+    return True, bundle_rel, [
+        f"Evidence bundle written to {bundle_rel} ({len(copied_xmls)} JUnit XML, {len(copied_shots)} screenshot(s), {len(file_hashes)} hashed files)."
+    ]
+
+
 def render_gate_report_markdown(result, bundle_rel_dir=None):
     """Render strictly machine-generated structured Jira/Markdown gate report (no agent prose)."""
     marker = f"[auto-gate:{result['ticket_key']}:{result['commit_sha'][:8]}:{result['verdict']}]"
@@ -373,11 +495,14 @@ def advance_jira_after_auto_gate(result, bundle_rel_dir=None, role="agent1"):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Run Lean AAA v2 automated quality gates (ATT-9543).")
+    parser = argparse.ArgumentParser(description="Run Lean AAA v2 automated quality gates & evidence bundler (ATT-9543, ATT-9544).")
     parser.add_argument("--ticket", required=True, help="Jira ticket key (e.g. ATT-9543)")
     parser.add_argument("--tier", default="tier-b", choices=("tier-a", "tier-b", "tier-c"), help="Ticket risk tier")
     parser.add_argument("--base-ref", default="develop", help="Git base ref for changed-file discovery")
     parser.add_argument("--skip-tests", action="store_true", help="Skip test execution (lint-only dry run)")
+    parser.add_argument("--write-bundle", action="store_true", help="Generate docs/engineering/test_evidence/tickets/<KEY>/ bundle with SHA-256 manifest (ATT-9544)")
+    parser.add_argument("--screenshot", action="append", default=[], help="Path to before/after UI screenshot to include in bundle (repeatable)")
+    parser.add_argument("--ci-url", default=None, help="Optional CI run URL to record in evidence bundle")
     parser.add_argument("--advance-jira", action="store_true", help="Post structured gate report to Jira and advance Tier B/C to Final Review (Agent) on PASS")
     parser.add_argument("--as", dest="role", default="agent1", help="Jira actor role")
     parser.add_argument("--json", action="store_true", help="Output JSON verdict")
@@ -390,13 +515,21 @@ def main(argv=None):
         base_ref=args.base_ref,
         run_tests=not args.skip_tests,
     )
+    bundle_rel = None
+    if args.write_bundle:
+        b_ok, bundle_rel, b_msgs = build_evidence_bundle(
+            result, repo_root=REPO_ROOT, screenshots=args.screenshot, ci_run_url=args.ci_url
+        )
+        result["checks"].append({"name": "evidence_bundle", "passed": b_ok, "details": "; ".join(b_msgs)})
+        if not b_ok:
+            result["verdict"] = "FAIL"
     if args.advance_jira:
-        advance_jira_after_auto_gate(result, role=args.role)
+        advance_jira_after_auto_gate(result, bundle_rel_dir=bundle_rel, role=args.role)
 
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
-        print(render_gate_report_markdown(result))
+        print(render_gate_report_markdown(result, bundle_rel_dir=bundle_rel))
     return 0 if result["verdict"] == "PASS" else 1
 
 
