@@ -691,7 +691,7 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertEqual(metrics["throughput"]["completion_rate_percent"], 75.0)
         self.assertEqual(metrics["quality_gates"]["human_accepted_tickets"], 1)
         self.assertEqual(metrics["quality_gates"]["human_acceptance_rate_percent"], 25.0)
-        self.assertEqual(metrics["process_version"], "2.0")
+        self.assertEqual(metrics["process_version"], "aaa-v2")
 
     def test_zero_revision_gates_no_synthetic_002_floor_and_unmasked_plausibility(self):
         """TST-PRO-122.3 & TST-PRO-122.4: No p=0.02 floor and Gate 6 bounces never mask Gate 1-5 plausibility."""

@@ -56,7 +56,7 @@ FINAL_REVIEW_ESCALATED_RE = re.compile(
 )
 
 DEFAULT_METRICS_PATH = "docs/engineering/metrics/process_metrics.jsonl"
-ACTIVE_PROCESS_VERSION = "2.0"
+ACTIVE_PROCESS_VERSION = "aaa-v2"
 SEVERITY_LEVELS = ("Critical", "Major", "Minor", "Cosmetic")
 NON_FIX_RESOLUTION_LABELS = {
     "resolution-rejected": "Rejected",
