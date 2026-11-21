@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.48  
+**Version**: 1.0.53  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 77
+**Total Requirements**: 78
 
 ---
 
@@ -2556,6 +2556,32 @@
 
 ---
 
+### REQ-STB-022: Headless Debug-Only Heap Watchdog & Periodic Pixel 10 Heap Hygiene (ATT-9352) [Verified]
+- **Tests**: `TST-STB-022`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration / Review
+- **Implementation**: `DebugHeapWatchdog.kt`, `TrackerService.java`, `app/src/main/res/xml/data_extraction_rules.xml`, `app/src/main/res/xml/full_backup_content.xml`, `.agents/rules/aspice_governance.md`, `.agents/skills/sprint-planner/SKILL.md`
+- **Rationale**: Long outdoor endurance recordings in `com.atrainingtracker.debug` lack passive Java/native heap telemetry and automatic pre-OOM `.hprof` capture, and sprint ceremonies lack a standard ADB inspection/triage/cleanup workflow (`ATT-9352`, Epic `ATT-2466`):
+- **Description**:
+  1. *Release-Build Zero-Overhead & Headless Invariant (`REQ-STB-022.1`, DebugHeapWatchdog.kt, TrackerService.java)*: When `BuildConfig.DEBUG == false`, the watchdog MUST NOT start, allocate background threads, register hooks, or write files, incurring zero runtime overhead. Even in debug builds, the feature SHALL remain completely headless with zero UI screens, notifications, banners, or `strings*.xml` entries.
+  2. *Periodic Heap Telemetry CSV & Retention (`REQ-STB-022.2`, DebugHeapWatchdog.kt, TrackerService.java)*: During active `BuildConfig.DEBUG` tracking, `DebugHeapWatchdog` SHALL sample off the UI thread and off `mDbExecutor`/`mScheduler` every `30 s` on a dedicated background executor and append to `files/debug_heap/<fileBaseName>.heap.csv` columns `timestamp`, `elapsedSec`, `javaUsedMb`, `javaMaxMb`, `javaPct`, `nativeAllocatedMb`, `activeSensorCount`. `files/debug_heap/` MUST auto-prune oldest `.heap.csv` files beyond `20` sessions. `TrackerService.java` hook additions MUST keep `TrackerService.java <= 3,559` LoC (`ArchitectureConformanceContractTest`).
+  3. *One-Shot Automatic `.hprof` Capture & Safety Guards (`REQ-STB-022.3`, DebugHeapWatchdog.kt)*: When `javaUsed / javaMax >= 0.70` across `2` consecutive `30 s` samples, `DebugHeapWatchdog` SHALL capture at most `1` `.hprof` dump per workout session (including across `RESUME_SERVICE_RECREATION` restarts for the same `<fileBaseName>`) via `Debug.dumpHprofData()` to `files/debug_hprof/<fileBaseName>_<usedMb>MB.hprof`, ONLY if internal storage usable space is `>= 1 GB` (`1_073_741_824` bytes). All watchdog I/O, dumping, and pruning MUST be wrapped in `try/catch (Throwable)` so failures never destabilize workout tracking, and `files/debug_hprof/` MUST auto-prune beyond the `2` most recent `.hprof` files.
+  4. *Backup Exclusions & Periodic Pixel 10 Hygiene (`REQ-STB-022.4`, data_extraction_rules.xml, full_backup_content.xml, aspice_governance.md, sprint-planner/SKILL.md)*: Both `data_extraction_rules.xml` (`cloud-backup` & `device-transfer`) and `full_backup_content.xml` SHALL exclude `domain="file"` `debug_heap` and `debug_hprof` (while `.attbackup` via `BackupManager.kt` already excludes `files/`). `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md` SHALL add a periodic device-hygiene check (Ceremony 1 / connected Pixel 10 `66020DLCR002FL`) instructing agents to inspect `files/debug_hprof/` and `files/debug_heap/` on `com.atrainingtracker.debug`, pull & analyze anomalies, file a structured backlog Bug under `ATT-235` (stopping per `Rule 5.1`), and delete processed files (`run-as com.atrainingtracker.debug rm ...`) while optionally pruning healthy `.heap.csv` logs.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`); aligns operationally with `REQ-TST-004` (`Rule 7.6`, `Rule 2.2`). Targets `DebugHeapWatchdog.kt`, `TrackerService.java`, backup XML rules, `.agents/rules/aspice_governance.md`, and `.agents/skills/sprint-planner/SKILL.md`.
+  2. *Historical Origin & Commit Trace*: `REQ-TST-004` (`ATT-6506`) isolated `66020DLCR002FL` from Phase 2 autonomous runs; `Rule 2.7` (`ATT-8164`/`ATT-8223`) limits `.agents/` edits to PO-approved tickets (`ATT-9352`); `BackupRulesXmlValidationTest` (`ATT-4023`) protects backup XML rules.
+  3. *Root Reason for Existing Formulation*: `Rule 7.6` prevents disrupting PO field workouts during Phase 2; `ATT-9352` authorizes Ceremony 1 / connected-Pixel-10 read-triage-delete hygiene strictly for `files/debug_heap/` & `files/debug_hprof/`.
+  4. *Preservation of Core Invariants*: Preserves `TrackerService.java <= 3,559` LoC, `Rule 7.6` emulator-only Phase 2 testing, `auth_credentials_prefs.xml` backup exclusions, `Rule 5.1` stop-on-bug-creation, and release zero-overhead no-op.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `BuildConfig.DEBUG == true` and active tracking, *When* tracking runs for 5+ minutes, *Then* `files/debug_heap/<fileBaseName>.heap.csv` records 30 s Java/native heap & sensor count rows off the UI/`mDbExecutor`/`mScheduler` threads with zero UI/notifications and retains at most 20 logs.
+  • *Given* `javaUsed / javaMax >= 0.70` across 2 consecutive checks and `>= 1 GB` free disk space, *When* the threshold triggers, *Then* exactly 1 `.hprof` dump per workout session writes to `files/debug_hprof/`, at most 2 dumps are retained, exceptions never disrupt tracking, and `data_extraction_rules.xml`/`full_backup_content.xml` exclude `debug_heap` & `debug_hprof`.
+  • *Given* `BuildConfig.DEBUG == false`, *When* tracking runs, *Then* the watchdog does not start, writes no files, and incurs zero overhead.
+  • *Given* `.agents/rules/aspice_governance.md` and `.agents/skills/sprint-planner/SKILL.md`, *When* executed with Pixel 10 attached, *Then* agents inspect `files/debug_hprof/` & `files/debug_heap/`, file an `ATT-235` Bug on anomaly, and delete processed files via `run-as com.atrainingtracker.debug rm`.
+- **Invariants**: `TrackerService.java <= 3,559` LoC; `auth_credentials_prefs.xml` exclusions preserved; `Rule 7.6` emulator-only Phase 2 build/test preserved; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2609,3 +2635,8 @@
 | `1.0.46` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Promoted `REQ-PRO-132` (`REQ-PRO-132.1`, `REQ-PRO-132.4`) to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9342` @ `10bde5ec`, `Rule 7.5` doc-only fast path): `24/24 PASS` across 5 Gradle suites, `4/4` Python linters PASS, `ATT-9179_walkthrough.md`. |
 | `1.0.47` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Set `REQ-PRO-135` (`REQ-PRO-135.1`, `REQ-PRO-135.5`) to `[Planned]` for `ATT-9319`: `--test-apk` install + fail-closed `adb install` / `am instrument`, post-instrument `am start -W` active App-UI & non-launcher XML/PNG validation, API < 33 (`adb root` + `uid=0` + `persist.sys.locale`) fallback, and `emulator-5554` smoke verification. |
 | `1.0.48` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Promoted `REQ-PRO-135` (`REQ-PRO-135.1`, `REQ-PRO-135.5`) to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9369` @ `06623b57`, `Rule 7.5` doc-only fast path): `4/4` `test_run_multi_os_emulator_sweep.py` OK, `530/530` `tools/test_*.py` OK, `4/4` linters PASS, live `Pixel_5_Android_12` (`en` + `de`) App-UI smoke verified (`ATT-9319_walkthrough.md`). |
+| `1.0.49` | 2026-11-20 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Added `[Planned]` `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`: headless `BuildConfig.DEBUG`-only heap watchdog, 30 s CSV + latest-20 prune, one-shot `>= 70%` 2-sample `.hprof` dump + `>= 1 GB` disk / latest-2 prune, backup XML exclusions, and Pixel 10 device-hygiene workflow). |
+| `1.0.50` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `REQ-STB-022` to `[Implemented]` in Stage 4 (`DebugHeapWatchdog.kt`, `TrackerService.java` `3,537` LoC, `data_extraction_rules.xml`, `full_backup_content.xml`, `aspice_governance.md` `v1.0.6`, `sprint-planner/SKILL.md`, `architecture.md` `v1.0.16`, `tracker_service.md` `v1.0.5`). |
+| `1.0.51` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`) to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9402` @ `7feb5c06`, `Rule 7.5` doc-only fast path): `41/41` targeted Gradle tests across 7 suites (`DebugHeapWatchdogTest` `7/7`, `TrackerServiceHeapWatchdogTest` `2/2`, `TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, and `ATT-9352_walkthrough.md`. |
+| `1.0.52` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Stage 6 Bounce 1/3 heal: deferred `countActiveDevicesSafely(banalService)` strictly behind the 30-second sampling gate in `DebugHeapWatchdog.kt` via `onTickWithCountProvider` (`0` per-second `LinkedList` allocations on intermediate ticks); reset `REQ-STB-022` to `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.53` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9404` @ `c4035319`, `Rule 7.5` doc-only fast path): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`, `verify_skills.py` `11/11`, `test_agent_emulator.py` `21/21`, `4/4` linters, `ATT-9352_walkthrough.md`). |

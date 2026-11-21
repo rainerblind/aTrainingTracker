@@ -60,6 +60,7 @@ import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
@@ -231,6 +232,19 @@ public class TrackerService extends Service {
             Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", t);
         }
     });
+    @Nullable
+    private volatile DebugHeapWatchdog mDebugHeapWatchdog;
+
+    @NonNull
+    @VisibleForTesting
+    DebugHeapWatchdog getDebugHeapWatchdog() {
+        DebugHeapWatchdog existing = mDebugHeapWatchdog;
+        if (existing == null) {
+            existing = new DebugHeapWatchdog(getSafeContext());
+            mDebugHeapWatchdog = existing;
+        }
+        return existing;
+    }
 
     private Context getSafeContext() {
         try {
@@ -888,6 +902,9 @@ public class TrackerService extends Service {
 
                     sampleAndWriteToDb(banalService);
                     maybeFlushLiveRrQueue();
+                    if (BuildConfig.DEBUG) {
+                        getDebugHeapWatchdog().onTick(mBaseFileName, banalService);
+                    }
 
                     // update notification
                     if (DEBUG) Log.i(TAG, "updating notification");
@@ -1243,6 +1260,9 @@ public class TrackerService extends Service {
                 }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
+                if (BuildConfig.DEBUG) {
+                    getDebugHeapWatchdog().startSession(mBaseFileName);
+                }
                 try {
                     com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.startActiveSession(
                             getApplicationContext(),
@@ -1452,6 +1472,9 @@ public class TrackerService extends Service {
         RadarTrafficSimulator.INSTANCE.stop();
 
         cancelTrackerHandle();
+        if (BuildConfig.DEBUG && mDebugHeapWatchdog != null) {
+            mDebugHeapWatchdog.stopSession();
+        }
         // ATT-7746 (REQ-TRK-076.1): Do NOT call mScheduler.shutdownNow() here.
         // Complete executor shutdown is deferred strictly to onDestroy().
 
@@ -1652,6 +1675,9 @@ public class TrackerService extends Service {
         // Stop the periodic 1 Hz tracker task and shut down the scheduler pool (REQ-TRK-033.1)
         cancelTrackerHandle();
         mScheduler.shutdownNow();
+        if (BuildConfig.DEBUG && mDebugHeapWatchdog != null) {
+            mDebugHeapWatchdog.shutdown();
+        }
 
         // Release main-thread resources immediately while keeping mBanalService and wakeLock
         // valid until the terminal finalization task on mDbExecutor completes (REQ-TRK-033.2).

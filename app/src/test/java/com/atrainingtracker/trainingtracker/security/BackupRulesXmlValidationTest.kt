@@ -112,4 +112,37 @@ class BackupRulesXmlValidationTest {
         assertTrue("Manifest must configure android:fullBackupContent=\"@xml/full_backup_content\"",
             content.contains("android:fullBackupContent=\"@xml/full_backup_content\""))
     }
+
+    // Linked test specs: TST-STB-022.4
+    @Test
+    fun testBackupRules_excludeDebugHeapAndHprofDirectories() {
+        val rulesFile = File("src/main/res/xml/data_extraction_rules.xml").let {
+            if (it.exists()) it else File("app/src/main/res/xml/data_extraction_rules.xml")
+        }
+        val root = loadXml(rulesFile)
+        for (sectionName in listOf("cloud-backup", "device-transfer")) {
+            val section = root.getElementsByTagName(sectionName).item(0) as Element
+            val excludes = section.getElementsByTagName("exclude")
+            val excludedFilePaths = (0 until excludes.length)
+                .map { excludes.item(it) as Element }
+                .filter { it.getAttribute("domain") == "file" }
+                .map { it.getAttribute("path") }
+                .toSet()
+            assertTrue("$sectionName must exclude debug_heap", excludedFilePaths.contains("debug_heap"))
+            assertTrue("$sectionName must exclude debug_hprof", excludedFilePaths.contains("debug_hprof"))
+        }
+
+        val backupFile = File("src/main/res/xml/full_backup_content.xml").let {
+            if (it.exists()) it else File("app/src/main/res/xml/full_backup_content.xml")
+        }
+        val fullBackupRoot = loadXml(backupFile)
+        val fullExcludes = fullBackupRoot.getElementsByTagName("exclude")
+        val fullFilePaths = (0 until fullExcludes.length)
+            .map { fullExcludes.item(it) as Element }
+            .filter { it.getAttribute("domain") == "file" }
+            .map { it.getAttribute("path") }
+            .toSet()
+        assertTrue("full_backup_content.xml must exclude debug_heap", fullFilePaths.contains("debug_heap"))
+        assertTrue("full_backup_content.xml must exclude debug_hprof", fullFilePaths.contains("debug_hprof"))
+    }
 }

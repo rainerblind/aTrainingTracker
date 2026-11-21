@@ -274,6 +274,20 @@ class TestGovernanceParity(unittest.TestCase):
         self.assertIn("Pixel 10", content)
         self.assertIn("REQ-TST-004", content)
 
+    def test_pixel10_debug_heap_hygiene_workflow_documented(self):
+        """TST-STB-022.4: Periodic Pixel 10 debug_heap & debug_hprof triage/cleanup rules & skills."""
+        for rel_path in (
+            os.path.join(".agents", "rules", "aspice_governance.md"),
+            os.path.join(".agents", "skills", "sprint-planner", "SKILL.md"),
+        ):
+            full_path = os.path.join(REPO_ROOT, rel_path)
+            with open(full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("files/debug_hprof/", content)
+            self.assertIn("files/debug_heap/", content)
+            self.assertIn("ATT-235", content)
+            self.assertIn("run-as com.atrainingtracker.debug rm", content)
+
 
 class TestStdlibCompliance(unittest.TestCase):
     """TST-TST-004.6: Python Standard Library Compliance."""

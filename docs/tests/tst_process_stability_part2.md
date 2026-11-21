@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.41  
+**Version**: 1.0.46  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 93
+**Total Tests**: 94
 
 ---
 
@@ -1608,6 +1608,23 @@
   5. *Instrumented Click-Through & Local `emulator-5554` Smoke Execution (`TST-PRO-135.5`, `app/src/androidTest/` & `tools/run_multi_os_emulator_sweep.py`)*:
      • *Given* `MultiLocaleUiSweepAndroidTest.kt` and a booted local `emulator-5554` AVD (`REQ-TST-004`, never physical `66020DLCR002FL`), *When* `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest` and a targeted smoke run of `run_multi_os_emulator_sweep.py` with `--apk` and `--test-apk` execute against `emulator-5554`, *Then* `am instrument` passes with `OK (`, `uiautomator dump` confirms target app package UI (not launcher), and captured PNG screenshot renders active App UI. Tag with `TST-PRO-135.5`.
 
+### TST-STB-022: **Headless Debug Heap Watchdog, Backup Exclusions & Device Hygiene Verification Suite (ATT-9352)** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration / Review
+- **Requirement(s)**: `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`)
+- **Component**: `DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `BackupRulesXmlValidationTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `tools/verify_skills.py`, `tools/test_agent_emulator.py`
+- **Jira**: `ATT-9352`
+- **Test Description**:
+  1. *Release-Build Zero-Overhead No-Op & Headless Guard (`TST-STB-022.1`, `DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`)*:
+     • *Given* `isDebug = false` (`BuildConfig.DEBUG == false`), *When* `DebugHeapWatchdog` start/tick/stop methods or `TrackerService` watchdog hooks execute, *Then* zero background executors are allocated, zero files or directories (`debug_heap`/`debug_hprof`) are created, zero notifications/UI/strings are emitted, and `TrackerService.java <= 3,559` LoC holds (`ArchitectureConformanceContractTest`). Tag with `TST-STB-022.1`.
+  2. *Periodic 30 s CSV Telemetry & Latest-20 Pruning (`TST-STB-022.2`, `DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`)*:
+     • *Given* `isDebug = true` and simulated ticks across `30 s` intervals (plus deferred `mBaseFileName` on `RESUME_SERVICE_RECREATION`), *When* `DebugHeapWatchdog` runs on its background executor, *Then* `files/debug_heap/<fileBaseName>.heap.csv` appends header + `timestamp,elapsedSec,javaUsedMb,javaMaxMb,javaPct,nativeAllocatedMb,activeSensorCount` rows every `30 s` cleanly off UI/`mDbExecutor` threads, and creating `21+` `.heap.csv` files auto-prunes oldest logs to `<= 20`. Tag with `TST-STB-022.2`.
+  3. *One-Shot `.hprof` Capture, Consecutive-Check Debounce, Disk Guard, Exception Shielding & Latest-2 Pruning (`TST-STB-022.3`, `DebugHeapWatchdogTest.kt`)*:
+     • *Given* injected memory/disk/dumper doubles under: (a) transient single `>= 70%` spike, (b) `2` consecutive `>= 70%` checks with `>= 1 GB` free space, (c) additional high-water checks in the same session or after `RESUME_SERVICE_RECREATION` with an existing `<fileBaseName>_*.hprof`, (d) `< 1 GB` free space, (e) dumper throwing `RuntimeException` / `OutOfMemoryError`, and (f) `> 2` `.hprof` files in `files/debug_hprof/`, *When* evaluated, *Then* transient spikes do NOT dump, sustained checks dump exactly `1` `<fileBaseName>_<usedMb>MB.hprof`, restarts do not re-dump, low disk skips safely, `Throwable` is caught without crashing tracking, and `files/debug_hprof/` retains at most `2` newest `.hprof` files. Tag with `TST-STB-022.3`.
+  4. *Backup Exclusion XMLs, Agent Hygiene Rules & Emulator Live Smoke (`TST-STB-022.4`, `BackupRulesXmlValidationTest.kt`, `tools/verify_skills.py`, `tools/test_*.py`, `emulator-5554`)*:
+     • *Given* `data_extraction_rules.xml`, `full_backup_content.xml`, `.agents/rules/aspice_governance.md`, and `.agents/skills/sprint-planner/SKILL.md`, *When* `BackupRulesXmlValidationTest`, `verify_skills.py`, `test_agent_emulator.py`, `test_jira_accounts.py`, and a live `emulator-5554` tracking smoke check execute, *Then* both backup XMLs exclude `debug_heap` and `debug_hprof` (preserving `auth_credentials_prefs.xml`), rules/skills document Pixel 10 inspect/Bug-file/delete hygiene, and `emulator-5554` creates `<fileBaseName>.heap.csv` cleanly (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-022.4`.
+
 ---
 
 ## Change History
@@ -1656,3 +1673,8 @@
 | `1.0.39` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Promoted `TST-PRO-132` to `[Verified]` in Stage 5 with verbatim test evidence (`ATT-9179_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9342` @ `10bde5ec`, `24/24 PASS` across 5 suites). |
 | `1.0.40` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Set `TST-PRO-135` (`TST-PRO-135.1`, `.2`, `.5`) to `[Planned]` for `ATT-9319`: added `--test-apk`, fail-closed `adb install` / `am instrument` / launcher & empty XML / missing PNG assertions, API < 33 `adb root` + `uid=0` + `persist.sys.locale` tests, and `emulator-5554` smoke verification. |
 | `1.0.41` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Promoted `TST-PRO-135` to `[Verified]` in Stage 5 (`ATT-9319_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9369` @ `06623b57`): `TestMultiOsEmulatorSweep` `4/4` OK (`test_tst_pro_135_1_serial_multi_os_and_9_locale_sweep_and_cleanup_on_failure`, `test_tst_pro_135_1_api31_locale_fallback_and_non_rootable_error`, `test_tst_pro_135_2_fail_closed_install_instrument_launcher_and_screencap`, `test_tst_pro_135_2_physical_device_refusal_and_logcat_and_bounds_defects`), `530/530` `tools/test_*.py` OK, live `Pixel_5_Android_12` smoke verified. |
+| `1.0.42` | 2026-11-20 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Added `[Planned]` `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`: release no-op & headless guard, 30 s CSV + 20-file prune, one-shot `>= 70%` 2-sample `.hprof` + `>= 1 GB` disk + `Throwable` isolation + 2-file prune, backup XML exclusions, rules/skills hygiene & `emulator-5554` smoke). |
+| `1.0.43` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` to `[Implemented]` in Stage 4 (`DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`, `BackupRulesXmlValidationTest.kt`, `tools/test_agent_emulator.py`). |
+| `1.0.44` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9402` @ `7feb5c06`): `41/41` targeted Gradle tests across 7 suites (`DebugHeapWatchdogTest` `7/7`, `TrackerServiceHeapWatchdogTest` `2/2`, `TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
+| `1.0.45` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Stage 6 Bounce 1/3 heal: added `DebugHeapWatchdogTest.onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds` (`TST-STB-022.2`); reset `TST-STB-022` to `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.46` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 Bounce 1 `ATT-9404` @ `c4035319`): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
