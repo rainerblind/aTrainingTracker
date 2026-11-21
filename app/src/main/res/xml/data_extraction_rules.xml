@@ -22,10 +22,12 @@
         <exclude domain="sharedpref" path="auth_credentials_prefs.xml" />
         <exclude domain="file" path="debug_heap" />
         <exclude domain="file" path="debug_hprof" />
+        <exclude domain="file" path="raw_sensor" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="auth_credentials_prefs.xml" />
         <exclude domain="file" path="debug_heap" />
         <exclude domain="file" path="debug_hprof" />
+        <exclude domain="file" path="raw_sensor" />
     </device-transfer>
 </data-extraction-rules>

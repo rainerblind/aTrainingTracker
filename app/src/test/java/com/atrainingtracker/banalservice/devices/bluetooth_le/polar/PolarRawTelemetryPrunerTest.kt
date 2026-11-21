@@ -140,4 +140,39 @@ class PolarRawTelemetryPrunerTest {
         assertTrue("Recent file (10d) must be kept", recentFile.exists())
         assertFalse("Old file (35d) must be pruned", oldFile.exists())
     }
+
+    // REQ-EXP-045.4 / TST-EXP-045.4: Smartphone sidecar hasSidecar, cascade delete, and retention pruning
+    @Test
+    fun smartphoneRawSidecar_hasSidecarDeleteAndRetentionPrune_TST_EXP_045_4() {
+        val nowMs = System.currentTimeMillis()
+        val msPerDay = 24L * 60L * 60L * 1000L
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)
+
+        val recentBase = dateFormat.format(Date(nowMs - (5L * msPerDay)))
+        val oldBase = dateFormat.format(Date(nowMs - (40L * msPerDay)))
+
+        val recentPhone = File(rawDir, "$recentBase.phone_raw.csv.gz")
+        val oldPhone = File(rawDir, "$oldBase.phone_raw.csv.gz")
+        val oldPhoneTmp = File(rawDir, "$oldBase.phone_raw.csv.gz.tmp")
+
+        recentPhone.writeText("recent phone data")
+        oldPhone.writeText("old phone data")
+        oldPhoneTmp.writeText("old phone tmp")
+
+        assertTrue("hasSidecar must detect .phone_raw.csv.gz", PolarRawTelemetryPruner.hasSidecar(context, recentBase))
+
+        val pruned = PolarRawTelemetryPruner.pruneExpiredSidecars(
+            context = context,
+            policy = RawSensorRetentionPolicy.DAYS_30,
+            nowEpochMs = nowMs
+        )
+        assertEquals(2, pruned)
+        assertTrue("Recent phone sidecar must be kept", recentPhone.exists())
+        assertFalse("Old phone sidecar must be pruned", oldPhone.exists())
+        assertFalse("Old phone tmp must be pruned", oldPhoneTmp.exists())
+
+        assertTrue(PolarRawTelemetryPruner.deleteSidecar(context, recentBase))
+        assertFalse(recentPhone.exists())
+        assertFalse(PolarRawTelemetryPruner.hasSidecar(context, recentBase))
+    }
 }

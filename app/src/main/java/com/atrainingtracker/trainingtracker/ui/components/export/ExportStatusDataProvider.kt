@@ -33,7 +33,30 @@ class ExportStatusDataProvider(private val context: Context) {
      */
     fun createGroupData(fileBaseName: String, exportType: ExportType): ExportStatusGroupData {
         val allRows = ExportStatusRepository.getInstance(context).getExportRows(fileBaseName)
-        val rawRows = allRows.filter { it.type == exportType }
+        return createGroupDataFromRows(exportType, allRows)
+    }
+
+    /**
+     * Builds UI group data from pre-loaded domain [ExportStatusEntry] rows without executing SQLite queries.
+     */
+    fun createGroupDataFromEntries(
+        exportType: ExportType,
+        preloadedEntries: List<ExportStatusEntry>
+    ): ExportStatusGroupData {
+        val mapped = preloadedEntries.map {
+            ExportStatusDatabaseManager.ExportRow(it.type, it.format, it.status, it.answer)
+        }
+        return createGroupDataFromRows(exportType, mapped)
+    }
+
+    /**
+     * Builds UI group data from pre-loaded export rows for [exportType] without executing additional SQLite queries.
+     */
+    fun createGroupDataFromRows(
+        exportType: ExportType,
+        preloadedRows: List<ExportStatusDatabaseManager.ExportRow>
+    ): ExportStatusGroupData {
+        val rawRows = preloadedRows.filter { it.type == exportType }
 
         // If this exportType has any activity/rows for this workout, synthesize missing supported formats (e.g. FIT on legacy workouts)
         val rows = if (rawRows.isNotEmpty()) {

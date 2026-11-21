@@ -1760,13 +1760,24 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     override fun <T> runInTransaction(block: () -> T): T =
         clusterDataPort.runInTransaction(block)
 
+    private val batchMetadataLoader by lazy {
+        com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoader(
+            context = application,
+            summariesManagerProvider = { summariesManager },
+            sportTypeDbProvider = { sportTypeDatabaseManager },
+            equipmentDbProvider = { equipmentDbHelper },
+            stravaUploadDbProvider = { stravaUploadDbHelper }
+        )
+    }
+
     private val mapper by lazy {
         WorkoutDataMapper(
             context = application,
             workoutSummariesDatabaseManager = summariesManager,
             sportTypeDatabaseManager = sportTypeDatabaseManager,
             equipmentDbHelper = equipmentDbHelper,
-            stravaUploadDbHelper = stravaUploadDbHelper
+            stravaUploadDbHelper = stravaUploadDbHelper,
+            batchMetadataLoader = batchMetadataLoader
         )
     }
 
@@ -3822,36 +3833,37 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             continue
                         }
 
-                        // 2. Fetch Metadata for the chunk in vectorized queries (ATT-359/388)
-                        val chunkIds = snapshots.map { it.workoutId }
+                        // 2. Fetch Metadata & Export Statuses for the chunk in O(1) batch queries (ATT-359/388/6038)
                         val chunkNames = snapshots.mapNotNull { it.fileBaseName }
-                        val chunkClusterIds = snapshots.mapNotNull { if (it.clusterId != -1L) it.clusterId else null }.toSet()
+                        val batchMetadata = batchMetadataLoader.loadForSnapshots(snapshots)
+                        val exportRowsByFile = if (chunkNames.isNotEmpty()) {
+                            try {
+                                com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
+                                    .getInstance(application)
+                                    .getExportStatusEntriesForWorkouts(chunkNames)
+                            } catch (e: Exception) {
+                                try {
+                                    Log.w(TAG, "loadAllWorkouts: error batch-loading export status rows: ${e.message}")
+                                } catch (_: Throwable) {
+                                }
+                                emptyMap()
+                            }
+                        } else {
+                            emptyMap()
+                        }
 
-                        val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
-                        val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
-                        val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
-                        val lapsMap = LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
-                        val cardioPowerMap = summariesManager.getCardioPowerDynamicsForWorkouts(chunkIds)
-
-                        val batchMetadata = WorkoutDataMapper.BatchMetadata(
-                            extrema = extremaList.groupBy { it.workoutId },
-                            stravaData = stravaDataMap,
-                            clusterNames = clusterNamesMap,
-                            laps = lapsMap,
-                            cardioPowerDynamics = cardioPowerMap
-                        )
-
-                        // 3. Map the chunk in memory without cursor seeking (ATT-2309 / REQ-STB-018.2)
+                        // 3. Map the chunk in memory without cursor seeking or N+1 DB fallbacks (ATT-2309 / ATT-6038)
                         for (snapshot in snapshots) {
                             try {
                                 val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
 
-                                // Add Export Statuses (Fast from memory-only providers if possible)
                                 val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
-                                if (workoutData.fileBaseName != null) {
+                                val baseName = workoutData.fileBaseName
+                                if (baseName != null) {
+                                    val preloadedRows = exportRowsByFile[baseName] ?: emptyList()
                                     for (type in orderedExportTypes) {
                                         try {
-                                            val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
+                                            val groupData = exportStatusDataProvider.createGroupDataFromEntries(type, preloadedRows)
                                             if (groupData.hasContent) exportStatuses.add(groupData)
                                         } catch (e: Exception) {
                                             Log.w(TAG, "loadAllWorkouts: error creating export status group data for type $type", e)

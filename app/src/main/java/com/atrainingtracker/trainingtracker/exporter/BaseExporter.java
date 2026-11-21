@@ -178,6 +178,11 @@ public abstract class BaseExporter {
     protected void copyFileToDownloads(@NonNull ExportInfo exportInfo) {
         String filename = exportInfo.getShortPath();
         File fileToCopy = new File(getBaseDirFile(mContext), filename);
+        copyFileToDownloads(fileToCopy, exportInfo.getFileFormat().getMimeType());
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    protected void copyFileToDownloads(@NonNull File fileToCopy, @NonNull String mimeType) {
         if (!fileToCopy.exists()) {
             return;
         }
@@ -188,7 +193,7 @@ public abstract class BaseExporter {
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileToCopy.getName());
-        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, exportInfo.getFileFormat().getMimeType());
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
         contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
         Uri targetUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);

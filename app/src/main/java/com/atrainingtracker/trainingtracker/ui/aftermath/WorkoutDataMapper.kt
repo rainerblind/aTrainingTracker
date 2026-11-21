@@ -61,8 +61,21 @@ class WorkoutDataMapper(
     private val equipmentDbHelper: EquipmentDbHelper,
     private val stravaUploadDbHelper: StravaUploadDbHelper,
     private val knownLocationsDatabaseManager: KnownLocationsDatabaseManager? = null,
-    private val knownLocationsRepository: KnownLocationsRepository? = null
+    private val knownLocationsRepository: KnownLocationsRepository? = null,
+    private val batchMetadataLoader: com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoader? = null
 ) {
+
+    private val effectiveBatchMetadataLoader: com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoader by lazy {
+        batchMetadataLoader ?: com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoader(
+            context = context,
+            summariesManagerProvider = { workoutSummariesDatabaseManager },
+            sportTypeDbProvider = { sportTypeDatabaseManager },
+            equipmentDbProvider = { equipmentDbHelper },
+            stravaUploadDbProvider = { stravaUploadDbHelper },
+            knownLocationsDbProvider = { knownLocationsDatabaseManager },
+            knownLocationsRepoProvider = { knownLocationsRepository }
+        )
+    }
 
     // Define all sensors to check
     val sensorsToCheck = SensorType.CORE_METRICS + listOf(
@@ -72,245 +85,16 @@ class WorkoutDataMapper(
 
     /**
      * Creates a WorkoutData object from the current position of a cursor.
+     * Delegates to [readCursorSnapshot] + [fromSnapshot] with a fully populated single-workout
+     * [BatchMetadata] and `reconcile = true` (`REQ-DAT-045.4`, `Rule 20`).
      *
      * @param cursor The cursor, already positioned at the desired row.
      * @return A new WorkoutData object.
      */
     fun fromCursor(cursor: Cursor): WorkoutData {
-
-        val workoutId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
-
-        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val bSportType = sportTypeDatabaseManager.getBSportType(sportId)
-        val sportName = sportTypeDatabaseManager.getUIName(sportId)
-
-        val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
-        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
-
-        val dateTimeResult = formatDateTime(cursor)
-
-        val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
-        val stravaActivityData = if (fileBaseName != null) stravaUploadDbHelper.getStravaActivityData(fileBaseName) else null
-
-        val totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
-        val startLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
-        val endLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
-        val rawMaxDispLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
-        val rawMaxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
-        val mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: ""
-
-        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng, endLatLng)
-        val maxDisplacement = resolvedApex.first
-        val maxDispLatLng = resolvedApex.second
-
-        val encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: ""
-        val rawMinAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
-        val rawMaxAltitude = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
-        val resolvedAltitudeExtrema = reconcileAltitudeExtrema(workoutId, encodedAltitudes, rawMinAltitude, rawMaxAltitude)
-        val minAltitude = resolvedAltitudeExtrema.first
-        val maxAltitude = resolvedAltitudeExtrema.second
-
-        val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
-        val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
-        val clusterName = try {
-            WorkoutClusterRepository.getInstance(context).getClusterNameById(clusterId)
-        } catch (_: Throwable) {
-            null
-        }
-
-        val startLocationName = resolveLocationName(startLatLng)
-        val endLocationName = resolveLocationName(endLatLng)
-
-        val activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s))
-        val avgSpeedMpsVal = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps))
-        val avgPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG)
-        val maxPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.MAX)
-        val hasPowerData = (avgPowerWattsVal != null && avgPowerWattsVal > 0.0) || (maxPowerWattsVal != null && maxPowerWattsVal > 0.0)
-
-        val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
-        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal, hasPowerData = hasPowerData)
-        val aerobicSummary = resolveAerobicEfficiencySummary(
-            powerEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
-            powerDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
-            speedEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
-            speedDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
-            avgHrBpm = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HR, ExtremaType.AVG),
-            avgPowerWatts = avgPowerWattsVal,
-            avgSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG) ?: avgSpeedMpsVal,
-            bSportType = bSportType
-        )
-        val powerSummary = resolvePowerTrainingSummary(
-            npEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END),
-            npAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG),
-            ifEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END),
-            ifAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG),
-            tssEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.END),
-            tssAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG),
-            tssMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX),
-            workEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END),
-            workAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG),
-            workMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX),
-            ptwAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG),
-            ptwMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX),
-            avgPowerWatts = avgPowerWattsVal,
-            maxPowerWatts = maxPowerWattsVal,
-            activeTimeSec = activeTimeSec,
-            startTimeS = dateTimeResult.timestampS
-        )
-
-        // The mapper is responsible for assembling the final object from its constituent parts.
-        return WorkoutData(
-            id = workoutId,
-            finished = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.FINISHED)) == 1,
-            fileBaseName = fileBaseName,
-            workoutName = workoutName,
-            sportId = sportId,
-            sportName = sportName,
-            formattedDate = dateTimeResult.date,
-            formattedTime = dateTimeResult.time,
-            startTimeS = dateTimeResult.timestampS,
-            localDateTime = dateTimeResult.localDateTime,
-            bSportType = bSportType,
-            equipmentName = equipmentName,
-            equipmentId = equipmentId,
-            commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1,
-            trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1,
-            race = cursor.getColumnIndex(WorkoutSummaries.RACE).takeIf { it >= 0 }?.let { cursor.getInt(it) == 1 } ?: false,
-            source = cursor.getColumnIndex(WorkoutSummaries.SOURCE).takeIf { it >= 0 }?.let {
-                WorkoutSource.fromString(cursor.getString(it))
-            } ?: WorkoutSource.TRACKED,
-            uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA)),
-            mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: "",
-            encodedAltitudes = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.ALTITUDE_STREAM)) ?: "",
-            encodedDistances = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_STREAM)) ?: "",
-            clusterId = clusterId,
-            clusterName = clusterName,
-            startLocationName = startLocationName,
-            endLocationName = endLocationName,
-
-            minLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)),
-            minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)),
-            maxLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)),
-            maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
-
-            minWPrimeBalKj = minWPrimeBalKj,
-            minWPrimeBalPct = minWPrimeBalPct,
-            isEmptyTankWarning = isEmptyTankWarning,
-            efficiencyFactor = aerobicSummary.efficiencyFactor,
-            aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
-            isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
-            isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
-            normalizedPowerWatts = powerSummary.normalizedPowerWatts,
-            intensityFactor = powerSummary.intensityFactor,
-            tss = powerSummary.tss,
-            workKj = powerSummary.workKj,
-            avgPowerToWeight = powerSummary.avgPowerToWeight,
-            maxPowerToWeight = powerSummary.maxPowerToWeight,
-            variabilityIndex = powerSummary.variabilityIndex,
-            cardioPowerDynamics = workoutSummariesDatabaseManager.getCardioPowerDynamics(workoutId),
-            radarTrafficSummary = resolveRadarTrafficSummary(
-                totalVehiclesVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
-                    ?: workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.END),
-                maxApproachSpeedVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_APPROACH_SPEED_mps, ExtremaType.MAX),
-                maxVehicleSpeedVal = null,
-                highThreatPassVal = null,
-                totalDistanceM = totalDistance,
-                activeTimeSec = activeTimeSec,
-                riderMaxSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX),
-                minPassingDistanceVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_PASSING_DISTANCE_m, ExtremaType.MIN),
-                heavyVehicleCountVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
-            ),
-
-            dfaA1FreshBaseline = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE),
-            dfaA1LateMean = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN),
-            dfaA1DurabilityDriftPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT),
-
-            totalDistance = totalDistance,
-            maxDisplacement = maxDisplacement,
-            activeTimeSec = activeTimeSec,
-            totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
-            avgSpeedMps = avgSpeedMpsVal,
-            ascentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING)),
-            descentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING)),
-            minAltitude = minAltitude,
-            maxAltitude = maxAltitude,
-            minAltitudeLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN),
-            maxAltitudeLatLng = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX),
-            maxDisplacementLatLng = maxDispLatLng,
-            startLatLng = startLatLng,
-            endLatLng = endLatLng,
-
-            description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION)),
-            goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
-            method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
-            calories = cursor.getColumnIndex(WorkoutSummaries.CALORIES).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) null else cursor.getInt(it)
-            },
-
-            stravaSportName = sportTypeDatabaseManager.getStravaName(sportId),
-
-            stravaActivityData = stravaActivityData,
-            recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) null else cursor.getString(it)
-            },
-            rpe = cursor.getColumnIndex(WorkoutSummaries.RPE).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) null else cursor.getInt(it)
-            },
-            feel = cursor.getColumnIndex(WorkoutSummaries.FEEL).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) null else cursor.getInt(it)
-            },
-            polarSyncPending = cursor.getColumnIndex(WorkoutSummaries.POLAR_SYNC_PENDING).takeIf { it >= 0 }?.let {
-                !cursor.isNull(it) && cursor.getInt(it) == 1
-            } ?: false,
-            polarDeviceId = cursor.getColumnIndex(WorkoutSummaries.POLAR_DEVICE_ID).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) null else cursor.getString(it)
-            },
-            polarExerciseId = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXERCISE_ID).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) null else cursor.getString(it)
-            },
-            polarExpectedStartMs = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXPECTED_START_MS).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) 0L else cursor.getLong(it)
-            } ?: 0L,
-            polarExpectedEndMs = cursor.getColumnIndex(WorkoutSummaries.POLAR_EXPECTED_END_MS).takeIf { it >= 0 }?.let {
-                if (cursor.isNull(it)) 0L else cursor.getLong(it)
-            } ?: 0L,
-
-            extremaRows = sensorsToCheck.flatMap { sensorType ->
-                val rows = mutableListOf<ExtremaDataRow>()
-
-                // Primary row data
-                val rawMinVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, ExtremaType.MIN)
-                val rawMinPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MIN)
-                val avgVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, ExtremaType.AVG)
-                val rawMaxVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, sensorType, ExtremaType.MAX)
-                val rawMaxPos = workoutSummariesDatabaseManager.getExtremaPosition(workoutId, sensorType, ExtremaType.MAX)
-
-                // 1. Create standard row
-                val standardRow = createExtremaRow(
-                    sensorType,
-                    rawMinVal, rawMinPos,
-                    avgVal,
-                    rawMaxVal, rawMaxPos,
-                    bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps // Special case: label speed even in run
-                )
-                if (standardRow != null) rows.add(standardRow)
-
-                // 2. Special Case: Derive Pace from Speed for Runs
-                if (bSportType == BSportType.RUN && sensorType == SensorType.SPEED_mps) {
-                    val paceRow = createDerivedPaceRow(rawMinVal, rawMinPos, avgVal, rawMaxVal, rawMaxPos)
-                    if (paceRow != null) rows.add(paceRow)
-                }
-
-                rows
-            },
-
-            exportStatuses = emptyList(), // will be added/merged by the viewModel
-            laps = try {
-                WorkoutRepository.getInstance(context).getLaps(workoutId)
-            } catch (_: Throwable) {
-                emptyList()
-            }
-        )
+        val snapshot = readCursorSnapshot(cursor)
+        val singleBatch = effectiveBatchMetadataLoader.loadForSingleWorkout(snapshot)
+        return fromSnapshot(snapshot, singleBatch, reconcile = true)
     }
 
     /**
@@ -618,7 +402,10 @@ class WorkoutDataMapper(
         val equipmentNames: Map<Long, String> = emptyMap(),
         val locationNames: Map<LatLng, String> = emptyMap(),
         val athleteMetrics: Map<Long, AthleteMetricsInfo> = emptyMap(),
-        val cardioPowerDynamics: Map<Long, CardioPowerDynamicsRecord> = emptyMap()
+        val cardioPowerDynamics: Map<Long, CardioPowerDynamicsRecord> = emptyMap(),
+        val hasEquipmentNames: Boolean = false,
+        val hasLocationNames: Boolean = false,
+        val hasCardioPowerDynamics: Boolean = false
     )
 
     /**
@@ -791,7 +578,11 @@ class WorkoutDataMapper(
         val bSportType = sportInfo?.bSportType ?: sportTypeDatabaseManager.getBSportType(snapshot.sportId)
         val sportName = sportInfo?.sportName ?: sportTypeDatabaseManager.getUIName(snapshot.sportId)
         val equipmentName = if (snapshot.equipmentId > 0) {
-            batch.equipmentNames[snapshot.equipmentId] ?: equipmentDbHelper.getEquipmentNameFromId(snapshot.equipmentId)
+            if (batch.hasEquipmentNames) {
+                batch.equipmentNames[snapshot.equipmentId]
+            } else {
+                batch.equipmentNames[snapshot.equipmentId] ?: equipmentDbHelper.getEquipmentNameFromId(snapshot.equipmentId)
+            }
         } else null
 
         val stravaActivityData = if (snapshot.fileBaseName != null) batch.stravaData[snapshot.fileBaseName] else null
@@ -824,12 +615,12 @@ class WorkoutDataMapper(
         val maxAltitude = resolvedAltitudeExtrema.second
 
         val clusterName = batch.clusterNames[snapshot.clusterId]
-        val startLocationName = if (startLatLng != null && batch.locationNames.containsKey(startLatLng)) {
+        val startLocationName = if (startLatLng != null && (batch.hasLocationNames || batch.locationNames.containsKey(startLatLng))) {
             batch.locationNames[startLatLng]
         } else {
             resolveLocationName(startLatLng)
         }
-        val endLocationName = if (endLatLng != null && batch.locationNames.containsKey(endLatLng)) {
+        val endLocationName = if (endLatLng != null && (batch.hasLocationNames || batch.locationNames.containsKey(endLatLng))) {
             batch.locationNames[endLatLng]
         } else {
             resolveLocationName(endLatLng)
@@ -929,8 +720,12 @@ class WorkoutDataMapper(
             avgPowerToWeight = powerSummary.avgPowerToWeight,
             maxPowerToWeight = powerSummary.maxPowerToWeight,
             variabilityIndex = powerSummary.variabilityIndex,
-            cardioPowerDynamics = batch.cardioPowerDynamics[snapshot.workoutId]
-                ?: workoutSummariesDatabaseManager.getCardioPowerDynamics(snapshot.workoutId),
+            cardioPowerDynamics = if (batch.hasCardioPowerDynamics) {
+                batch.cardioPowerDynamics[snapshot.workoutId]
+            } else {
+                batch.cardioPowerDynamics[snapshot.workoutId]
+                    ?: workoutSummariesDatabaseManager.getCardioPowerDynamics(snapshot.workoutId)
+            },
             radarTrafficSummary = resolveRadarTrafficSummary(
                 totalVehiclesVal = getBatchVal(SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
                     ?: getBatchVal(SensorType.RADAR_VEHICLE_COUNT, ExtremaType.END),

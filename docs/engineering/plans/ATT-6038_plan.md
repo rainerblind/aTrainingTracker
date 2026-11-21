@@ -1,0 +1,26 @@
+# Stage 3: Implementation Plan - ATT-6038: BatchMetadataLoader & Export-Status N+1 Elimination
+
+**Ticket**: [ATT-6038](https://issue-tracker/ATT-6038) (`3 SP`) | **Parent Epic**: [ATT-6033](https://issue-tracker/ATT-6033)  
+**Target Release**: `V5.0.0` (`Rule 8.3`) | **Sprint**: `2026-11-21_01_Früh` (Sprint 468)  
+**Requirement**: `REQ-DAT-045` (`REQ-DAT-045.1`–`.4`) | **Test Spec**: `TST-DAT-041` (`TST-DAT-041.1`–`.5`)  
+**Branch**: `feature/ATT-6038` | **Author**: AI Agent 1 (`--as agent1`) | **Date**: 2026-11-21
+
+---
+
+## 1. SWE.2 Architectural Decomposition & Threading
+* **Package Placement (`ArchitectureConformanceContractTest`)**: Place `BatchMetadataLoader` in `com.atrainingtracker.trainingtracker.repositories` (`0` net-new `ui/*` DB callers; `0` `.ui.*` upward imports inside `database/`). Keep `WorkoutRepository.kt <= 5,117` LoC (currently `4,985`).
+* **Threading & Encapsulation**: All SQLite batch queries execute on `Dispatchers.IO`; `ExportStatusRepository` and `BatchMetadataLoader` expose domain DTOs only (zero `*DatabaseManager`/`Cursor` getters per `Rule 8.7`).
+* **SWE.2 / SWE.3 & UI Consistency**: Update `docs/architecture.md` (`Rule 8.8`) for `BatchMetadataLoader` in Stage 4 alongside `BatchMetadataLoader.kt`; zero `detailed_design/` service state changes (`REQ-PRO-114`); zero UI/Compose or `strings*.xml` edits.
+
+## 2. Atomic Construction Steps (Stage 4 — Post-Gate 3 Only)
+| Step | Action & Target Files | Mapped Req / Test | Verification / Guardrail |
+|---|---|---|---|
+| **1** | **Export-Status Batch & Dead Code Removal**: Delete both dead `getExportStatusMap` overloads (`:490, :587`) in `ExportStatusDatabaseManager.java`; add `getExportRowsForWorkouts(Collection<String>)` with single upfront `healStaleProcessingRows()` and `<= 500` bind-arg chunks (`try (Cursor ...)`); expose via `ExportStatusRepository`; add preloaded-rows `createGroupData(ExportType, List<ExportRow>)` sharing formatting logic in `ExportStatusDataProvider.kt`. | `REQ-DAT-045.1`, `TST-DAT-041.1` | `IN (...)` chunks `<= 500` (`<= 999`); `try (Cursor ...)`; `0` `*DatabaseManager` getters; `lint_cursor_safety.py`. |
+| **2** | **Strava Batch Chunking**: Update `StravaUploadDbHelper.getStravaActivityDataForWorkouts(Collection<String>)` to chunk `IN (...)` bind args at `<= 500` (`try (Cursor ...)`). | `REQ-DAT-045.2`, `TST-DAT-041.2` | `> 999` items (`1,200`) succeed without `SQLiteException`; identical map output. |
+| **3** | **Shared `BatchMetadataLoader` + SWE.2 Update**: Create `repositories/BatchMetadataLoader.kt` loading all 9 `BatchMetadata` maps (`extrema`, `stravaData`, `clusterNames`, `laps`, `cardioPowerDynamics`, `sportTypes`, `equipmentNames`, `locationNames` via single `allLocations` scan, and `athleteMetrics` via 2 `AthleteMetricsDatabaseManager.getEntriesByType` queries + `SettingsDataStore` fallback matching `resolveEffectiveFtpAt`/`resolveEffectiveWeightKgAt`). Update `docs/architecture.md` (`Rule 8.8`). | `REQ-DAT-045.3`, `TST-DAT-041.3`, `Rule 8.8` | Resides in `repositories/`; `athleteMetrics` matches `timestamp_ms <= startTimeMs` + `getLatestEntry` + `SettingsDataStore` fallback. |
+| **4** | **Repository Wiring & Lossless `fromCursor` Delegation**: Wire `BatchMetadataLoader` + `getExportRowsForWorkouts` into `WorkoutRepository.loadAllWorkouts` (keep `reconcile = false`, `deletedDuringLoadIds`, and `ATT-6170` `loadWorkout` boundary intact); wire `BatchMetadataLoader` into `PeriodsRepository` (`:243, :866`) and `WorkoutClusterRepository` (`:726`); delegate `WorkoutDataMapper.fromCursor(Cursor)` to `readCursorSnapshot` + `fromSnapshot(..., reconcile = true)` with single-workout `BatchMetadata` (defaulting `BatchMetadataLoader` from injected mapper DB dependencies so mock tests work cleanly). | `REQ-DAT-045.3`, `.4`; `TST-DAT-041.4`, `.5` | `<= 12` auxiliary queries per 50-batch; `WorkoutRepository.kt <= 5,117` LoC; `fromCursor` preserves `reconcile = true` and all fields (`Rule 20`). |
+| **5** | **Unit Tests & Tier 1 Verification**: Add/update `ExportStatusDatabaseManagerTest`, `ExportStatusDataProviderTest`, `StravaUploadDbHelperBatchTest`, `BatchMetadataLoaderTest`, `WorkoutRepositoryBatchLoadTest`, `WorkoutDataMappingSymmetryTest`; run targeted Tier 1 `./gradlew :app:testDebugUnitTest --rerun --tests ...` + `ArchitectureConformanceContractTest` + `TryWithResourcesCursorAuditTest` + `lint_cursor_safety.py` + `verify_requirement_governance.py`. | `TST-DAT-041.1`–`.5` | `100%` targeted unit & contract pass rate (`Rule 7.5`, no `--rerun-tasks`); `lint_cursor_safety.py` & governance `exit 0`. |
+
+## 3. System Invariants & Rollback Safety
+* **Invariants**: SQLite bind-arg chunks `<= 500` (`<= 999`); `try (Cursor ...)` on every cursor (`lint_cursor_safety.py`); zero `*DatabaseManager`/`Cursor` repository getters (`Rule 8.7`); `WorkoutRepository.kt <= 5,117` LoC & `0` net-new `ui/*` DB callers (`ArchitectureConformanceContractTest`); `reconcile = true` on `fromCursor`, `reconcile = false` on batch loads; `ATT-6170` `loadWorkout` export-status semantics untouched.
+* **Code Lock (`Rule 4.1`) & Rollback**: Zero `app/src/main/` edits until `check-gate` returns `0` (`GATE_PASSED`). Isolated on `feature/ATT-6038`; `sprint/2026-11-21_01_Früh` stays clean until Stage 6 `PASS`.

@@ -221,4 +221,7 @@
     <string name="devices_wheel_circumference_auto_hint">Początkowy rozmiar opony dla nowych czujników — kalibrowany automatycznie przez GNSS podczas jazdy.</string>
     <string name="devices_wheel_baseline_format">Wartość bazowa: %1$d mm</string>
     <string name="devices_wheel_history_empty">Brak historii kalibracji. Ukończ jazdę z GNSS i tym czujnikiem koła, aby zobaczyć przebieg w czasie.</string>
+    <!-- Smartphone Raw Sensor Sidecar Recording (ATT-9348, REQ-EXP-045.5) -->
+    <string name="tuning_record_smartphone_raw_title">Rejestruj surowe czujniki smartfona</string>
+    <string name="tuning_record_smartphone_raw_desc">Zapisuj skompresowane dane IMU, barometru, kroków i GNSS dla każdego treningu do odtwarzania offline</string>
 </resources>

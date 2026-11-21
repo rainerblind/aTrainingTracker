@@ -22,13 +22,13 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import java.io.BufferedWriter
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
@@ -36,9 +36,9 @@ import java.nio.charset.StandardCharsets
 import java.util.zip.GZIPOutputStream
 
 /**
- * Unit verification for Polar raw telemetry reader and parser (TST-SET-119.2 / REQ-SET-117.2).
+ * Pure-JVM unit verification for Polar raw telemetry reader and parser
+ * (TST-SET-119.2 / REQ-SET-117.2, TST-EXP-046.1 / REQ-EXP-046.1).
  */
-@RunWith(RobolectricTestRunner::class)
 class PolarRawTelemetryReaderTest {
 
     @get:Rule
@@ -128,5 +128,74 @@ class PolarRawTelemetryReaderTest {
         val session = PolarRawTelemetryReader.readFile(file)
         assertNotNull(session)
         assertTrue(session.rows.isEmpty())
+    }
+
+    // TST-EXP-046.1
+    @Test
+    fun metadata_roundTripWithEscapedCharactersAndUnicode_pureJvm() {
+        val original = PolarRawMetadata(
+            schemaVersion = 1,
+            appVersion = "5.0.0-\"beta\"\\rc1",
+            sensorModel = "Polar \"H10\" \\ Pro",
+            firmwareVersion = "3.2.0\tbuild",
+            streamMode = "OFFLINE",
+            accRateHz = 200,
+            gyroRateHz = 52,
+            sportId = 1,
+            poolLengthM = null
+        )
+        val json = original.toJsonString()
+        val parsed = PolarRawMetadata.fromJsonString(json)
+        assertEquals(original, parsed)
+        assertNull(parsed.poolLengthM)
+
+        // Verify \uXXXX unicode escape support matches org.json.JSONObject parity
+        val unicodeParsed = PolarRawMetadata.fromJsonString(
+            """{"schemaVersion":1,"sensorModel":"Polar H10 \u00B0C"}"""
+        )
+        assertEquals("Polar H10 °C", unicodeParsed.sensorModel)
+    }
+
+    // TST-EXP-046.1
+    @Test
+    fun metadata_malformedJson_fallsBackToDefaultsWithoutException() {
+        val malformed1 = PolarRawMetadata.fromJsonString("{broken json without closing")
+        assertEquals(PolarRawMetadata(), malformed1)
+
+        val malformed2 = PolarRawMetadata.fromJsonString("not-even-json")
+        assertEquals(PolarRawMetadata(), malformed2)
+    }
+
+    // TST-EXP-046.1
+    @Test
+    fun readFile_truncatedGzip_salvagesCompleteLinesAndDropsPartialTrailingRow() {
+        val fullBytes = ByteArrayOutputStream().use { baos ->
+            GZIPOutputStream(baos, true).use { gzipOut ->
+                val writer = BufferedWriter(OutputStreamWriter(gzipOut, StandardCharsets.UTF_8))
+                val metadata = PolarRawMetadata(sensorModel = "Polar H10 9999", accRateHz = 200)
+                writer.write("# metadata: ${metadata.toJsonString()}\n")
+                writer.write("${RawTelemetryRow.CSV_HEADER}\n")
+                writer.write("1000000000,0,ACC,10,20,980,,,,,,\n")
+                writer.write("1005000000,5,ACC,15,25,985,,,,,,\n")
+                writer.flush() // syncFlush flushes complete block to stream
+                // Write a trailing row WITHOUT newline to simulate crash-truncated partial line
+                writer.write("1010000000,10,ACC,100,200,9")
+                writer.flush()
+            }
+            baos.toByteArray()
+        }
+
+        // Chop off the final 8 bytes (GZIP CRC/ISIZE trailer) to simulate abrupt EOF
+        val truncatedFile = tempFolder.newFile("truncated.polar_raw.csv.gz")
+        FileOutputStream(truncatedFile).use { fos ->
+            fos.write(fullBytes, 0, fullBytes.size - 8)
+        }
+
+        val session = PolarRawTelemetryReader.readFile(truncatedFile)
+        assertEquals("Polar H10 9999", session.metadata.sensorModel)
+        assertEquals(200, session.metadata.accRateHz)
+        assertEquals("Only complete newline-terminated rows should be salvaged", 2, session.rows.size)
+        assertEquals(0L, session.rows[0].elapsedMs)
+        assertEquals(5L, session.rows[1].elapsedMs)
     }
 }

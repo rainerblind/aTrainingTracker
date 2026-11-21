@@ -358,8 +358,10 @@ class MyBTLEDeviceAddressAndSearchTest {
     }
 
     /**
-     * TST-CON-051.3: Verify scan-assist onScanResult connects GATT while in decoupled background
-     * reconnect (mIsBackgroundReconnecting=true, mState=DISCONNECTED) without State.SEARCHING.
+     * TST-CON-051.3 / TST-SET-125.2: Verify scan-assist onScanResult connects GATT while in decoupled
+     * background reconnect (mIsBackgroundReconnecting=true, mState=DISCONNECTED) without State.SEARCHING
+     * for a session-connected sensor (mHasConnectedInSession=true), whereas never-connected devices
+     * skip scan-assist during background reconnect.
      */
     @Test
     fun testScanAssistance_onScanResult_connectsDuringDecoupledBackgroundReconnect() {
@@ -367,6 +369,7 @@ class MyBTLEDeviceAddressAndSearchTest {
         try {
             val address = "D0:C6:37:33:67:AA"
             val device = ConcreteBTLEDevice(mockContext, mockSensorManager, address)
+            device.setHasConnectedInSessionForTesting(true)
             device.startSearching()
             assertTrue(device.isScanning())
 
@@ -375,7 +378,7 @@ class MyBTLEDeviceAddressAndSearchTest {
             assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
             assertFalse(device.isSearching)
 
-            // Re-run background reconnect via mReconnectRunnable
+            // Re-run background reconnect via mReconnectRunnable -> session-connected sensor uses scan-assist
             device.reconnectRunnable.run()
             assertTrue(device.isScanning())
             assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
@@ -394,6 +397,11 @@ class MyBTLEDeviceAddressAndSearchTest {
 
             assertFalse(device.isScanning())
             verify { mockDiscoveredDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
+
+            // Contrast (TST-SET-125.2): never-connected device during TRACKING skips scan-assist in background reconnect
+            val absentDevice = ConcreteBTLEDevice(mockContext, mockSensorManager, "D0:C6:37:33:67:BB")
+            absentDevice.reconnectRunnable.run()
+            assertFalse("Never-connected device must not start scan-assist in background reconnect", absentDevice.isScanning())
         } finally {
             TrainingApplication.setTrackingModeForTesting(com.atrainingtracker.trainingtracker.TrackingMode.READY)
         }

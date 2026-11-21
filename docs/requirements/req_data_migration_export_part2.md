@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.7  
+**Version**: 1.0.16  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 4
+**Total Requirements**: 7
 
 ---
 
@@ -140,6 +140,114 @@
 
 ---
 
+### REQ-DAT-045: Unified `BatchMetadataLoader`, Chunked Export-Status & Strava Batch Queries, and Lossless `fromCursor` Delegation (`ATT-6038`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-041`
+- **System Requirement(s)**: Derived (SW-only) — Internal SQLite batch metadata & export-status query optimization and cursor-mapper consolidation without external sensor, REST API, or backup schema changes (refining `REQ-DAT-033` and `REQ-DAT-029.6`)
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `BatchMetadataLoader.kt`, `ExportStatusDatabaseManager.java`, `ExportStatusRepository.kt`, `ExportStatusDataProvider.kt`, `StravaUploadDbHelper.java`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `PeriodsRepository.kt`, `WorkoutClusterRepository.kt`
+- **Rationale**: `WorkoutRepository.loadAllWorkouts` triggers `~15–16` SQLite queries per workout (`~750–800` per 50-workout batch): `4x` repeated `healStaleProcessingRows` + `SELECT` via `ExportStatusDataProvider.createGroupData` (`8` queries/workout), plus `fromSnapshot` fallbacks on empty `sportTypes`, `equipmentNames`, `locationNames` (full-table geofence scans), and `athleteMetrics`. Meanwhile `StravaUploadDbHelper.getStravaActivityDataForWorkouts` lacks `<= 999` SQLite bind-arg chunking, `ExportStatusDatabaseManager` retains two dead `getExportStatusMap` overloads, and `WorkoutDataMapper.fromCursor` duplicates `readCursorSnapshot` + `fromSnapshot`.
+- **Description**:
+  1. *Chunked Batch Export-Status Queries & Dead Overload Removal (`REQ-DAT-045.1`)*:
+     - `ExportStatusDatabaseManager` SHALL expose `getExportRowsForWorkouts(Collection<String> fileBaseNames): Map<String, List<ExportRow>>`, executing `healStaleProcessingRows()` at most **once** per batch call and querying `ExportStatusDbHelper.TABLE` via `WHERE file_base_name IN (...)` with SQLite bind-argument chunks `<= 500` (`<= 999` ceiling) and `try (Cursor ...)` safety (`REQ-DAT-043`).
+     - `ExportStatusRepository` SHALL encapsulate `getExportRowsForWorkouts` and `healStaleProcessingRows()` without exposing `*DatabaseManager` or `Cursor` getters (`Rule 8.7`). `ExportStatusDataProvider` SHALL provide a preloaded-rows `createGroupData` path used by `WorkoutRepository.loadAllWorkouts` so `4` export types evaluate in memory with zero per-workout export queries.
+     - Both dead `ExportStatusDatabaseManager.getExportStatusMap` overloads (`0` callers) SHALL be removed.
+  2. *Chunked Strava Batch Query Parity (`REQ-DAT-045.2`)*:
+     - `StravaUploadDbHelper.getStravaActivityDataForWorkouts(Collection<String> fileNames)` SHALL chunk `WHERE file_base_name IN (...)` bind arguments at `<= 500` (`<= 999` SQLite limit) while returning identical `Map<String, String>` results.
+  3. *Shared `BatchMetadataLoader` in `repositories/` (`REQ-DAT-045.3`)*:
+     - `BatchMetadataLoader` SHALL reside in `com.atrainingtracker.trainingtracker.repositories` (preventing net-new `ui/*` DB bindings per `ArchitectureConformanceContractTest` and keeping `WorkoutRepository.kt <= 5,117` LoC) and populate all `WorkoutDataMapper.BatchMetadata` fields (`extrema`, `stravaData`, `clusterNames`, `laps`, `sportTypes`, `equipmentNames`, `locationNames`, `cardioPowerDynamics`, and `athleteMetrics`).
+     - Batch `athleteMetrics` resolution SHALL load `FTP_WATTS` and `WEIGHT_KG` history once per batch (`AthleteMetricsDatabaseManager.getEntriesByType`) and resolve each workout's effective values identically to `SettingsDataStoreJavaHelper.resolveEffectiveFtpAt` / `resolveEffectiveWeightKgAt` (`timestamp_ms <= startTimeMs`, fallback to latest entry, fallback to `SettingsDataStore`).
+     - `WorkoutRepository.loadAllWorkouts`, `PeriodsRepository` (`getWorkoutsForRange`, `performHierarchicalMigration`), and `WorkoutClusterRepository` (`loadWorkoutsWithBatchMetadata`) SHALL delegate metadata loading to `BatchMetadataLoader`.
+  4. *Lossless `fromCursor` -> `fromSnapshot` Delegation (`REQ-DAT-045.4`)*:
+     - `WorkoutDataMapper.fromCursor(Cursor)` SHALL delegate to `readCursorSnapshot(cursor)` + `fromSnapshot(snapshot, singleWorkoutBatch, reconcile = true)` via `BatchMetadataLoader.loadForSingleWorkout(snapshot)` (populating the 5 non-fallback/batch maps `extrema`, `stravaData`, `clusterNames`, `laps`, `cardioPowerDynamics` with `hasCardioPowerDynamics = true` and delegating `sportTypes`, `equipmentNames`, `locationNames`, and `athleteMetrics` to `fromSnapshot`'s indexed single-item resolvers), preserving `REQ-DAT-009` / `REQ-MAP-020` self-healing and `ATT-6170` scope boundaries (`loadWorkout` export-status preservation stays out-of-scope).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `N` workouts (including `N > 999`, e.g. `1,200`) passed to `ExportStatusDatabaseManager.getExportRowsForWorkouts` or `StravaUploadDbHelper.getStravaActivityDataForWorkouts`, *When* queried, *Then* bind arguments execute in `<= 500`-item chunks without `SQLiteException`, `healStaleProcessingRows()` executes at most once, and returned maps match single-item queries.
+• *Given* `WorkoutRepository.loadAllWorkouts` loading a 50-workout batch, *When* executed, *Then* `BatchMetadataLoader` and `getExportRowsForWorkouts` populate all `BatchMetadata` fields (incl. `athleteMetrics`) and `exportStatuses` with `O(1)` batch queries (`<= 12` total auxiliary queries per 50-workout batch instead of `~750`) and `0` per-workout `fromSnapshot` DB fallbacks.
+• *Given* `PeriodsRepository` and `WorkoutClusterRepository` batch workout loads, *When* executed, *Then* both delegate to `BatchMetadataLoader` with all `BatchMetadata` fields populated identically to single-item mapping.
+• *Given* a `WorkoutDataMapper.fromCursor(Cursor)` call, *When* mapped, *Then* it delegates to `fromSnapshot(..., reconcile = true)` with a complete single-workout `BatchMetadata`, producing identical `WorkoutData` fields (`WorkoutDataMappingSymmetryTest`) and preserving `ATT-6170` `loadWorkout` boundaries.
+
+**Invariants**: SQLite `IN (...)` bind-arg chunks strictly `<= 500` (`<= 999`); `try (Cursor ...)` safety (`tools/lint_cursor_safety.py`); zero `*DatabaseManager`/`Cursor` getters exposed by repositories (`Rule 8.7`); `WorkoutRepository.kt <= 5,117` LoC & `0` net-new `ui/*` DB callers (`ArchitectureConformanceContractTest`); `reconcile = true` preserved on `fromCursor`, `reconcile = false` preserved on batch loads; `Localization Parity: N/A - no new or modified UI strings`.
+
+---
+
+### REQ-EXP-045: Bounded Crash-Safe Smartphone Raw Sensor Sidecar Recording, Pure-JVM Replay Schema & Multi-File Cloud Export (`ATT-9348`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-045`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `SmartphoneRawTelemetryRecorder.kt`, `SmartphoneRawSensorCapture.kt`, `PhoneRawTelemetryRow.kt`, `PhoneRawMetadata.kt`, `PhoneRawSidecarRecovery.kt`, `PhoneRawTelemetryReader.kt`, `RawSensorSidecarFiles.kt`, `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RawSensorFileExporter.kt`, `BaseExporter.java`, `DropboxUploader.java`, `GoogleDriveUploader.kt`, `PolarRawTelemetryPruner.kt`, `SensorDiagnosticBundlePackager.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `strings_devices.xml`
+- **Rationale**: Offline validation of `PhoneCarriageClassifier`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, and cadence filters (`ATT-9349`) requires bounded, crash-safe, opt-in recording of raw smartphone IMU, gyroscope, rotation-vector, barometer, step-detector, GNSS, wheel, and sport/carriage state streams alongside workouts with multi-destination export (local Downloads, Dropbox, Google Drive) symmetrical to Polar raw sidecars (`REQ-SET-117`, `REQ-EXP-044`, `REQ-STB-023`, `REQ-STB-025`).
+- **Description**:
+  1. *Opt-In Bounded Zero-OOM Smartphone Recorder & Sensor Tap (`REQ-EXP-045.1`)*:
+     - `TuningPreferencesDataStore` (`<= 2,410` LoC) SHALL persist `recordSmartphoneRawTelemetryEnabled: Boolean` (default `false`, key `tuning_record_smartphone_raw_telemetry`) with a plain-JVM-safe guarded accessor so unit tests without Android DataStore or `filesDir` never throw.
+     - When disabled (`false`), `0` files, `0` background writer coroutines, and `0` per-sample recording allocations SHALL occur. When enabled (`true`), `TrackerService` (`<= 3,559` LoC) SHALL start, resume, and stop `SmartphoneRawTelemetryRecorder` symmetrically with `PolarRawTelemetryRecorder` targeting `files/raw_sensor/<fileBaseName>.phone_raw.csv.gz` (active `.phone_raw.csv.gz.tmp`, lazy open on first frame so empty sessions discard cleanly with `0` files).
+     - `SmartphoneRawTelemetryRecorder` SHALL buffer frames via `Channel<PhoneRawTelemetryRow>(capacity = 8192, onBufferOverflow = BufferOverflow.DROP_OLDEST, onUndeliveredElement = { droppedFrameCount.incrementAndGet() })` exposing `getDroppedFrameCount(): Long`, drain on `Dispatchers.IO` using a single reusable `StringBuilder` (`appendCsvLine`, **zero `String.format` per row**), periodically flush (`<= 256` rows / `<= 5 s`) into `GZIPOutputStream(..., syncFlush = true)`, and cancel its private `CoroutineScope` after `writeJob?.join()` on `stop()`.
+     - `SpeedAndLocationDevice_ATTFused` (`<= 1,500` LoC) SHALL forward `TYPE_ACCELEROMETER`, `TYPE_GYROSCOPE` (registered when `isEffectiveGyroActive || recorderActive` and recorded **before** the `!isEffectiveGyroActive` EKF return guard so EKF gyro opt-out behavior stays intact), `TYPE_GAME_ROTATION_VECTOR`/`TYPE_ROTATION_VECTOR` (`values.size >= 3`, deriving `qw = sqrt(max(0.0, 1.0 - qx*qx - qy*qy - qz*qz))` when `size == 3`), `TYPE_PRESSURE`, `TYPE_STEP_DETECTOR`, GNSS `Location`, `onWheelMeasurement`, and `SportContextHint`/`PhoneCarriageMode` state updates.
+  2. *Self-Describing Schema, Crash-Safe `.tmp` Salvage & Pure-JVM `ATT-9349` Reader (`REQ-EXP-045.2`)*:
+     - Archives SHALL prepend `# metadata: {"schemaVersion":1,"appVersion":"...","deviceModel":"...","sportId":...,"sessionStartTimeMs":...}` followed by CSV header `elapsedRealtimeNs,epochMs,channel,v0,v1,v2,v3,v4,v5` supporting all 8 channels: `ACC(ax,ay,az)`, `GYRO(gx,gy,gz)`, `ROTVEC(qx,qy,qz,qw)`, `BARO(pressureHpa,altM)`, `STEP()`, `GNSS(lat,lon,altM,speedMps,bearingDeg,accM)`, `WHEEL(speedMps,var)`, `STATE(sportId,bSportCode,carriageCode)`.
+     - `PhoneRawSidecarRecovery` SHALL salvage truncated `.phone_raw.csv.gz.tmp` archives via atomic `.salvage` staging, small-chunk `GZIPInputStream` decompression, and strict CSV validation (`PhoneRawTelemetryRow.fromCsvLine`) during both `TrackerService` crash-resume and export-time fallback.
+     - Pure-JVM `PhoneRawTelemetryReader` (zero Android framework dependencies) SHALL parse `# metadata` JSON and stream typed `PhoneRawTelemetryRow` entries with graceful truncated-EOF recovery for downstream `ATT-9349`.
+  3. *Multi-File `FileFormat.RAW_SENSOR` Export & Cloud Upload Parity (`REQ-EXP-045.3`)*:
+     - `FileFormat.RAW_SENSOR` enum constant and SQLite export tables MUST remain unchanged.
+     - Shared `RawSensorSidecarFiles.resolveExportableSidecars(context, fileBaseName)` SHALL invoke `.tmp` salvage for both Polar and smartphone sidecars and return all existing non-empty sidecar files (`[.polar_raw.csv.gz, .phone_raw.csv.gz]`).
+     - `RawSensorFileExporter` (via `BaseExporter`), `DropboxUploader`, and `GoogleDriveUploader` SHALL export/upload every resolved sidecar (`Polar-only`, `Phone-only`, or `Both`) and return graceful skip/success when neither exists without impacting FIT/TCX/GPX/CSV exports.
+  4. *Retention, Cascade Deletion, Diagnostic Bundle Privacy & Auto-Backup Exclusion (`REQ-EXP-045.4`)*:
+     - `PolarRawTelemetryPruner` (`hasSidecar`, `deleteSidecar`, `pruneExpiredSidecars`) SHALL recognize and manage BOTH `.polar_raw.csv.gz*` and `.phone_raw.csv.gz*` symmetrically under `RawSensorRetentionPolicy` and workout cascade deletion.
+     - `SensorDiagnosticBundlePackager` SHALL include `.phone_raw.csv.gz` ONLY when `includeGps == true` (omitting it when `includeGps == false` so zero GNSS coordinates leak).
+     - `full_backup_content.xml` and `data_extraction_rules.xml` (`cloud-backup` and `device-transfer`) SHALL include `<exclude domain="file" path="raw_sensor" />` to protect Android's 25 MB Auto Backup quota.
+  5. *Dual-Host Tuning UI & 9-Locale Localization Parity (`REQ-EXP-045.5`)*:
+     - `SensorsGpsFilterSection` SHALL expose a `TuningToggleItem` (`design_guidelines.md` §1.4, no raw `Switch`) right above `RawTelemetryRetentionControl`, wired in BOTH `AdvancedTuningScreen` and `AdvancedTuningDialog` with `initial = null` async form hydration (`Rule 82`).
+     - All new string keys SHALL be defined across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/` in `strings_devices.xml`) with zero emojis.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `recordSmartphoneRawTelemetryEnabled == false` (default), *When* a workout runs on `SpeedAndLocationDevice_ATTFused`, *Then* `0` `.phone_raw.csv.gz*` files, `0` writers, and `0` per-sample recording allocations occur.
+• *Given* recording is enabled and `ACC`, `GYRO` (including when `isEffectiveGyroActive == false`), `ROTVEC` (`size == 3` or `4`), `BARO`, `STEP`, `GNSS`, `WHEEL`, and `STATE` frames stream (including `> 8,192` burst overflow), *When* stopped cleanly or killed mid-stream leaving a truncated `.tmp`, *Then* `DROP_OLDEST` retains newest frames with exact `getDroppedFrameCount()`, `.phone_raw.csv.gz` is finalized or salvaged via `.salvage`, and pure-JVM `PhoneRawTelemetryReader` replays metadata and all 8 channels losslessly.
+• *Given* a workout with Polar-only, Phone-only, both, or neither sidecar and `export_raw_sensor == true`, *When* exported to Local Downloads, Dropbox, or Google Drive, *Then* every present sidecar is salvaged and exported/uploaded without breaking standard formats, and absent sidecars skip gracefully.
+• *Given* a workout with `.phone_raw.csv.gz`, *When* pruned/deleted via `PolarRawTelemetryPruner`, *Then* `.phone_raw.csv.gz*` is removed; *When* packaged with `includeGps == false`, *Then* zero lat/lon coordinates leak; *When* backup XML rules are validated, *Then* `raw_sensor` is excluded from `full_backup_content.xml` and `data_extraction_rules.xml`.
+
+**Invariants**: Polar `.polar_raw.csv.gz` format/path/recovery/export stays 100% byte-compatible (`REQ-SET-117`, `REQ-EXP-044`); `FileFormat.RAW_SENSOR` enum & SQLite schema stay unchanged; `SpeedAndLocationDevice_ATTFused.kt <= 1,500`, `TrackerService.java <= 3,559`, `TuningPreferencesDataStore.kt <= 2,410`, `TrainingApplication.java` untouched; `0` emojis across 9-locale `strings_devices.xml`; `ANT-Android-SDKs` untouched at `160000`.
+
+---
+
+### REQ-EXP-046: Pure-JVM Offline Simulation Replay Harness for Smartphone and Polar Raw Sensor Sidecars (`ATT-9349`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-046`
+- **System Requirement(s)**: `SYSREQ-TRK-010`, `SYSREQ-DEX-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, `OfflineReplayModels.kt`, `OfflineTelemetryReplayHarness.kt`, `OfflineReplayGroundTruth.kt`, `OfflineReplayCli.kt`, `app/build.gradle`
+- **Rationale**: Validating parameter adjustments to `PhoneCarriageClassifier`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, ERTS smoothers, and smartphone/Polar cadence & running-dynamics estimators on real recorded `.phone_raw.csv.gz` and `.polar_raw.csv.gz` sidecars (`REQ-SET-117`, `REQ-EXP-045`) requires a fast, deterministic, pure-JVM offline replay engine runnable via Gradle/CLI without an Android device, emulator, or production APK bloat.
+- **Description**:
+  1. *Pure-JVM Polar Sidecar Metadata & Chunked Reader (`REQ-EXP-046.1`)*:
+     - `PolarRawMetadata.kt` and `PolarRawTelemetryReader.kt` SHALL have zero `android.*` and zero `org.json.*` imports so `.polar_raw.csv.gz` sidecars parse natively on standalone pure JVM (`JavaExec`) as well as Android.
+     - `PolarRawMetadata.toJsonString()` and `fromJsonString()` SHALL preserve exact JSON keys (`schemaVersion`, `appVersion`, `sensorModel`, `firmwareVersion`, `streamMode`, `accRateHz`, `gyroRateHz`, `sportId`, optional `poolLength_m`), JSON string escaping/unescaping, and safe default fallback on malformed JSON.
+     - `PolarRawTelemetryReader.readStream()` SHALL read small chunks directly from `GZIPInputStream` (mirroring `PhoneRawTelemetryReader`), gracefully handle truncated GZIP EOF, and strictly drop non-newline-terminated trailing bytes.
+  2. *Deterministic Chronological Multi-Sidecar Replay Engine (`REQ-EXP-046.2`)*:
+     - `OfflineTelemetryReplayHarness` (residing strictly under `app/src/test/java/com/atrainingtracker/banalservice/replay/` so `0` bytes are added to the production APK) SHALL ingest a `.phone_raw.csv.gz` sidecar, one or more `.polar_raw.csv.gz` sidecars (Polar H10 and/or Verity Sense routed via `PolarRawMetadata.sensorModel`), or both together.
+     - Cross-sidecar timestamps SHALL align deterministically onto a unified relative elapsed-millisecond axis (`tRelMs`: smartphone `CLOCK_BOOTTIME` `elapsedRealtimeNs` offset vs Polar `elapsedMs`, stably tie-broken by `(tRelMs, sourceOrder, seqIndex)`), feeding exact recorded frames through the production pure-Kotlin classes: `PhoneCarriageClassifier`, `QuaternionGyroProjector`, `SmartphoneImuCadenceEstimator`, `KinematicSportTypeDiscriminator`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, `ExtendedRtsOdometrySmoother`, `ExtendedRtsAltitudeSlopeSmoother`, `PolarLiveRunningCadenceEstimator`, and `PolarH10RunningDynamicsEstimator`.
+  3. *Quantitative Scorecard, Before-vs-After Diff, 1-Hz CSV & Ground-Truth Assertions (`REQ-EXP-046.3`)*:
+     - The harness SHALL emit a deterministic `OfflineReplayScorecard` reporting: carriage-mode `%` distribution & transition count; cadence statistics (`mean`, `count`, pairwise `MAE` & signed bias across Phone IMU vs Polar H10 vs Polar Verity Sense) plus H10 vertical oscillation (cm) & ground contact time (ms) means; live EKF & ERTS total distance (m), ascent/descent (m), min/max slope (%), and cold-start time-to-motion latency (s).
+     - `OfflineReplayDiff` SHALL compute structured before-vs-after deltas between two `OfflineReplayScorecard`s for offline parameter benchmarking.
+     - The harness SHALL support optional 1-Hz CSV export (`--csv`) and optional pure-JVM JSON ground-truth sidecar assertions (`--truth`, checking expected dominant carriage mode, min dominant %, max transitions, distance/ascent tolerances, and max cadence MAE) returning explicit `GroundTruthCheckResult` pass/fail violations.
+  4. *Lazy Gradle Pure-JVM CLI Task (`REQ-EXP-046.4`)*:
+     - `app/build.gradle` SHALL register a lazy `JavaExec` task `:app:replayRawTelemetry` (`tasks.register("replayRawTelemetry", JavaExec)`) executing `OfflineReplayCliKt` against debug + unit-test compiled classes (`-PphoneRaw`, `-PpolarRaw`, `-Ppolar2Raw`, `-PcsvOut`, `-Ptruth`, `-PjsonOut`) without busting Gradle's `Rule 8.6` build cache or requiring Android SDK runtime mocks.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a recorded `.phone_raw.csv.gz` and/or `.polar_raw.csv.gz` (H10 and/or Verity Sense) sidecar, *When* replayed via `OfflineTelemetryReplayHarness` or `./gradlew :app:replayRawTelemetry`, *Then* replay executes deterministically on pure JVM with zero Android device/emulator and produces identical scorecards across repeated runs (carriage mode %, transition count, cadence stats & pairwise MAE/bias, H10 VO/GCT, EKF & ERTS distance/ascent/descent/min-max slope, cold-start latency).
+• *Given* a parameter change or alternative replay configuration producing a candidate scorecard, *When* compared via `OfflineReplayDiff`, *Then* exact before-vs-after metric deltas are emitted offline alongside optional 1-Hz CSV output.
+• *Given* a JSON ground-truth sidecar defining expected carriage mode, distance, ascent, or cadence bounds, *When* evaluated by `OfflineReplayGroundTruth`, *Then* compliant replays pass with zero violations and out-of-tolerance replays fail with explicit violation descriptions.
+• *Given* a `.polar_raw.csv.gz` archive containing special JSON characters or a crash-truncated non-newline trailing line, *When* read via `PolarRawTelemetryReader.readFile()` on plain JVM (without Robolectric), *Then* metadata and complete pre-truncation rows parse cleanly with zero `android.util.Log` or `org.json` runtime errors.
+
+**Invariants**: Zero `android.*`/`org.json.*` dependencies in `PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, and `app/src/test/.../replay/`; 100% backward compatibility with `PolarRawTelemetryReaderTest` & `PolarRawTelemetryRecorderTest`; `0` bytes added to release APK; `0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, or `TrainingApplication.java`; `Localization Parity: N/A - pure-JVM developer replay tool with no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -152,3 +260,12 @@
 | `1.0.5` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Added `[Planned]` `REQ-MIG-055` (`SYSREQ-DEX-004`) for thread-/DST-safe `java.time` parsing in GPX/TCX parsers, dead `LegacyImportEngine.tcxTimeFormat` removal, and `BaseExporter` `< 0` index-0 fix (`ExportStatusDatabaseManager.getDatabase()` preserved). |
 | `1.0.6` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `REQ-MIG-055` to `[Implemented]` following Stage 4 implementation (`WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `TcxWorkoutParser.kt`, `LegacyImportEngine.kt`, `BaseExporter.java`). |
 | `1.0.7` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `REQ-MIG-055` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9420`) `89/89` PASS across 20 suites + `4/4` linters PASS @ `529a9ee8`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6045_walkthrough.md`. |
+| `1.0.8` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Added `[Planned]` `REQ-DAT-045` for `BatchMetadataLoader` (`repositories/`), `<= 500`-chunked `getExportRowsForWorkouts` & `StravaUploadDbHelper`, dead `getExportStatusMap` removal, and lossless `fromCursor` -> `fromSnapshot` delegation. |
+| `1.0.9` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Implemented]` (`BatchMetadataLoader.kt`, `ExportStatusDatabaseManager.java`, `ExportStatusRepository.kt`, `ExportStatusDataProvider.kt`, `StravaUploadDbHelper.java`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `PeriodsRepository.kt`, `WorkoutClusterRepository.kt`). |
+| `1.0.10` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9452`) `99/99` PASS across 18 suites @ `df4b48ee`. |
+| `1.0.11` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Stage 6 Bounce 1 remediation: aligned `REQ-DAT-045.3`/`.4` with `PeriodsRepository.performHierarchicalMigration` & `BatchMetadataLoader.loadForSingleWorkout`, set `[Implemented]` for Gate 4 Bounce 1 re-verification. |
+| `1.0.12` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 Bounce 1 reusing Gate 4 (`ATT-9463`) `33/33` PASS (`0` warnings) @ `34ef13d5` + `99/99` PASS @ `df4b48ee`. |
+| `1.0.13` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Added & verified `REQ-EXP-045` (`SYSREQ-DEX-001`, `SYSREQ-DEX-004`, `SYSREQ-TRK-010`) for opt-in bounded crash-safe smartphone raw sensor sidecar (`SmartphoneRawTelemetryRecorder`, `SmartphoneRawSensorCapture`, `PhoneRawSidecarRecovery`, `PhoneRawTelemetryReader`, `RawSensorSidecarFiles`), unified `CLOCK_BOOTTIME`, multi-file `RAW_SENSOR` export, pruner/privacy/backup exclusions, and 9-locale dual-host tuning UI (`141/141` PASS @ `94e7f204`). |
+| `1.0.14` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Added `[Planned]` `REQ-EXP-046` (`SYSREQ-TRK-010`, `SYSREQ-DEX-001`) for pure-JVM `PolarRawMetadata`/`PolarRawTelemetryReader`, deterministic multi-sidecar offline replay harness, scorecard/diff/CSV/ground-truth verifier, and lazy Gradle `JavaExec` CLI task `:app:replayRawTelemetry`. |
+| `1.0.15` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `REQ-EXP-046` to `[Implemented]` following Stage 4 implementation (`PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, `app/src/test/.../replay/` harness + CLI, lazy `:app:replayRawTelemetry` task in `app/build.gradle`, `55/55` PASS + live CLI smoke PASS/FAIL). |
+| `1.0.16` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `REQ-EXP-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9476`) independently verified `56/56` PASS across 9 suites (`0` warnings) @ `d889e9ca` + live `:app:replayRawTelemetry` PASS (`9s`) / FAIL (`4s`). |

@@ -424,4 +424,58 @@ class DeviceManagerSearchQueueTest {
         assertEquals(false, devicesMap.containsKey(401L))
         verify(exactly = 0) { offlineSensor.startSearching() }
     }
+
+    /**
+     * TST-SET-125.3: 3 absent keep-alive paired BLE sensors during active workout with tries=3 each
+     * execute strictly 1 search per device (3 total instead of 9), remove deviceTries entries without
+     * re-enqueueing tries 2..3, stay registered in mMyRemoteDevices, and drain the queue cleanly.
+     */
+    @Test
+    fun testThreeAbsentKeepAliveDevices_withTries3_searchedOnceAndDeviceTriesCleared_TST_SET_125_3() {
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+        val devicesMap = getRemoteDevicesMap(deviceManager)
+        val triesField = DeviceManager::class.java.getDeclaredField("mMyRemoteDeviceTries")
+        triesField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val triesMap = triesField.get(deviceManager) as MutableMap<MyRemoteDevice, Int>
+
+        val d1 = mockk<MyRemoteDevice>(relaxed = true)
+        val d2 = mockk<MyRemoteDevice>(relaxed = true)
+        val d3 = mockk<MyRemoteDevice>(relaxed = true)
+        listOf(101L to d1, 102L to d2, 103L to d3).forEach { (id, dev) ->
+            every { dev.deviceId } returns id
+            every { dev.deviceType } returns DeviceType.HRM
+            every { dev.isSearching } returns false
+            every { dev.isReceivingData } returns false
+            every { dev.shouldKeepAliveOnSearchTimeout() } returns true
+            devicesMap[id] = dev
+            setDeviceTries(deviceManager, dev, 3)
+        }
+
+        setCurrentlySearching(deviceManager, d1)
+        deviceManager.searchQueue.clear()
+        deviceManager.searchQueue.addLast(d2)
+        deviceManager.searchQueue.addLast(d3)
+
+        val receiver = deviceManager.searchingStoppedForOneReceiver
+        for (id in listOf(101L, 102L, 103L)) {
+            val timeoutIntent = mockk<Intent>()
+            every { timeoutIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns id
+            every { timeoutIntent.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
+            receiver.onReceive(mockBanalService, timeoutIntent)
+        }
+
+        // d1 was already searching, d2 & d3 each started strictly once (zero tries 2..3 re-enqueues)
+        verify(exactly = 0) { d1.startSearching() }
+        verify(exactly = 1) { d2.startSearching() }
+        verify(exactly = 1) { d3.startSearching() }
+        listOf(d1, d2, d3).forEach { dev ->
+            verify(exactly = 0) { dev.shutDown() }
+            assertEquals("deviceTries entry must be cleaned for keep-alive device", false, triesMap.containsKey(dev))
+        }
+        assertTrue(devicesMap.containsKey(101L) && devicesMap.containsKey(102L) && devicesMap.containsKey(103L))
+        assertTrue(deviceManager.searchQueue.isEmpty())
+        assertEquals(null, deviceManager.currentlySearchingForRemoteDevice)
+        assertEquals(false, DeviceManager.isSearchingForARemoteDevice())
+    }
 }

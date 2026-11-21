@@ -1273,6 +1273,10 @@ public class TrackerService extends Service {
                 } catch (Throwable t) {
                     Log.w(TAG, "Error starting PolarRawTelemetryRecorder active session: " + t.getMessage());
                 }
+                try {
+                    BSportType startSport = getSportTypesRepository().getBSportType(getSportTypeId());
+                    com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.startActiveSession(getApplicationContext(), mBaseFileName, getSportTypeId(), startSport != null ? startSport.ordinal() : -1);
+                } catch (Throwable t) { Log.w(TAG, "Error starting SmartphoneRawTelemetryRecorder: " + t.getMessage()); }
                 mSamplesTableName = WorkoutRepository.getSamplesTableName(mBaseFileName);
                 mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
                 mLiveSession.setSessionEpochStartTimeMs(startTimeMs);
@@ -1912,6 +1916,10 @@ public class TrackerService extends Service {
         } catch (Throwable t) {
             Log.w(TAG, "Error resuming PolarRawTelemetryRecorder active session: " + t.getMessage());
         }
+        try {
+            BSportType resumedSport = getSportTypesRepository().getBSportType(getSportTypeId());
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.resumeOrStartActiveSession(getApplicationContext(), mBaseFileName, getSportTypeId(), resumedSport != null ? resumedSport.ordinal() : -1);
+        } catch (Throwable t) { Log.w(TAG, "Error resuming SmartphoneRawTelemetryRecorder: " + t.getMessage()); }
 
         final long resumedWorkoutId = mWorkoutID;
         final int resumedActiveTimeS = mTimeActive_s;
@@ -2287,6 +2295,7 @@ public class TrackerService extends Service {
 
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        try { com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.updateSportState(sportTypeId, bSport != null ? bSport.ordinal() : -1); } catch (Throwable t) { Log.w(TAG, "Error updating SmartphoneRawTelemetryRecorder sport state: " + t.getMessage()); }
         boolean isIndoor = false;
         try {
             isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
@@ -2314,6 +2323,7 @@ public class TrackerService extends Service {
 
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        try { com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.updateSportState(sportTypeId, bSport != null ? bSport.ordinal() : -1); } catch (Throwable t) { Log.w(TAG, "Error updating SmartphoneRawTelemetryRecorder sport state: " + t.getMessage()); }
         String gcData = banalService.getGCDataString();
 
         mTableInitializationFuture.thenAcceptAsync(v -> {
@@ -2331,6 +2341,7 @@ public class TrackerService extends Service {
     private void onUserSelectedSportTypeChanged() {
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        try { com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.updateSportState(sportTypeId, bSport != null ? bSport.ordinal() : -1); } catch (Throwable t) { Log.w(TAG, "Error updating SmartphoneRawTelemetryRecorder sport state: " + t.getMessage()); }
         boolean isIndoor = false;
         try {
             isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
@@ -2494,6 +2505,9 @@ public class TrackerService extends Service {
         } catch (Throwable t) {
             Log.w(TAG, "Error stopping PolarRawTelemetryRecorder active session: " + t.getMessage());
         }
+        try {
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.stopActiveSession();
+        } catch (Throwable t) { Log.w(TAG, "Error stopping SmartphoneRawTelemetryRecorder: " + t.getMessage()); }
         try {
             com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPruner.pruneExpiredSidecarsAsync(getApplicationContext());
         } catch (Throwable t) {

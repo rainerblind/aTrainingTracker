@@ -312,22 +312,36 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         java.util.Map<String, String> results = new java.util.HashMap<>();
         if (fileNames == null || fileNames.isEmpty()) return results;
 
-        String[] nameArray = fileNames.toArray(new String[0]);
-        StringBuilder placeholders = new StringBuilder();
-        for (int i = 0; i < nameArray.length; i++) {
-            if (i > 0) placeholders.append(",");
-            placeholders.append("?");
+        java.util.List<String> validNames = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String name : fileNames) {
+            if (name != null && !name.isEmpty() && seen.add(name)) {
+                validNames.add(name);
+            }
         }
+        if (validNames.isEmpty()) return results;
 
-        String selection = WorkoutSummaries.FILE_BASE_NAME + " IN (" + placeholders + ")";
-        
-        try (Cursor cursor = getReadableDatabase().query(TABLE, new String[]{WorkoutSummaries.FILE_BASE_NAME, STRAVA_ACTIVITY_DATA}, selection, nameArray, null, null, null)) {
-            int nameIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME);
-            int dataIdx = cursor.getColumnIndexOrThrow(STRAVA_ACTIVITY_DATA);
+        SQLiteDatabase db = getReadableDatabase();
+        final int chunkSize = 500;
+        for (int i = 0; i < validNames.size(); i += chunkSize) {
+            java.util.List<String> chunk = validNames.subList(i, Math.min(i + chunkSize, validNames.size()));
+            StringBuilder placeholders = new StringBuilder();
+            String[] args = new String[chunk.size()];
+            for (int k = 0; k < chunk.size(); k++) {
+                if (k > 0) placeholders.append(",");
+                placeholders.append("?");
+                args[k] = chunk.get(k);
+            }
 
-            while (cursor.moveToNext()) {
-                if (!cursor.isNull(dataIdx)) {
-                    results.put(cursor.getString(nameIdx), cursor.getString(dataIdx));
+            String selection = WorkoutSummaries.FILE_BASE_NAME + " IN (" + placeholders + ")";
+            try (Cursor cursor = db.query(TABLE, new String[]{WorkoutSummaries.FILE_BASE_NAME, STRAVA_ACTIVITY_DATA}, selection, args, null, null, null)) {
+                int nameIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME);
+                int dataIdx = cursor.getColumnIndexOrThrow(STRAVA_ACTIVITY_DATA);
+
+                while (cursor.moveToNext()) {
+                    if (!cursor.isNull(dataIdx)) {
+                        results.put(cursor.getString(nameIdx), cursor.getString(dataIdx));
+                    }
                 }
             }
         }

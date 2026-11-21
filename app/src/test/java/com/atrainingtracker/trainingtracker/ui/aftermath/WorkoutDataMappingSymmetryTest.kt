@@ -236,41 +236,27 @@ class WorkoutDataMappingSymmetryTest {
     @Test
     fun testRule20_wPrimeBalSummary_symmetryAcrossSingleBatchAndSnapshot() {
         val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
-        every {
-            mockSummariesDb.getExtremaValue(
+        val extremaList = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
                 5023L,
                 com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
-            )
-        } returns 1.5
-        every {
-            mockSummariesDb.getExtremaValue(
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
+                1.5,
+                null
+            ),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
                 5023L,
                 com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG,
+                200.0,
+                null
             )
-        } returns 200.0
+        )
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(5023L)) } returns extremaList
 
         val singleData = mapper.fromCursor(cursor)
         val batchMetadata = WorkoutDataMapper.BatchMetadata(
-            extrema = mapOf(
-                5023L to listOf(
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(
-                        5023L,
-                        com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
-                        1.5,
-                        null
-                    ),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(
-                        5023L,
-                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.AVG,
-                        200.0,
-                        null
-                    )
-                )
-            ),
+            extrema = mapOf(5023L to extremaList),
             stravaData = emptyMap(),
             clusterNames = mapOf(42L to "Test Cluster"),
             laps = emptyMap()
@@ -295,41 +281,20 @@ class WorkoutDataMappingSymmetryTest {
         // [TST-TRK-031.6] / REQ-TRK-038.5 (Rule 20 & Rule 52)
         // Given legacy SQLite extrema for W_PRIME_BAL, but zero power data
         val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
-        every {
-            mockSummariesDb.getExtremaValue(
+        val extremaList = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
                 5023L,
                 com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
+                20.0,
+                null
             )
-        } returns 20.0
-        every {
-            mockSummariesDb.getExtremaValue(
-                5023L,
-                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
-            )
-        } returns null
-        every {
-            mockSummariesDb.getExtremaValue(
-                5023L,
-                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.MAX
-            )
-        } returns null
+        )
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(5023L)) } returns extremaList
 
         val singleData = mapper.fromCursor(cursor)
         val batchMetadata = WorkoutDataMapper.BatchMetadata(
-            extrema = mapOf(
-                5023L to listOf(
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(
-                        5023L,
-                        com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
-                        20.0,
-                        null
-                    )
-                )
-            ),
+            extrema = mapOf(5023L to extremaList),
             stravaData = emptyMap(),
             clusterNames = mapOf(42L to "Test Cluster"),
             laps = emptyMap()
@@ -356,41 +321,27 @@ class WorkoutDataMappingSymmetryTest {
     @Test
     fun `fromCursor and fromSnapshot map Efficiency Factor and Aerobic Decoupling symmetrically (REQ-UI-400_3)`() {
         val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
-        every {
-            mockSummariesDb.getExtremaValue(
+        val extremaList = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
                 5023L,
                 com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR
-            )
-        } returns 1.65
-        every {
-            mockSummariesDb.getExtremaValue(
+                com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR,
+                1.65,
+                null
+            ),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(
                 5023L,
                 com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING,
+                3.8,
+                null
             )
-        } returns 3.8
+        )
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(5023L)) } returns extremaList
 
         val singleData = mapper.fromCursor(cursor)
         val batchMetadata = WorkoutDataMapper.BatchMetadata(
-            extrema = mapOf(
-                5023L to listOf(
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(
-                        5023L,
-                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR,
-                        1.65,
-                        null
-                    ),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(
-                        5023L,
-                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
-                        com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING,
-                        3.8,
-                        null
-                    )
-                )
-            ),
+            extrema = mapOf(5023L to extremaList),
             stravaData = emptyMap(),
             clusterNames = mapOf(42L to "Test Cluster"),
             laps = emptyMap()
@@ -429,38 +380,25 @@ class WorkoutDataMappingSymmetryTest {
         val extMax = com.atrainingtracker.trainingtracker.database.ExtremaType.MAX
         val extEnd = com.atrainingtracker.trainingtracker.database.ExtremaType.END
 
-        every { mockSummariesDb.getExtremaValue(5023L, sensorPower, extAvg) } returns 200.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorPower, extMax) } returns 600.0
-        // Suppose AVG had an intermediate cumulative mean, while END has the authoritative session end value
-        every { mockSummariesDb.getExtremaValue(5023L, sensorNp, extAvg) } returns 190.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorNp, extEnd) } returns 210.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorIf, extAvg) } returns 0.76
-        every { mockSummariesDb.getExtremaValue(5023L, sensorIf, extEnd) } returns 0.84
-        every { mockSummariesDb.getExtremaValue(5023L, sensorTss, extAvg) } returns 40.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorTss, extEnd) } returns 75.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorWork, extAvg) } returns 350.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorWork, extEnd) } returns 720.0
-        every { mockSummariesDb.getExtremaValue(5023L, sensorPtw, extAvg) } returns 2.80
-        every { mockSummariesDb.getExtremaValue(5023L, sensorPtw, extMax) } returns 8.00
+        val extremaList = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extAvg, 200.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extMax, 600.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extAvg, 190.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extEnd, 210.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extAvg, 0.76, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extEnd, 0.84, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extAvg, 40.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extEnd, 75.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extAvg, 350.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extEnd, 720.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extAvg, 2.80, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extMax, 8.00, null)
+        )
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(5023L)) } returns extremaList
 
         val singleData = mapper.fromCursor(cursor)
         val batchMetadata = WorkoutDataMapper.BatchMetadata(
-            extrema = mapOf(
-                5023L to listOf(
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extAvg, 200.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extMax, 600.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extAvg, 190.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extEnd, 210.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extAvg, 0.76, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extEnd, 0.84, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extAvg, 40.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extEnd, 75.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extAvg, 350.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extEnd, 720.0, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extAvg, 2.80, null),
-                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extMax, 8.00, null)
-                )
-            ),
+            extrema = mapOf(5023L to extremaList),
             stravaData = emptyMap(),
             clusterNames = mapOf(42L to "Test Cluster"),
             laps = emptyMap()
@@ -638,5 +576,43 @@ class WorkoutDataMappingSymmetryTest {
             paceSeconds(paceRow.minValue!!) <= paceSeconds(paceRow.avgValue!!) &&
                 paceSeconds(paceRow.avgValue!!) <= paceSeconds(paceRow.maxValue!!)
         )
+    }
+
+    @Test
+    fun testFromCursor_delegatesToFromSnapshotWithReconcileAndFullBatchMetadata_TST_DAT_041_5() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 1)
+        val startPos = LatLng(48.10, 11.50)
+        val endPos = LatLng(48.20, 11.60)
+        val extremaList = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, SensorType.LATITUDE, ExtremaType.START, 0.0, startPos),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, SensorType.LATITUDE, ExtremaType.END, 0.0, endPos),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, SensorType.ALTITUDE, ExtremaType.MIN, 500.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, SensorType.ALTITUDE, ExtremaType.MAX, 650.0, null)
+        )
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(5023L)) } returns extremaList
+        every { mockStravaUploadDb.getStravaActivityData("2026-09-09-10-02-00") } returns "{\"id\":99}"
+        val lap = LapData(1L, 5023L, 1L, null, 600, 2000.0, 3.33)
+        every { LapsDatabaseManager.getInstance(any()).getLaps(5023L) } returns listOf(lap)
+
+        val single = mapper.fromCursor(cursor)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val explicitBatch = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(5023L to extremaList),
+            stravaData = mapOf("2026-09-09-10-02-00" to "{\"id\":99}"),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = mapOf(5023L to listOf(lap))
+        )
+        val viaSnapshot = mapper.fromSnapshot(snapshot, explicitBatch, reconcile = true)
+
+        assertEquals(viaSnapshot.id, single.id)
+        assertEquals(viaSnapshot.stravaActivityData, single.stravaActivityData)
+        assertEquals(viaSnapshot.clusterName, single.clusterName)
+        assertEquals(viaSnapshot.laps, single.laps)
+        assertEquals(viaSnapshot.minAltitude, single.minAltitude)
+        assertEquals(viaSnapshot.maxAltitude, single.maxAltitude)
+        assertEquals(viaSnapshot.startLatLng, single.startLatLng)
+        assertEquals(viaSnapshot.endLatLng, single.endLatLng)
+        assertEquals(viaSnapshot.sportName, single.sportName)
+        assertEquals(viaSnapshot.equipmentName, single.equipmentName)
     }
 }

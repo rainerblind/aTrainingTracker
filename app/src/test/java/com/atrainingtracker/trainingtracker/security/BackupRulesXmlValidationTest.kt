@@ -130,6 +130,7 @@ class BackupRulesXmlValidationTest {
                 .toSet()
             assertTrue("$sectionName must exclude debug_heap", excludedFilePaths.contains("debug_heap"))
             assertTrue("$sectionName must exclude debug_hprof", excludedFilePaths.contains("debug_hprof"))
+            assertTrue("$sectionName must exclude raw_sensor (REQ-EXP-045.4)", excludedFilePaths.contains("raw_sensor"))
         }
 
         val backupFile = File("src/main/res/xml/full_backup_content.xml").let {
@@ -144,5 +145,6 @@ class BackupRulesXmlValidationTest {
             .toSet()
         assertTrue("full_backup_content.xml must exclude debug_heap", fullFilePaths.contains("debug_heap"))
         assertTrue("full_backup_content.xml must exclude debug_hprof", fullFilePaths.contains("debug_hprof"))
+        assertTrue("full_backup_content.xml must exclude raw_sensor (REQ-EXP-045.4)", fullFilePaths.contains("raw_sensor"))
     }
 }

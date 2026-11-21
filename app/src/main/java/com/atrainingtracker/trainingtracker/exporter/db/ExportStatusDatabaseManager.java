@@ -42,7 +42,6 @@ import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 
 
@@ -487,50 +486,6 @@ public class ExportStatusDatabaseManager {
         }
     }
 
-    public EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> getExportStatusMap(String fileBaseName) {
-        if (DEBUG) Log.d(TAG, "getExportStatus");
-
-        if (!isValidFileBaseName(fileBaseName)) {
-            return null;
-        }
-
-        healStaleProcessingRows(fileBaseName);
-
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        if (db == null) {
-            Log.e(TAG, "Database is null, cannot get the export status for " + fileBaseName + " will return null");
-            return null;
-        }
-
-        EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<>(ExportType.class);
-
-        for (ExportType exportType : ExportType.values()) {
-            EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<>(FileFormat.class);
-            for (FileFormat fileFormat : FileFormat.values()) {
-                try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
-                        new String[]{EXPORT_STATUS},
-                        WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
-                        new String[]{fileBaseName, exportType.name(), fileFormat.name()},
-                        null,
-                        null,
-                        null)) {
-                    ExportStatus status = CursorUtils.mapFirst(cursor, null, c -> {
-                        int colIdx = c.getColumnIndex(EXPORT_STATUS);
-                        return colIdx >= 0 ? EnumUtils.safeValueOfOrNull(ExportStatus.class, c.getString(colIdx), TAG) : null;
-                    });
-                    if (status != null) {
-                        enumMap.put(fileFormat, status);
-                    }
-                }
-            }
-            result.put(exportType, enumMap);
-        }
-
-        if (DEBUG) Log.d(TAG, "getExportStatus finished");
-
-        return result;
-    }
-
     public static class ExportRow {
         public final ExportType type;
         public final FileFormat format;
@@ -568,60 +523,88 @@ public class ExportStatusDatabaseManager {
                 new String[]{fileBaseName},
                 null, null, null)) {
             while (cursor.moveToNext()) {
-                ExportType type = EnumUtils.safeValueOfOrNull(ExportType.class, cursor.getString(0), TAG);
-                FileFormat format = EnumUtils.safeValueOfOrNull(FileFormat.class, cursor.getString(1), TAG);
-                ExportStatus status = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(2), TAG);
-                if (type == null || format == null || status == null) {
-                    Log.w(TAG, "Skipping corrupted or unrecognized export row");
-                    continue;
+                ExportRow row = parseExportRow(cursor, 0);
+                if (row != null) {
+                    result.add(row);
                 }
-                String answer = cursor.getString(3);
-                long lastUpdated = cursor.isNull(4) ? 0L : cursor.getLong(4);
-                int attemptCount = cursor.isNull(5) ? 0 : cursor.getInt(5);
-                result.add(new ExportRow(type, format, status, answer, lastUpdated, attemptCount));
             }
         }
         return result;
     }
 
-    public EnumMap<FileFormat, ExportStatus> getExportStatusMap(String fileBaseName, ExportType exportType) {
-        if (DEBUG) Log.d(TAG, "getExportStatus " + fileBaseName + " " + exportType);
-
-        if (!isValidFileBaseName(fileBaseName)) {
-            return null;
+    /**
+     * Batch-loads export status rows for multiple workouts (ATT-6038 / REQ-DAT-045.1).
+     * Runs {@link #healStaleProcessingRows()} once upfront and chunks SQLite IN (...) bind arguments at <= 500.
+     */
+    @NonNull
+    public java.util.Map<String, java.util.List<ExportRow>> getExportRowsForWorkouts(@NonNull java.util.Collection<String> fileBaseNames) {
+        java.util.Map<String, java.util.List<ExportRow>> result = new java.util.HashMap<>();
+        java.util.List<String> validNames = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String name : fileBaseNames) {
+            if (isValidFileBaseName(name) && seen.add(name)) {
+                validNames.add(name);
+            }
+        }
+        if (validNames.isEmpty()) {
+            return result;
         }
 
-        healStaleProcessingRows(fileBaseName);
+        healStaleProcessingRows();
 
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        SQLiteDatabase db = mDbHelper.getReadableDatabase();
         if (db == null) {
-            Log.e(TAG, "Database is null, cannot get the export status for " + fileBaseName + " " + exportType + " will return null");
-            return null;
+            return result;
         }
 
-        EnumMap<FileFormat, ExportStatus> result = new EnumMap<>(FileFormat.class);
+        final int chunkSize = 500;
+        for (int i = 0; i < validNames.size(); i += chunkSize) {
+            java.util.List<String> chunk = validNames.subList(i, Math.min(i + chunkSize, validNames.size()));
+            StringBuilder placeholders = new StringBuilder();
+            String[] args = new String[chunk.size()];
+            for (int k = 0; k < chunk.size(); k++) {
+                if (k > 0) placeholders.append(",");
+                placeholders.append("?");
+                args[k] = chunk.get(k);
+            }
 
-        for (FileFormat fileFormat : FileFormat.values()) {
-            try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
-                    new String[]{EXPORT_STATUS},
-                    WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
-                    new String[]{fileBaseName, exportType.name(), fileFormat.name()},
-                    null,
-                    null,
-                    null)) {
-                ExportStatus status = CursorUtils.mapFirst(cursor, null, c -> {
-                    int colIdx = c.getColumnIndex(EXPORT_STATUS);
-                    return colIdx >= 0 ? EnumUtils.safeValueOfOrNull(ExportStatus.class, c.getString(colIdx), TAG) : null;
-                });
-                if (status != null) {
-                    result.put(fileFormat, status);
+            String selection = WorkoutSummaries.FILE_BASE_NAME + " IN (" + placeholders + ")";
+            try (Cursor cursor = db.query(
+                    ExportStatusDbHelper.TABLE,
+                    new String[]{WorkoutSummaries.FILE_BASE_NAME, TYPE, FORMAT, EXPORT_STATUS, ANSWER, LAST_UPDATED, RUN_ATTEMPT_COUNT},
+                    selection,
+                    args,
+                    null, null, null)) {
+                while (cursor.moveToNext()) {
+                    String baseName = cursor.getString(0);
+                    ExportRow row = parseExportRow(cursor, 1);
+                    if (baseName != null && row != null) {
+                        java.util.List<ExportRow> rows = result.get(baseName);
+                        if (rows == null) {
+                            rows = new java.util.ArrayList<>();
+                            result.put(baseName, rows);
+                        }
+                        rows.add(row);
+                    }
                 }
             }
         }
-
-        if (DEBUG) Log.d(TAG, "getExportStatus finished");
-
         return result;
+    }
+
+    @Nullable
+    private ExportRow parseExportRow(@NonNull Cursor cursor, int colOffset) {
+        ExportType type = EnumUtils.safeValueOfOrNull(ExportType.class, cursor.getString(colOffset), TAG);
+        FileFormat format = EnumUtils.safeValueOfOrNull(FileFormat.class, cursor.getString(colOffset + 1), TAG);
+        ExportStatus status = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(colOffset + 2), TAG);
+        if (type == null || format == null || status == null) {
+            Log.w(TAG, "Skipping corrupted or unrecognized export row");
+            return null;
+        }
+        String answer = cursor.getString(colOffset + 3);
+        long lastUpdated = cursor.isNull(colOffset + 4) ? 0L : cursor.getLong(colOffset + 4);
+        int attemptCount = cursor.isNull(colOffset + 5) ? 0 : cursor.getInt(colOffset + 5);
+        return new ExportRow(type, format, status, answer, lastUpdated, attemptCount);
     }
 
 

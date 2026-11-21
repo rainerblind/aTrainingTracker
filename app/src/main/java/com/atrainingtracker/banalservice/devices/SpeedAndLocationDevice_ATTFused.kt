@@ -43,6 +43,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.odometry.AttFusedColdStartHelper
 import com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminator
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
+import com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.QuaternionGyroProjector
 import com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimator
@@ -497,7 +498,10 @@ open class SpeedAndLocationDevice_ATTFused(
         // No-op for interface compliance
     }
 
+    override fun recordsRawLocationDirectly(): Boolean = true
+
     override fun onLocationChanged(location: Location) {
+        SmartphoneRawTelemetryRecorder.recordLocation(location, if (location.time > 0L) location.time else System.currentTimeMillis())
         if (!AttFusedPreferences.isEffectiveGnssActive(mContext)) return
 
         val lat = location.latitude
@@ -737,6 +741,7 @@ open class SpeedAndLocationDevice_ATTFused(
         variance: Double,
         timestampMs: Long
     ) {
+        SmartphoneRawTelemetryRecorder.recordWheel(SmartphoneRawTelemetryRecorder.currentElapsedRealtimeNanos(), timestampMs, speedMps, variance)
         if (!AttFusedPreferences.isEffectiveWheelActive(mContext)) return
         val wasMoving = mLastWheelSpeedMps > SPEED_ZERO_THRESHOLD
         mLastWheelMeasurementMs = timestampMs
@@ -867,6 +872,7 @@ open class SpeedAndLocationDevice_ATTFused(
             val shouldEmitSensor = synchronized(mYawRateLock) {
                 modeChanged = mode != mCachedCarriageMode
                 mCachedCarriageMode = mode
+                if (modeChanged) SmartphoneRawTelemetryRecorder.updateCarriageMode(mode.code, timestampMs)
                 mCachedTargetYawWindowSec = targetYawWindowSec
                 mLastClassifyTimestampMs = if (mLastClassifyTimestampMs == Long.MIN_VALUE) {
                     timestampMs

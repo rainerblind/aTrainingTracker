@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.95  
+**Version**: 1.0.98  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 87
+**Total Requirements**: 88
 
 ---
 
@@ -3838,6 +3838,28 @@
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* Polar H10/Verity offline recording is armed, *When* Stop is tapped, *Then* `TRACKING_FINISHED_INTENT` fires in `< 1 s`, async stages run with unified progress notification `8047`, back-to-back armed tokens are isolated, early user edits/saves never lose data or export stale telemetry, and `shortService` + 9-locale parity hold.
 
+### REQ-FIL-039: PhoneCarriageClassifier Front-Hip Belt Discrimination, Viewing-Inclination Glance Guard & Active-Footstrike Cycling Mask (`ATT-9347`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-039`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifier.kt`
+- **Rationale**: On Pixel 10 run `Kurze Runde var 2 #54` (`2026-11-20_173833`, `_id = 2422`, `Sport = RUN`, 100% Salomon front-hip running belt, zero cycling sensors), `ATT-9157` improved `RUN_WAIST_HIP` (`0.3% -> 47.3%`) yet `RUN_HANDHELD (7)` still claimed `42.5%` (`1,164 s`, `111` transitions) due to steep front-hip belt cliffs (`swingSd 15.5°`, `yaw 0.68`, `baro 0.45`), false vertical-plane belt-slip glances (`>= 15°` without screen-viewing tilt), and symmetric `6 s` dwell, while `BIKE_FRONT_POCKET (4)` still bled `29 s` (`1.1%`) when post-crash `UNKNOWN` sport hint or `>= 5.5 m/s` GNSS spikes lifted `suppressCyclingForRun` despite active running footstrikes (`ATT-9347`, refining `REQ-FIL-028.1`, `REQ-FIL-034.2`/`.4`, `REQ-FIL-035.1`–`.3`).
+- **Description**:
+  1. *Active-Footstrike Cycling Mask & High-Impact Step-Batching Guard (`REQ-FIL-039.1`)*: `PhoneCarriageClassifier.evaluateRawCandidate()` SHALL mask `BIKE_HANDLEBAR`, `BIKE_JERSEY_BACK`, and `BIKE_FRONT_POCKET` (`Double.NEGATIVE_INFINITY`, including zero-IMU fallback and stale `BIKE_*` `committedScore = -Inf`) whenever `suppressCyclingForRun` holds OR `suppressCyclingForFootstrikes` holds (`!wheelActiveMoving && (wheelSpeed == null || wheelSpeed <= 0.5) && effectiveRunStepFreqHz != null && effectiveRunStepFreqHz >= 2.25`). Furthermore, `stepDetectorActiveAndZero` and `evaluateAccelFootstrike()` MUST NOT set `confirmedNoFootstrikes = true` when `accelEval.impactRmsMps2 >= 1.8 m/s²`, preventing SensorHub step-batching gaps on high-impact trail running from awarding `cyclingPrior += 1.5` while preserving uphill MTB (`impactRms < 1.2 m/s²`) and triathlon/brick overrides (`wheel > 0.5` or `speed >= 5.5` with zero footstrikes).
+  2. *Viewing-Inclination Glance Guard (`REQ-FIL-039.2`)*: `PhoneCarriageClassifier.detectGlanceShift()` SHALL compute recent/previous gravity inclinations (`acos(|mz|)`) and MUST reject any orientation shift where `recInclinationDeg > 60.0°` OR `(prevInclinationDeg - recInclinationDeg) < 10.0°`, eliminating false vertical-plane belt-roll/slip and hill-lean glances (including large `>= 30°` lateral vertical rolls) while preserving genuine wrist glances (`70–72° -> 18–35°`, `55° -> 30°`) and `ATT-9062` cyclic thigh-flexion rejection.
+  3. *Calibrated Front-Hip Belt Scoring & Asymmetric Non-Glance Dwell (`REQ-FIL-039.3`)*: `scoreRunWaistHip()` (`swingSd < 10.0 -> +2.6`, `< 16.0 -> +2.0`, `< 18.0 -> +0.8`, `< 22.0 -> -0.5`, else `-2.0`; `yaw < 0.06 -> +0.8`, `<= 0.48 -> +2.2`, `<= 0.85 -> +1.8`, `<= 1.15 -> +0.4`, else `-1.2`; `baro < 0.45 -> +1.2`, `< 0.60 -> +0.5`, else `-0.6`; `step >= 2.15 -> +0.8`; `glance == 0 -> +1.4`, else `-1.8`), `scoreRunBicepArm()` (`yaw < 0.16 -> -1.0`, `<= 0.48 -> +2.0`, `<= 0.60 -> +0.3`, else `-0.8`; `glance == 0 -> +0.8`, else `-2.2`), and `scoreRunHandheld()` (`swingSd >= 17.5 -> +1.8`, `>= 13.5 -> +0.4`, else `-1.6`; `yaw >= 0.72 -> +2.4`, `>= 0.55 -> +0.6`, else `-1.5`; `baro >= 0.60 -> +2.4`, `>= 0.45 -> +0.4`, else `-0.4`; `glance >= 1 -> +3.8`, `== 0 -> -1.8`) SHALL classify continuous front-hip belt running predominantly (`>= 85%`) as `RUN_WAIST_HIP` while preserving winning margins for rear-clip, bicep armband (`17°`), unglanced handheld (`18.4°`/`0.74`/`0.83`), and glanced handheld (`SpeedAndLocationDevice_ATTFusedTest:837, 865`, `yaw = 0`). `requiredDwellMs()` SHALL enforce `maxOf(mountHysteresisMs, 10_000L)` for non-glance `RUN_WAIST_HIP -> RUN_HANDHELD` while keeping `0 ms` verified glance, `4 s` `RUN -> WALK`, `6 s` general intra-run, and `2 s` `WALK -> RUN` / `STATIONARY`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-FIL-039` refining `REQ-FIL-028.1`, `REQ-FIL-034.2`/`.4`, and `REQ-FIL-035.1`–`.3` strictly inside `PhoneCarriageClassifier.kt`.
+  2. *Historical Origin & Commit Trace*: `fee3e805` (`ATT-8890`), `0210b827` (`ATT-9062`), `6d80345c` (`ATT-9157`).
+  3. *Root Reason for Existing Formulation*: `ATT-9157` calibrated against synthetic `swingSd <= 14.5°` / `yaw <= 0.60` / `baro <= 0.45` envelopes and `sportHint == RUNNING && speed < 5.5` before run `2422` revealed wider Salomon belt dynamics, vertical-plane belt slips, and post-crash `UNKNOWN` sport-hint fallback.
+  4. *Preservation of Core Invariants*: Pure-JVM determinism; `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` immutable; `0` edits to `SpeedAndLocationDevice_ATTFused.kt` (`1,489/1,500`) & protected monoliths; all 9 carriage modes, uphill MTB (`impactRms < 1.2`), brick overrides, and `ATT-9062`/`ATT-9157` tests preserved; `0` DB schema bumps; `0` `src/main` test reads; `Localization Parity: N/A - no UI strings`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `Sport = RUN` without a cycling speed sensor (`< 5.5 m/s`), OR `sportHint == UNKNOWN` / transient `>= 5.5 m/s` GNSS spike with active running footstrikes (`>= 2.25 Hz`) or high-impact trail step-batching gaps (`impactRms >= 1.8 m/s²`), *When* `PhoneCarriageClassifier` scores candidates, *Then* `BIKE_FRONT_POCKET` and all `BIKE_*` modes record `0%` (`0 s`), while uphill MTB (`impactRms < 1.2`) and footstrike-free brick transitions (`wheel > 0.5` or `speed >= 5.5`) still classify `BIKE_*`.
+  • *Given* a 45-min synthetic front-hip running belt session (`155–170 spm`, `swingSd 10–17.5°`, `yaw 0.45–1.05 rad/s`, `baro 0.25–0.58 m/s`, vertical belt rolls/slips `18–35°` at `recIncl > 60°`, plus obstacle walk and genuine wrist glance), *When* `PhoneCarriageClassifier` classifies, *Then* steady running classifies `>= 85%` as `RUN_WAIST_HIP` with zero false vertical glances, drastically reduced transitions (`<< 111`), and intact detection of obstacle walks (`4 s`), wrist glances (`0 ms`), bicep armband, unglanced handheld, and post-glance handheld (`yaw = 0`).
+
 ---
 
 ## Change History
@@ -3942,3 +3964,6 @@
 | `1.0.92` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Promoted `REQ-TRK-091` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9341` @ `9ca92f78`) `115/115` Bounce 1 (17 suites) + `200/200` full 23-suite (`7d3b0908`) PASS + `:app:assembleDebug` + `0` new Kotlin warnings (`Rule 7.5`, `0` `app/` diff since `9ca92f78`), `4/4` Python safety linters PASS, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9154_walkthrough.md`. |
 | `1.0.93` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Stage 6 Bounce 1/3 heal: overrode both 1-arg `onTimeout(startId)` and 2-arg `onTimeout(startId, fgsType)` in `WorkoutPostProcessingService.kt`, preserved transient `syncToHealthConnect` across deferred export via `MutableMap<Long, Boolean?>` + `DeferredExportDecision`, added `hostLock -> stateLock` TOCTOU protection, propagated `initialHadWarning` on drain restart, exposed `currentProgress` for `onStartCommand()`, and reset to `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
 | `1.0.94` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Promoted `REQ-TRK-091` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9361` @ `7725517b`) `113/113 PASS` (16 suites, `+6` regression tests) layered on full 23+ suite baseline + `:app:assembleDebug` + `0` new Kotlin warnings (`Rule 7.5`, `0` `app/` diff since `7725517b`), `4/4` Python safety linters PASS, `--check-verified-evidence` `exit 0`, and refreshed `ATT-9154_walkthrough.md`. |
+| `1.0.96` | 2026-11-21 | Lane B Author (`ATT-9347`, `--as agent1`) | `ATT-9347` | Added `REQ-FIL-039` `[Planned]` (`REQ-FIL-039.1`–`.3`, linked to `SYSREQ-TRK-003`/`004`/`010`) for active-footstrike cycling mask + `impactRms >= 1.8` batching guard, viewing-inclination `detectGlanceShift()` filter (`recIncl <= 60°`, drop `>= 10°`), calibrated front-hip belt vs. handheld/bicep scoring tiers, and `10 s` non-glance `RUN_WAIST_HIP -> RUN_HANDHELD` dwell (`0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `N/A - no UI strings`). |
+| `1.0.97` | 2026-11-21 | Lane B Author (`ATT-9347`, `--as agent1`) | `ATT-9347` | Promoted `REQ-FIL-039` to `[Implemented]` following Stage 4 construction (`PhoneCarriageClassifier.kt` `1,161 / 1,500` LoC, `0` edits to `SpeedAndLocationDevice_ATTFused.kt` & monoliths; baro `0.60`/`0.45` & glance `+3.8`/`-2.2` code-grounded sync; `130/130` PASS across 11 suites, `0` new warnings, `3/3` safety linters PASS). |
+| `1.0.98` | 2026-11-21 | Lane B Author (`ATT-9347`, `--as agent1`) | `ATT-9347` | Promoted `REQ-FIL-039` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9449`) independent `130/130` PASS evidence @ `2680a799` (`Rule 7.5`, `0` `app/` diff since `2680a799`), `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9347_walkthrough.md`. |

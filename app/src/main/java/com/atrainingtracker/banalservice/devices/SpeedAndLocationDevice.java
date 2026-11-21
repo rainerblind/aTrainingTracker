@@ -562,10 +562,23 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
         return false;
     }
 
+    /**
+     * Returns {@code true} when a subclass records raw GNSS locations directly before any in-place
+     * fusion/mutation (e.g. {@link SpeedAndLocationDevice_ATTFused}), preventing duplicate rows in
+     * {@link #onNewLocation(Location)} (REQ-EXP-045.1, ATT-9348).
+     */
+    protected boolean recordsRawLocationDirectly() {
+        return false;
+    }
+
     public void onNewLocation(Location location) {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
 
         if (location != null) {
+            if (!recordsRawLocationDirectly()) {
+                com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.recordLocation(
+                        location, location.getTime() > 0L ? location.getTime() : System.currentTimeMillis());
+            }
             double accuracyThreshold = SettingsDataStoreJavaHelper.getGpsAccuracyThreshold(mContext);
             if (DEBUG)
                 Log.d(TAG, "new location, provider: " + location.getProvider() + ", accuracy=" + location.getAccuracy() + ", threshold=" + accuracyThreshold);

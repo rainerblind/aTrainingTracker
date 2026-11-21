@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.preference.PreferenceManager
 import java.text.DateFormat
 import java.util.Date
@@ -92,6 +93,54 @@ import kotlinx.coroutines.withContext
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
+/**
+ * Sealed UI state representing a pending destructive full-restore confirmation dialog (`REQ-UI-2790.1`).
+ */
+sealed interface PendingRestoreSource {
+    data class LocalFile(val uri: Uri) : PendingRestoreSource
+    data object AutomaticLocalBackup : PendingRestoreSource
+    data object Dropbox : PendingRestoreSource
+    data object GoogleDrive : PendingRestoreSource
+}
+
+/**
+ * Sealed UI state representing an informational cloud-connection status dialog (`REQ-UI-2790.1`, `REQ-MIG-036.13`).
+ */
+sealed interface CloudInfoDialog {
+    @get:StringRes val titleRes: Int
+    @get:StringRes val messageRes: Int
+
+    data object DropboxDisconnected : CloudInfoDialog {
+        override val titleRes: Int = R.string.Dropbox
+        override val messageRes: Int = R.string.dropbox_disconnected_status
+    }
+
+    data object GoogleDriveDisconnected : CloudInfoDialog {
+        override val titleRes: Int = R.string.google_drive
+        override val messageRes: Int = R.string.google_drive_disconnected_status
+    }
+
+    data object NoCloudConnected : CloudInfoDialog {
+        override val titleRes: Int = R.string.cloud_backup_no_provider_dialog_title
+        override val messageRes: Int = R.string.cloud_backup_no_provider_dialog_message
+    }
+}
+
+/**
+ * Sealed UI state representing a resolved import source awaiting pre-import tuning confirmation (`REQ-UI-2790.1`).
+ */
+sealed interface PendingImportSource {
+    val showStravaUploadOption: Boolean get() = true
+
+    data class DropboxBulk(val format: String) : PendingImportSource
+    data class LegacyFiles(val uris: List<Uri>, val format: String) : PendingImportSource
+    data class FitFiles(val uris: List<Uri>) : PendingImportSource
+    data class StravaArchive(val uri: Uri) : PendingImportSource {
+        override val showStravaUploadOption: Boolean = false
+    }
+    data class Directory(val uri: Uri, val format: String) : PendingImportSource
+}
+
 // Format-specific MIME type definitions (ATT-2622, ATT-2740 / REQ-UI-294)
 val FIT_MIME_TYPES = arrayOf("application/vnd.ant.fit", "application/fit", "application/octet-stream")
 val TCX_MIME_TYPES = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml", "application/octet-stream")
@@ -123,26 +172,14 @@ fun ImportBackupTabsScreen(
         stringResource(R.string.tab_restore)
     )
 
-    var showRestoreConfirm by remember { mutableStateOf(false) }
-    var showDropboxRestoreConfirm by remember { mutableStateOf(false) }
-    var showAutomaticBackupRestoreConfirm by remember { mutableStateOf(false) }
-    var showGoogleDriveRestoreConfirm by remember { mutableStateOf(false) }
-    var restoreUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingRestoreSource by remember { mutableStateOf<PendingRestoreSource?>(null) }
+    var cloudInfoDialog by remember { mutableStateOf<CloudInfoDialog?>(null) }
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
-    
-    // ATT-315 / ATT-2623: Pre-import Tuning & Format Scoping state
-    var showTuningDialogForBulk by remember { mutableStateOf(false) }
-    var pendingDropboxFormat by remember { mutableStateOf("all") }
-    var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
-    var pendingLegacyUris by remember { mutableStateOf<List<Uri>?>(null) }
-    var pendingFitUris by remember { mutableStateOf<List<Uri>?>(null) }
-    var pendingStravaArchiveUri by remember { mutableStateOf<Uri?>(null) }
+
+    // ATT-315 / ATT-2623 / ATT-6040: Pre-import Tuning & SAF Pre-Picker Format state
+    var pendingImportSource by remember { mutableStateOf<PendingImportSource?>(null) }
     var pendingSingleLegacyFormat by remember { mutableStateOf("auto") }
-    var pendingDirectoryUri by remember { mutableStateOf<Uri?>(null) }
     var pendingDirectoryFormat by remember { mutableStateOf("fit") }
-    var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
-    var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }
-    var showNoCloudConnectedDialog by remember { mutableStateOf(false) }
     var resumeTrigger by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, context) {
@@ -166,10 +203,10 @@ fun ImportBackupTabsScreen(
         }
     }
 
-    val isDropboxConnected = remember(uiState, resumeTrigger, showDropboxDisconnectedDialog, showNoCloudConnectedDialog) {
+    val isDropboxConnected = remember(uiState, resumeTrigger, cloudInfoDialog) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
     }
-    val isGoogleDriveConnected = remember(uiState, resumeTrigger, showGoogleDriveDisconnectedDialog, showNoCloudConnectedDialog) {
+    val isGoogleDriveConnected = remember(uiState, resumeTrigger, cloudInfoDialog) {
         TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
     }
     
@@ -189,7 +226,7 @@ fun ImportBackupTabsScreen(
             } catch (e: Exception) {
                 // Ignore if provider doesn't support persistable permission
             }
-            pendingDirectoryUri = uri
+            pendingImportSource = PendingImportSource.Directory(uri, pendingDirectoryFormat)
         }
     }
 
@@ -197,8 +234,7 @@ fun ImportBackupTabsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            restoreUri = it
-            showRestoreConfirm = true
+            pendingRestoreSource = PendingRestoreSource.LocalFile(it)
         }
     }
 
@@ -226,7 +262,7 @@ fun ImportBackupTabsScreen(
                 ).show()
             }
             if (validUris.isNotEmpty()) {
-                pendingLegacyUris = validUris
+                pendingImportSource = PendingImportSource.LegacyFiles(validUris, pendingSingleLegacyFormat)
             }
         }
     }
@@ -247,7 +283,7 @@ fun ImportBackupTabsScreen(
                 ).show()
             }
             if (validUris.isNotEmpty()) {
-                pendingFitUris = validUris
+                pendingImportSource = PendingImportSource.FitFiles(validUris)
             }
         }
     }
@@ -258,7 +294,7 @@ fun ImportBackupTabsScreen(
         if (uri != null) {
             val fileName = ImportFileValidator.resolveDisplayName(context, uri)
             if (ImportFileValidator.isMatchingFormat(fileName, "zip")) {
-                pendingStravaArchiveUri = uri
+                pendingImportSource = PendingImportSource.StravaArchive(uri)
             } else {
                 Toast.makeText(
                     context,
@@ -380,10 +416,9 @@ fun ImportBackupTabsScreen(
                         },
                         onDropboxScanClick = { format ->
                             if (isDropboxConnected) {
-                                pendingDropboxFormat = format
-                                showTuningDialogForBulk = true
+                                pendingImportSource = PendingImportSource.DropboxBulk(format)
                             } else {
-                                showDropboxDisconnectedDialog = true
+                                cloudInfoDialog = CloudInfoDialog.DropboxDisconnected
                             }
                         },
                         onStravaArchiveClick = {
@@ -415,7 +450,7 @@ fun ImportBackupTabsScreen(
                             if (isDropboxConnected || isGoogleDriveConnected) {
                                 viewModel.uploadToCloud(context)
                             } else {
-                                showNoCloudConnectedDialog = true
+                                cloudInfoDialog = CloudInfoDialog.NoCloudConnected
                             }
                         }
                     )
@@ -429,20 +464,22 @@ fun ImportBackupTabsScreen(
                             isGoogleDriveConnected = isGoogleDriveConnected,
                             automaticBackupTimestamp = autoBackupTimestamp,
                             onIncrementalImportClick = { pickImportLauncher.launch(arrayOf("*/*")) },
-                            onAutomaticBackupRestoreClick = { showAutomaticBackupRestoreConfirm = true },
+                            onAutomaticBackupRestoreClick = {
+                                pendingRestoreSource = PendingRestoreSource.AutomaticLocalBackup
+                            },
                             onLocalRestoreClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
                             onDropboxRestoreClick = {
                                 if (isDropboxConnected) {
-                                    showDropboxRestoreConfirm = true
+                                    pendingRestoreSource = PendingRestoreSource.Dropbox
                                 } else {
-                                    showDropboxDisconnectedDialog = true
+                                    cloudInfoDialog = CloudInfoDialog.DropboxDisconnected
                                 }
                             },
                             onGoogleDriveRestoreClick = {
                                 if (isGoogleDriveConnected) {
-                                    showGoogleDriveRestoreConfirm = true
+                                    pendingRestoreSource = PendingRestoreSource.GoogleDrive
                                 } else {
-                                    showGoogleDriveDisconnectedDialog = true
+                                    cloudInfoDialog = CloudInfoDialog.GoogleDriveDisconnected
                                 }
                             }
                         )
@@ -452,10 +489,10 @@ fun ImportBackupTabsScreen(
         }
     }
 
-    // Dialogs remain unchanged
-    if (showRestoreConfirm) {
+    // Sealed Restore Confirmation Dialog (REQ-UI-2790.1)
+    pendingRestoreSource?.let { source ->
         AlertDialog(
-            onDismissRequest = { showRestoreConfirm = false },
+            onDismissRequest = { pendingRestoreSource = null },
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
             title = { Text(stringResource(R.string.restore_warning_title)) },
@@ -463,8 +500,13 @@ fun ImportBackupTabsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showRestoreConfirm = false
-                        restoreUri?.let { viewModel.performFullRestore(context, it) }
+                        pendingRestoreSource = null
+                        when (source) {
+                            is PendingRestoreSource.LocalFile -> viewModel.performFullRestore(context, source.uri)
+                            PendingRestoreSource.AutomaticLocalBackup -> viewModel.restoreFromLocalBackup(context)
+                            PendingRestoreSource.Dropbox -> viewModel.restoreFromDropbox(context)
+                            PendingRestoreSource.GoogleDrive -> viewModel.restoreFromGoogleDrive(context)
+                        }
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -472,130 +514,23 @@ fun ImportBackupTabsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRestoreConfirm = false }) {
+                TextButton(onClick = { pendingRestoreSource = null }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
         )
     }
 
-    if (showAutomaticBackupRestoreConfirm) {
+    // Sealed Cloud Connection Informational Dialog (REQ-UI-2790.1, REQ-MIG-036.13)
+    cloudInfoDialog?.let { info ->
         AlertDialog(
-            onDismissRequest = { showAutomaticBackupRestoreConfirm = false },
+            onDismissRequest = { cloudInfoDialog = null },
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.restore_warning_title)) },
-            text = { Text(stringResource(R.string.restore_warning_message)) },
+            title = { Text(stringResource(info.titleRes)) },
+            text = { Text(stringResource(info.messageRes)) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showAutomaticBackupRestoreConfirm = false
-                        viewModel.restoreFromLocalBackup(context)
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.restore_backup))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAutomaticBackupRestoreConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showDropboxRestoreConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDropboxRestoreConfirm = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.restore_warning_title)) },
-            text = { Text(stringResource(R.string.restore_warning_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDropboxRestoreConfirm = false
-                        viewModel.restoreFromDropbox(context)
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.restore_backup))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDropboxRestoreConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showGoogleDriveRestoreConfirm) {
-        AlertDialog(
-            onDismissRequest = { showGoogleDriveRestoreConfirm = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.restore_warning_title)) },
-            text = { Text(stringResource(R.string.restore_warning_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showGoogleDriveRestoreConfirm = false
-                        viewModel.restoreFromGoogleDrive(context)
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.restore_backup))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGoogleDriveRestoreConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
-
-    if (showDropboxDisconnectedDialog) {
-        AlertDialog(
-            onDismissRequest = { showDropboxDisconnectedDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.Dropbox)) },
-            text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
-            confirmButton = {
-                TextButton(onClick = { showDropboxDisconnectedDialog = false }) {
-                    Text(stringResource(R.string.OK))
-                }
-            }
-        )
-    }
-
-    if (showGoogleDriveDisconnectedDialog) {
-        AlertDialog(
-            onDismissRequest = { showGoogleDriveDisconnectedDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.google_drive)) },
-            text = { Text(stringResource(R.string.google_drive_disconnected_status)) },
-            confirmButton = {
-                TextButton(onClick = { showGoogleDriveDisconnectedDialog = false }) {
-                    Text(stringResource(R.string.OK))
-                }
-            }
-        )
-    }
-
-    if (showNoCloudConnectedDialog) {
-        AlertDialog(
-            onDismissRequest = { showNoCloudConnectedDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.cloud_backup_no_provider_dialog_title)) },
-            text = { Text(stringResource(R.string.cloud_backup_no_provider_dialog_message)) },
-            confirmButton = {
-                TextButton(onClick = { showNoCloudConnectedDialog = false }) {
+                TextButton(onClick = { cloudInfoDialog = null }) {
                     Text(stringResource(R.string.OK))
                 }
             }
@@ -626,76 +561,28 @@ fun ImportBackupTabsScreen(
         )
     }
 
-    // ATT-315 / ATT-793 / ATT-2623: Pre-import Tuning Bottom Sheets
-    if (showTuningDialogForBulk) {
+    // ATT-315 / ATT-793 / ATT-2623 / ATT-6040: Unified Pre-import Tuning Bottom Sheet (REQ-UI-2790.1)
+    pendingImportSource?.let { source ->
         PreImportTuningBottomSheet(
             viewModel = viewModel,
+            showStravaUploadOption = source.showStravaUploadOption,
             onConfirm = {
-                showTuningDialogForBulk = false
-                viewModel.bulkRecoverLegacyData(context, pendingDropboxFormat)
-            },
-            onDismiss = { showTuningDialogForBulk = false }
-        )
-    }
-
-    pendingSingleLegacyUri?.let { uri ->
-        PreImportTuningBottomSheet(
-            viewModel = viewModel,
-            onConfirm = {
-                viewModel.importLegacyFile(context, uri, pendingSingleLegacyFormat)
-                pendingSingleLegacyUri = null
-            },
-            onDismiss = { pendingSingleLegacyUri = null }
-        )
-    }
-
-    pendingLegacyUris?.let { uris ->
-        PreImportTuningBottomSheet(
-            viewModel = viewModel,
-            onConfirm = {
-                if (uris.size == 1) {
-                    val uri = uris.first()
-                    viewModel.importLegacyFile(context, uri, pendingSingleLegacyFormat)
-                } else {
-                    viewModel.importWorkoutFiles(context, uris, pendingSingleLegacyFormat)
+                pendingImportSource = null
+                when (source) {
+                    is PendingImportSource.DropboxBulk -> viewModel.bulkRecoverLegacyData(context, source.format)
+                    is PendingImportSource.LegacyFiles -> {
+                        if (source.uris.size == 1) {
+                            viewModel.importLegacyFile(context, source.uris.first(), source.format)
+                        } else {
+                            viewModel.importWorkoutFiles(context, source.uris, source.format)
+                        }
+                    }
+                    is PendingImportSource.FitFiles -> viewModel.importFitFiles(context, source.uris)
+                    is PendingImportSource.StravaArchive -> viewModel.importStravaArchive(context, source.uri)
+                    is PendingImportSource.Directory -> viewModel.importWorkoutDirectory(context, source.uri, source.format)
                 }
-                pendingLegacyUris = null
             },
-            onDismiss = { pendingLegacyUris = null }
-        )
-    }
-
-    pendingFitUris?.let { uris ->
-        PreImportTuningBottomSheet(
-            viewModel = viewModel,
-            onConfirm = {
-                viewModel.importFitFiles(context, uris)
-                pendingFitUris = null
-            },
-            onDismiss = { pendingFitUris = null }
-        )
-    }
-
-    pendingStravaArchiveUri?.let { uri ->
-        PreImportTuningBottomSheet(
-            viewModel = viewModel,
-            showStravaUploadOption = false,
-            onConfirm = {
-                viewModel.importStravaArchive(context, uri)
-                pendingStravaArchiveUri = null
-            },
-            onDismiss = { pendingStravaArchiveUri = null }
-        )
-    }
-
-    pendingDirectoryUri?.let { uri ->
-        PreImportTuningBottomSheet(
-            viewModel = viewModel,
-            onConfirm = {
-                viewModel.importWorkoutDirectory(context, uri, pendingDirectoryFormat)
-                pendingDirectoryUri = null
-            },
-            onDismiss = { pendingDirectoryUri = null }
+            onDismiss = { pendingImportSource = null }
         )
     }
 }

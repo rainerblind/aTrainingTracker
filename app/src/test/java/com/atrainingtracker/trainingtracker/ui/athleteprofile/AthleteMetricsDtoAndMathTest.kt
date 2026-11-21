@@ -297,4 +297,91 @@ class AthleteMetricsDtoAndMathTest {
             Locale.setDefault(origLocale)
         }
     }
+
+    @Test
+    fun `computePmcYAxisScale produces clean rounded ticks including single explicit zero across ranges (TST-UI-2791_1)`() {
+        // 1. Pixel 10 zero-CTL / negative-TSB spanning range (-21..+25) -> clean multiples with single 0
+        val pixelScale = AthleteMetricsPlotMath.computePmcYAxisScale(-21f, 25f)
+        assertEquals(-30f, pixelScale.yMin, 1e-4f)
+        assertEquals(30f, pixelScale.yMax, 1e-4f)
+        assertEquals(listOf(-30f, -15f, 0f, 15f, 30f), pixelScale.ticks)
+        assertEquals("0 must appear strictly once", 1, pixelScale.ticks.count { it == 0f })
+
+        // 2. Flat all-zero series -> clean 0..10 scale with explicit 0
+        val flatZero = AthleteMetricsPlotMath.computePmcYAxisScale(0f, 0f)
+        assertEquals(0f, flatZero.yMin, 1e-4f)
+        assertEquals(10f, flatZero.yMax, 1e-4f)
+        assertEquals(listOf(0f, 5f, 10f), flatZero.ticks)
+
+        // 3. All-positive series (10..85) -> rounded bounds & clean step multiples
+        val positive = AthleteMetricsPlotMath.computePmcYAxisScale(10f, 85f)
+        assertTrue(positive.yMin <= 10f && positive.yMax >= 85f)
+        assertTrue("Ticks must be strictly ascending", positive.ticks.zipWithNext().all { (a, b) -> b > a })
+        assertTrue("Tick count must stay readable (3..6)", positive.ticks.size in 3..6)
+        assertEquals(listOf(0f, 20f, 40f, 60f, 80f, 100f), positive.ticks)
+
+        // 4. Negative-dominant series (-45..5) -> spans zero with explicit 0 tick
+        val negDominant = AthleteMetricsPlotMath.computePmcYAxisScale(-45f, 5f)
+        assertTrue(negDominant.yMin <= -45f && negDominant.yMax >= 5f)
+        assertEquals(1, negDominant.ticks.count { it == 0f })
+        assertEquals(listOf(-45f, -30f, -15f, 0f, 15f), negDominant.ticks)
+
+        // 5. Wide elite range (-60..140) -> clean 50-unit multiples including 0
+        val elite = AthleteMetricsPlotMath.computePmcYAxisScale(-60f, 140f)
+        assertTrue(elite.yMin <= -60f && elite.yMax >= 140f)
+        assertEquals(1, elite.ticks.count { it == 0f })
+        assertEquals(listOf(-100f, -50f, 0f, 50f, 100f, 150f), elite.ticks)
+
+        // 6. All-negative degenerate range (-40..-10) -> strictly ascending rounded ticks
+        val allNeg = AthleteMetricsPlotMath.computePmcYAxisScale(-40f, -10f)
+        assertEquals(listOf(-40f, -30f, -20f, -10f), allNeg.ticks)
+    }
+
+    @Test
+    fun `computePmcYAxisScale synchronizes yMin and yMax with tick bounds for narrow ranges (TST-UI-2791_1)`() {
+        val narrowCases = listOf(
+            Triple(0f, 2.86f, true),
+            Triple(0f, 5f, true),
+            Triple(-4f, 0f, true),
+            Triple(21f, 24f, false)
+        )
+        for ((minVal, maxVal, touchesZero) in narrowCases) {
+            val scale = AthleteMetricsPlotMath.computePmcYAxisScale(minVal, maxVal)
+            assertTrue("Expected at least 3 ticks for $minVal..$maxVal, got ${scale.ticks}", scale.ticks.size >= 3)
+            assertEquals("yMin must equal ticks.first() for $minVal..$maxVal", scale.ticks.first(), scale.yMin, 1e-4f)
+            assertEquals("yMax must equal ticks.last() for $minVal..$maxVal", scale.ticks.last(), scale.yMax, 1e-4f)
+            assertTrue("Bounds must cover input [$minVal, $maxVal]: ${scale.yMin}..${scale.yMax}", scale.yMin <= minVal && scale.yMax >= maxVal)
+            assertTrue(
+                "Ticks must be strictly increasing and unique for $minVal..$maxVal: ${scale.ticks}",
+                scale.ticks.zipWithNext().all { (a, b) -> b > a }
+            )
+            if (touchesZero) {
+                assertEquals("0f must appear strictly once for $minVal..$maxVal: ${scale.ticks}", 1, scale.ticks.count { it == 0f })
+            }
+        }
+        assertEquals(listOf(0f, 5f, 10f), AthleteMetricsPlotMath.computePmcYAxisScale(0f, 2.86f).ticks)
+        assertEquals(listOf(0f, 5f, 10f), AthleteMetricsPlotMath.computePmcYAxisScale(0f, 5f).ticks)
+        assertEquals(listOf(-10f, -5f, 0f), AthleteMetricsPlotMath.computePmcYAxisScale(-4f, 0f).ticks)
+        assertEquals(listOf(20f, 25f, 30f), AthleteMetricsPlotMath.computePmcYAxisScale(21f, 24f).ticks)
+    }
+
+    @Test
+    fun `computePmcZeroBaselineY clamps CTL area baseline to zeroY or plot bounds (TST-UI-2791_1)`() {
+        val topPad = 12f
+        val plotH = 160f
+
+        // Spanning zero symmetrically (-30..30) -> zeroY sits exactly at vertical midpoint
+        val midZeroY = AthleteMetricsPlotMath.computePmcZeroBaselineY(-30f, 30f, topPad, plotH)
+        assertEquals(topPad + plotH * 0.5f, midZeroY, 1e-3f)
+
+        // All-positive (yMin >= 0) -> baseline clamps to bottom of plot (topPad + plotH)
+        val bottomZeroY = AthleteMetricsPlotMath.computePmcZeroBaselineY(0f, 100f, topPad, plotH)
+        assertEquals(topPad + plotH, bottomZeroY, 1e-3f)
+        val strictlyPositiveZeroY = AthleteMetricsPlotMath.computePmcZeroBaselineY(20f, 80f, topPad, plotH)
+        assertEquals(topPad + plotH, strictlyPositiveZeroY, 1e-3f)
+
+        // All-negative (yMax <= 0) -> baseline clamps safely to topPad (guarding LinearGradient)
+        val topZeroY = AthleteMetricsPlotMath.computePmcZeroBaselineY(-40f, -10f, topPad, plotH)
+        assertEquals(topPad, topZeroY, 1e-3f)
+    }
 }

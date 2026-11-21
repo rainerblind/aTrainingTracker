@@ -92,34 +92,36 @@ class DeviceSearchPeriodicRetryCoordinator @JvmOverloads constructor(
             onDeviceSearchSucceeded(deviceId)
             return
         }
+        if (current.shouldKeepAliveOnSearchTimeout()) {
+            deviceTries.remove(current)
+            return
+        }
         val tries = deviceTries[current]
         if (tries == null || tries <= 1) {
-            if (!current.shouldKeepAliveOnSearchTimeout()) {
-                val scheduled = scheduleRetryIfEnabled(
-                    deviceId = deviceId,
-                    onDisabledGiveUp = {
-                        synchronized(searchQueue) {
-                            if (isShutDown) return@synchronized
-                            val dev = remoteDevices[deviceId]
-                            if (dev === current && !dev.isReceivingData && currentlySearchingSupplier.get() !== dev && !searchQueue.contains(dev)) {
-                                detachAndGiveUpDevice.run()
-                            }
+            val scheduled = scheduleRetryIfEnabled(
+                deviceId = deviceId,
+                onDisabledGiveUp = {
+                    synchronized(searchQueue) {
+                        if (isShutDown) return@synchronized
+                        val dev = remoteDevices[deviceId]
+                        if (dev === current && !dev.isReceivingData && currentlySearchingSupplier.get() !== dev && !searchQueue.contains(dev)) {
+                            detachAndGiveUpDevice.run()
                         }
-                    },
-                    onRetryDue = {
-                        enqueueDeviceForPeriodicResearch(
-                            deviceId = deviceId,
-                            remoteDevices = remoteDevices,
-                            deviceTries = deviceTries,
-                            searchQueue = searchQueue,
-                            currentlySearchingSupplier = currentlySearchingSupplier,
-                            searchNextRunnable = searchNextRunnable
-                        )
                     }
-                )
-                if (!scheduled) {
-                    detachAndGiveUpDevice.run()
+                },
+                onRetryDue = {
+                    enqueueDeviceForPeriodicResearch(
+                        deviceId = deviceId,
+                        remoteDevices = remoteDevices,
+                        deviceTries = deviceTries,
+                        searchQueue = searchQueue,
+                        currentlySearchingSupplier = currentlySearchingSupplier,
+                        searchNextRunnable = searchNextRunnable
+                    )
                 }
+            )
+            if (!scheduled) {
+                detachAndGiveUpDevice.run()
             }
         } else {
             deviceTries[current] = tries - 1

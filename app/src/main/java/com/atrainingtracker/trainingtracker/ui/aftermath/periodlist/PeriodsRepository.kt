@@ -65,6 +65,13 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
 
     private val rebuildMutex = Mutex()
 
+    private val batchMetadataLoader by lazy {
+        com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoader(
+            context = application,
+            summariesManagerProvider = { workoutSummariesManager }
+        )
+    }
+
     // ATT-4019 / REQ-PER-016.3: Consolidated lazy WorkoutDataMapper instance
     // Replaces repeated ad-hoc instantiations and duplicate DB helper singletons.
     internal val mapper by lazy {
@@ -73,7 +80,8 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
             workoutSummariesManager,
             com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
             com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
-            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
+            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application),
+            batchMetadataLoader = batchMetadataLoader
         )
     }
 
@@ -215,46 +223,30 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
                 val cursor = workoutSummariesManager.getCursorForAllWorkouts() ?: return@withContext emptyList<WorkoutData>()
 
                 val chunkSize = 100
-                val stravaUploadDbHelper = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
 
                 cursor.use { c ->
                     if (!c.moveToFirst()) return@withContext emptyList<WorkoutData>()
                     val total = c.count
                     
                     while (!c.isAfterLast) {
-                        // 1. Gather IDs and names for the next chunk
-                        val chunkIds = mutableListOf<Long>()
-                        val chunkNames = mutableListOf<String>()
-                        val currentChunkStartPos = c.position
-                        
+                        // 1. Gather raw snapshots in a single forward pass (ATT-6038)
+                        val snapshots = mutableListOf<WorkoutDataMapper.RawCursorSnapshot>()
                         var i = 0
                         while (i < chunkSize && !c.isAfterLast) {
-                            chunkIds.add(c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
-                            c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
-                                chunkNames.add(it)
-                            }
+                            snapshots.add(mapper.readCursorSnapshot(c))
                             c.moveToNext()
                             i++
                         }
 
-                        // 2. Fetch Metadata for the chunk in just 2 queries (ATT-359/382)
-                        val extremaList = workoutSummariesManager.getExtremaForWorkouts(chunkIds)
-                        val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
-                        val batchMetadata = WorkoutDataMapper.BatchMetadata(
-                            extrema = extremaList.groupBy { it.workoutId },
-                            stravaData = stravaDataMap
-                        )
+                        // 2. Fetch full BatchMetadata via shared BatchMetadataLoader
+                        val batchMetadata = batchMetadataLoader.loadForSnapshots(snapshots)
 
-                        // 3. Map the chunk using vectorized data
-                        c.moveToPosition(currentChunkStartPos)
-                        var j = 0
-                        while (j < chunkSize && !c.isAfterLast) {
-                            val workout = mapper.fromCursor(c, batchMetadata)
+                        // 3. Map the chunk without cursor seeking or per-workout DB fallbacks
+                        for (snapshot in snapshots) {
+                            val workout = mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false)
                             if (workout.startTimeS > 0L) {
                                 list.add(workout)
                             }
-                            c.moveToNext()
-                            j++
                         }
 
                         // 4. Update Progress
@@ -800,78 +792,7 @@ class PeriodsRepository @androidx.annotation.VisibleForTesting internal construc
 
         if (snapshots.isEmpty()) return emptyList()
 
-        val chunkIds = snapshots.map { it.workoutId }
-        val chunkNames = snapshots.mapNotNull { it.fileBaseName }
-        val chunkClusterIds = snapshots.mapNotNull { if (it.clusterId != -1L) it.clusterId else null }.toSet()
-
-        val extremaList = workoutSummariesManager.getExtremaForWorkouts(chunkIds)
-        val stravaDataMap = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application).getStravaActivityDataForWorkouts(chunkNames)
-        val clusterNamesMap = com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
-        val lapsMap = com.atrainingtracker.trainingtracker.database.LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
-
-        val sportTypeDb = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application)
-        val sportIds = snapshots.map { it.sportId }.toSet()
-        val sportTypesMap = sportIds.associateWith { id ->
-            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper.SportTypeInfo(
-                bSportType = sportTypeDb.getBSportType(id),
-                sportName = sportTypeDb.getUIName(id),
-                stravaSportName = sportTypeDb.getStravaName(id)
-            )
-        }
-
-        val equipDb = com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application)
-        val equipmentMap = try {
-            equipDb.getEquipmentItems().associate { it.id to it.name }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to load equipment items for periods; falling back to empty map", e)
-            emptyMap()
-        }
-
-        val knownLocs = try {
-            com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application).allLocations
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to load known locations for periods; falling back to empty list", e)
-            emptyList()
-        }
-
-        val extremaByWorkout = extremaList.groupBy { it.workoutId }
-        val locationNamesMap = mutableMapOf<LatLng, String>()
-        val startLoc = android.location.Location("")
-        val candidateLoc = android.location.Location("")
-        for (record in extremaList) {
-            if (record.sensorType == com.atrainingtracker.banalservice.sensor.SensorType.LATITUDE && record.position != null) {
-                val pos = record.position
-                if (!locationNamesMap.containsKey(pos)) {
-                    candidateLoc.latitude = pos.latitude
-                    candidateLoc.longitude = pos.longitude
-                    var minDistance = Double.MAX_VALUE
-                    var bestLoc: com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.MyLocation? = null
-                    for (loc in knownLocs) {
-                        startLoc.latitude = loc.latLng.latitude
-                        startLoc.longitude = loc.latLng.longitude
-                        val d = candidateLoc.distanceTo(startLoc)
-                        if (d < loc.radius && d < minDistance) {
-                            minDistance = d.toDouble()
-                            bestLoc = loc
-                        }
-                    }
-                    val name = bestLoc?.let { com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper.getDisplayName(application, it) }
-                    if (name != null) {
-                        locationNamesMap[pos] = name
-                    }
-                }
-            }
-        }
-
-        val batchMetadata = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper.BatchMetadata(
-            extrema = extremaByWorkout,
-            stravaData = stravaDataMap,
-            clusterNames = clusterNamesMap,
-            laps = lapsMap,
-            sportTypes = sportTypesMap,
-            equipmentNames = equipmentMap,
-            locationNames = locationNamesMap
-        )
+        val batchMetadata = batchMetadataLoader.loadForSnapshots(snapshots)
 
         val list = ArrayList<WorkoutData>(snapshots.size)
         for (snapshot in snapshots) {

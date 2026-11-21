@@ -96,23 +96,25 @@ class WorkoutExtremaBigSixMapperTest {
         val avgSpeedMps = distanceM / activeSec.toDouble() // 1.0 m/s
 
         // Populate extrema values for Big 6 + unrelated non-Big-6 metrics (TORQUE, DISTANCE_m)
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG) } returns 210.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.MAX) } returns 450.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.HR, ExtremaType.MIN) } returns 95.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.HR, ExtremaType.AVG) } returns 145.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.HR, ExtremaType.MAX) } returns 182.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG) } returns avgSpeedMps
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX) } returns 5.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.CADENCE, ExtremaType.AVG) } returns 85.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.CADENCE, ExtremaType.MAX) } returns 110.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MIN) } returns 420.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.AVG) } returns 480.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.ALTITUDE, ExtremaType.MAX) } returns 540.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.TEMPERATURE, ExtremaType.MIN) } returns 12.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.TEMPERATURE, ExtremaType.AVG) } returns 15.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.TEMPERATURE, ExtremaType.MAX) } returns 19.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.TORQUE, ExtremaType.AVG) } returns 40.0
-        every { mockSummariesDb.getExtremaValue(workoutId, SensorType.DISTANCE_m, ExtremaType.MAX) } returns distanceM
+        every { mockSummariesDb.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.POWER, ExtremaType.AVG, 210.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.POWER, ExtremaType.MAX, 450.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MIN, 95.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.HR, ExtremaType.AVG, 145.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MAX, 182.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.SPEED_mps, ExtremaType.AVG, avgSpeedMps, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.SPEED_mps, ExtremaType.MAX, 5.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.CADENCE, ExtremaType.AVG, 85.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.CADENCE, ExtremaType.MAX, 110.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.ALTITUDE, ExtremaType.MIN, 420.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.ALTITUDE, ExtremaType.AVG, 480.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.ALTITUDE, ExtremaType.MAX, 540.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.TEMPERATURE, ExtremaType.MIN, 12.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.TEMPERATURE, ExtremaType.AVG, 15.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.TEMPERATURE, ExtremaType.MAX, 19.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.TORQUE, ExtremaType.AVG, 40.0, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(workoutId, SensorType.DISTANCE_m, ExtremaType.MAX, distanceM, null)
+        )
 
         val cursor = MatrixCursor(
             arrayOf(

@@ -112,10 +112,6 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     companion object {
         private const val TAG = "PolarOnlineImuBridge"
         private const val NS_PER_MS = 1_000_000L
-        private const val H10_DEFAULT_ACC_HZ = 100
-        private const val H10_FALLBACK_ACC_HZ = 50
-        private const val H10_HIGH_RATE_ACC_HZ = 200
-        private const val VERITY_IMU_HZ = 52
         internal const val DEFAULT_CONNECTING_HANDSHAKE_TIMEOUT_MS = 15_000L
 
         private val activeBridges = CopyOnWriteArrayList<PolarOnlineStreamingBridge>()
@@ -226,6 +222,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     @Volatile
     var highRateRunningDynamicsActive: Boolean = false
 
+    @Volatile
+    private var availableAccRates: Set<Int> = emptySet()
+
+    @Volatile
+    private var activeAccSampleRateHz: Int? = null
+
     private var lastBeatTimestampMs = 0.0
     private var lastNormalRrMs = RrBeatNormalization.DEFAULT_REFERENCE_RR_MS
     private var packetCounter = 0
@@ -283,12 +285,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             PolarOfflineGattCoordinator.registerDeviceAliases(persistedPolarId, macAddress)
         }
         try {
-            ContextCompat.registerReceiver(
-                mContext,
-                sportChangedReceiver,
-                IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT),
-                ContextCompat.RECEIVER_NOT_EXPORTED
-            )
+            val sportFilter = IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT).apply {
+                addAction(BANALService.MULTISPORT_TRANSITION_INTENT)
+            }
+            ContextCompat.registerReceiver(mContext, sportChangedReceiver, sportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         } catch (_: Throwable) {
             // Ignored in minimal unit test contexts without receiver registration.
         }
@@ -301,6 +301,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     @VisibleForTesting internal var connectingHandshakeTimeoutMs: Long = DEFAULT_CONNECTING_HANDSHAKE_TIMEOUT_MS
     private val resumeSearchAfterOfflineSync = AtomicBoolean(false)
     private val resumeSilentWatchdogAfterOfflineSync = AtomicBoolean(false)
+    private val resumeAccAfterOfflineSync = AtomicBoolean(false)
 
     private val silentHrWatchdog = BleHrmSilentConnectionWatchdog()
     private val silentHrWatchdogLock = Any()
@@ -335,6 +336,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         cancelReconnectJob()
         cancelSearchTimeoutWatchdog()
         cancelSilentHrWatchdog(resetState = true)
+        if (PolarPmdStreamCoordinator.StreamSlot.ACC in streamCoordinator.cancelAllRenegotiations()) {
+            resumeAccAfterOfflineSync.set(true)
+        }
     }
 
     /** Resumes session sync, silent-HR watchdog, or reconnect cleanly after the final offline GATT lease releases (`REQ-SET-120.2`). */
@@ -346,9 +350,14 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             if (needsWatchdog && silentHrWatchdog.getState() != BleHrmSilentConnectionWatchdog.State.DISARMED) {
                 armSilentHrWatchdog()
             }
+            if (resumeAccAfterOfflineSync.getAndSet(false)) {
+                if (!streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.ACC)) polarApi?.let(::startAccCollection)
+                else syncCadenceSensorRegistration()
+            }
             return
         }
         resumeSilentWatchdogAfterOfflineSync.set(false)
+        resumeAccAfterOfflineSync.set(false)
         polarApi?.let { syncAlreadyOpenSessionIfReady(it) }
         if (isConnectedFlag.get()) {
             resumeSearchAfterOfflineSync.set(false)
@@ -366,6 +375,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
 
     private fun detachBridgeSessionState() {
         sessionOpenPendingFeatures.set(false)
+        resumeAccAfterOfflineSync.set(false)
         isConnectedFlag.set(false)
         activeBridges.remove(this@PolarOnlineStreamingBridge)
         cancelActiveStreamJobs()
@@ -589,6 +599,8 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     private fun cancelActiveStreamJobs() {
+        activeAccSampleRateHz = null
+        availableAccRates = emptySet()
         streamCoordinator.cancelAllStreams { releaseOnlineAccChannels() }
     }
 
@@ -1009,26 +1021,27 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
+    private fun tryAcquireOnlineAccChannel(accOwnerKey: String): Boolean {
+        if (isShutDown.get() || !isConnectedFlag.get()) return false
+        if (isOfflineGattYielded()) {
+            resumeAccAfterOfflineSync.set(true)
+            if (isOfflineGattYielded()) return false
+        }
+        resumeAccAfterOfflineSync.set(false)
+        val acquired = PolarOfflineGattCoordinator.tryAcquireAccChannel(accOwnerKey, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
+        if (!acquired) Log.w(TAG, "Skipping online ACC stream on $accOwnerKey: ACC channel locked by offline recording.")
+        return acquired
+    }
+
     private fun startAccCollection(api: PolarBleApi) {
         val accOwnerKey = polarId
         val sessionId = sdkSessionId
         streamCoordinator.launchStream(
             slot = PolarPmdStreamCoordinator.StreamSlot.ACC,
-            preAcquire = {
-                val acquired = PolarOfflineGattCoordinator.tryAcquireAccChannel(
-                    accOwnerKey,
-                    PolarOfflineGattCoordinator.ACC_OWNER_ONLINE
-                )
-                if (!acquired) {
-                    Log.w(TAG, "Skipping online ACC stream on $accOwnerKey: ACC channel locked by offline recording.")
-                }
-                acquired
-            },
+            preAcquire = { tryAcquireOnlineAccChannel(accOwnerKey) },
             onFinalCleanup = {
-                PolarOfflineGattCoordinator.releaseAccChannel(
-                    accOwnerKey,
-                    PolarOfflineGattCoordinator.ACC_OWNER_ONLINE
-                )
+                activeAccSampleRateHz = null
+                PolarOfflineGattCoordinator.releaseAccChannel(accOwnerKey, PolarOfflineGattCoordinator.ACC_OWNER_ONLINE)
             }
         ) {
             highRateRunningDynamicsActive = !isVeritySense && isRunSportActive()
@@ -1060,41 +1073,19 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private suspend fun resolveAccSetting(api: PolarBleApi, sessionId: String): PolarSensorSetting {
         val available = api.requestStreamSettings(sessionId, PolarBleApi.PolarDeviceDataType.ACC)
         val rates = available.settings[PolarSensorSetting.SettingType.SAMPLE_RATE].orEmpty()
-        val desiredRate = when {
-            isVeritySense -> VERITY_IMU_HZ
-            highRateRunningDynamicsActive && rates.contains(H10_HIGH_RATE_ACC_HZ) -> H10_HIGH_RATE_ACC_HZ
-            rates.contains(H10_DEFAULT_ACC_HZ) -> H10_DEFAULT_ACC_HZ
-            rates.contains(H10_FALLBACK_ACC_HZ) -> H10_FALLBACK_ACC_HZ
-            else -> null
+        availableAccRates = rates
+        highRateRunningDynamicsActive = !isVeritySense && isRunSportActive()
+        val desiredRate = PolarPmdStreamCoordinator.computeDesiredAccRateHz(rates, isVeritySense, highRateRunningDynamicsActive)
+        return PolarPmdStreamCoordinator.buildSettingWithRate(available, desiredRate).also { setting ->
+            activeAccSampleRateHz = setting.settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull()
         }
-        return buildSettingWithRate(available, desiredRate)
     }
 
     private suspend fun resolveGyroSetting(api: PolarBleApi, sessionId: String): PolarSensorSetting {
         val available = api.requestStreamSettings(sessionId, PolarBleApi.PolarDeviceDataType.GYRO)
         val rates = available.settings[PolarSensorSetting.SettingType.SAMPLE_RATE].orEmpty()
-        val desiredRate = if (rates.contains(VERITY_IMU_HZ)) VERITY_IMU_HZ else null
-        return buildSettingWithRate(available, desiredRate)
-    }
-
-    private fun buildSettingWithRate(
-        available: PolarSensorSetting,
-        desiredRate: Int?
-    ): PolarSensorSetting {
-        if (desiredRate == null) {
-            return available.maxSettings()
-        }
-        val selected = mutableMapOf<PolarSensorSetting.SettingType, Int>()
-        available.settings.forEach { (type, values) ->
-            if (values.isNotEmpty()) {
-                selected[type] = if (type == PolarSensorSetting.SettingType.SAMPLE_RATE) {
-                    desiredRate
-                } else {
-                    values.max()
-                }
-            }
-        }
-        return if (selected.isEmpty()) available.maxSettings() else PolarSensorSetting(selected)
+        val desiredRate = if (rates.contains(PolarPmdStreamCoordinator.VERITY_IMU_HZ)) PolarPmdStreamCoordinator.VERITY_IMU_HZ else null
+        return PolarPmdStreamCoordinator.buildSettingWithRate(available, desiredRate)
     }
 
     /**
@@ -1257,6 +1248,37 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         } else {
             unregisterImuCadenceSensors()
         }
+        maybeRenegotiateAccRate(runActive)
+    }
+
+    private fun maybeRenegotiateAccRate(runActive: Boolean) {
+        val api = polarApi ?: return
+        if (isVeritySense || !isConnectedFlag.get() || isOfflineGattYielded() || !streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.ACC)) return
+        val currentRate = activeAccSampleRateHz ?: return
+        val desiredRate = PolarPmdStreamCoordinator.computeDesiredAccRateHz(availableAccRates, isVeritySense = false, highRateRunningDynamicsActive = runActive) ?: return
+        if (desiredRate == currentRate) return
+        val sessionId = sdkSessionId
+        streamCoordinator.renegotiateSlot(
+            slot = PolarPmdStreamCoordinator.StreamSlot.ACC,
+            isAllowedToRelaunch = { !isShutDown.get() && isConnectedFlag.get() && !isOfflineGattYielded() },
+            onOldSlotCancelled = { activeAccSampleRateHz = null; releaseOnlineAccChannels() },
+            stopStreaming = { api.stopStreaming(sessionId, PmdMeasurementType.ACC) },
+            beforeRelaunch = { synchronized(cadenceEstimatorLock) { runningDynamicsEstimator.reset() } },
+            onAborted = { onAccRenegotiationAborted() },
+            relaunch = { startAccCollection(api) }
+        )
+    }
+
+    private fun onAccRenegotiationAborted() {
+        if (isShutDown.get() || !isConnectedFlag.get()) return
+        if (isOfflineGattYielded()) {
+            resumeAccAfterOfflineSync.set(true)
+            if (isOfflineGattYielded()) return
+        }
+        if (!streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.ACC) && !streamCoordinator.isRenegotiating(PolarPmdStreamCoordinator.StreamSlot.ACC)) {
+            resumeAccAfterOfflineSync.set(false)
+            polarApi?.let(::startAccCollection)
+        }
     }
 
     private fun unregisterImuCadenceSensors() {
@@ -1396,6 +1418,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         PolarOfflineGattCoordinator.unregisterOfflineYieldListener(offlineYieldListener)
         resumeSearchAfterOfflineSync.set(false)
         resumeSilentWatchdogAfterOfflineSync.set(false)
+        resumeAccAfterOfflineSync.set(false)
         sessionOpenPendingFeatures.set(false)
         hasConnectedInSession.set(false)
         cancelSearchTimeoutWatchdog()

@@ -283,10 +283,17 @@ class AthleteProfileContractAndLocalizationTest {
                 zonesSource.contains("ZoneType.HR_BIKE") &&
                 zonesSource.contains("ZoneType.PWR_BIKE")
         )
+        val pmcCardFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/PerformanceManagementChartCard.kt"
+        )
+        assertTrue("PerformanceManagementChartCard.kt must exist (REQ-UI-2791.6)", pmcCardFile.exists())
+        val pmcCardSource = pmcCardFile.readText()
         assertTrue(
-            "AthleteProfileScreen.kt must render PerformanceManagementChartCard and PerformanceManagementChartCanvas (REQ-UI-401.3)",
-            source.contains("fun PerformanceManagementChartCard(") &&
-                source.contains("fun PerformanceManagementChartCanvas(")
+            "AthleteProfileScreen.kt must invoke PerformanceManagementChartCard and PerformanceManagementChartCard.kt must define it alongside PerformanceManagementChartCanvas (REQ-UI-401.3, REQ-UI-2791.6)",
+            source.contains("PerformanceManagementChartCard(") &&
+                pmcCardSource.contains("fun PerformanceManagementChartCard(") &&
+                pmcCardSource.contains("fun PerformanceManagementChartCanvas(")
         )
 
         val detailsFile = File(
@@ -331,10 +338,17 @@ class AthleteProfileContractAndLocalizationTest {
             source.contains("modifier = Modifier.padding(horizontal = 3.dp, vertical = 6.dp)")
         )
 
-        // TST-UI-495.2: Locale.getDefault() formatting without hardcoded Locale.US
+        val pmcCardFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/PerformanceManagementChartCard.kt"
+        )
+        assertTrue("PerformanceManagementChartCard.kt must exist", pmcCardFile.exists())
+        val pmcSource = pmcCardFile.readText()
+
+        // TST-UI-495.2: Locale.getDefault() / currentLocale formatting without hardcoded Locale.US
         assertFalse(
-            "AthleteProfileScreen must not hardcode Locale.US for decimal number display",
-            source.contains("Locale.US")
+            "AthleteProfileScreen and PerformanceManagementChartCard must not hardcode Locale.US for decimal number display",
+            source.contains("Locale.US") || pmcSource.contains("Locale.US")
         )
         assertTrue(
             "AthleteProfileScreen must use Locale.getDefault() for value formatting",
@@ -344,18 +358,18 @@ class AthleteProfileContractAndLocalizationTest {
         // TST-UI-495.3: Uniform PMC stat badge heights via IntrinsicSize.Min and .fillMaxHeight()
         assertTrue(
             "PMC stat badge rows must apply Modifier.height(IntrinsicSize.Min)",
-            source.contains("height(IntrinsicSize.Min)")
+            pmcSource.contains("height(IntrinsicSize.Min)")
         )
         assertTrue(
             "PmcStatBadge root Surface must apply fillMaxHeight()",
-            source.contains("modifier.fillMaxHeight()")
+            pmcSource.contains("modifier.fillMaxHeight()")
         )
 
         // TST-UI-495.4: Dedicated PMC time-range selector
         assertTrue(
             "PerformanceManagementChartCard must render dedicated time-range selector",
-            source.contains("selectedPmcTimeRange: MetricsTimeRange") &&
-                source.contains("onSelectPmcTimeRange: (MetricsTimeRange) -> Unit")
+            pmcSource.contains("selectedPmcTimeRange: MetricsTimeRange") &&
+                pmcSource.contains("onSelectPmcTimeRange: (MetricsTimeRange) -> Unit")
         )
         val defaultUiState = AthleteProfileUiState()
         assertEquals(

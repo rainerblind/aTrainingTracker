@@ -211,6 +211,46 @@ class PolarH10RunningDynamicsEstimatorTest {
         assertNull("50 Hz fallback stream must suppress 200 Hz GCT", lowRateEstimator.latestGroundContactTimeMs)
     }
 
+    // REQ-SET-122.3 / TST-SET-124.3
+    @Test
+    fun testResetForGap_afterLowRate100HzBurst_recoversOn200HzAsymmetricWaveform_TST_SET_124_3() {
+        val estimator = PolarH10RunningDynamicsEstimator()
+
+        // 1. Feed 3 s of 100 Hz (dt = 10 ms) running ACC -> avgDtMs converges to 10 ms > 7.5 ms, suppressing VO/GCT
+        val stepPeriodSec = 60.0 / 162.0
+        for (i in 0 until 300) {
+            val tMs = i * 10L
+            val aMg = (1000.0 + 900.0 * cos(2.0 * PI * (tMs / 1000.0) / stepPeriodSec)).roundToInt()
+            estimator.onAccSample(0, 0, aMg, tMs)
+        }
+        assertNull("Sustained 100 Hz stream must keep VO suppressed", estimator.latestVerticalOscillationCm)
+        assertNull("Sustained 100 Hz stream must keep GCT suppressed", estimator.latestGroundContactTimeMs)
+
+        // 2. Introduce > 500 ms renegotiation/BLE gap triggering resetForGap(), then stream 200 Hz asymmetric stance/flight running waveform (162 spm, GCT ~240 ms)
+        val resumeStartMs = 3_800L
+        val gctSec = 0.240
+        val stanceAmpMps2 = 9.80665 * stepPeriodSec * PI / (2.0 * gctSec)
+        estimator.setCurrentCadenceStepsPerMin(162.0)
+        for (i in 0 until 1600) {
+            val tMs = resumeStartMs + i * 5L
+            val phaseSec = ((i * 0.005) % stepPeriodSec)
+            val aDynMps2 = if (phaseSec < gctSec) {
+                stanceAmpMps2 * sin(PI * phaseSec / gctSec) - 9.80665
+            } else {
+                -9.80665
+            }
+            val zMg = (1000.0 + (aDynMps2 / 9.80665) * 1000.0).roundToInt()
+            estimator.onAccSample(0, 0, zMg, tMs)
+        }
+
+        val recoveredVo = estimator.latestVerticalOscillationCm
+        val recoveredGct = estimator.latestGroundContactTimeMs
+        assertNotNull("resetForGap must clear poisoned 100 Hz avgDtMs so 200 Hz VO recovers", recoveredVo)
+        assertNotNull("resetForGap must clear poisoned 100 Hz avgDtMs so 200 Hz GCT recovers", recoveredGct)
+        assertTrue("Recovered VO must stay within physiological 5.0..13.0 cm (got $recoveredVo)", recoveredVo!! in 5.0..13.0)
+        assertTrue("Recovered GCT must stay within physiological 140..400 ms (got $recoveredGct)", recoveredGct!! in 140.0..400.0)
+    }
+
     private fun feedRunningStream(
         estimator: PolarH10RunningDynamicsEstimator,
         startMs: Long,

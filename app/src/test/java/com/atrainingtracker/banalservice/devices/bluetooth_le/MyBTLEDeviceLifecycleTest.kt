@@ -455,9 +455,13 @@ class MyBTLEDeviceLifecycleTest {
 
             device.pauseGattOperations()
             assertTrue(device.isGattPaused)
+            MyBTLEDevice.clearScanTimestampsForTesting()
+            delayedRunnables.clear()
             device.resumeGattOperations()
             assertFalse(device.isGattPaused)
             assertFalse("Resuming background reconnect must not mark mSearching=true", device.isSearching)
+            assertEquals("Passive resume must consume 0 scan quota (TST-SET-125.2)", 0, MyBTLEDevice.getScanTimestampsCountForTesting())
+            assertFalse("Passive resume must not schedule mSearchTimeoutRunnable (TST-SET-125.2)", delayedRunnables.contains(device.searchTimeoutRunnable))
         } finally {
             com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(
                 com.atrainingtracker.trainingtracker.TrackingMode.READY

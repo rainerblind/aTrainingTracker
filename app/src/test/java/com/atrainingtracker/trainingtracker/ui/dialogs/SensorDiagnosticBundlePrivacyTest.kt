@@ -135,4 +135,43 @@ class SensorDiagnosticBundlePrivacyTest {
             assertTrue(metaJson.getBoolean("includeGps"))
         }
     }
+
+    // REQ-EXP-045.4 / TST-EXP-045.4: .phone_raw.csv.gz omitted when includeGps=false, included when true
+    @Test
+    fun testPhoneRawSidecar_omittedWhenIncludeGpsFalseAndIncludedWhenTrue_TST_EXP_045_4() = runBlocking {
+        val phoneSidecar = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder
+            .getSidecarFile(context, testBaseName)!!
+        phoneSidecar.parentFile?.mkdirs()
+        phoneSidecar.writeText("phone_raw_with_gnss_48.137_11.576")
+
+        try {
+            val noGpsZip = SensorDiagnosticBundlePackager.createBundle(
+                context = context,
+                fileBaseName = testBaseName,
+                includeGps = false,
+                symptomNotes = "No GPS"
+            ).getOrThrow()
+            ZipFile(noGpsZip).use { zf ->
+                assertTrue(
+                    "Phone sidecar with GNSS MUST be omitted when includeGps=false",
+                    zf.getEntry(phoneSidecar.name) == null
+                )
+            }
+
+            val withGpsZip = SensorDiagnosticBundlePackager.createBundle(
+                context = context,
+                fileBaseName = testBaseName,
+                includeGps = true,
+                symptomNotes = "With GPS"
+            ).getOrThrow()
+            ZipFile(withGpsZip).use { zf ->
+                assertTrue(
+                    "Phone sidecar MUST be included when includeGps=true",
+                    zf.getEntry(phoneSidecar.name) != null
+                )
+            }
+        } finally {
+            phoneSidecar.delete()
+        }
+    }
 }

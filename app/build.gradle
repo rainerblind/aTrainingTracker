@@ -402,5 +402,36 @@ afterEvaluate {
     tasks.findByName("assembleRelease")?.configure {
         dependsOn("testDebugUnitTest")
     }
+
+    // Pure-JVM offline simulation replay CLI (REQ-EXP-046.4, ATT-9349; zero production APK impact)
+    tasks.register("replayRawTelemetry", JavaExec) {
+        group = "verification"
+        description = "Replays recorded .phone_raw.csv.gz and/or .polar_raw.csv.gz sidecars deterministically on pure JVM."
+        dependsOn(
+            "compileDebugKotlin",
+            "compileDebugJavaWithJavac",
+            "compileDebugUnitTestKotlin",
+            "compileDebugUnitTestJavaWithJavac",
+            "processDebugJavaRes",
+            "processDebugUnitTestJavaRes"
+        )
+        mainClass.set("com.atrainingtracker.banalservice.replay.OfflineReplayCliKt")
+
+        doFirst {
+            // Resolve compiled debug + unit-test classpath strictly at execution time so
+            // configuration stays lazy and testDebugUnitTest is never executed.
+            classpath = files(tasks.named("testDebugUnitTest", Test).get().classpath.files)
+            def cliArgs = []
+            if (project.hasProperty("phoneRaw")) { cliArgs.addAll(["--phone", project.property("phoneRaw").toString()]) }
+            if (project.hasProperty("polarRaw")) { cliArgs.addAll(["--polar", project.property("polarRaw").toString()]) }
+            if (project.hasProperty("polar2Raw")) { cliArgs.addAll(["--polar2", project.property("polar2Raw").toString()]) }
+            if (project.hasProperty("csvOut")) { cliArgs.addAll(["--csv", project.property("csvOut").toString()]) }
+            if (project.hasProperty("jsonOut")) { cliArgs.addAll(["--json", project.property("jsonOut").toString()]) }
+            if (project.hasProperty("truth")) { cliArgs.addAll(["--truth", project.property("truth").toString()]) }
+            if (!cliArgs.isEmpty()) {
+                args(cliArgs)
+            }
+        }
+    }
 }
 

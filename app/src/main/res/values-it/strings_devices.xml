@@ -221,4 +221,7 @@
     <string name="devices_wheel_circumference_auto_hint">Misura iniziale dello pneumatico per nuovi sensori — calibrata automaticamente via GNSS durante le uscite.</string>
     <string name="devices_wheel_baseline_format">Base: %1$d mm</string>
     <string name="devices_wheel_history_empty">Nessuna cronologia di calibrazione. Completa un\'uscita con GNSS e questo sensore ruota per vedere l\'andamento.</string>
+    <!-- Smartphone Raw Sensor Sidecar Recording (ATT-9348, REQ-EXP-045.5) -->
+    <string name="tuning_record_smartphone_raw_title">Registra sensori grezzi dello smartphone</string>
+    <string name="tuning_record_smartphone_raw_desc">Salva file compresso di IMU, barometro, passi e GNSS per allenamento per analisi offline</string>
 </resources>

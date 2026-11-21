@@ -30,11 +30,13 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -77,6 +79,7 @@ class BTLEMeasurementParsingTest {
         fun getPowerSensor() = mPowerSensor
         fun getCadenceSensor() = mCadenceSensor
         fun getSpeedSensor() = mSpeedSensor
+        fun getPaceSensor() = mPaceSensor
         fun getDistanceSensor() = mDistanceSensor
         fun getPowerBalanceSensor() = mPowerBalanceSensor
     }
@@ -104,7 +107,42 @@ class BTLEMeasurementParsingTest {
 
         fun getCadenceSensor() = mCadenceSensor
         fun getSpeedSensor() = mSpeedSensor
+        fun getPaceSensor() = mPaceSensor
         fun getDistanceSensor() = mDistanceSensor
+    }
+
+    private class TestBikeSpeedDevice(
+        context: Context,
+        sensorManager: MySensorManager,
+        deviceId: Long,
+        address: String
+    ) : BTLEBikeSpeedDevice(context, sensorManager, deviceId, address) {
+        public override fun measurementCharacteristicUpdate(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?
+        ) {
+            super.measurementCharacteristicUpdate(gatt, characteristic)
+        }
+
+        fun getSpeedSensor() = mSpeedSensor
+        fun getCadenceSensor() = mCadenceSensor
+    }
+
+    private class TestBikeCadenceDevice(
+        context: Context,
+        sensorManager: MySensorManager,
+        deviceId: Long,
+        address: String
+    ) : BTLEBikeCadenceDevice(context, sensorManager, deviceId, address) {
+        public override fun measurementCharacteristicUpdate(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?
+        ) {
+            super.measurementCharacteristicUpdate(gatt, characteristic)
+        }
+
+        fun getSpeedSensor() = mSpeedSensor
+        fun getCadenceSensor() = mCadenceSensor
     }
 
     private class TestRunSpeedDevice(
@@ -676,6 +714,196 @@ class BTLEMeasurementParsingTest {
         val p4 = byteArrayOf(0x02, 0x16, 0x00, 0xD0.toByte(), 0x0B) // revs = 22, time = 3024
         cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(p4))
         assertEquals(120.0, cscDevice.getCadenceSensor().value, 0.001)
+    }
+
+    private fun buildCscWheelAndCrankPacket(
+        wheelRevs: Long,
+        wheelTime: Int,
+        crankRevs: Int,
+        crankTime: Int
+    ): ByteArray = byteArrayOf(
+        0x03.toByte(),
+        (wheelRevs and 0xFF).toByte(),
+        ((wheelRevs ushr 8) and 0xFF).toByte(),
+        ((wheelRevs ushr 16) and 0xFF).toByte(),
+        ((wheelRevs ushr 24) and 0xFF).toByte(),
+        (wheelTime and 0xFF).toByte(),
+        ((wheelTime ushr 8) and 0xFF).toByte(),
+        (crankRevs and 0xFF).toByte(),
+        ((crankRevs ushr 8) and 0xFF).toByte(),
+        (crankTime and 0xFF).toByte(),
+        ((crankTime ushr 8) and 0xFF).toByte()
+    )
+
+    private fun buildCpsWheelAndCrankPacket(
+        powerWatts: Int,
+        wheelRevs: Long,
+        wheelTime: Int,
+        crankRevs: Int,
+        crankTime: Int
+    ): ByteArray = byteArrayOf(
+        0x30.toByte(), 0x00.toByte(), // Flags: Wheel (0x10) + Crank (0x20)
+        (powerWatts and 0xFF).toByte(),
+        ((powerWatts ushr 8) and 0xFF).toByte(),
+        (wheelRevs and 0xFF).toByte(),
+        ((wheelRevs ushr 8) and 0xFF).toByte(),
+        ((wheelRevs ushr 16) and 0xFF).toByte(),
+        ((wheelRevs ushr 24) and 0xFF).toByte(),
+        (wheelTime and 0xFF).toByte(),
+        ((wheelTime ushr 8) and 0xFF).toByte(),
+        (crankRevs and 0xFF).toByte(),
+        ((crankRevs ushr 8) and 0xFF).toByte(),
+        (crankTime and 0xFF).toByte(),
+        ((crankTime ushr 8) and 0xFF).toByte()
+    )
+
+    /**
+     * TST-SET-126.2: CSC BTLEBikeDevice UINT16 wheel & crank event-time rollover (65000 -> 500)
+     * preserves the wrap sample (timeDiff = 1036) and notifies wheel revolutions.
+     */
+    @Test
+    fun testBikeDevice_uint16WheelAndCrankEventTimeRollover_computesSpeedDistanceCadenceAndNotifiesWheel() {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+
+        val device = TestBikeSpeedAndCadenceDevice(mockContext, mockSensorManager, 118L, "AA:BB:CC:DD:EE:18")
+
+        device.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(buildCscWheelAndCrankPacket(100L, 64000, 8, 64000))
+        )
+        assertNull(device.getSpeedSensor().value)
+        assertNull(device.getCadenceSensor().value)
+
+        // Second packet seeds MyAccumulatorSensor.mLastAbsoluteValue at 2.096 m
+        device.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(buildCscWheelAndCrankPacket(101L, 65000, 10, 65000))
+        )
+
+        // Third packet rolls over 65000 -> 500 (timeDiff = 1036 ticks, revDiff = 2)
+        device.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(buildCscWheelAndCrankPacket(103L, 500, 12, 500))
+        )
+
+        val expectedSpeed = 2.096 * 2 * 1024 / 1036.0
+        val expectedCadence = (60.0 * 2 * 1024.0) / 1036.0
+        assertEquals(expectedSpeed, device.getSpeedSensor().value, 0.001)
+        assertEquals(1.0 / expectedSpeed, device.getPaceSensor().value, 0.001)
+        assertEquals(2.096 * 2, device.getDistanceSensor().value, 0.001)
+        assertEquals(expectedCadence, device.getCadenceSensor().value, 0.001)
+        verify(exactly = 1) { mockSensorManager.notifyWheelRevolutions(2.0, 103.0, any()) }
+    }
+
+    /**
+     * TST-SET-126.2: CPS BTLEBikePowerDevice UINT16 wheel (2048 Hz) & crank (1024 Hz) event-time rollover
+     * preserves the wrap sample (timeDiff = 1036) and omits notifyWheelRevolutions.
+     */
+    @Test
+    fun testBikePower_uint16WheelAndCrankEventTimeRollover_computes2048HzSpeedCadenceAndOmitsNotifyWheel() {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+
+        val device = TestBikePowerDevice(mockContext, mockSensorManager, 119L, "AA:BB:CC:DD:EE:19")
+
+        device.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(buildCpsWheelAndCrankPacket(220, 100L, 64000, 8, 64000))
+        )
+        assertEquals(220, device.getPowerSensor().value)
+        assertNull(device.getSpeedSensor().value)
+        assertNull(device.getCadenceSensor().value)
+
+        // Second packet seeds MyAccumulatorSensor.mLastAbsoluteValue at 2.096 m
+        device.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(buildCpsWheelAndCrankPacket(222, 101L, 65000, 10, 65000))
+        )
+
+        // Third packet rolls over 65000 -> 500 (timeDiff = 1036 ticks, revDiff = 2)
+        device.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(buildCpsWheelAndCrankPacket(225, 103L, 500, 12, 500))
+        )
+
+        val expectedSpeed = 2.096 * 2 * 2048 / 1036.0
+        val expectedCadence = (60.0 * 2 * 1024.0) / 1036.0
+        assertEquals(225, device.getPowerSensor().value)
+        assertEquals(expectedSpeed, device.getSpeedSensor().value, 0.001)
+        assertEquals(1.0 / expectedSpeed, device.getPaceSensor().value, 0.001)
+        assertEquals(2.096 * 2, device.getDistanceSensor().value, 0.001)
+        assertEquals(expectedCadence, device.getCadenceSensor().value, 0.001)
+        verify(exactly = 0) { mockSensorManager.notifyWheelRevolutions(any(), any(), any()) }
+    }
+
+    /**
+     * TST-SET-126.2: MAX_IDENTICAL = 4 identical timestamps zero speed (plus null pace) and cadence
+     * on the 4th identical packet across both CSC and CPS drivers.
+     */
+    @Test
+    fun testBikeDevice_and_BikePower_identicalEventTimeZeroesAfterFourPackets() {
+        val cscDevice = TestBikeSpeedAndCadenceDevice(mockContext, mockSensorManager, 120L, "AA:BB:CC:DD:EE:20")
+        val pwrDevice = TestBikePowerDevice(mockContext, mockSensorManager, 121L, "AA:BB:CC:DD:EE:21")
+
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCscWheelAndCrankPacket(10L, 1000, 10, 1000)))
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCscWheelAndCrankPacket(12L, 2024, 12, 2024)))
+        assertTrue(cscDevice.getSpeedSensor().value > 0.0)
+        assertEquals(120.0, cscDevice.getCadenceSensor().value, 0.001)
+
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCpsWheelAndCrankPacket(200, 10L, 1000, 10, 1000)))
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCpsWheelAndCrankPacket(200, 12L, 2024, 12, 2024)))
+        assertTrue(pwrDevice.getSpeedSensor().value > 0.0)
+        assertEquals(120.0, pwrDevice.getCadenceSensor().value, 0.001)
+
+        repeat(3) {
+            cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCscWheelAndCrankPacket(12L, 2024, 12, 2024)))
+            pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCpsWheelAndCrankPacket(200, 12L, 2024, 12, 2024)))
+            assertTrue(cscDevice.getSpeedSensor().value > 0.0)
+            assertTrue(pwrDevice.getSpeedSensor().value > 0.0)
+        }
+
+        // 4th identical packet triggers coasting zero
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCscWheelAndCrankPacket(12L, 2024, 12, 2024)))
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(buildCpsWheelAndCrankPacket(200, 12L, 2024, 12, 2024)))
+
+        assertEquals(0.0, cscDevice.getSpeedSensor().value, 0.001)
+        assertNull(cscDevice.getPaceSensor().value)
+        assertEquals(0.0, cscDevice.getCadenceSensor().value, 0.001)
+
+        assertEquals(0.0, pwrDevice.getSpeedSensor().value, 0.001)
+        assertNull(pwrDevice.getPaceSensor().value)
+        assertEquals(0.0, pwrDevice.getCadenceSensor().value, 0.001)
+    }
+
+    /**
+     * TST-SET-126.2: Single-sensor BTLEBikeSpeedDevice & BTLEBikeCadenceDevice safely ignore missing sensors
+     * even when receiving combined 0x03 wheel+crank CSC notifications.
+     */
+    @Test
+    fun testBikeSpeedOnly_and_BikeCadenceOnly_ignoreMissingSensorsWithoutCrash() {
+        val speedOnly = TestBikeSpeedDevice(mockContext, mockSensorManager, 122L, "AA:BB:CC:DD:EE:22")
+        val cadenceOnly = TestBikeCadenceDevice(mockContext, mockSensorManager, 123L, "AA:BB:CC:DD:EE:23")
+
+        assertNull(speedOnly.getCadenceSensor())
+        assertNull(cadenceOnly.getSpeedSensor())
+
+        val packet1 = createMockCharacteristic(buildCscWheelAndCrankPacket(10L, 1000, 10, 1000))
+        val packet2 = createMockCharacteristic(buildCscWheelAndCrankPacket(12L, 2024, 12, 2024))
+
+        speedOnly.measurementCharacteristicUpdate(mockGatt, packet1)
+        speedOnly.measurementCharacteristicUpdate(mockGatt, packet2)
+        assertEquals(2.096 * 2, speedOnly.getSpeedSensor().value, 0.001)
+        assertNull(speedOnly.getCadenceSensor())
+
+        cadenceOnly.measurementCharacteristicUpdate(mockGatt, packet1)
+        cadenceOnly.measurementCharacteristicUpdate(mockGatt, packet2)
+        assertEquals(120.0, cadenceOnly.getCadenceSensor().value, 0.001)
+        assertNull(cadenceOnly.getSpeedSensor())
     }
 }
 

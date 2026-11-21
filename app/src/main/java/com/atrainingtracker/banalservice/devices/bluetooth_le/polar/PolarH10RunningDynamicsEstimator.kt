@@ -178,6 +178,7 @@ class PolarH10RunningDynamicsEstimator(
     }
 
     private fun resetForGap() {
+        avgDtMs = DEFAULT_DT_MS
         stepBandPass.reset()
         bpPrev2 = 0.0
         bpPrev1 = 0.0

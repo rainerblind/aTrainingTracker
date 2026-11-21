@@ -1,0 +1,34 @@
+# Stage 5 Walkthrough: ATT-9347 - Refine PhoneCarriageClassifier Front-Hip Running Belt Discrimination & Eliminate Residual BIKE_FRONT_POCKET Bleed
+
+**Ticket**: `ATT-9347` (`2 SP`, `Bug`, `severity-minor`) | **Parent Epic**: `ATT-166` | **Target Release**: `V5.0.0`  
+**Active Sprint**: `2026-11-21_01_Früh` (ID `468`) | **Branch**: `feature/ATT-9347` (code SHA `2680a799`) | **Author**: Lane B Author (`--as agent1`) | **Date**: 2026-11-21  
+**Verified Requirements**: `REQ-FIL-039` (`REQ-FIL-039.1`–`.3`, `[Verified]`) | **Verified Tests**: `TST-FIL-039` (`TST-FIL-039.1`–`.3`, `[Verified]`)
+
+## 1. Summary of Changes (Single Pure-JVM Production File)
+* **`PhoneCarriageClassifier.kt` (`1,161 / 1,500` LoC, `+37` net LoC, `339` headroom)**:
+  1. **Active-Footstrike Cycling Mask & Step-Batching Impact Guard (`REQ-FIL-039.1`)**: Added `suppressCyclingForFootstrikes` (`effectiveRunStepFreqHz >= 2.25 Hz` without moving wheel `> 0.5 m/s`) combined with `suppressCyclingForRun` across candidate scoring, zero-IMU fallback, and non-sticky stale `BIKE_*` eviction (`-Inf`). Guarded `stepDetectorActiveAndZero` and `evaluateAccelFootstrike()` against `impactRmsMps2 >= 1.8 m/s²` so SensorHub step-batching gaps on trail runs never falsely award `cyclingPrior += 1.5`, while preserving `< 1.2 m/s²` uphill MTB and footstrike-free brick overrides (`wheel > 0.5` or `speed >= 5.5`).
+  2. **Viewing-Inclination Glance Guard (`REQ-FIL-039.2`)**: Extended `detectGlanceShift()` to compute recent/previous inclinations (`acos(|mz|)`) and reject any shift with `recInclinationDeg > 60.0°` or `(prevInclinationDeg - recInclinationDeg) < 10.0°`, blocking vertical-plane belt rolls/slips (including `>= 30°` lateral rolls), hill torso-leans (`85° -> 68°`), and stow transitions (`20° -> 75°`) while keeping genuine wrist glances (`70–72° -> 18–35°`, `55° -> 30°`) and `ATT-9062` cyclic thigh rejection intact.
+  3. **Calibrated Front-Hip Belt Tiers & `10 s` Non-Glance Dwell (`REQ-FIL-039.3`)**: Smoothed `scoreRunWaistHip()` (`swing <10:+2.6, <16:+2.0, <18:+0.8, <22:-0.5`; `yaw <=0.48:+2.2, <=0.85:+1.8, <=1.15:+0.4`; `baro <0.45:+1.2, <0.60:+0.5`; `glance 0:+1.4/-1.8`), tightened `scoreRunBicepArm()` (`yaw <0.16:-1.0, <=0.48:+2.0, <=0.60:+0.3, >0.60:-0.8`; `glance 0:+0.8/-2.2`), and calibrated `scoreRunHandheld()` (`swing >=17.5:+1.8, >=13.5:+0.4`; `yaw >=0.72:+2.4, >=0.55:+0.6`; `baro >=0.60:+2.4, >=0.45:+0.4`; `glance >=1:+3.8/-1.8`). Added `10 s` non-glance `RUN_WAIST_HIP -> RUN_HANDHELD` dwell in `requiredDwellMs()` before general `6 s` intra-run dwell, preserving `0 ms` verified glance, `4 s` `RUN -> WALK`, and `2 s` `WALK -> RUN` / `STATIONARY`.
+* **Zero Caller / Monolith / Localization Touch**: `SpeedAndLocationDevice_ATTFused.kt` (`1,489 / 1,500` LoC), `PhoneCarriageMode.kt`, protected monoliths, DB schemas, and UI/strings (`Localization Parity: N/A - no UI strings`) remain **`0` LoC touched**.
+
+## 2. Bug Fix Verification Evidence (`REQ-PRO-121.2`, `Rule 7.5` Gate 4 Reuse @ `2680a799`)
+* **Reproduction & Verified Fix Behavior**:
+  * **Cycling Bleed (`TST-FIL-039.1`)**: Reproduced cycling-like front-pocket IMU (`swingSd ~17°`, `yawRms ~0.78`, `baro ~0.46`, `dom 1.35 Hz`) under post-crash `UNKNOWN` sport hint + `2.75 Hz` step/accel footstrikes, `5.8 m/s` GNSS spikes + `2.8 Hz` steps, and `5 s` high-impact (`>= 2.2 m/s²`) step-batching gaps — verified **`0%` (`0 s`) `BIKE_*`** while upholding uphill MTB (`impactRms < 1.2`) and footstrike-free brick overrides.
+  * **Vertical Belt-Slip False Glances (`TST-FIL-039.2`)**: Reproduced `18°` and `35°` lateral vertical rolls at `80°` pitch (`recIncl > 60°`), `85° -> 68°` hill lean, and `20° -> 75°` stow — verified **`0` false glances** and uninterrupted `RUN_WAIST_HIP`, while genuine `55° -> 30°` and `70–72° -> 18–35°` glances trigger `isGlanceActive` and `0 ms` `RUN_HANDHELD`.
+  * **45-Min Salomon Front-Hip Belt Replay (`TST-FIL-039.3`)**: Replayed `2,700 s` at `50 Hz` (`155–170 spm`, calm/lively/bouncy/strong-yaw/hill regimes, `18°`/`35°` vertical rolls, post-crash `UNKNOWN` segment, narrow `BICEP` vs `WAIST` corner in steady-state & cold-warmup recovery, `8 s` bounce burst, `30 s` obstacle walk, and `15 s` wrist glance) — verified **`>= 85%` `RUN_WAIST_HIP`**, **`0%` (`0 s`) `BIKE_*`**, **`<= 10` transitions** (vs. `111` field baseline), `0` switches on narrow corner & `8 s` burst, intact `WALKING_TRANSITION` & `0 ms` wrist glance, and `> 10 s` sustained handheld transition.
+* **Tier-1 Targeted Incremental `--rerun` Results (Gate 4 `ATT-9449` Independently Verified @ `2680a799`, `0` `app/` diff since `2680a799`, `0` new Kotlin warnings, `130/130 PASS`)**:
+
+| Suite (`Tier 1 Targeted`) | Result | Key Verified Coverage |
+| :--- | :---: | :--- |
+| `PhoneCarriageClassifierTest` | `15/15 PASS` | `TST-FIL-039.1`/`.2`/`.3` (`testActiveFootstrikeCyclingMaskAndHighImpactBatchingGuard_eliminatesBikeFrontPocketBleed_tstFil039_1`, `testViewingInclinationGlanceGuard_rejectsVerticalBeltRollsAndPreservesWristGlances_tstFil039_2`, `testSalomonFrontHipBeltReplayNarrowBicepCornerAndTenSecondDwell_achievesHighWaistShare_tstFil039_3`) + all `TST-FIL-028`/`034`/`035` regressions |
+| `SpeedAndLocationDevice_ATTFusedTest` | `34/34 PASS` | `testHandheldGlanceGatingAndRunningChordHeading_tstFil028_3` (`:837, :865` `yaw = 0`) + all fused regressions |
+| `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` | `3/3 PASS` | Live BANALService sport-context & walk→run parity |
+| `AltitudeAndSlopeDevice_ATTFusedTest` | `23/23 PASS` | Carriage-adaptive barometric filtering parity |
+| `SmartphoneImuCadenceEstimatorTest` | `12/12 PASS` | Shared `ImuCadenceDsp` & carriage cadence parity |
+| `KinematicSportTypeDiscriminatorTest` / `MultisportTransitionDetectorTest` | `6/6` / `10/10` | Sport discrimination & multisport brick parity |
+| `ArchitectureConformance` / `DeadCodeElimination` / `SourceTextReadingAudit` / `SystemLiveTrackingRequirements` ContractTests | `11/11`, `6/6`, `6/6`, `4/4` | LoC ceilings (`PhoneCarriageClassifier.kt` `1,161/1,500`, `0` monolith edits), `0` dead code, `0` `src/main` reads, `SYSREQ-TRK-003`/`004`/`010` <-> `REQ-FIL-039` parity |
+
+* **Linters, Governance & Device Policy**: `lint_cursor_safety.py`, `lint_lifecycle_safety.py`, `lint_safe_enum.py` (`3/3 PASS`); `verify_requirement_governance.py --sync-indexes`, `--check-living-doc-layout` (`req_tracking_cockpit_part2.md` `3,969/4,000`, `tst_tracking_cockpit.md` `3,992/4,000`), and `--check-verified-evidence` **`exit 0`**; pure-JVM algorithm ticket (no UI/emulator APK required in Stage 5 per `stage5-verification/SKILL.md`).
+
+## 3. Handoff Status (`Rule 3.3`)
+* `feature/ATT-9347` remains **intact** (NOT merged onto `sprint/2026-11-21_01_Früh`) with `0` files modified under `app/` since Gate 4 (`2680a799`), ready for Gate 5 review and Stage 6 Cold Final Review (`Final Review (Agent)`).

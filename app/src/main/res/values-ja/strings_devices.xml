@@ -221,4 +221,7 @@
     <string name="devices_wheel_circumference_auto_hint">新規センサーの初期タイヤサイズ — 走行中にGNSSで自動校正されます。</string>
     <string name="devices_wheel_baseline_format">基準値: %1$d mm</string>
     <string name="devices_wheel_history_empty">校正履歴はまだありません。GNSSとこのホイールセンサーで走行すると推移が表示されます。</string>
+    <!-- Smartphone Raw Sensor Sidecar Recording (ATT-9348, REQ-EXP-045.5) -->
+    <string name="tuning_record_smartphone_raw_title">スマホ生センサーを記録</string>
+    <string name="tuning_record_smartphone_raw_desc">オフライン再生用にワークアウトごとのIMU・気圧・歩数・GNSS圧縮ファイルを保存</string>
 </resources>

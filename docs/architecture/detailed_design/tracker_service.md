@@ -1,11 +1,11 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-TRK`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,537 LOC)  
+**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,551 LOC)  
 **Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `LiveWorkoutBroadcastTracker` (`LiveWorkoutBroadcastTracker.kt`), `DebugHeapWatchdog` (`DebugHeapWatchdog.kt`), `MultisportLapCoordinator` (`MultisportLapCoordinator.kt`), `WorkoutPostProcessingCoordinator` (`WorkoutPostProcessingCoordinator.kt`), `WorkoutPostProcessingService` (`WorkoutPostProcessingService.kt`), `WorkoutPostProcessingNotificationManager` (`WorkoutPostProcessingNotificationManager.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
 **Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-STB-025.1`, `REQ-STB-025.2`, `REQ-STB-025.3`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`
@@ -139,3 +139,4 @@ stateDiagram-v2
 | `1.0.4` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Decoupled stop-workout Polar backfill, HRV/ERTS recompute, and `ExportManager.workoutFinished()` out of synchronous `endWorkout()` into `WorkoutPostProcessingCoordinator` / `WorkoutPostProcessingService` (`shortService`) / `WorkoutPostProcessingNotificationManager` (`ID 8047` progress, `ID 8048` warning), shrinking `TrackerService.java` to `3,511 LOC` (`-28 LOC`) so `TRACKING_FINISHED_INTENT` -> `EditWorkoutScreen` fires immediately (`REQ-TRK-091`). |
 | `1.0.5` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Wired `DebugHeapWatchdog` (`BuildConfig.DEBUG`-only headless periodic CSV & one-shot HPROF watchdog) into `TrackerService` (`3,537 LOC`, `<= 3,559` ceiling) with isolated daemon executor and `DebugHeapWatchdogTest` / `TrackerServiceHeapWatchdogTest` traceability (`REQ-STB-022`). |
 | `1.0.6` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Extended `ResumedWorkoutState` (`lastAltitudeM`, preserving legacy constructors) and `applyResumedState()` (`3,537 LOC`, `+0` net) to re-anchor live barometers silently via `BANALService.reanchorBarometricAltitudeOnResume` and salvage/resume Polar sidecars via `PolarRawTelemetryRecorder.resumeOrStartActiveSession` (`REQ-STB-025`). |
+| `1.0.7` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Wired opt-in `SmartphoneRawTelemetryRecorder` start/resume/stop symmetrically alongside `PolarRawTelemetryRecorder` in `TrackerService.java` (`3,540 LOC`, `+3` net, `<= 3,559` ceiling) (`REQ-EXP-045.1`). |

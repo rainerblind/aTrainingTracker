@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.13  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 46
+**Total Requirements**: 48
 
 ---
 
@@ -1860,6 +1860,77 @@
 
 ---
 
+### REQ-UI-2790: Type-Safe Sealed UI State Models for `ImportBackupTabsScreen` & `MapScreenWithTrack` (`ATT-6040`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2790`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `ImportBackupTabsScreen.kt`, `MapScreenWithTrack.kt`, `ArchitectureConformanceContractTest.kt`
+- **Localization Parity**: `N/A - no new or modified UI strings` (`0` edits to `res/values*/strings*.xml`)
+- **Rationale**: `ImportBackupTabsScreen.kt` (`1,513` LoC) manages mutually exclusive restore, cloud-info, and pre-import tuning popups via `18` scattered `remember` booleans/nullables (`4` identical restore `AlertDialog`s, `3` cloud info `AlertDialog`s, `5` active + `1` dead `pendingSingleLegacyUri` `PreImportTuningBottomSheet` blocks), while `MapScreenWithTrack.kt` (`865` LoC) clears `5` mutually exclusive `rememberSaveable` IDs manually across `8` sites with a latent priority mismatch between `sheetPeekHeight` and `sheetContent`.
+- **Description**:
+  1. *Sealed Dialog & Pre-Import States in `ImportBackupTabsScreen.kt` (`REQ-UI-2790.1`)*:
+     - `ImportBackupTabsScreen` SHALL model the `4` destructive full-restore confirmation `AlertDialog`s via a `sealed interface PendingRestoreSource` (`LocalFile(uri)`, `AutomaticLocalBackup`, `Dropbox`, `GoogleDrive`) rendered by one parameterized `AlertDialog`.
+     - `ImportBackupTabsScreen` SHALL model the `3` cloud informational `AlertDialog`s via a `sealed interface CloudInfoDialog` (`DropboxDisconnected`, `GoogleDriveDisconnected`, `NoCloudConnected`) rendered by one parameterized `AlertDialog`, updating `isDropboxConnected` and `isGoogleDriveConnected` `remember` keys to observe that state (`REQ-MIG-036.13`).
+     - `ImportBackupTabsScreen` SHALL model the `5` active `PreImportTuningBottomSheet` triggers via a `sealed interface PendingImportSource` (`DropboxBulk(format)`, `LegacyFiles(uris, format)`, `FitFiles(uris)`, `StravaArchive(uri)`, `Directory(uri, format)`), preserving `showStravaUploadOption = false` on `StravaArchive`, single-file `importLegacyFile` vs multi-file `importWorkoutFiles` dispatch on `LegacyFiles`, and pre-picker SAF launcher format holders (`pendingSingleLegacyFormat`, `pendingDirectoryFormat`) for async `rememberLauncherForActivityResult` callbacks (`REQ-UI-293`, `REQ-UI-362`).
+     - Dead `pendingSingleLegacyUri` state and its unreachable `PreImportTuningBottomSheet` branch SHALL be removed.
+     - Once `ImportBackupTabsScreen.kt` shrinks `<= 1,500` LoC, `ArchitectureConformanceContractTest.MAX_MONOLITH_FILE_LOC_BASELINE` MUST remove `ImportBackupTabsScreen.kt` (`REQ-PRO-129.2`).
+  2. *Sealed `MapPeekSelection` with `Saver` & Unified Header Measurement in `MapScreenWithTrack.kt` (`REQ-UI-2790.2`)*:
+     - `MapScreenWithTrack` SHALL replace the `5` mutually exclusive `rememberSaveable` selection IDs (`selectedSegmentId`, `selectedRouteId`, `selectedClusterId`, `selectedClimbId`, `selectedLocationId`) and `8` manual multi-null reset blocks with a single `sealed interface MapPeekSelection` (`Segment(id)`, `Route(id)`, `Cluster(id)`, `Location(id)`, `Climb(id)`) stored via `rememberSaveable(stateSaver = MapPeekSelection.Saver)`.
+     - `MapPeekSelection.Saver` SHALL losslessly round-trip `null` and all `5` variants across configuration changes/process death while `LaunchedEffect(targetLocationId)` continues selecting `MapPeekSelection.Location(targetLocationId)` when `targetLocationId != null && targetLocationId > 0`.
+     - `MapScreenWithTrack` SHALL distinguish sheet-backed selections (`Segment`, `Route`, `Cluster`, `Location`) from `Climb` so `Climb` keeps `BottomSheetScaffold` hidden (`0.dp` peek) and renders modal `ClimbDetailSheet`, while sheet-backed selections dispatch `sheetPeekHeight` and `sheetContent` from a single exhaustive `when (peekSelection)` without priority mismatch.
+     - `MapScreenWithTrack` SHALL replace `3` separate `measured*HeaderHeight` states with a single `measuredHeaderHeight` keyed via `remember(peekSelection)` (`REQ-UI-221`) while preserving `editingLocation`/`previewRadius` coexistence with `Location`, location-peek expansion lock (`confirmValueChange` rejecting `SheetValue.Expanded` & `sheetSwipeEnabled = false`, `REQ-UI-238`), and `BackHandler`.
+  3. *Preserved Signatures & Invariants (`REQ-UI-2790.3`)*:
+     - Public signatures of `ImportBackupTabsScreen`, `PreImportTuningBottomSheet`, and `MapScreenWithTrack` MUST remain unchanged; `showMappingDialog` (`MappingRequired` flow) and `activeInteraction` (`ClusterNamingDialog`) remain intact; `0` `strings*.xml` edits and `0` visual/behavioral regressions.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ImportBackupTabsScreen`, *When* local/auto/Dropbox/GoogleDrive restore, disconnected/no-cloud notice, or FIT/TCX/GPX/folder/Dropbox/Strava pre-import tuning is triggered, *Then* exactly one `AlertDialog` or `PreImportTuningBottomSheet` renders from `PendingRestoreSource`/`CloudInfoDialog`/`PendingImportSource` with `showStravaUploadOption = false` for Strava, `pendingSingleLegacyUri` absent, `isDropboxConnected`/`isGoogleDriveConnected` keys refreshing, and `ImportBackupTabsScreen.kt <= 1,500` LoC.
+• *Given* `MapScreenWithTrack` with `Segment`, `Route`, `Cluster`, `Location`, or `Climb` layers, *When* entities are tapped sequentially, `BackHandler`/`onMapClick` fires, or configuration changes occur, *Then* `MapPeekSelection.Saver` preserves the active variant, `sheetPeekHeight` and `sheetContent` always match, `Climb` shows modal `ClimbDetailSheet` without peek overlap, `Location` blocks `SheetValue.Expanded`, and `measuredHeaderHeight` resets cleanly per selection.
+• *Given* behavioral Compose (`createComposeRule()`) and `MapPeekSelection.Saver` unit tests plus existing migration/map/build contract suites, *When* executed, *Then* 100% pass with `0` reflection-only UI stubs (`REQ-PRO-132`) and `0` `src/main` test reads (`REQ-PRO-049.1`).
+
+**Invariants**: Public composable signatures preserved; `REQ-MIG-036.13`, `REQ-UI-221`, `REQ-UI-238`, `REQ-UI-293`, `REQ-UI-322`, `REQ-UI-362`, `REQ-MAP-059` contracts intact; `ImportBackupTabsScreen.kt` ratcheted out of `MAX_MONOLITH_FILE_LOC_BASELINE`; `0` `strings*.xml` edits; `0` Compose snapshot writes during composition (`Rule 66`).
+
+---
+
+### REQ-UI-2791: PMC Chart Box-to-Curve Visual Mapping, Zero-Baseline CTL Area Fill, Rounded Y-Axis Ticks & Unclipped Readiness Badges (`ATT-9357`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2791`
+- **System Requirement(s)**: Derived (SW-only — Compose UI presentation refinement of `REQ-UI-401.3` / `REQ-UI-495`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PerformanceManagementChartCard.kt`, `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`
+- **Localization Parity**: `N/A - 0 new strings (reuses existing ATT-5678 trademark-free 9-locale athlete_profile_pmc_* strings)`
+- **Rationale**: Physical Pixel 10 inspection (`ATT-9357`, `pixel10_screen.png`) of **Fitness & Physiologie -> Fitness & Ermüdung** revealed that `Form (Balance)`'s border used `PmcOptimalBlue` instead of its amber curve color `PmcTsbAmber` while Row 2 non-plotted KPIs (`ACWR`, `7T-Steigerung`) collided with `PmcAtlMagenta`/`PmcCtlBlue`, `Optimaler Aufbau` clipped to `Optimaler Auf...`, the blue CTL area fill shaded negative territory down to `-26`, Y-axis ticks rendered raw `30 / 2 / -26` with an adjacent duplicate zero line, and `ACWR` used `Locale.getDefault()` instead of `currentLocale`. Additionally, `AthleteProfileScreen.kt` sat at its exact `1,975 / 1,975` LoC monolith ceiling (`ArchitectureConformanceContractTest.kt:125`).
+- **Description**:
+  1. *Unambiguous Box-to-Curve Mapping, Curve Swatches & Legend (`REQ-UI-2791.1`)*:
+     - Row 1 plotted KPI cards in `PerformanceManagementChartCard` (`Fitness (42d)` -> `TTColor.PmcCtlBlue`, `Ermüdung (7d)` -> `TTColor.PmcAtlMagenta`, `Form (Balance)` -> `TTColor.PmcTsbAmber`) SHALL anchor their card borders and visible curve swatch indicators strictly to their exact chart curve colors, while styling `Form (Balance)`'s semantic readiness zone text (`TsbReadinessZone`: `PmcFreshGreen`, `onSurfaceVariant`, `PmcOptimalBlue`, `error`) independently on its status line so readiness semantics MUST NEVER hijack the curve identity border or swatch.
+     - Row 2 non-plotted derived KPIs (`ACWR`, `7T-Steigerung`) SHALL use neutral card borders (`MaterialTheme.colorScheme.outlineVariant`) to prevent color collision with `PmcCtlBlue` and `PmcAtlMagenta`, preserving semantic status coloring strictly on their status text/badge.
+     - `PerformanceManagementChartCard` SHALL render a compact horizontal curve legend pairing each curve swatch (`PmcCtlBlue`, `PmcAtlMagenta`, `PmcTsbAmber`) with the existing `ATT-5678` trademark-free 9-locale labels (`athlete_profile_pmc_ctl_label`, `athlete_profile_pmc_atl_label`, `athlete_profile_pmc_tsb_label`).
+  2. *Unclipped Multi-Line Readiness Badge & Uniform Row Heights (`REQ-UI-2791.2`)*:
+     - `PmcStatBadge` SHALL allow its readiness/status `badgeText` to wrap cleanly up to `2` lines (`maxLines = 2`, `softWrap = true`, `overflow = TextOverflow.Ellipsis`) so multi-word localized readiness labels (specifically DE `Optimaler Aufbau`, ES `Sobrecarga óptima`, FR `Surcharge optimale`, IT `Sovraccarico ottimale`) render without ellipsis clipping on 3-column mobile viewports (`360–412 dp`), while maintaining uniform aligned card heights via `Modifier.height(IntrinsicSize.Min)` and `Modifier.fillMaxHeight()` (`REQ-UI-495`).
+  3. *CTL Area Fill Clamped to Zero Baseline `zeroY` (`REQ-UI-2791.3`)*:
+     - `PerformanceManagementChartCanvas` SHALL compute the clamped zero baseline `zeroY = (topPad + plotH * (1f - ((0.0 - yMin) / yRange).toFloat())).coerceIn(topPad, topPad + plotH)` (`topPad + plotH` only when `yMin >= 0`) and SHALL anchor both the CTL `fillPath` closing edge and its vertical gradient `endY = zeroY`, producing zero pale-blue CTL shading below `0` whenever `CTL = 0` and `yMin < 0`.
+  4. *Clean Rounded Y-Axis Bounds & Explicit `0` Tick (`REQ-UI-2791.4`)*:
+     - `AthleteMetricsPlotMath` SHALL provide a pure deterministic helper (`computePmcYAxisScale`) returning rounded Y-axis bounds and clean human-readable tick increments (`5, 10, 15, 20, 25, 50, ...` scaled by powers of 10) that explicitly include `0` whenever data spans or touches zero, rendering `0` once as an emphasized labeled gridline and eliminating arbitrary ticks (`30 / 2 / -26`) and adjacent duplicate zero lines.
+  5. *`currentLocale` Decimal Formatting Parity for `ACWR` (`REQ-UI-2791.5`)*:
+     - `PerformanceManagementChartCard` SHALL format `pmcSummary.currentAcwr` using `currentLocale` (`LocalConfiguration.current.locales[0]`, `"%.2f"`) matching CTL/ATL/TSB formatting (`0` `Locale.US` or `Locale.getDefault()` drift in `PerformanceManagementChartCard`).
+  6. *Modular Extraction & Monolith Ceiling Compliance (`REQ-UI-2791.6`)*:
+     - `PerformanceManagementChartCard`, `PmcStatBadge`, and `PerformanceManagementChartCanvas` SHALL be extracted into sibling `PerformanceManagementChartCard.kt` (`<= 1,500` LoC), keeping `AthleteProfileScreen.kt` cleanly within `(1500, 1975]` LoC (`ArchitectureConformanceContractTest.kt:125, :517`) with Banister/Coggan `TSB_t = CTL_{t-1} - ATL_{t-1}` (`PowerPhysiologyCalculator.kt`) and `ATT-9360` (`ACWR` `CTL >= 15` gate / Tier-4 `sRPE`) untouched and `0` new string keys.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* **Fitness & Physiologie -> Fitness & Ermüdung** with populated PMC data (including `TsbReadinessZone.OPTIMAL_OVERLOAD`), *When* `PerformanceManagementChartCard` renders, *Then* Row 1 cards (`Fitness (42d)`, `Ermüdung (7d)`, `Form (Balance)`) display borders and curve swatches matching `PmcCtlBlue`, `PmcAtlMagenta`, and `PmcTsbAmber` alongside a compact curve legend, while `ACWR` and `7T-Steigerung` use neutral borders with semantic status text only.
+  • *Given* a German (`de-DE`) mobile viewport (`360 dp`) with `Form (Balance)` in `OPTIMAL_OVERLOAD` (`Optimaler Aufbau`), *When* rendered, *Then* `Optimaler Aufbau` displays completely without ellipsis truncation (`hasVisualOverflow == false`), `ACWR` formats with a comma decimal separator via `currentLocale`, and all Row 1 cards maintain equal aligned heights.
+  • *Given* a PMC series containing `CTL = 0` days alongside negative `TSB` values (e.g. `-21` to `+25`), *When* `PerformanceManagementChartCanvas` draws the chart, *Then* Y-axis ticks use clean rounded multiples explicitly including a single labeled `0` line (no duplicate zero line) and the CTL blue area fill closes at `zeroY` leaving negative territory unshaded.
+  • *Given* Light and Dark/AMOLED rendered Compose screenshots (`Rule 8.5`), *When* inspected via `read_file`, *Then* all curves, swatches, legend, Y-axis ticks, and localized badges render cleanly with zero clipping, overlap, or theme contrast regressions.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-401` (`REQ-UI-401.3`/`.4`) and `REQ-UI-495` (`TST-UI-364`, `TST-UI-495`) targeting `AthleteProfileScreen.kt`, `PerformanceManagementChartCard.kt`, and `AthleteMetricsPlotMath.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-3859` introduced PMC UI; `ATT-5678` replaced proprietary Peaksware trademarks across all 9 locales; `ATT-4927` (`REQ-UI-495`) added `IntrinsicSize.Min` uniform heights & dedicated `selectedPmcTimeRange`.
+  3. *Root Reason for Existing Formulation*: Original `PmcStatBadge` shared one `accentColor` for both border and status text and anchored CTL fill to `topPad + plotH`, assuming positive series without sparse zero-CTL / negative-TSB onset periods.
+  4. *Preservation of Core Invariants*: Preserves Banister/Coggan `TSB_t = CTL_{t-1} - ATL_{t-1}` (`PowerPhysiologyCalculator.kt` untouched), `ATT-9360` out-of-scope isolation, `ATT-5678` trademark-free 9-locale strings (`0` new keys), `IntrinsicSize.Min` + `fillMaxHeight()` uniform heights, `CompactSelectorPill` time-range selector, `AthleteProfileScreen.kt` within `(1500, 1975]` LoC, and `HrvRampTestScreenTest` `AthleteProfileScreenKt` symbol.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1878,3 +1949,10 @@
 | `1.0.13` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Added `REQ-UI-2788` (`[Planned]`, `.1`–`.3`) for adequate Value+Graph sparkline Canvas height (`46/52/60/68.dp`), monotonic Graph-only heights (`48/56/68/84.dp`), compact `12.sp` X-axis leading (`includeFontPadding = false`), flexible `heightIn(min).weight(1f)` in `SensorFieldView`, and `52.dp` preview parity (`N/A - no new or modified UI strings`). |
 | `1.0.14` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `REQ-UI-2788` to `[Implemented]` (`SensorSparklineView.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `SensorFieldViewSparklineLayoutComposeTest.kt`, Light/Dark `Rule 8.5` PNG `ATT-8995_sparkline_value_graph_layout.png`; `0` `strings*.xml` or monolith edits). |
 | `1.0.15` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `REQ-UI-2788` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9382` @ `a5cbbd1b`) `57/57 PASS` across 11 suites + `:app:assembleDebug` + `0` new Kotlin/deprecation warnings (`Rule 7.5`, `0` `app/` diff since `a5cbbd1b`), `Rule 8.5` Light/Dark PNG certified, `4/4` safety linters PASS, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-8995_walkthrough.md`. |
+| `1.0.16` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Added `REQ-UI-2790` `[Planned]` for type-safe sealed UI state models (`PendingRestoreSource`, `CloudInfoDialog`, `PendingImportSource`, `MapPeekSelection` + `Saver`, dead `pendingSingleLegacyUri` removal, `<= 1,500` LoC ratchet). |
+| `1.0.17` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Promoted `REQ-UI-2790` to `[Implemented]` (`ImportBackupTabsScreen.kt` `1,400` LoC, `MapScreenWithTrack.kt` `886` LoC, `ArchitectureConformanceContractTest.kt` baseline ratcheted to 15, `ImportBackupTabsSealedStateComposeTest.kt`, `MapPeekSelectionSaverAndUiComposeTest.kt`). |
+| `1.0.18` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Promoted `REQ-UI-2790` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9485` @ `cd809943`: `886/886 PASS` across 172 suites, `0` new warnings, `--check-verified-evidence` `exit 0`). |
+| `1.0.19` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Added `REQ-UI-2791` (`[Planned]`, `.1`–`.6`, refining `REQ-UI-401.3`/`REQ-UI-495`) for PMC box-to-curve swatches/legend & neutral Row 2 borders, 2-line unclipped readiness badges, `zeroY`-clamped CTL area fill, pure rounded Y-axis ticks with explicit `0`, `currentLocale` `ACWR` formatting, and modular `PerformanceManagementChartCard.kt` extraction (`0` new strings). |
+| `1.0.20` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `REQ-UI-2791` to `[Implemented]` (`PerformanceManagementChartCard.kt` `613` LoC, `AthleteProfileScreen.kt` `1,596/1,975` LoC, `AthleteMetricsPlotMath.kt` `365` LoC; `55/55 PASS` across 7 Tier-1 suites + `3/3` Python safety linters, `0` new warnings, `Rule 8.5` Light/Dark PNG inspected). |
+| `1.0.21` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `REQ-UI-2791` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9506` @ `04271fff`: `55/55` Stage 4 + `35/35` Gate 4 PASS, `0` `app/` drift, `0` new warnings, `3/3` safety linters PASS, `Rule 8.5` Light/Dark PNG certified, `--check-verified-evidence` `exit 0`). |
+| `1.0.22` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Re-promoted `REQ-UI-2791` to `[Verified]` in Stage 5 Bounce 1 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 Bounce 1 `ATT-9512` @ `4fe0f4af`: narrow-range `yMin == ticks.first()` / `yMax == ticks.last()` sync, `currentLocale` X-axis `formatShortDate`, TalkBack decorative swatch cleanup, `36/36 PASS`, `0` `app/` drift, `Rule 8.5` PNG re-certified, `--check-verified-evidence` `exit 0`). |

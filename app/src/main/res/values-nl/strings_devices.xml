@@ -221,4 +221,7 @@
     <string name="devices_wheel_circumference_auto_hint">Startbandenmaat voor nieuwe sensoren — wordt tijdens ritten automatisch via GNSS gekalibreerd.</string>
     <string name="devices_wheel_baseline_format">Basiswaarde: %1$d mm</string>
     <string name="devices_wheel_history_empty">Nog geen kalibratiegeschiedenis. Voltooi een rit met GNSS en deze wielsensor om het verloop te bekijken.</string>
+    <!-- Smartphone Raw Sensor Sidecar Recording (ATT-9348, REQ-EXP-045.5) -->
+    <string name="tuning_record_smartphone_raw_title">Ruwe smartphonesensoren opnemen</string>
+    <string name="tuning_record_smartphone_raw_desc">Sla gecomprimeerde IMU-, barometer-, stap- en GNSS-gegevens per training op voor offline herhaling</string>
 </resources>

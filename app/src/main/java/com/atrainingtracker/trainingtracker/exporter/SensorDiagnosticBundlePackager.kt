@@ -53,6 +53,7 @@ object SensorDiagnosticBundlePackager {
             }
 
             val sidecarFile = PolarRawTelemetryRecorder.getSidecarFile(context, fileBaseName)
+            val phoneSidecarFile = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.getSidecarFile(context, fileBaseName)
 
             val workoutRepo = WorkoutRepository.getInstance(context)
             val workoutId = workoutRepo.getWorkoutIdByBaseFileName(fileBaseName)
@@ -65,11 +66,19 @@ object SensorDiagnosticBundlePackager {
             }
 
             ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
-                // 1. Raw sidecar (if exists)
+                // 1. Raw Polar sidecar (if exists)
                 if (sidecarFile.exists() && sidecarFile.length() > 0) {
                     val entryName = sidecarFile.name
                     zos.putNextEntry(ZipEntry(entryName))
                     FileInputStream(sidecarFile).use { fis ->
+                        fis.copyTo(zos)
+                    }
+                    zos.closeEntry()
+                }
+                // 1b. Raw smartphone sidecar (contains GNSS lat/lon rows -> strictly gated by includeGps, REQ-EXP-045.4)
+                if (includeGps && phoneSidecarFile != null && phoneSidecarFile.exists() && phoneSidecarFile.length() > 0) {
+                    zos.putNextEntry(ZipEntry(phoneSidecarFile.name))
+                    FileInputStream(phoneSidecarFile).use { fis ->
                         fis.copyTo(zos)
                     }
                     zos.closeEntry()
@@ -192,7 +201,12 @@ object SensorDiagnosticBundlePackager {
                     for (colIdx in includedColumnIndices) {
                         if (!first) bodyBuilder.append(",")
                         first = false
-                        val value = cursor.getString(colIdx) ?: ""
+                        val value = when (cursor.getType(colIdx)) {
+                            android.database.Cursor.FIELD_TYPE_NULL -> ""
+                            android.database.Cursor.FIELD_TYPE_FLOAT -> cursor.getDouble(colIdx).toString()
+                            android.database.Cursor.FIELD_TYPE_INTEGER -> cursor.getLong(colIdx).toString()
+                            else -> cursor.getString(colIdx) ?: ""
+                        }
                         bodyBuilder.append(escapeCsv(value))
                     }
                     bodyBuilder.append("\n")

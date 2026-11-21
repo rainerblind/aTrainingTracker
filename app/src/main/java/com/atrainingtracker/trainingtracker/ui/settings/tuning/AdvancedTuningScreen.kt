@@ -125,6 +125,7 @@ fun AdvancedTuningScreen(
     var enableCardioPowerDynamics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS) }; var showCardioPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY) }
     var dfaA1ThresholdT1 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1) }; var dfaA1ThresholdT2 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2) }; var hrvArtifactGateThresholdPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT) }
     var rawSensorRetentionPolicy by remember { mutableStateOf(TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY) }
+    var recordSmartphoneRawTelemetryEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED) }
     var enableMorningSleepAndWellness by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS) }
     var enableSleepDurationAndQuality by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_SLEEP_DURATION_AND_QUALITY) }
     var enableMorningEnergy by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY) }
@@ -179,6 +180,7 @@ fun AdvancedTuningScreen(
         enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
         dfaA1ThresholdT1 = config.dfaA1ThresholdT1; dfaA1ThresholdT2 = config.dfaA1ThresholdT2; hrvArtifactGateThresholdPercent = config.hrvArtifactGateThresholdPercent
         rawSensorRetentionPolicy = config.rawSensorRetentionPolicy
+        recordSmartphoneRawTelemetryEnabled = config.recordSmartphoneRawTelemetryEnabled
         enableMorningSleepAndWellness = config.enableMorningSleepAndWellness
         enableSleepDurationAndQuality = config.enableSleepDurationAndQuality
         enableMorningEnergy = config.enableMorningEnergy
@@ -224,7 +226,7 @@ fun AdvancedTuningScreen(
             wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec,
             gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
             slopeMinSpeedMps = slopeMinSpeed, postWorkoutErtsSmoothingEnabled = postWorkoutErtsSmoothingEnabled,
-            rawSensorRetentionPolicy = rawSensorRetentionPolicy, paceCeilingMinKm = paceCeilingMinKm,
+            rawSensorRetentionPolicy = rawSensorRetentionPolicy, recordSmartphoneRawTelemetryEnabled = recordSmartphoneRawTelemetryEnabled, paceCeilingMinKm = paceCeilingMinKm,
             routeSelectionRadiusKm = routeSelectionRadiusKm, navigationCueDismissDurationSec = navigationCueDismissDurationSec,
             elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
             suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
@@ -429,7 +431,9 @@ fun AdvancedTuningScreen(
                     hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent,
                     onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it },
                     rawSensorRetentionPolicy = rawSensorRetentionPolicy,
-                    onRawSensorRetentionPolicyChange = { rawSensorRetentionPolicy = it }
+                    onRawSensorRetentionPolicyChange = { rawSensorRetentionPolicy = it },
+                    recordSmartphoneRawTelemetryEnabled = recordSmartphoneRawTelemetryEnabled,
+                    onRecordSmartphoneRawTelemetryChange = { recordSmartphoneRawTelemetryEnabled = it }
                 )
             }
 

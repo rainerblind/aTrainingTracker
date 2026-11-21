@@ -18,6 +18,7 @@ package com.atrainingtracker.trainingtracker.exporter.uploader
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.raw.RawSensorSidecarFiles
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
@@ -53,14 +54,20 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
     }
 
     public override fun doExport(exportInfo: ExportInfo): ExportResult {
-        val filename = exportInfo.shortPath
-        val file = getBaseFile(filename)
-        if (!file.exists()) {
-            if (exportInfo.fileFormat == FileFormat.RAW_SENSOR) {
+        val filesToUpload: List<Pair<String, File>> = if (exportInfo.fileFormat == FileFormat.RAW_SENSOR) {
+            val sidecars = RawSensorSidecarFiles.resolveExportableSidecars(mContext, exportInfo.fileBaseName)
+            if (sidecars.isEmpty()) {
                 Log.i(TAG, "Raw sensor sidecar does not exist for ${exportInfo.fileBaseName} (graceful skip)")
                 return ExportResult(true, false, "Raw sensor sidecar does not exist (graceful skip)")
             }
-            return ExportResult(false, false, "Google Drive file does not exist: $file")
+            sidecars.map { it.name to it }
+        } else {
+            val filename = exportInfo.shortPath
+            val file = getBaseFile(filename)
+            if (!file.exists()) {
+                return ExportResult(false, false, "Google Drive file does not exist: $file")
+            }
+            listOf(exportInfo.fileName to file)
         }
 
         if (!TrainingApplication.uploadToGoogleDrive()) {
@@ -102,34 +109,39 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
                 return ExportResult(false, isTransient, errorMsg)
             }
 
-            val driveFileName = exportInfo.fileName
             val mimeType = resolveMimeType(exportInfo.fileFormat)
-            var resolvedFolderId = folderId
-            var success = client.uploadOrOverwriteFile(resolvedFolderId, driveFileName, mimeType, file)
+            var resolvedFolderId: String = folderId
+            val uploadedNames = ArrayList<String>(filesToUpload.size)
 
-            // Bounded self-healing re-creation on HTTP 404 (REQ-DAT-030.3)
-            if (!success && client.lastHttpCode == 404) {
-                Log.w(TAG, "Upload returned HTTP 404 for folder $resolvedFolderId; attempting single self-healing re-creation...")
-                client.evictFolder(resolvedFolderId)
-                val recreatedFolderId = client.ensureFolderHierarchy(targetHierarchy)
-                if (recreatedFolderId != null) {
-                    resolvedFolderId = recreatedFolderId
-                    success = client.uploadOrOverwriteFile(resolvedFolderId, driveFileName, mimeType, file)
+            for ((driveFileName, file) in filesToUpload) {
+                var success = client.uploadOrOverwriteFile(resolvedFolderId, driveFileName, mimeType, file)
+
+                // Bounded self-healing re-creation on HTTP 404 (REQ-DAT-030.3)
+                if (!success && client.lastHttpCode == 404) {
+                    Log.w(TAG, "Upload returned HTTP 404 for folder $resolvedFolderId; attempting single self-healing re-creation...")
+                    client.evictFolder(resolvedFolderId)
+                    val recreatedFolderId = client.ensureFolderHierarchy(targetHierarchy)
+                    if (recreatedFolderId != null) {
+                        resolvedFolderId = recreatedFolderId
+                        success = client.uploadOrOverwriteFile(resolvedFolderId, driveFileName, mimeType, file)
+                    }
                 }
+
+                if (!success) {
+                    TrainingApplication.setGoogleDriveLastSyncStatus("FAILED")
+                    Log.e(TAG, "Failed to upload $driveFileName to Google Drive (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
+                    val httpSuffix = client.lastHttpCode?.let { " (HTTP $it)" } ?: ""
+                    val isTransient = isTransientHttpCode(client.lastHttpCode)
+                    return ExportResult(false, isTransient, "Failed to upload $driveFileName to Google Drive$httpSuffix")
+                }
+                uploadedNames.add(driveFileName)
             }
 
-            return if (success) {
-                TrainingApplication.setGoogleDriveLastSyncTimestamp(System.currentTimeMillis())
-                TrainingApplication.setGoogleDriveLastSyncStatus("SUCCESS")
-                if (DEBUG) Log.i(TAG, "Successfully uploaded $driveFileName to Google Drive")
-                ExportResult(true, false, "successfully uploaded $driveFileName to Google Drive")
-            } else {
-                TrainingApplication.setGoogleDriveLastSyncStatus("FAILED")
-                Log.e(TAG, "Failed to upload $driveFileName to Google Drive (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
-                val httpSuffix = client.lastHttpCode?.let { " (HTTP $it)" } ?: ""
-                val isTransient = isTransientHttpCode(client.lastHttpCode)
-                ExportResult(false, isTransient, "Failed to upload $driveFileName to Google Drive$httpSuffix")
-            }
+            TrainingApplication.setGoogleDriveLastSyncTimestamp(System.currentTimeMillis())
+            TrainingApplication.setGoogleDriveLastSyncStatus("SUCCESS")
+            val summaryNames = uploadedNames.joinToString(", ")
+            if (DEBUG) Log.i(TAG, "Successfully uploaded $summaryNames to Google Drive")
+            return ExportResult(true, false, "successfully uploaded $summaryNames to Google Drive")
         } catch (e: IOException) {
             Log.e(TAG, "IOException uploading to Google Drive: ${e.message}", e)
             return ExportResult(false, true, "IOException: ${e.message}")
@@ -151,6 +163,7 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
             FileFormat.GPX -> "application/gpx+xml"
             FileFormat.CSV -> "text/csv"
             FileFormat.GC -> "application/json"
+            FileFormat.RAW_SENSOR -> "application/gzip"
             else -> "application/octet-stream"
         }
     }
