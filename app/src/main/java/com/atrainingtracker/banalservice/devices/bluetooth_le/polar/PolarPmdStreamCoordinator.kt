@@ -25,6 +25,7 @@ import androidx.annotation.VisibleForTesting
 import com.polar.androidcommunications.api.ble.exceptions.BleControlPointCommandError
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdControlPointResponse
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
+import com.polar.sdk.api.model.PolarSensorSetting
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -81,7 +82,51 @@ class PolarPmdStreamCoordinator(
         const val MAX_ALREADY_IN_STATE_RETRIES = 3
         /** Bounded drop-oldest flow buffer capacity for Polar BLE streams (`REQ-STB-023.3`). */
         const val PMD_STREAM_BUFFER_CAPACITY = 64
+        const val H10_DEFAULT_ACC_HZ = 100
+        const val H10_FALLBACK_ACC_HZ = 50
+        const val H10_HIGH_RATE_ACC_HZ = 200
+        const val VERITY_IMU_HZ = 52
         val RETRY_BACKOFF_MS: LongArray = longArrayOf(500L, 1_000L, 2_000L)
+
+        /**
+         * Computes the desired Polar PMD `ACC` sample rate against device-advertised
+         * [availableRates] (`REQ-SET-122.1`). Returns `null` when no preferred rate is advertised.
+         */
+        fun computeDesiredAccRateHz(
+            availableRates: Set<Int>,
+            isVeritySense: Boolean,
+            highRateRunningDynamicsActive: Boolean
+        ): Int? = when {
+            isVeritySense -> VERITY_IMU_HZ
+            highRateRunningDynamicsActive && availableRates.contains(H10_HIGH_RATE_ACC_HZ) -> H10_HIGH_RATE_ACC_HZ
+            availableRates.contains(H10_DEFAULT_ACC_HZ) -> H10_DEFAULT_ACC_HZ
+            availableRates.contains(H10_FALLBACK_ACC_HZ) -> H10_FALLBACK_ACC_HZ
+            else -> null
+        }
+
+        /**
+         * Builds a [PolarSensorSetting] pinned to [desiredRate] with maximum supported range/resolution,
+         * falling back to `available.maxSettings()` when [desiredRate] is `null` or settings are empty.
+         */
+        fun buildSettingWithRate(
+            available: PolarSensorSetting,
+            desiredRate: Int?
+        ): PolarSensorSetting {
+            if (desiredRate == null) {
+                return available.maxSettings()
+            }
+            val selected = mutableMapOf<PolarSensorSetting.SettingType, Int>()
+            available.settings.forEach { (type, values) ->
+                if (values.isNotEmpty()) {
+                    selected[type] = if (type == PolarSensorSetting.SettingType.SAMPLE_RATE) {
+                        desiredRate
+                    } else {
+                        values.max()
+                    }
+                }
+            }
+            return if (selected.isEmpty()) available.maxSettings() else PolarSensorSetting(selected)
+        }
 
         private val _streamWarning = MutableStateFlow<PolarPmdStreamWarning?>(null)
         val streamWarning: StateFlow<PolarPmdStreamWarning?> = _streamWarning.asStateFlow()
@@ -133,6 +178,11 @@ class PolarPmdStreamCoordinator(
 
         @Volatile
         var job: Job? = null
+
+        val renegotiating = AtomicBoolean(false)
+
+        @Volatile
+        var renegotiateJob: Job? = null
     }
 
     private val slotLock = Any()
@@ -143,8 +193,10 @@ class PolarPmdStreamCoordinator(
      * Atomically claims [slot] and starts a lazy coroutine running [block] (`REQ-CON-053.1`).
      *
      * Re-entrant calls while [slot] is active or in-flight return `false` immediately without
-     * cancelling the active job. If [preAcquire] returns `false`, the atomic slot is rolled back.
-     * [onFinalCleanup] executes strictly when this coroutine still owns [slot] (`job === myJob`).
+     * cancelling the active job. [preAcquire] executes under [slotLock] before `state.active` is
+     * marked `true`, ensuring concurrent observers never see speculative `isActive(slot) == true`
+     * during a rejected [preAcquire]. [onFinalCleanup] executes strictly when this coroutine still
+     * owns [slot] (`job === myJob`).
      */
     fun launchStream(
         slot: StreamSlot,
@@ -154,19 +206,14 @@ class PolarPmdStreamCoordinator(
     ): Boolean {
         val state = slots.getValue(slot)
         val launchedJob = synchronized(slotLock) {
-            if (isShutDownProvider() || !state.active.compareAndSet(false, true)) {
+            if (isShutDownProvider() || state.active.get()) {
                 return false
             }
-            val acquired = try {
-                preAcquire?.invoke() ?: true
-            } catch (t: Throwable) {
-                state.active.set(false)
-                throw t
-            }
+            val acquired = preAcquire?.invoke() ?: true
             if (!acquired) {
-                state.active.set(false)
                 return false
             }
+            state.active.set(true)
             scope.launch(start = CoroutineStart.LAZY) {
                 val myJob = coroutineContext[Job]
                 try {
@@ -210,17 +257,126 @@ class PolarPmdStreamCoordinator(
     }
 
     /**
-     * Cancels all active stream jobs atomically, clears slot ownership and executes
-     * [onStreamsCancelled] under [slotLock] so no concurrent launch can re-acquire channels before
-     * cleanup completes, then cancels the snapshotted jobs outside [slotLock].
+     * Atomically schedules a single-flight, non-reentrant renegotiation of [slot] on a sibling
+     * [scope] coroutine (`REQ-SET-122.2`).
+     *
+     * Cancels the active [slot] collector and executes [onOldSlotCancelled] under [slotLock]
+     * (ensuring `ACC_OWNER_ONLINE` release since clearing `state.job` bypasses `launchStream`'s
+     * `onFinalCleanup`), invokes [stopStreaming], runs [beforeRelaunch], and atomically verifies
+     * `state.renegotiateJob === myJob && isAllowedToRelaunch()`, clears renegotiation ownership,
+     * and invokes [relaunch] under [slotLock] to eliminate any TOCTOU window with concurrent
+     * teardown or offline yield. Invokes [onAborted] outside [slotLock] if the renegotiation exits
+     * without relaunching.
+     */
+    fun renegotiateSlot(
+        slot: StreamSlot,
+        isAllowedToRelaunch: () -> Boolean = { !isShutDownProvider() && isConnectedProvider() },
+        onOldSlotCancelled: () -> Unit = {},
+        stopStreaming: () -> Unit,
+        beforeRelaunch: () -> Unit = {},
+        onAborted: () -> Unit = {},
+        relaunch: () -> Unit
+    ): Boolean {
+        val state = slots.getValue(slot)
+        val launchedJob = synchronized(slotLock) {
+            if (!isAllowedToRelaunch() || !state.renegotiating.compareAndSet(false, true)) {
+                return false
+            }
+            scope.launch(start = CoroutineStart.LAZY) {
+                val myJob = coroutineContext[Job]
+                var relaunched = false
+                try {
+                    val oldJob = synchronized(slotLock) {
+                        if (state.renegotiateJob !== myJob) {
+                            return@launch
+                        }
+                        val current = state.job
+                        state.job = null
+                        state.active.set(false)
+                        onOldSlotCancelled()
+                        current
+                    }
+                    oldJob?.cancel()
+                    if (!isAllowedToRelaunch()) {
+                        return@launch
+                    }
+                    runCatching { stopStreaming() }.onFailure { err ->
+                        if (err is CancellationException) throw err
+                        Log.w(TAG, "stopStreaming(${slot.name}) failed during renegotiation on ${polarIdProvider()}: ${err.message}")
+                    }
+                    if (!isAllowedToRelaunch()) {
+                        return@launch
+                    }
+                    beforeRelaunch()
+                    synchronized(slotLock) {
+                        if (state.renegotiateJob === myJob) {
+                            state.renegotiateJob = null
+                            state.renegotiating.set(false)
+                            if (isAllowedToRelaunch()) {
+                                relaunch()
+                                relaunched = true
+                            }
+                        }
+                    }
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to renegotiate ${slot.name} stream on ${polarIdProvider()}: ${t.message}")
+                } finally {
+                    synchronized(slotLock) {
+                        if (state.renegotiateJob === myJob) {
+                            state.renegotiateJob = null
+                            state.renegotiating.set(false)
+                        }
+                    }
+                    if (!relaunched) {
+                        onAborted()
+                    }
+                }
+            }.also { state.renegotiateJob = it }
+        }
+        launchedJob.start()
+        return true
+    }
+
+    /**
+     * Atomically cancels all in-flight slot renegotiations so delayed restarts cannot fire after
+     * disconnect, shutdown, or offline PFTP GATT yield (`REQ-SET-122.2`).
+     *
+     * @return set of [StreamSlot]s that had an active renegotiation cancelled.
+     */
+    fun cancelAllRenegotiations(): Set<StreamSlot> {
+        val cancelledSlots = mutableSetOf<StreamSlot>()
+        val jobsToCancel = synchronized(slotLock) {
+            slots.entries.mapNotNull { (slot, state) ->
+                val current = state.renegotiateJob
+                state.renegotiateJob = null
+                state.renegotiating.set(false)
+                if (current != null) {
+                    cancelledSlots.add(slot)
+                }
+                current
+            }
+        }
+        jobsToCancel.forEach { it.cancel() }
+        return cancelledSlots
+    }
+
+    /**
+     * Cancels all active stream jobs and in-flight renegotiations atomically, clears slot ownership
+     * and executes [onStreamsCancelled] under [slotLock] so no concurrent launch can re-acquire
+     * channels before cleanup completes, then cancels the snapshotted jobs outside [slotLock].
      */
     fun cancelAllStreams(onStreamsCancelled: () -> Unit = {}) {
         val jobsToCancel = synchronized(slotLock) {
-            val snapshot = slots.values.mapNotNull { state ->
-                val current = state.job
+            val snapshot = mutableListOf<Job>()
+            for (state in slots.values) {
+                state.renegotiateJob?.let(snapshot::add)
+                state.renegotiateJob = null
+                state.renegotiating.set(false)
+                state.job?.let(snapshot::add)
                 state.job = null
                 state.active.set(false)
-                current
             }
             onStreamsCancelled()
             snapshot
@@ -231,6 +387,8 @@ class PolarPmdStreamCoordinator(
     fun isActive(slot: StreamSlot): Boolean = slots.getValue(slot).active.get()
 
     fun isJobActive(slot: StreamSlot): Boolean = slots.getValue(slot).job?.isActive == true
+
+    fun isRenegotiating(slot: StreamSlot): Boolean = slots.getValue(slot).renegotiating.get()
 
     /**
      * Resets per-connect-cycle warning deduplication and clears any active global warning owned by

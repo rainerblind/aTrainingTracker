@@ -60,8 +60,10 @@ import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.math.PI
@@ -2710,6 +2712,722 @@ class PolarOnlineStreamingBridgeTest {
             assertNotNull("Stale pauseForOfflineSync() must NOT cancel active searchTimeoutJob", bridge.getSearchTimeoutJobForTesting())
             assertTrue(bridge.isSearching)
         } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-122.1, REQ-SET-122.2, REQ-SET-122.3 / TST-SET-124.1, TST-SET-124.3
+    @Test
+    fun testH10LateRunActivation_renegotiatesAcc100To200HzPreservesStridesAndEmitsVoGct_TST_SET_124_1() = runTest {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Mac = "AA:BB:CC:DD:EE:46"
+        val h10IdStr = "93460001"
+        val h10DevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, h10Mac, "Polar H10 $h10IdStr", "Polar Electro", 90, true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accAvailable = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+            every { maxSettings() } returns PolarSensorSetting(
+                mapOf(
+                    PolarSensorSetting.SettingType.SAMPLE_RATE to 200,
+                    PolarSensorSetting.SettingType.RESOLUTION to 16,
+                    PolarSensorSetting.SettingType.RANGE to 8
+                )
+            )
+        }
+        val capturedRates = mutableListOf<Int?>()
+        val accFlows = mutableListOf<MutableSharedFlow<PolarAccelerometerData>>()
+        coEvery { mockApi.requestStreamSettings(h10IdStr, PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailable
+        every { mockApi.startHrStreaming(h10IdStr) } returns flowOf()
+        every { mockApi.startAccStreaming(h10IdStr, any()) } answers {
+            val setting = secondArg<PolarSensorSetting>()
+            capturedRates.add(setting.settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            MutableSharedFlow<PolarAccelerometerData>(extraBufferCapacity = 64).also { accFlows.add(it) }
+        }
+
+        var currentSport = BSportType.UNKNOWN
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10DevId,
+            macAddress = h10Mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { currentSport },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.startSearching()
+            val cb = bridge.getSdkCallbackForTesting()
+            cb.deviceConnected(PolarDeviceInfo(h10IdStr, h10Mac, -55, "Polar H10 $h10IdStr", true))
+            cb.bleSdkFeatureReady(h10IdStr, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+
+            assertEquals("H10 connecting during BSportType.UNKNOWN must initially negotiate 100 Hz", listOf(100), capturedRates)
+            assertEquals(PolarOfflineGattCoordinator.ACC_OWNER_ONLINE, PolarOfflineGattCoordinator.getAccChannelOwner(h10IdStr))
+
+            // Switch to BSportType.RUN (simulating Tier-3 inference detected inside processAccData on active 100 Hz stream)
+            val fStep = 162.0 / 60.0
+            val omega = 2.0 * PI * fStep
+            val ampMg = ((0.085 / 2.0) * omega * omega / 9.80665) * 1000.0
+            currentSport = BSportType.RUN
+
+            // Emit 4 s of 100 Hz frames BEFORE draining renegotiation so STRIDES accumulate and self-trigger renegotiation inside ACC collector
+            val samples100Hz = (0 until 400).map { i ->
+                val tMs = i * 10L
+                val zMg = (1000.0 + ampMg * cos(omega * (tMs / 1000.0))).roundToInt()
+                PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, zMg)
+            }
+            for (chunk in samples100Hz.chunked(200)) {
+                accFlows[0].tryEmit(PolarAccelerometerData(chunk))
+            }
+            testScheduler.runCurrent()
+
+            val stridesBefore200Hz = (bridge.getSensor(SensorType.STRIDES)?.value as? Int) ?: 0
+            assertTrue(
+                "100 Hz ACC must accumulate > 0 STRIDES before/during upgrade (got $stridesBefore200Hz)",
+                stridesBefore200Hz > 0
+            )
+            assertEquals("Tier-3 RUN activation must renegotiate ACC from 100 Hz -> 200 Hz", listOf(100, 200), capturedRates)
+            verify(atLeast = 1) { mockApi.stopStreaming(h10IdStr, PmdMeasurementType.ACC) }
+            assertEquals(
+                "Replacement 200 Hz ACC stream must retain ACC_OWNER_ONLINE after renegotiation",
+                PolarOfflineGattCoordinator.ACC_OWNER_ONLINE,
+                PolarOfflineGattCoordinator.getAccChannelOwner(h10IdStr)
+            )
+            assertTrue("highRateRunningDynamicsActive must be true in RUN", bridge.highRateRunningDynamicsActive)
+
+            // Emit 8 s of 200 Hz frames into replacement ACC flow
+            val samples200Hz = (0 until 1600).map { i ->
+                val tMs = 4_500L + i * 5L
+                val zMg = (1000.0 + ampMg * cos(omega * (tMs / 1000.0))).roundToInt()
+                PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, zMg)
+            }
+            for (chunk in samples200Hz.chunked(40)) {
+                accFlows[1].tryEmit(PolarAccelerometerData(chunk))
+            }
+            testScheduler.runCurrent()
+
+            val stridesAfter200Hz = (bridge.getSensor(SensorType.STRIDES)?.value as? Int) ?: 0
+            assertTrue(
+                "Cumulative STRIDES must continue monotonically across 100 -> 200 Hz renegotiation (before=$stridesBefore200Hz, after=$stridesAfter200Hz)",
+                stridesAfter200Hz > stridesBefore200Hz
+            )
+            val voCm = bridge.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double
+            val gctMs = bridge.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double
+            assertNotNull("VERTICAL_OSCILLATION must emit after 100 -> 200 Hz renegotiation", voCm)
+            assertNotNull("GROUND_CONTACT_TIME must emit after 100 -> 200 Hz renegotiation", gctMs)
+            assertTrue("VO must be within 5.0..13.0 cm (got $voCm)", voCm!! in 5.0..13.0)
+            assertTrue("GCT must be within 140..400 ms (got $gctMs)", gctMs!! in 140.0..400.0)
+
+            // Verify end-to-end MySensorManager proxy & all-sensors propagation for WorkoutSamples.db/CSV/FIT
+            val proxyVo = sensorManager.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double
+            val proxyGct = sensorManager.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double
+            assertEquals("MySensorManager proxy VO must match H10 VO", voCm, proxyVo)
+            assertEquals("MySensorManager proxy GCT must match H10 GCT", gctMs, proxyGct)
+
+            // Switch RUN -> BIKE via MULTISPORT_TRANSITION_INTENT -> unregisters VO/GCT and downgrades ACC to 100 Hz
+            currentSport = BSportType.BIKE
+            context.sendBroadcast(Intent(BANALService.MULTISPORT_TRANSITION_INTENT).setPackage(context.packageName))
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            testScheduler.runCurrent()
+
+            assertFalse("highRateRunningDynamicsActive must be false in BIKE", bridge.highRateRunningDynamicsActive)
+            assertNull("VO sensor must unregister on RUN -> BIKE", bridge.getSensor(SensorType.VERTICAL_OSCILLATION))
+            assertNull("GCT sensor must unregister on RUN -> BIKE", bridge.getSensor(SensorType.GROUND_CONTACT_TIME))
+            assertEquals("RUN -> BIKE must downgrade ACC back to 100 Hz", listOf(100, 200, 100), capturedRates)
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-122.1 / TST-SET-124.1
+    @Test
+    fun testH10RapidSportFlipDuringRenegotiation_convergesToLatestSport_andUnsupported200HzHasZeroLoop_TST_SET_124_1() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+
+        // Part A: Rapid UNKNOWN -> RUN -> BIKE flip before pending renegotiation relaunches converges directly to 100 Hz
+        val h10MacA = "AA:BB:CC:DD:EE:47"
+        val h10IdA = "93460002"
+        val devIdA = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, h10MacA, "Polar H10 $h10IdA", "Polar Electro", 90, true)
+        val mockApiA = mockk<PolarBleApi>(relaxed = true)
+        val accAvailableA = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+        }
+        val capturedRatesA = mutableListOf<Int?>()
+        coEvery { mockApiA.requestStreamSettings(h10IdA, PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailableA
+        every { mockApiA.startHrStreaming(h10IdA) } returns flowOf()
+        every { mockApiA.startAccStreaming(h10IdA, any()) } answers {
+            capturedRatesA.add(secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            flow { awaitCancellation() }
+        }
+        var sportA = BSportType.UNKNOWN
+        val bridgeA = PolarOnlineStreamingBridge(
+            context = context, mySensorManager = sensorManager, deviceId = devIdA, macAddress = h10MacA,
+            dispatcher = testDispatcher, sdkIntProvider = { 34 }, sportTypeProvider = { sportA }, apiFactory = { _, _ -> mockApiA }
+        )
+        try {
+            bridgeA.startSearching()
+            bridgeA.getSdkCallbackForTesting().deviceConnected(PolarDeviceInfo(h10IdA, h10MacA, -55, "Polar H10 $h10IdA", true))
+            bridgeA.getSdkCallbackForTesting().bleSdkFeatureReady(h10IdA, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+            assertEquals(listOf(100), capturedRatesA)
+
+            // Queue renegotiation for RUN, then immediately flip to BIKE before coroutine executes
+            sportA = BSportType.RUN
+            bridgeA.syncCadenceSensorRegistration()
+            sportA = BSportType.BIKE
+            bridgeA.syncCadenceSensorRegistration()
+            testScheduler.runCurrent()
+
+            assertEquals("Relaunch must dynamically re-evaluate latest sport (BIKE -> 100 Hz)", listOf(100, 100), capturedRatesA)
+            assertFalse(bridgeA.highRateRunningDynamicsActive)
+            assertNull(bridgeA.getSensor(SensorType.VERTICAL_OSCILLATION))
+        } finally {
+            bridgeA.shutDown()
+        }
+
+        // Part B: Firmware omitting 200 Hz (50/100 Hz only) -> zero restart loops across repeated processAccData calls
+        val h10MacB = "AA:BB:CC:DD:EE:48"
+        val h10IdB = "93460003"
+        val devIdB = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, h10MacB, "Polar H10 $h10IdB", "Polar Electro", 90, true)
+        val mockApiB = mockk<PolarBleApi>(relaxed = true)
+        val accOnly100 = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+        }
+        val capturedRatesB = mutableListOf<Int?>()
+        coEvery { mockApiB.requestStreamSettings(h10IdB, PolarBleApi.PolarDeviceDataType.ACC) } returns accOnly100
+        every { mockApiB.startHrStreaming(h10IdB) } returns flowOf()
+        every { mockApiB.startAccStreaming(h10IdB, any()) } answers {
+            capturedRatesB.add(secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            flow { awaitCancellation() }
+        }
+        var sportB = BSportType.UNKNOWN
+        val bridgeB = PolarOnlineStreamingBridge(
+            context = context, mySensorManager = sensorManager, deviceId = devIdB, macAddress = h10MacB,
+            dispatcher = testDispatcher, sdkIntProvider = { 34 }, sportTypeProvider = { sportB }, apiFactory = { _, _ -> mockApiB }
+        )
+        try {
+            bridgeB.startSearching()
+            bridgeB.getSdkCallbackForTesting().deviceConnected(PolarDeviceInfo(h10IdB, h10MacB, -55, "Polar H10 $h10IdB", true))
+            bridgeB.getSdkCallbackForTesting().bleSdkFeatureReady(h10IdB, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+
+            sportB = BSportType.RUN
+            repeat(15) { idx ->
+                bridgeB.processAccData(
+                    PolarAccelerometerData(listOf(PolarAccelerometerData.PolarAccelerometerDataSample((idx + 1) * 10_000_000L, 0, 0, 1000)))
+                )
+            }
+            testScheduler.runCurrent()
+
+            assertEquals("Unsupported 200 Hz firmware must stay at 100 Hz with zero restart loops", listOf(100), capturedRatesB)
+            verify(exactly = 0) { mockApiB.stopStreaming(h10IdB, PmdMeasurementType.ACC) }
+        } finally {
+            bridgeB.shutDown()
+        }
+
+        // Part C: Polar Verity Sense stays pinned at 52 Hz across sport transitions with zero renegotiation or VO/GCT
+        val verityMac = "AA:BB:CC:DD:EE:49"
+        val verityId = "93460004"
+        val verityDevId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, verityMac, "Polar Sense $verityId", "Polar Electro", 90, true)
+        val mockApiV = mockk<PolarBleApi>(relaxed = true)
+        val verityAccSetting = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(52),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+        }
+        val verityRates = mutableListOf<Int?>()
+        coEvery { mockApiV.requestStreamSettings(verityId, PolarBleApi.PolarDeviceDataType.ACC) } returns verityAccSetting
+        coEvery { mockApiV.requestStreamSettings(verityId, PolarBleApi.PolarDeviceDataType.GYRO) } returns verityAccSetting
+        coEvery { mockApiV.getAvailableOnlineStreamDataTypes(verityId) } returns emptySet()
+        every { mockApiV.startHrStreaming(verityId) } returns flowOf()
+        every { mockApiV.startGyroStreaming(verityId, any()) } returns flow { awaitCancellation() }
+        every { mockApiV.startAccStreaming(verityId, any()) } answers {
+            verityRates.add(secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            flow { awaitCancellation() }
+        }
+        var sportV = BSportType.UNKNOWN
+        val bridgeV = PolarOnlineStreamingBridge(
+            context = context, mySensorManager = sensorManager, deviceId = verityDevId, macAddress = verityMac,
+            dispatcher = testDispatcher, sdkIntProvider = { 34 }, sportTypeProvider = { sportV }, apiFactory = { _, _ -> mockApiV }
+        )
+        try {
+            bridgeV.startSearching()
+            bridgeV.getSdkCallbackForTesting().deviceConnected(PolarDeviceInfo(verityId, verityMac, -55, "Polar Sense $verityId", true))
+            bridgeV.getSdkCallbackForTesting().bleSdkFeatureReady(verityId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+
+            sportV = BSportType.RUN
+            bridgeV.syncCadenceSensorRegistration()
+            testScheduler.runCurrent()
+            sportV = BSportType.BIKE
+            bridgeV.syncCadenceSensorRegistration()
+            testScheduler.runCurrent()
+
+            assertEquals("Verity Sense must stay pinned at 52 Hz with zero renegotiations", listOf(52), verityRates)
+            assertNull(bridgeV.getSensor(SensorType.VERTICAL_OSCILLATION))
+            assertNull(bridgeV.getSensor(SensorType.GROUND_CONTACT_TIME))
+        } finally {
+            bridgeV.shutDown()
+        }
+    }
+
+    // REQ-SET-122.2 / TST-SET-124.2
+    @Test
+    fun testH10AccRenegotiation_cancelledOnDisconnectOfflineYieldAndShutdownWithoutLateRestart_TST_SET_124_2() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Mac = "AA:BB:CC:DD:EE:50"
+        val h10Id = "93460005"
+        val h10DevId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, h10Mac, "Polar H10 $h10Id", "Polar Electro", 90, true)
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accAvailable = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+        }
+        val capturedRates = mutableListOf<Int?>()
+        coEvery { mockApi.requestStreamSettings(h10Id, PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailable
+        every { mockApi.startHrStreaming(h10Id) } returns flowOf()
+        every { mockApi.startAccStreaming(h10Id, any()) } answers {
+            capturedRates.add(secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            flow { awaitCancellation() }
+        }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        var currentSport = BSportType.UNKNOWN
+        val bridge = PolarOnlineStreamingBridge(
+            context = context, mySensorManager = sensorManager, deviceId = h10DevId, macAddress = h10Mac,
+            dispatcher = testDispatcher, sdkIntProvider = { 34 }, sportTypeProvider = { currentSport }, apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.startSearching()
+            val info = PolarDeviceInfo(h10Id, h10Mac, -55, "Polar H10 $h10Id", true)
+            val cb = bridge.getSdkCallbackForTesting()
+            cb.deviceConnected(info)
+            cb.bleSdkFeatureReady(h10Id, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+            assertEquals(listOf(100), capturedRates)
+
+            // 1. Offline GATT yield cancels pending renegotiation so startAccStreaming is never called during yield
+            currentSport = BSportType.RUN
+            bridge.syncCadenceSensorRegistration()
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context, macAddress = h10Mac, polarId = h10Id,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING),
+                timeoutMs = 30_000L, disconnectOnExit = false
+            ) {
+                testScheduler.runCurrent()
+                assertEquals("Offline yield must cancel pending renegotiation without launching 200 Hz", listOf(100), capturedRates)
+            }
+
+            // 2. deviceDisconnected() cancels pending renegotiation without late startAccStreaming
+            bridge.syncCadenceSensorRegistration()
+            cb.deviceDisconnected(info)
+            testScheduler.runCurrent()
+            assertEquals("Disconnect must cancel pending renegotiation without late restart", listOf(100), capturedRates)
+
+            // 3. Reconnect at 100 Hz (UNKNOWN), queue renegotiation for RUN, then shutDown() -> zero late restart
+            currentSport = BSportType.UNKNOWN
+            cb.deviceConnected(info)
+            cb.bleSdkFeatureReady(h10Id, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+            assertEquals(listOf(100, 100), capturedRates)
+
+            currentSport = BSportType.RUN
+            bridge.syncCadenceSensorRegistration()
+            bridge.shutDown()
+            testScheduler.runCurrent()
+            assertEquals("shutDown() must cancel pending renegotiation without late restart", listOf(100, 100), capturedRates)
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-122.1, REQ-SET-122.2 / TST-SET-124.2
+    @Test
+    fun testH10OfflineYieldMidStopStreaming_abortsWithoutRestartDuringYieldAndRecovers200HzVoGctOnResume_TST_SET_124_2() = runTest {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Mac = "AA:BB:CC:DD:EE:51"
+        val h10Id = "93460006"
+        val h10DevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, h10Mac, "Polar H10 $h10Id", "Polar Electro", 90, true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accAvailable = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+            every { maxSettings() } returns PolarSensorSetting(
+                mapOf(
+                    PolarSensorSetting.SettingType.SAMPLE_RATE to 200,
+                    PolarSensorSetting.SettingType.RESOLUTION to 16,
+                    PolarSensorSetting.SettingType.RANGE to 8
+                )
+            )
+        }
+        val capturedRates = mutableListOf<Int?>()
+        val accFlows = mutableListOf<MutableSharedFlow<PolarAccelerometerData>>()
+        val yieldEntered = CompletableDeferred<Unit>()
+        val releaseYield = CompletableDeferred<Unit>()
+        val stopHookFired = AtomicBoolean(false)
+
+        coEvery { mockApi.requestStreamSettings(h10Id, PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailable
+        every { mockApi.startHrStreaming(h10Id) } returns flowOf()
+        every { mockApi.startAccStreaming(h10Id, any()) } answers {
+            capturedRates.add(secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            MutableSharedFlow<PolarAccelerometerData>(extraBufferCapacity = 64).also { accFlows.add(it) }
+        }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        var currentSport = BSportType.UNKNOWN
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10DevId,
+            macAddress = h10Mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { currentSport },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        var yieldJob: kotlinx.coroutines.Job? = null
+        every { mockApi.stopStreaming(h10Id, PmdMeasurementType.ACC) } answers {
+            if (stopHookFired.compareAndSet(false, true)) {
+                // Verify onOldSlotCancelled() already cancelled 100 Hz slot and released ACC_OWNER_ONLINE
+                assertFalse("Old 100 Hz ACC slot must already be inactive when stopStreaming runs", bridge.isAccStreamingForTesting())
+                assertNull("ACC_OWNER_ONLINE must already be released when stopStreaming runs", PolarOfflineGattCoordinator.getAccChannelOwner(h10Id))
+                // Simulate offline GATT yield arriving mid-stopStreaming() with disconnectOnExit = false
+                yieldJob = launch(Dispatchers.Unconfined) {
+                    PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                        context = context,
+                        macAddress = h10Mac,
+                        polarId = h10Id,
+                        features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING),
+                        timeoutMs = 30_000L,
+                        disconnectOnExit = false
+                    ) {
+                        yieldEntered.complete(Unit)
+                        releaseYield.await()
+                    }
+                }
+            }
+        }
+
+        try {
+            bridge.startSearching()
+            val info = PolarDeviceInfo(h10Id, h10Mac, -55, "Polar H10 $h10Id", true)
+            val cb = bridge.getSdkCallbackForTesting()
+            cb.deviceConnected(info)
+            cb.bleSdkFeatureReady(h10Id, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            testScheduler.runCurrent()
+            assertEquals("Initial H10 ACC in UNKNOWN must be 100 Hz", listOf(100), capturedRates)
+
+            // Trigger 100 -> 200 Hz renegotiation; offline yield arrives mid-stopStreaming()
+            currentSport = BSportType.RUN
+            bridge.syncCadenceSensorRegistration()
+            testScheduler.runCurrent()
+
+            assertTrue("Mid-stopStreaming offline yield must have entered", yieldEntered.isCompleted)
+            assertTrue("Bridge must observe active offline yield", bridge.isOfflineGattYielded())
+            assertEquals("Zero startAccStreaming calls permitted while offline yield is active", listOf(100), capturedRates)
+            assertFalse("ACC stream must remain inactive while yielded", bridge.isAccStreamingForTesting())
+            assertNull("ACC_OWNER_ONLINE must stay free during offline yield", PolarOfflineGattCoordinator.getAccChannelOwner(h10Id))
+
+            // Release offline yield (disconnectOnExit = false, bridge still connected) -> must automatically recover 200 Hz ACC + VO/GCT
+            releaseYield.complete(Unit)
+            yieldJob?.join()
+            testScheduler.runCurrent()
+
+            assertFalse(bridge.isOfflineGattYielded())
+            assertEquals("resumeAfterOfflineSync must automatically recover 200 Hz ACC stream", listOf(100, 200), capturedRates)
+            assertTrue("ACC stream must be active again post-yield", bridge.isAccStreamingForTesting())
+            assertEquals(
+                "ACC_OWNER_ONLINE must be re-acquired by recovered 200 Hz ACC stream",
+                PolarOfflineGattCoordinator.ACC_OWNER_ONLINE,
+                PolarOfflineGattCoordinator.getAccChannelOwner(h10Id)
+            )
+
+            // Emit 8 s of 200 Hz running frames into recovered ACC flow and verify VO & GCT emit cleanly
+            val fStep = 162.0 / 60.0
+            val omega = 2.0 * PI * fStep
+            val ampMg = ((0.085 / 2.0) * omega * omega / 9.80665) * 1000.0
+            val samples200Hz = (0 until 1600).map { i ->
+                val tMs = 1_000L + i * 5L
+                val zMg = (1000.0 + ampMg * cos(omega * (tMs / 1000.0))).roundToInt()
+                PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, zMg)
+            }
+            for (chunk in samples200Hz.chunked(40)) {
+                accFlows[1].tryEmit(PolarAccelerometerData(chunk))
+            }
+            testScheduler.runCurrent()
+
+            val voCm = bridge.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double
+            val gctMs = bridge.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double
+            assertNotNull("Recovered 200 Hz ACC stream must emit VERTICAL_OSCILLATION", voCm)
+            assertNotNull("Recovered 200 Hz ACC stream must emit GROUND_CONTACT_TIME", gctMs)
+            assertTrue("VO must be within 5.0..13.0 cm (got $voCm)", voCm!! in 5.0..13.0)
+            assertTrue("GCT must be within 140..400 ms (got $gctMs)", gctMs!! in 140.0..400.0)
+            assertEquals(voCm, sensorManager.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double)
+            assertEquals(gctMs, sensorManager.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double)
+        } finally {
+            if (!releaseYield.isCompleted) releaseYield.complete(Unit)
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-122.1, REQ-SET-122.2 / TST-SET-124.2
+    @Test
+    fun testH10FeatureReadyDuringOfflineYield_defersAccAndRecovers200HzVoGctOnResume_TST_SET_124_2() = runTest {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Mac = "AA:BB:CC:DD:EE:52"
+        val h10Id = "93460007"
+        val h10DevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, h10Mac, "Polar H10 $h10Id", "Polar Electro", 90, true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accAvailable = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+            every { maxSettings() } returns PolarSensorSetting(
+                mapOf(
+                    PolarSensorSetting.SettingType.SAMPLE_RATE to 200,
+                    PolarSensorSetting.SettingType.RESOLUTION to 16,
+                    PolarSensorSetting.SettingType.RANGE to 8
+                )
+            )
+        }
+        val capturedRates = mutableListOf<Int?>()
+        val accFlows = mutableListOf<MutableSharedFlow<PolarAccelerometerData>>()
+        coEvery { mockApi.requestStreamSettings(h10Id, PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailable
+        every { mockApi.startHrStreaming(h10Id) } returns flowOf()
+        every { mockApi.startAccStreaming(h10Id, any()) } answers {
+            capturedRates.add(secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull())
+            MutableSharedFlow<PolarAccelerometerData>(extraBufferCapacity = 64).also { accFlows.add(it) }
+        }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10DevId,
+            macAddress = h10Mac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.startSearching()
+            val info = PolarDeviceInfo(h10Id, h10Mac, -55, "Polar H10 $h10Id", true)
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+
+            // One-shot deviceConnected + FEATURE_POLAR_ONLINE_STREAMING arrive while offline GATT yield is active (disconnectOnExit = false)
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context,
+                macAddress = h10Mac,
+                polarId = h10Id,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING),
+                timeoutMs = 30_000L,
+                disconnectOnExit = false
+            ) {
+                mux.deviceConnected(info)
+                mux.bleSdkFeatureReady(h10Id, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+                testScheduler.runCurrent()
+
+                assertTrue("Bridge must be connected during yield", bridge.isReceivingData())
+                assertTrue("Bridge must observe active offline yield", bridge.isOfflineGattYielded())
+                assertTrue("Zero startAccStreaming calls permitted while offline yield is active", capturedRates.isEmpty())
+                assertFalse("ACC stream must remain deferred while yielded", bridge.isAccStreamingForTesting())
+                assertNull("ACC_OWNER_ONLINE must remain free while yielded", PolarOfflineGattCoordinator.getAccChannelOwner(h10Id))
+            }
+
+            // Yield released (disconnectOnExit = false) -> resumeAfterOfflineSync() must automatically start 200 Hz ACC & emit VO/GCT
+            testScheduler.runCurrent()
+            assertFalse(bridge.isOfflineGattYielded())
+            assertEquals("Deferred one-shot FEATURE_POLAR_ONLINE_STREAMING must recover 200 Hz ACC on resumeAfterOfflineSync()", listOf(200), capturedRates)
+            assertTrue("ACC stream must be active after yield release", bridge.isAccStreamingForTesting())
+            assertEquals(
+                "ACC_OWNER_ONLINE must be acquired on recovered ACC stream",
+                PolarOfflineGattCoordinator.ACC_OWNER_ONLINE,
+                PolarOfflineGattCoordinator.getAccChannelOwner(h10Id)
+            )
+
+            // Emit 8 s of 200 Hz running frames into recovered ACC flow and assert live VO/GCT emission
+            val fStep = 162.0 / 60.0
+            val omega = 2.0 * PI * fStep
+            val ampMg = ((0.085 / 2.0) * omega * omega / 9.80665) * 1000.0
+            val samples200Hz = (0 until 1600).map { i ->
+                val tMs = 1_000L + i * 5L
+                val zMg = (1000.0 + ampMg * cos(omega * (tMs / 1000.0))).roundToInt()
+                PolarAccelerometerData.PolarAccelerometerDataSample(tMs * 1_000_000L, 0, 0, zMg)
+            }
+            for (chunk in samples200Hz.chunked(40)) {
+                accFlows[0].tryEmit(PolarAccelerometerData(chunk))
+            }
+            testScheduler.runCurrent()
+
+            val voCm = bridge.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double
+            val gctMs = bridge.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double
+            assertNotNull("Recovered ACC stream must emit VERTICAL_OSCILLATION", voCm)
+            assertNotNull("Recovered ACC stream must emit GROUND_CONTACT_TIME", gctMs)
+            assertTrue("VO must be within 5.0..13.0 cm (got $voCm)", voCm!! in 5.0..13.0)
+            assertTrue("GCT must be within 140..400 ms (got $gctMs)", gctMs!! in 140.0..400.0)
+            assertEquals(voCm, sensorManager.getSensor(SensorType.VERTICAL_OSCILLATION)?.value as? Double)
+            assertEquals(gctMs, sensorManager.getSensor(SensorType.GROUND_CONTACT_TIME)?.value as? Double)
+        } finally {
+            bridge.shutDown()
+        }
+    }
+
+    // REQ-SET-122.2 / TST-SET-124.2
+    @Test
+    fun testH10StaleAbortedRenegotiationAndConcurrentYieldResume_respectsReplacementAndLinearizesPreAcquire_TST_SET_124_2() = runTest {
+        val db = DevicesDatabaseManager.getInstance(context)
+        val h10Mac = "AA:BB:CC:DD:EE:53"
+        val h10Id = "93460008"
+        val h10DevId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM, h10Mac, "Polar H10 $h10Id", "Polar Electro", 90, true
+        )
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val accAvailable = mockk<PolarSensorSetting> {
+            every { settings } returns mutableMapOf(
+                PolarSensorSetting.SettingType.SAMPLE_RATE to setOf(50, 100, 200),
+                PolarSensorSetting.SettingType.RESOLUTION to setOf(16),
+                PolarSensorSetting.SettingType.RANGE to setOf(8)
+            )
+            every { maxSettings() } returns PolarSensorSetting(
+                mapOf(
+                    PolarSensorSetting.SettingType.SAMPLE_RATE to 200,
+                    PolarSensorSetting.SettingType.RESOLUTION to 16,
+                    PolarSensorSetting.SettingType.RANGE to 8
+                )
+            )
+        }
+        val capturedRates = java.util.Collections.synchronizedList(mutableListOf<Int?>())
+        val firstStartReady = java.util.concurrent.CountDownLatch(1)
+        val secondStartReady = java.util.concurrent.CountDownLatch(1)
+        val thirdStartReady = java.util.concurrent.CountDownLatch(1)
+        val stop1Entered = java.util.concurrent.CountDownLatch(1)
+        val stop1Release = java.util.concurrent.CountDownLatch(1)
+        val stop2Entered = java.util.concurrent.CountDownLatch(1)
+        val stop2Release = java.util.concurrent.CountDownLatch(1)
+        val stopCounter = java.util.concurrent.atomic.AtomicInteger(0)
+
+        coEvery { mockApi.requestStreamSettings(h10Id, PolarBleApi.PolarDeviceDataType.ACC) } returns accAvailable
+        every { mockApi.startHrStreaming(h10Id) } returns flowOf()
+        every { mockApi.startAccStreaming(h10Id, any()) } answers {
+            val rate = secondArg<PolarSensorSetting>().settings[PolarSensorSetting.SettingType.SAMPLE_RATE]?.firstOrNull()
+            capturedRates.add(rate)
+            when (capturedRates.size) {
+                1 -> firstStartReady.countDown()
+                2 -> secondStartReady.countDown()
+                3 -> thirdStartReady.countDown()
+            }
+            flow { awaitCancellation() }
+        }
+        every { mockApi.stopStreaming(h10Id, PmdMeasurementType.ACC) } answers {
+            when (stopCounter.incrementAndGet()) {
+                1 -> {
+                    stop1Entered.countDown()
+                    stop1Release.await(5L, java.util.concurrent.TimeUnit.SECONDS)
+                }
+                2 -> {
+                    stop2Entered.countDown()
+                    stop2Release.await(5L, java.util.concurrent.TimeUnit.SECONDS)
+                }
+            }
+        }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+        var currentSport = BSportType.UNKNOWN
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = h10DevId,
+            macAddress = h10Mac,
+            dispatcher = Dispatchers.IO,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { currentSport },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.startSearching()
+            val info = PolarDeviceInfo(h10Id, h10Mac, -55, "Polar H10 $h10Id", true)
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            mux.deviceConnected(info)
+            mux.bleSdkFeatureReady(h10Id, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING)
+            assertTrue("Initial 100 Hz ACC must start", firstStartReady.await(5L, java.util.concurrent.TimeUnit.SECONDS))
+            assertEquals(listOf(100), capturedRates.toList())
+
+            // 1. Trigger renegotiation #1 (100 -> 200 Hz) and pause it inside stopStreaming()
+            currentSport = BSportType.RUN
+            bridge.syncCadenceSensorRegistration()
+            assertTrue("Renegotiation #1 must enter stopStreaming", stop1Entered.await(5L, java.util.concurrent.TimeUnit.SECONDS))
+
+            // 2. Yield cancels renegotiation #1 while stopStreaming #1 is blocked; exiting yield recovers 200 Hz ACC cleanly
+            PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                context = context, macAddress = h10Mac, polarId = h10Id,
+                features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING),
+                timeoutMs = 30_000L, disconnectOnExit = false
+            ) {
+                assertFalse("isActive(ACC) must be false during yield", bridge.isAccStreamingForTesting())
+            }
+            assertTrue("Post-yield resume must recover 200 Hz ACC", secondStartReady.await(5L, java.util.concurrent.TimeUnit.SECONDS))
+            assertEquals(listOf(100, 200), capturedRates.toList())
+
+            // 3. Trigger replacement renegotiation #2 (200 -> 100 Hz) and hold it in stopStreaming() (isActive=false, isRenegotiating=true)
+            currentSport = BSportType.BIKE
+            bridge.syncCadenceSensorRegistration()
+            assertTrue("Replacement renegotiation #2 must enter stopStreaming", stop2Entered.await(5L, java.util.concurrent.TimeUnit.SECONDS))
+
+            // 4. Release stale renegotiation #1 so its finally { onAccRenegotiationAborted() } runs WHILE replacement #2 is active
+            stop1Release.countDown()
+            Thread.sleep(60L)
+            assertEquals(
+                "Stale cancelled renegotiation's onAborted must NOT launch ACC while replacement renegotiation is in progress",
+                listOf(100, 200),
+                capturedRates.toList()
+            )
+
+            // 5. Release replacement renegotiation #2 -> finishes cleanly at 100 Hz (BIKE)
+            stop2Release.countDown()
+            assertTrue("Replacement renegotiation #2 must launch 100 Hz ACC", thirdStartReady.await(5L, java.util.concurrent.TimeUnit.SECONDS))
+            assertEquals(listOf(100, 200, 100), capturedRates.toList())
+        } finally {
+            stop1Release.countDown()
+            stop2Release.countDown()
             bridge.shutDown()
         }
     }
