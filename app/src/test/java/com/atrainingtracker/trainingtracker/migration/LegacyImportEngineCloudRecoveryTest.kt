@@ -244,6 +244,80 @@ class LegacyImportEngineCloudRecoveryTest {
         assertTrue("Expected downloading status", statusMessages.any { it.contains("Downloading") && it.contains("Dropbox") })
     }
 
+    // Verifies REQ-MIG-056 / TST-MIG-056
+    @Test
+    fun testBulkRecoverFromDropbox_rejectsTraversalAndUnsafeNamesWhileRecoveringValidSibling_TST_MIG_056() = runBlocking {
+        mockkObject(ExistingWorkoutsSnapshot.Companion)
+        every { ExistingWorkoutsSnapshot.create(any()) } returns ExistingWorkoutsSnapshot(emptySet(), emptySet())
+
+        val unsafeNames = listOf(
+            "../../evil_1.tcx" to "/tcx/evil_1.tcx",
+            "sub/evil_2.gpx" to "/gpx/evil_2.gpx",
+            "sub\\evil_3.fit" to "/fit/evil_3.fit",
+            "ride..fit" to "/fit/ride..fit",
+            "bad\u0000.fit" to "/fit/bad.fit"
+        )
+        val unsafeEntries = unsafeNames.map { (entryName, remotePath) ->
+            mockk<FileMetadata>(relaxed = true) {
+                every { name } returns entryName
+                every { pathLower } returns remotePath
+            }
+        }
+        val validEntry = mockk<FileMetadata>(relaxed = true) {
+            every { name } returns "valid_ride.tcx"
+            every { pathLower } returns "/tcx/valid_ride.tcx"
+        }
+
+        val tcxPage = mockk<ListFolderResult>(relaxed = true) {
+            every { entries } returns unsafeEntries + validEntry
+            every { hasMore } returns false
+        }
+        val emptyPage = mockk<ListFolderResult>(relaxed = true) {
+            every { entries } returns emptyList()
+            every { hasMore } returns false
+        }
+
+        val mockFilesReq = mockk<DbxUserFilesRequests>(relaxed = true)
+        val tcxBuilder = mockk<DbxUserListFolderBuilder>(relaxed = true)
+        val emptyBuilder = mockk<DbxUserListFolderBuilder>(relaxed = true)
+        every { tcxBuilder.withRecursive(true) } returns tcxBuilder
+        every { emptyBuilder.withRecursive(true) } returns emptyBuilder
+        every { tcxBuilder.start() } returns tcxPage
+        every { emptyBuilder.start() } returns emptyPage
+        every { mockFilesReq.listFolderBuilder(any()) } answers {
+            if (firstArg<String>() == "/TCX") tcxBuilder else emptyBuilder
+        }
+
+        val downloadedPaths = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val mockDownloader = mockk<DbxDownloader<FileMetadata>>(relaxed = true)
+        every { mockDownloader.download(any<OutputStream>()) } returns mockk(relaxed = true)
+        every { mockFilesReq.download(any()) } answers {
+            downloadedPaths.add(firstArg())
+            mockDownloader
+        }
+
+        mockkConstructor(DbxClientV2::class)
+        every { anyConstructed<DbxClientV2>().files() } returns mockFilesReq
+
+        mockkObject(LegacyImportEngine)
+        io.mockk.coEvery {
+            LegacyImportEngine.importFromTcxInternal(any(), any(), any(), any())
+        } returns LegacyImportEngine.ImportStatus.SUCCESS
+
+        val result = LegacyImportEngine.bulkRecoverFromDropbox(mockContext, "all")
+
+        assertEquals(unsafeNames.size, result.failedCount)
+        assertEquals(1, result.importedCount)
+        assertEquals(0, result.skippedCount)
+        assertEquals(unsafeNames.size + 1, result.totalScanned)
+        assertEquals(listOf("/tcx/valid_ride.tcx"), downloadedPaths)
+
+        // Ensure zero files escaped workerDir into cacheDir/legacy_recovery or tempFolder.root
+        val recoveryRoot = File(cacheDir, "legacy_recovery")
+        assertTrue("Expected zero leftover job files or directories", recoveryRoot.listFiles().orEmpty().isEmpty())
+        assertEquals(listOf("cache"), tempFolder.root.listFiles().orEmpty().map { it.name })
+    }
+
     @Test
     fun testBackupRestoreViewModel_emitsInformativeSummaryCountsAfterDropboxScan_TST_MIG_018() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)

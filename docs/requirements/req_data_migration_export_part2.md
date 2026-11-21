@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.19  
+**Version**: 1.0.22  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 8
+**Total Requirements**: 9
 
 ---
 
@@ -275,10 +275,38 @@
 
 ---
 
+### REQ-MIG-056: Dropbox Remote Filename Path-Traversal Sanitization & `SecureZipExtractor.sanitizeDriveFileName` Hardening (`ATT-6174`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-056`
+- **System Requirement(s)**: Derived (SW-only) — Internal local cache-path sanitization parity for Dropbox bulk recovery without external sensor, REST API, or backup archive schema changes (extending `REQ-MIG-016`, `REQ-MIG-034`, and `REQ-MIG-040`).
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `LegacyImportEngine.kt`, `SecureZipExtractor.kt`
+- **Rationale**: `LegacyImportEngine.bulkRecoverFromGoogleDrive` sanitizes remote filenames via `SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)`, whereas `bulkRecoverFromDropbox` passes `entry.name` directly into `File(workerDir, entry.name)` before writing via `FileOutputStream`. Additionally, `SecureZipExtractor.sanitizeDriveFileName` does not explicitly reject null bytes (`\u0000`) or single-dot `"."` before path resolution (`targetPath == workerPath` passes `startsWith(workerPath)`).
+- **Description**:
+  1. *Dropbox Filename Sanitization Parity (`REQ-MIG-056.1`)*:
+     - `LegacyImportEngine.bulkRecoverFromDropbox` SHALL validate every remote `entry.name` via `SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)` prior to invoking `downloadFileWithRetry`.
+     - Upon `SecurityException`, `bulkRecoverFromDropbox` SHALL log the violation, delete the empty `workerDir`, increment `failedCount`, and skip downloading/importing so zero files are written outside `workerDir`.
+  2. *`SecureZipExtractor.sanitizeDriveFileName` Edge-Case Hardening (`REQ-MIG-056.2`)*:
+     - `SecureZipExtractor.sanitizeDriveFileName(fileName, workerDir)` SHALL retain its exact function name and signature (preserving `BackupImportSecurityTest` and `bulkRecoverFromGoogleDrive` callers) and SHALL additionally reject null bytes (`\u0000`) and self-referential single-dot paths (`safeName == "."` / `targetPath == workerPath`) with `SecurityException`.
+     - Existing rejection of `/`, `\`, `..` (including filenames containing literal `..` such as `ride..fit`), and blank strings SHALL remain preserved, while benign filenames (e.g., `2026-10-18-run.tcx`) resolve strictly inside `workerDir`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Dropbox entry with traversal, separator, `..`, null-byte (`\u0000`), blank, or `"."` name (e.g., `../../evil.tcx`, `sub/evil.tcx`, `sub\evil.tcx`, `ride..fit`), *When* `bulkRecoverFromDropbox` executes, *Then* `SecurityException` is caught, `failedCount` increments, the violation is logged, empty `workerDir` is cleaned up, `downloadFileWithRetry` is never invoked, and zero files are written outside `workerDir`.
+• *Given* a valid filename without path separators, `..`, `\u0000`, or `"."`, *When* `bulkRecoverFromDropbox` or `SecureZipExtractor.sanitizeDriveFileName` executes, *Then* the resolved `File` sits directly inside `workerDir` and imports normally.
+
+**Invariants**: `SecureZipExtractor.sanitizeDriveFileName` signature & `BackupImportSecurityTest` compatibility preserved; `bulkRecoverFromGoogleDrive` parity preserved; `0` DB manager calls in `LegacyImportEngine.kt` (`RepositoryEngineCleanlinessContractTest`); `0` `strings*.xml` edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.22` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `REQ-MIG-056` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9555`) independently verified `30/30` PASS across 4 suites (`0` fail, `0` skip) + `4/4` linters PASS @ `993be8d5`. |
+| `1.0.21` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `REQ-MIG-056` to `[Implemented]` (`SecureZipExtractor.sanitizeDriveFileName` `\u0000`/`"."` hardening + `LegacyImportEngine.sanitizeRemoteTempFile` in `bulkRecoverFromDropbox` & `bulkRecoverFromGoogleDrive`). |
+| `1.0.20` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Added `[Planned]` `REQ-MIG-056` (`Derived (SW-only)`) specifying `SecureZipExtractor.sanitizeDriveFileName` enforcement in `LegacyImportEngine.bulkRecoverFromDropbox` and `\u0000`/`"."` `SecurityException` hardening. |
 | `1.0.19` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `REQ-DAT-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9533`) independently verified `25/25` PASS across 4 suites (`0` fail, `0` skip) + `4/4` linters PASS @ `36609fff`. |
 | `1.0.18` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `REQ-DAT-046` to `[Implemented]` (`WorkoutRepository.loadWorkout` delegates `_allWorkouts` updates to `addOrUpdateWorkout`). |
 | `1.0.17` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Added `[Planned]` `REQ-DAT-046` (`Derived (SW-only)`) specifying lossless `addOrUpdateWorkout` merge in `WorkoutRepository.loadWorkout` preserving `exportStatuses` and transient cache fields while keeping `_initialWorkoutLoaded` and descending insertion intact. |

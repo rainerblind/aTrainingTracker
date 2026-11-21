@@ -214,8 +214,8 @@ class BackupImportSecurityTest {
     }
 
     /**
-     * TST-MIG-037.6: Remote Google Drive filename traversal sanitization.
-     * In LegacyImportEngine, filename containing path separators or traversal must be rejected.
+     * TST-MIG-037.6 / TST-MIG-056.2: Remote cloud filename traversal, null-byte, and single-dot sanitization.
+     * Verifies REQ-MIG-056 / TST-MIG-056
      */
     @Test
     fun testSanitizeDriveFileName_rejectsTraversalAndSeparators() {
@@ -249,6 +249,22 @@ class BackupImportSecurityTest {
         try {
             SecureZipExtractor.sanitizeDriveFileName("   ", workerDir)
             fail("Must throw SecurityException on blank name")
+        } catch (e: SecurityException) {
+            // Expected
+        }
+
+        // Null-byte injection attempt (REQ-MIG-056.2)
+        try {
+            SecureZipExtractor.sanitizeDriveFileName("bad\u0000.fit", workerDir)
+            fail("Must throw SecurityException on null byte")
+        } catch (e: SecurityException) {
+            // Expected
+        }
+
+        // Single-dot self-reference attempt (REQ-MIG-056.2)
+        try {
+            SecureZipExtractor.sanitizeDriveFileName(".", workerDir)
+            fail("Must throw SecurityException on single dot")
         } catch (e: SecurityException) {
             // Expected
         }

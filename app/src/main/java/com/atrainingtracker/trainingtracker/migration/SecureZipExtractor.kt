@@ -220,16 +220,16 @@ object SecureZipExtractor {
      * or relative traversal elements, and guarantees the returned [File] resides strictly within [workerDir].
      */
     fun sanitizeDriveFileName(fileName: String, workerDir: File): File {
-        if (fileName.contains('/') || fileName.contains('\\') || fileName.contains("..")) {
+        if ('\u0000' in fileName || fileName.contains('/') || fileName.contains('\\') || fileName.contains("..")) {
             throw SecurityException("Invalid remote file name containing path traversal characters: $fileName")
         }
         val safeName = File(fileName).name
-        if (safeName.isBlank()) {
+        if (safeName.isBlank() || safeName == ".") {
             throw SecurityException("Invalid empty remote file name: $fileName")
         }
         val workerPath = workerDir.toPath().toAbsolutePath().normalize()
         val targetPath = workerPath.resolve(safeName).normalize()
-        if (!targetPath.startsWith(workerPath)) {
+        if (!targetPath.startsWith(workerPath) || targetPath == workerPath) {
             throw SecurityException("Path traversal attempt in Drive filename: $fileName")
         }
         return targetPath.toFile()

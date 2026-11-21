@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.21  
+**Version**: 1.0.24  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 128
+**Total Tests**: 129
 
 ---
 
@@ -2409,10 +2409,36 @@
 
 ---
 
+### TST-MIG-056: **`LegacyImportEngine` Dropbox Filename Sanitization & `SecureZipExtractor.sanitizeDriveFileName` Edge-Case Verification (`ATT-6174`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-MIG-056` (`REQ-MIG-056.1`, `REQ-MIG-056.2`)
+- **Component**: `LegacyImportEngine.kt`, `SecureZipExtractor.kt`
+- **Jira**: `ATT-6174`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Verification Evidence**: Verified (`ATT-6174`, SHA `993be8d5`, Gate 4 `ATT-9555` `30/30` PASS across 4 suites, `0` fail, `0` skip, `Rule 7.5`):
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngineCloudRecoveryTest.kt`: `testBulkRecoverFromDropbox_rejectsTraversalAndUnsafeNamesWhileRecoveringValidSibling_TST_MIG_056` (`TST-MIG-056.1`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/BackupImportSecurityTest.kt`: `testSanitizeDriveFileName_rejectsTraversalAndSeparators` (`TST-MIG-056.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/RepositoryEngineCleanlinessContractTest.kt` (`testLegacyImportEngine_zeroDatabaseManagerInstantiation` `1/1` PASS), `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt` (`11/11` PASS) (`TST-MIG-056.3`)
+- **Test Description**:
+  1. *Dropbox Bulk Recovery Traversal & Malformed Name Rejection (`TST-MIG-056.1` — `LegacyImportEngineCloudRecoveryTest.kt`)*:
+     - Mock `DbxClientV2` to return remote Dropbox metadata entries including traversal (`../../evil_1.tcx`), POSIX/Windows separators (`sub/evil_2.gpx`, `sub\evil_3.fit`), `..` substring (`ride..fit`), null byte (`bad\u0000.fit`), and a benign entry (`valid_ride.tcx`).
+     - Invoke `LegacyImportEngine.bulkRecoverFromDropbox` and assert `failedCount == 5`, `importedCount == 1`, `dbxClient.files().download(...)` is invoked ONLY for `valid_ride.tcx`, empty `workerDir` directories are cleaned up, and zero files are created outside `workerDir`.
+  2. *`SecureZipExtractor.sanitizeDriveFileName` Null-Byte & Single-Dot Hardening (`TST-MIG-056.2` — `BackupImportSecurityTest.kt`)*:
+     - Invoke `SecureZipExtractor.sanitizeDriveFileName` with `"evil\u0000.tcx"`, `"."`, `"../../escaped.fit"`, `"sub/dir/workout.fit"`, `"sub\\workout.fit"`, `"   "`, and `"2026-10-18-run.fit"`; assert `SecurityException` on all 6 invalid inputs and strict `workerDir` resolution on the valid filename.
+  3. *Cleanliness & Architecture Contract Regression (`TST-MIG-056.3` — `RepositoryEngineCleanlinessContractTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     - Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.migration.LegacyImportEngineCloudRecoveryTest" --tests "com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" --tests "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`; confirm `0` string edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.24` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `TST-MIG-056` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9555`) independently verified `30/30` PASS across 4 suites (`0` fail, `0` skip) @ `993be8d5` and `docs/engineering/walkthroughs/ATT-6174_walkthrough.md`. |
+| `1.0.23` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `TST-MIG-056` to `[Implemented]` with unit tests (`LegacyImportEngineCloudRecoveryTest.testBulkRecoverFromDropbox_rejectsTraversalAndUnsafeNamesWhileRecoveringValidSibling_TST_MIG_056`, `BackupImportSecurityTest.testSanitizeDriveFileName_rejectsTraversalAndSeparators`). |
+| `1.0.22` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Added `[Planned]` `TST-MIG-056` (`TST-MIG-056.1`..`TST-MIG-056.3`) for `REQ-MIG-056` verifying mocked `DbxClientV2` Dropbox traversal rejection, `SecureZipExtractor.sanitizeDriveFileName` `\u0000`/`"."` hardening, and cleanliness/architecture contract parity. |
 | `1.0.21` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `TST-DAT-042` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9533`) independently verified `25/25` PASS across 4 suites (`0` fail, `0` skip) @ `36609fff` and `docs/engineering/walkthroughs/ATT-6170_walkthrough.md`. |
 | `1.0.20` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `TST-DAT-042` to `[Implemented]` with unit tests in `WorkoutRepositoryExportStatusTest.kt` (`testLoadWorkout_cachedWorkout_preservesExportStatusesAndTransientFieldsWhileUpdatingDbFields_TST_DAT_042_1`, `testLoadWorkout_uncachedWorkout_insertsSortedDescendingAndEmitsInitialWorkout_TST_DAT_042_2`). |
 | `1.0.19` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Added `[Planned]` `TST-DAT-042` (`TST-DAT-042.1`..`TST-DAT-042.3`) for `REQ-DAT-046` verifying `WorkoutRepository.loadWorkout` preservation of `exportStatuses` and transient fields, `_initialWorkoutLoaded` emission, uncached descending insertion, and `WorkoutRepositoryBatchLoadTest` / `WorkoutDataMappingSymmetryTest` / `ArchitectureConformanceContractTest` parity. |
