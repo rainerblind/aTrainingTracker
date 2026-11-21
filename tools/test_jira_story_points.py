@@ -417,6 +417,28 @@ class TestRiskTiers(unittest.TestCase):
             dir_ok, dir_msgs = vrg.verify_engineering_directory_structure(os.path.join(tmp, "docs", "engineering"))
             self.assertTrue(dir_ok, dir_msgs)
 
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_submit_tier_c_fast_lane_and_rejects_non_tier_c(self, mock_cfg, mock_req, mock_comment, mock_trans):
+        """ATT-9542: submit-tier-c moves tier-c tickets directly to Final Review (Agent) and rejects tier-b/tier-a."""
+        mock_cfg.return_value = self.mock_config
+        mock_req.return_value = {"fields": {"summary": "UI tweak", "status": {"name": "Zu erledigen"}, "labels": ["tier-c"]}}
+        res = jira_util.submit_tier_c("ATT-9558", "Adjusted border width; Compose test + screenshot verified.")
+        self.assertEqual(res, "ATT-9558")
+        mock_comment.assert_called_once()
+        mock_trans.assert_called_once_with("ATT-9558", "final review (agent)", role="agent1", inject_context=False)
+
+        # Reject tier-b
+        mock_req.return_value = {"fields": {"summary": "Normal feature", "status": {"name": "Zu erledigen"}, "labels": ["tier-b"]}}
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.submit_tier_c("ATT-9553", "Attempt bypass")
+            self.assertEqual(cm.exception.code, 1)
+        self.assertIn("strictly restricted to 'tier-c'", stderr_capture.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

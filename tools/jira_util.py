@@ -1598,6 +1598,42 @@ def _resolve_bounce_stage_ids(norm_bounce_target):
     return ("1", "2", "3", "4", "5")
 
 
+def submit_tier_c(parent_key, text_or_file, role="agent1"):
+    """
+    ATT-9542: Tier C Fast Lane submission.
+    Verifies the parent ticket carries label 'tier-c', posts a concise implementation/test/screenshot
+    summary comment on the parent ticket without creating stage documents or Stages 1-5 subtasks,
+    and moves the parent directly to 'Final Review (Agent)' (assigned to agent2) for 1x Stage 6 Flash review.
+    """
+    if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
+        with open(text_or_file[1:], "r", encoding="utf-8") as f:
+            summary_text = f.read()
+    else:
+        summary_text = text_or_file
+
+    config = get_config()
+    parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary,status,labels"
+    parent_info = jira_request(parent_url, role=role)
+    parent_fields = parent_info.get("fields") or {}
+    tier = get_issue_risk_tier(parent_fields)
+    if tier != "tier-c":
+        print(
+            f"Error: submit-tier-c is strictly restricted to 'tier-c' tickets (ATT-9542). "
+            f"'{parent_key}' has risk tier '{tier or 'unclassified'}'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    add_comment(
+        parent_key,
+        f"*Tier C Fast Lane Submission (ATT-9542)* (tests + Stage 6 Flash review only; zero stage documents):\n\n{summary_text}",
+        role=role,
+    )
+    transition_issue(parent_key, "final review (agent)", role=role, inject_context=False)
+    print(f"TIER_C_SUBMITTED: {parent_key} moved directly to 'Final Review (Agent)' for Stage 6 Flash review.")
+    return parent_key
+
+
 def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1", author=None, bypass_authorship=False):
     """
     Composite Stage-Submission Command for agent1 (ATT-4290 Process Improvement #2).
@@ -5603,7 +5639,10 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
         # 1. Lifecycle Deliverables (Risk-Tier aware: Tier A = 4 docs, Tier B = 1 combined tickets/<KEY>.md, Tier C = none)
         ticket_tier = get_issue_risk_tier(item)
         combined_ticket_doc = os.path.isfile(os.path.join(repo_root, "docs", "engineering", "tickets", f"{key}.md"))
-        if ticket_tier == "tier-b" and combined_ticket_doc:
+        if ticket_tier == "tier-c":
+            deliv_checks = {"tier_c_fast_lane": True}
+            deliv_pass = True
+        elif ticket_tier == "tier-b" and combined_ticket_doc:
             deliv_checks = {"combined_ticket_doc": True}
             deliv_pass = True
         else:
@@ -5622,50 +5661,54 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             deliv_pass = all(deliv_checks.values()) or combined_ticket_doc
 
         # 2. Stage Subtask Lifecycle Progression
-        found_gates = {}
-        for st in subtasks:
-            st_summary = st.get("fields", {}).get("summary", "")
-            g_num = identify_gate_number(st_summary)
-            if not g_num:
-                for idx, pat in [
-                    (1, r"analysis"),
-                    (2, r"req|spec|test\s*spec"),
-                    (3, r"plan|design"),
-                    (4, r"impl"),
-                    (5, r"test|verif"),
-                ]:
-                    if re.search(pat, st_summary, re.IGNORECASE):
-                        g_num = idx
-                        break
-            if g_num:
-                found_gates[g_num] = st
+        if ticket_tier == "tier-c":
+            # ATT-9542: Tier C Fast Lane uses tests + 1x Stage 6 Flash review without Stages 1-5 subtasks
+            gate_pass = True
+        else:
+            found_gates = {}
+            for st in subtasks:
+                st_summary = st.get("fields", {}).get("summary", "")
+                g_num = identify_gate_number(st_summary)
+                if not g_num:
+                    for idx, pat in [
+                        (1, r"analysis"),
+                        (2, r"req|spec|test\s*spec"),
+                        (3, r"plan|design"),
+                        (4, r"impl"),
+                        (5, r"test|verif"),
+                    ]:
+                        if re.search(pat, st_summary, re.IGNORECASE):
+                            g_num = idx
+                            break
+                if g_num:
+                    found_gates[g_num] = st
 
-        expected_stages = {1, 2, 3, 4, 5}
-        gate_pass = False
-        if expected_stages.issubset(found_gates.keys()):
-            all_stages_good = True
-            for g_num in expected_stages:
-                st = found_gates[g_num]
-                st_st = st.get("fields", {}).get("status", {}).get("name", "").lower()
-                st_comms = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
-                if st_st not in ("erledigt", "done", "closed", "geschlossen", "resolved"):
-                    all_stages_good = False
-                    break
-                has_pass = any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in st_comms)
-                if not has_pass:
-                    all_stages_good = False
-                    break
-            gate_pass = all_stages_good
-        elif len(subtasks) >= 5:
-            all_st_erledigt = all(
-                st.get("fields", {}).get("status", {}).get("name", "").lower() in ("erledigt", "done", "closed", "geschlossen", "resolved")
-                for st in subtasks
-            )
-            all_st_pass = all(
-                any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
-                for st in subtasks
-            )
-            gate_pass = all_st_erledigt and all_st_pass
+            expected_stages = {1, 2, 3, 4, 5}
+            gate_pass = False
+            if expected_stages.issubset(found_gates.keys()):
+                all_stages_good = True
+                for g_num in expected_stages:
+                    st = found_gates[g_num]
+                    st_st = st.get("fields", {}).get("status", {}).get("name", "").lower()
+                    st_comms = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
+                    if st_st not in ("erledigt", "done", "closed", "geschlossen", "resolved"):
+                        all_stages_good = False
+                        break
+                    has_pass = any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in st_comms)
+                    if not has_pass:
+                        all_stages_good = False
+                        break
+                gate_pass = all_stages_good
+            elif len(subtasks) >= 5:
+                all_st_erledigt = all(
+                    st.get("fields", {}).get("status", {}).get("name", "").lower() in ("erledigt", "done", "closed", "geschlossen", "resolved")
+                    for st in subtasks
+                )
+                all_st_pass = all(
+                    any("PASS" in extract_text_from_comment_body(c.get("body", "")).upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
+                    for st in subtasks
+                )
+                gate_pass = all_st_erledigt and all_st_pass
 
         # 3. 4-Augen-Prinzip & Role Separation (REQ-PRO-091.6)
         role_sep_pass = True
@@ -6192,6 +6235,7 @@ USAGE_TEXT = (
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
     "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
+    "  submit-tier-c PARENT_KEY TEXT_OR_@FILE                Tier C Fast Lane: submit tests/screenshots directly to Final Review (Agent) (ATT-9542)\n"
     "  gate-verdict SUBTASK_KEY PASS|REVISION TEXT_OR_@FILE [--file-escape-bug] [--severity=major]\n"
     "                                                        Record agent2 gate verdict, close/advance on PASS or reopen on REVISION\n"
     "  resolve-bug KEY <rejected|duplicate|cannot-reproduce|fixed> [--duplicate-of=KEY] [--reason=TEXT]\n"
@@ -6341,6 +6385,8 @@ if __name__ == "__main__":
         print_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
         check_gate(remaining_argv[1], role=active_role)
+    elif cmd in ("submit-tier-c", "submit_tier_c") and len(remaining_argv) == 3:
+        submit_tier_c(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd in ("submit-stage", "submit_stage") and len(remaining_argv) >= 4:
         parent_k = remaining_argv[1]
         stage_arg = remaining_argv[2]

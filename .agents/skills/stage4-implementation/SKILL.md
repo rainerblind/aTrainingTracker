@@ -14,12 +14,13 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 - **Gate 4 Review (`--as agent2`)**: **`subagent_pro`** *(Standard)* / **`subagent_flash`** *(High-Risk)* (`send_message` to the ticket's `pro` subagent — which authored the Stage 3 plan! — or `subagent_flash` when `pro` authored a High-Risk implementation) — Conducts an **adversarial code review** of the `git diff` (actively probing byte/bitfield layouts, SQLite N+1 queries, subtle race conditions, Compose recomposition traps, resource leaks, and caller reachability independently of its own Stage 3 plan rather than rubber-stamping plan conformance), followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...`.
 
 ## Key Responsibilities (`subagent_flash` / `subagent_pro` as `agent1`)
-1. **Pre-Implementation Gate Verification (Core Rule 4 — `REQ-PRO-016`)**:
-   - Before modifying any source files in `app/src/...`, verify that the Stage 3 Plan subtask is in status `Erledigt`:
+1. **Pre-Implementation Gate Verification (Core Rule 4 — `REQ-PRO-016`, `ATT-9542`)**:
+   - **`tier-a` / `tier-b`**: Before modifying any source files in `app/src/...`, verify that the Stage 3 Plan subtask is in status `Erledigt`:
      ```bash
      python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
      ```
-   - If exit code is not 0, halt immediately.
+     If exit code is not 0, halt immediately.
+   - **`tier-c` Fast Lane (`ATT-9542`)**: Tickets labeled `tier-c` skip Stages 1–3 and per-ticket stage documents. Implement cleanly on `feature/<KEY>`, run targeted tests (and capture before/after UI screenshot inspected via `read_file` if UI-touching), update `REQ`/`TST` only if user-visible behavior changes, and submit directly to Stage 6 Flash Cold Review via `python3 tools/jira_util.py --as agent1 submit-tier-c <TICKET_KEY> "<Summary + test/screenshot evidence>"`.
 2. **Isolated In-Place Code & Document Review Workflow (`.reviews/` + Emacs)**:
    - For concurrent, conflict-free human review of code (`.kt`, `.java`, `.py`, `.xml`) or documents (`.md`) while agents compile or switch branches:
      - Stage target files: `python3 tools/review_tool.py stage <file...>` or `python3 tools/review_tool.py stage-ticket <TICKET_KEY>`.
