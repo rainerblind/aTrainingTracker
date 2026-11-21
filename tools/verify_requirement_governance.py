@@ -542,11 +542,37 @@ ALLOWED_ENGINEERING_ENTRIES = {
     "retros",
     "reviews",
     "test_specs",
+    "tickets",
     "walkthroughs",
     "test_evidence",
     "rule_history_archive.md",
     "workflow_overview.html",
 }
+
+
+def verify_tier_b_ticket_deliverable(ticket_key, repo_root=None):
+    """
+    ATT-9541: Verify that a Tier B ticket has a single combined deliverable at
+    docs/engineering/tickets/<KEY>.md containing REQ/TST delta and evidence sections,
+    without requiring separate analysis/test_specs/plans/walkthroughs files.
+    """
+    root = repo_root or os.getcwd()
+    ticket_doc = os.path.join(root, "docs", "engineering", "tickets", f"{ticket_key}.md")
+    if not os.path.isfile(ticket_doc):
+        return False, [f"ERROR: Combined Tier B deliverable missing: docs/engineering/tickets/{ticket_key}.md"]
+    with open(ticket_doc, "r", encoding="utf-8") as f:
+        text = f.read()
+    required_markers = [
+        ("Problem / Scope", r"##\s+1\.\s+Problem|##\s+Problem"),
+        ("Decision", r"##\s+2\.\s+Decision|##\s+Decision"),
+        ("REQ / TST Delta", r"##\s+3\.\s+REQ|REQ\s*/\s*TST"),
+        ("Implementation Plan", r"##\s+4\.\s+Implementation|##\s+Plan"),
+        ("Verification & Evidence", r"##\s+5\.\s+Verification|Evidence"),
+    ]
+    missing = [label for label, pat in required_markers if not re.search(pat, text, re.IGNORECASE)]
+    if missing:
+        return False, [f"ERROR: Combined Tier B deliverable {ticket_key}.md missing required section(s): {', '.join(missing)}"]
+    return True, [f"PASS: Combined Tier B deliverable verified at docs/engineering/tickets/{ticket_key}.md."]
 
 
 def verify_gate_records(sprint_name=None, repo_root=None):
@@ -6431,6 +6457,7 @@ def main(argv=None):
                     pass
             if ticket_key:
                 candidates = [
+                    f"docs/engineering/tickets/{ticket_key}.md",
                     f"docs/engineering/test_specs/{ticket_key}_test_spec.md",
                     f"docs/engineering/plans/{ticket_key}_plan.md",
                     f"docs/engineering/walkthroughs/{ticket_key}_walkthrough.md",

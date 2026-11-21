@@ -5600,20 +5600,26 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             })
             continue
 
-        # 1. Lifecycle Deliverables
-        deliv_checks = {
-            "analysis": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "analysis", f"{key}_analysis.md")),
-            "test_spec": (
-                os.path.isfile(os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"))
-                or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "specifications", f"{key}_spec.md"))
-            ),
-            "plan": (
-                os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md"))
-                or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_impl_plan.md"))
-            ),
-            "walkthrough": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "walkthroughs", f"{key}_walkthrough.md")),
-        }
-        deliv_pass = all(deliv_checks.values())
+        # 1. Lifecycle Deliverables (Risk-Tier aware: Tier A = 4 docs, Tier B = 1 combined tickets/<KEY>.md, Tier C = none)
+        ticket_tier = get_issue_risk_tier(item)
+        combined_ticket_doc = os.path.isfile(os.path.join(repo_root, "docs", "engineering", "tickets", f"{key}.md"))
+        if ticket_tier == "tier-b" and combined_ticket_doc:
+            deliv_checks = {"combined_ticket_doc": True}
+            deliv_pass = True
+        else:
+            deliv_checks = {
+                "analysis": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "analysis", f"{key}_analysis.md")),
+                "test_spec": (
+                    os.path.isfile(os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"))
+                    or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "specifications", f"{key}_spec.md"))
+                ),
+                "plan": (
+                    os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md"))
+                    or os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_impl_plan.md"))
+                ),
+                "walkthrough": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "walkthroughs", f"{key}_walkthrough.md")),
+            }
+            deliv_pass = all(deliv_checks.values()) or combined_ticket_doc
 
         # 2. Stage Subtask Lifecycle Progression
         found_gates = {}

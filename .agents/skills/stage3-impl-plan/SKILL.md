@@ -29,8 +29,9 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
      - **Expert Settings (`ui/settings/tuning/categories/`)** $\rightarrow$ Always use the standardized wrappers in `TuningFormControls.kt` (`TuningToggleItem`, `TuningSliderItem`, `TuningSegmentedButtonRow`, `TuningDropdownRow`). Never propose raw unscaled `Switch`, raw `FilterChip`, or nested `ElevatedCard` inside an `ExpertCategoryCard`.
      - **Side-by-Side Action Buttons** $\rightarrow$ Ensure German translations fit on a single line (`maxLines = 1`) on 360dp–412dp screens and that the recommended primary action is the filled `Button` while the secondary/destructive fallback is the `OutlinedButton`.
      - **Anti-"Broken Window" Rule**: If a neighboring file still contains a legacy anti-pattern (e.g., `FilterChip` for a binary toggle), **follow `docs/design_guidelines.md` — never copy a legacy anti-pattern from a sibling file.**
-4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
-   - Author `docs/engineering/plans/<TICKET_KEY>_plan.md` using `templates/plan_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
+4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60, `ATT-9541`)**:
+   - **`tier-a`**: Author `docs/engineering/plans/<TICKET_KEY>_plan.md` using `templates/plan_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
+   - **`tier-b` (`ATT-9541`)**: Populate Section 4 (`Implementation Plan`) inside the single combined `docs/engineering/tickets/<TICKET_KEY>.md` and submit `@docs/engineering/tickets/<TICKET_KEY>.md` (no separate `plans/` file).
    - Submit Stage 3 in a single composite CLI call (creates/updates `[Impl-Plan]` sub-task and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 3 @docs/engineering/plans/<TICKET_KEY>_plan.md

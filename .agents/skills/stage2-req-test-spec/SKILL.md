@@ -37,8 +37,9 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - Synchronize the appropriate domain shard under `docs/tests/` (`docs/tests.md` master index) with the new test definition.
 3. **Traceability Matrix**:
    - Map all test cases to requirement IDs in a structured markdown table.
-4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
-   - Author `docs/engineering/test_specs/<TICKET_KEY>_test_spec.md` using `templates/test_spec_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
+4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60, `ATT-9541`)**:
+   - **`tier-a`**: Author `docs/engineering/test_specs/<TICKET_KEY>_test_spec.md` using `templates/test_spec_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
+   - **`tier-b` (`ATT-9541`)**: Populate Section 3 (`REQ / TST Delta`) inside the single combined `docs/engineering/tickets/<TICKET_KEY>.md` and submit `@docs/engineering/tickets/<TICKET_KEY>.md` (no separate `test_specs/` file).
    - Submit Stage 2 in a single composite CLI call (creates/updates `[Req & Test Spec]` sub-task and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 2 @docs/engineering/test_specs/<TICKET_KEY>_test_spec.md

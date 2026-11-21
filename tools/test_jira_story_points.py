@@ -395,6 +395,28 @@ class TestRiskTiers(unittest.TestCase):
         mock_comment.assert_called_once()
         self.assertIn("PO override", mock_comment.call_args[0][1])
 
+    def test_tier_b_combined_deliverable_verified_without_four_files(self):
+        """ATT-9541: Governance verifier accepts single docs/engineering/tickets/<KEY>.md for Tier B."""
+        import tempfile
+        import verify_requirement_governance as vrg
+        with tempfile.TemporaryDirectory() as tmp:
+            tickets_dir = os.path.join(tmp, "docs", "engineering", "tickets")
+            os.makedirs(tickets_dir, exist_ok=True)
+            doc_path = os.path.join(tickets_dir, "ATT-9991.md")
+            with open(doc_path, "w", encoding="utf-8") as f:
+                f.write(
+                    "# Ticket Deliverable: ATT-9991\n\n"
+                    "## 1. Problem, Scope & Change-Request Impact Analysis\n- Root cause\n\n"
+                    "## 2. Decision & Architecture Impact\n- Design decision\n\n"
+                    "## 3. REQ / TST Delta\n- REQ-UI-999 / TST-UI-999\n\n"
+                    "## 4. Implementation Plan\n1. Step 1\n\n"
+                    "## 5. Verification & Evidence Links\n- Bundle: docs/engineering/test_evidence/tickets/ATT-9991/\n"
+                )
+            ok, msgs = vrg.verify_tier_b_ticket_deliverable("ATT-9991", repo_root=tmp)
+            self.assertTrue(ok, msgs)
+            dir_ok, dir_msgs = vrg.verify_engineering_directory_structure(os.path.join(tmp, "docs", "engineering"))
+            self.assertTrue(dir_ok, dir_msgs)
+
 
 if __name__ == "__main__":
     unittest.main()
