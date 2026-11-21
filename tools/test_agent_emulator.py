@@ -15,6 +15,7 @@ import ast
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -24,6 +25,7 @@ REPO_ROOT = os.path.dirname(TOOLS_DIR)
 if TOOLS_DIR not in sys.path:
     sys.path.insert(0, TOOLS_DIR)
 
+import agent_emulator
 from agent_emulator import (
     AdbDevice,
     CORE_DATABASES,
@@ -299,6 +301,8 @@ class TestStdlibCompliance(unittest.TestCase):
 
         allowed_stdlib = {
             "argparse",
+            "contextlib",
+            "fcntl",
             "os",
             "re",
             "shutil",
@@ -324,6 +328,112 @@ class TestStdlibCompliance(unittest.TestCase):
                 allowed_stdlib,
                 f"Disallowed third-party dependency '{mod}' found in agent_emulator.py (violates TST-PRO-005.6)",
             )
+
+
+class TestEmulatorSessionLock(unittest.TestCase):
+    """Tests for exclusive POSIX /tmp/att_emulator.lock session serialization."""
+
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp(prefix="test_emu_lock_")
+        self.lock_file = os.path.join(self.tmp_dir, "emu.lock")
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+    def test_concurrent_processes_are_strictly_serialized(self):
+        """Two concurrent 'agent_emulator.py exec' processes must never overlap."""
+        import subprocess
+        import time
+
+        events_file = os.path.join(self.tmp_dir, "events.log")
+        script = os.path.join(os.path.dirname(__file__), "agent_emulator.py")
+        worker_py = (
+            "import sys, time; "
+            f"f=open({events_file!r}, 'a'); "
+            "wid=sys.argv[1]; "
+            "f.write(f'{wid}:start:{time.monotonic():.4f}\\n'); f.flush(); "
+            "time.sleep(0.35); "
+            "f.write(f'{wid}:end:{time.monotonic():.4f}\\n'); f.flush(); f.close()"
+        )
+        env = os.environ.copy()
+        env.pop("ATT_EMULATOR_LOCK_HELD", None)
+        env.pop("ATT_SPRINT_LOCK_HELD", None)
+
+        p1 = subprocess.Popen(
+            [sys.executable, script, "exec", "--lock-file", self.lock_file, "--timeout", "10", "--", sys.executable, "-c", worker_py, "W1"],
+            env=env,
+        )
+        time.sleep(0.05)
+        p2 = subprocess.Popen(
+            [sys.executable, script, "exec", "--lock-file", self.lock_file, "--timeout", "10", "--", sys.executable, "-c", worker_py, "W2"],
+            env=env,
+        )
+        rc1 = p1.wait(timeout=15)
+        rc2 = p2.wait(timeout=15)
+        self.assertEqual(rc1, 0)
+        self.assertEqual(rc2, 0)
+
+        with open(events_file, "r", encoding="utf-8") as f:
+            lines = [line.strip().split(":") for line in f if line.strip()]
+        self.assertEqual(len(lines), 4)
+        # Strict non-overlapping execution: first worker must finish before second starts
+        first_worker = lines[0][0]
+        second_worker = lines[2][0]
+        self.assertNotEqual(first_worker, second_worker)
+        self.assertEqual(lines[1][0], first_worker)
+        self.assertEqual(lines[1][1], "end")
+        self.assertEqual(lines[2][1], "start")
+        self.assertEqual(lines[3][0], second_worker)
+        self.assertEqual(lines[3][1], "end")
+
+    def test_lock_timeout_raises_when_busy(self):
+        """Acquiring an already-held lock beyond timeout raises TimeoutError."""
+        import fcntl
+
+        fd = os.open(self.lock_file, os.O_CREAT | os.O_RDWR, 0o666)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaises(TimeoutError):
+                with agent_emulator.emulator_session_lock(
+                    lock_path=self.lock_file,
+                    timeout_sec=0.15,
+                    poll_interval_sec=0.05,
+                ):
+                    pass
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+
+    def test_lock_order_inversion_is_rejected(self):
+        """Calling emulator_session_lock while ATT_SPRINT_LOCK_HELD=1 must fail fast."""
+        with patch.dict(os.environ, {"ATT_SPRINT_LOCK_HELD": "1"}, clear=False):
+            os.environ.pop("ATT_EMULATOR_LOCK_HELD", None)
+            with self.assertRaises(RuntimeError) as ctx:
+                with agent_emulator.emulator_session_lock(lock_path=agent_emulator.DEFAULT_EMULATOR_LOCK):
+                    pass
+            self.assertIn("Lock-order inversion", str(ctx.exception))
+
+    def test_reentrant_default_lock_when_env_set(self):
+        """Nested calls when ATT_EMULATOR_LOCK_HELD=1 must not self-deadlock."""
+        with patch.dict(os.environ, {"ATT_EMULATOR_LOCK_HELD": "1"}, clear=False):
+            entered = False
+            with agent_emulator.emulator_session_lock(lock_path=agent_emulator.DEFAULT_EMULATOR_LOCK, timeout_sec=0.1):
+                entered = True
+            self.assertTrue(entered)
+
+    def test_exec_locked_session_propagates_exit_code_and_releases_lock(self):
+        """Non-zero child exit code is propagated and lock is released afterward."""
+        rc = agent_emulator.exec_locked_session(
+            cmd=[sys.executable, "-c", "import sys; sys.exit(7)"],
+            ensure=False,
+            lock_path=self.lock_file,
+            lock_timeout_sec=5.0,
+        )
+        self.assertEqual(rc, 7)
+        # Lock must be free immediately after child failure
+        with agent_emulator.emulator_session_lock(lock_path=self.lock_file, timeout_sec=0.5):
+            pass
 
 
 if __name__ == "__main__":
