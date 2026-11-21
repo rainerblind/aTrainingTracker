@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:00:00.452Z" hostname="rainer-HP-EliteBook-850-G5" time="21.117">
+  <properties/>
+  <testcase name="pruneExpiredSidecarsAsync_relaxedMockApplication_doesNotLeakUncaughtException" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" time="20.491"/>
+  <testcase name="pruneExpiredSidecars_keepAll_preservesAllFiles" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" time="0.117"/>
+  <testcase name="pruneExpiredSidecars_off_deletesAllFiles" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" time="0.152"/>
+  <testcase name="smartphoneRawSidecar_hasSidecarDeleteAndRetentionPrune_TST_EXP_045_4" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" time="0.133"/>
+  <testcase name="deleteSidecar_cascadeDeletesSidecarAndTmp" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" time="0.1"/>
+  <testcase name="pruneExpiredSidecars_days30_prunesOnlyFilesOlderThan30Days" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" time="0.118"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

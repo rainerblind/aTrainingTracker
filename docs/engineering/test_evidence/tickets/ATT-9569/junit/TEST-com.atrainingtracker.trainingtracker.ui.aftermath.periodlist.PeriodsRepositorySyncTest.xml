@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:00:28.396Z" hostname="rainer-HP-EliteBook-850-G5" time="9.383">
+  <properties/>
+  <testcase name="testPeriodsRepository_unfinishedLiveWorkout3600Ticks_triggersZeroRebuilds_TST_STB_020_2_and_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="5.606"/>
+  <testcase name="testPeriodSummariesDatabaseManager_setSyncFinishedUpdatesDatabase" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.79"/>
+  <testcase name="testWorkoutsInRangeCursor_includesFinishedCondition" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.434"/>
+  <testcase name="testTrackingFinishedIntent_contractConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.332"/>
+  <testcase name="testPeriodsViewModel_loadPeriods_triggersCheckIntegrityAndSync" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="1.1"/>
+  <testcase name="testPeriodsRepository_sharedMapperReused" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.395"/>
+  <testcase name="testPeriodProjectionKey_filtersNonPeriodChanges_andDetectsPeriodRelevantChanges" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.354"/>
+  <testcase name="testSingleOwnerFinalization_andIdempotentDeduplication" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.369"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

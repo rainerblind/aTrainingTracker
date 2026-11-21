@@ -1,0 +1,17 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "243fb386135375c81bd7c414b7e186adbce9b301",
+  "files": {
+    "evidence_summary.json": "f2a25c302207c1b75c18ac89ded41e0acf30e3c63a9404c58a7dd5429247c505",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest.xml": "e33f3f396efc52ddaeb963ac570016cb88c6d7efd8118ca3be0da14c9da42461",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml": "ac38644df758eaf09359d01fce707bd9c9eaf3288a63b5066a48451e1b7f1b4d",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.polar.PolarPmdStreamWarningEffectTest.xml": "a0a6362a37c9d9d9bee6cc0e045971a983bd876d3702788c2947d408ae331f48",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest.xml": "96df3ff348db94c86ff3f2ca79587a0807253a23d7ab5e9ab92b0e92aa8cf4e7",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest.xml": "f7cb1a903238597429229d7f3b8b92de20069fe4b3a6bfc5af50acd1bb83429d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest.xml": "117196151083d49f50ee082c132c5cec07252933014304af7421e74ca34e5946",
+    "screenshots/ATT-9569_tracking_screen.png": "cad91c97f67f63d6d8e26ab9fafd7aa028fcf810f6db3c71fa59d19e2253f27c"
+  },
+  "run_started_utc": "2026-11-21T22:58:05.259281+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9569"
+}

@@ -451,8 +451,14 @@ class PeriodsRepositorySyncTest {
             activeTimeSec = 999_999L
         )
         verify(timeout = 3000, atLeast = 4) { mockDbManager.getPeriodsByType(any()) }
-        Thread.sleep(100L)
-        val updatedMonth = repo.groupedPeriods.value.getOrNull(2)?.firstOrNull()
+        val deadlineMs = System.currentTimeMillis() + 3000L
+        var updatedMonth = repo.groupedPeriods.value.getOrNull(2)?.firstOrNull()
+        while (System.currentTimeMillis() < deadlineMs &&
+            updatedMonth?.workoutIdToSportMap?.containsKey(activeWorkoutId) != true
+        ) {
+            Thread.sleep(25L)
+            updatedMonth = repo.groupedPeriods.value.getOrNull(2)?.firstOrNull()
+        }
         assertTrue(updatedMonth!!.workoutIdToSportMap.containsKey(activeWorkoutId))
         assertEquals(2201, updatedMonth.workoutIdToSportMap.size)
         PeriodsRepository.resetInstanceForTesting()
