@@ -490,4 +490,38 @@ class AltitudeFromPressureDeviceTest {
         assertEquals("Correction offset must anchor to filtered baseline (approx +50m)", 50.0, device.altitudeCorrection, 1.5)
         assertEquals(50.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 1.5)
     }
+
+    // REQ-STB-025.3 / TST-STB-025.3: Silent resume re-anchoring before & after first TYPE_PRESSURE emits zero retroactive broadcast
+    @Test
+    fun testReanchorSilently_beforeAndAfterFirstPressure_alignsWithoutRetroactiveBroadcast_TST_STB_025_3() {
+        val rawIsaPressure = 960.0f
+        every { SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, rawIsaPressure) } returns 450.8f
+
+        // 1. Pre-pressure silent re-anchor (dedicated silent-pending flag path)
+        val deviceBefore = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        deviceBefore.reanchorSilently(430.6)
+        deviceBefore.handlePressureMeasurement(rawIsaPressure)
+
+        assertTrue("Pre-pressure silent re-anchor must mark sensor initialized", deviceBefore.isPressureSensorInitialized)
+        assertTrue("Pre-pressure silent re-anchor must mark sensor calibrated", deviceBefore.isCalibrated)
+        assertEquals("Correction offset must absorb -20.2 m ISA jump", -20.2, deviceBefore.altitudeCorrection, 0.05)
+        assertEquals(
+            "Published altitude must match lastAltitudeM (430.6 m)",
+            430.6,
+            (deviceBefore.altitudeSensor.value as Number).toDouble(),
+            0.05
+        )
+        verify(exactly = 0) { mockContext.sendBroadcast(any()) }
+
+        // 2. Post-pressure silent re-anchor (when pressure already arrived before applyResumedState)
+        val deviceAfter = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        deviceAfter.handlePressureMeasurement(rawIsaPressure)
+        deviceAfter.reanchorSilently(430.6)
+
+        assertTrue(deviceAfter.isPressureSensorInitialized)
+        assertTrue(deviceAfter.isCalibrated)
+        assertEquals(-20.2, deviceAfter.altitudeCorrection, 0.05)
+        assertEquals(430.6, (deviceAfter.altitudeSensor.value as Number).toDouble(), 0.05)
+        verify(exactly = 0) { mockContext.sendBroadcast(any()) }
+    }
 }

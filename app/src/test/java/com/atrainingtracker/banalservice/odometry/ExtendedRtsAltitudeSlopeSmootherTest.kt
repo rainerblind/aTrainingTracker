@@ -418,4 +418,38 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
         assertEquals(0.0, singleNaN[0].altitudeM, 1e-12)
         assertEquals(0.0, singleNaN[0].slopePercent, 1e-12)
     }
+
+    // REQ-STB-025.4 / TST-STB-025.4: Direct ERTS smoother absorbs sustained +20.2 m barometer reset step into b_baro without slope spike
+    @Test
+    fun testSustainedBaroResetStep_absorbedIntoBiasWithoutSlopeSpike_TST_STB_025_4() {
+        val baseTs = 9_000_000L
+        val samples = (0 until 80).map { sec ->
+            val ts = if (sec < 40) baseTs + sec * 1000L else baseTs + (sec + 3) * 1000L
+            val baro = if (sec < 40) 430.6 else 450.8 // +20.2 m uncalibrated barometer step after 4 s restart gap
+            RawAltitudeSample(
+                timestampMs = ts,
+                rawAltitudeM = baro,
+                referenceAltitudeM = 430.6,
+                smoothedSpeedMps = 3.4,
+                isStandstill = false,
+                carriageMode = PhoneCarriageMode.RUN_WAIST_HIP
+            )
+        }
+
+        val detected = ExtendedRtsAltitudeSlopeSmoother.detectDirectBaroResetSteps(samples)
+        assertTrue("Direct smoother must detect sustained +20.2 m reset step at idx=40", detected.contains(40))
+
+        val smoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(samples)
+        val maxAbsSlope = smoothed.maxOf { abs(it.slopePercent) }
+        val maxAltDev = smoothed.maxOf { abs(it.altitudeM - 430.6) }
+
+        assertTrue(
+            "ERTS slope across sustained +20.2 m barometer step must stay < 5% (got $maxAbsSlope%)",
+            maxAbsSlope < 5.0
+        )
+        assertTrue(
+            "ERTS altitude across sustained +20.2 m barometer step must remain flat near 430.6 m (maxDev=$maxAltDev m)",
+            maxAltDev < 3.0
+        )
+    }
 }

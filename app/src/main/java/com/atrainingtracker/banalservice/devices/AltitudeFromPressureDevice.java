@@ -79,6 +79,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     private final BarometricAltitudeFilter mAltitudeFilter = new BarometricAltitudeFilter();
     private double mFilteredRawAltitude = Double.NaN;
     private double mPendingReferenceAltitude = Double.NaN;
+    private double mPendingSilentAnchorAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
     private boolean mIsCalibrated = false;
     private long mLastCalibrationTimeMs = -1L;
@@ -125,6 +126,7 @@ public class AltitudeFromPressureDevice extends MyDevice
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mGPSProviderEnabledReceiver, TAG);
         mPendingReferenceAltitude = Double.NaN;
+        mPendingSilentAnchorAltitude = Double.NaN;
         mIsCalibrated = false;
         mLastCalibrationTimeMs = -1L;
         mAltitudeFilter.reset();
@@ -301,6 +303,30 @@ public class AltitudeFromPressureDevice extends MyDevice
         }
     }
 
+    /**
+     * Silently re-anchors barometric correction to [lastAltitudeM] after mid-workout crash/service
+     * recovery without broadcasting {@link #ALTITUDE_CORRECTION_INTENT} so pre-crash workout rows
+     * are never shifted retroactively ({@code REQ-STB-025.3}).
+     */
+    public synchronized void reanchorSilently(double lastAltitudeM) {
+        if (!Double.isFinite(lastAltitudeM) || lastAltitudeM <= -500.0 || lastAltitudeM >= 9000.0) {
+            return;
+        }
+        double baseAltitude = !Double.isNaN(mFilteredRawAltitude) ? mFilteredRawAltitude : mLastRawAltitude;
+        if (!Double.isNaN(baseAltitude)) {
+            mAltitudeCorrection = lastAltitudeM - baseAltitude;
+            mPressureSensorInitialized = true;
+            mIsCalibrated = true;
+            mPendingReferenceAltitude = Double.NaN;
+            mPendingSilentAnchorAltitude = Double.NaN;
+            if (mAltitudeSensor != null) {
+                mAltitudeSensor.newValue(baseAltitude + mAltitudeCorrection);
+            }
+        } else {
+            mPendingSilentAnchorAltitude = lastAltitudeM;
+        }
+    }
+
     public synchronized boolean isCalibrated() {
         return mIsCalibrated;
     }
@@ -340,6 +366,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         mIsCalibrated = false;
         mAltitudeCorrection = 0.0;
         mPendingReferenceAltitude = Double.NaN;
+        mPendingSilentAnchorAltitude = Double.NaN;
         mAltitudeFilter.reset();
         mFilteredRawAltitude = Double.NaN;
     }
@@ -391,12 +418,18 @@ public class AltitudeFromPressureDevice extends MyDevice
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
-    void handlePressureMeasurement(float pressureHpa) {
+    synchronized void handlePressureMeasurement(float pressureHpa) {
         mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa);
         // REQ-TRK-057.1: Apply non-linear outlier rejection to raw altitude stream
         mFilteredRawAltitude = mAltitudeFilter.filter(mLastRawAltitude, System.currentTimeMillis());
 
-        if (!Double.isNaN(mPendingReferenceAltitude)) {
+        if (!Double.isNaN(mPendingSilentAnchorAltitude)) {
+            double target = mPendingSilentAnchorAltitude;
+            mPendingSilentAnchorAltitude = Double.NaN;
+            mAltitudeCorrection = target - mFilteredRawAltitude;
+            mPressureSensorInitialized = true;
+            mIsCalibrated = true;
+        } else if (!Double.isNaN(mPendingReferenceAltitude)) {
             calibrate(mPendingReferenceAltitude);
         } else if (!mPressureSensorInitialized) {
             initPressureSensor();

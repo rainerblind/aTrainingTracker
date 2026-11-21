@@ -58,11 +58,12 @@ import java.util.zip.GZIPOutputStream
  * bounded [Channel] of capacity 8192 drained on [Dispatchers.IO]. BLE GATT event loops
  * are strictly never blocked. Discards empty or aborted recording sessions leaving zero orphan files.
  */
-class PolarRawTelemetryRecorder(
+class PolarRawTelemetryRecorder @JvmOverloads constructor(
     private val context: Context,
     val fileBaseName: String,
     val sessionStartTimeMs: Long,
-    var metadata: PolarRawMetadata = PolarRawMetadata()
+    var metadata: PolarRawMetadata = PolarRawMetadata(),
+    private val resumeExisting: Boolean = false
 ) : PolarOnlineStreamingBridge.ImuFrameListener, RrBeatListener {
 
     private val isRunning = AtomicBoolean(false)
@@ -112,6 +113,11 @@ class PolarRawTelemetryRecorder(
                 if (!dir.exists()) {
                     dir.mkdirs()
                 }
+                val salvageFile = if (resumeExisting) {
+                    PolarRawSidecarRecovery.prepareSalvageSource(tempFile, targetFile)
+                } else {
+                    null
+                }
                 if (tempFile.exists()) {
                     tempFile.delete()
                 }
@@ -120,12 +126,21 @@ class PolarRawTelemetryRecorder(
                 val gzipOut = GZIPOutputStream(fos)
                 writer = BufferedWriter(OutputStreamWriter(gzipOut, StandardCharsets.UTF_8))
 
-                // Write self-describing metadata header
-                writer.write("# metadata: ${metadata.toJsonString()}")
-                writer.newLine()
-                // Write CSV column header
-                writer.write(RawTelemetryRow.CSV_HEADER)
-                writer.newLine()
+                if (salvageFile != null) {
+                    val salvageResult = PolarRawSidecarRecovery.salvageIntoWriter(salvageFile, writer, metadata)
+                    metadata = salvageResult.metadata
+                    if (salvageResult.salvagedRowCount > 0L) {
+                        rowCount.addAndGet(salvageResult.salvagedRowCount)
+                        Log.i(TAG, "Salvaged ${salvageResult.salvagedRowCount} pre-crash rows for $fileBaseName")
+                    }
+                } else {
+                    // Write self-describing metadata header
+                    writer.write("# metadata: ${metadata.toJsonString()}")
+                    writer.newLine()
+                    // Write CSV column header
+                    writer.write(RawTelemetryRow.CSV_HEADER)
+                    writer.newLine()
+                }
 
                 // Drain channel loop reusing a single line buffer (zero per-row String.format churn, REQ-STB-023.4)
                 val lineBuffer = StringBuilder(LINE_BUFFER_CAPACITY)
@@ -388,6 +403,49 @@ class PolarRawTelemetryRecorder(
             activeRecorder = recorder
             PolarOnlineStreamingBridge.attachActiveRecorder(recorder)
             Log.i(TAG, "Started active PolarRawTelemetryRecorder session for $fileBaseName")
+            return recorder
+        }
+
+        /**
+         * Resumes an active raw telemetry session across service recreation or user resume,
+         * preserving an already-active recorder for [fileBaseName] or salvaging any existing
+         * `.polar_raw.csv.gz.tmp` / prior archive into the continued stream (`REQ-STB-025.2`).
+         */
+        @JvmStatic
+        @Synchronized
+        fun resumeOrStartActiveSession(
+            context: Context,
+            fileBaseName: String,
+            startTimeMs: Long,
+            sportId: Int = 0
+        ): PolarRawTelemetryRecorder? {
+            if (fileBaseName.isBlank()) return null
+            val existing = activeRecorder
+            if (existing != null && existing.fileBaseName == fileBaseName) {
+                return existing
+            }
+            val policy = SettingsDataStoreJavaHelper.getRawSensorRetentionPolicy(context)
+            if (policy == RawSensorRetentionPolicy.OFF) {
+                Log.d(TAG, "Raw telemetry retention is OFF; skipping recorder resume")
+                return null
+            }
+            stopActiveSession()
+
+            val metadata = PolarRawMetadata(
+                streamMode = "LIVE",
+                sportId = sportId
+            )
+            val recorder = PolarRawTelemetryRecorder(
+                context = context,
+                fileBaseName = fileBaseName,
+                sessionStartTimeMs = startTimeMs,
+                metadata = metadata,
+                resumeExisting = true
+            )
+            recorder.start()
+            activeRecorder = recorder
+            PolarOnlineStreamingBridge.attachActiveRecorder(recorder)
+            Log.i(TAG, "Resumed active PolarRawTelemetryRecorder session for $fileBaseName")
             return recorder
         }
 

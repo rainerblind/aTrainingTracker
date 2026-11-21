@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.48  
+**Version**: 1.0.49  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 96
+**Total Tests**: 97
 
 **Total Tests**: 94
 
@@ -1661,6 +1661,24 @@
   4. *Architecture & Static Contract Parity (`TST-STB-024.4`, `LifecycleServiceReceiverSafetyAuditTest.kt`, `TryWithResourcesCursorAuditTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • *Given* `LifecycleServiceReceiverSafetyAuditTest`, `TryWithResourcesCursorAuditTest`, `ArchitectureConformanceContractTest`, and `verify_requirement_governance.py`, *When* executed, *Then* `0` unshielded `startService`/`unregisterReceiver` calls exist, `0` unclosed `Cursor` leaks exist in `smartwatch/pebble/`, `TrainingApplication.java` remains `<= 2,135` LoC, `Localization Parity: N/A - no UI strings`, and governance exits `0`. Tag tests with `TST-STB-024.4`.
 
+
+### TST-STB-025: **Mid-Workout Crash-Recovery Lap Continuity, Polar Raw `.tmp` Salvage, and Barometer Reset ERTS Resilience Suite (`ATT-9344`)** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-STB-025` (`REQ-STB-025.1`–`REQ-STB-025.4`)
+- **Component**: `MyAccumulatorSensor.java`, `WorkoutRepository.kt`, `TrackerService.java`, `BANALService.java`, `PolarRawSidecarRecovery.kt`, `PolarRawTelemetryRecorder.kt`, `RawSensorFileExporter.kt`, `AltitudeFromPressureDevice.java`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `MyAccumulatorSensorTest.kt`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`, `PolarRawTelemetryRecorderTest.kt`, `RawSensorFileExporterTest.kt`, `AltitudeFromPressureDeviceTest.kt`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`
+- **Jira**: `ATT-9344`
+- **Test Description**:
+  1. *Seamless `LAP_NR` Continuity Across Crash & User Resume (`TST-STB-025.1`, `MyAccumulatorSensorTest`, `TrackerServiceCrashRecoveryCharacterisationTest`)*:
+     • *Given* `MyIntegerAccumulatorSensor(SensorType.LAP_NR, zeroValue = 1)` and `TrackerService.applyResumedState()` for both `RESUME_SERVICE_RECREATION` and `RESUME_BY_USER`, *When* restored with `lapNr = 1`, `lapNr = 3`, or clamped `lapNr = 0`, *Then* `getValue()` equals exact `1`/`3`/`1` (never `2`/`4`), subsequent `newLap()` increments to `2`/`4`, `reset()` returns `1`, and `zeroValue == 0` accumulators remain unchanged. Tag with `TST-STB-025.1`.
+  2. *Truncated `.polar_raw.csv.gz.tmp` Salvage, Resume & Export Fallback (`TST-STB-025.2`, `PolarRawTelemetryRecorderTest`, `RawSensorFileExporterTest`)*:
+     • *Given* a crash-truncated `.polar_raw.csv.gz.tmp` (chopped mid-deflate stream with incomplete final line), *When* `resumeOrStartActiveSession()` salvages pre-crash rows, appends post-crash rows, and `stop()` runs (or `RawSensorFileExporter.doExport()` encounters an abandoned `.tmp`), *Then* a valid `.polar_raw.csv.gz` is produced containing preserved `# metadata:` + all complete pre-crash rows + post-crash rows (partial trailing line dropped via `RawTelemetryRow.fromCsvLine`) readable by `PolarRawTelemetryReader`, and corrupt/empty `.tmp` leaves zero orphans. Tag with `TST-STB-025.2`.
+  3. *Silent Live Barometer Re-Anchoring on Resume (`TST-STB-025.3`, `AltitudeFromPressureDeviceTest`, `AltitudeAndSlopeDevice_ATTFusedTest`)*:
+     • *Given* restarted `AltitudeFromPressureDevice` (both before and after first `TYPE_PRESSURE` event) and `AltitudeAndSlopeDevice_ATTFused` re-anchored via `lastAltitudeM = 430.6 m` while raw ISA pressure reads `450.8 m`, *When* pressure arrives, *Then* both publish `~430.6 m` without `+20.2 m` step, zero `ALTITUDE_CORRECTION_INTENT` broadcast is emitted, and ascent/descent accumulators do not jump. Tag with `TST-STB-025.3`.
+  4. *Pre-Slew Sustained Barometer Step Detection, ERTS Re-Anchor & LoC Contracts (`TST-STB-025.4`, `ErtsPostWorkoutRecomputerTest`, `ExtendedRtsAltitudeSlopeSmootherTest`, `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`)*:
+     • *Given* a raw barometer series containing a sustained `+20.2 m` reset step at `t = 920` (across a `4 s` restart gap), *When* `ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro()` and `ExtendedRtsAltitudeSlopeSmoother.smooth()` execute, *Then* `|slopePercent| < 5%` across `t = 915..945` (zero `+35%` spike), transient 2-sample `+25 m` pocket spikes stay rejected (`REQ-TRK-057.1`), genuine `10%` climbs remain unattenuated (`REQ-FIL-033.2`), and `TrackerService.java <= 3,559` LoC & `WorkoutRepository.kt <= 5,117` LoC hold (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-025.4`.
+
 ---
 
 ## Change History
@@ -1716,3 +1734,4 @@
 | `1.0.46` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 Bounce 1 `ATT-9404` @ `c4035319`): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
 | `1.0.47` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `TST-STB-023` (`TST-STB-023.1`–`TST-STB-023.4`, `141/141` PASS across 11 suites incl. `PolarDualImuBoundedHeapStressTest` @ `344ad639`, Stage 6 PASS). |
 | `1.0.48` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `TST-STB-024` (`TST-STB-024.1`–`TST-STB-024.4`, `PebbleServiceLifecycleTest` + `PebbleDatabaseManagerTest`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |
+| `1.0.49` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Added and verified `TST-STB-025` (`TST-STB-025.1`–`TST-STB-025.4`, `130/130` PASS across 18 suites @ `a98d0157`, live `am crash` recovery verified on `emulator-5554`, Stage 6 PASS). |

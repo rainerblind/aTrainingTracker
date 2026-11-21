@@ -1775,41 +1775,31 @@ public class TrackerService extends Service {
         public final double descent;
         public final int timeLap_s;
         public final double distanceLap_m;
+        public final double lastAltitudeM;
 
         public ResumedWorkoutState(
-                @NonNull String baseFileName,
-                long workoutId,
-                int timeTotal_s,
-                int timeActive_s,
-                int calories,
-                int lapNr,
-                double distanceTotal_m,
-                double ascent,
-                double descent,
-                int timeLap_s,
-                double distanceLap_m) {
-            this.baseFileName = baseFileName;
-            this.workoutId = workoutId;
-            this.timeTotal_s = timeTotal_s;
-            this.timeActive_s = timeActive_s;
-            this.calories = calories;
-            this.lapNr = lapNr;
-            this.distanceTotal_m = distanceTotal_m;
-            this.ascent = ascent;
-            this.descent = descent;
-            this.timeLap_s = timeLap_s;
-            this.distanceLap_m = distanceLap_m;
+                @NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s,
+                int calories, int lapNr, double distanceTotal_m, double ascent, double descent,
+                int timeLap_s, double distanceLap_m, double lastAltitudeM) {
+            this.baseFileName = baseFileName; this.workoutId = workoutId;
+            this.timeTotal_s = timeTotal_s; this.timeActive_s = timeActive_s;
+            this.calories = calories; this.lapNr = lapNr;
+            this.distanceTotal_m = distanceTotal_m; this.ascent = ascent; this.descent = descent;
+            this.timeLap_s = timeLap_s; this.distanceLap_m = distanceLap_m;
+            this.lastAltitudeM = lastAltitudeM;
         }
 
         public ResumedWorkoutState(
-                @NonNull String baseFileName,
-                long workoutId,
-                int timeTotal_s,
-                int timeActive_s,
-                int calories,
-                int lapNr,
-                double distanceTotal_m) {
-            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, 0.0, 0.0, timeActive_s, distanceTotal_m);
+                @NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s,
+                int calories, int lapNr, double distanceTotal_m, double ascent, double descent,
+                int timeLap_s, double distanceLap_m) {
+            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, ascent, descent, timeLap_s, distanceLap_m, Double.NaN);
+        }
+
+        public ResumedWorkoutState(
+                @NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s,
+                int calories, int lapNr, double distanceTotal_m) {
+            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, 0.0, 0.0, timeActive_s, distanceTotal_m, Double.NaN);
         }
     }
 
@@ -1912,6 +1902,16 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.DESCENT, state.descent);
         BANALService.setInitialSensorValue(SensorType.TIME_LAP, state.timeLap_s);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, state.distanceLap_m);
+        if (Double.isFinite(state.lastAltitudeM)) {
+            BANALService.reanchorBarometricAltitudeOnResume(state.lastAltitudeM);
+        }
+        try {
+            long resumedStartEpochMs = Math.max(0L, System.currentTimeMillis() - mTimeTotal_s * 1000L);
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.resumeOrStartActiveSession(
+                    getApplicationContext(), mBaseFileName, resumedStartEpochMs, (int) getSportTypeId());
+        } catch (Throwable t) {
+            Log.w(TAG, "Error resuming PolarRawTelemetryRecorder active session: " + t.getMessage());
+        }
 
         final long resumedWorkoutId = mWorkoutID;
         final int resumedActiveTimeS = mTimeActive_s;

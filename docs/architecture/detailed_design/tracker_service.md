@@ -1,14 +1,14 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-TRK`  
-**Version**: 1.0.5  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,537 LOC)  
 **Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `LiveWorkoutBroadcastTracker` (`LiveWorkoutBroadcastTracker.kt`), `DebugHeapWatchdog` (`DebugHeapWatchdog.kt`), `MultisportLapCoordinator` (`MultisportLapCoordinator.kt`), `WorkoutPostProcessingCoordinator` (`WorkoutPostProcessingCoordinator.kt`), `WorkoutPostProcessingService` (`WorkoutPostProcessingService.kt`), `WorkoutPostProcessingNotificationManager` (`WorkoutPostProcessingNotificationManager.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-STB-025.1`, `REQ-STB-025.2`, `REQ-STB-025.3`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`
 
 ---
 
@@ -82,7 +82,7 @@ stateDiagram-v2
 | :--- | :--- | :--- | :--- |
 | `onStartCommand(START_NORMAL)` | `mIsStopping` reset if true | Increment `mSessionGeneration`; `acquireWakeLock()`; bind `BANALService`; schedule 1-Hz `tracker`; submit `createNewWorkout()` + `createSamplesTable()` on `mDbExecutor`; seed `LiveWorkoutBroadcastTracker` & dispatch initial `WORKOUT_UPDATED_INTENT`; `performStartForeground()` | `TRACKING_ACTIVE` |
 | `onStartCommand(intent == null)` | `!hasBackgroundLocationPermission()` | Set `mTrackingInterrupted=true`; `showTrackingInterruptedNotification()`; `performStopSelf()` | `ABORTED` |
-| `onStartCommand(intent == null)` | `hasBackgroundLocationPermission()` | Set `StartType.RESUME_SERVICE_RECREATION`; restore Tier 1 `MANUAL_PAUSED` / Tier 2 `AUTO_PAUSED` / Tier 3 `TRACKING`; `recreateValuesWhenResuming()` (seed `LiveWorkoutBroadcastTracker` & emit resume edge `WORKOUT_UPDATED_INTENT`) | `REHYDRATING` |
+| `onStartCommand(intent == null)` | `hasBackgroundLocationPermission()` | Set `StartType.RESUME_SERVICE_RECREATION`; restore Tier 1 `MANUAL_PAUSED` / Tier 2 `AUTO_PAUSED` / Tier 3 `TRACKING`; `recreateValuesWhenResuming()` -> `applyResumedState()` (seed `LiveWorkoutBroadcastTracker` & `LAP_NR` without `mZeroValue` double-count, silently re-anchor live barometers via `BANALService.reanchorBarometricAltitudeOnResume`, and salvage/resume raw sidecar via `PolarRawTelemetryRecorder.resumeOrStartActiveSession`) | `REHYDRATING` |
 | `onServiceConnected` (`mBanalConnection`) | `mResumeFromPausedWhenConnectedToBanalService` or `mResumeTrackingWhenConnectedToBanalService` | Call `recreateValuesWhenResuming()`; if `!BANALService.isSearching()` call `onSearchingFinished()`; evaluate `AutoPauseManager.shouldStartInAutoPause` | `TRACKING_ACTIVE` or `AUTO_PAUSED` |
 | 1-Hz `tracker` tick | `!mIsStopping && mBanalService != null` | Run `sampleAndWriteToDb(banalService)` -> `evaluateAutoPauseTick`, check `LiveWorkoutBroadcastTracker` for `TRACKING <-> PAUSED` edge (0 steady-state `WORKOUT_UPDATED_INTENT` & 0 `updateExtremaValueInMemory` calls; if paused still call `updateWorkoutTotalTime` per `REQ-TRK-009`), update `mLiveSession` if `!mIsRehydrating`, queue `recordLiveSample` behind `mTableInitializationFuture` on `mDbExecutor`, `maybeFlushLiveRrQueue()` | Unchanged or `AUTO_PAUSED` |
 | Discrete live edge (`LAP_SUMMARY` / `SPORT_TYPE_CHANGED` / pause edge) | `!mIsStopping && workout active` | Persist lap (`saveLap` outside `endWorkout`) or sport update (`BANALService` / DB), and invoke `LiveWorkoutBroadcastTracker` to emit a single `WORKOUT_UPDATED_INTENT` (also preserving altitude calibration broadcast) | `TRACKING_ACTIVE` or `PAUSED_SUBSTATE` |
@@ -138,3 +138,4 @@ stateDiagram-v2
 | `1.0.3` | 2026-11-20 | AI Agent (`ATT-9159`, `--as agent1`) | `ATT-9159` | Updated `TrackerService.saveLap` (`3,539 LOC`, `+1` LOC) to resolve actual UTC lap start timestamp via `MultisportLapCoordinator.consumeLapStartTimeUtc(lapTime)` (preserving 4-/5-arg signatures, pre-mutation manual-split anchor capture, pause neutrality, and UTC `now - lapTime` fallback) (`REQ-TRK-090`). |
 | `1.0.4` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Decoupled stop-workout Polar backfill, HRV/ERTS recompute, and `ExportManager.workoutFinished()` out of synchronous `endWorkout()` into `WorkoutPostProcessingCoordinator` / `WorkoutPostProcessingService` (`shortService`) / `WorkoutPostProcessingNotificationManager` (`ID 8047` progress, `ID 8048` warning), shrinking `TrackerService.java` to `3,511 LOC` (`-28 LOC`) so `TRACKING_FINISHED_INTENT` -> `EditWorkoutScreen` fires immediately (`REQ-TRK-091`). |
 | `1.0.5` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Wired `DebugHeapWatchdog` (`BuildConfig.DEBUG`-only headless periodic CSV & one-shot HPROF watchdog) into `TrackerService` (`3,537 LOC`, `<= 3,559` ceiling) with isolated daemon executor and `DebugHeapWatchdogTest` / `TrackerServiceHeapWatchdogTest` traceability (`REQ-STB-022`). |
+| `1.0.6` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Extended `ResumedWorkoutState` (`lastAltitudeM`, preserving legacy constructors) and `applyResumedState()` (`3,537 LOC`, `+0` net) to re-anchor live barometers silently via `BANALService.reanchorBarometricAltitudeOnResume` and salvage/resume Polar sidecars via `PolarRawTelemetryRecorder.resumeOrStartActiveSession` (`REQ-STB-025`). |

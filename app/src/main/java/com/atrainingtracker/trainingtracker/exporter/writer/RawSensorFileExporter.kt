@@ -13,18 +13,22 @@ package com.atrainingtracker.trainingtracker.exporter.writer
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawSidecarRecovery
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 
 /**
  * Exporter for raw Polar sensor sidecar files (.polar_raw.csv.gz).
- * Traceable to REQ-EXP-044.1.
+ * Traceable to REQ-EXP-044.1, REQ-STB-025.2.
  */
 class RawSensorFileExporter(context: Context) : BaseExporter(context) {
 
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         val sidecarFile = PolarRawTelemetryRecorder.getSidecarFile(mContext, exportInfo.fileBaseName)
+        if (!sidecarFile.exists() || sidecarFile.length() == 0L) {
+            PolarRawSidecarRecovery.recoverAbandonedTmpToFinal(mContext, exportInfo.fileBaseName)
+        }
         if (!sidecarFile.exists() || sidecarFile.length() == 0L) {
             Log.i(TAG, "Raw sensor sidecar does not exist for ${exportInfo.fileBaseName} (graceful skip)")
             return ExportResult(true, false, "Raw sensor sidecar does not exist (graceful skip)")

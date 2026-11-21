@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.55  
+**Version**: 1.0.56  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 80
+**Total Requirements**: 81
 
 **Total Requirements**: 78
 
@@ -2639,6 +2639,30 @@
   • *Given* `PebbleDatabaseManager` closed via `close()` / `closeIfInitialized()`, *When* `ConfigPebbleViews*` or a test subsequently queries `getSensorTypeList()` / `getName()`, *Then* `getDatabase()` reopens `PebbleView.db` cleanly without `IllegalStateException` and `close()` leaves zero open handles.
 - **Invariants**: `REQ-WEA-001` supported-Pebble behavior intact; `TrainingApplication.java <= 2,135` LoC untouched; `PebbleServiceBuildIn.java` & `DatabaseSchemaRegistry.kt` untouched; `0` `SYS.2`/`SYS.3` impact; `Localization Parity: N/A - no UI strings`.
 
+
+### REQ-STB-025: Mid-Workout Crash-Recovery Data Integrity for Lap Numbering, Polar Raw Sidecar `.tmp` Salvage, and Barometer Reset Continuity (`ATT-9344`) [Verified]
+- **Tests**: `TST-STB-025`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `MyAccumulatorSensor.java`, `WorkoutRepository.kt`, `TrackerService.java`, `BANALService.java`, `PolarRawSidecarRecovery.kt`, `PolarRawTelemetryRecorder.kt`, `RawSensorFileExporter.kt`, `AltitudeFromPressureDevice.java`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Description**: Mid-workout service crash recovery (`RESUME_SERVICE_RECREATION`) and user resume (`RESUME_BY_USER`) SHALL preserve seamless `LAP_NR` continuity without `mZeroValue` off-by-one increments, salvage and continue existing truncated `.polar_raw.csv.gz.tmp` sidecars into valid RFC-1952 `.polar_raw.csv.gz` archives (with export-time recovery fallback), silently re-anchor live barometers (`AltitudeFromPressureDevice` and `AltitudeAndSlopeDevice_ATTFused`) from last persisted finite altitude without retroactive broadcasts, and detect/absorb sustained barometer reset steps prior to slew-rate filtering in post-workout ERTS recomputation.
+- **Rationale**: During Pixel 10 run `2026-11-20_173833`, crash recovery at `t = 919 -> 920` exposed three integrity defects: `MyAccumulatorSensor` double-counted `mZeroValue = 1` for `LAP_NR` (`1 -> 2` without saving Lap 1), `TrackerService.applyResumedState()` never resumed `PolarRawTelemetryRecorder` (abandoning `3.33 MB` `.tmp`), and uncalibrated restarted barometers (`+20.2 m` jump) were slewed into a `17 s` `+1.2 m/s` ramp yielding a `+35.0%` ERTS slope spike:
+  1. *Seamless `LAP_NR` Continuity Across Crash & User Resume (`REQ-STB-025.1`)*: `MyAccumulatorSensor` SHALL normalize its constructor (`mInitialValue = sub(initialVal, zeroValue)`) and `setInitialValue(value)` (`mInitialValue = sub(value, mZeroValue)`) so `SensorType.LAP_NR` (`mZeroValue = 1`) reports exact restored `lapNr = N` across `RESUME_SERVICE_RECREATION` and `RESUME_BY_USER` while preserving `mZeroValue == 0` accumulators, `newLap()`, `reset()`, and `resetTo()`; `WorkoutRepository.getResumedWorkoutState()` MUST clamp `lapNr >= BANALService.INIT_LAP_NR`.
+  2. *Truncated `.polar_raw.csv.gz.tmp` Salvage, Seamless Resume & Export Fallback (`REQ-STB-025.2`)*: `PolarRawSidecarRecovery` / `PolarRawTelemetryRecorder.resumeOrStartActiveSession()` SHALL atomically rename `.tmp` (or prior `.polar_raw.csv.gz`) to `.salvage`, stream-salvage all complete lines validated via `RawTelemetryRow.fromCsvLine(line) != null` (dropping truncated trailing lines and catching `EOFException`/`ZipException`), preserve `# metadata:` and original workout start epoch (`now - timeTotal_s * 1000L`), and resume appending live frames from `TrackerService.applyResumedState()`; `RawSensorFileExporter.doExport()` SHALL salvage abandoned `.tmp` when finalized `.polar_raw.csv.gz` is absent.
+  3. *Silent Live Barometer Re-Anchoring on Resume (`REQ-STB-025.3`)*: `ResumedWorkoutState` SHALL expose optional `lastAltitudeM` (`Double.NaN` default, preserving legacy Java constructors), and `TrackerService.applyResumedState()` SHALL invoke `BANALService.reanchorBarometricAltitudeOnResume(lastAltitudeM)` to silently re-anchor `AltitudeFromPressureDevice` (using a dedicated silent-pending field/flag before the first `TYPE_PRESSURE` event so `mPressureSensorInitialized = true` without calling `calibrate()` or broadcasting `ALTITUDE_CORRECTION_INTENT`) and `AltitudeAndSlopeDevice_ATTFused.ekf` without ascent/descent jumps.
+  4. *Pre-Slew Sustained Barometer Bias-Step Detection, ERTS Re-Anchor & LoC Contracts (`REQ-STB-025.4`)*: `ErtsPostWorkoutRecomputer` SHALL detect sustained barometer bias steps (`>= 3` shifted samples exceeding physical climb bounds) on raw un-slewed barometer readings BEFORE `BarometricAltitudeFilter.filterSlewOnly()`, signaling `ExtendedRtsAltitudeSlopeSmoother` to absorb the step into `b_baro` while keeping `h` and `slopePercent` continuous, preserving transient pocket-spike rejection (`REQ-TRK-057.1`), alpine climb slew (`REQ-FIL-033.2`), `TrackerService.java <= 3,559` LoC, and `WorkoutRepository.kt <= 5,117` LoC.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-STB-025` (`REQ-STB-025.1`–`REQ-STB-025.4`), refining `REQ-TRK-026`, `REQ-TRK-036`, `REQ-TRK-078.4`, `REQ-SET-117`, `REQ-EXP-044`, `REQ-CON-017`, `REQ-TRK-057`, `REQ-FIL-033`, and `REQ-FIL-037`.
+  2. *Historical Origin & Commit Trace*: `MyAccumulatorSensor` (`REQ-TRK-078.4`), `PolarRawTelemetryRecorder` (`ATT-8019`, `e8735fcb`), `ExtendedRtsAltitudeSlopeSmoother` & `ErtsPostWorkoutRecomputer` (`ATT-7750`, `ATT-9063`).
+  3. *Root Reason for Existing Formulation*: Prior accumulators assumed `mZeroValue == 0`; raw recorder assumed single-process sessions; `BarometricAltitudeFilter` treated every altitude jump as a transient pocket pulse.
+  4. *Preservation of Core Invariants*: Preserves `mZeroValue == 0` accumulators, `reset()`/`resetTo()`, empty-session discard (`REQ-SET-117.1`), `ResumedWorkoutState` constructors, `REQ-CON-017` non-retroactive silent resume, `REQ-TRK-057.1` pocket-spike rejection, `REQ-FIL-033.2` alpine climbs, and LoC baselines.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `RESUME_SERVICE_RECREATION` or `RESUME_BY_USER` in `lapNr = N`, *When* `applyResumedState()` restores sensors, *Then* `LAP_NR == N` (never `N + 1`) and `Laps.db` retains exact per-lap duration, distance, and speed.
+  • *Given* a crash-truncated `.polar_raw.csv.gz.tmp` (missing GZIP footer + truncated trailing line), *When* `resumeOrStartActiveSession()` runs and finishes (or `RawSensorFileExporter.doExport()` runs on abandoned `.tmp`), *Then* a valid `.polar_raw.csv.gz` containing all complete pre-crash rows + post-crash rows is finalized and exported.
+  • *Given* restarted `AltitudeFromPressureDevice` and `AltitudeAndSlopeDevice_ATTFused` re-anchored silently to `lastAltitudeM`, *When* pressure arrives, *Then* no `+20.2 m` jump, zero `ALTITUDE_CORRECTION_INTENT` broadcast, and zero ascent/descent spike occur; *Given* a sustained `+20.2 m` barometer step in post-workout samples, *When* ERTS runs, *Then* `|slopePercent| < 5%` while transient `<= 3`-sample pocket spikes stay rejected and genuine `10%` climbs remain intact.
+- **Invariants**: `TrackerService.java <= 3,559` LoC; `WorkoutRepository.kt <= 5,117` LoC; `ResumedWorkoutState` legacy constructors preserved; `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -2701,3 +2725,4 @@
 | `1.0.53` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9404` @ `c4035319`, `Rule 7.5` doc-only fast path): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`, `verify_skills.py` `11/11`, `test_agent_emulator.py` `21/21`, `4/4` linters, `ATT-9352_walkthrough.md`). |
 | `1.0.54` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `REQ-STB-023` (`REQ-STB-023.1`–`REQ-STB-023.5`: live EKF `recordSnapshots = false` & bounded `MAX_SNAPSHOTS = 4096` ring, throttled `setLastActive()`, Polar SDK `BleLogger.setLoggerInterface(null)`, `DROP_OLDEST` backpressure + zero-`String.format` CSV + `scope.cancel()`; Gate 4 `ATT-9406` & Stage 6 PASS @ `344ad639`, `141/141` PASS). |
 | `1.0.55` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `REQ-STB-024` (`REQ-STB-024.1`–`REQ-STB-024.4`: immediate `PebbleService` stopSelf/START_NOT_STICKY when appMessages unsupported, guarded teardown, `PebbleDatabaseManager` reopen guard + `closeIfInitialized()`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |
+| `1.0.56` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Added and verified `REQ-STB-025` (`REQ-STB-025.1`–`REQ-STB-025.4`: crash-recovery `LAP_NR` continuity via `MyAccumulatorSensor` `mZeroValue` normalization, `PolarRawSidecarRecovery` `.tmp` salvage & export fallback, silent barometer re-anchor, and pre-slew ERTS sustained-step compensation; `130/130` PASS @ `a98d0157`, live `am crash` verified, Stage 6 PASS). |

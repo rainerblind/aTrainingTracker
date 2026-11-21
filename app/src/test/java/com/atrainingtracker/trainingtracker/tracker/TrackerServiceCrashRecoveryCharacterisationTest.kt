@@ -489,4 +489,51 @@ class TrackerServiceCrashRecoveryCharacterisationTest {
             service.sentBroadcasts.any { it.action == BANALService.RESET_ACCUMULATORS_INTENT }
         )
     }
+
+    // REQ-STB-025.1 / REQ-STB-025.2 / REQ-STB-025.3 / TST-STB-025.1
+    @Test
+    fun testApplyResumedState_reanchorsBarometerAndResumesPolarSidecarForCrashAndUserResume_TST_STB_025_1() {
+        io.mockk.mockkObject(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.Companion)
+        every {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.resumeOrStartActiveSession(
+                any(), any(), any(), any()
+            )
+        } returns null
+        every { BANALService.reanchorBarometricAltitudeOnResume(any()) } just Runs
+
+        val method: Method = TrackerService::class.java.getDeclaredMethod("applyResumedState", ResumedWorkoutState::class.java)
+        method.isAccessible = true
+
+        // 1. Legacy 11-arg constructor preserves Double.NaN default for lastAltitudeM
+        val legacyState = ResumedWorkoutState("2026-11-20_173833", 2422L, 919, 919, 200, 1, 1857.27, 30.0, 10.0, 919, 1857.27)
+        assertTrue(legacyState.lastAltitudeM.isNaN())
+
+        // 2. Crash recovery (RESUME_SERVICE_RECREATION) with lastAltitudeM = 430.6 m
+        val startTypeField: Field = TrackerService::class.java.getDeclaredField("mStartType")
+        startTypeField.isAccessible = true
+        startTypeField.set(service, StartType.RESUME_SERVICE_RECREATION)
+
+        val crashState = ResumedWorkoutState(
+            "2026-11-20_173833", 2422L, 919, 919, 200, 1, 1857.27, 30.0, 10.0, 919, 1857.27, 430.6
+        )
+        method.invoke(service, crashState)
+
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.LAP_NR, 1) }
+        verify(exactly = 1) { BANALService.reanchorBarometricAltitudeOnResume(430.6) }
+        verify(exactly = 1) {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.resumeOrStartActiveSession(
+                any(), eq("2026-11-20_173833"), any(), any()
+            )
+        }
+
+        // 3. User resume (RESUME_BY_USER) in Lap 3 also seeds exact LAP_NR=3 and re-anchors silently
+        startTypeField.set(service, StartType.RESUME_BY_USER)
+        val userResumeState = ResumedWorkoutState(
+            "2026-11-20_173833", 2422L, 1200, 1180, 260, 3, 2400.0, 40.0, 12.0, 200, 500.0, 442.0
+        )
+        method.invoke(service, userResumeState)
+
+        verify(exactly = 1) { BANALService.setInitialSensorValue(SensorType.LAP_NR, 3) }
+        verify(exactly = 1) { BANALService.reanchorBarometricAltitudeOnResume(442.0) }
+    }
 }
