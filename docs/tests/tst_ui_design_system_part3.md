@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.14  
+**Version**: 1.0.17  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 46
+**Total Tests**: 47
 
 ---
 
@@ -907,6 +907,22 @@
 
 ---
 
+### TST-UI-2790: **Sealed UI State Models for `ImportBackupTabsScreen` & `MapScreenWithTrack` Verification Suite** (`ATT-6040`) [Verified]
+- **Requirement(s)**: `REQ-UI-2790` (`REQ-UI-2790.1`–`REQ-UI-2790.3`)
+- **Component**: `ImportBackupTabsScreen.kt`, `MapScreenWithTrack.kt`, `ArchitectureConformanceContractTest.kt`, `ImportBackupTabsUiContractTest.kt`, `ImportBackupTabsSealedStateComposeTest.kt`, `MapPeekSelectionSaverAndUiComposeTest.kt`
+- **Jira**: `ATT-6040` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *`ImportBackupTabsScreen` Sealed Dialog & Pre-Import Compose Behavioral Tests (`TST-UI-2790.1`, `ImportBackupTabsSealedStateComposeTest.kt`)*:
+     - Using Robolectric `createComposeRule()`, verify all `4` `PendingRestoreSource` paths (Local/Auto/Dropbox/GoogleDrive restore confirmation -> Cancel vs Confirm ViewModel dispatch), all `3` `CloudInfoDialog` paths (Dropbox disconnected, Google Drive disconnected, No-cloud upload notice), and `PreImportTuningBottomSheet` rendering (`showStravaUploadOption = false` on `PendingImportSource.StravaArchive` vs `true` on `DropboxBulk`/`LegacyFiles`/`FitFiles`/`Directory`) plus dead `pendingSingleLegacyUri` absence.
+  2. *`MapPeekSelection.Saver` Round-Trip & `MapScreenWithTrack` Mutual Exclusion Tests (`TST-UI-2790.2`, `MapPeekSelectionSaverAndUiComposeTest.kt`)*:
+     - Unit-test `MapPeekSelection.Saver` `save`/`restore` round-trip for `null` and all `5` variants (`Segment`, `Route`, `Cluster`, `Location`, `Climb`) plus `StateRestorationTester` rotation survival in Compose.
+     - Verify via `createComposeRule()` that selecting `Segment`/`Route`/`Cluster`/`Location` vs `Climb` enforces mutual exclusion, renders matching `sheetPeekHeight` + `sheetContent` (`Segment` -> `SegmentOnMapScreen`, `Route` -> `RouteOnMapScreen`, `Cluster` -> `ClusterOnMapSheet`, `Location` -> `KnownLocationOnMapSheet` with `SheetValue.Expanded` blocked), hides `BottomSheetScaffold` on `Climb` while showing `ClimbDetailSheet`, and resets `measuredHeaderHeight` per selection.
+  3. *Targeted Regression, LoC Ratchet & Hygiene Checks (`TST-UI-2790.3`)*:
+     - Execute Tier-1 targeted suites (`ImportBackupTabsUiContractTest`, `BackupCloudProviderUnificationTest`, `RestoreCardContractTest`, `ImportFormatCardsContractTest`, `ImportFormatFilePickerContractTest`, `ImportBackupMapResilienceTest`, `AppDialogActionsIntegrityTest`, `MapScreenWithTrackTest`, `FavoriteLocationSheetContractTest`, `GeneralMapLayersContractTest`, `MapDetailLayoutNavigationBarsPaddingTest`, `HardcodedStringsAndUnitsContractTest`, `ArchitectureConformanceContractTest`, `DeadCodeEliminationContractTest`, `UiReflectionOnlyTestAuditContractTest`), confirming `ImportBackupTabsScreen.kt <= 1,500` LoC removed from `MAX_MONOLITH_FILE_LOC_BASELINE`, `0` reflection-only UI stubs, `0` `src/main` reads in new tests, and `Localization Parity: N/A - 0 string changes`.
+- **Verified Evidence (`cd809943`, `ATT-9485` PASS, `886/886` across 172 suites)**: `ImportBackupTabsSealedStateComposeTest#testPendingRestoreSource_autoDropboxAndGoogleDriveRestoreDialogs_cancelAndConfirmDispatch_tstUi2790_1`, `ImportBackupTabsSealedStateComposeTest#testCloudInfoDialog_disconnectedAndNoCloudPaths_showUnifiedAlertAndNeverOpenRestoreConfirm_tstUi2790_1`, `ImportBackupTabsSealedStateComposeTest#testPendingImportSource_dropboxBulkConfirmAndStravaStravaOptionSuppression_tstUi2790_1`, `ImportBackupTabsSealedStateComposeTest#testPendingImportSource_stravaArchiveHidesStravaUploadOptionWhileOtherVariantsShowIt_tstUi2790_1`, `MapPeekSelectionSaverAndUiComposeTest#testMapPeekSelectionSaver_roundTripsNullAndAllFiveVariants_tstUi2790_2`, `MapPeekSelectionSaverAndUiComposeTest#testMapPeekSelection_stateRestorationTester_survivesConfigurationChange_tstUi2790_2`, `MapPeekSelectionSaverAndUiComposeTest#testMapScreenWithTrack_targetLocationRendersKnownLocationSheetAndZeroOverlap_tstUi2790_2`, `ArchitectureConformanceContractTest#testMonolithLocRatchet_noNewOrGrowingGodClasses`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -926,3 +942,6 @@
 | `1.0.14` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Added `TST-UI-2788` (`[Planned]`, `.1`–`.3`, strictly symmetric `REQ-UI-2788`) covering `resolveSparklineHeight` monotonicity, `v2.createComposeRule()` exact `sensor_sparkline_canvas` height & fixed-card safety, and `Rule 8.5` Light/Dark visual PNG (`N/A - no new or modified UI strings`). |
 | `1.0.15` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `TST-UI-2788` to `[Implemented]` (`SensorSparklineViewTest`, `SensorFieldViewGraphOnlyLayoutTest`, `SensorFieldViewSparklineLayoutComposeTest` `4/4`, `Rule 8.5` PNG `ATT-8995_sparkline_value_graph_layout.png`, `6/6` verbatim `TestClass#testMethod` citations). |
 | `1.0.16` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `TST-UI-2788` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9382` @ `a5cbbd1b`) `57/57 PASS` across 11 suites + `:app:assembleDebug` + `0` new Kotlin/deprecation warnings (`Rule 7.5`, `0` `app/` diff since `a5cbbd1b`, `6/6` verbatim `TestClass#testMethod` citations, `Rule 8.5` Light/Dark PNG certified, `4/4` safety linters PASS, `--check-verified-evidence` `exit 0`). |
+| `1.0.17` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Added `TST-UI-2790` `[Planned]` covering sealed dialog/pre-import Compose UI behavior, `MapPeekSelection.Saver` round-trip & `StateRestorationTester` rotation survival, sheet/modal mutual exclusion, and monolith LoC ratchet. |
+| `1.0.18` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Promoted `TST-UI-2790` to `[Implemented]` following Stage 4 implementation and Tier-1 unit/Compose verification. |
+| `1.0.19` | 2026-11-21 | Lane 2 Author (`ATT-6040`, `--as agent1`) | `ATT-6040` | Promoted `TST-UI-2790` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9485` @ `cd809943`: `886/886 PASS` across 172 suites, `8/8` verbatim `TestClass#testMethod` citations, `--check-verified-evidence` `exit 0`). |

@@ -129,8 +129,7 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/banalservice/devices/DeviceManager.java" to 1708,
             "com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" to 1671,
             "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" to 1635,
-            "com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java" to 1533,
-            "com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt" to 1513
+            "com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java" to 1533
         )
 
         fun stripComments(content: String): String {

@@ -83,6 +83,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -109,6 +110,60 @@ import com.google.android.gms.maps.model.LatLngBounds
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
+ * Type-safe mutually exclusive selection state for map overlays and peek/modal sheets (`REQ-UI-2790.2`).
+ */
+sealed interface MapPeekSelection {
+    val id: Long
+    val isSheetBacked: Boolean get() = true
+
+    data class Segment(override val id: Long) : MapPeekSelection
+    data class Route(override val id: Long) : MapPeekSelection
+    data class Cluster(override val id: Long) : MapPeekSelection
+    data class Location(override val id: Long) : MapPeekSelection
+    data class Climb(override val id: Long) : MapPeekSelection {
+        override val isSheetBacked: Boolean = false
+    }
+
+    companion object {
+        private const val TAG_SEGMENT = "segment"
+        private const val TAG_ROUTE = "route"
+        private const val TAG_CLUSTER = "cluster"
+        private const val TAG_LOCATION = "location"
+        private const val TAG_CLIMB = "climb"
+
+        /**
+         * Lossless Compose [Saver] preserving [MapPeekSelection] across configuration changes and process death.
+         */
+        val Saver: Saver<MapPeekSelection?, Any> = Saver(
+            save = { selection ->
+                when (selection) {
+                    null -> null
+                    is Segment -> listOf(TAG_SEGMENT, selection.id)
+                    is Route -> listOf(TAG_ROUTE, selection.id)
+                    is Cluster -> listOf(TAG_CLUSTER, selection.id)
+                    is Location -> listOf(TAG_LOCATION, selection.id)
+                    is Climb -> listOf(TAG_CLIMB, selection.id)
+                }
+            },
+            restore = { saved ->
+                val list = saved as? List<*> ?: return@Saver null
+                if (list.size != 2) return@Saver null
+                val tag = list[0] as? String ?: return@Saver null
+                val id = (list[1] as? Number)?.toLong() ?: return@Saver null
+                when (tag) {
+                    TAG_SEGMENT -> Segment(id)
+                    TAG_ROUTE -> Route(id)
+                    TAG_CLUSTER -> Cluster(id)
+                    TAG_LOCATION -> Location(id)
+                    TAG_CLIMB -> Climb(id)
+                    else -> null
+                }
+            }
+        )
+    }
+}
+
+/**
  * Top-level Composable for Map with current track, live segments, routes, and favorite locations (REQ-UI-159, REQ-UI-180).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,26 +182,18 @@ fun MapScreenWithTrack(
     val allClusters by viewModel.allClusters.collectAsStateWithLifecycle()
     val enabledLayers by viewModel.enabledLayers.collectAsStateWithLifecycle()
 
-    // The ID of the segment/route/location/cluster/climb currently being "peeked"
-    var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var selectedClusterId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var selectedClimbId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var selectedLocationId by rememberSaveable { mutableStateOf<Long?>(targetLocationId) }
+    // Mutually exclusive selection of the segment/route/location/cluster/climb currently being inspected (REQ-UI-2790.2)
+    var peekSelection by rememberSaveable(stateSaver = MapPeekSelection.Saver) {
+        mutableStateOf(targetLocationId?.takeIf { it > 0 }?.let { MapPeekSelection.Location(it) })
+    }
     var editingLocation by remember { mutableStateOf<KnownLocationItem?>(null) }
     var previewRadius by remember { mutableStateOf<Int?>(null) }
 
-    var measuredSegmentHeaderHeight by remember(selectedSegmentId) { mutableStateOf<Dp?>(null) }
-    var measuredRouteHeaderHeight by remember(selectedRouteId) { mutableStateOf<Dp?>(null) }
-    var measuredClusterHeaderHeight by remember(selectedClusterId) { mutableStateOf<Dp?>(null) }
+    var measuredHeaderHeight by remember(peekSelection) { mutableStateOf<Dp?>(null) }
 
     LaunchedEffect(targetLocationId) {
         if (targetLocationId != null && targetLocationId > 0) {
-            selectedSegmentId = null
-            selectedRouteId = null
-            selectedClusterId = null
-            selectedClimbId = null
-            selectedLocationId = targetLocationId
+            peekSelection = MapPeekSelection.Location(targetLocationId)
         }
     }
 
@@ -154,7 +201,7 @@ fun MapScreenWithTrack(
         bottomSheetState = rememberStandardBottomSheetState(
             skipHiddenState = false,
             confirmValueChange = { targetValue ->
-                if (selectedLocationId != null && targetValue == SheetValue.Expanded) {
+                if (peekSelection is MapPeekSelection.Location && targetValue == SheetValue.Expanded) {
                     false
                 } else {
                     true
@@ -163,9 +210,9 @@ fun MapScreenWithTrack(
         )
     )
 
-    // Effect: When a user clicks a new segment/route/location/cluster, ensure the sheet is at least "Partially Expanded" (Peeked)
-    LaunchedEffect(selectedSegmentId, selectedRouteId, selectedLocationId, selectedClusterId) {
-        if (selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null) {
+    // Effect: When a user clicks a new sheet-backed overlay, ensure the sheet is at least "Partially Expanded" (Peeked)
+    LaunchedEffect(peekSelection) {
+        if (peekSelection?.isSheetBacked == true) {
             scaffoldState.bottomSheetState.partialExpand()
         } else {
             scaffoldState.bottomSheetState.hide()
@@ -173,8 +220,8 @@ fun MapScreenWithTrack(
     }
 
     // Effect: When dynamic measurement completes for the active sheet, re-align the resting offset flush to the navigation bar (REQ-UI-221, ATT-1645)
-    LaunchedEffect(measuredSegmentHeaderHeight, measuredRouteHeaderHeight, measuredClusterHeaderHeight) {
-        if (selectedSegmentId != null || selectedRouteId != null || selectedClusterId != null) {
+    LaunchedEffect(peekSelection, measuredHeaderHeight) {
+        if (peekSelection?.isSheetBacked == true && measuredHeaderHeight != null) {
             if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded ||
                 scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded) {
                 scaffoldState.bottomSheetState.partialExpand()
@@ -215,55 +262,56 @@ fun MapScreenWithTrack(
 
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
-            sheetSwipeEnabled = selectedLocationId == null,
+            sheetSwipeEnabled = peekSelection !is MapPeekSelection.Location,
             sheetShape = BottomSheetDesign.SheetShape,
             sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
-            sheetPeekHeight = when {
-                selectedSegmentId != null -> {
-                    val base = measuredSegmentHeaderHeight ?: BottomSheetDesign.PeekHeightSegment
+            sheetPeekHeight = when (val selection = peekSelection) {
+                is MapPeekSelection.Segment -> {
+                    val base = measuredHeaderHeight ?: BottomSheetDesign.PeekHeightSegment
                     base + navBarHeight
                 }
-                selectedRouteId != null -> {
-                    val routeSummary = allRoutes.find { it.summary.id == selectedRouteId }?.summary
+                is MapPeekSelection.Route -> {
+                    val routeSummary = allRoutes.find { it.summary.id == selection.id }?.summary
                     val defaultPeek = if (routeSummary?.description.isNullOrEmpty()) {
                         BottomSheetDesign.PeekHeightRoute
                     } else {
                         BottomSheetDesign.PeekHeightRouteWithDescription
                     }
-                    val base = measuredRouteHeaderHeight ?: defaultPeek
+                    val base = measuredHeaderHeight ?: defaultPeek
                     base + navBarHeight
                 }
-                selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
-                selectedClusterId != null -> {
-                    val base = measuredClusterHeaderHeight ?: BottomSheetDesign.PeekHeightWorkout
+                is MapPeekSelection.Location -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
+                is MapPeekSelection.Cluster -> {
+                    val base = measuredHeaderHeight ?: BottomSheetDesign.PeekHeightWorkout
                     base + navBarHeight
                 }
-                else -> 0.dp
+                is MapPeekSelection.Climb, null -> 0.dp
             },
             sheetDragHandle = null,
             sheetContent = {
-                if (selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null) {
+                val selection = peekSelection
+                if (selection != null && selection.isSheetBacked) {
                     Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
-                        when {
-                            selectedClusterId != null -> {
+                        when (selection) {
+                            is MapPeekSelection.Cluster -> {
                                 val selectedCluster =
-                                    uiState.clusters.find { it.id == selectedClusterId }
+                                    uiState.clusters.find { it.id == selection.id }
 
                                 if (selectedCluster != null) {
-                                    val rawCluster = allClusters.find { it.id == selectedClusterId }
+                                    val rawCluster = allClusters.find { it.id == selection.id }
                                     ClusterOnMapSheet(
                                         cluster = selectedCluster,
                                         rawCluster = rawCluster,
-                                        onHeaderHeightMeasured = { measuredClusterHeaderHeight = it },
+                                        onHeaderHeightMeasured = { measuredHeaderHeight = it },
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 }
                             }
-                            selectedLocationId != null -> {
+                            is MapPeekSelection.Location -> {
                                 val selectedLocation =
-                                    uiState.knownLocations.find { it.id == selectedLocationId }
+                                    uiState.knownLocations.find { it.id == selection.id }
 
                                 if (selectedLocation != null) {
                                     val isMetric = remember { TrainingApplication.getUnit() == MyUnits.METRIC }
@@ -275,34 +323,37 @@ fun MapScreenWithTrack(
                                     )
                                 }
                             }
-                            selectedSegmentId != null -> {
+                            is MapPeekSelection.Segment -> {
                                 val selectedSegment =
-                                    uiState.segments.find { it.stravaId == selectedSegmentId }
+                                    uiState.segments.find { it.stravaId == selection.id }
 
                                 SegmentOnMapScreen(
-                                    segmentSummary = liveSegments.find { it.summary.stravaId == selectedSegmentId }?.summary,
+                                    segmentSummary = liveSegments.find { it.summary.stravaId == selection.id }?.summary,
                                     segment = selectedSegment,
                                     modifier = Modifier.fillMaxSize(),
                                     useStatusBarsPadding = false,
-                                    onHeaderHeightMeasured = { measuredSegmentHeaderHeight = it }
+                                    onHeaderHeightMeasured = { measuredHeaderHeight = it }
                                 )
                             }
-                            selectedRouteId != null -> {
+                            is MapPeekSelection.Route -> {
                                 val selectedRoute =
-                                    uiState.routes.find { it.id == selectedRouteId }
+                                    uiState.routes.find { it.id == selection.id }
 
                                 RouteOnMapScreen(
                                     route = selectedRoute,
-                                    routeSummary = allRoutes.find { it.summary.id == selectedRouteId }?.summary,
-                                    onToggleSelection = { viewModel.onToggleRoute(
-                                        id = selectedRouteId!!,
-                                        selected = it
-                                    ) },
+                                    routeSummary = allRoutes.find { it.summary.id == selection.id }?.summary,
+                                    onToggleSelection = {
+                                        viewModel.onToggleRoute(
+                                            id = selection.id,
+                                            selected = it
+                                        )
+                                    },
                                     modifier = Modifier.fillMaxSize(),
                                     useStatusBarsPadding = false,
-                                    onHeaderHeightMeasured = { measuredRouteHeaderHeight = it }
+                                    onHeaderHeightMeasured = { measuredHeaderHeight = it }
                                 )
                             }
+                            is MapPeekSelection.Climb -> Unit
                         }
                     }
                 } else {
@@ -317,58 +368,32 @@ fun MapScreenWithTrack(
                     bSportType = uiState.bSportType,
                     currentLocationFlow = MutableStateFlow(currentLocation),
                     contentPadding = WindowInsets.navigationBars.asPaddingValues(),
-                    onMapClick = {
-                        selectedSegmentId = null
-                        selectedRouteId = null
-                        selectedLocationId = null
-                        selectedClusterId = null
-                        selectedClimbId = null
-                    },
+                    onMapClick = { peekSelection = null },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (GeneralMapLayer.KNOWN_LOCATIONS in enabledLayers) {
                         knownLocations(displayLocations, onLocationClick = { id ->
-                            selectedSegmentId = null
-                            selectedRouteId = null
-                            selectedClusterId = null
-                            selectedClimbId = null
-                            selectedLocationId = id
+                            peekSelection = MapPeekSelection.Location(id)
                         })
                     }
                     if (GeneralMapLayer.SEGMENTS in enabledLayers) {
                         segments(uiState.segments, onSegmentClick = { id ->
-                            selectedRouteId = null
-                            selectedLocationId = null
-                            selectedClusterId = null
-                            selectedClimbId = null
-                            selectedSegmentId = id
+                            peekSelection = MapPeekSelection.Segment(id)
                         })
                     }
                     if (GeneralMapLayer.ROUTES in enabledLayers) {
                         routes(uiState.routes, onRouteClick = { id ->
-                            selectedSegmentId = null
-                            selectedLocationId = null
-                            selectedClusterId = null
-                            selectedClimbId = null
-                            selectedRouteId = id
+                            peekSelection = MapPeekSelection.Route(id)
                         })
                     }
                     if (GeneralMapLayer.CLUSTERS in enabledLayers) {
                         clusters(uiState.clusters, onClusterClick = { id ->
-                            selectedSegmentId = null
-                            selectedRouteId = null
-                            selectedLocationId = null
-                            selectedClimbId = null
-                            selectedClusterId = id
+                            peekSelection = MapPeekSelection.Cluster(id)
                         })
                     }
                     if (GeneralMapLayer.CLIMBS in enabledLayers) {
                         climbs(uiState.climbs, onClimbClick = { id ->
-                            selectedSegmentId = null
-                            selectedRouteId = null
-                            selectedLocationId = null
-                            selectedClusterId = null
-                            selectedClimbId = id
+                            peekSelection = MapPeekSelection.Climb(id)
                         })
                     }
                     if (GeneralMapLayer.TRACK in enabledLayers) {
@@ -524,24 +549,20 @@ fun MapScreenWithTrack(
         )
     }
 
-    selectedClimbId?.let { id ->
-        val climb = uiState.climbs.find { it.id == id }
+    (peekSelection as? MapPeekSelection.Climb)?.let { climbSelection ->
+        val climb = uiState.climbs.find { it.id == climbSelection.id }
         if (climb != null) {
             ClimbDetailSheet(
                 climb = climb,
                 bSportType = uiState.bSportType,
-                onDismiss = { selectedClimbId = null }
+                onDismiss = { peekSelection = null }
             )
         }
     }
 
     // Handle system back button to close the peek
-    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null || selectedClimbId != null) {
-        selectedSegmentId = null
-        selectedRouteId = null
-        selectedLocationId = null
-        selectedClusterId = null
-        selectedClimbId = null
+    BackHandler(enabled = peekSelection != null) {
+        peekSelection = null
     }
 }
 
