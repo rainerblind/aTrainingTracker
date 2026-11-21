@@ -1257,7 +1257,10 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
     normalized_target = aliases.get(normalized_input, normalized_input)
 
     # Complexity split guardrail on parent tickets (Fibonacci scale: 0-5 SP direct, 8 SP PO decision, > 8 SP mandatory split)
-    if not is_subtask and normalized_target == "analysis":
+    if not is_subtask and (
+        normalized_target == "analysis"
+        or (current_status_lower == "zu erledigen" and normalized_target in PARENT_STAGE_ORDER[1:])
+    ):
         sp = fields_data.get(STORY_POINTS_FIELD)
         if sp is not None:
             try:
@@ -1313,6 +1316,26 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
                 chosen_trans = t
                 break
 
+    # Multi-hop forward stepping along PARENT_STAGE_ORDER for Lean AAA v2 (Rule 2.4: tier-b/tier-c live
+    # board visibility, e.g. Zu erledigen -> Implementation -> Test -> Final Review (Agent)).
+    # Checked BEFORE Pass 3 substring matching so "implementation" never stops prematurely on "Implementation Plan",
+    # and strictly capped at 'final review (agent)' so Stage 6 Cold Review can never be skipped.
+    if not chosen_trans and not is_subtask:
+        max_auto_hop_idx = PARENT_STAGE_ORDER.index("final review (agent)")
+        if current_status_lower in PARENT_STAGE_ORDER and normalized_target in PARENT_STAGE_ORDER:
+            curr_idx = PARENT_STAGE_ORDER.index(current_status_lower)
+            target_idx = PARENT_STAGE_ORDER.index(normalized_target)
+            if curr_idx + 1 < target_idx <= max_auto_hop_idx:
+                for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : target_idx + 1]:
+                    transition_issue(
+                        issue_key,
+                        step_stage,
+                        role=role,
+                        inject_context=(inject_context and step_stage == normalized_target),
+                        allow_epic_close=allow_epic_close,
+                    )
+                return
+
     # Pass 3: substring match on target status name
     if not chosen_trans:
         for t in available_transitions:
@@ -1363,7 +1386,7 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
         assign_issue(issue_key, "human", role=role)
     elif "überprüfung" in norm_target_lower or "review" in norm_target_lower:
         assign_issue(issue_key, "agent2", role=role)
-    elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower or norm_target_lower in ("implementation", "analysis", "zu erledigen"):
+    elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower or norm_target_lower in ("implementation", "analysis", "test", "zu erledigen"):
         assign_issue(issue_key, "agent1", role=role)
 
     # Automatic Stage-Skill & Rule Context Injection when parent ticket enters a lifecycle stage

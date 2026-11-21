@@ -73,9 +73,12 @@ python3 tools/jira_util.py comment <KEY> "<COMMENT_TEXT_OR_@FILE>"
 python3 tools/jira_util.py update-desc <KEY> "<CONTENT_OR_@FILE>"
 
 # Transition parent ticket states (NEVER move parent tickets to Erledigt!)
-# Note: Moving a parent ticket into a lifecycle stage automatically injects that stage's SKILL.md into stdout!
-python3 tools/jira_util.py move <PARENT_KEY> "analysis"
-python3 tools/jira_util.py move <PARENT_KEY> "final review" # Assigns to human for final review
+# Note: Moving a parent ticket into a lifecycle stage automatically injects that stage's SKILL.md into stdout,
+# and automatically steps forward along PARENT_STAGE_ORDER (capped at Final Review (Agent)) for tier-b/tier-c live board visibility (Rule 2.4)!
+python3 tools/jira_util.py move <PARENT_KEY> "analysis"             # tier-a / tier-b start
+python3 tools/jira_util.py --as agent1 move <PARENT_KEY> "implementation"  # tier-c start, or tier-b when coding starts
+python3 tools/jira_util.py --as agent1 move <PARENT_KEY> "test"            # tier-b / tier-c when verification starts
+python3 tools/jira_util.py move <PARENT_KEY> "final review"         # Assigns to human for final review (only from Final Review (Agent))
 
 # Check Gate 3 prerequisite before modifying production code
 python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>

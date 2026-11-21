@@ -4221,6 +4221,102 @@ class TestProcessStabilityLegacyTsts(unittest.TestCase):
         self.assertIn("is_weekly_emulator_sweep_overdue()", rel_skill)
 
 
+class TestMultiHopParentStageTransitions(unittest.TestCase):
+    """Rule 2.4 (aaa-v2): safe multi-hop forward stepping for tier-b/tier-c live Jira status."""
+
+    def _make_linear_jira_mock(self, initial_status, story_points=2):
+        stage_chain = [
+            "Zu erledigen",
+            "Analysis",
+            "Test Spec",
+            "Implementation Plan",
+            "Implementation",
+            "Test",
+            "Final Review (Agent)",
+            "Final Review (Human)",
+        ]
+        state = {"status": initial_status, "transitions_posted": []}
+
+        def fake_request(url, method="GET", payload=None, role=None):
+            if method == "POST" and url.endswith("/transitions"):
+                tid = int(payload["transition"]["id"])
+                next_name = stage_chain[tid]
+                state["status"] = next_name
+                state["transitions_posted"].append(next_name)
+                return {}
+            if url.endswith("/transitions"):
+                idx = stage_chain.index(state["status"])
+                transitions = []
+                if idx + 1 < len(stage_chain):
+                    nxt = stage_chain[idx + 1]
+                    transitions.append({"id": str(idx + 1), "name": f"Start {nxt}", "to": {"name": nxt}})
+                return {"transitions": transitions}
+            return {
+                "fields": {
+                    "issuetype": {"name": "Verbesserung", "subtask": False},
+                    "status": {"name": state["status"]},
+                    "summary": "Tier-C test ticket",
+                    "parent": {},
+                    jira_util.STORY_POINTS_FIELD: story_points,
+                }
+            }
+
+        return state, fake_request
+
+    def test_tier_c_direct_move_from_todo_to_implementation_steps_cleanly(self):
+        state, fake_req = self._make_linear_jira_mock("Zu erledigen", story_points=2)
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.jira_request", side_effect=fake_req), \
+             patch("jira_util.assign_issue") as mock_assign, \
+             patch("jira_util.inject_stage_context") as mock_inject:
+            jira_util.transition_issue("ATT-9999", "implementation", role="agent1", inject_context=True)
+
+        self.assertEqual(
+            state["transitions_posted"],
+            ["Analysis", "Test Spec", "Implementation Plan", "Implementation"],
+        )
+        self.assertEqual(state["status"], "Implementation")
+        mock_inject.assert_called_once()
+        self.assertEqual(mock_inject.call_args[0][0], "implementation")
+        self.assertEqual(mock_assign.call_args[0][1], "agent1")
+
+    def test_auto_gate_move_from_analysis_to_final_review_agent_steps_cleanly(self):
+        state, fake_req = self._make_linear_jira_mock("Analysis", story_points=3)
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.jira_request", side_effect=fake_req), \
+             patch("jira_util.assign_issue") as mock_assign, \
+             patch("jira_util.inject_stage_context") as mock_inject:
+            jira_util.transition_issue("ATT-9998", "final review (agent)", role="agent1", inject_context=False)
+
+        self.assertEqual(
+            state["transitions_posted"],
+            ["Test Spec", "Implementation Plan", "Implementation", "Test", "Final Review (Agent)"],
+        )
+        self.assertEqual(state["status"], "Final Review (Agent)")
+        mock_inject.assert_not_called()
+        self.assertEqual(mock_assign.call_args[0][1], "agent2")
+
+    def test_multi_hop_never_skips_stage6_into_final_review_human(self):
+        state, fake_req = self._make_linear_jira_mock("Analysis", story_points=2)
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.jira_request", side_effect=fake_req), \
+             patch("jira_util.assign_issue"):
+            jira_util.transition_issue("ATT-9997", "final review (human)", role="agent1", inject_context=False)
+
+        self.assertEqual(state["transitions_posted"], [])
+        self.assertEqual(state["status"], "Analysis")
+
+    def test_split_guardrail_still_enforced_when_jumping_todo_to_implementation(self):
+        state, fake_req = self._make_linear_jira_mock("Zu erledigen", story_points=13)
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.jira_request", side_effect=fake_req), \
+             patch("sys.argv", ["jira_util.py", "move", "ATT-9996", "implementation"]):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.transition_issue("ATT-9996", "implementation", role="agent1")
+        self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(state["transitions_posted"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
 
