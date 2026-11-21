@@ -248,9 +248,9 @@ class WorkoutRpeFeelTest {
             avgHrBpm = null,
             rpe = 6
         )
-        // 6 * (3600 / 60.0) = 360.0
+        // 1h @ RPE 6 -> 70.0 TSS (TSS-normalized per REQ-WKO-039.2, ATT-9360)
         val resolvedLoad = PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(sampleWithRpe)
-        assertEquals(360.0, resolvedLoad, 1e-4)
+        assertEquals(70.0, resolvedLoad, 1e-4)
 
         // When power is available, power TSS takes precedence
         val sampleWithPowerAndRpe = WorkoutTrainingLoadSample(

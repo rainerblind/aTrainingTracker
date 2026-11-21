@@ -2136,6 +2136,7 @@
     <string name="athlete_profile_pmc_acwr_sweet_spot">Zona óptima</string>
     <string name="athlete_profile_pmc_acwr_caution">Carga alta</string>
     <string name="athlete_profile_pmc_acwr_danger">Zona de riesgo</string>
+    <string name="athlete_profile_pmc_acwr_building_base">Creando base</string>
     <string name="athlete_profile_pmc_empty">Aún no hay datos de carga de entrenamiento.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->

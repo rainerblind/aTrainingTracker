@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.22  
+**Version**: 1.0.25  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 48
+**Total Requirements**: 49
 
 ---
 
@@ -1931,6 +1931,31 @@
 
 ---
 
+### REQ-UI-2792: PMC ACWR Low-CTL Building-Base Card Presentation & 9-Locale Trademark-Free Parity (`ATT-9360`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2792`
+- **System Requirement(s)**: Derived (SW-only — Compose UI & 9-locale string refinement of `REQ-UI-401.1`/`.3`/`.4` & `REQ-UI-2791`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PerformanceManagementChartCard.kt`, `values*/strings.xml`
+- **Localization Parity**: `9/9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) — athlete_profile_pmc_acwr_building_base`
+- **Rationale**: When `PowerPhysiologyCalculator` gates `ACWR` below `MIN_CTL_FOR_ACWR = 15.0` (`REQ-WKO-039.1`), athletes with active workout history must see a calm, informative neutral hint (*Building base* / *Aufbauphase*) alongside `'—'` rather than a blank sub-label or false red *Risikobereich* alarm (`ATT-9360`).
+- **Description**:
+  1. *Neutral Building-Base ACWR Presentation (`REQ-UI-2792.1`)*: In `PerformanceManagementChartCard.kt`, when `pmcSummary.currentAcwr == null && (pmcSummary.dailyPoints.isNotEmpty() || pmcPlotPoints.isNotEmpty())`, the Row 2 ACWR `PmcStatBadge` SHALL remain visible, display `"—"` as `valueText`, display `stringResource(R.string.athlete_profile_pmc_acwr_building_base)` as `badgeText`, and style neutrally with `MaterialTheme.colorScheme.onSurfaceVariant` text and neutral `MaterialTheme.colorScheme.outlineVariant` border (MUST NEVER display red `error` or *Risikobereich* styling). When both `pmcSummary.dailyPoints` and `pmcPlotPoints` are empty, `valueText` SHALL be `"—"` and `badgeText` SHALL be `null`. When `pmcSummary.currentAcwr != null` (`CTL >= 15.0`), `currentLocale` `"%.2f"` formatting and semantic `AcwrZone` text coloring (`REQ-UI-2791.1`/`.5`) SHALL remain intact.
+  2. *9-Locale Trademark-Free String Parity (`REQ-UI-2792.2`)*: `athlete_profile_pmc_acwr_building_base` SHALL be defined and non-blank across all 9 supported locales in `app/src/main/res/values*/strings.xml` (`EN`: `Building base`, `DE`: `Aufbauphase`, `ES`: `Creando base`, `FR`: `Construction de base`, `IT`: `Costruzione base`, `JA`: `ベース構築中`, `NL`: `Basis opbouwen`, `PL`: `Budowanie bazy`, `PT`: `Construção de base`), with 100% parity verified by `TranslationParityTest` and `AthleteProfileContractAndLocalizationTest` (18 `athlete_profile_pmc_*` keys).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `pmcSummary.currentAcwr == null` with populated workout history (`pmcSummary.dailyPoints.isNotEmpty() || pmcPlotPoints.isNotEmpty()`, `CTL < 15.0`), *When* `PerformanceManagementChartCard` renders, *Then* the ACWR card displays `"—"` and localized `athlete_profile_pmc_acwr_building_base` (DE: `Aufbauphase`, EN: `Building base`) in neutral styling without red warning text or truncation.
+  • *Given* completely empty PMC history (`dailyPoints.isEmpty() && pmcPlotPoints.isEmpty()`), *When* `PerformanceManagementChartCard` renders, *Then* the ACWR card displays `"—"` with no building-base hint (`badgeText == null`).
+  • *Given* all 9 supported locale `strings.xml` files, *When* `TranslationParityTest` and `AthleteProfileContractAndLocalizationTest` run, *Then* `athlete_profile_pmc_acwr_building_base` passes with 100% 9-locale parity (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-401` (`REQ-UI-401.1`/`.3`/`.4`) and `REQ-UI-2791` targeting `PerformanceManagementChartCard.kt` and `values*/strings.xml`.
+  2. *Historical Origin & Commit Trace*: `ATT-3859` (`dc62bb3c`) introduced PMC ACWR card & 17 `athlete_profile_pmc_*` strings; `ATT-5678` made PMC labels trademark-free; `ATT-9357` extracted `PerformanceManagementChartCard.kt` with neutral Row 2 borders and `currentLocale` formatting.
+  3. *Root Reason for Existing Formulation*: Previously `currentAcwrZone == null` unconditionally mapped to `acwrZoneText = null` because `acwr` was only `null` when `ctl <= 0.01` (empty history).
+  4. *Preservation of Core Invariants*: Preserves `ATT-9357` Row 1 curve swatches/legend, Row 2 neutral `outlineVariant` borders, `IntrinsicSize.Min` uniform row heights, `currentLocale` formatting, `AthleteProfileScreen.kt` (`1,596/1,975` LoC untouched), and `ATT-5678` trademark-free 9-locale strings.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1956,3 +1981,6 @@
 | `1.0.20` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `REQ-UI-2791` to `[Implemented]` (`PerformanceManagementChartCard.kt` `613` LoC, `AthleteProfileScreen.kt` `1,596/1,975` LoC, `AthleteMetricsPlotMath.kt` `365` LoC; `55/55 PASS` across 7 Tier-1 suites + `3/3` Python safety linters, `0` new warnings, `Rule 8.5` Light/Dark PNG inspected). |
 | `1.0.21` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `REQ-UI-2791` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9506` @ `04271fff`: `55/55` Stage 4 + `35/35` Gate 4 PASS, `0` `app/` drift, `0` new warnings, `3/3` safety linters PASS, `Rule 8.5` Light/Dark PNG certified, `--check-verified-evidence` `exit 0`). |
 | `1.0.22` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Re-promoted `REQ-UI-2791` to `[Verified]` in Stage 5 Bounce 1 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 Bounce 1 `ATT-9512` @ `4fe0f4af`: narrow-range `yMin == ticks.first()` / `yMax == ticks.last()` sync, `currentLocale` X-axis `formatShortDate`, TalkBack decorative swatch cleanup, `36/36 PASS`, `0` `app/` drift, `Rule 8.5` PNG re-certified, `--check-verified-evidence` `exit 0`). |
+| `1.0.23` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Added `REQ-UI-2792` (`[Planned]`, `.1`–`.2`, refining `REQ-UI-401.1`/`.3`/`.4` & `REQ-UI-2791`) for neutral ACWR building-base hint (`—` + `athlete_profile_pmc_acwr_building_base` when `currentAcwr == null` with non-empty `dailyPoints`/`pmcPlotPoints`, `badgeText = null` when both empty) and 9-locale trademark-free parity (`EN, DE, ES, FR, IT, JA, NL, PL, PT`). |
+| `1.0.24` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-UI-2792` to `[Implemented]` (`PerformanceManagementChartCard.kt` neutral building-base badge + 9-locale `values*/strings.xml` parity). |
+| `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-UI-2792` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` incl. `TranslationParityTest` `11/11`, `0` `app/` drift, `Rule 8.5` Light/Dark PNG certified, `--check-verified-evidence` `exit 0`). |

@@ -2221,6 +2221,7 @@
     <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
     <string name="athlete_profile_pmc_acwr_caution">Hohe Last</string>
     <string name="athlete_profile_pmc_acwr_danger">Risikobereich</string>
+    <string name="athlete_profile_pmc_acwr_building_base">Aufbauphase</string>
     <string name="athlete_profile_pmc_empty">Noch keine Trainingsbelastungsdaten vorhanden.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->

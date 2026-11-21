@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.23  
+**Version**: 1.0.26  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 48
+**Total Tests**: 49
 
 ---
 
@@ -941,6 +941,18 @@
 
 ---
 
+### TST-UI-2792: **PMC ACWR Building-Base Card UX, 9-Locale Parity & Visual Verification Suite (`ATT-9360`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2792` (`REQ-UI-2792.1`–`REQ-UI-2792.2`)
+- **Component**: `PerformanceManagementChartCard.kt`, `PerformanceManagementChartCardTest.kt`, `AthleteProfileContractAndLocalizationTest.kt`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `UiReflectionOnlyTestAuditContractTest.kt`
+- **Jira**: `ATT-9360` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Behavioral Compose UI Building-Base & Empty-State Tests (`TST-UI-2792.1`, `PerformanceManagementChartCardTest#testAcwrBuildingBaseHint_shownNeutrallyWhenLowCtlAndOmittedWhenEmpty_tstUi2792_1`, `PerformanceManagementChartCardTest#testAcwrBuildingBaseHint_omittedWhenPmcHistoryCompletelyEmpty_tstUi2792_1`)*: Using Robolectric `v2.createComposeRule()` at `360 dp`, verify (a) `currentAcwr == null` with non-empty `pmcSummary.dailyPoints` or `pmcPlotPoints` renders `"—"` and unclipped localized `"Aufbauphase"` (DE) / `"Building base"` (EN) in neutral styling with zero `"Risikobereich"`/`"Danger Zone"` text; (b) completely empty history (`dailyPoints.isEmpty() && pmcPlotPoints.isEmpty()`) renders `"—"` with `badgeText == null` (no building-base hint); (c) `currentAcwr != null` (`CTL >= 15.0`) preserves `currentLocale` `"%.2f"` formatting.
+  2. *9-Locale Parity & Architecture Contract Checks (`TST-UI-2792.2`, `TranslationParityTest`, `AthleteProfileContractAndLocalizationTest`, `ArchitectureConformanceContractTest`, `UiReflectionOnlyTestAuditContractTest`)*: Verify `athlete_profile_pmc_acwr_building_base` exists and is non-blank across all 9 locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT` — 18 `athlete_profile_pmc_*` keys total), `PowerPhysiologyCalculator.kt <= 1,500` LoC, `PerformanceManagementChartCard.kt <= 1,500` LoC, and `AthleteProfileScreen.kt` stays untouched (`1,596/1,975` LoC).
+  3. *`Rule 8.5` Light/Dark PNG & Live Emulator Verification (`TST-UI-2792.3`, `PerformanceManagementChartCardTest#testCapturePmcBuildingBaseLightAndDarkComparisonPng_tstUi2792_3`, `emulator-5554`)*: Capture Light and Dark/AMOLED PNG (`/tmp/att9360_verify/ATT-9360_pmc_building_base_light_dark.png`) for the `CTL = 7.0 < 15.0` cold-start state and visually inspect via `read_file` confirming `"—"` + neutral `"Aufbauphase"`, zero red alarm, and intact Row 1/Row 2 layout; verify live on `emulator-5554` in Stage 5/6.
+- **Verified Evidence (`51ce6830`, `ATT-9534` PASS, `67/67` Tier-1 PASS)**: `PerformanceManagementChartCardTest#testAcwrBuildingBaseHint_shownNeutrallyWhenLowCtlAndOmittedWhenEmpty_tstUi2792_1`, `PerformanceManagementChartCardTest#testAcwrBuildingBaseHint_omittedWhenPmcHistoryCompletelyEmpty_tstUi2792_1`, `PerformanceManagementChartCardTest#testCapturePmcBuildingBaseLightAndDarkComparisonPng_tstUi2792_3`, `AthleteProfileContractAndLocalizationTest`, `TranslationParityTest`, `ArchitectureConformanceContractTest#testMonolithLocRatchet_noNewOrGrowingGodClasses`, `UiReflectionOnlyTestAuditContractTest`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -967,3 +979,6 @@
 | `1.0.21` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `TST-UI-2791` to `[Implemented]` with exact test method citations (`55/55 PASS` across 7 Tier-1 suites, `0` new compiler warnings, `3/3` Python safety linters PASS, `Rule 8.5` Light/Dark PNG `/tmp/att9357_verify/ATT-9357_pmc_chart_light_dark.png` inspected). |
 | `1.0.22` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Promoted `TST-UI-2791` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9506` @ `04271fff`: `55/55` Stage 4 + `35/35` Gate 4 PASS, `0` `app/` drift, `3/3` safety linters PASS, `Rule 8.5` PNG certified, `--check-verified-evidence` `exit 0`, `docs/engineering/walkthroughs/ATT-9357_walkthrough.md`). |
 | `1.0.23` | 2026-11-21 | Single-Lane Author (`ATT-9357`, `--as agent1`) | `ATT-9357` | Re-promoted `TST-UI-2791` to `[Verified]` in Stage 5 Bounce 1 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 Bounce 1 `ATT-9512` @ `4fe0f4af`: `36/36 PASS` incl. narrow-range Y-axis bound sync test, `0` `app/` drift, `3/3` safety linters PASS, `Rule 8.5` PNG re-certified, `--check-verified-evidence` `exit 0`). |
+| `1.0.24` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Added `TST-UI-2792` (`[Planned]`, `.1`–`.3`, strictly symmetric `REQ-UI-2792`) covering Robolectric `v2.createComposeRule()` ACWR building-base & empty-state UI tests, 9-locale `TranslationParityTest` / `AthleteProfileContractAndLocalizationTest` parity, and `Rule 8.5` Light/Dark PNG + `emulator-5554` verification. |
+| `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-UI-2792` to `[Implemented]` with exact verbatim `PerformanceManagementChartCardTest` method citations and `Rule 8.5` PNG path. |
+| `1.0.26` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-UI-2792` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` incl. `TranslationParityTest` `11/11`, `0` `app/` drift, `Rule 8.5` PNG certified, `--check-verified-evidence` `exit 0`, `docs/engineering/walkthroughs/ATT-9360_walkthrough.md`). |
