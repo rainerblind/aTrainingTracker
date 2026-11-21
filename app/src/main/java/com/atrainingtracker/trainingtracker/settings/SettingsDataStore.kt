@@ -70,9 +70,9 @@ data class SettingsSnapshot(
 ) {
     companion object {
         val DEFAULT = SettingsSnapshot(
-            hrRunZoneMax = listOf(132, 145, 158, 171),
-            hrBikeZoneMax = listOf(127, 140, 153, 166),
-            pwrBikeZoneMax = listOf(149, 203, 243, 284, 324, 405),
+            hrRunZoneMax = SettingsDataStore.DEFAULT_HR_RUN_ZONES,
+            hrBikeZoneMax = SettingsDataStore.DEFAULT_HR_BIKE_ZONES,
+            pwrBikeZoneMax = SettingsDataStore.DEFAULT_PWR_BIKE_ZONES,
             ftp = null,
             athleteWeightKg = SettingsDataStore.DEFAULT_ATHLETE_WEIGHT_KG,
             cpWatts = null,
@@ -146,6 +146,10 @@ class SettingsDataStore(
 
     // Define integer keys
     companion object {
+
+        internal val DEFAULT_HR_RUN_ZONES = listOf(132, 145, 158, 171)
+        internal val DEFAULT_HR_BIKE_ZONES = listOf(127, 140, 153, 166)
+        internal val DEFAULT_PWR_BIKE_ZONES = listOf(149, 203, 243, 284, 324, 405)
 
         @Volatile
         private var INSTANCE: SettingsDataStore? = null
@@ -298,30 +302,9 @@ class SettingsDataStore(
     // --- HELPER: Get Good Default Values ---
     fun getDefaultValue(zoneType: ZoneType, zone: Zone): Int {
         return when (zoneType) {
-            // Heart Rate defaults
-            ZoneType.HR_RUN -> when (zone) {
-                Zone.ZONE_1 -> 132 // Recovery
-                Zone.ZONE_2 -> 145 // Aerobic
-                Zone.ZONE_3 -> 158 // Tempo
-                Zone.ZONE_4 -> 171 // Threshold
-                else -> 0
-            }
-            ZoneType.HR_BIKE -> when (zone) {
-                Zone.ZONE_1 -> 127 // Recovery
-                Zone.ZONE_2 -> 140 // Aerobic
-                Zone.ZONE_3 -> 153 // Tempo
-                Zone.ZONE_4 -> 166 // Threshold
-                else -> 0
-            }
-            // Power defaults (Watts)
-            ZoneType.PWR_BIKE -> when (zone) {
-                Zone.ZONE_1 -> 149 // Active Recovery
-                Zone.ZONE_2 -> 203 // Endurance
-                Zone.ZONE_3 -> 243 // Tempo
-                Zone.ZONE_4 -> 284 // Threshold (FTP)
-                Zone.ZONE_5 -> 324 // VO2 Max
-                Zone.ZONE_6 -> 405 // Anaerobic Capacity
-            }
+            ZoneType.HR_RUN -> DEFAULT_HR_RUN_ZONES.getOrElse(zone.index - 1) { 0 }
+            ZoneType.HR_BIKE -> DEFAULT_HR_BIKE_ZONES.getOrElse(zone.index - 1) { 0 }
+            ZoneType.PWR_BIKE -> DEFAULT_PWR_BIKE_ZONES.getOrElse(zone.index - 1) { 0 }
         }
     }
 
@@ -330,7 +313,7 @@ class SettingsDataStore(
      */
     fun calculateProportionalPowerDefaults(z4Max: Int): Pair<Int, Int> {
         if (z4Max <= 0) {
-            return Pair(324, 405)
+            return Pair(DEFAULT_PWR_BIKE_ZONES[4], DEFAULT_PWR_BIKE_ZONES[5])
         }
         val estimatedFtp = maxOf(50, kotlin.math.round(z4Max / 1.05).toInt())
         val defaultZ5 = maxOf(z4Max + 10, kotlin.math.round(estimatedFtp * 1.20).toInt())
@@ -359,7 +342,7 @@ class SettingsDataStore(
                 stored
             } else if (zoneType == ZoneType.PWR_BIKE && (zone == Zone.ZONE_5 || zone == Zone.ZONE_6) && prefs.contains(PWR_BIKE_ZONE4_MAX)) {
                 // Dynamic proportional migration from existing z4Max
-                val z4Max = prefs[PWR_BIKE_ZONE4_MAX] ?: 284
+                val z4Max = prefs[PWR_BIKE_ZONE4_MAX] ?: DEFAULT_PWR_BIKE_ZONES[3]
                 val (propZ5, propZ6) = calculateProportionalPowerDefaults(z4Max)
                 if (zone == Zone.ZONE_5) propZ5 else propZ6
             } else {
@@ -779,35 +762,35 @@ class SettingsDataStore(
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private fun mapSettingsSnapshot(prefs: Preferences): SettingsSnapshot {
-        val hrRunZ1 = prefs[HR_RUN_ZONE1_MAX] ?: 132
-        val hrRunZ2 = prefs[HR_RUN_ZONE2_MAX] ?: 145
-        val hrRunZ3 = prefs[HR_RUN_ZONE3_MAX] ?: 158
-        val hrRunZ4 = prefs[HR_RUN_ZONE4_MAX] ?: 171
+        val hrRunZ1 = prefs[HR_RUN_ZONE1_MAX] ?: DEFAULT_HR_RUN_ZONES[0]
+        val hrRunZ2 = prefs[HR_RUN_ZONE2_MAX] ?: DEFAULT_HR_RUN_ZONES[1]
+        val hrRunZ3 = prefs[HR_RUN_ZONE3_MAX] ?: DEFAULT_HR_RUN_ZONES[2]
+        val hrRunZ4 = prefs[HR_RUN_ZONE4_MAX] ?: DEFAULT_HR_RUN_ZONES[3]
 
-        val hrBikeZ1 = prefs[HR_BIKE_ZONE1_MAX] ?: 127
-        val hrBikeZ2 = prefs[HR_BIKE_ZONE2_MAX] ?: 140
-        val hrBikeZ3 = prefs[HR_BIKE_ZONE3_MAX] ?: 153
-        val hrBikeZ4 = prefs[HR_BIKE_ZONE4_MAX] ?: 166
+        val hrBikeZ1 = prefs[HR_BIKE_ZONE1_MAX] ?: DEFAULT_HR_BIKE_ZONES[0]
+        val hrBikeZ2 = prefs[HR_BIKE_ZONE2_MAX] ?: DEFAULT_HR_BIKE_ZONES[1]
+        val hrBikeZ3 = prefs[HR_BIKE_ZONE3_MAX] ?: DEFAULT_HR_BIKE_ZONES[2]
+        val hrBikeZ4 = prefs[HR_BIKE_ZONE4_MAX] ?: DEFAULT_HR_BIKE_ZONES[3]
 
-        val pwrBikeZ1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 149
-        val pwrBikeZ2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 203
-        val pwrBikeZ3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 243
-        val pwrBikeZ4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 284
+        val pwrBikeZ1 = prefs[PWR_BIKE_ZONE1_MAX] ?: DEFAULT_PWR_BIKE_ZONES[0]
+        val pwrBikeZ2 = prefs[PWR_BIKE_ZONE2_MAX] ?: DEFAULT_PWR_BIKE_ZONES[1]
+        val pwrBikeZ3 = prefs[PWR_BIKE_ZONE3_MAX] ?: DEFAULT_PWR_BIKE_ZONES[2]
+        val pwrBikeZ4 = prefs[PWR_BIKE_ZONE4_MAX] ?: DEFAULT_PWR_BIKE_ZONES[3]
 
         val pwrBikeZ5 = if (prefs.contains(PWR_BIKE_ZONE5_MAX)) {
-            prefs[PWR_BIKE_ZONE5_MAX] ?: 324
+            prefs[PWR_BIKE_ZONE5_MAX] ?: DEFAULT_PWR_BIKE_ZONES[4]
         } else if (prefs.contains(PWR_BIKE_ZONE4_MAX)) {
             calculateProportionalPowerDefaults(pwrBikeZ4).first
         } else {
-            324
+            DEFAULT_PWR_BIKE_ZONES[4]
         }
 
         val pwrBikeZ6 = if (prefs.contains(PWR_BIKE_ZONE6_MAX)) {
-            prefs[PWR_BIKE_ZONE6_MAX] ?: 405
+            prefs[PWR_BIKE_ZONE6_MAX] ?: DEFAULT_PWR_BIKE_ZONES[5]
         } else if (prefs.contains(PWR_BIKE_ZONE4_MAX)) {
             calculateProportionalPowerDefaults(pwrBikeZ4).second
         } else {
-            405
+            DEFAULT_PWR_BIKE_ZONES[5]
         }
 
         val hrRunKeys = getZoneDisplayKeys(ZoneType.HR_RUN)
@@ -1105,10 +1088,10 @@ class SettingsDataStore(
             val hasZ5 = prefs.contains(PWR_BIKE_ZONE5_MAX)
             val hasZ6 = prefs.contains(PWR_BIKE_ZONE6_MAX)
             if (!hasZ5 || !hasZ6) {
-                val z1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 149
-                val z2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 203
-                val z3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 243
-                val z4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 284
+                val z1 = prefs[PWR_BIKE_ZONE1_MAX] ?: DEFAULT_PWR_BIKE_ZONES[0]
+                val z2 = prefs[PWR_BIKE_ZONE2_MAX] ?: DEFAULT_PWR_BIKE_ZONES[1]
+                val z3 = prefs[PWR_BIKE_ZONE3_MAX] ?: DEFAULT_PWR_BIKE_ZONES[2]
+                val z4 = prefs[PWR_BIKE_ZONE4_MAX] ?: DEFAULT_PWR_BIKE_ZONES[3]
                 val (migratedZ5, migratedZ6) = calculateProportionalPowerDefaults(z4)
                 
                 // Sanity check: verify monotonic consistency
@@ -1117,12 +1100,12 @@ class SettingsDataStore(
                     prefs[PWR_BIKE_ZONE6_MAX] = migratedZ6
                 } else {
                     // Fallback to canonical defaults if existing data was corrupt
-                    prefs[PWR_BIKE_ZONE1_MAX] = 149
-                    prefs[PWR_BIKE_ZONE2_MAX] = 203
-                    prefs[PWR_BIKE_ZONE3_MAX] = 243
-                    prefs[PWR_BIKE_ZONE4_MAX] = 284
-                    prefs[PWR_BIKE_ZONE5_MAX] = 324
-                    prefs[PWR_BIKE_ZONE6_MAX] = 405
+                    prefs[PWR_BIKE_ZONE1_MAX] = DEFAULT_PWR_BIKE_ZONES[0]
+                    prefs[PWR_BIKE_ZONE2_MAX] = DEFAULT_PWR_BIKE_ZONES[1]
+                    prefs[PWR_BIKE_ZONE3_MAX] = DEFAULT_PWR_BIKE_ZONES[2]
+                    prefs[PWR_BIKE_ZONE4_MAX] = DEFAULT_PWR_BIKE_ZONES[3]
+                    prefs[PWR_BIKE_ZONE5_MAX] = DEFAULT_PWR_BIKE_ZONES[4]
+                    prefs[PWR_BIKE_ZONE6_MAX] = DEFAULT_PWR_BIKE_ZONES[5]
                 }
             }
         }
@@ -1136,24 +1119,24 @@ class SettingsDataStore(
             prefs[getCustomizedKey(zoneType)] = false
             when (zoneType) {
                 ZoneType.HR_RUN -> {
-                    prefs[HR_RUN_ZONE1_MAX] = 132
-                    prefs[HR_RUN_ZONE2_MAX] = 145
-                    prefs[HR_RUN_ZONE3_MAX] = 158
-                    prefs[HR_RUN_ZONE4_MAX] = 171
+                    prefs[HR_RUN_ZONE1_MAX] = DEFAULT_HR_RUN_ZONES[0]
+                    prefs[HR_RUN_ZONE2_MAX] = DEFAULT_HR_RUN_ZONES[1]
+                    prefs[HR_RUN_ZONE3_MAX] = DEFAULT_HR_RUN_ZONES[2]
+                    prefs[HR_RUN_ZONE4_MAX] = DEFAULT_HR_RUN_ZONES[3]
                 }
                 ZoneType.HR_BIKE -> {
-                    prefs[HR_BIKE_ZONE1_MAX] = 127
-                    prefs[HR_BIKE_ZONE2_MAX] = 140
-                    prefs[HR_BIKE_ZONE3_MAX] = 153
-                    prefs[HR_BIKE_ZONE4_MAX] = 166
+                    prefs[HR_BIKE_ZONE1_MAX] = DEFAULT_HR_BIKE_ZONES[0]
+                    prefs[HR_BIKE_ZONE2_MAX] = DEFAULT_HR_BIKE_ZONES[1]
+                    prefs[HR_BIKE_ZONE3_MAX] = DEFAULT_HR_BIKE_ZONES[2]
+                    prefs[HR_BIKE_ZONE4_MAX] = DEFAULT_HR_BIKE_ZONES[3]
                 }
                 ZoneType.PWR_BIKE -> {
-                    prefs[PWR_BIKE_ZONE1_MAX] = 149
-                    prefs[PWR_BIKE_ZONE2_MAX] = 203
-                    prefs[PWR_BIKE_ZONE3_MAX] = 243
-                    prefs[PWR_BIKE_ZONE4_MAX] = 284
-                    prefs[PWR_BIKE_ZONE5_MAX] = 324
-                    prefs[PWR_BIKE_ZONE6_MAX] = 405
+                    prefs[PWR_BIKE_ZONE1_MAX] = DEFAULT_PWR_BIKE_ZONES[0]
+                    prefs[PWR_BIKE_ZONE2_MAX] = DEFAULT_PWR_BIKE_ZONES[1]
+                    prefs[PWR_BIKE_ZONE3_MAX] = DEFAULT_PWR_BIKE_ZONES[2]
+                    prefs[PWR_BIKE_ZONE4_MAX] = DEFAULT_PWR_BIKE_ZONES[3]
+                    prefs[PWR_BIKE_ZONE5_MAX] = DEFAULT_PWR_BIKE_ZONES[4]
+                    prefs[PWR_BIKE_ZONE6_MAX] = DEFAULT_PWR_BIKE_ZONES[5]
                 }
             }
         }

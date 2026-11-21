@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.14  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 108
+**Total Tests**: 109
 
 ---
 
@@ -1569,6 +1569,23 @@
   4. *Monolith Ceilings & Governance Contracts (`TST-SET-122.4`)*: Verify `ArchitectureConformanceContractTest` (`PolarOnlineStreamingBridge.kt <= 1,500`, `PolarOfflineGattCoordinator.kt <= 1,500`, `0` edits to `PolarVeritySenseOfflineController.kt`/`DeviceManager.java`), `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest`, `DetailedDesignParityContractTest`, `SourceTextReadingAuditContractTest`, `SystemDataExchangeRequirementsContractTest`, and `SystemLiveTrackingRequirementsContractTest` (`Localization Parity: N/A`).
 - **Verification Evidence**: Gate 4 Bounce 1 (`ATT-9384` @ `d2c4953f`, `Rule 7.5`, `0` `app/` drift) — `164/164 PASS` (`0` fail, `0` err, `0` skip) across 15 suites + `:app:assembleDebug` PASS + `0` new production Kotlin warnings (`9/9` verbatim `TST-SET-122` methods verified); `4/4` Python safety linters PASS; `--check-verified-evidence` EXIT `0`.
 
+### TST-SET-123: **`TuningPreferencesDataStore` Round-Trip, `BoundedPref` & `SettingsDataStore` Zone Defaults Verification Suite (`ATT-6048`)** [Verified]
+- **Requirement(s)**: `REQ-SET-121` (`REQ-SET-121.1`..`REQ-SET-121.4`)
+- **Component**: `TuningPreferencesDataStore.kt`, `SettingsDataStore.kt`, `TuningPreferencesDataStoreRoundTripTest.kt`, `TuningPreferencesDataStoreAutoPauseTest.kt`, `TuningConfigTest.kt`, `SettingsDataStoreZoneAtomicTest.kt`, `DataStoreHotPathContractTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-6048`
+- **Status**: Verified
+- **Verification Evidence**: Verified (`ATT-6048`, SHA `2038d89b`, Gate 4 `167/167` PASS across 31 suites): `TuningPreferencesDataStoreRoundTripTest.kt` (`saveTuningConfig_roundTripsAllPersistedFieldsIncluding4AutoPauseKeys_TST_SET_123_1`, `boundedPref_dependentClampsZeroRuleAndLegacyMirrors_preserveExactBehavior_TST_SET_123_2`, `boundedPref_contractAndPrivateConstructor_verified_TST_SET_123_3`), `SettingsDataStoreZoneAtomicTest.kt` (`dataStore_centralizedZoneDefaults_matchAllReadAndResetPaths_TST_SET_123_2`), `DataStoreHotPathContractTest.kt` (`3/3`), `ArchitectureConformanceContractTest.kt` (`11/11`).
+- **Test Description**:
+  1. *Full `TuningConfig` Round-Trip Persistence (`TST-SET-123.1`)*:
+  • Construct a `TuningConfig` where all non-derived, non-hardcoded fields (including `startInAutoPauseEnabled`, `autoPauseBikeResumeDebounceSec`, `autoPauseRunResumeDebounceSec`, `autoPauseOtherResumeDebounceSec`) differ from `TuningConfig()` defaults, keeping the 7 `REQ-MAP-050` `mapFollowMe*` fields at defaults, `autoPauseSpeedThresholdKmh`/`autoPauseDebounceSec` consistent with Bike values, and `radarAutoLightControl`/`radarSmartLightAutomation` consistent with `radarLightControlMode`.
+  • Invoke `saveTuningConfig(config)`, read `tuningConfigFlow.first()`, and assert via Kotlin reflection over `TuningConfig` properties that every property round-trips identically.
+  2. *`BoundedPref`, Dependent Clamps, `0 -> DEFAULT` & Legacy Mirror Characterization (`TST-SET-123.2`)*:
+  • Verify out-of-range values clamp identically across `mapPreferencesToConfig`, `saveTuningConfig`, and `update*` via `BoundedPref` descriptors.
+  • Verify dependent clamps (`mediumDimFactor < fullDimFactor` clamps `>= clampedFullDim`, `slopeSteepThreshold < slopeFlatThreshold` clamps `>= clampedSlopeFlat`, `dfaA1 T1/T2` gap enforcement), `navigationCueDismissDurationSec == 0 -> DEFAULT`, legacy fallbacks/mirrors (`KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH`, `KEY_AUTO_PAUSE_DEBOUNCE_SEC`, `KEY_PROFILE_X_AXIS_DOMAIN`, radar modes), `TrainingApplication` cluster sync, and existing `invalidateAutoPauseCache()` behavior remain unchanged.
+  3. *Centralized `SettingsDataStore` Zone Defaults & Architectural Contracts (`TST-SET-123.3`)*:
+  • Verify `SettingsSnapshot.DEFAULT`, `getDefaultValue`, `calculateProportionalPowerDefaults`, `mapSettingsSnapshot`, `checkAndMigratePowerZones`, and `resetToDefaults` return identical `HR_RUN` (`132, 145, 158, 171`), `HR_BIKE` (`127, 140, 153, 166`), and `PWR_BIKE` (`149, 203, 243, 284, 324, 405`) boundaries.
+  • Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.settings.*"` and `ArchitectureConformanceContractTest` confirming `TuningPreferencesDataStore.kt <= 2,410` LoC, non-public constructor, and zero new `runBlocking` in `SettingsDataStore.kt`.
+
 ---
 
 ## Change History
@@ -1589,3 +1606,4 @@
 | `1.0.12` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `TST-SET-122` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9378` @ `cbe8ef29`, `Rule 7.5`, `0` `app/` drift) `161/161 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`6/6` verbatim `TST-SET-122` methods verified), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
 | `1.0.13` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Stage 6 Bounce 1/3 heal: added 3 regression tests (`9/9` verbatim `TST-SET-122` methods covering overlapping-lease alias expansion, mid-yield `deviceConnected` silent-HR watchdog deferral/resume, `shouldKeepAliveOnSearchTimeout()` in `WAITING_FOR_START`, and stale out-of-order `pauseForOfflineSync()` non-wedge) and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
 | `1.0.14` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `TST-SET-122` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9384` @ `d2c4953f`, `Rule 7.5`, `0` `app/` drift) `164/164 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`9/9` verbatim `TST-SET-122` methods verified), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
+| `1.0.15` | 2026-11-21 | Lane B Flash (`ATT-6048`, `--as agent1`) | `ATT-6048` | Added and verified `TST-SET-123` (`TuningPreferencesDataStoreRoundTripTest.kt`, `SettingsDataStoreZoneAtomicTest.kt`, `167/167` PASS @ `2038d89b`, Stage 6 PASS). |

@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.15  
+**Version**: 1.0.16  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 119
+**Total Requirements**: 120
 
 ---
 
@@ -2833,6 +2833,30 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
   3. *Root Reason for Existing Formulation*: `withGattYieldAndPolarApi()` targeted `MyBTLEDevice.pauseGattOperations()` before `PolarOnlineStreamingBridge` existed; `5 s` `searchTimeoutJob` prevented absent Polar sensors from stalling `DeviceManager`'s sequential queue.
   4. *Preservation of Core Invariants*: Preserves `5 s` absent-sensor timeout (`REQ-CON-045.1`), sibling Polar session isolation (`REQ-SET-118.3`), `PolarOnlineStreamingBridge` constructor/public JVM signatures, `ATT-9155` watchdog generation safety, and `0` edits to `PolarVeritySenseOfflineController.kt` (Lane A `ATT-9154`).
 
+### REQ-SET-121: Full `saveTuningConfig` Auto-Pause Persistence, `BoundedPref` Descriptors & Centralized Zone Defaults (`ATT-6048`) [Verified]
+- **Tests**: `TST-SET-123`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TuningPreferencesDataStore.kt`, `SettingsDataStore.kt`
+- **Rationale**: Duplicated `.coerceIn(...)` clamping and manual key read/write blocks across `TuningPreferencesDataStore.kt` caused `saveTuningConfig(config)` to omit 4 Auto-Pause keys (`KEY_START_IN_AUTO_PAUSE_ENABLED`, `KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC`), while `SettingsDataStore.kt` duplicates default `HR_RUN`, `HR_BIKE`, and `PWR_BIKE` zone boundaries across 7 locations (`ATT-6048`, refining `REQ-SET-073`, `REQ-TRK-043`, `REQ-TRK-044`).
+- **Description**:
+  1. *Complete `saveTuningConfig` Auto-Pause Persistence (`REQ-SET-121.1`)*:
+     - `TuningPreferencesDataStore.saveTuningConfig(config: TuningConfig)` SHALL clamp and persist all 4 previously omitted Auto-Pause keys (`KEY_START_IN_AUTO_PAUSE_ENABLED`, `KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC`), preserving full round-trip fidelity across all non-derived, non-hardcoded fields of `TuningConfig` (excluding the 7 `REQ-MAP-050` hardcoded `mapFollowMe*` fields, 2 derived legacy `autoPause*` fields, and `radarAutoLightControl`/`radarSmartLightAutomation` derived from `radarLightControlMode`).
+  2. *Declarative `BoundedPref` Descriptors & Dependent Clamp Preservation (`REQ-SET-121.2`)*:
+     - Standard bounded numeric preferences across `mapPreferencesToConfig`, `mapAutoPausePreferences`, `saveTuningConfig`, and `update*`/`set*` setters in `TuningPreferencesDataStore.kt` SHALL delegate range clamping to declarative `BoundedPref` descriptors while preserving identical behavior for all dependent clamps (`mediumDimFactor >= clampedFullDim`, `slopeSteepThreshold >= clampedSlopeFlat`, `dfaA1ThresholdT1`/`T2` `MIN_DFA_A1_THRESHOLD_GAP`), `navigationCueDismissDurationSec == 0 -> DEFAULT`, legacy fallback/mirror writes (`KEY_PROFILE_X_AXIS_DOMAIN`, `KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH`, `KEY_AUTO_PAUSE_DEBOUNCE_SEC`, radar light modes), `TrainingApplication` cluster tolerance fallback/sync, and existing `TrackerService.invalidateAutoPauseCache()` call sites.
+  3. *Centralized Default Zone Boundaries (`REQ-SET-121.3`)*:
+     - `SettingsDataStore.kt` SHALL define centralized default zone boundary constants for `HR_RUN` (`132, 145, 158, 171`), `HR_BIKE` (`127, 140, 153, 166`), and `PWR_BIKE` (`149, 203, 243, 284, 324, 405`) and reference them across `SettingsSnapshot.DEFAULT`, `getDefaultValue`, `calculateProportionalPowerDefaults`, `getZoneMaxFlow`, `mapSettingsSnapshot`, `checkAndMigratePowerZones`, and `resetToDefaults` without behavior change.
+  4. *Architectural & Hot-Path Invariants (`REQ-SET-121.4`)*:
+     - `TuningPreferencesDataStore.kt` MUST remain `<= 2,410` LoC (`ArchitectureConformanceContractTest`) with a non-public constructor (`TuningPreferencesDataStoreLifecycleTest`), `SettingsDataStore.kt` MUST introduce zero `runBlocking` calls (`DataStoreHotPathContractTest`), and zero `strings*.xml` edits are required.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `TuningConfig` where all non-derived, non-hardcoded fields (including `startInAutoPauseEnabled` and `autoPause*ResumeDebounceSec`) differ from defaults (with derived legacy/radar fields consistent with their source fields), *When* `saveTuningConfig(config)` is executed, *Then* `tuningConfigFlow` emits an identical `TuningConfig` verified across all properties.
+• *Given* out-of-range inputs and dependent parameters (`mediumDimFactor < fullDimFactor`, `slopeSteepThreshold < slopeFlatThreshold`, `dfaA1 T1/T2` gap violation, `navigationCueDismissDurationSec == 0`), *When* read or written via `TuningPreferencesDataStore`, *Then* `BoundedPref` and dependent clamp logic produce identical values, legacy mirrors, `TrainingApplication` syncs, and `invalidateAutoPauseCache()` calls as before refactoring.
+• *Given* default `HR_RUN`, `HR_BIKE`, and `PWR_BIKE` zone reads, migrations, and resets in `SettingsDataStore`, *When* evaluated via `SettingsSnapshot.DEFAULT`, `getDefaultValue`, `mapSettingsSnapshot`, `checkAndMigratePowerZones`, and `resetToDefaults`, *Then* all boundaries match the centralized constants identically.
+
+**Invariants**: `TuningPreferencesDataStore.kt <= 2,410` LoC; non-public `TuningPreferencesDataStore` constructor; zero new `runBlocking` in `SettingsDataStore.kt`; zero changes to `TuningConfig` public constructor signature or `invalidateAutoPauseCache()` call sites; 9-locale parity N/A (`0` UI strings).
+
 ---
 
 ## Change History
@@ -2854,3 +2878,4 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.13` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `REQ-SET-120` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9378` @ `cbe8ef29`) `161/161 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `cbe8ef29`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
 | `1.0.14` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Stage 6 Bounce 1/3 heal: removed sticky `isPausedForOfflineSync` so `PolarOfflineGattCoordinator` is single atomic source of truth, guarded `pauseForOfflineSync()` against stale calls, armed `silentHrWatchdog` on resume after mid-yield `deviceConnected`, kept yielded bridge alive via `shouldKeepAliveOnSearchTimeout()` in `WAITING_FOR_START`, tracked `pausedOfflineYieldListeners` set for alias-expansion transitions, logged exact `timeoutMs`, and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
 | `1.0.15` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `REQ-SET-120` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9384` @ `d2c4953f`) `164/164 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `d2c4953f`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
+| `1.0.16` | 2026-11-21 | Lane B Flash (`ATT-6048`, `--as agent1`) | `ATT-6048` | Added and verified `REQ-SET-121` (`saveTuningConfig` 4 missing Auto-Pause keys, `BoundedPref` descriptors, and centralized `SettingsDataStore` zone defaults; Stage 4 verified `167/167` PASS @ `2038d89b`). |
