@@ -30,10 +30,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
@@ -49,6 +49,7 @@ import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
 import com.atrainingtracker.trainingtracker.physiology.TsbReadinessZone
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -164,15 +165,13 @@ class PerformanceManagementChartCardTest {
             )
         }
 
-        // 2. Row 1 curve swatches & compact 3-curve legend displayed (decorative swatches carry no duplicate TalkBack label)
+        // 2. Thick top-only accent bars are removed (ATT-9558); compact 3-curve legend & Row 1 cards remain displayed
         for (swatchTag in listOf("pmc_swatch_ctl", "pmc_swatch_atl", "pmc_swatch_tsb")) {
-            val swatchNode = composeTestRule.onNodeWithTag(swatchTag, useUnmergedTree = true)
-            swatchNode.assertIsDisplayed()
-            assertFalse(
-                "Decorative swatch '$swatchTag' must not duplicate label via contentDescription",
-                SemanticsProperties.ContentDescription in swatchNode.fetchSemanticsNode().config
-            )
+            composeTestRule.onNodeWithTag(swatchTag, useUnmergedTree = true).assertDoesNotExist()
         }
+        composeTestRule.onNodeWithTag("pmc_card_ctl", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("pmc_card_atl", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("pmc_card_tsb", useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithTag("pmc_chart_legend", useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithTag("pmc_legend_ctl", useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithTag("pmc_legend_atl", useUnmergedTree = true).assertIsDisplayed()
@@ -397,5 +396,91 @@ class PerformanceManagementChartCardTest {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
         }
         assertTrue("Building-base PNG must be written and non-empty", outFile.exists() && outFile.length() > 1024L)
+    }
+
+    private fun verifyUniformColoredBordersWithoutTopAccentBar(darkMode: Boolean) {
+        fun colorDistance(a: Int, b: Int): Int {
+            val dr = android.graphics.Color.red(a) - android.graphics.Color.red(b)
+            val dg = android.graphics.Color.green(a) - android.graphics.Color.green(b)
+            val db = android.graphics.Color.blue(a) - android.graphics.Color.blue(b)
+            return abs(dr) + abs(dg) + abs(db)
+        }
+
+        fun assertUniformColoredBorderAndNoThickTopBar(cardTag: String, expectedCurveArgb: Int) {
+            val bmp = composeTestRule
+                .onNodeWithTag(cardTag, useUnmergedTree = true)
+                .captureToImage()
+                .asAndroidBitmap()
+            val midX = bmp.width / 2
+            val midY = bmp.height / 2
+            val topEdge = bmp.getPixel(midX, 1)
+            val bottomEdge = bmp.getPixel(midX, bmp.height - 2)
+            val leftEdge = bmp.getPixel(1, midY)
+            val rightEdge = bmp.getPixel(bmp.width - 2, midY)
+            // 1.5dp border at xhdpi (2px/dp) = 3px -> pixel at y=6 is inside the card background (not a thick 3dp+ top bar)
+            val belowTopBorder = bmp.getPixel(midX, 6)
+            val aboveBottomBorder = bmp.getPixel(midX, bmp.height - 7)
+
+            assertTrue(
+                "$cardTag top and bottom border edges must match uniformly (top=${Integer.toHexString(topEdge)}, bottom=${Integer.toHexString(bottomEdge)})",
+                colorDistance(topEdge, bottomEdge) <= 18
+            )
+            assertTrue(
+                "$cardTag left and right border edges must match top border uniformly",
+                colorDistance(topEdge, leftEdge) <= 18 && colorDistance(topEdge, rightEdge) <= 18
+            )
+            assertTrue(
+                "$cardTag must NOT have a thick top-only bar extending into interior (y=6 should match bottom interior)",
+                colorDistance(belowTopBorder, aboveBottomBorder) <= 18
+            )
+            assertTrue(
+                "$cardTag border must visibly differ from its interior background",
+                colorDistance(topEdge, belowTopBorder) >= 40
+            )
+            assertTrue(
+                "$cardTag border must stay anchored to its curve color",
+                colorDistance(topEdge, expectedCurveArgb) < colorDistance(belowTopBorder, expectedCurveArgb)
+            )
+        }
+
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val deConfig = Configuration(baseConfig).apply { setLocale(Locale.GERMANY) }
+            CompositionLocalProvider(LocalConfiguration provides deConfig) {
+                ATrainingTrackerTheme(darkTheme = darkMode, amoled = darkMode) {
+                    Surface(modifier = Modifier.width(360.dp).padding(16.dp)) {
+                        PerformanceManagementChartCard(
+                            pmcSummary = pixel10SampleSummary(),
+                            pmcPlotPoints = pixel10ZeroCtlNegativeTsbPoints(),
+                            selectedPmcTimeRange = MetricsTimeRange.THREE_MONTHS
+                        )
+                    }
+                }
+            }
+        }
+
+        assertUniformColoredBorderAndNoThickTopBar("pmc_card_ctl", TTColor.PmcCtlBlue.toArgb())
+        assertUniformColoredBorderAndNoThickTopBar("pmc_card_atl", TTColor.PmcAtlMagenta.toArgb())
+        assertUniformColoredBorderAndNoThickTopBar("pmc_card_tsb", TTColor.PmcTsbAmber.toArgb())
+
+        // Row 2 ACWR border must remain visually distinct from Row 1 CTL blue border
+        val ctlBmp = composeTestRule.onNodeWithTag("pmc_card_ctl", useUnmergedTree = true).captureToImage().asAndroidBitmap()
+        val acwrBmp = composeTestRule.onNodeWithTag("pmc_card_acwr", useUnmergedTree = true).captureToImage().asAndroidBitmap()
+        val ctlBorder = ctlBmp.getPixel(ctlBmp.width / 2, 1)
+        val acwrBorder = acwrBmp.getPixel(acwrBmp.width / 2, 1)
+        assertTrue(
+            "Row 1 CTL colored border must remain distinct from Row 2 neutral ACWR border (darkMode=$darkMode)",
+            colorDistance(ctlBorder, acwrBorder) >= 60
+        )
+    }
+
+    @Test
+    fun testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInLightTheme_att9558() {
+        verifyUniformColoredBordersWithoutTopAccentBar(darkMode = false)
+    }
+
+    @Test
+    fun testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInDarkAmoledTheme_att9558() {
+        verifyUniformColoredBordersWithoutTopAccentBar(darkMode = true)
     }
 }
