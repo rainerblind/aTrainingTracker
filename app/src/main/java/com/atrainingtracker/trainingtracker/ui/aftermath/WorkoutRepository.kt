@@ -3726,18 +3726,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     }
                     _initialWorkoutLoaded.postValue(workout)
 
-                    _allWorkouts.update { currentList ->
-                        val newList = currentList.toMutableList()
-                        val index = newList.indexOfFirst { it.id == id }
-
-                        if (index != -1) {
-                            newList[index] = workout
-                        } else {
-                            newList.add(workout)
-                            newList.sortByDescending { it.headerData.startTimeS }
-                        }
-                        newList
-                    }
+                    addOrUpdateWorkout(workout)
                 }
             }
         }

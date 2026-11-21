@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.18  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 127
+**Total Tests**: 128
 
 ---
 
@@ -2386,10 +2386,36 @@
 
 ---
 
+### TST-DAT-042: **`WorkoutRepository.loadWorkout` In-Memory Merge & Export-Status Preservation Verification (`ATT-6170`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-046` (`REQ-DAT-046.1`..`REQ-DAT-046.3`)
+- **Component**: `WorkoutRepository.kt`
+- **Jira**: `ATT-6170`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Verification Evidence**: Verified (`ATT-6170`, SHA `36609fff`, Gate 4 `ATT-9533` `25/25` PASS across 4 suites, `0` fail, `0` skip, `Rule 7.5`):
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepositoryExportStatusTest.kt`: `testLoadWorkout_cachedWorkout_preservesExportStatusesAndTransientFieldsWhileUpdatingDbFields_TST_DAT_042_1`, `testLoadWorkout_uncachedWorkout_insertsSortedDescendingAndEmitsInitialWorkout_TST_DAT_042_2` (`TST-DAT-042.1`, `TST-DAT-042.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepositoryBatchLoadTest.kt` (`1/1` PASS), `WorkoutDataMappingSymmetryTest.kt` (`10/10` PASS), `ArchitectureConformanceContractTest.kt` (`11/11` PASS) (`TST-DAT-042.3`)
+- **Test Description**:
+  1. *Cached Workout Merge & Export-Status / Transient Field Preservation (`TST-DAT-042.1` — `WorkoutRepositoryExportStatusTest.kt`)*:
+     - Seed `_allWorkouts` with a cached `WorkoutData` entry having populated `exportStatuses` (e.g., Strava, Dropbox, Google Drive chips), `mapPolyline`, `encodedAltitudes`, `encodedDistances`, and `extremaRows` with non-null `minLatLng`/`maxLatLng`.
+     - Stub cursor mapping for `loadWorkout(id)` returning updated DB fields (`clusterId`, `clusterName`, `workoutName`, `sportId`, `sportName`, `equipmentId`, `equipmentName`) with empty `exportStatuses`, empty track/elevation strings, and null `minLatLng`/`maxLatLng` in `extremaRows`.
+     - Invoke `loadWorkout(id)` and assert `_allWorkouts` preserves all cached `exportStatuses`, `mapPolyline`, `encodedAltitudes`, `encodedDistances`, and `extremaRows` (`minLatLng`/`maxLatLng`), updates the refreshed DB fields (`clusterId`, `clusterName`, `workoutName`, `sportId`, `equipmentId`), and posts the refreshed `WorkoutData` to `_initialWorkoutLoaded`.
+  2. *Uncached Workout Insertion & Descending Sort (`TST-DAT-042.2` — `WorkoutRepositoryExportStatusTest.kt`)*:
+     - Seed `_allWorkouts` with workouts at newer and older `startTimeS` values excluding target `id`; invoke `loadWorkout(id)` and assert the newly loaded workout is inserted at its descending `headerData.startTimeS` position and posted to `_initialWorkoutLoaded`.
+  3. *Batch/Symmetry/Architecture Regression Parity (`TST-DAT-042.3` — `WorkoutRepositoryBatchLoadTest.kt`, `WorkoutDataMappingSymmetryTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     - Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExportStatusTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBatchLoadTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` (`WorkoutRepository.kt <= 5,117` LoC); confirm `0` string edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.21` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `TST-DAT-042` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9533`) independently verified `25/25` PASS across 4 suites (`0` fail, `0` skip) @ `36609fff` and `docs/engineering/walkthroughs/ATT-6170_walkthrough.md`. |
+| `1.0.20` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `TST-DAT-042` to `[Implemented]` with unit tests in `WorkoutRepositoryExportStatusTest.kt` (`testLoadWorkout_cachedWorkout_preservesExportStatusesAndTransientFieldsWhileUpdatingDbFields_TST_DAT_042_1`, `testLoadWorkout_uncachedWorkout_insertsSortedDescendingAndEmitsInitialWorkout_TST_DAT_042_2`). |
+| `1.0.19` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Added `[Planned]` `TST-DAT-042` (`TST-DAT-042.1`..`TST-DAT-042.3`) for `REQ-DAT-046` verifying `WorkoutRepository.loadWorkout` preservation of `exportStatuses` and transient fields, `_initialWorkoutLoaded` emission, uncached descending insertion, and `WorkoutRepositoryBatchLoadTest` / `WorkoutDataMappingSymmetryTest` / `ArchitectureConformanceContractTest` parity. |
 | `1.0.18` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `TST-EXP-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9476`) independently verified `56/56` PASS across 9 suites (`0` warnings) @ `d889e9ca` + live `:app:replayRawTelemetry` PASS (`9s`) / FAIL (`4s`), `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9349_walkthrough.md`. |
 | `1.0.17` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Gate 4 (`ATT-9476`) revision: added `replay_veritySenseGyroOnlySidecar_preservesUnscaledDegPerSecAndRoutesSenseModel` verifying unscaled Verity gyro deg/s, `"Polar Sense ..."` model routing, and H10 external cadence wiring parity. |
 | `1.0.16` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `TST-EXP-046` to `[Implemented]` with pure-JVM suites (`PolarRawTelemetryReaderTest`, `OfflineTelemetryReplayHarnessTest`, `OfflineReplayCliTest`: `55/55` PASS across 9 suites + live `:app:replayRawTelemetry` PASS `exit 0` and FAIL `exit 1`). |

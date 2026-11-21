@@ -20,13 +20,19 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.app.Application
 import android.content.IntentFilter
+import android.database.Cursor
 import android.util.Log
+import androidx.arch.core.executor.ArchTaskExecutor
+import androidx.arch.core.executor.TaskExecutor
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
+import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
+import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +57,12 @@ class WorkoutRepositoryExportStatusTest {
 
     @Before
     fun setUp() {
+        ArchTaskExecutor.getInstance().setDelegate(object : TaskExecutor() {
+            override fun executeOnDiskIO(runnable: Runnable) = runnable.run()
+            override fun postToMainThread(runnable: Runnable) = runnable.run()
+            override fun isMainThread(): Boolean = true
+        })
+
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
@@ -84,6 +96,7 @@ class WorkoutRepositoryExportStatusTest {
 
     @After
     fun tearDown() {
+        ArchTaskExecutor.getInstance().setDelegate(null)
         WorkoutRepository.resetForTesting(null)
         StravaUploadDbHelper.resetForTesting(null)
         unmockkStatic(WorkoutSummariesDatabaseManager::class)
@@ -158,5 +171,126 @@ class WorkoutRepositoryExportStatusTest {
         }
 
         assertEquals("Strava Lunch Run", repository.allWorkouts.value.first().workoutName)
+    }
+
+    private fun installMockMapper(targetRepo: WorkoutRepository, mockMapper: WorkoutDataMapper) {
+        val field: Field = WorkoutRepository::class.java.getDeclaredField("mapper\$delegate")
+        field.isAccessible = true
+        field.set(targetRepo, lazyOf(mockMapper))
+    }
+
+    @Test
+    // Verifies REQ-DAT-046 / TST-DAT-042.1
+    fun testLoadWorkout_cachedWorkout_preservesExportStatusesAndTransientFieldsWhileUpdatingDbFields_TST_DAT_042_1() = runBlocking {
+        val cachedExtrema = listOf(
+            ExtremaDataRow(
+                sensorLabel = "HR",
+                unitLabel = "bpm",
+                minValue = "110",
+                minLatLng = LatLng(48.10, 11.50),
+                avgValue = "145",
+                maxValue = "175",
+                maxLatLng = LatLng(48.20, 11.60)
+            )
+        )
+        val cachedExportStatuses = listOf(
+            ExportStatusGroupData(hasContent = true, groupTitle = "Strava", succeededLine = "Uploaded"),
+            ExportStatusGroupData(hasContent = true, groupTitle = "Dropbox", succeededLine = "Uploaded"),
+            ExportStatusGroupData(hasContent = true, groupTitle = "Google Drive", succeededLine = "Uploaded")
+        )
+        val cachedWorkout = createDummyWorkout(101L, "2026_09_11_10_00_00", "Morning Run").copy(
+            mapPolyline = "encoded_poly_abc",
+            encodedAltitudes = "encoded_alt_123",
+            encodedDistances = "encoded_dist_456",
+            extremaRows = cachedExtrema,
+            exportStatuses = cachedExportStatuses
+        )
+        seedWorkouts(listOf(cachedWorkout))
+
+        val dbWorkout = createDummyWorkout(101L, "2026_09_11_10_00_00", "Updated Loop Ride").copy(
+            sportId = 2L,
+            sportName = "Cycling",
+            bSportType = BSportType.BIKE,
+            equipmentId = 7L,
+            equipmentName = "Road Bike",
+            clusterId = 42L,
+            clusterName = "Morning Loop",
+            radarTrafficSummary = RadarTrafficSummary(totalVehicles = 5),
+            mapPolyline = "",
+            encodedAltitudes = "",
+            encodedDistances = "",
+            extremaRows = listOf(
+                ExtremaDataRow(
+                    sensorLabel = "HR",
+                    unitLabel = "bpm",
+                    minValue = "110",
+                    minLatLng = null,
+                    avgValue = "145",
+                    maxValue = "175",
+                    maxLatLng = null
+                )
+            ),
+            exportStatuses = emptyList()
+        )
+        val enrichedRadar = RadarTrafficSummary(totalVehicles = 12, closePassCount = 1)
+        val mockCursor = mockk<Cursor>(relaxed = true) {
+            every { moveToFirst() } returns true
+        }
+        every { mockSummariesDb.getWorkoutCursor(101L) } returns mockCursor
+
+        val mockMapper = mockk<WorkoutDataMapper>()
+        every { mockMapper.fromCursor(mockCursor) } returns dbWorkout
+
+        val spyRepo = spyk(repository)
+        installMockMapper(spyRepo, mockMapper)
+        every { spyRepo.getRadarTrafficSummary("2026_09_11_10_00_00") } returns enrichedRadar
+
+        spyRepo.loadWorkout(101L)
+
+        val updated = spyRepo.allWorkouts.value.single { it.id == 101L }
+        assertEquals(cachedExportStatuses, updated.exportStatuses)
+        assertEquals("encoded_poly_abc", updated.mapPolyline)
+        assertEquals("encoded_alt_123", updated.encodedAltitudes)
+        assertEquals("encoded_dist_456", updated.encodedDistances)
+        assertEquals(LatLng(48.10, 11.50), updated.extremaRows.single().minLatLng)
+        assertEquals(LatLng(48.20, 11.60), updated.extremaRows.single().maxLatLng)
+        assertEquals(42L, updated.clusterId)
+        assertEquals("Morning Loop", updated.clusterName)
+        assertEquals("Updated Loop Ride", updated.workoutName)
+        assertEquals(2L, updated.sportId)
+        assertEquals("Cycling", updated.sportName)
+        assertEquals(7L, updated.equipmentId)
+        assertEquals("Road Bike", updated.equipmentName)
+        assertEquals(enrichedRadar, updated.radarTrafficSummary)
+
+        val emitted = spyRepo.initialWorkoutLoaded.value
+        assertEquals(101L, emitted?.id)
+        assertEquals(42L, emitted?.clusterId)
+        assertEquals("Morning Loop", emitted?.clusterName)
+        assertEquals("Updated Loop Ride", emitted?.workoutName)
+        assertEquals(enrichedRadar, emitted?.radarTrafficSummary)
+    }
+
+    @Test
+    // Verifies REQ-DAT-046 / TST-DAT-042.2
+    fun testLoadWorkout_uncachedWorkout_insertsSortedDescendingAndEmitsInitialWorkout_TST_DAT_042_2() = runBlocking {
+        val newest = createDummyWorkout(200L, "2026_09_11_12_00_00", "Newest").copy(startTimeS = 1700002000L)
+        val oldest = createDummyWorkout(100L, "2026_09_11_08_00_00", "Oldest").copy(startTimeS = 1700000000L)
+        seedWorkouts(listOf(newest, oldest))
+
+        val middleFromDb = createDummyWorkout(150L, "2026_09_11_10_00_00", "Middle").copy(startTimeS = 1700001000L)
+        val mockCursor = mockk<Cursor>(relaxed = true) {
+            every { moveToFirst() } returns true
+        }
+        every { mockSummariesDb.getWorkoutCursor(150L) } returns mockCursor
+
+        val mockMapper = mockk<WorkoutDataMapper>()
+        every { mockMapper.fromCursor(mockCursor) } returns middleFromDb
+        installMockMapper(repository, mockMapper)
+
+        repository.loadWorkout(150L)
+
+        assertEquals(listOf(200L, 150L, 100L), repository.allWorkouts.value.map { it.id })
+        assertEquals(150L, repository.initialWorkoutLoaded.value?.id)
     }
 }
