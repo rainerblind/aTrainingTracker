@@ -3,9 +3,9 @@
 **Document ID**: `DOC-MGT-QA`  
 **Document Identifier**: `QA-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.1` (Quality Assurance) & `GP 2.1.6` (Ensure independence of quality assurance)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.3  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-21  
-**Governing Tickets**: [ATT-8212](https://atrainingtracker.atlassian.net/browse/ATT-8212), [ATT-8213](https://atrainingtracker.atlassian.net/browse/ATT-8213), [ATT-8164](https://atrainingtracker.atlassian.net/browse/ATT-8164), [ATT-8169](https://atrainingtracker.atlassian.net/browse/ATT-8169), [ATT-9494](https://atrainingtracker.atlassian.net/browse/ATT-9494) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`  
+**Target Release**: `V5.0.0` | **Version**: 1.2.4  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-22  
+**Governing Tickets**: [ATT-8212](https://atrainingtracker.atlassian.net/browse/ATT-8212), [ATT-8213](https://atrainingtracker.atlassian.net/browse/ATT-8213), [ATT-8164](https://atrainingtracker.atlassian.net/browse/ATT-8164), [ATT-8169](https://atrainingtracker.atlassian.net/browse/ATT-8169), [ATT-8222](https://atrainingtracker.atlassian.net/browse/ATT-8222), [ATT-9494](https://atrainingtracker.atlassian.net/browse/ATT-9494), [ATT-9567](https://atrainingtracker.atlassian.net/browse/ATT-9567) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`, `REQ-PRO-135`, `REQ-PRO-136`  
 
 ---
 
@@ -77,31 +77,35 @@ To maintain verifiable audit trails, all quality records are formally version-co
 * `docs/engineering/aspice_audits/`: Versioned weekly dual-vendor ASPICE cross-audit reports (`YYYY-MM-DD_dual_vendor_aspice_audit.md`).
 * `docs/engineering/code_reviews/`: Versioned weekly dual-vendor code review reports and `coverage_matrix.md`.
 * `docs/engineering/emulator_sweeps/`: Versioned weekly & pre-release serial Multi-OS & 9-language emulator sweep reports (`YYYY-MM-DD_sweep.md`) and per-locale screenshots (`REQ-PRO-135`, `ATT-8222`).
+* `docs/engineering/test_evidence/`: Versioned weekly full test suite & Kover coverage snapshots (`weekly_YYYY_KWww.md` / `.json`, `REQ-PRO-136`, `ATT-9567`), per-`Schicht` test evidence, and per-ticket SHA-256 bundles (`tickets/<KEY>/`).
 * `docs/engineering/qa_audits/`: Per-sprint QA process compliance audit reports (`sprint_<sprint_id>.md`).
 * `docs/engineering/gates/`: Sprint quality gate export records.
 * `docs/engineering/metrics/process_metrics.jsonl`: PA 4.1 quantitative process metrics and PA 4.2 SPC control limits.
 
 ---
 
-## 7. Mandatory Weekly Dual-Vendor Review Mandate (Layer 5)
+## 7. Mandatory Weekly Dual-Vendor Review & Verification Mandate (Layer 5)
 
-Under `SWE.2`, `SWE.3.BP4`, `SWE.4.BP2`, `SUP.1.BP1/BP3`, and `GP 2.1.6`, the project mandates regular weekly ("in der Regel wöchentlich", cadence $\le 7$ days) independent reviews conducted across **two distinct AI vendors (Google Gemini and Anthropic Claude)**:
+Under `SWE.2`, `SWE.3.BP4`, `SWE.4.BP2`, `SUP.1.BP1/BP3`, and `GP 2.1.6`, the project mandates regular weekly ("in der Regel wöchentlich", 7-day cadence enforced with a **6-day overdue trigger** for 1-day lead time) independent reviews and full-suite verification across **4 weekly pillars**:
 
-### 7.1 Dual Review Pillars
-1. **ASPICE 4.0 Process & Evidence Cross-Audits (`ATT-8212`)**:
+### 7.1 Four Weekly Governance & Verification Pillars
+1. **ASPICE 4.0 Process & Evidence Cross-Audits (`ATT-8212`, `REQ-PRO-096`)**:
    - Audits living documentation, gate verdicts, test integrity, and ASPICE BP evidence in `docs/engineering/aspice_audits/`.
-2. **Holistic Codebase & Architecture Reviews (`ATT-8213`)**:
+2. **Holistic Codebase & Architecture Reviews (`ATT-8213`, `REQ-PRO-095`)**:
    - Broad codebase scope: reviews are **NOT** restricted to delta diffs (`<last_sha>..develop`).
    - Every weekly review inspects **full production & test subsystem slices** of the existing codebase alongside recent changes, systematically tracking progress via `docs/engineering/code_reviews/coverage_matrix.md` across all 9 package domains (`tracker/`, `banalservice/`, `database/`, `exporter/`, `ui/tracking/`, `ui/aftermath/`, `ui/settings/`, `tools/`, `test/`).
    - Reconciles findings into `docs/engineering/code_reviews/YYYY-MM-DD_dual_vendor_code_review.md` and files actionable Bug/Improvement tickets under Epic `ATT-232` / `ATT-8138`.
 3. **Serial Multi-OS & 9-Language Emulator UI Verification Sweeps (`ATT-8222` / `REQ-PRO-135`)**:
    - Executed serially across representative Android OS levels and all 9 app locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) via `python3 tools/run_multi_os_emulator_sweep.py` strictly on `emulator-*` instances (`REQ-TST-004`).
    - Audits `logcat` (`FATAL EXCEPTION`, `ANR`, `StrictMode`, `IllegalFormat*`) and `uiautomator dump` bounds, archiving results under `docs/engineering/emulator_sweeps/YYYY-MM-DD_sweep.md`.
+4. **Weekly Full Test Suite, Static Analysis & Kover Snapshot (`ATT-9567` / `REQ-PRO-136` / `Rule 7.5`)**:
+   - Executes the full `:app:testDebugUnitTest --rerun`, `:app:lintDebug`, `:app:detekt`, `:app:koverXmlReportDebug`, `verify_requirement_governance.py`, Python `tools/test_*.py`, and safety linters on `develop`.
+   - Archives the unmodified full-suite and Kover evidence snapshot under `docs/engineering/test_evidence/weekly_YYYY_KWww.md` & `.json` before any targeted re-runs, fixes/triages discovered findings, and rolls up summary results to `Wochen Review & Retro`.
 
 ### 7.2 Automated Backlog Scheduling & Enforcement (`ensure-weekly-reviews`)
-* To guarantee that weekly reviews and multi-OS/9-locale sweeps cannot be overlooked or deprioritized during active sprints, `tools/jira_util.py ensure-weekly-reviews` runs during Ceremony 1 (Sprint Planning) and Ceremony 2 (Sprint Review).
-* If `> 7 days` have elapsed since the latest completed review/sweep (with new `develop` commits for emulator sweeps, or unreviewed subsystems remaining in `coverage_matrix.md` / `aspice_audits/`) and no open ticket exists in Jira, the tooling **automatically creates the due ticket under Epic `ATT-232` and ranks it at the very top of the Product Backlog (`rank-top`)**.
-* `release-manager/SKILL.md` verifies that weekly dual-vendor reviews and multi-OS/9-language emulator sweeps are current ($\le 7$ days) prior to production release branch cutting.
+* To guarantee that all 4 weekly pillars (code review, ASPICE audit, multi-OS/9-locale emulator sweep, and full test suite) cannot be overlooked or deprioritized during active sprints, `tools/jira_util.py ensure-weekly-reviews` runs during Ceremony 1 (Sprint Planning) and Ceremony 2 (Sprint Review) / `Schichtwechsel`.
+* Each `ensure_weekly_*_ticket()` helper evaluates its local overdue check **first** (`>= 6` days elapsed since the latest completed artifact, with new `develop` commits for emulator sweeps and weekly full test suites); only when overdue does it query Jira (`status != "Erledigt"`) to reuse any open ticket or create a deduplicated `Verbesserung` ticket under Epic `ATT-232` ranked at the very top of the Product Backlog (`add_to_sprint=False`, `rank_top=True`).
+* `release-manager/SKILL.md` verifies that all 4 weekly gates (`is_weekly_review_overdue()`, `is_weekly_aspice_audit_overdue()`, `is_weekly_emulator_sweep_overdue()`, `is_weekly_full_test_suite_overdue()`) are current (`< 6` days) prior to production release branch cutting.
 
 ---
 
@@ -135,3 +139,4 @@ Per `docs/architecture/adr_001_java_core_services_migration.md` (`ADR-001` / `RE
 | `1.2.1` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added Section 8 documenting CI safety guards, Detekt/Lint baseline ratchet & burn-down plan, and PMD vs SpotBugs vs Error Prone Java evaluation referencing `ADR-001`. |
 | `1.2.2` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added Pillar 3 (`Serial Multi-OS & 9-Language Emulator UI Verification Sweeps`) to §6 & §7 and `ensure-weekly-reviews` scheduling + pre-release gate integration (`REQ-PRO-135`). |
 | `1.2.3` | 2026-11-21 | Independent ASPICE Auditor (Gemini) | `ATT-9494` | Reconciled §2 Layer 2–3 with `Rule 3.3`/`Rule 7.2` (pre-squash `feature/<KEY>` Stage 6 Cold Final Review with live `emulator-5554` verification & `Flash`/`Neon` routing; 3-`Schicht` cadence) and updated Jira URLs (`Finding m1`). |
+| `1.2.4` | 2026-11-22 | Lane 2 Author (`ATT-9567`, `--as agent1`) | `ATT-9567` | Added Pillar 4 (`Weekly Full Test Suite, Static Analysis & Kover Snapshot`, `REQ-PRO-136`) to §6 & §7, unified all 4 weekly pillars on a 6-day overdue trigger with overdue-first Jira deduplication, and synced `release-manager` gate docs. |

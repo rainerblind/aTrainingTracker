@@ -57,7 +57,7 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 2. `Gradle: Version: Remove -dev` (Set clean production `versionName`)
 3. `Build: Signed APK` (`app-release.apk`)
 4. `Build: Signed APP Bundle` (`app-release.aab`)
-* **[MANDATORY SYSTEM & GOVERNANCE EVIDENCE GATES - ASPICE SYS.5 & SWE.2/SWE.3/SWE.5/SWE.6/SUP.1]**: Release branch initiation and release candidate tag creation (Step 7) / Play Store distribution (Step 6) are **STRICTLY BLOCKED** if mandatory weekly dual-vendor code reviews are overdue (`is_weekly_review_overdue()`) or unless verified software and hardware-in-the-loop system evidence artifacts pass all criteria:
+* **[MANDATORY SYSTEM & GOVERNANCE EVIDENCE GATES - ASPICE SYS.5 & SWE.2/SWE.3/SWE.5/SWE.6/SUP.1]**: Release branch initiation and release candidate tag creation (Step 7) / Play Store distribution (Step 6) are **STRICTLY BLOCKED** if mandatory weekly 4-pillar governance/verification gates are overdue (`is_weekly_review_overdue()`, `is_weekly_aspice_audit_overdue()`, `is_weekly_emulator_sweep_overdue()`, or `is_weekly_full_test_suite_overdue()`) or unless verified software and hardware-in-the-loop system evidence artifacts pass all criteria:
   - Automated Unit & Software Integration: `./gradlew :app:testDebugUnitTest` (including `INT-SWE-01..08`) + CI `AppSmokeAndroidTest.kt`
   - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
   - Verification Summary: `docs/releases/<tag>/verification_summary.md` (from `tools/generate_release_verification_summary.py`)
@@ -84,12 +84,12 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
    git status
    ```
 
-   * **Mandatory Weekly Dual-Vendor & Multi-OS/9-Language Emulator Sweep Currency Gate (`REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-135` / `ATT-8212`, `ATT-8213`, `ATT-8222`, `ATT-8426`)**:
-     Prior to cutting the release branch, verify that the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review, ASPICE 4.0 Cross-Audit, and Multi-OS & 9-Language Emulator UI Verification Sweep are all current ($\le 7$ days old since the latest completed record) in `docs/engineering/code_reviews/`, `docs/engineering/aspice_audits/`, and `docs/engineering/emulator_sweeps/`:
+   * **Mandatory Weekly 4-Pillar Governance & Verification Currency Gate (`REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-135`, `REQ-PRO-136` / `ATT-8212`, `ATT-8213`, `ATT-8222`, `ATT-8426`, `ATT-9567`)**:
+     Prior to cutting the release branch, verify that the weekly Dual-Vendor (Google Gemini + Anthropic Claude) Code Review, ASPICE 4.0 Cross-Audit, Multi-OS & 9-Language Emulator UI Verification Sweep, and Weekly Full Test Suite (`:app:testDebugUnitTest`, `:app:lintDebug`, `:app:detekt`, `:app:koverXmlReportDebug`) are all current (`< 6` days old since the latest completed record; unified 6-day trigger threshold) in `docs/engineering/code_reviews/`, `docs/engineering/aspice_audits/`, `docs/engineering/emulator_sweeps/`, and `docs/engineering/test_evidence/weekly_*.md`:
      ```bash
-     python3 -c "import tools.jira_util as ju; exit(1 if (ju.is_weekly_review_overdue() or ju.is_weekly_aspice_audit_overdue() or ju.is_weekly_emulator_sweep_overdue()) else 0)"
+     python3 -c "import tools.jira_util as ju; exit(1 if (ju.is_weekly_review_overdue() or ju.is_weekly_aspice_audit_overdue() or ju.is_weekly_emulator_sweep_overdue() or ju.is_weekly_full_test_suite_overdue()) else 0)"
      ```
-     If any of these weekly gates is overdue (> 7 days), release preparation is **STRICTLY BLOCKED** until the pending review/sweep ticket is resolved (e.g. `python3 tools/run_multi_os_emulator_sweep.py`) or a human exception is recorded (decoupled from requiring all subsystem slices in coverage_matrix.md to be audited before release).
+     If any of these 4 weekly gates is overdue ($\ge 6$ days), release preparation is **STRICTLY BLOCKED** until the pending review/sweep/test-suite ticket is resolved (e.g. `python3 tools/run_multi_os_emulator_sweep.py` or `python3 tools/generate_test_evidence.py --target weekly_<YYYY>_KW<ww>`) or a human exception is recorded (decoupled from requiring all subsystem slices in coverage_matrix.md to be audited before release).
 
 2. **Inspect Current Version in `app/build.gradle`**:
    Read `versionName` and `versionCode` from the `defaultConfig` block in `app/build.gradle`:
