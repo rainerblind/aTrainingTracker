@@ -1,15 +1,15 @@
 # V5.0.0 Product Release Plan
 
 **Document ID**: `DOC-MGT-REL`  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 **Project**: aTrainingTracker (ATT)  
 **Target Release**: `V5.0.0`  
 **Configuration Item**: `docs/management/release_plan.md` (ASPICE 4.0 `MAN.3`, `SUP.8`, `SUP.10`)  
-**Parent Epic**: `ATT-8138` (*ASPICE 4.0 Audit Remediation 2026-11*)  
-**Associated Ticket**: `ATT-8162` (*Enforce capacity-bound sprint commitment and establish a V5.0.0 release plan*), `ATT-8164`  
-**Baseline Date**: 2026-11-15  
+**Parent Epic**: `ATT-8138` (*ASPICE 4.0 Audit Remediation 2026-11*), `ATT-9494` (*ASPICE 4.0 Audit Remediation 2026-11-21*)  
+**Associated Ticket**: `ATT-8162`, `ATT-8164`, `ATT-9494`  
+**Baseline Date**: 2026-11-21  
 
 ---
 
@@ -37,19 +37,20 @@ Release `V5.0.0` represents the production milestone for aTrainingTracker, trans
 ---
 
 ## 2. Sprint Cadence & Continuous Delivery Architecture
-In accordance with Core Rule 85 (`ATT-8030`, `ATT-8162`), `V5.0.0` is constructed through fixed 12-hour continuous sprint waves:
+In accordance with `Rule 2.2` / `Rule 7.2` / `Rule 9.1` (`docs/management/schichtbetrieb.md`, `ATT-8030` evolved, `ATT-8162`), `V5.0.0` is constructed through three PO-aligned continuous **`Schicht` windows**:
 
 ### 2.1 Cadence Windows & Naming
-* **Sprint Windows**: Two 12-hour windows per calendar day:
-  - **Window 1**: `04:00 -> 16:00`
-  - **Window 2**: `16:00 -> 04:00`
-* **Sprint Naming**: Sequential per ISO week: `YYYY-WW.1`, `YYYY-WW.2`, `YYYY-WW.3`, ... (e.g. `2026-46.8`, `2026-46.9`).
+* **Schicht Windows (Local Time)**:
+  - **`01_Früh`**: `05:00 – 15:00` (10 h)
+  - **`02_Spät`**: `15:00 – 22:00` (7 h)
+  - **`03_Nacht`**: `22:00 – 05:00` (7 h)
+* **Sprint Naming**: Sequential per calendar day and shift: `YYYY-MM-DD_0x_Schichtname` (e.g. `2026-11-20_03_Nacht`).
 
 ### 2.2 Capacity Envelope & Multi-Lane Bin-Packing
 * **Source Queue**: Exclusively pulled from the PO-curated pseudo-sprint `Vom PO Freigegeben` (ID `447`) in strict `ORDER BY rank ASC`.
-* **Disjoint Lane Allocation**: Up to 3 parallel Agent-Pair Lanes (`1..3`). Disjoint Epics are allocated per lane (`max_sp_per_lane` $\le 10$ SP per 12h window) so lanes never collide on shared domains.
-* **Automatic Start-Cutoff (`03:25` / `15:25`)**: No new `Zu erledigen` ticket may be started when remaining time until the wave deadline is $< 35\text{ min}$. Untouched tickets return to the top of `Vom PO Freigegeben`.
-* **Automated USB Pixel 10 Deployment**: Following Tier-2 tests and `--no-ff` merge to `develop`, `installDebug` flashes the USB-connected Pixel 10 automatically before the morning ride (`04:00`) or afternoon session (`16:00`).
+* **Disjoint Lane Allocation**: Up to 3 parallel Agent-Pair Lanes (`1..3`). Disjoint Epics are allocated per lane (`max_sp_per_lane` $\le 8$ SP per `Schicht` window) so lanes never collide on shared domains.
+* **Direct Next-`Schicht` Rollover (`05:00` / `15:00` / `22:00`)**: At each `Schichtwechsel`, merges freeze on `sprint/<CLOSING_SCHICHT>`, completed Stage-6-verified items archive into `Bereit für PO Abnahme` (ID `453`), active WIP carries seamlessly (`carryover-wip`) into the next `Schicht`, and untouched tickets return to `Vom PO Freigegeben`.
+* **Best-Effort USB Pixel 10 Deployment**: Following Lean Tier-2 checks and `--no-ff` merge to `develop`, `installDebug -PstampGitHash=true` deploys the commit-stamped build (`5.0.0-dev-<sha>`) when the Pixel 10 is connected (non-blocking if unplugged per `REQ-TST-004`).
 
 ---
 
@@ -71,8 +72,8 @@ In compliance with ASPICE 4.0 `SWE.6` (Software Qualification Testing) and Findi
 ## 5. Release Quality Gate & Exit Criteria
 A release build for `V5.0.0` may only be tagged and distributed when all following exit criteria are satisfied:
 1. **Zero Open Blocker/Critical Defects**: Zero open issues with Priority `Critical` or `High`.
-2. **ASPICE 4.0 Gate Records**: 100% of sprint tickets have completed Gates 1–5 and Stage 6 Cold Carbon Review with verified evidence.
-3. **Weekly Dual-Vendor Currency**: Both weekly dual-vendor Code Review and ASPICE 4.0 Cross-Audit are current ($\le 7$ days).
+2. **ASPICE 4.0 Gate Records**: 100% of sprint tickets have completed Gates 1–5 and Stage 6 Cold Final Review with verified evidence.
+3. **Weekly Dual-Vendor Currency**: Both weekly dual-vendor Code Review and ASPICE 4.0 Cross-Audit are current ($\le 7$ days), plus weekly Multi-OS & 9-Language emulator sweep (`REQ-PRO-135`).
 4. **Living Documentation Master Parity**: `verify_requirement_governance.py` reports 100% parity across `docs/requirements.md` and `docs/tests.md`, with zero ungrounded requirements or dangling references.
 5. **Tier 2 Full Regression Suite**: Clean execution of `./gradlew testDebugUnitTest :app:lintDebug :app:detekt assembleDebug`.
 6. **Signed Release Artifacts**: APK and AAB built with production keystore, aligned with `docs/management/cm_plan.md`.
@@ -84,3 +85,4 @@ A release build for `V5.0.0` may only be tagged and distributed when all followi
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added standardized `DOC-MGT-REL` work-product control header and Change History (`ATT-8162` baseline). |
+| `1.1.0` | 2026-11-21 | Independent ASPICE Auditor (Gemini) | `ATT-9494` | Reconciled §2 cadence and §5 exit criteria with live 3-`Schicht` cadence (`05:00`/`15:00`/`22:00`, `max_sp 8`, `YYYY-MM-DD_0x_Schichtname`, `schichtbetrieb.md`) and Stage 6 Cold Final Review + `REQ-PRO-135` emulator sweep (`Finding m1`). |

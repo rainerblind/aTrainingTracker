@@ -9,12 +9,12 @@
 ---
 
 ## 1. Hardware & Environment Log
-* **Primary Reference Phone (`SYS-HW-01`)**: Google Pixel 10 (Serial: `66020DLCR002FL`, Build: `BP2A.250305.002`) - Android 16
-* **HRM Sensor (`SYS-HW-02`)**: Polar H10 (FW: `5.0.0`, BLE Address: `C0:26:DF:A1:42:01`), Garmin HRM-Pro (FW: `8.80`, ANT+ ID: `45102`)
-* **Power Meter (`SYS-HW-03`)**: Favero Assioma Duo (FW: `4.75`, Dual BLE/ANT+ ID: `19824`)
-* **Smart Trainer (`SYS-HW-04`)**: Wahoo KICKR v5 (FW: `4.2.1`, BLE FTMS / ANT+ FE-C)
-* **Radar Sensor (`SYS-HW-05`)**: Garmin Varia RTL515 (FW: `3.34`, BLE Custom Radar / ANT+)
-* **Barometer & GNSS (`SYS-HW-06`)**: Bosch BMP581 MEMS Barometer + Broadcom BCM47765 Dual-frequency GNSS (L1+L5)
+* **Primary Reference Phone (`SYS-HW-01`)**: Google Pixel 10 (Serial: `66020DLCR002FL`, Build: `[PENDING EXTRACTION FROM PIXEL 10]`) - Android 16
+* **HRM Sensor (`SYS-HW-02`)**: `[PENDING EXTRACTION FROM PIXEL 10]`
+* **Power Meter (`SYS-HW-03`)**: `[PENDING EXTRACTION FROM PIXEL 10]`
+* **Smart Trainer (`SYS-HW-04`)**: `[PENDING EXTRACTION FROM PIXEL 10]`
+* **Radar Sensor (`SYS-HW-05`)**: `[PENDING EXTRACTION FROM PIXEL 10]`
+* **Barometer & GNSS (`SYS-HW-06`)**: Google Pixel 10 Integrated Barometer & GNSS (`[PENDING EXTRACTION FROM PIXEL 10]`)
 * **Environments Tested**: [ ] E1 Urban  [ ] E2 Rural  [ ] E3 Climb  [ ] E4 Indoor  [ ] E5 Longevity
 
 ---

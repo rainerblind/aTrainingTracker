@@ -3,9 +3,9 @@
 **Document ID**: `DOC-MGT-QA`  
 **Document Identifier**: `QA-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.1` (Quality Assurance) & `GP 2.1.6` (Ensure independence of quality assurance)  
-**Target Release**: `V5.0.0` | **Version**: 1.2.2  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-20  
-**Governing Tickets**: [ATT-8212](https://rainerblind.atlassian.net/browse/ATT-8212), [ATT-8213](https://rainerblind.atlassian.net/browse/ATT-8213), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164), [ATT-8169](https://rainerblind.atlassian.net/browse/ATT-8169) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`  
+**Target Release**: `V5.0.0` | **Version**: 1.2.3  
+**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-21  
+**Governing Tickets**: [ATT-8212](https://atrainingtracker.atlassian.net/browse/ATT-8212), [ATT-8213](https://atrainingtracker.atlassian.net/browse/ATT-8213), [ATT-8164](https://atrainingtracker.atlassian.net/browse/ATT-8164), [ATT-8169](https://atrainingtracker.atlassian.net/browse/ATT-8169), [ATT-9494](https://atrainingtracker.atlassian.net/browse/ATT-9494) | **Requirements**: `REQ-PRO-095`, `REQ-PRO-096`, `REQ-PRO-061`, `REQ-PRO-120`, `REQ-PRO-123`  
 
 ---
 
@@ -22,8 +22,8 @@ To enforce technical role independence (`GP 2.1.6`), aTrainingTracker organizes 
 | Layer | Verification Mechanism | Scope | Responsible Actor | Independence Level |
 | :--- | :--- | :--- | :--- | :--- |
 | **Layer 1: Automated Contract Gates** | CI, Detekt, Lint, Kover coverage floors, `verify_requirement_governance.py` | Per-commit / Per-PR automated regression & syntax gates | Automated Tooling | Tool-Enforced |
-| **Layer 2: Stage 6 Cold Carbon Review** | Independent, zero-build, adversarial review on squashed commit | Single-ticket diff on `sprint/<ID>` prior to human handoff | Fresh Cold `Gemini 4 Carbon` (`agent2`) | Cross-Model Independence |
-| **Layer 3: Sprint Process QA Audits** | Sampled ASPICE process compliance audits recorded in `docs/engineering/qa_audits/` | $\ge 2$ sampled sprint tickets per 12h sprint | Dedicated `qa` role (`jira_util.py qa-audit`) | Process-Level Independence |
+| **Layer 2: Stage 6 Cold Final Review** | Independent adversarial diff audit on intact `feature/<KEY>` + live `emulator-5554` / simulator verification & `read_file` screenshot critique prior to `--merge-ticket` (`Rule 3.3`) | Single-ticket `git diff sprint/<SPRINT>...feature/<KEY>` before atomic squash | Fresh Cold `Flash` (routine) or `Pro` / `Gemini 4 Neon` (complex/graphical/bounce) (`agent2`) | Fresh-Context & Tier Independence |
+| **Layer 3: Sprint Process QA Audits** | Sampled ASPICE process compliance audits recorded in `docs/engineering/qa_audits/` | $\ge \max(2, \lceil 0.10 \times N \rceil)$ sampled sprint tickets per `Schicht` | Dedicated `agent2` QA role (`jira_util.py qa-audit`) | Process-Level Independence |
 | **Layer 4: Human Acceptance & Device Ride Verification** | End-to-end on-device verification on Google Pixel (`REQ-TST-004`) | Physical BLE/ANT+ sensors, GPS, UI ergonomics | Human Product Owner | External Human Gate |
 | **Layer 5: Weekly Dual-Vendor Holistic Reviews** | Whole-subsystem code audits & ASPICE process cross-audits | Existing codebase subsystems & delta commits | **Dual AI Vendors: Google Gemini + Anthropic Claude** | **Cross-Vendor Independence (`GP 2.1.6`)** |
 
@@ -134,3 +134,4 @@ Per `docs/architecture/adr_001_java_core_services_migration.md` (`ADR-001` / `RE
 | `1.2.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Standardized `DOC-MGT-QA` header, reset self-declared `Approved` to `Reviewed` (`Pending PO Sign-Off`), and added Change History. |
 | `1.2.1` | 2026-11-17 | AI Agent (`ATT-8169`) | `ATT-8169` | Added Section 8 documenting CI safety guards, Detekt/Lint baseline ratchet & burn-down plan, and PMD vs SpotBugs vs Error Prone Java evaluation referencing `ADR-001`. |
 | `1.2.2` | 2026-11-20 | Lane A Flash (`ATT-8222`, `--as agent1`) | `ATT-8222` | Added Pillar 3 (`Serial Multi-OS & 9-Language Emulator UI Verification Sweeps`) to §6 & §7 and `ensure-weekly-reviews` scheduling + pre-release gate integration (`REQ-PRO-135`). |
+| `1.2.3` | 2026-11-21 | Independent ASPICE Auditor (Gemini) | `ATT-9494` | Reconciled §2 Layer 2–3 with `Rule 3.3`/`Rule 7.2` (pre-squash `feature/<KEY>` Stage 6 Cold Final Review with live `emulator-5554` verification & `Flash`/`Neon` routing; 3-`Schicht` cadence) and updated Jira URLs (`Finding m1`). |
