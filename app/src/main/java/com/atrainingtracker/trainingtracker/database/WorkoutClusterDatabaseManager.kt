@@ -189,6 +189,87 @@ data class WorkoutCluster(
             LatLng(endLat, endLng)
         ) >= 150f
 
+    /**
+     * Returns an updated cluster incorporating a workout's spatial signature, optional bounds,
+     * and optional altitude extrema using running arithmetic mean weighted by [hitCount].
+     * Preserves [hitCount] so callers can reconcile counts from authoritative SQLite rows.
+     */
+    fun withAddedWorkout(
+        start: LatLng,
+        end: LatLng,
+        apex: LatLng,
+        distance: Double,
+        minLat: Double? = null,
+        minLng: Double? = null,
+        maxLat: Double? = null,
+        maxLng: Double? = null,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
+    ): WorkoutCluster {
+        val nextCount = hitCount + 1
+        return copy(
+            startLat = (startLat * hitCount + start.latitude) / nextCount,
+            startLng = (startLng * hitCount + start.longitude) / nextCount,
+            endLat = (endLat * hitCount + end.latitude) / nextCount,
+            endLng = (endLng * hitCount + end.longitude) / nextCount,
+            maxDispLat = (maxDispLat * hitCount + apex.latitude) / nextCount,
+            maxDispLng = (maxDispLng * hitCount + apex.longitude) / nextCount,
+            refDistance = (refDistance * hitCount + distance) / nextCount,
+            minLat = if (minLat != null) minOf(this.minLat ?: 90.0, minLat) else this.minLat,
+            minLng = if (minLng != null) minOf(this.minLng ?: 180.0, minLng) else this.minLng,
+            maxLat = if (maxLat != null) maxOf(this.maxLat ?: -90.0, maxLat) else this.maxLat,
+            maxLng = if (maxLng != null) maxOf(this.maxLng ?: -180.0, maxLng) else this.maxLng,
+            minAltLat = addWeightedCoord(minAltLat, minAltPos?.latitude, hitCount),
+            minAltLng = addWeightedCoord(minAltLng, minAltPos?.longitude, hitCount),
+            maxAltLat = addWeightedCoord(maxAltLat, maxAltPos?.latitude, hitCount),
+            maxAltLng = addWeightedCoord(maxAltLng, maxAltPos?.longitude, hitCount)
+        )
+    }
+
+    /**
+     * Returns an updated cluster reversing a removed workout's weighted centroid, [refDistance],
+     * and nullable altitude extrema contribution, guarding [hitCount] <= 1. Spatial bounds cannot
+     * shrink incrementally and must be recalculated via `WorkoutClusterEngine.recalculateClusterAnchors`.
+     */
+    fun withRemovedWorkout(
+        start: LatLng?,
+        end: LatLng?,
+        apex: LatLng?,
+        distance: Double,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null,
+        decrementHitCount: Boolean = false
+    ): WorkoutCluster {
+        if (hitCount <= 1) {
+            return if (decrementHitCount) copy(hitCount = 0) else this
+        }
+        val newHitCount = hitCount - 1
+        return copy(
+            hitCount = if (decrementHitCount) newHitCount else hitCount,
+            startLat = (startLat * hitCount - (start?.latitude ?: startLat)) / newHitCount,
+            startLng = (startLng * hitCount - (start?.longitude ?: startLng)) / newHitCount,
+            endLat = (endLat * hitCount - (end?.latitude ?: endLat)) / newHitCount,
+            endLng = (endLng * hitCount - (end?.longitude ?: endLng)) / newHitCount,
+            maxDispLat = (maxDispLat * hitCount - (apex?.latitude ?: maxDispLat)) / newHitCount,
+            maxDispLng = (maxDispLng * hitCount - (apex?.longitude ?: maxDispLng)) / newHitCount,
+            refDistance = (refDistance * hitCount - distance) / newHitCount,
+            minAltLat = removeWeightedCoord(minAltLat, minAltPos?.latitude, hitCount),
+            minAltLng = removeWeightedCoord(minAltLng, minAltPos?.longitude, hitCount),
+            maxAltLat = removeWeightedCoord(maxAltLat, maxAltPos?.latitude, hitCount),
+            maxAltLng = removeWeightedCoord(maxAltLng, maxAltPos?.longitude, hitCount)
+        )
+    }
+
+    private fun addWeightedCoord(existing: Double?, added: Double?, count: Int): Double? {
+        if (added == null) return existing
+        return if (existing != null) (existing * count + added) / (count + 1) else added
+    }
+
+    private fun removeWeightedCoord(existing: Double?, removed: Double?, count: Int): Double? {
+        if (existing == null || removed == null || count <= 1) return existing
+        return (existing * count - removed) / (count - 1)
+    }
+
     companion object {
         fun fromCursor(cursor: Cursor): WorkoutCluster = WorkoutClusterDatabaseManager.mapCursorToCluster(cursor)
     }

@@ -1,14 +1,14 @@
 # Living Requirements: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-REQ-REVIEWS`  
-**Version**: 1.0.8  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 16
+**Total Requirements**: 17
 
 ---
 
@@ -498,6 +498,32 @@
 
 **Invariants**: Map-pan gesture isolation on `ATrainingTrackerMap` (`REQ-UI-408.4`); `REQ-UI-491` `controlsTopOffsetDp`; `REQ-UI-500.5` `44.dp` `CircleShape` & `showFloatingShareButton = workoutData == null`; `REQ-MAP-013` persistence; `REQ-REV-015` offscreen `snapshotHeader` isolation; `MapDetailLayout.kt <= 1,500` LoC; `TrackOnMapScreen.kt <= 1,500` LoC; `0` `src/main` reads in tests; `Localization Parity: N/A - no new or modified UI strings`.
 
+### REQ-REV-017: `WorkoutCluster` Centroid/Altitude/Bounds Encapsulation & Move/Delete Extrema Completeness (`ATT-6047`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-REV-018`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutClusterDatabaseManager.kt` (`WorkoutCluster`), `WorkoutClusterEngine.kt`
+- **Rationale**: `WorkoutClusterEngine.kt` duplicates running-mean centroid and altitude-extrema arithmetic across 5 callers plus two ~65-line `createNewClusterFromWorkout` overloads and duplicated hit-count decrement blocks. Consequently, `moveWorkoutToCluster` omits altitude extrema and spatial bounds, and `onWorkoutDeleted` omits altitude extrema reversal (`ATT-6047`, building on `ATT-6159` / `REQ-REV-007` and `REQ-SET-065`).
+- **Description**:
+  1. *Domain Encapsulation on `WorkoutCluster` (`REQ-REV-017.1`)*:
+     - `WorkoutCluster` (`WorkoutClusterDatabaseManager.kt`) SHALL expose `withAddedWorkout(...)` (updating running-mean `start`, `end`, `maxDisp`, `refDistance`, nullable `minAlt`/`maxAlt` LatLngs, and `minOf`/`maxOf` bounds) and `withRemovedWorkout(...)` (reversing centroids, `refDistance`, and nullable `minAlt`/`maxAlt` LatLngs with `hitCount <= 1` guard), preserving caller `hitCount` semantics (`withAddedWorkout` preserves `hitCount`; `withRemovedWorkout` supports `decrementHitCount: Boolean = false`).
+     - `learnFromWorkout`, `onWorkoutFinished`, `migrateHistory`, `moveWorkoutToCluster`, and `onWorkoutDeleted` SHALL delegate centroid/altitude arithmetic to these methods.
+  2. *Move & Delete Completeness (`REQ-REV-017.2`)*:
+     - `moveWorkoutToCluster` SHALL fetch `ALTITUDE` `MIN`/`MAX` extrema and workout bounds, apply `withRemovedWorkout` (source) and `withAddedWorkout` (target) before `assignClusterToWorkout`, then run `recalculateClusterAnchors(context, refreshedOld)` on the source cluster to shrink bounds and refresh sport distribution, and update `refreshedNew` sport frequency.
+     - `onWorkoutDeleted` SHALL pass nullable in-memory `w.minAltitudeLatLng` / `w.maxAltitudeLatLng` to `withRemovedWorkout(..., decrementHitCount = true)` before `recalculateClusterAnchors` when `isAnchor` (preserving `hitCount <= 1 -> hitCount = 0`).
+  3. *Deduplication & Architectural Invariants (`REQ-REV-017.3`)*:
+     - Both `createNewClusterFromWorkout` overloads and the `assignClusterToWorkout`/`unassignClusterFromWorkout` hit-count decrement blocks SHALL delegate to shared private helpers.
+     - `WorkoutClusterEngine.kt` MUST stay `<= 1,635` LoC (updating `ArchitectureConformanceContractTest` baseline if `<= 1,500` LoC), retain `0` `.ui.*` imports (`REQ-PRO-130.2`), and add `0` UI strings.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* source and target `WorkoutCluster`s with valid `minAltLat/Lng`, `maxAltLat/Lng`, and bounds, *When* `moveWorkoutToCluster` moves a workout, *Then* target altitude extrema & bounds expand via `withAddedWorkout`, source altitude extrema update via `withRemovedWorkout`, and `recalculateClusterAnchors` recomputes source bounds after `assignClusterToWorkout`.
+• *Given* a deleted workout whose DB rows are already removed (`WorkoutRepository.kt:4689->4698`), *When* `onWorkoutDeleted` executes with in-memory `w.minAltitudeLatLng`/`w.maxAltitudeLatLng` (or `null`), *Then* `minAltLat/Lng` & `maxAltLat/Lng` reverse cleanly and `recalculateClusterAnchors` runs if `isAnchor` (`hitCount <= 1 -> 0`).
+• *Given* `learnFromWorkout`, `onWorkoutFinished`, `migrateHistory`, and both `createNewClusterFromWorkout` overloads, *When* executed, *Then* all delegate to `WorkoutCluster.withAddedWorkout`/`withRemovedWorkout` or the shared creation/reconciliation helper with `0` `.ui.*` imports and conforming monolith LoC baseline.
+
+**Invariants**: `clusterLock` synchronization; `ATT-6159` post-move `assignClusterToWorkout` ordering; `0` `.ui.*` imports in `WorkoutClusterEngine.kt`; `ArchitectureConformanceContractTest` LoC ratchet parity; `Localization Parity: N/A - no new or modified UI strings`.
+
 ---
 
 ## Change History
@@ -513,3 +539,6 @@
 | `1.0.6` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Added `REQ-REV-016` `[Planned]` for isolating `MapDetailLayout.kt` `FLOATING CONTROLS` (`.zIndex(1f)` + `onInteractiveCanvasTouch(false)`) from `ATrainingTrackerMap` canvas touch detection and hoisting/deduplicating `TrackLayersMenuButton` with `testTag`s in `TrackOnMapScreen.kt` (`N/A - no new or modified UI strings`). |
 | `1.0.7` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `REQ-REV-016` to `[Implemented]` following Stage 4 implementation in `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, and `TrackOnMapLayersUiTest.kt`. |
 | `1.0.8` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `REQ-REV-016` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9334`) `103/103 PASS` across 25 suites on `1c1df08e` (`0` `app/` diff post-`1c1df08e`, `0` compiler warnings, `4/4` linters PASS), `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9067_walkthrough.md`. |
+| `1.0.9` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Added `[Planned]` `REQ-REV-017` (`WorkoutCluster` centroid/altitude/bounds encapsulation, move/delete extrema & bounds fixes, and `createNewClusterFromWorkout`/hit-count deduplication). |
+| `1.0.10` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `REQ-REV-017` to `[Implemented]` following Stage 4 implementation in `WorkoutClusterDatabaseManager.kt` (`withAddedWorkout`, `withRemovedWorkout`) and `WorkoutClusterEngine.kt` (`1,634 -> 1,562` LoC). |
+| `1.0.11` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `REQ-REV-017` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9407`) `106/106` & Stage 4 `131/131` PASS (`+1/1` isolated `WorkoutClusterPreviewPersistenceTest`) + `4/4` linters PASS @ `e9af7578`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6047_walkthrough.md`. |
