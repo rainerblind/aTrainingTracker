@@ -37,10 +37,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.util.TimeZone
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
- * Targeted unit tests for [GpxWorkoutParser] (REQ-MIG-038, TST-MIG-035).
+ * Targeted unit tests for [GpxWorkoutParser] (REQ-MIG-038, TST-MIG-035, REQ-MIG-055, TST-MIG-055).
  */
+// Linked test specs: TST-MIG-035, TST-MIG-055, TST-MIG-055.1, TST-MIG-055.2
 class GpxWorkoutParserTest {
 
     private lateinit var mockContext: Context
@@ -192,6 +198,110 @@ class GpxWorkoutParserTest {
             assertEquals(2, workout.bufferedSamples.size)
         } finally {
             tempFile.delete()
+        }
+    }
+
+    /**
+     * TST-MIG-055.2: Verifies DST spring-forward/fall-back boundaries under Europe/Berlin,
+     * numeric offsets (+02:00, -05:00), fractional seconds (.SSS), bare local ISO, lap duration,
+     * and malformed raw-string fallback without +1h DST shift.
+     */
+    @Test
+    fun testParseDstBoundariesOffsetsAndFractionalSeconds_TST_MIG_055_2() {
+        val originalTz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            val gpxContent = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+                  <trk>
+                    <name>DST &amp; Offsets</name>
+                    <type>Cycling</type>
+                    <trkseg>
+                      <trkpt lat="48.10" lon="11.50"><time>2026-03-29T02:30:00Z</time></trkpt>
+                      <trkpt lat="48.11" lon="11.51"><time>2026-03-29T02:35:00.789Z</time></trkpt>
+                    </trkseg>
+                  </trk>
+                </gpx>
+            """.trimIndent()
+            val result = GpxWorkoutParser.parse(gpxContent.byteInputStream(), mockContext)
+            assertTrue(result.isSuccess)
+            val workout = result.getOrThrow()
+            assertEquals("2026-03-29 02:30:00", workout.firstTime)
+            assertEquals("2026-03-29 02:35:00", workout.lastTime)
+            assertEquals(300.0, workout.parsedLaps[0].totalTimeSeconds, 0.001)
+
+            val offsetFallBackGpx = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+                  <trk>
+                    <trkseg>
+                      <trkpt lat="48.10" lon="11.50"><time>2026-10-25T04:30:00+02:00</time></trkpt>
+                      <trkpt lat="48.11" lon="11.51"><time>2026-10-25T02:30:00</time></trkpt>
+                      <trkpt lat="48.12" lon="11.52"><time>2026-10-25T00:00:00-05:00</time></trkpt>
+                    </trkseg>
+                  </trk>
+                </gpx>
+            """.trimIndent()
+            val offsetWorkout = GpxWorkoutParser.parse(offsetFallBackGpx.byteInputStream(), mockContext).getOrThrow()
+            assertEquals("2026-10-25 02:30:00", offsetWorkout.firstTime)
+            assertEquals("2026-10-25 05:00:00", offsetWorkout.lastTime)
+            assertEquals(9000.0, offsetWorkout.parsedLaps[0].totalTimeSeconds, 0.001)
+
+            val malformedGpx = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+                  <trk><trkseg><trkpt lat="48.10" lon="11.50"><time>not-a-timestamp</time></trkpt></trkseg></trk>
+                </gpx>
+            """.trimIndent()
+            val malformedWorkout = GpxWorkoutParser.parse(malformedGpx.byteInputStream(), mockContext).getOrThrow()
+            assertEquals("not-a-timestamp", malformedWorkout.firstTime)
+        } finally {
+            TimeZone.setDefault(originalTz)
+        }
+    }
+
+    /**
+     * TST-MIG-055.1: Concurrent multi-thread parsing across 4 worker threads produces
+     * deterministic timestamps without SimpleDateFormat race corruption.
+     */
+    @Test
+    fun testConcurrentMultiThreadGpxParsing_isDeterministic_TST_MIG_055_1() {
+        val threadCount = 4
+        val iterationsPerThread = 25
+        val pool = Executors.newFixedThreadPool(threadCount)
+        val ready = CountDownLatch(threadCount)
+        val go = CountDownLatch(1)
+        try {
+            val futures = (0 until threadCount).map { workerIdx ->
+                val day = 10 + workerIdx
+                val xml = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+                      <trk>
+                        <trkseg>
+                          <trkpt lat="48.1" lon="11.5"><time>2026-05-${day}T06:15:00Z</time></trkpt>
+                          <trkpt lat="48.2" lon="11.6"><time>2026-05-${day}T06:25:00Z</time></trkpt>
+                        </trkseg>
+                      </trk>
+                    </gpx>
+                """.trimIndent()
+                pool.submit(Callable {
+                    ready.countDown()
+                    assertTrue(go.await(5, TimeUnit.SECONDS))
+                    repeat(iterationsPerThread) {
+                        val workout = GpxWorkoutParser.parse(xml.byteInputStream(), mockContext).getOrThrow()
+                        assertEquals("2026-05-$day 06:15:00", workout.firstTime)
+                        assertEquals("2026-05-$day 06:25:00", workout.lastTime)
+                        assertEquals(600.0, workout.parsedLaps[0].totalTimeSeconds, 0.001)
+                    }
+                })
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS))
+            go.countDown()
+            futures.forEach { it.get(15, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
         }
     }
 }

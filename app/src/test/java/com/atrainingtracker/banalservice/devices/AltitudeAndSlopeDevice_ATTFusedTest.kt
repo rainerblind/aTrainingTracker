@@ -941,4 +941,42 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         assertTrue("Live |dAlt/dt| must remain smooth without DEM step teleports (max was $maxAltRateMps m/s)", maxAltRateMps < 1.5)
         assertTrue("Closing altitude must stay anchored near 440.0 m MSL (was $closingAlt m)", kotlin.math.abs(closingAlt - 440.0) <= 5.0)
     }
+
+    // REQ-STB-025.3 / TST-STB-025.3: Silent live EKF re-anchor on resume prevents +20 m / +56 m ISA step & ascent jump in 3-State & 2-State
+    @Test
+    fun testReanchorOnResume_bothThreeStateAndTwoState_preventsStepAndAscentJump_TST_STB_025_3() {
+        val baroIsaAltM = 487.3
+        val rawPressureHpa = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - baroIsaAltM / 44330.0, 5.255).toFloat()
+
+        // 1. 3-State mode (DEM/GPS active): re-anchor BEFORE first barometer event
+        val device3State = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device3State.ekf.setMode(true)
+        device3State.reanchorOnResume(430.6)
+        assertTrue("EKF must be initialized after reanchorOnResume", device3State.ekf.isInitialized)
+        assertEquals(430.6, device3State.ekf.altitude, 0.05)
+
+        device3State.handlePressureMeasurement(rawPressureHpa, 1_000_000L)
+        assertEquals(
+            "3-State first barometer sample must be absorbed into baroBias without jumping to 487.3 m",
+            430.6,
+            device3State.ekf.altitude,
+            0.2
+        )
+        assertEquals("baroBias must absorb +56.7 m ISA offset", baroIsaAltM - 430.6, device3State.ekf.baroBias, 0.5)
+        val ascent3 = (device3State.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertEquals("Zero phantom ascent on resume re-anchor", 0.0, ascent3, 0.01)
+
+        // 2. 2-State mode (barometer-only): re-anchor BEFORE and AFTER first barometer event
+        val ekf2State = com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkf()
+        ekf2State.setMode(false)
+        ekf2State.reanchorOnResume(430.6)
+        assertTrue("2-State EKF must be initialized after reanchorOnResume", ekf2State.isInitialized)
+        ekf2State.updateBarometer(baroIsaAltM, isStandstill = false, speedMps = 3.2)
+        assertEquals("2-State first barometer sample must keep resumed 430.6 m", 430.6, ekf2State.altitude, 0.2)
+        // Subsequent +1.5 m climb on barometer propagates cleanly to 432.1 m
+        ekf2State.predict(1.0, 3.2)
+        ekf2State.updateBarometer(baroIsaAltM + 1.5, isStandstill = false, speedMps = 3.2)
+        assertTrue("2-State subsequent baro delta must still track relative climb", ekf2State.altitude in 431.0..432.5)
+    }
 }

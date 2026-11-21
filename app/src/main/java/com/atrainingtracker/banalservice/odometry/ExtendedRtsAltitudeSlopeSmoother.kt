@@ -53,7 +53,8 @@ data class RawAltitudeSample(
     val referenceAltitudeM: Double? = null,
     val smoothedSpeedMps: Double = 0.0,
     val isStandstill: Boolean = smoothedSpeedMps < 0.3,
-    val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
+    val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN,
+    val baroResetStep: Boolean = false
 )
 
 /**
@@ -78,6 +79,10 @@ object ExtendedRtsAltitudeSlopeSmoother {
     private const val DEFAULT_QH = 0.005       // Elevation random walk m^2 / s
     private const val DEFAULT_QG = 1e-4        // Spatial slope grade curvature per meter
     private const val DEFAULT_Q_BIAS = 1e-5    // Thermal/weather drift m^2 / s
+    private const val BARO_RESET_Q_BIAS_IMPULSE = 1000.0 // Process-noise impulse on sustained barometer reset step (REQ-STB-025.4)
+    internal const val BARO_RESET_STEP_MIN_M = 6.0
+    private const val BARO_RESET_LOOKAHEAD_SAMPLES = 4
+    private const val BARO_RESET_MIN_SUSTAINED_SAMPLES = 3
     private const val DEFAULT_VAR_DEM = 4.0    // DEM anchor variance m^2
     private const val HUBER_K = 2.5
     private const val STANDSTILL_SPEED_THRESHOLD_MPS = 0.3
@@ -131,6 +136,7 @@ object ExtendedRtsAltitudeSlopeSmoother {
         // Determine sensor availability across samples (REQ-FIL-033.1, REQ-FIL-033.3)
         val hasBaroData = samples.any { it.rawAltitudeM.isFinite() }
         val hasReference = samples.any { it.referenceAltitudeM?.isFinite() == true }
+        val directResetSteps = if (hasBaroData) detectDirectBaroResetSteps(samples) else emptySet()
 
         // State vector: [h, g, b_baro]
         val x = DoubleArray(STATE_DIM)
@@ -181,6 +187,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
             val gainScale = if (isStandstill) 0.0 else lowSpeedSlopeGainFactor(speedMps)
 
             // 1. Predict (exact linear transition matching saved jacobians[k])
+            val isBaroResetStep = k > 0 && sample.rawAltitudeM.isFinite() &&
+                (sample.baroResetStep || directResetSteps.contains(k))
             var slopeTransition = 1.0
             if (k > 0) {
                 if (isStandstill) {
@@ -218,6 +226,12 @@ object ExtendedRtsAltitudeSlopeSmoother {
                     p[2][0] = p02New
                     p[2][2] += DEFAULT_Q_BIAS * dtSec
                 }
+                if (isBaroResetStep) {
+                    // Sustained barometer calibration reset step: inject bias process-noise impulse
+                    // before saving priorCovs[k] so forward update absorbs the jump into b_baro
+                    // and backward RTS gain decouples h & slope across the reset (REQ-STB-025.4).
+                    p[2][2] += BARO_RESET_Q_BIAS_IMPULSE
+                }
             }
 
             // Save prior state & transition Jacobian
@@ -244,7 +258,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 if (isStandstill) {
                     val sBias = p[2][2] + varBaro
                     val kBias = p[2][2] / sBias
-                    x[2] += kBias * applyHuber(y, sBias)
+                    val yStep = if (isBaroResetStep) y else applyHuber(y, sBias)
+                    x[2] += kBias * yStep
                     josephCovarianceUpdate3x3(
                         p = p,
                         kVec = doubleArrayOf(0.0, 0.0, kBias),
@@ -253,7 +268,7 @@ object ExtendedRtsAltitudeSlopeSmoother {
                     )
                 } else {
                     val s = p[0][0] + 2.0 * p[0][2] + p[2][2] + varBaro
-                    val yH = applyHuber(y, s)
+                    val yH = if (isBaroResetStep) y else applyHuber(y, s)
                     val k0 = (p[0][0] + p[0][2]) / s
                     val k1 = ((p[1][0] + p[1][2]) / s) * gainScale
                     val k2 = (p[2][0] + p[2][2]) / s
@@ -407,6 +422,54 @@ object ExtendedRtsAltitudeSlopeSmoother {
         }
 
         return result
+    }
+
+    /**
+     * Detects sustained barometric reset/calibration step discontinuities directly on un-slewed
+     * [RawAltitudeSample.rawAltitudeM] series (e.g. crash recovery barometer offset jump) while
+     * ignoring transient `<= 2` sample pocket spikes (`REQ-TRK-057.1`) and genuine climbs
+     * (`REQ-FIL-033.2`, `REQ-STB-025.4`).
+     */
+    internal fun detectDirectBaroResetSteps(samples: List<RawAltitudeSample>): Set<Int> {
+        val validIndices = samples.indices.filter { samples[it].rawAltitudeM.isFinite() }
+        if (validIndices.size < BARO_RESET_MIN_SUSTAINED_SAMPLES + 1) return emptySet()
+
+        val steps = mutableSetOf<Int>()
+        for (pos in 1 until validIndices.size) {
+            val prevIdx = validIndices[pos - 1]
+            val currIdx = validIndices[pos]
+            val dtSec = max(1.0, (samples[currIdx].timestampMs - samples[prevIdx].timestampMs) / 1000.0)
+            val vPrev = samples[prevIdx].smoothedSpeedMps.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+            val vCurr = samples[currIdx].smoothedSpeedMps.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+            val refSpeed = max(max(vPrev, vCurr), 2.0)
+            val thresholdM = max(BARO_RESET_STEP_MIN_M, MAX_PHYSICAL_SLOPE * refSpeed * min(dtSec, 15.0) + 3.0)
+
+            val jump = samples[currIdx].rawAltitudeM - samples[prevIdx].rawAltitudeM
+            if (abs(jump) < thresholdM) continue
+
+            val preStart = max(0, pos - 5)
+            val preVals = (preStart until pos).map { samples[validIndices[it]].rawAltitudeM }.sorted()
+            val preMedian = (preVals[(preVals.size - 1) / 2] + preVals[preVals.size / 2]) / 2.0
+            val preStableCount = preVals.count { abs(it - preMedian) <= 0.5 * thresholdM }
+            if (preStableCount < min(3, preVals.size) || abs(samples[prevIdx].rawAltitudeM - preMedian) > 0.5 * thresholdM) {
+                continue
+            }
+
+            val postEnd = min(validIndices.size, pos + BARO_RESET_LOOKAHEAD_SAMPLES)
+            if (postEnd - pos < BARO_RESET_MIN_SUSTAINED_SAMPLES) continue
+            val postVals = (pos until postEnd).map { samples[validIndices[it]].rawAltitudeM }
+            val sortedPost = postVals.sorted()
+            val postMedian = (sortedPost[(sortedPost.size - 1) / 2] + sortedPost[sortedPost.size / 2]) / 2.0
+            val stepOffset = postMedian - preMedian
+
+            val sustainedCount = postVals.count { v ->
+                (v - preMedian) * stepOffset > 0.0 && abs(v - preMedian) >= 0.5 * abs(stepOffset)
+            }
+            if (abs(stepOffset) >= thresholdM && stepOffset * jump > 0.0 && sustainedCount >= BARO_RESET_MIN_SUSTAINED_SAMPLES) {
+                steps.add(currIdx)
+            }
+        }
+        return steps
     }
 
     private fun applyHuber(y: Double, s: Double): Double {

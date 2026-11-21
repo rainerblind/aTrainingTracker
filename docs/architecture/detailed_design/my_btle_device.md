@@ -1,14 +1,14 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BTLE`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,324 LOC)  
 **Superclass / Subclasses**: Extends `MyRemoteDevice`; specialized by BLE profiles (`BTLEHeartRateDevice`, `BTLERadarDevice`, cycling speed/cadence/power devices)  
 **SWE.2 Alignment**: `docs/architecture.md` §3.4, §4.5, §4.9 (`IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`, `REQ-SET-120`
 
 ---
 
@@ -84,7 +84,7 @@ stateDiagram-v2
 | :--- | :--- | :--- |
 | Android BLE HAL -> `MyBTLEDevice` | Callback | `BluetoothGattCallback` (`mGattCallback`) & `ScanCallback` (`mScanCallback`) deliver connection, discovery, read, write, MTU, and notification events |
 | `MyBTLEDevice` -> `MySensorManager` | Registration & Telemetry | Subclasses implement `addSensors()` and `measurementCharacteristicUpdate(gatt, characteristic)` emitting into `MySensor` instances |
-| `MyBTLEDevice` <-> `PolarOfflineGattCoordinator` | Yield Coordination | `pauseGattOperations()`, `resumeGattOperations()`, `isGattPaused()` yield the radio link cleanly without `shutDown()` |
+| `MyBTLEDevice` <-> `PolarOfflineGattCoordinator` | Yield Coordination | `pauseGattOperations()`, `resumeGattOperations()`, `isGattPaused()` yield the radio link cleanly without `shutDown()`; `PolarOfflineGattCoordinator` symmetrically pauses/resumes `PolarOnlineStreamingBridge` via alias-aware ref-counted lease tokens (`REQ-SET-120.1`) |
 
 ### 4.2 Threading & Serialized GATT Queue
 * **Main Looper (`mHandler = new Handler(mContext.getMainLooper())`)**: Executes `connectGatt`, `discoverServices`, `disconnect`/`close`, `configureServices`, `measurementCharacteristicUpdate`, `mSearchTimeoutRunnable`, `mReconnectRunnable`, `mBatteryReadRunnable`, and `mGattTimeoutRunnable`.
@@ -121,3 +121,4 @@ stateDiagram-v2
 | `1.0.4` | 2026-11-19 | AI Agent (`ATT-8998`) | `ATT-8998` | Stage 6 Bounce 1/3 heal: guarded `mSearchTimeoutRunnable` on `CONNECTED_TO_GATT`/`CONNECTED_WITH_SERVICE` under `mGattLock` and documented `resumeGattOperations()` routing to `attemptBackgroundReconnect()` when `mIsBackgroundReconnecting == true`. |
 | `1.0.5` | 2026-11-19 | AI Agent (`ATT-8965`) | `ATT-8965` | Delegated runtime backoff progression beyond `16s` (`32s->64s->128s->finalPeriodMs`) to `SensorReconnectBackoffPolicy` while preserving `MAX_RECONNECT_DELAY_MS = 16000L` constant (`SYSREQ-TRK-002`, `REQ-CON-052`); updated unit LOC (`1,274`). |
 | `1.0.6` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Added null-safe same-looper synchronous `disconnectFromGatt()` (`onGattClosed == null`), strict `mIsShutDown == true` late `onConnectionStateChange` GATT close guard, and `triggerSilentConnectionReconnect()` for `BTLEHeartRateDevice` silent-HR recovery (`REQ-CON-054`, `1,324 LOC`). |
+| `1.0.7` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Documented symmetric `PolarOfflineGattCoordinator` alias-aware lease-token yield for `PolarOnlineStreamingBridge` alongside `MyBTLEDevice.pauseGattOperations()` (`REQ-SET-120`). |

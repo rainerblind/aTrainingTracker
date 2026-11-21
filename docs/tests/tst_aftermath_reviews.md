@@ -1,14 +1,14 @@
 # Living Test Specification: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-TST-REVIEWS`  
-**Version**: 1.0.8  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 17
+**Total Tests**: 18
 
 ---
 
@@ -218,6 +218,26 @@
      • Render standalone `TrackLayersMenuButton` inside `MapDetailLayout(showMap = true, showHeader = true)` (`useStatusBarsPadding = true`); verify `track_layers_button` click opens `track_layers_menu` and toggles `TrackType`.
      • Execute `MapDetailLayoutTest`, `MapDetailLayoutOffscreenHeaderUiTest`, `WorkoutDetailTabbedContentTest`, `ArchitectureConformanceContractTest` (`MapDetailLayout.kt <= 1,500`, `TrackOnMapScreen.kt <= 1,500`), `SourceTextReadingAuditContractTest` (`0` `src/main` reads), and `UiReflectionOnlyTestAuditContractTest` (`Localization Parity: N/A - no new or modified UI strings`).
 
+### TST-REV-018: **`WorkoutCluster` Encapsulation, Move/Delete Altitude Extrema & Bounds Verification Suite (`ATT-6047`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-6047`
+- **Requirement(s)**: `REQ-REV-017` (`REQ-REV-017.1`..`REQ-REV-017.3`)
+- **Component**: `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterApexTest.kt`, `EditWorkoutClusterTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterApexTest.kt`: `testWithAddedWorkout_encapsulatesCentroidsBoundsAndAltitudeExtrema`, `testWithRemovedWorkout_reversesCentroidsAndAltitudeExtremaWithHitCountGuard` (`TST-REV-018.1`); `testOnWorkoutDeleted_reversesAltitudeExtremaFromInMemorySnapshot` (`TST-REV-018.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/database/EditWorkoutClusterTest.kt`: `testMoveWorkoutToCluster_updatesAltitudeExtremaAndRecalculatesBounds` (`TST-REV-018.2`)
+- **Test Description**:
+  1. *`WorkoutCluster.withAddedWorkout` & `withRemovedWorkout` Contract (`TST-REV-018.1`)*:
+  • Verify `withAddedWorkout` updates running-mean `start`/`end`/`maxDisp`/`refDistance`, nullable `minAlt`/`maxAlt` LatLngs, and `minOf`/`maxOf` bounds while preserving `hitCount`.
+  • Verify `withRemovedWorkout` reverses centroids and nullable `minAlt`/`maxAlt` LatLngs, respects `decrementHitCount`, and guards `hitCount <= 1`.
+  2. *`moveWorkoutToCluster` & `onWorkoutDeleted` Extrema/Bounds Completeness (`TST-REV-018.2`)*:
+  • Verify `moveWorkoutToCluster` updates source (`withRemovedWorkout`) & target (`withAddedWorkout` + expanded bounds + altitude extrema) before `assignClusterToWorkout`, then calls `recalculateClusterAnchors` on the source cluster to shrink bounds cleanly.
+  • Verify `onWorkoutDeleted` reverses `minAltLat/Lng` & `maxAltLat/Lng` from nullable in-memory `w.minAltitudeLatLng`/`w.maxAltitudeLatLng` before `recalculateClusterAnchors` when `isAnchor` (and resets `hitCount = 0` when `hitCount <= 1`).
+  3. *Targeted Cluster & Contract Regression (`TST-REV-018.3`)*:
+  • Execute `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.database.WorkoutCluster*" --tests "com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`, confirming `WorkoutClusterEngine.kt` LoC ratchet compliance and `0` `.ui.*` imports.
+
 ---
 
 ## Change History
@@ -233,3 +253,6 @@
 | `1.0.6` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Added `TST-REV-017` `[Planned]` (`TST-REV-017.1`–`.2`, strictly symmetric `REQ-REV-016`) using `@GraphicsMode(NATIVE)` `v2.createComposeRule` for tabbed & fallback `TrackLayersMenuButton` click-through, `FLOATING CONTROLS` `.zIndex(1f)` & `onInteractiveCanvasTouch(false)` gesture isolation, `DropdownMenu` track selection, and contract hygiene (`N/A - no new or modified UI strings`). |
 | `1.0.7` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `TST-REV-017` to `[Implemented]` following Stage 4 construction of `TrackOnMapLayersUiTest.kt`. |
 | `1.0.8` | 2026-11-20 | AI Agent (`ATT-9067`, `--as agent1`) | `ATT-9067` | Promoted `TST-REV-017` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9334`) `103/103 PASS` across 25 suites on `1c1df08e` (`0` `app/` diff post-`1c1df08e`, `0` compiler warnings, `4/4` linters PASS), `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-9067_walkthrough.md`. |
+| `1.0.9` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Added `[Planned]` `TST-REV-018` verification suite for `REQ-REV-017` (`WorkoutCluster` encapsulation, move/delete altitude extrema & bounds, and contract checks). |
+| `1.0.10` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `TST-REV-018` to `[Implemented]` following Stage 4 unit test additions in `WorkoutClusterApexTest.kt` and `EditWorkoutClusterTest.kt`. |
+| `1.0.11` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `TST-REV-018` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9407`) `106/106` & Stage 4 `131/131` PASS (`+1/1` isolated `WorkoutClusterPreviewPersistenceTest`) + `4/4` linters PASS @ `e9af7578`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6047_walkthrough.md`. |

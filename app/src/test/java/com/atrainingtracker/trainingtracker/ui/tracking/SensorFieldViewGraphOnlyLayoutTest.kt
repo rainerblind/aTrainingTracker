@@ -43,21 +43,21 @@ class SensorFieldViewGraphOnlyLayoutTest {
 
     @Test
     fun testResolveSparklineHeight_graphOnlyMode_enforcesStrictlyPositiveHeights() {
-        // Assert all ViewSizes produce guaranteed non-zero minimum heights in Graph-only mode
+        // TST-UI-2788, TST-UI-2788.1 (REQ-TRK-059.10, REQ-UI-2788.1, ATT-6689, ATT-8995)
         val smallH = resolveSparklineHeight(ViewSize.SMALL, isGraphOnly = true)
         val normalH = resolveSparklineHeight(ViewSize.NORMAL, isGraphOnly = true)
         val largeH = resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = true)
         val xlargeH = resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = true)
 
-        assertEquals(24.dp, smallH)
-        assertEquals(36.dp, normalH)
-        assertEquals(52.dp, largeH)
-        assertEquals(68.dp, xlargeH)
+        assertEquals(48.dp, smallH)
+        assertEquals(56.dp, normalH)
+        assertEquals(68.dp, largeH)
+        assertEquals(84.dp, xlargeH)
 
-        assertTrue("Small graph-only height must be strictly positive", smallH > 0.dp)
-        assertTrue("Normal graph-only height must be strictly positive", normalH > 0.dp)
-        assertTrue("Large graph-only height must be strictly positive", largeH > 0.dp)
-        assertTrue("XLarge graph-only height must be strictly positive", xlargeH > 0.dp)
+        assertTrue("Small graph-only height must exceed Value+Graph", smallH > resolveSparklineHeight(ViewSize.SMALL, isGraphOnly = false))
+        assertTrue("Normal graph-only height must exceed Value+Graph", normalH > resolveSparklineHeight(ViewSize.NORMAL, isGraphOnly = false))
+        assertTrue("Large graph-only height must exceed Value+Graph", largeH > resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = false))
+        assertTrue("XLarge graph-only height must exceed Value+Graph", xlargeH > resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = false))
     }
 
     @Test

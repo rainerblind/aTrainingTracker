@@ -30,6 +30,8 @@ import io.mockk.*
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -37,8 +39,9 @@ import java.time.LocalDateTime
 
 /**
  * Verifies geometric apex resolution, arithmetic running mean maintenance,
- * and deletion reversal for route clusters (REQ-SET-063, TST-SET-049, ATT-1138).
+ * and deletion reversal for route clusters (REQ-SET-063, TST-SET-049, ATT-1138, TST-REV-018).
  */
+// Linked test specs: TST-SET-049, TST-REV-018, TST-REV-018.1, TST-REV-018.2
 class WorkoutClusterApexTest {
 
     private val mockContext = mockk<Context>(relaxed = true)
@@ -279,5 +282,184 @@ class WorkoutClusterApexTest {
         val updated = slot.captured
         assertEquals(48.7060, updated.maxDispLat, 0.0001)
         assertEquals(9.1060, updated.maxDispLng, 0.0001)
+    }
+
+    /**
+     * TST-REV-018.1: Direct unit verification of WorkoutCluster.withAddedWorkout encapsulation.
+     */
+    @Test
+    fun testWithAddedWorkout_encapsulatesCentroidsBoundsAndAltitudeExtrema() {
+        val initial = WorkoutCluster(
+            id = 1L,
+            name = "Hill Loop",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 9.0,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 5000.0,
+            hitCount = 1,
+            bSportType = BSportType.RUN,
+            minLat = 47.9,
+            minLng = 8.9,
+            maxLat = 48.3,
+            maxLng = 9.3,
+            minAltLat = null,
+            minAltLng = null,
+            maxAltLat = 48.15,
+            maxAltLng = 9.15
+        )
+
+        val updated = initial.withAddedWorkout(
+            start = LatLng(48.2, 9.2),
+            end = LatLng(48.3, 9.3),
+            apex = LatLng(48.4, 9.4),
+            distance = 7000.0,
+            minLat = 47.8,
+            minLng = 9.0,
+            maxLat = 48.2,
+            maxLng = 9.5,
+            minAltPos = LatLng(48.05, 9.05),
+            maxAltPos = LatLng(48.25, 9.25)
+        )
+
+        // Preserves hitCount so callers reconcile from SQLite rows
+        assertEquals(1, updated.hitCount)
+        assertEquals(48.1, updated.startLat, 0.0001)
+        assertEquals(9.1, updated.startLng, 0.0001)
+        assertEquals(48.2, updated.endLat, 0.0001)
+        assertEquals(9.2, updated.endLng, 0.0001)
+        assertEquals(48.3, updated.maxDispLat, 0.0001)
+        assertEquals(9.3, updated.maxDispLng, 0.0001)
+        assertEquals(6000.0, updated.refDistance, 0.0001)
+        // Bounds expand via minOf/maxOf
+        assertEquals(47.8, updated.minLat!!, 0.0001)
+        assertEquals(8.9, updated.minLng!!, 0.0001)
+        assertEquals(48.3, updated.maxLat!!, 0.0001)
+        assertEquals(9.5, updated.maxLng!!, 0.0001)
+        // Nullable minAlt seeds directly when previously null; populated maxAlt averages weighted by hitCount
+        assertEquals(48.05, updated.minAltLat!!, 0.0001)
+        assertEquals(9.05, updated.minAltLng!!, 0.0001)
+        assertEquals(48.20, updated.maxAltLat!!, 0.0001)
+        assertEquals(9.20, updated.maxAltLng!!, 0.0001)
+    }
+
+    /**
+     * TST-REV-018.1: Direct unit verification of WorkoutCluster.withRemovedWorkout & hitCount <= 1 guard.
+     */
+    @Test
+    fun testWithRemovedWorkout_reversesCentroidsAndAltitudeExtremaWithHitCountGuard() {
+        val cluster = WorkoutCluster(
+            id = 2L,
+            name = "Ridge Loop",
+            probableSportId = 1L,
+            startLat = 48.1,
+            startLng = 9.1,
+            endLat = 48.2,
+            endLng = 9.2,
+            maxDispLat = 48.3,
+            maxDispLng = 9.3,
+            refDistance = 6000.0,
+            hitCount = 2,
+            bSportType = BSportType.RUN,
+            minAltLat = 48.05,
+            minAltLng = 9.05,
+            maxAltLat = 48.20,
+            maxAltLng = 9.20
+        )
+
+        val reversedKeepCount = cluster.withRemovedWorkout(
+            start = LatLng(48.2, 9.2),
+            end = LatLng(48.3, 9.3),
+            apex = LatLng(48.4, 9.4),
+            distance = 7000.0,
+            minAltPos = null,
+            maxAltPos = LatLng(48.25, 9.25),
+            decrementHitCount = false
+        )
+        assertEquals(2, reversedKeepCount.hitCount)
+        assertEquals(48.0, reversedKeepCount.startLat, 0.0001)
+        assertEquals(9.0, reversedKeepCount.startLng, 0.0001)
+        assertEquals(5000.0, reversedKeepCount.refDistance, 0.0001)
+        // Null minAltPos preserves existing minAlt; non-null maxAltPos reverses weighted average
+        assertEquals(48.05, reversedKeepCount.minAltLat!!, 0.0001)
+        assertEquals(9.05, reversedKeepCount.minAltLng!!, 0.0001)
+        assertEquals(48.15, reversedKeepCount.maxAltLat!!, 0.0001)
+        assertEquals(9.15, reversedKeepCount.maxAltLng!!, 0.0001)
+
+        // Guard for hitCount <= 1: decrementHitCount = true yields 0, false returns same instance
+        val singleCluster = cluster.copy(hitCount = 1)
+        assertEquals(0, singleCluster.withRemovedWorkout(null, null, null, 0.0, decrementHitCount = true).hitCount)
+        assertSame(singleCluster, singleCluster.withRemovedWorkout(null, null, null, 0.0, decrementHitCount = false))
+    }
+
+    /**
+     * TST-REV-018.2: onWorkoutDeleted reverses altitude extrema from in-memory snapshot
+     * (covering both non-null anchor recalc and null extrema preservation).
+     */
+    @Test
+    fun testOnWorkoutDeleted_reversesAltitudeExtremaFromInMemorySnapshot() {
+        val cluster = WorkoutCluster(
+            id = 43L,
+            name = "Mountain Loop",
+            probableSportId = 1L,
+            startLat = 48.1,
+            startLng = 9.1,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 10000.0,
+            hitCount = 3,
+            bSportType = BSportType.RUN,
+            minLat = 47.0,
+            maxLat = 49.0,
+            minLng = 8.0,
+            maxLng = 10.0,
+            minAltLat = 48.030,
+            minAltLng = 9.030,
+            maxAltLat = 48.060,
+            maxAltLng = 9.060
+        )
+
+        val updates = mutableListOf<WorkoutCluster>()
+        every { mockDbManager.getClusterById(43L) } returns cluster
+        every { mockDbManager.updateCluster(capture(updates)) } just Runs
+
+        val anchorWorkout = ClusterWorkoutSnapshot(
+            id = 201L,
+            clusterId = 43L,
+            startLatLng = LatLng(48.1, 9.1),
+            endLatLng = LatLng(48.1, 9.1),
+            maxDisplacementLatLng = LatLng(48.2, 9.2),
+            totalDistance = 10000.0,
+            minLat = 47.0, // matches cluster.minLat -> triggers recalculateClusterAnchors
+            maxLat = 48.5,
+            minLng = 8.5,
+            maxLng = 9.5,
+            minAltitudeLatLng = LatLng(48.050, 9.050),
+            maxAltitudeLatLng = null
+        )
+
+        val mockPort = mockk<ClusterWorkoutDataPort>(relaxed = true)
+        ClusterWorkoutDataPortRegistry.setTestOverride(mockPort)
+        try {
+            clusterEngine.onWorkoutDeleted(mockContext, anchorWorkout)
+        } finally {
+            ClusterWorkoutDataPortRegistry.setTestOverride(null)
+        }
+
+        val updated = updates.last()
+        assertEquals(2, updated.hitCount)
+        // minAlt reversed: (48.030 * 3 - 48.050) / 2 = 48.020
+        assertEquals(48.020, updated.minAltLat!!, 0.0001)
+        assertEquals(9.020, updated.minAltLng!!, 0.0001)
+        // maxAlt preserved when snapshot maxAltitudeLatLng is null
+        assertEquals(48.060, updated.maxAltLat!!, 0.0001)
+        assertEquals(9.060, updated.maxAltLng!!, 0.0001)
+        // Confirm anchor recalculation ran and did not clobber reversed altitude extrema
+        assertNull(updated.minLat)
     }
 }

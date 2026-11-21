@@ -504,4 +504,38 @@ class UnicycleOdometryEkfTest {
         assertTrue("Post-outage snap must pull East toward ~41 m (was ${snapEkf.eastMeters})", snapEkf.eastMeters > 25.0)
         assertTrue("Post-outage snap must NOT inject synthetic velocity spike into x[2] (was ${snapEkf.speedMps})", snapEkf.speedMps < 3.0)
     }
+
+    // REQ-STB-023.1 / TST-STB-023.1
+    @Test
+    fun testSnapshotRingBuffer_capsAtMaxSnapshotsAndDisablesCleanly_TST_STB_023_1() {
+        // 1. Default recordSnapshots = true preserves snapshot API while enforcing drop-oldest MAX_SNAPSHOTS cap
+        val boundedEkf = UnicycleOdometryEkf(initialSpeed = 3.0, initialHeadingRad = 0.0)
+        val totalSteps = UnicycleOdometryEkf.MAX_SNAPSHOTS + 500
+        for (i in 1..totalSteps) {
+            boundedEkf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.01, timestampMs = i * 20L)
+        }
+        val retained = boundedEkf.getSnapshots()
+        assertEquals(
+            "Snapshot history must be strictly bounded at MAX_SNAPSHOTS",
+            UnicycleOdometryEkf.MAX_SNAPSHOTS,
+            retained.size
+        )
+        assertEquals(
+            "Oldest snapshots must be evicted first (drop-oldest ring)",
+            501L * 20L,
+            retained.first().timestampMs
+        )
+        assertEquals(
+            "Newest snapshot must be retained at tail",
+            totalSteps.toLong() * 20L,
+            retained.last().timestampMs
+        )
+
+        // 2. recordSnapshots = false retains zero snapshots across 60 min of 50 Hz predictions
+        val liveEkf = UnicycleOdometryEkf(initialSpeed = 3.0, initialHeadingRad = 0.0, recordSnapshots = false)
+        for (i in 1..180_000) {
+            liveEkf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.0, timestampMs = i * 20L)
+        }
+        assertTrue("Live EKF with recordSnapshots=false must retain 0 snapshots", liveEkf.getSnapshots().isEmpty())
+    }
 }

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.exporter
 
 import android.content.Context
+import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter.ExportResult
 import io.mockk.every
@@ -35,9 +36,10 @@ import java.text.ParseException
 import java.util.concurrent.CancellationException
 
 /**
- * Unit tests verifying BaseExporter error classification and cancellation behavior
- * (REQ-DAT-029.1, REQ-DAT-029.3, TST-DAT-024.1, TST-DAT-024.2, TST-DAT-024.6).
+ * Unit tests verifying BaseExporter error classification, cancellation behavior, and cursor column-0 access
+ * (REQ-DAT-029.1, REQ-DAT-029.3, TST-DAT-024.1, TST-DAT-024.2, TST-DAT-024.6, REQ-MIG-055.2, TST-MIG-055.3).
  */
+// Linked test specs: TST-DAT-024, TST-MIG-055, TST-MIG-055.3
 class BaseExporterTest {
 
     private val mockContext = mockk<Context>(relaxed = true)
@@ -49,6 +51,12 @@ class BaseExporterTest {
         override fun doExport(exportInfo: ExportInfo): ExportResult {
             return behavior(exportInfo)
         }
+
+        fun callGetStringFromCursor(cursor: Cursor, key: String): String? =
+            myGetStringFromCursor(cursor, key)
+
+        fun callGetBooleanFromCursor(cursor: Cursor, key: String): Boolean =
+            myGetBooleanFromCursor(cursor, key)
     }
 
     @Before
@@ -148,5 +156,37 @@ class BaseExporterTest {
         assertFalse(result.success())
         assertFalse(result.shallRetry())
         assertTrue(result.answer().contains("cancelled"))
+    }
+
+    /**
+     * TST-MIG-055.3: Verifies myGetStringFromCursor and myGetBooleanFromCursor read valid column index 0
+     * (including empty-string -> null, > 0 boolean, and null handling) while rejecting index -1.
+     */
+    @Test
+    fun testCursorHelpers_allowColumnIndexZeroAndRejectNegative_TST_MIG_055_3() {
+        val exporter = TestExporter(mockContext)
+        val cursor = mockk<Cursor>()
+
+        every { cursor.getColumnIndex("col_str") } returns 0
+        every { cursor.isNull(0) } returns false
+        every { cursor.getString(0) } returns "Alpine Loop"
+        assertEquals("Alpine Loop", exporter.callGetStringFromCursor(cursor, "col_str"))
+
+        every { cursor.getColumnIndex("col_empty") } returns 0
+        every { cursor.getString(0) } returns ""
+        assertNull(exporter.callGetStringFromCursor(cursor, "col_empty"))
+
+        every { cursor.getColumnIndex("col_missing") } returns -1
+        assertNull(exporter.callGetStringFromCursor(cursor, "col_missing"))
+
+        every { cursor.getColumnIndex("col_bool_true") } returns 0
+        every { cursor.getInt(0) } returns 1
+        assertTrue(exporter.callGetBooleanFromCursor(cursor, "col_bool_true"))
+
+        every { cursor.getColumnIndex("col_bool_false") } returns 0
+        every { cursor.getInt(0) } returns 0
+        assertFalse(exporter.callGetBooleanFromCursor(cursor, "col_bool_false"))
+
+        assertFalse(exporter.callGetBooleanFromCursor(cursor, "col_missing"))
     }
 }

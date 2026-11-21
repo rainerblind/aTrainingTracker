@@ -93,6 +93,11 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
        1. Review Section 4 ("Non-Compliance Tracking & Remediation") of the prior sprint's QA audit report.
        2. Verify that all referenced Jira corrective-action tickets (`[ATT-XXXX]`) for non-compliant findings are either completed (`Erledigt`) or actively scheduled in the active sprint backlog.
        3. Flag any unaddressed or orphaned non-compliance findings to the human user before sprint execution begins.
+   * **Periodic Pixel 10 Debug Heap Hygiene Check (`REQ-STB-022.4` — `ATT-9352`)**:
+     * Whenever the reference Google Pixel 10 (`66020DLCR002FL`) is attached via ADB during Ceremony 1 (or any connected-device hygiene check), inspect `files/debug_hprof/` and `files/debug_heap/` on `com.atrainingtracker.debug`:
+       1. List artifacts via `adb -s 66020DLCR002FL shell run-as com.atrainingtracker.debug ls -la files/debug_hprof files/debug_heap`.
+       2. If an `.hprof` dump exists or a `.heap.csv` log shows sustained abnormal heap growth / `>= 70%` high-water crossing, pull it via `adb -s 66020DLCR002FL exec-out run-as com.atrainingtracker.debug cat <file> > /tmp/<file>`, inspect the evidence, file a structured backlog `Bug` ticket under Epic `ATT-235` (*Crash-Free Resilience*, stopping immediately per `Rule 5.1` without starting autonomous implementation), and **delete the processed file from the device** (`adb -s 66020DLCR002FL shell run-as com.atrainingtracker.debug rm <file>`) so it is not re-triaged on subsequent checks.
+       3. Clean/healthy `.heap.csv` logs showing no anomaly may also be pruned via `run-as com.atrainingtracker.debug rm <file>` after review.
    * **Consolidated Presentation & Approval — Keep Tickets in `Zu erledigen` Until Stage 1 Starts (`Rule 78` — `ATT-5829`, `"Tickets sollten von den Agenten erst dann nach Analyse geschoben werden, wenn die Analyse startet."`)**:
      * Present a compact overview table of all sprint tickets (Rank, Key, Summary, Story Points, Audit Status) together with any specific clarifying questions or proposed estimates in a single turn.
      * Wait for the user's confirmation (and answers to any open questions) and update any refined descriptions (`python3 tools/jira_util.py update-desc <KEY> ...`).

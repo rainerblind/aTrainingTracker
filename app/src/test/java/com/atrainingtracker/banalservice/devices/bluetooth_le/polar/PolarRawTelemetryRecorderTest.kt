@@ -337,4 +337,178 @@ class PolarRawTelemetryRecorderTest {
         assertTrue("Sidecar must contain HR/RR frames", session.rows.any { it.channel == RawTelemetryChannel.HR || it.channel == RawTelemetryChannel.RR })
         assertTrue("Sidecar must contain ACC frames", session.rows.any { it.channel == RawTelemetryChannel.ACC })
     }
+
+    // REQ-STB-023.3, REQ-STB-023.4 / TST-STB-023.3
+    @Test
+    fun testDropOldestBackpressure_onUndeliveredElementCountsDropsAndCancelsScopeOnStop_TST_STB_023_3() {
+        val startTime = System.currentTimeMillis()
+        val recorder = PolarRawTelemetryRecorder(
+            context = context,
+            fileBaseName = testBaseFileName,
+            sessionStartTimeMs = startTime,
+            metadata = PolarRawMetadata(sensorModel = "Polar H10", accRateHz = 200)
+        )
+        assertTrue("Private coroutine scope should start active", recorder.isScopeActiveForTesting())
+
+        // Enqueue > CHANNEL_CAPACITY rows BEFORE starting IO drain so Channel(DROP_OLDEST) evicts oldest rows
+        val excess = 250
+        val total = PolarRawTelemetryRecorder.CHANNEL_CAPACITY + excess
+        for (i in 0 until total) {
+            recorder.enqueueRowForBackpressureTest(
+                RawTelemetryRow(
+                    sensorTimestampNs = (i + 1) * 5_000_000L,
+                    elapsedMs = i * 5L,
+                    channel = RawTelemetryChannel.ACC,
+                    axMg = i,
+                    ayMg = -i,
+                    azMg = 1000
+                )
+            )
+        }
+
+        assertEquals(
+            "onUndeliveredElement must accurately account every DROP_OLDEST evicted row",
+            excess.toLong(),
+            recorder.getDroppedFrameCount()
+        )
+
+        // Start drain and stop -> newest CHANNEL_CAPACITY rows written, scope cancelled cleanly
+        recorder.start()
+        recorder.stop()
+
+        assertFalse("stop() must cancel private CoroutineScope", recorder.isScopeActiveForTesting())
+        assertEquals(PolarRawTelemetryRecorder.CHANNEL_CAPACITY.toLong(), recorder.getRecordedRowCount())
+
+        val sidecar = PolarRawTelemetryRecorder.getSidecarFile(context, testBaseFileName)
+        assertTrue(sidecar.exists())
+        val parsed = PolarRawTelemetryReader.readFile(sidecar)
+        assertEquals(PolarRawTelemetryRecorder.CHANNEL_CAPACITY, parsed.rows.size)
+        assertEquals("Oldest retained row must start right after evicted prefix", excess, parsed.rows.first().axMg)
+        assertEquals("Newest row must be preserved at tail", total - 1, parsed.rows.last().axMg)
+    }
+
+    // REQ-STB-023.4 / TST-STB-023.3
+    @Test
+    fun testAppendCsvLine_exactParityWithStringFormatAcrossEdgeCases_TST_STB_023_3() {
+        val gyroCases = listOf(
+            0.0f, -0.0f, 0.004f, -0.004f, 0.005f, -0.005f, 0.006f, -0.006f,
+            1.25f, -1.25f, 12.345f, -12.345f, 999.995f, -999.995f,
+            Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, 1e15f
+        )
+        val rrCases = listOf(
+            0.0, -0.0, 0.04, -0.04, 0.05, -0.05, 800.0, 800.05, 800.25, 812.35, -12.45,
+            Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, 1e15
+        )
+        val sb = StringBuilder(128)
+        for (i in gyroCases.indices) {
+            val g = gyroCases[i]
+            val rr = rrCases[i % rrCases.size]
+            val row = RawTelemetryRow(
+                sensorTimestampNs = 1_000_000_000L + i,
+                elapsedMs = i.toLong(),
+                channel = RawTelemetryChannel.GYRO,
+                axMg = if (i % 2 == 0) -123 else null,
+                ayMg = if (i % 2 == 0) 0 else null,
+                azMg = if (i % 2 == 0) 998 else null,
+                gxMdps = g,
+                gyMdps = -g,
+                gzMdps = g * 0.5f,
+                hrBpm = if (i % 3 == 0) 142 else null,
+                rrMs = rr
+            )
+            val expected = "${row.sensorTimestampNs},${row.elapsedMs},${row.channel.name}," +
+                "${row.axMg ?: ""},${row.ayMg ?: ""},${row.azMg ?: ""}," +
+                "${String.format(java.util.Locale.US, "%.2f", row.gxMdps!!)}," +
+                "${String.format(java.util.Locale.US, "%.2f", row.gyMdps!!)}," +
+                "${String.format(java.util.Locale.US, "%.2f", row.gzMdps!!)}," +
+                "${row.hrBpm ?: ""}," +
+                String.format(java.util.Locale.US, "%.1f", row.rrMs!!)
+
+            sb.setLength(0)
+            row.appendCsvLine(sb)
+            assertEquals("appendCsvLine mismatch for gyro=$g rr=$rr", expected, sb.toString())
+            assertEquals("toCsvLine mismatch for gyro=$g rr=$rr", expected, row.toCsvLine())
+        }
+    }
+
+    // REQ-STB-025.2 / TST-STB-025.2: Salvage crash-truncated .polar_raw.csv.gz.tmp (dropping partial tail) and continue stream
+    @Test
+    fun testResumeOrStartActiveSession_salvagesTruncatedTmpDropsPartialLineAndAppendsPostCrashRows_TST_STB_025_2() {
+        val fileBaseName = "crash_recovery_sidecar_2422"
+        val rawDir = PolarRawTelemetryRecorder.getRawSensorDir(context)
+        val tmpFile = File(rawDir, "$fileBaseName${PolarRawTelemetryRecorder.SIDECAR_EXTENSION}${PolarRawTelemetryRecorder.TMP_EXTENSION}")
+
+        // 1. Write a valid GZIP buffer with metadata + 50 complete ACC rows + 1 truncated partial row,
+        //    then chop trailing bytes to simulate mid-deflate OOM crash without GZIP footer.
+        val originalMeta = PolarRawMetadata(sensorModel = "Polar H10", streamMode = "LIVE", accRateHz = 200, sportId = 2)
+        val baos = java.io.ByteArrayOutputStream()
+        java.util.zip.GZIPOutputStream(baos, true).use { gzip ->
+            val writer = java.io.OutputStreamWriter(gzip, java.nio.charset.StandardCharsets.UTF_8)
+            writer.write("# metadata: ${originalMeta.toJsonString()}\n")
+            writer.write("${RawTelemetryRow.CSV_HEADER}\n")
+            for (i in 1..50) {
+                val row = RawTelemetryRow(
+                    sensorTimestampNs = 1_760_000_000_000_000_000L + i * 5_000_000L,
+                    elapsedMs = i * 5L,
+                    channel = RawTelemetryChannel.ACC,
+                    axMg = i,
+                    ayMg = -i,
+                    azMg = 1000
+                )
+                writer.write("${row.toCsvLine()}\n")
+            }
+            writer.flush()
+            // Partial crash-truncated trailing line (missing columns)
+            writer.write("1760000000300000000,300,ACC,12")
+            writer.flush()
+        }
+        val fullBytes = baos.toByteArray()
+        // Chop off GZIP 8-byte trailer + 4 bytes of compressed tail to simulate abrupt OOM kill
+        tmpFile.writeBytes(fullBytes.copyOfRange(0, fullBytes.size - 12))
+        assertTrue(tmpFile.exists())
+
+        // 2. Resume active session -> must salvage pre-crash rows and append 20 post-crash rows
+        val resumed = PolarRawTelemetryRecorder.resumeOrStartActiveSession(
+            context = context,
+            fileBaseName = fileBaseName,
+            startTimeMs = 1_760_000_000_000L,
+            sportId = 2
+        )
+        assertTrue("Resumed recorder must be created", resumed != null)
+
+        // Idempotent re-call for same fileBaseName returns same active instance
+        assertEquals(
+            resumed,
+            PolarRawTelemetryRecorder.resumeOrStartActiveSession(context, fileBaseName, 1_760_000_000_000L, 2)
+        )
+
+        for (j in 1..20) {
+            resumed!!.recordAcc(
+                sensorTimestampNs = 1_760_000_920_000_000_000L + j * 5_000_000L,
+                axMg = 500 + j,
+                ayMg = 0,
+                azMg = 980
+            )
+        }
+        PolarRawTelemetryRecorder.stopActiveSession()
+
+        val finalFile = PolarRawTelemetryRecorder.getSidecarFile(context, fileBaseName)
+        assertTrue("Finalized .polar_raw.csv.gz must exist", finalFile.exists())
+        assertFalse("Temporary .tmp file must not remain after stop()", tmpFile.exists())
+
+        val parsed = PolarRawTelemetryReader.readFile(finalFile)
+        assertEquals("Original pre-crash sensorModel metadata must be preserved", "Polar H10", parsed.metadata.sensorModel)
+        assertEquals("Original pre-crash accRateHz metadata must be preserved", 200, parsed.metadata.accRateHz)
+        // Must have salvaged all complete pre-crash rows (at least 45+ before chopped deflate tail) + all 20 post-crash rows
+        assertTrue("Expected salvaged pre-crash + 20 post-crash rows (got ${parsed.rows.size})", parsed.rows.size >= 60)
+        assertEquals("Final post-crash row must be preserved", 520, parsed.rows.last().axMg)
+
+        // 3. Corrupt/garbage .tmp with zero recoverable rows leaves zero orphan files
+        val corruptBase = "corrupt_crash_sidecar"
+        val corruptTmp = File(rawDir, "$corruptBase${PolarRawTelemetryRecorder.SIDECAR_EXTENSION}${PolarRawTelemetryRecorder.TMP_EXTENSION}")
+        corruptTmp.writeBytes(byteArrayOf(0x00, 0x01, 0x02, 0x03))
+        assertFalse(PolarRawSidecarRecovery.recoverAbandonedTmpToFinal(context, corruptBase))
+        assertFalse("Corrupt .tmp must not produce orphan final file", PolarRawTelemetryRecorder.getSidecarFile(context, corruptBase).exists())
+        assertFalse("Corrupt .tmp must be cleaned up", corruptTmp.exists())
+    }
 }

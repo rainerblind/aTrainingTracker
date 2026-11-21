@@ -501,9 +501,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val descentCol = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING)
 
                 val workoutId = cursor.getLong(idCol)
+                val baseFileName = cursor.getString(baseFileNameCol) ?: ""
                 val timeActive = cursor.getInt(timeActiveCol)
                 val distanceTotal = cursor.getDouble(distanceCol)
-                val laps = cursor.getInt(lapsCol)
+                val laps = cursor.getInt(lapsCol).coerceAtLeast(com.atrainingtracker.banalservice.BANALService.INIT_LAP_NR)
                 val ascent = if (ascentCol >= 0 && !cursor.isNull(ascentCol)) cursor.getDouble(ascentCol) else 0.0
                 val descent = if (descentCol >= 0 && !cursor.isNull(descentCol)) cursor.getDouble(descentCol) else 0.0
 
@@ -522,9 +523,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         Log.w("WorkoutRepository", "Failed to compute active lap metrics from laps table for workout $workoutId", t)
                     }
                 }
+                val lastAltitudeM = queryLastFiniteAltitude(baseFileName)
 
                 return TrackerService.ResumedWorkoutState(
-                    cursor.getString(baseFileNameCol) ?: "",
+                    baseFileName,
                     workoutId,
                     cursor.getInt(timeTotalCol),
                     timeActive,
@@ -534,11 +536,41 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     ascent,
                     descent,
                     timeLap,
-                    distanceLap
+                    distanceLap,
+                    lastAltitudeM
                 )
             }
         }
         return null
+    }
+
+    private fun queryLastFiniteAltitude(baseFileName: String): Double {
+        if (baseFileName.isBlank()) return Double.NaN
+        return try {
+            if (!samplesManager.existsTable(baseFileName)) return Double.NaN
+            val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+            val altCol = SensorType.ALTITUDE.name
+            val idCol = WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.C_ID
+            samplesManager.database.query(
+                tableName,
+                arrayOf(altCol),
+                "$altCol IS NOT NULL",
+                null,
+                null,
+                null,
+                "$idCol DESC",
+                "1"
+            ).use { altCursor ->
+                if (altCursor.moveToFirst() && !altCursor.isNull(0)) {
+                    altCursor.getDouble(0).takeIf { it.isFinite() } ?: Double.NaN
+                } else {
+                    Double.NaN
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w("WorkoutRepository", "Failed to query last finite altitude for $baseFileName", t)
+            Double.NaN
+        }
     }
 
     fun interface LiveSampleFailureCallback {

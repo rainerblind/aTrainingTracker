@@ -39,7 +39,9 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,22 +52,27 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 
 /**
- * Resolves the sparkline container height dynamically based on tile [ViewSize] and display mode (REQ-TRK-059.5, ATT-1294, ATT-6695).
+ * Resolves the minimum sparkline container height dynamically based on tile [ViewSize] and display mode
+ * (REQ-TRK-059.5, REQ-UI-2788.1, ATT-1294, ATT-6695, ATT-8995).
+ *
+ * Value+Graph (`isGraphOnly = false`) reserves enough total height for the compact `12.sp` X-axis
+ * label row plus `2 * 3.dp` canvas padding so `ViewSize.NORMAL` guarantees `>= 28–34.dp` net curve
+ * drawing amplitude, while Graph-only (`isGraphOnly = true`) remains strictly monotonically taller.
  */
 fun resolveSparklineHeight(viewSize: ViewSize, isGraphOnly: Boolean = false): Dp =
     if (isGraphOnly) {
         when {
-            viewSize <= ViewSize.SMALL -> 24.dp
-            viewSize == ViewSize.NORMAL -> 36.dp
-            viewSize == ViewSize.LARGE -> 52.dp
-            else -> 68.dp
+            viewSize <= ViewSize.SMALL -> 48.dp
+            viewSize == ViewSize.NORMAL -> 56.dp
+            viewSize == ViewSize.LARGE -> 68.dp
+            else -> 84.dp
         }
     } else {
         when {
-            viewSize <= ViewSize.SMALL -> 26.dp
-            viewSize == ViewSize.NORMAL -> 34.dp
-            viewSize == ViewSize.LARGE -> 44.dp
-            else -> 52.dp
+            viewSize <= ViewSize.SMALL -> 46.dp
+            viewSize == ViewSize.NORMAL -> 52.dp
+            viewSize == ViewSize.LARGE -> 60.dp
+            else -> 68.dp
         }
     }
 
@@ -202,6 +209,7 @@ fun SensorSparklineView(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .testTag("sensor_sparkline_canvas")
         ) {
             if (size.width <= 0f || size.height <= 0f) {
                 return@Canvas
@@ -354,6 +362,11 @@ fun SensorSparklineView(
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             }
+            val axisLabelStyle = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -361,21 +374,24 @@ fun SensorSparklineView(
             ) {
                 Text(
                     text = formatSparklineTimeOffset(spanSeconds),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    style = axisLabelStyle,
                     color = labelColor,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
                 Text(
                     text = formatSparklineTimeOffset(spanSeconds / 2),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    style = axisLabelStyle,
                     color = labelColor,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
                 Text(
                     text = stringResource(R.string.sparkline_axis_now),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    style = axisLabelStyle,
                     color = labelColor,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }

@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.5  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 123
+**Total Tests**: 124
 
 ---
 
@@ -2280,10 +2280,36 @@
 
 ---
 
+### TST-MIG-055: **Thread- & DST-Safe `java.time` GPX/TCX Timestamp Parsing & `BaseExporter` Column Index-0 Verification Suite (`ATT-6045`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-MIG-055` (`REQ-MIG-055.1`, `REQ-MIG-055.2`)
+- **Component**: `WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `TcxWorkoutParser.kt`, `LegacyImportEngine.kt`, `BaseExporter.java`, `WorkoutTimestampParserTest.kt`, `GpxWorkoutParserTest.kt`, `TcxWorkoutParserTest.kt`, `BaseExporterTest.kt`
+- **Jira**: `ATT-6045`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/parsers/WorkoutTimestampParserTest.kt`: `formatIsoToUtcDbString_handlesOffsetsFractionalBareIsoAndDstGaps`, `computeDurationSeconds_handlesValidBoundsAndMalformedInputs`, `formatIsoToUtcDbString_concurrentContentionRemainsDeterministic` (`TST-MIG-055.1`, `TST-MIG-055.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/parsers/GpxWorkoutParserTest.kt`: `testConcurrentMultiThreadGpxParsing_isDeterministic_TST_MIG_055_1`, `testParseDstBoundariesOffsetsAndFractionalSeconds_TST_MIG_055_2` (`TST-MIG-055.1`, `TST-MIG-055.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/parsers/TcxWorkoutParserTest.kt`: `testConcurrentMultiThreadTcxParsing_isDeterministic_TST_MIG_055_1`, `testParseDstBoundariesOffsetsAndMalformedFallback_TST_MIG_055_2` (`TST-MIG-055.1`, `TST-MIG-055.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/BaseExporterTest.kt`: `testCursorHelpers_allowColumnIndexZeroAndRejectNegative_TST_MIG_055_3` (`TST-MIG-055.3`)
+- **Test Description**:
+  1. *Concurrent Multi-Thread Parsing (`TST-MIG-055.1` — `GpxWorkoutParserTest.kt`, `TcxWorkoutParserTest.kt`)*:
+     - Invoke `GpxWorkoutParser.parse` and `TcxWorkoutParser.parse` concurrently from >= 3 worker threads across repeated iterations with distinct UTC dates; assert zero exceptions, deterministic `firstTime`/`lastTime`/`parsedLaps.startTime`, and intact lap duration calculation.
+  2. *DST Boundaries & ISO-8601 Variants (`TST-MIG-055.2` — `GpxWorkoutParserTest.kt`, `TcxWorkoutParserTest.kt`)*:
+     - Under `TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))`, verify spring-forward gap (`2026-03-29T02:30:00Z` -> `"2026-03-29 02:30:00"`, zero `+1h` shift), fall-back boundary (`2026-10-25T02:30:00Z` -> `"2026-10-25 02:30:00"`), fractional seconds (`.123Z`), explicit numeric offsets (`2026-10-15T16:00:00+02:00` -> `"2026-10-15 14:00:00"`, `-05:00`), bare local ISO (`2026-10-15T14:00:00` -> `"2026-10-15 14:00:00"`), and malformed fallback returning raw text cleanly.
+  3. *`BaseExporter` Column Index `0` & Regression Contract (`TST-MIG-055.3` — `BaseExporterTest.kt`, `ArchitectureConformanceContractTest`)*:
+     - Verify `BaseExporter.myGetStringFromCursor` and `myGetBooleanFromCursor` read valid values at column index `0` (while mapping `"" -> null` and `-1 -> null/false`).
+     - Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.8` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `TST-MIG-055` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9420`) `89/89` PASS across 20 suites + `4/4` linters PASS @ `529a9ee8`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6045_walkthrough.md`. |
+| `1.0.7` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `TST-MIG-055` to `[Implemented]` following Stage 4 implementation and test additions (`WorkoutTimestampParserTest.kt`, `GpxWorkoutParserTest.kt`, `TcxWorkoutParserTest.kt`, `BaseExporterTest.kt`). |
+| `1.0.6` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Added `[Planned]` `TST-MIG-055` verification suite (`TST-MIG-055.1`..`TST-MIG-055.3`) for `REQ-MIG-055` (multi-threaded GPX/TCX `java.time` parsing, DST/offset/fractional-second edge cases, and `BaseExporter` index-0 reads). |
 | `1.0.5` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `TST-MIG-052` to `[Verified]` reusing Gate 4 verified SHA `aa9a407c` (`46/46` PASS across 7 suites, `Rule 7.5`). |
 | `1.0.4` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `TST-MIG-052` to `[Implemented]` (`TcxImportStravaToggleTest`, `WorkoutSummariesDatabaseManagerApplyIdentityTest`). |
 | `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Added `TST-MIG-052` (`[Planned]`) verifying empty-DB TCX opt-out preservation (`0`), `-1`/SQL `NULL` inference, `1` protection, and non-existent ID safety. |

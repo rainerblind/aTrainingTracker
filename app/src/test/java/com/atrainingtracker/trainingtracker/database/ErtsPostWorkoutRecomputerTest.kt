@@ -21,8 +21,10 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmoother
 import com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmoother
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
+import com.atrainingtracker.banalservice.odometry.RawAltitudeSample
 import com.atrainingtracker.banalservice.odometry.SmoothedAltitudeSlopePoint
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -31,6 +33,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -2117,5 +2120,101 @@ class ErtsPostWorkoutRecomputerTest {
             "ExtremumValues.MAX(SPEED_mps) must stay < 3.5 m/s (was $maxSpeedExtrema)",
             maxSpeedExtrema != null && maxSpeedExtrema > 1.8 && maxSpeedExtrema < 3.5
         )
+    }
+
+    // REQ-STB-025.4 / TST-STB-025.4: Pre-slew sustained barometer reset step compensation vs transient pocket spike & genuine climb
+    @Test
+    fun testBarometerResetStep_compensatedBeforeSlewFilterWhilePreservingPocketSpikeAndAlpineClimb_TST_STB_025_4() {
+        val baseTs = 1_760_000_000_000L
+
+        // 1. Replay Pixel 10 crash-recovery scenario: flat 430.6 m run (3.4 m/s), 4 s gap + permanent +20.2 m baro step at idx=30
+        val crashRows = (0 until 70).map { i ->
+            val ts = if (i < 30) baseTs + i * 1000L else baseTs + (i + 3) * 1000L
+            val baro = if (i < 30) 430.6 else 450.8
+            ErtsPostWorkoutRecomputer.RawSampleRow(
+                rowId = i + 1L,
+                timestampMs = ts,
+                latitude = 48.7 + i * 0.00003,
+                longitude = 9.1,
+                speedMps = 3.4,
+                bearingDeg = 0.0,
+                accuracyM = 4.0,
+                yawRateRadPerSec = 0.0,
+                rawAltitude = baro,
+                referenceAltitude = 430.6,
+                wheelSpeedMps = null,
+                recordedCarriageMode = PhoneCarriageMode.RUN_WAIST_HIP,
+                rawBaroAltitude = baro
+            )
+        }
+        val resolvedCrash = ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro(crashRows)
+        assertTrue("Sustained +20.2 m step at idx=30 must be flagged as baroResetStep", resolvedCrash[30].baroResetStep)
+        val smoothedCrash = ExtendedRtsAltitudeSlopeSmoother.smooth(
+            resolvedCrash.map { r ->
+                RawAltitudeSample(
+                    timestampMs = r.timestampMs,
+                    rawAltitudeM = r.rawAltitude ?: Double.NaN,
+                    referenceAltitudeM = r.referenceAltitude,
+                    smoothedSpeedMps = r.speedMps ?: 0.0,
+                    carriageMode = r.effectiveCarriageMode,
+                    baroResetStep = r.baroResetStep
+                )
+            }
+        )
+        val maxAbsSlopeCrash = smoothedCrash.maxOf { kotlin.math.abs(it.slopePercent) }
+        assertTrue(
+            "Pre-slew compensation + ERTS must eliminate +35% slope spike across +20.2 m reset step (max=$maxAbsSlopeCrash%)",
+            maxAbsSlopeCrash < 5.0
+        )
+
+        // 2. Transient 2-sample +25 m pocket compression spike MUST NOT be treated as a reset step (REQ-TRK-057.1)
+        val pocketRows = (0 until 40).map { i ->
+            val baro = if (i == 15 || i == 16) 455.6 else 430.6
+            ErtsPostWorkoutRecomputer.RawSampleRow(
+                rowId = i + 1L,
+                timestampMs = baseTs + i * 1000L,
+                latitude = 48.7,
+                longitude = 9.1,
+                speedMps = 3.0,
+                bearingDeg = 0.0,
+                accuracyM = 4.0,
+                yawRateRadPerSec = 0.0,
+                rawAltitude = baro,
+                referenceAltitude = 430.6,
+                wheelSpeedMps = null,
+                recordedCarriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET,
+                rawBaroAltitude = baro
+            )
+        }
+        val resolvedPocket = ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro(pocketRows)
+        assertFalse("Transient 2-sample pocket spike must NOT trigger baroResetStep", resolvedPocket.any { it.baroResetStep })
+        assertTrue(
+            "BarometricAltitudeFilter must still reject 2-sample +25 m pocket spike",
+            resolvedPocket.all { kotlin.math.abs((it.rawAltitude ?: 430.6) - 430.6) < 2.0 }
+        )
+
+        // 3. Genuine steady 10% climb at 4 m/s (+0.4 m/s) MUST NOT trigger baroResetStep and passes unattenuated (REQ-FIL-033.2)
+        val climbRows = (0 until 50).map { i ->
+            val baro = 400.0 + i * 0.4
+            ErtsPostWorkoutRecomputer.RawSampleRow(
+                rowId = i + 1L,
+                timestampMs = baseTs + i * 1000L,
+                latitude = 48.7,
+                longitude = 9.1,
+                speedMps = 4.0,
+                bearingDeg = 0.0,
+                accuracyM = 4.0,
+                yawRateRadPerSec = 0.0,
+                rawAltitude = baro,
+                referenceAltitude = baro,
+                wheelSpeedMps = null,
+                recordedCarriageMode = PhoneCarriageMode.BIKE_HANDLEBAR,
+                rawBaroAltitude = baro
+            )
+        }
+        val resolvedClimb = ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro(climbRows)
+        assertFalse("Genuine 10% climb must NOT trigger baroResetStep", resolvedClimb.any { it.baroResetStep })
+        val climbGain = (resolvedClimb.last().rawAltitude ?: 0.0) - (resolvedClimb.first().rawAltitude ?: 0.0)
+        assertTrue("Genuine 10% climb must pass unattenuated (~19.6 m, got $climbGain m)", climbGain >= 17.0)
     }
 }

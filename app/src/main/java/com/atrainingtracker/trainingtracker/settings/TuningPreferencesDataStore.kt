@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -529,14 +530,32 @@ data class TuningConfig(
 }
 
 /**
+ * Declarative descriptor pairing a DataStore preference key with its factory default and inclusive clamping bounds.
+ */
+internal class BoundedPref<T : Comparable<T>>(
+    val key: Preferences.Key<T>,
+    val default: T,
+    val min: T,
+    val max: T
+) {
+    fun clamp(value: T): T = value.coerceIn(min, max)
+    fun read(prefs: Preferences, fallback: T = default): T = clamp(prefs[key] ?: fallback)
+    fun write(prefs: MutablePreferences, value: T) {
+        prefs[key] = clamp(value)
+    }
+}
+
+/**
  * DataStore repository managing expert tuning preferences with strict parameter validation and atomic factory reset.
- * Conforms to REQ-SET-073.
+ * Conforms to REQ-SET-073 and REQ-SET-121.
  */
 class TuningPreferencesDataStore private constructor(
     context: Context,
-    private val appScope: CoroutineScope
+    private val appScope: CoroutineScope,
+    dataStoreOverride: DataStore<Preferences>? = null
 ) {
     private val context: Context = context.applicationContext ?: context
+    private val dataStore: DataStore<Preferences> = dataStoreOverride ?: this.context.dataStore
 
     companion object {
         val KEY_ELEVATION_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_elevation_x_axis_domain")
@@ -670,6 +689,72 @@ class TuningPreferencesDataStore private constructor(
         val KEY_RADAR_CLOSE_PASS_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_radar_close_pass_threshold_m")
         val KEY_DEFAULT_POOL_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_default_pool_length_meters")
         val KEY_DEFAULT_POOL_LENGTH_UNIT: Preferences.Key<String> = stringPreferencesKey("tuning_default_pool_length_unit")
+
+        internal val PREF_RADAR_ALERT_VOLUME = BoundedPref(KEY_RADAR_ALERT_VOLUME, TuningPreferencesDefaults.RADAR_ALERT_VOLUME, 10, 100)
+        internal val PREF_DEFAULT_POOL_LENGTH_METERS = BoundedPref(KEY_DEFAULT_POOL_LENGTH_METERS, TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS, TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS, TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS)
+        internal val PREF_FULL_DIM_FACTOR = BoundedPref(KEY_FULL_DIM_FACTOR, TuningPreferencesDefaults.FULL_DIM_FACTOR, TuningPreferencesDefaults.MIN_FULL_DIM_FACTOR, TuningPreferencesDefaults.MAX_FULL_DIM_FACTOR)
+        internal val PREF_MEDIUM_DIM_FACTOR = BoundedPref(KEY_MEDIUM_DIM_FACTOR, TuningPreferencesDefaults.MEDIUM_DIM_FACTOR, TuningPreferencesDefaults.MIN_MEDIUM_DIM_FACTOR, TuningPreferencesDefaults.MAX_MEDIUM_DIM_FACTOR)
+        internal val PREF_SLOPE_FLAT = BoundedPref(KEY_SLOPE_FLAT, TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD, TuningPreferencesDefaults.MIN_SLOPE_FLAT, TuningPreferencesDefaults.MAX_SLOPE_FLAT)
+        internal val PREF_SLOPE_STEEP = BoundedPref(KEY_SLOPE_STEEP, TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD, TuningPreferencesDefaults.MIN_SLOPE_STEEP, TuningPreferencesDefaults.MAX_SLOPE_STEEP)
+        internal val PREF_WAKEUP_DURATION_SEC = BoundedPref(KEY_WAKEUP_DURATION_SEC, TuningPreferencesDefaults.WAKEUP_DURATION_SEC, TuningPreferencesDefaults.MIN_WAKEUP_SEC, TuningPreferencesDefaults.MAX_WAKEUP_SEC)
+        internal val PREF_DOWNWARD_DELAY_SEC = BoundedPref(KEY_DOWNWARD_DELAY_SEC, TuningPreferencesDefaults.DOWNWARD_DELAY_SEC, TuningPreferencesDefaults.MIN_DOWNWARD_DELAY_SEC, TuningPreferencesDefaults.MAX_DOWNWARD_DELAY_SEC)
+        internal val PREF_GPS_ACCURACY_THRESHOLD = BoundedPref(KEY_GPS_ACCURACY_THRESHOLD, TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M, TuningPreferencesDefaults.MIN_GPS_ACCURACY_M, TuningPreferencesDefaults.MAX_GPS_ACCURACY_M)
+        internal val PREF_ALTITUDE_FILTER_WINDOW = BoundedPref(KEY_ALTITUDE_FILTER_WINDOW, TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC, TuningPreferencesDefaults.MIN_ALTITUDE_WINDOW_SEC, TuningPreferencesDefaults.MAX_ALTITUDE_WINDOW_SEC)
+        internal val PREF_SLOPE_MIN_SPEED = BoundedPref(KEY_SLOPE_MIN_SPEED, TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS, TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS, TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS)
+        internal val PREF_PACE_CEILING_MIN_KM = BoundedPref(KEY_PACE_CEILING_MIN_KM, TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM, TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM, TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM)
+        internal val PREF_TURN_CUE_COUNTDOWN_DISTANCE = BoundedPref(KEY_TURN_CUE_COUNTDOWN_DISTANCE, TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS, TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS, TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS)
+        internal val PREF_OFF_ROUTE_CORRIDOR_THRESHOLD = BoundedPref(KEY_OFF_ROUTE_CORRIDOR_THRESHOLD, TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS, TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS, TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS)
+        internal val PREF_SENSOR_FIELD_CORNER_RADIUS = BoundedPref(KEY_SENSOR_FIELD_CORNER_RADIUS, TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS, TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS, TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS)
+        internal val PREF_SENSOR_FIELD_BORDER_THICKNESS = BoundedPref(KEY_SENSOR_FIELD_BORDER_THICKNESS, TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS, TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS, TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS)
+        internal val PREF_SENSOR_FIELD_BORDER_CONTRAST = BoundedPref(KEY_SENSOR_FIELD_BORDER_CONTRAST, TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST, TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST, TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST)
+        internal val PREF_ROUTE_SELECTION_RADIUS_KM = BoundedPref(KEY_ROUTE_SELECTION_RADIUS_KM, TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM, TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM, TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM)
+        internal val PREF_NAVIGATION_CUE_TRANSPARENCY = BoundedPref(KEY_NAVIGATION_CUE_TRANSPARENCY, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY, TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY, TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY)
+        internal val PREF_NAVIGATION_CUE_DISMISS_DURATION_SEC = BoundedPref(KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC, TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC, TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC)
+        internal val PREF_ELEVATION_SMOOTHING_SIGMA_METERS = BoundedPref(KEY_ELEVATION_SMOOTHING_SIGMA_METERS, TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS, TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS, TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS)
+        internal val PREF_CLUSTER_TOL_ENDPOINTS = BoundedPref(KEY_CLUSTER_TOL_ENDPOINTS, TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS, TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS, TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS)
+        internal val PREF_CLUSTER_TOL_APEX = BoundedPref(KEY_CLUSTER_TOL_APEX, TuningPreferencesDefaults.CLUSTER_TOL_APEX, TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX, TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX)
+        internal val PREF_CLUSTER_TOL_DISTANCE = BoundedPref(KEY_CLUSTER_TOL_DISTANCE, TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE, TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE, TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE)
+        internal val PREF_CLUSTER_TOL_ALTITUDE_POS = BoundedPref(KEY_CLUSTER_TOL_ALTITUDE_POS, TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS, TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS, TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS)
+        internal val PREF_CLUSTER_SCORE_THRESHOLD = BoundedPref(KEY_CLUSTER_SCORE_THRESHOLD, TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD, TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD, TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD)
+        internal val PREF_MORNING_CHECK_CUTOFF_HOUR = BoundedPref(KEY_MORNING_CHECK_CUTOFF_HOUR, TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR, TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
+        internal val PREF_DFA_A1_THRESHOLD_T1 = BoundedPref(KEY_DFA_A1_THRESHOLD_T1, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1, TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD, TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD)
+        internal val PREF_DFA_A1_THRESHOLD_T2 = BoundedPref(KEY_DFA_A1_THRESHOLD_T2, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2, TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD, TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD)
+        internal val PREF_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = BoundedPref(KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT, TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT, TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT, TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT)
+        internal val PREF_AUTO_PAUSE_BIKE_SPEED_THRESHOLD = BoundedPref(KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+        internal val PREF_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+        internal val PREF_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC)
+        internal val PREF_AUTO_PAUSE_RUN_SPEED_THRESHOLD = BoundedPref(KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+        internal val PREF_AUTO_PAUSE_RUN_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+        internal val PREF_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC)
+        internal val PREF_AUTO_PAUSE_OTHER_SPEED_THRESHOLD = BoundedPref(KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+        internal val PREF_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+        internal val PREF_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC)
+        internal val PREF_AUTO_PAUSE_SPEED_THRESHOLD_KMH = BoundedPref(KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH, TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH)
+        internal val PREF_AUTO_PAUSE_DEBOUNCE_SEC = BoundedPref(KEY_AUTO_PAUSE_DEBOUNCE_SEC, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC, TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC)
+
+        private fun clampMediumDim(raw: Float, clampedFullDim: Float): Float =
+            raw.coerceIn(clampedFullDim, TuningPreferencesDefaults.MAX_MEDIUM_DIM_FACTOR)
+
+        private fun clampSlopeSteep(raw: Float, clampedSlopeFlat: Float): Float =
+            raw.coerceIn(clampedSlopeFlat, TuningPreferencesDefaults.MAX_SLOPE_STEEP)
+
+        private fun clampNavCueDismiss(durationSec: Int): Int =
+            if (durationSec == 0) TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            else PREF_NAVIGATION_CUE_DISMISS_DURATION_SEC.clamp(durationSec)
+
+        private fun clampDfaA1Pair(t1: Float, t2: Float): Pair<Float, Float> {
+            var clampedT1 = PREF_DFA_A1_THRESHOLD_T1.clamp(t1)
+            var clampedT2 = PREF_DFA_A1_THRESHOLD_T2.clamp(t2)
+            if (clampedT1 < clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
+                if (clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
+                    clampedT1 = clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+                } else {
+                    clampedT2 = (clampedT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP)
+                        .coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+                }
+            }
+            return clampedT1 to clampedT2
+        }
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -857,26 +942,17 @@ class TuningPreferencesDataStore private constructor(
             val legacyThreshold = prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH]?.roundToInt()
             val legacyDebounce = prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC]
 
-            val bikeThreshold = (prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
-            val bikeDebounce = (prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
-            val bikeResumeDebounce = (prefs[KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC)
+            val bikeThreshold = PREF_AUTO_PAUSE_BIKE_SPEED_THRESHOLD.read(prefs, legacyThreshold ?: PREF_AUTO_PAUSE_BIKE_SPEED_THRESHOLD.default)
+            val bikeDebounce = PREF_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.read(prefs, legacyDebounce ?: PREF_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.default)
+            val bikeResumeDebounce = PREF_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC.read(prefs)
 
-            val runThreshold = (prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
-            val runDebounce = (prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
-            val runResumeDebounce = (prefs[KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC)
+            val runThreshold = PREF_AUTO_PAUSE_RUN_SPEED_THRESHOLD.read(prefs, legacyThreshold ?: PREF_AUTO_PAUSE_RUN_SPEED_THRESHOLD.default)
+            val runDebounce = PREF_AUTO_PAUSE_RUN_DEBOUNCE_SEC.read(prefs, legacyDebounce ?: PREF_AUTO_PAUSE_RUN_DEBOUNCE_SEC.default)
+            val runResumeDebounce = PREF_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC.read(prefs)
 
-            val otherThreshold = (prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
-            val otherDebounce = (prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
-            val otherResumeDebounce = (prefs[KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC)
-                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC)
+            val otherThreshold = PREF_AUTO_PAUSE_OTHER_SPEED_THRESHOLD.read(prefs, legacyThreshold ?: PREF_AUTO_PAUSE_OTHER_SPEED_THRESHOLD.default)
+            val otherDebounce = PREF_AUTO_PAUSE_OTHER_DEBOUNCE_SEC.read(prefs, legacyDebounce ?: PREF_AUTO_PAUSE_OTHER_DEBOUNCE_SEC.default)
+            val otherResumeDebounce = PREF_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC.read(prefs)
 
             return AutoPausePreferences(
                 bikeEnabled = bikeEnabled,
@@ -936,9 +1012,10 @@ class TuningPreferencesDataStore private constructor(
         @VisibleForTesting
         fun createForTesting(
             context: Context,
-            testScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            testScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            dataStoreOverride: DataStore<Preferences>? = null
         ): TuningPreferencesDataStore {
-            return TuningPreferencesDataStore(context.applicationContext ?: context, testScope)
+            return TuningPreferencesDataStore(context.applicationContext ?: context, testScope, dataStoreOverride)
         }
 
         @VisibleForTesting
@@ -994,7 +1071,7 @@ data class AutoPausePreferences(
     val otherResumeDebounceSec: Int
 )
 
-    val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
+    val tuningConfigFlow: Flow<TuningConfig> = dataStore.data.map { prefs ->
         mapPreferencesToConfig(prefs)
     }
 
@@ -1021,8 +1098,7 @@ data class AutoPausePreferences(
         val rawAudioAlertModeStr = prefs[KEY_RADAR_AUDIO_ALERT_MODE]
         val radarAudioAlertMode = safeEnumValueOf(rawAudioAlertModeStr, TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
 
-        val rawAlertVolume = prefs[KEY_RADAR_ALERT_VOLUME] ?: TuningPreferencesDefaults.RADAR_ALERT_VOLUME
-        val radarAlertVolume = rawAlertVolume.coerceIn(10, 100)
+        val radarAlertVolume = PREF_RADAR_ALERT_VOLUME.read(prefs)
 
         val radarSpeakerBoost = prefs[KEY_RADAR_SPEAKER_BOOST] ?: TuningPreferencesDefaults.RADAR_SPEAKER_BOOST
 
@@ -1053,71 +1129,23 @@ data class AutoPausePreferences(
         val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
         val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
         val radarClosePassThresholdM = prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
-        val defaultPoolLengthMeters = (prefs[KEY_DEFAULT_POOL_LENGTH_METERS] ?: TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS).coerceIn(
-            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
-            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
-        )
+        val defaultPoolLengthMeters = PREF_DEFAULT_POOL_LENGTH_METERS.read(prefs)
         val defaultPoolLengthUnit = safeEnumValueOf(prefs[KEY_DEFAULT_POOL_LENGTH_UNIT], TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
-        val rawFullDim = prefs[KEY_FULL_DIM_FACTOR] ?: TuningPreferencesDefaults.FULL_DIM_FACTOR
-        val rawMediumDim = prefs[KEY_MEDIUM_DIM_FACTOR] ?: TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
-        val clampedFullDim = rawFullDim.coerceIn(
-            TuningPreferencesDefaults.MIN_FULL_DIM_FACTOR,
-            TuningPreferencesDefaults.MAX_FULL_DIM_FACTOR
-        )
-        val clampedMediumDim = rawMediumDim.coerceIn(
-            clampedFullDim,
-            TuningPreferencesDefaults.MAX_MEDIUM_DIM_FACTOR
-        )
+        val clampedFullDim = PREF_FULL_DIM_FACTOR.read(prefs)
+        val clampedMediumDim = clampMediumDim(prefs[KEY_MEDIUM_DIM_FACTOR] ?: PREF_MEDIUM_DIM_FACTOR.default, clampedFullDim)
 
-        val rawSlopeFlat = prefs[KEY_SLOPE_FLAT] ?: TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD
-        val rawSlopeSteep = prefs[KEY_SLOPE_STEEP] ?: TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD
-        val clampedSlopeFlat = rawSlopeFlat.coerceIn(
-            TuningPreferencesDefaults.MIN_SLOPE_FLAT,
-            TuningPreferencesDefaults.MAX_SLOPE_FLAT
-        )
-        val clampedSlopeSteep = rawSlopeSteep.coerceIn(
-            clampedSlopeFlat,
-            TuningPreferencesDefaults.MAX_SLOPE_STEEP
-        )
+        val clampedSlopeFlat = PREF_SLOPE_FLAT.read(prefs)
+        val clampedSlopeSteep = clampSlopeSteep(prefs[KEY_SLOPE_STEEP] ?: PREF_SLOPE_STEEP.default, clampedSlopeFlat)
 
-        val rawWakeup = prefs[KEY_WAKEUP_DURATION_SEC] ?: TuningPreferencesDefaults.WAKEUP_DURATION_SEC
-        val clampedWakeup = rawWakeup.coerceIn(
-            TuningPreferencesDefaults.MIN_WAKEUP_SEC,
-            TuningPreferencesDefaults.MAX_WAKEUP_SEC
-        )
-
-        val rawDownward = prefs[KEY_DOWNWARD_DELAY_SEC] ?: TuningPreferencesDefaults.DOWNWARD_DELAY_SEC
-        val clampedDownward = rawDownward.coerceIn(
-            TuningPreferencesDefaults.MIN_DOWNWARD_DELAY_SEC,
-            TuningPreferencesDefaults.MAX_DOWNWARD_DELAY_SEC
-        )
-
-        val rawAccuracy = prefs[KEY_GPS_ACCURACY_THRESHOLD] ?: TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M
-        val clampedAccuracy = rawAccuracy.coerceIn(
-            TuningPreferencesDefaults.MIN_GPS_ACCURACY_M,
-            TuningPreferencesDefaults.MAX_GPS_ACCURACY_M
-        )
-
-        val rawAltWindow = prefs[KEY_ALTITUDE_FILTER_WINDOW] ?: TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC
-        val clampedAltWindow = rawAltWindow.coerceIn(
-            TuningPreferencesDefaults.MIN_ALTITUDE_WINDOW_SEC,
-            TuningPreferencesDefaults.MAX_ALTITUDE_WINDOW_SEC
-        )
-
-        val rawSlopeSpeed = prefs[KEY_SLOPE_MIN_SPEED] ?: TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
-        val clampedSlopeSpeed = rawSlopeSpeed.coerceIn(
-            TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS,
-            TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS
-        )
-
-        val rawPaceCeiling = prefs[KEY_PACE_CEILING_MIN_KM] ?: TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
-        val clampedPaceCeiling = rawPaceCeiling.coerceIn(
-            TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM,
-            TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
-        )
+        val clampedWakeup = PREF_WAKEUP_DURATION_SEC.read(prefs)
+        val clampedDownward = PREF_DOWNWARD_DELAY_SEC.read(prefs)
+        val clampedAccuracy = PREF_GPS_ACCURACY_THRESHOLD.read(prefs)
+        val clampedAltWindow = PREF_ALTITUDE_FILTER_WINDOW.read(prefs)
+        val clampedSlopeSpeed = PREF_SLOPE_MIN_SPEED.read(prefs)
+        val clampedPaceCeiling = PREF_PACE_CEILING_MIN_KM.read(prefs)
 
         val showLiveClimbs = prefs[KEY_SHOW_LIVE_CLIMBS] ?: TuningPreferencesDefaults.SHOW_LIVE_CLIMBS
         val climbMinLength = prefs[KEY_CLIMB_MIN_LENGTH_METERS] ?: TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS
@@ -1132,38 +1160,12 @@ data class AutoPausePreferences(
 
         val turnPromptsEnabled = prefs[KEY_TURN_PROMPTS_ENABLED] ?: TuningPreferencesDefaults.TURN_PROMPTS_ENABLED
         val turnAudioAlertsEnabled = prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] ?: TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED
-        val rawTurnCountdown = prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] ?: TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS
-        val clampedTurnCountdown = rawTurnCountdown.coerceIn(
-            TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
-            TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
-        )
-        val rawOffRoute = prefs[KEY_OFF_ROUTE_CORRIDOR_THRESHOLD] ?: TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
-        val clampedOffRoute = rawOffRoute.coerceIn(
-            TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
-            TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
-        )
-
-        val rawCornerRadius = prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] ?: TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS
-        val clampedCornerRadius = rawCornerRadius.coerceIn(
-            TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS,
-            TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS
-        )
-        val rawBorderThickness = prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] ?: TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS
-        val clampedBorderThickness = rawBorderThickness.coerceIn(
-            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS,
-            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS
-        )
-        val rawBorderContrast = prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] ?: TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST
-        val clampedBorderContrast = rawBorderContrast.coerceIn(
-            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
-            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
-        )
-
-        val rawRadiusKm = prefs[KEY_ROUTE_SELECTION_RADIUS_KM] ?: TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
-        val clampedRadiusKm = rawRadiusKm.coerceIn(
-            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
-            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
-        )
+        val clampedTurnCountdown = PREF_TURN_CUE_COUNTDOWN_DISTANCE.read(prefs)
+        val clampedOffRoute = PREF_OFF_ROUTE_CORRIDOR_THRESHOLD.read(prefs)
+        val clampedCornerRadius = PREF_SENSOR_FIELD_CORNER_RADIUS.read(prefs)
+        val clampedBorderThickness = PREF_SENSOR_FIELD_BORDER_THICKNESS.read(prefs)
+        val clampedBorderContrast = PREF_SENSOR_FIELD_BORDER_CONTRAST.read(prefs)
+        val clampedRadiusKm = PREF_ROUTE_SELECTION_RADIUS_KM.read(prefs)
 
         val autoPausePrefs = mapAutoPausePreferences(prefs)
 
@@ -1197,24 +1199,9 @@ data class AutoPausePreferences(
             sensorFieldBorderThickness = clampedBorderThickness,
             sensorFieldBorderContrast = clampedBorderContrast,
             routeSelectionRadiusKm = clampedRadiusKm,
-            navigationCueTransparency = (prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY).coerceIn(
-                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
-                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
-            ),
-            navigationCueDismissDurationSec = (prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC).let {
-                if (it == 0) {
-                    TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
-                } else {
-                    it.coerceIn(
-                        TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
-                        TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
-                    )
-                }
-            },
-            elevationSmoothingSigmaMeters = (prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] ?: TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS).coerceIn(
-                TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
-                TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
-            ),
+            navigationCueTransparency = PREF_NAVIGATION_CUE_TRANSPARENCY.read(prefs),
+            navigationCueDismissDurationSec = clampNavCueDismiss(prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] ?: PREF_NAVIGATION_CUE_DISMISS_DURATION_SEC.default),
+            elevationSmoothingSigmaMeters = PREF_ELEVATION_SMOOTHING_SIGMA_METERS.read(prefs),
             mapFollowMeInitialZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
             mapFollowMeSpeedZoomEnabled = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
             mapFollowMeCruisingZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
@@ -1224,28 +1211,13 @@ data class AutoPausePreferences(
             mapFollowMeBearingSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
             suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
             autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
-            clusterTolEndpoints = (prefs[KEY_CLUSTER_TOL_ENDPOINTS] ?: TrainingApplication.getClusterTolEndpoints()).coerceIn(
-                TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS,
-                TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS
-            ),
-            clusterTolApex = (prefs[KEY_CLUSTER_TOL_APEX] ?: TrainingApplication.getClusterTolApex()).coerceIn(
-                TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX,
-                TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX
-            ),
-            clusterTolDistance = (prefs[KEY_CLUSTER_TOL_DISTANCE] ?: TrainingApplication.getClusterTolDistance()).coerceIn(
-                TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE,
-                TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE
-            ),
-            clusterTolAltitudePos = (prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] ?: TrainingApplication.getClusterTolAltitudePos()).coerceIn(
-                TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
-                TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
-            ),
+            clusterTolEndpoints = PREF_CLUSTER_TOL_ENDPOINTS.read(prefs, TrainingApplication.getClusterTolEndpoints()),
+            clusterTolApex = PREF_CLUSTER_TOL_APEX.read(prefs, TrainingApplication.getClusterTolApex()),
+            clusterTolDistance = PREF_CLUSTER_TOL_DISTANCE.read(prefs, TrainingApplication.getClusterTolDistance()),
+            clusterTolAltitudePos = PREF_CLUSTER_TOL_ALTITUDE_POS.read(prefs, TrainingApplication.getClusterTolAltitudePos()),
             clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
             clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering(),
-            clusterScoreThreshold = (prefs[KEY_CLUSTER_SCORE_THRESHOLD] ?: TrainingApplication.getClusterScoreThreshold()).coerceIn(
-                TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD,
-                TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
-            ),
+            clusterScoreThreshold = PREF_CLUSTER_SCORE_THRESHOLD.read(prefs, TrainingApplication.getClusterScoreThreshold()),
             autoPauseBikeEnabled = autoPausePrefs.bikeEnabled,
             autoPauseRunEnabled = autoPausePrefs.runEnabled,
             autoPauseOtherEnabled = autoPausePrefs.otherEnabled,
@@ -1276,10 +1248,7 @@ data class AutoPausePreferences(
             enableMuscleSoreness = prefs[KEY_ENABLE_MUSCLE_SORENESS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS,
             enableContextTags = prefs[KEY_ENABLE_CONTEXT_TAGS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS,
             showMorningCheckOnStartScreen = prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] ?: TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN,
-            morningCheckCutoffHour = (prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] ?: TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR).coerceIn(
-                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
-                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
-            ),
+            morningCheckCutoffHour = PREF_MORNING_CHECK_CUTOFF_HOUR.read(prefs),
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
             hrvArtifactGateThresholdPercent = prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
@@ -1323,280 +1292,141 @@ data class AutoPausePreferences(
         }
     }
 
-    val enableCogganPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val enableCogganPowerMetricsFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_COGGAN_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS
     }
 
-    val enablePmcModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val enablePmcModelFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_PMC_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL
     }
 
-    val enableAerobicEfficiencyModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val enableAerobicEfficiencyModelFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL
     }
 
-    val enableCriticalPowerModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val enableCriticalPowerModelFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
     }
 
-    val enableCardioPowerDynamicsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val enableCardioPowerDynamicsFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS
     }
 
-    val enableMorningSleepAndWellnessFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val enableMorningSleepAndWellnessFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS
     }
 
     suspend fun setEnableMorningSleepAndWellness(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] = enabled
         }
     }
 
-    val showMorningCheckOnStartScreenFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val showMorningCheckOnStartScreenFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] ?: TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN
     }
 
     suspend fun setShowMorningCheckOnStartScreen(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] = enabled
         }
     }
 
-    val morningCheckCutoffHourFlow: Flow<Int> = context.dataStore.data.map { prefs ->
-        (prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] ?: TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR)
-            .coerceIn(TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
+    val morningCheckCutoffHourFlow: Flow<Int> = dataStore.data.map { prefs ->
+        PREF_MORNING_CHECK_CUTOFF_HOUR.read(prefs)
     }
 
     suspend fun setMorningCheckCutoffHour(hour: Int) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] = hour.coerceIn(
-                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
-                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
-            )
+        dataStore.edit { prefs ->
+            PREF_MORNING_CHECK_CUTOFF_HOUR.write(prefs, hour)
         }
     }
 
     suspend fun setEnableCardioPowerDynamics(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] = enabled
         }
     }
 
     suspend fun setEnableCogganPowerMetrics(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_COGGAN_POWER_METRICS] = enabled
         }
     }
 
     suspend fun setEnablePmcModel(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_PMC_MODEL] = enabled
         }
     }
 
     suspend fun setEnableAerobicEfficiencyModel(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] = enabled
         }
     }
 
     suspend fun setEnableCriticalPowerModel(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = enabled
         }
     }
 
-    val dfaA1ThresholdT1Flow: Flow<Float> = context.dataStore.data.map { prefs ->
+    val dfaA1ThresholdT1Flow: Flow<Float> = dataStore.data.map { prefs ->
         prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
     }
 
-    val dfaA1ThresholdT2Flow: Flow<Float> = context.dataStore.data.map { prefs ->
+    val dfaA1ThresholdT2Flow: Flow<Float> = dataStore.data.map { prefs ->
         prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
     }
 
-    val hrvArtifactGateThresholdPercentFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+    val hrvArtifactGateThresholdPercentFlow: Flow<Float> = dataStore.data.map { prefs ->
         prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
     }
 
     suspend fun setHrvArtifactGateThresholdPercent(percent: Float) {
-        context.dataStore.edit { prefs ->
-            val clamped = percent.coerceIn(
-                TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
-                TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
-            )
-            prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clamped
+        dataStore.edit { prefs ->
+            PREF_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT.write(prefs, percent)
         }
     }
 
     suspend fun setDfaA1ThresholdT1(threshold: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             val currentT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
             val minT1 = (currentT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtMost(TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD)
-            val clamped = threshold.coerceIn(
-                minT1,
-                TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-            )
-            prefs[KEY_DFA_A1_THRESHOLD_T1] = clamped
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = threshold.coerceIn(minT1, TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD)
         }
     }
 
     suspend fun setDfaA1ThresholdT2(threshold: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             val currentT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
             val maxT2 = (currentT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
-            val clamped = threshold.coerceIn(
-                TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-                maxT2
-            )
-            prefs[KEY_DFA_A1_THRESHOLD_T2] = clamped
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = threshold.coerceIn(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD, maxT2)
         }
     }
 
     suspend fun setDfaA1Thresholds(t1: Float, t2: Float) {
-        var clampedT1 = t1.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
-        var clampedT2 = t2.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
-        if (clampedT1 < clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
-            if (clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
-                clampedT1 = clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
-            } else {
-                clampedT2 = (clampedT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
-            }
-        }
-        context.dataStore.edit { prefs ->
+        val (clampedT1, clampedT2) = clampDfaA1Pair(t1, t2)
+        dataStore.edit { prefs ->
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedT1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedT2
         }
     }
 
     suspend fun saveTuningConfig(config: TuningConfig) {
-        val clampedFullDim = config.fullDimFactor.coerceIn(
-            TuningPreferencesDefaults.MIN_FULL_DIM_FACTOR,
-            TuningPreferencesDefaults.MAX_FULL_DIM_FACTOR
-        )
-        val clampedMediumDim = config.mediumDimFactor.coerceIn(
-            clampedFullDim,
-            TuningPreferencesDefaults.MAX_MEDIUM_DIM_FACTOR
-        )
-        val clampedSlopeFlat = config.slopeFlatThreshold.coerceIn(
-            TuningPreferencesDefaults.MIN_SLOPE_FLAT,
-            TuningPreferencesDefaults.MAX_SLOPE_FLAT
-        )
-        val clampedSlopeSteep = config.slopeSteepThreshold.coerceIn(
-            clampedSlopeFlat,
-            TuningPreferencesDefaults.MAX_SLOPE_STEEP
-        )
-        val clampedWakeup = config.wakeupDurationSec.coerceIn(
-            TuningPreferencesDefaults.MIN_WAKEUP_SEC,
-            TuningPreferencesDefaults.MAX_WAKEUP_SEC
-        )
-        val clampedDownward = config.downwardDelaySec.coerceIn(
-            TuningPreferencesDefaults.MIN_DOWNWARD_DELAY_SEC,
-            TuningPreferencesDefaults.MAX_DOWNWARD_DELAY_SEC
-        )
-        val clampedAccuracy = config.gpsAccuracyThresholdMeters.coerceIn(
-            TuningPreferencesDefaults.MIN_GPS_ACCURACY_M,
-            TuningPreferencesDefaults.MAX_GPS_ACCURACY_M
-        )
-        val clampedAltWindow = config.altitudeFilterWindowSec.coerceIn(
-            TuningPreferencesDefaults.MIN_ALTITUDE_WINDOW_SEC,
-            TuningPreferencesDefaults.MAX_ALTITUDE_WINDOW_SEC
-        )
-        val clampedSlopeSpeed = config.slopeMinSpeedMps.coerceIn(
-            TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS,
-            TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS
-        )
-        val clampedPaceCeiling = config.paceCeilingMinKm.coerceIn(
-            TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM,
-            TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
-        )
-        val clampedCornerRadius = config.sensorFieldCornerRadius.coerceIn(
-            TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS,
-            TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS
-        )
-        val clampedBorderThickness = config.sensorFieldBorderThickness.coerceIn(
-            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS,
-            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS
-        )
-        val clampedBorderContrast = config.sensorFieldBorderContrast.coerceIn(
-            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
-            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
-        )
-        val clampedRadiusKm = config.routeSelectionRadiusKm.coerceIn(
-            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
-            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
-        )
-        val clampedClusterTolEndpoints = config.clusterTolEndpoints.coerceIn(
-            TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS,
-            TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS
-        )
-        val clampedClusterTolApex = config.clusterTolApex.coerceIn(
-            TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX,
-            TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX
-        )
-        val clampedClusterTolDistance = config.clusterTolDistance.coerceIn(
-            TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE,
-            TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE
-        )
-        val clampedClusterTolAltitudePos = config.clusterTolAltitudePos.coerceIn(
-            TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
-            TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
-        )
-        val clampedClusterScoreThreshold = config.clusterScoreThreshold.coerceIn(
-            TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD,
-            TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
-        )
-        val clampedBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
-        )
-        val clampedBikeDebounce = config.autoPauseBikeDebounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC
-        )
-        val clampedRunSpeedThreshold = config.autoPauseRunSpeedThreshold.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
-        )
-        val clampedRunDebounce = config.autoPauseRunDebounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC
-        )
-        val clampedOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
-        )
-        val clampedOtherDebounce = config.autoPauseOtherDebounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
-        )
-        var clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
-        var clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
-        if (clampedDfaA1T1 < clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
-            if (clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
-                clampedDfaA1T1 = clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
-            } else {
-                clampedDfaA1T2 = (clampedDfaA1T1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
-            }
-        }
-        val clampedArtifactGate = config.hrvArtifactGateThresholdPercent.coerceIn(
-            TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
-            TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
-        )
+        val clampedFullDim = PREF_FULL_DIM_FACTOR.clamp(config.fullDimFactor)
+        val clampedMediumDim = clampMediumDim(config.mediumDimFactor, clampedFullDim)
+        val clampedSlopeFlat = PREF_SLOPE_FLAT.clamp(config.slopeFlatThreshold)
+        val clampedSlopeSteep = clampSlopeSteep(config.slopeSteepThreshold, clampedSlopeFlat)
+        val clampedClusterTolEndpoints = PREF_CLUSTER_TOL_ENDPOINTS.clamp(config.clusterTolEndpoints)
+        val clampedClusterTolApex = PREF_CLUSTER_TOL_APEX.clamp(config.clusterTolApex)
+        val clampedClusterTolDistance = PREF_CLUSTER_TOL_DISTANCE.clamp(config.clusterTolDistance)
+        val clampedClusterTolAltitudePos = PREF_CLUSTER_TOL_ALTITUDE_POS.clamp(config.clusterTolAltitudePos)
+        val clampedClusterScoreThreshold = PREF_CLUSTER_SCORE_THRESHOLD.clamp(config.clusterScoreThreshold)
+        val (clampedDfaA1T1, clampedDfaA1T2) = clampDfaA1Pair(config.dfaA1ThresholdT1, config.dfaA1ThresholdT2)
 
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
             prefs[KEY_TELEMETRY_X_AXIS_DOMAIN] = config.telemetryXAxisDomain.name
             prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -1607,48 +1437,29 @@ data class AutoPausePreferences(
             prefs[KEY_MEDIUM_DIM_FACTOR] = clampedMediumDim
             prefs[KEY_SLOPE_FLAT] = clampedSlopeFlat
             prefs[KEY_SLOPE_STEEP] = clampedSlopeSteep
-            prefs[KEY_WAKEUP_DURATION_SEC] = clampedWakeup
-            prefs[KEY_DOWNWARD_DELAY_SEC] = clampedDownward
-            prefs[KEY_GPS_ACCURACY_THRESHOLD] = clampedAccuracy
-            prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
-            prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
+            PREF_WAKEUP_DURATION_SEC.write(prefs, config.wakeupDurationSec)
+            PREF_DOWNWARD_DELAY_SEC.write(prefs, config.downwardDelaySec)
+            PREF_GPS_ACCURACY_THRESHOLD.write(prefs, config.gpsAccuracyThresholdMeters)
+            PREF_ALTITUDE_FILTER_WINDOW.write(prefs, config.altitudeFilterWindowSec)
+            PREF_SLOPE_MIN_SPEED.write(prefs, config.slopeMinSpeedMps)
             prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = config.postWorkoutErtsSmoothingEnabled
             prefs[KEY_RAW_SENSOR_RETENTION_POLICY] = config.rawSensorRetentionPolicy.name
-            prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
+            PREF_PACE_CEILING_MIN_KM.write(prefs, config.paceCeilingMinKm)
             prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
             prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
             prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] = config.climbMinGradientPercent
             prefs[KEY_CLIMB_SCORING_FORMULA] = config.climbScoringFormula.name
             prefs[KEY_TURN_PROMPTS_ENABLED] = config.turnPromptsEnabled
             prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] = config.turnAudioAlertsEnabled
-            prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = config.turnCueCountdownDistanceMeters.coerceIn(
-                TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
-                TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
-            )
-            prefs[KEY_OFF_ROUTE_CORRIDOR_THRESHOLD] = config.offRouteCorridorThresholdMeters.coerceIn(
-                TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
-                TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
-            )
-            prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] = clampedCornerRadius
-            prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] = clampedBorderThickness
-            prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] = clampedBorderContrast
-            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clampedRadiusKm
-            prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] = config.navigationCueTransparency.coerceIn(
-                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
-                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
-            )
-            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = if (config.navigationCueDismissDurationSec == 0) {
-                TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
-            } else {
-                config.navigationCueDismissDurationSec.coerceIn(
-                    TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
-                    TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
-                )
-            }
-            prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = config.elevationSmoothingSigmaMeters.coerceIn(
-                TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
-                TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
-            )
+            PREF_TURN_CUE_COUNTDOWN_DISTANCE.write(prefs, config.turnCueCountdownDistanceMeters)
+            PREF_OFF_ROUTE_CORRIDOR_THRESHOLD.write(prefs, config.offRouteCorridorThresholdMeters)
+            PREF_SENSOR_FIELD_CORNER_RADIUS.write(prefs, config.sensorFieldCornerRadius)
+            PREF_SENSOR_FIELD_BORDER_THICKNESS.write(prefs, config.sensorFieldBorderThickness)
+            PREF_SENSOR_FIELD_BORDER_CONTRAST.write(prefs, config.sensorFieldBorderContrast)
+            PREF_ROUTE_SELECTION_RADIUS_KM.write(prefs, config.routeSelectionRadiusKm)
+            PREF_NAVIGATION_CUE_TRANSPARENCY.write(prefs, config.navigationCueTransparency)
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = clampNavCueDismiss(config.navigationCueDismissDurationSec)
+            PREF_ELEVATION_SMOOTHING_SIGMA_METERS.write(prefs, config.elevationSmoothingSigmaMeters)
             // ATT-3581: Actively purge any legacy camera preferences to prevent stale override interference
             for (legacyKey in LEGACY_MAP_CAMERA_KEYS) {
                 prefs.remove(legacyKey)
@@ -1665,12 +1476,16 @@ data class AutoPausePreferences(
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
-            prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clampedBikeSpeedThreshold
-            prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clampedBikeDebounce
-            prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clampedRunSpeedThreshold
-            prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
-            prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
-            prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
+            prefs[KEY_START_IN_AUTO_PAUSE_ENABLED] = config.startInAutoPauseEnabled
+            PREF_AUTO_PAUSE_BIKE_SPEED_THRESHOLD.write(prefs, config.autoPauseBikeSpeedThreshold)
+            PREF_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.write(prefs, config.autoPauseBikeDebounceSec)
+            PREF_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC.write(prefs, config.autoPauseBikeResumeDebounceSec)
+            PREF_AUTO_PAUSE_RUN_SPEED_THRESHOLD.write(prefs, config.autoPauseRunSpeedThreshold)
+            PREF_AUTO_PAUSE_RUN_DEBOUNCE_SEC.write(prefs, config.autoPauseRunDebounceSec)
+            PREF_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC.write(prefs, config.autoPauseRunResumeDebounceSec)
+            PREF_AUTO_PAUSE_OTHER_SPEED_THRESHOLD.write(prefs, config.autoPauseOtherSpeedThreshold)
+            PREF_AUTO_PAUSE_OTHER_DEBOUNCE_SEC.write(prefs, config.autoPauseOtherDebounceSec)
+            PREF_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC.write(prefs, config.autoPauseOtherResumeDebounceSec)
             prefs[KEY_ENABLE_COGGAN_POWER_METRICS] = config.enableCogganPowerMetrics
             prefs[KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY] = config.showCogganPowerInWorkoutSummary
             prefs[KEY_ENABLE_PMC_MODEL] = config.enablePmcModel
@@ -1686,17 +1501,14 @@ data class AutoPausePreferences(
             prefs[KEY_ENABLE_MUSCLE_SORENESS] = config.enableMuscleSoreness
             prefs[KEY_ENABLE_CONTEXT_TAGS] = config.enableContextTags
             prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] = config.showMorningCheckOnStartScreen
-            prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] = config.morningCheckCutoffHour.coerceIn(
-                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
-                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
-            )
+            PREF_MORNING_CHECK_CUTOFF_HOUR.write(prefs, config.morningCheckCutoffHour)
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
-            prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clampedArtifactGate
+            PREF_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT.write(prefs, config.hrvArtifactGateThresholdPercent)
             prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
             prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
             prefs[KEY_RADAR_AUDIO_ALERT_MODE] = config.radarAudioAlertMode.name
-            prefs[KEY_RADAR_ALERT_VOLUME] = config.radarAlertVolume.coerceIn(10, 100)
+            PREF_RADAR_ALERT_VOLUME.write(prefs, config.radarAlertVolume)
             prefs[KEY_RADAR_SPEAKER_BOOST] = config.radarSpeakerBoost
             prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
@@ -1713,10 +1525,7 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
             prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = config.radarClosePassThresholdM
-            prefs[KEY_DEFAULT_POOL_LENGTH_METERS] = config.defaultPoolLengthMeters.coerceIn(
-                TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
-                TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
-            )
+            PREF_DEFAULT_POOL_LENGTH_METERS.write(prefs, config.defaultPoolLengthMeters)
             prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = config.defaultPoolLengthUnit.name
         }
 
@@ -1732,65 +1541,45 @@ data class AutoPausePreferences(
 
 
     suspend fun updateShowLiveClimbs(show: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_SHOW_LIVE_CLIMBS] = show
         }
     }
 
     suspend fun updateClimbScoringFormula(formula: ClimbScoringFormula) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_CLIMB_SCORING_FORMULA] = formula.name
         }
     }
 
     suspend fun updateSensorFieldVariant(variant: SensorFieldVariant) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_SENSOR_FIELD_VARIANT] = variant.name
         }
     }
 
     suspend fun updateRouteSelectionRadiusKm(radiusKm: Float) {
-        val clamped = radiusKm.coerceIn(
-            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
-            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clamped
+        dataStore.edit { prefs ->
+            PREF_ROUTE_SELECTION_RADIUS_KM.write(prefs, radiusKm)
         }
     }
 
     @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
     suspend fun updateNavigationCueTransparency(transparency: Float) {
-        val clamped = transparency.coerceIn(
-            TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
-            TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] = clamped
+        dataStore.edit { prefs ->
+            PREF_NAVIGATION_CUE_TRANSPARENCY.write(prefs, transparency)
         }
     }
 
     suspend fun updateNavigationCueDismissDurationSec(durationSec: Int) {
-        val valid = if (durationSec == 0) {
-            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
-        } else {
-            durationSec.coerceIn(
-                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
-                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
-            )
-        }
-        context.dataStore.edit { prefs ->
-            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = valid
+        dataStore.edit { prefs ->
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = clampNavCueDismiss(durationSec)
         }
     }
 
     suspend fun updateElevationSmoothingSigmaMeters(sigma: Float) {
-        val clamped = sigma.coerceIn(
-            TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
-            TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = clamped
+        dataStore.edit { prefs ->
+            PREF_ELEVATION_SMOOTHING_SIGMA_METERS.write(prefs, sigma)
         }
     }
 
@@ -1799,55 +1588,55 @@ data class AutoPausePreferences(
      * cannot persist or interfere with calibrated defaults (REQ-MAP-050 / ATT-3581).
      */
     suspend fun purgeLegacyMapCameraPreferences() {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             purgeLegacyMapCameraKeys(prefs)
         }
     }
 
     @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(KEY_MAP_FOLLOW_ME_INITIAL_ZOOM)
         }
     }
 
     @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeSpeedZoomEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED)
         }
     }
 
     @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeCruisingZoom(zoom: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(KEY_MAP_FOLLOW_ME_CRUISING_ZOOM)
         }
     }
 
     @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeTiltAngle(angle: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(KEY_MAP_FOLLOW_ME_TILT_ANGLE)
         }
     }
 
     @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeLookaheadPaddingPercent(percent: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT)
         }
     }
 
-    val suppressAntMissingAdapterDialogFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val suppressAntMissingAdapterDialogFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
     }
 
-    val postWorkoutErtsSmoothingFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val postWorkoutErtsSmoothingFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
     }
 
-    val rawSensorRetentionPolicyFlow: Flow<RawSensorRetentionPolicy> = context.dataStore.data.map { prefs ->
+    val rawSensorRetentionPolicyFlow: Flow<RawSensorRetentionPolicy> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RAW_SENSOR_RETENTION_POLICY], TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY)
     }
 
@@ -1860,122 +1649,118 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRawSensorRetentionPolicy(policy: RawSensorRetentionPolicy) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RAW_SENSOR_RETENTION_POLICY] = policy.name
         }
     }
 
     suspend fun updatePostWorkoutErtsSmoothingEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = enabled
         }
     }
 
     suspend fun setSuppressAntMissingAdapterDialog(suppress: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = suppress
         }
     }
 
     suspend fun updateAutoFollowUniqueRouteEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = enabled
         }
     }
 
     suspend fun updateTurnCueCountdownDistanceMeters(distanceMeters: Float) {
-        val clamped = distanceMeters.coerceIn(
-            TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
-            TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
+        dataStore.edit { prefs ->
+            PREF_TURN_CUE_COUNTDOWN_DISTANCE.write(prefs, distanceMeters)
         }
     }
 
-    val radarEdgeSideFlow: Flow<RadarEdgeSide> = context.dataStore.data.map { prefs ->
+    val radarEdgeSideFlow: Flow<RadarEdgeSide> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RADAR_EDGE_SIDE], TuningPreferencesDefaults.RADAR_EDGE_SIDE)
     }
 
-    val radarClearModeFlow: Flow<RadarClearMode> = context.dataStore.data.map { prefs ->
+    val radarClearModeFlow: Flow<RadarClearMode> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RADAR_CLEAR_MODE], TuningPreferencesDefaults.RADAR_CLEAR_MODE)
     }
 
     suspend fun updateRadarEdgeSide(side: RadarEdgeSide) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_EDGE_SIDE] = side.name
         }
     }
 
     suspend fun updateRadarClearMode(mode: RadarClearMode) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_CLEAR_MODE] = mode.name
         }
     }
 
-    val radarAudioAlertModeFlow: Flow<RadarAudioAlertMode> = context.dataStore.data.map { prefs ->
+    val radarAudioAlertModeFlow: Flow<RadarAudioAlertMode> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RADAR_AUDIO_ALERT_MODE], TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
     }
 
-    val radarAlertVolumeFlow: Flow<Int> = context.dataStore.data.map { prefs ->
-        (prefs[KEY_RADAR_ALERT_VOLUME] ?: TuningPreferencesDefaults.RADAR_ALERT_VOLUME).coerceIn(10, 100)
+    val radarAlertVolumeFlow: Flow<Int> = dataStore.data.map { prefs ->
+        PREF_RADAR_ALERT_VOLUME.read(prefs)
     }
 
-    val radarSpeakerBoostFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarSpeakerBoostFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_SPEAKER_BOOST] ?: TuningPreferencesDefaults.RADAR_SPEAKER_BOOST
     }
 
-    val radarAudioRouteFlow: Flow<RadarAudioRoute> = context.dataStore.data.map { prefs ->
+    val radarAudioRouteFlow: Flow<RadarAudioRoute> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RADAR_AUDIO_ROUTE], TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
     }
 
-    val radarHapticAlertFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarHapticAlertFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
     }
 
     suspend fun updateRadarAudioAlertMode(mode: RadarAudioAlertMode) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_AUDIO_ALERT_MODE] = mode.name
         }
     }
 
     suspend fun updateRadarAlertVolume(volume: Int) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_RADAR_ALERT_VOLUME] = volume.coerceIn(10, 100)
+        dataStore.edit { prefs ->
+            PREF_RADAR_ALERT_VOLUME.write(prefs, volume)
         }
     }
 
     suspend fun updateRadarSpeakerBoost(boost: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_SPEAKER_BOOST] = boost
         }
     }
 
     suspend fun updateRadarAudioRoute(route: RadarAudioRoute) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_AUDIO_ROUTE] = route.name
         }
     }
 
     suspend fun updateRadarHapticAlert(haptic: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_HAPTIC_ALERT] = haptic
         }
     }
 
-    val radarLightDefaultModeFlow: Flow<RadarLightMode> = context.dataStore.data.map { prefs ->
+    val radarLightDefaultModeFlow: Flow<RadarLightMode> = dataStore.data.map { prefs ->
         resolveRadarLightDefaultMode(prefs)
     }
 
-    val radarLightAutoModeFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarLightAutoModeFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         resolveRadarLightAutoMode(prefs)
     }
 
-    val radarLightControlModeFlow: Flow<RadarLightControlMode> = context.dataStore.data.map { prefs ->
+    val radarLightControlModeFlow: Flow<RadarLightControlMode> = dataStore.data.map { prefs ->
         resolveRadarLightControlMode(prefs)
     }
 
-    val radarAutoLightControlFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarAutoLightControlFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
         if (rawControl != null) {
             safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE) == RadarLightControlMode.FIXED_WORKOUT_MODE
@@ -1985,13 +1770,13 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRadarLightDefaultMode(mode: RadarLightMode) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
         }
     }
 
     suspend fun updateRadarLightAutoMode(autoMode: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_LIGHT_AUTO_MODE] = autoMode
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (autoMode) {
                 RadarLightControlMode.SMART_AUTOMATION.name
@@ -2004,7 +1789,7 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRadarLightSelection(isAuto: Boolean, mode: RadarLightMode? = null) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_LIGHT_AUTO_MODE] = isAuto
             if (mode != null) {
                 prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
@@ -2020,7 +1805,7 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRadarLightControlMode(mode: RadarLightControlMode) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = mode.name
             val isAuto = (mode == RadarLightControlMode.SMART_AUTOMATION)
             prefs[KEY_RADAR_LIGHT_AUTO_MODE] = isAuto
@@ -2030,7 +1815,7 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRadarAutoLightControl(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = enabled
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (enabled) {
                 RadarLightControlMode.FIXED_WORKOUT_MODE.name
@@ -2040,7 +1825,7 @@ data class AutoPausePreferences(
         }
     }
 
-    val radarSmartLightAutomationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarSmartLightAutomationFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
         if (rawControl != null) {
             safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE) == RadarLightControlMode.SMART_AUTOMATION
@@ -2050,7 +1835,7 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRadarSmartLightAutomation(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = enabled
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (enabled) {
                 RadarLightControlMode.SMART_AUTOMATION.name
@@ -2064,105 +1849,98 @@ data class AutoPausePreferences(
         }
     }
 
-    val radarBrakeLightEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarBrakeLightEnabledFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] ?: TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED
     }
 
     suspend fun updateRadarBrakeLightEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] = enabled
         }
         com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = enabled
     }
 
-    val radarPelotonAudioSyncFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarPelotonAudioSyncFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
     }
 
-    val radarSmartUrbanMuteFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarSmartUrbanMuteFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
     }
 
     suspend fun updateRadarPelotonAudioSync(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = enabled
         }
     }
 
     suspend fun updateRadarSmartUrbanMute(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = enabled
         }
     }
 
-    val radarSpatialAudioEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarSpatialAudioEnabledFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
     }
 
-    val radarSpeedPitchModulationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarSpeedPitchModulationFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_SPEED_PITCH_MODULATION] ?: TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION
     }
 
-    val radarTrafficOrientationFlow: Flow<RadarTrafficOrientation> = context.dataStore.data.map { prefs ->
+    val radarTrafficOrientationFlow: Flow<RadarTrafficOrientation> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RADAR_TRAFFIC_ORIENTATION], TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
     }
 
-    val radarLaneChangeTickEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val radarLaneChangeTickEnabledFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
     }
 
-    val radarClosePassThresholdFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+    val radarClosePassThresholdFlow: Flow<Float> = dataStore.data.map { prefs ->
         prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
     }
 
     suspend fun updateRadarSpatialAudioEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = enabled
         }
     }
 
     suspend fun updateRadarSpeedPitchModulation(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = enabled
         }
     }
 
     suspend fun updateRadarTrafficOrientation(orientation: RadarTrafficOrientation) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = orientation.name
         }
     }
 
     suspend fun updateRadarLaneChangeTickEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = enabled
         }
     }
 
     suspend fun updateRadarClosePassThreshold(thresholdM: Float) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = thresholdM
         }
     }
 
-    val defaultPoolLengthMetersFlow: Flow<Float> = context.dataStore.data.map { prefs ->
-        (prefs[KEY_DEFAULT_POOL_LENGTH_METERS] ?: TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_METERS).coerceIn(
-            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
-            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
-        )
+    val defaultPoolLengthMetersFlow: Flow<Float> = dataStore.data.map { prefs ->
+        PREF_DEFAULT_POOL_LENGTH_METERS.read(prefs)
     }
 
-    val defaultPoolLengthUnitFlow: Flow<PoolLengthUnit> = context.dataStore.data.map { prefs ->
+    val defaultPoolLengthUnitFlow: Flow<PoolLengthUnit> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_DEFAULT_POOL_LENGTH_UNIT], TuningPreferencesDefaults.DEFAULT_POOL_LENGTH_UNIT)
     }
 
     suspend fun updateDefaultPoolLength(lengthMeters: Float, unit: PoolLengthUnit) {
-        val clamped = lengthMeters.coerceIn(
-            TuningPreferencesDefaults.MIN_POOL_LENGTH_METERS,
-            TuningPreferencesDefaults.MAX_POOL_LENGTH_METERS
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_DEFAULT_POOL_LENGTH_METERS] = clamped
+        dataStore.edit { prefs ->
+            PREF_DEFAULT_POOL_LENGTH_METERS.write(prefs, lengthMeters)
             prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = unit.name
         }
     }
@@ -2171,7 +1949,7 @@ data class AutoPausePreferences(
      * Reactive flow emitting whether the first-time stop tracking coachmark hint on the cockpit screen
      * has already been seen/dismissed by the user (REQ-UI-367 / ATT-3387).
      */
-    val hasSeenStopTrackingHintFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val hasSeenStopTrackingHintFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] ?: TuningPreferencesDefaults.DEFAULT_HAS_SEEN_STOP_TRACKING_HINT
     }
 
@@ -2179,7 +1957,7 @@ data class AutoPausePreferences(
      * Atomically persists whether the first-time stop tracking coachmark hint has been acknowledged (REQ-UI-367 / ATT-3387).
      */
     suspend fun setHasSeenStopTrackingHint(seen: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] = seen
         }
     }
@@ -2187,7 +1965,7 @@ data class AutoPausePreferences(
     /**
      * Reactive flow emitting whether the first-install permission onboarding flow has been completed or dismissed (REQ-PRI-007 / ATT-4455).
      */
-    val hasCompletedPermissionOnboardingFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val hasCompletedPermissionOnboardingFlow: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_HAS_COMPLETED_PERMISSION_ONBOARDING] ?: TuningPreferencesDefaults.DEFAULT_HAS_COMPLETED_PERMISSION_ONBOARDING
     }
 
@@ -2195,64 +1973,53 @@ data class AutoPausePreferences(
      * Atomically persists whether the first-install permission onboarding flow has been completed or dismissed (REQ-PRI-007 / ATT-4455).
      */
     suspend fun setHasCompletedPermissionOnboarding(completed: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_HAS_COMPLETED_PERMISSION_ONBOARDING] = completed
         }
     }
 
     suspend fun updateStartInAutoPauseEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_START_IN_AUTO_PAUSE_ENABLED] = enabled
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = enabled
         }
     }
 
     suspend fun updateAutoPauseRunEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = enabled
         }
     }
 
     suspend fun updateAutoPauseOtherEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = enabled
         }
     }
 
     suspend fun updateAutoPauseSpeedThresholdKmh(thresholdKmh: Float) {
-        val clamped = thresholdKmh.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_SPEED_THRESHOLD_KMH.write(prefs, thresholdKmh)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeSpeedThreshold(threshold: Int) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
-        )
-        context.dataStore.edit { prefs ->
+        val clamped = PREF_AUTO_PAUSE_BIKE_SPEED_THRESHOLD.clamp(threshold)
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clamped
             prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped.toFloat()
         }
@@ -2260,11 +2027,8 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateAutoPauseBikeDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
+        val clamped = PREF_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.clamp(debounceSec)
+        dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clamped
             prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
@@ -2272,84 +2036,56 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateAutoPauseBikeResumeDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunSpeedThreshold(threshold: Int) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_RUN_SPEED_THRESHOLD.write(prefs, threshold)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_RUN_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunResumeDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherSpeedThreshold(threshold: Int) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_OTHER_SPEED_THRESHOLD.write(prefs, threshold)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_OTHER_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherResumeDebounceSec(debounceSec: Int) {
-        val clamped = debounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC
-        )
-        context.dataStore.edit { prefs ->
-            prefs[KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC] = clamped
+        dataStore.edit { prefs ->
+            PREF_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
         TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun resetAutoPausePreferences(sportType: BSportType? = null) {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             when (sportType) {
                 BSportType.BIKE -> {
                     prefs.remove(KEY_AUTO_PAUSE_BIKE_ENABLED)
@@ -2394,7 +2130,7 @@ data class AutoPausePreferences(
     }
 
     suspend fun resetToDefaults() {
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             for (key in ALL_KEYS) {
                 prefs.remove(key)
             }

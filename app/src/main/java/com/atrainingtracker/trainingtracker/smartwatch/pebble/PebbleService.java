@@ -25,8 +25,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -40,13 +38,11 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
-import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.MyUnits;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager.PebbleDbHelper;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.PebbleKit.PebbleAckReceiver;
 import com.getpebble.android.kit.PebbleKit.PebbleNackReceiver;
@@ -176,6 +172,8 @@ public class PebbleService extends Service {
     // protected String mLayoutName;  // called viewName elsewhere => TODO: change names
     protected int mRows = 3;
     protected boolean mReceiversRegistered = false;
+    protected boolean mIsBanalBound = false;
+    protected boolean mBaseReceiversRegistered = false;
     @NonNull
     protected Number prevLapDistance = 0;
     @NonNull
@@ -305,36 +303,18 @@ public class PebbleService extends Service {
         }
     }
 
+    /**
+     * Checks whether the Pebble companion app supports appMessages on this device ({@code REQ-STB-024.1}).
+     */
+    protected boolean isAppMessagesSupported() {
+        return PebbleKit.areAppMessagesSupported(this);
+    }
+
     protected void updateSensorTypeList() {
         if (DEBUG) Log.d(TAG, "updateSensorTypeList");
 
-        List<SensorType> result = new LinkedList<>();
-
-        SQLiteDatabase db = (new PebbleDbHelper(this)).getReadableDatabase();
-        try (Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
-                null,
-                PebbleDbHelper.VIEW_ID + "=?",
-                new String[]{mViewId + ""},
-                null,
-                null,
-                PebbleDbHelper.ROW_NR + " ASC")) { // sorting
-
-            if (cursor != null) {
-                mRows = cursor.getCount();
-                int colIdx = cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE);
-                while (cursor.moveToNext()) {
-                    SensorType sensorType = colIdx != -1 ? EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(colIdx), TAG) : null;
-                    if (sensorType != null) {
-                        result.add(sensorType);
-                    } else {
-                        Log.w(TAG, "Skipping unrecognized sensor type for Pebble view");
-                    }
-                }
-            } else {
-                mRows = 0;
-            }
-        }
-
+        List<SensorType> result = PebbleDatabaseManager.getInstance(this).getSensorTypeList(mViewId);
+        mRows = result.size();
         mSensorTypeList = result;
     }
 
@@ -353,8 +333,14 @@ public class PebbleService extends Service {
             Log.d(TAG, "onCreate");
         }
 
+        if (!isAppMessagesSupported()) {
+            if (DEBUG) Log.d(TAG, "WTF: appMessages are not supported in onCreate; stopping");
+            stopSelf();
+            return;
+        }
+
         // request bind to the BANAL Service
-        bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
+        mIsBanalBound = bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
 
         mConfigurePebbleWatchAppFilter.addAction(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
         mConfigurePebbleWatchAppFilter.addAction(ConfigPebbleViewFragment.PEBBLE_VIEW_CHANGED_INTENT);
@@ -368,6 +354,7 @@ public class PebbleService extends Service {
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mStartSearchingReceiver, mStartSearchingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mEndSearchingReceiver, mEndSearchingFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        mBaseReceiversRegistered = true;
     }
 
     @Override
@@ -376,6 +363,12 @@ public class PebbleService extends Service {
             Log.d(TAG, "onStartCommand Received start id " + startId + ": " + intent);
         }
         super.onStartCommand(intent, flags, startId);
+
+        if (!isAppMessagesSupported()) {
+            if (DEBUG) Log.d(TAG, "WTF: appMessages are not supported in onStartCommand; stopping");
+            stopSelf(startId);
+            return Service.START_NOT_STICKY;
+        }
 
         mViewId = PebbleDatabaseManager.getInstance(this).getFirstViewId(getActivityType());
         startPebbleWatchApp();
@@ -396,20 +389,31 @@ public class PebbleService extends Service {
         super.onDestroy();
         if (DEBUG) Log.d(TAG, "onDestroy");
 
-        unbindService(mBanalConnection);
+        if (mIsBanalBound) {
+            try {
+                unbindService(mBanalConnection);
+            } catch (IllegalArgumentException e) {
+                if (DEBUG) Log.w(TAG, "BANALService was not bound during unbindService", e);
+            }
+            mIsBanalBound = false;
+        }
         banalService = null;
 
-        // unregisterReceiver(mSearchingFinishedReceiver);
-        LifecycleUtils.safeUnregisterReceiver(this, mConfigurePebbleWatchAppReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mUpdatePebbleReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mPebbleConnectedReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mPauseReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mResumeReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mStartSearchingReceiver, TAG);
-        LifecycleUtils.safeUnregisterReceiver(this, mEndSearchingReceiver, TAG);
+        if (mBaseReceiversRegistered) {
+            // unregisterReceiver(mSearchingFinishedReceiver);
+            LifecycleUtils.safeUnregisterReceiver(this, mConfigurePebbleWatchAppReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mUpdatePebbleReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mPebbleConnectedReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mPauseReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mResumeReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mStartSearchingReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, mEndSearchingReceiver, TAG);
+            mBaseReceiversRegistered = false;
+        }
 
         stopPebbleWatchApp();
+        PebbleDatabaseManager.closeIfInitialized();
     }
 
     // Send a broadcast to launch the specified application on the connected Pebble
@@ -418,17 +422,20 @@ public class PebbleService extends Service {
             Log.d(TAG, "startPebbleWatchApp");
         }
 
+        // Check support before opening PebbleView.db or launching the watchapp (REQ-STB-024.1)
+        if (!isAppMessagesSupported()) {
+            if (DEBUG) Log.d(TAG, "WTF: appMessages are not supported");
+            stopSelf();
+            return;
+        }
+
         // first, we update the SensorType list
         updateSensorTypeList();
 
         // then we start the pebble Watchapp
-        if (PebbleKit.areAppMessagesSupported(this)) {
-            PebbleKit.startAppOnPebble(this, TRAINING_TRACKER_UUID);
+        PebbleKit.startAppOnPebble(this, TRAINING_TRACKER_UUID);
+        if (!mReceiversRegistered) {
             registerReceivers();
-
-        } else {
-            if (DEBUG) Log.d(TAG, "WTF: appMessages are not supported");
-            // TODO: close this service
         }
     }
 
@@ -542,6 +549,10 @@ public class PebbleService extends Service {
             Log.d(TAG, "stopPebbleWatchApp");
         }
 
+        if (!mReceiversRegistered) {
+            return;
+        }
+
         // here, we want to disconnect, if this fails, we don't care
         try {
             PebbleKit.closeAppOnPebble(this, TRAINING_TRACKER_UUID);
@@ -549,11 +560,10 @@ public class PebbleService extends Service {
             Log.e(TAG, "failed to closeAppOnPebble");
         }
 
-        if (mReceiversRegistered) {
-            LifecycleUtils.safeUnregisterReceiver(this, mPebbleDataReceiver, TAG);
-            LifecycleUtils.safeUnregisterReceiver(this, pebbleAckReceiver, TAG);
-            LifecycleUtils.safeUnregisterReceiver(this, pebbleNackReceiver, TAG);
-        }
+        LifecycleUtils.safeUnregisterReceiver(this, mPebbleDataReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, pebbleAckReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, pebbleNackReceiver, TAG);
+        mReceiversRegistered = false;
     }
 
 }

@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.10  
+**Version**: 1.0.16  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 118
+**Total Requirements**: 120
 
 ---
 
@@ -2813,6 +2813,52 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-120: Polar Online Bridge Offline-Sync Yield & Bounded `deviceConnecting` Handshake Grace (`ATT-9175`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-122`
+- **System Requirement(s)**: `SYSREQ-DEX-007`, `SYSREQ-TRK-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`
+- **Rationale**: During Polar Verity Sense Aftermath retry sync on Pixel 10 (`ATT-9175`), `PolarOfflineGattCoordinator.withGattYieldAndPolarApi()` paused only `MyBTLEDevice`, leaving `PolarOnlineStreamingBridge`'s reconnect loop, `5 s` `onSearchTimeout()` (`disconnectFromDevice()`), and `12 s` `silentHrWatchdog` running against the shared `PolarBleApi` singleton and causing `45 s` backfill timeouts; additionally, ignoring `deviceConnecting()` aborted live `SESSION_OPENING` `discoverServices()` + 8-feature handshakes at `5 s`.
+- **Description**:
+  1. *Alias-Aware Ref-Counted Offline GATT Yield & Lock-Free Dispatch (`REQ-SET-120.1`)*: `PolarOfflineGattCoordinator` SHALL maintain per-device alias-aware (`MAC` <-> `8-hex Polar ID`) ref-counted offline GATT yield leases (`isOfflineGattYieldActive()`) and a bridge yield listener registry (`registerOfflineYieldListener` / `unregisterOfflineYieldListener`, cleared in `resetForTesting()`). `withGattYieldAndPolarApi()` SHALL acquire the lease on entry, resolve `DeviceManager` via `deviceManagerProvider`, release strictly in `finally` (including on timeout, exception, and `CancellationException`), and dispatch pause/resume callbacks strictly outside coordinator locks without affecting sibling paired Polar sensors (`REQ-SET-118.3`).
+  2. *`PolarOnlineStreamingBridge` Pause/Resume & Watchdog Deferral (`REQ-SET-120.2`)*: `PolarOnlineStreamingBridge` SHALL register for offline yield events on lifecycle init and unregister in `shutDown()`. While yielded, it SHALL cancel active `reconnectJob`, `searchTimeoutJob` (under `searchTimeoutLock`), and `silentHrWatchdogJob` (under `silentHrWatchdogLock` without leaking timers or corrupting generation tokens per `REQ-CON-054`), and MUST NOT invoke `connectToDevice()`, `disconnectFromDevice()`, or `forceDisconnectDevice()` from `startSearching()`, `scheduleBackoffReconnect()`, `onSearchTimeout()`, `onSilentHrWatchdogTimeout()`, `deviceDisconnected()`, or `blePowerStateChanged(true)`. Upon final lease release (`count -> 0`, `!isShutDown`), it SHALL sync any already-open shared session via `syncAlreadyOpenSessionIfReady(api)` (or re-arm `silentHrWatchdog` if connected without HR packets) or cleanly resume searching/backoff reconnect if disconnected.
+  3. *Single-Shot Bounded `deviceConnecting()` Handshake Grace (`REQ-SET-120.3`)*: `PolarOnlineStreamingBridge.sdkCallback` SHALL override `deviceConnecting(polarDeviceInfo)` filtered strictly by `matchesDeviceInfo` across target aliases. When `deviceConnecting` fires during an active search/reconnect attempt (`!isShutDown && !isConnectedFlag && !isOfflineGattYielded()`), it SHALL extend `searchTimeoutJob` (under `searchTimeoutLock` with job-identity cleanup) at most once per attempt to `maxOf(searchTimeoutMsProvider(), connectingHandshakeTimeoutMs)` (`15_000 ms` default, `@VisibleForTesting` injectable), preserving the `5_000 ms` timeout for absent sensors (`REQ-CON-045.1`) and bounded teardown if a live handshake stalls.
+  4. *Monolith Ceilings, Public Signature Pin & Localization (`REQ-SET-120.4`)*: `PolarOnlineStreamingBridge.kt <= 1,500` LoC with unchanged constructor & public JVM signatures (`InterfaceSignatureDriftContractTest`); `PolarOfflineGattCoordinator.kt <= 1,500` LoC; `0` edits to `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, `DeviceManager.java`, `TrackerService.java`, and `DevicesDatabaseManager.java`; `0` new `src/main` reads; `Localization Parity: N/A - no new or modified UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-118`, `REQ-SET-119`, `REQ-CON-045`, `REQ-CON-050`, `REQ-CON-054` across `PolarOfflineGattCoordinator.kt` and `PolarOnlineStreamingBridge.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-8451` (`14070717`), `ATT-8690` (`34b78941`), `ATT-8714` (`1e7a2f0b`), `ATT-8969` (`8e44039d`), `ATT-9155` (`f7ed7d94`).
+  3. *Root Reason for Existing Formulation*: `withGattYieldAndPolarApi()` targeted `MyBTLEDevice.pauseGattOperations()` before `PolarOnlineStreamingBridge` existed; `5 s` `searchTimeoutJob` prevented absent Polar sensors from stalling `DeviceManager`'s sequential queue.
+  4. *Preservation of Core Invariants*: Preserves `5 s` absent-sensor timeout (`REQ-CON-045.1`), sibling Polar session isolation (`REQ-SET-118.3`), `PolarOnlineStreamingBridge` constructor/public JVM signatures, `ATT-9155` watchdog generation safety, and `0` edits to `PolarVeritySenseOfflineController.kt` (Lane A `ATT-9154`).
+
+### REQ-SET-121: Full `saveTuningConfig` Auto-Pause Persistence, `BoundedPref` Descriptors & Centralized Zone Defaults (`ATT-6048`) [Verified]
+- **Tests**: `TST-SET-123`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TuningPreferencesDataStore.kt`, `SettingsDataStore.kt`
+- **Rationale**: Duplicated `.coerceIn(...)` clamping and manual key read/write blocks across `TuningPreferencesDataStore.kt` caused `saveTuningConfig(config)` to omit 4 Auto-Pause keys (`KEY_START_IN_AUTO_PAUSE_ENABLED`, `KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC`), while `SettingsDataStore.kt` duplicates default `HR_RUN`, `HR_BIKE`, and `PWR_BIKE` zone boundaries across 7 locations (`ATT-6048`, refining `REQ-SET-073`, `REQ-TRK-043`, `REQ-TRK-044`).
+- **Description**:
+  1. *Complete `saveTuningConfig` Auto-Pause Persistence (`REQ-SET-121.1`)*:
+     - `TuningPreferencesDataStore.saveTuningConfig(config: TuningConfig)` SHALL clamp and persist all 4 previously omitted Auto-Pause keys (`KEY_START_IN_AUTO_PAUSE_ENABLED`, `KEY_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC`, `KEY_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC`), preserving full round-trip fidelity across all non-derived, non-hardcoded fields of `TuningConfig` (excluding the 7 `REQ-MAP-050` hardcoded `mapFollowMe*` fields, 2 derived legacy `autoPause*` fields, and `radarAutoLightControl`/`radarSmartLightAutomation` derived from `radarLightControlMode`).
+  2. *Declarative `BoundedPref` Descriptors & Dependent Clamp Preservation (`REQ-SET-121.2`)*:
+     - Standard bounded numeric preferences across `mapPreferencesToConfig`, `mapAutoPausePreferences`, `saveTuningConfig`, and `update*`/`set*` setters in `TuningPreferencesDataStore.kt` SHALL delegate range clamping to declarative `BoundedPref` descriptors while preserving identical behavior for all dependent clamps (`mediumDimFactor >= clampedFullDim`, `slopeSteepThreshold >= clampedSlopeFlat`, `dfaA1ThresholdT1`/`T2` `MIN_DFA_A1_THRESHOLD_GAP`), `navigationCueDismissDurationSec == 0 -> DEFAULT`, legacy fallback/mirror writes (`KEY_PROFILE_X_AXIS_DOMAIN`, `KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH`, `KEY_AUTO_PAUSE_DEBOUNCE_SEC`, radar light modes), `TrainingApplication` cluster tolerance fallback/sync, and existing `TrackerService.invalidateAutoPauseCache()` call sites.
+  3. *Centralized Default Zone Boundaries (`REQ-SET-121.3`)*:
+     - `SettingsDataStore.kt` SHALL define centralized default zone boundary constants for `HR_RUN` (`132, 145, 158, 171`), `HR_BIKE` (`127, 140, 153, 166`), and `PWR_BIKE` (`149, 203, 243, 284, 324, 405`) and reference them across `SettingsSnapshot.DEFAULT`, `getDefaultValue`, `calculateProportionalPowerDefaults`, `getZoneMaxFlow`, `mapSettingsSnapshot`, `checkAndMigratePowerZones`, and `resetToDefaults` without behavior change.
+  4. *Architectural & Hot-Path Invariants (`REQ-SET-121.4`)*:
+     - `TuningPreferencesDataStore.kt` MUST remain `<= 2,410` LoC (`ArchitectureConformanceContractTest`) with a non-public constructor (`TuningPreferencesDataStoreLifecycleTest`), `SettingsDataStore.kt` MUST introduce zero `runBlocking` calls (`DataStoreHotPathContractTest`), and zero `strings*.xml` edits are required.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `TuningConfig` where all non-derived, non-hardcoded fields (including `startInAutoPauseEnabled` and `autoPause*ResumeDebounceSec`) differ from defaults (with derived legacy/radar fields consistent with their source fields), *When* `saveTuningConfig(config)` is executed, *Then* `tuningConfigFlow` emits an identical `TuningConfig` verified across all properties.
+• *Given* out-of-range inputs and dependent parameters (`mediumDimFactor < fullDimFactor`, `slopeSteepThreshold < slopeFlatThreshold`, `dfaA1 T1/T2` gap violation, `navigationCueDismissDurationSec == 0`), *When* read or written via `TuningPreferencesDataStore`, *Then* `BoundedPref` and dependent clamp logic produce identical values, legacy mirrors, `TrainingApplication` syncs, and `invalidateAutoPauseCache()` calls as before refactoring.
+• *Given* default `HR_RUN`, `HR_BIKE`, and `PWR_BIKE` zone reads, migrations, and resets in `SettingsDataStore`, *When* evaluated via `SettingsSnapshot.DEFAULT`, `getDefaultValue`, `mapSettingsSnapshot`, `checkAndMigratePowerZones`, and `resetToDefaults`, *Then* all boundaries match the centralized constants identically.
+
+**Invariants**: `TuningPreferencesDataStore.kt <= 2,410` LoC; non-public `TuningPreferencesDataStore` constructor; zero new `runBlocking` in `SettingsDataStore.kt`; zero changes to `TuningConfig` public constructor signature or `invalidateAutoPauseCache()` call sites; 9-locale parity N/A (`0` UI strings).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2827,3 +2873,9 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.8` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `REQ-SET-119` to `[Verified]` following Stage 5 verification (`155/155` unit/Compose/contract tests). |
 | `1.0.9` | 2026-11-20 | AI Agent (`ATT-8328`) | `ATT-8328` | Promoted 39 unblocked `REQ-SET-*` requirements to `[Verified]` following Gate 4 (`2a149eca`, `119/119` PASS); retained `REQ-SET-014`, `019`, `021`, `069` at `[Implemented]`. |
 | `1.0.10` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-SET-003` (`TST-UNT-003`) to `[Verified]` following Gate 4 verification (`3e20473b`, `Rule 7.5`). |
+| `1.0.11` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Added `REQ-SET-120` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-DEX-007`/`SYSREQ-TRK-002`) for alias-aware ref-counted offline GATT yield pause/resume on `PolarOnlineStreamingBridge` and single-shot bounded `deviceConnecting` handshake grace (`N/A - no UI strings`). |
+| `1.0.12` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `REQ-SET-120` to `[Implemented]` following Stage 4 construction (`PolarOfflineGattCoordinator.kt` `1,285/1,500`, `PolarOnlineStreamingBridge.kt` `1,466/1,500`, `my_btle_device.md` `v1.0.7`, `0` edits to `PolarVeritySenseOfflineController.kt`/`DeviceManager.java`). |
+| `1.0.13` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `REQ-SET-120` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9378` @ `cbe8ef29`) `161/161 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `cbe8ef29`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
+| `1.0.14` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Stage 6 Bounce 1/3 heal: removed sticky `isPausedForOfflineSync` so `PolarOfflineGattCoordinator` is single atomic source of truth, guarded `pauseForOfflineSync()` against stale calls, armed `silentHrWatchdog` on resume after mid-yield `deviceConnected`, kept yielded bridge alive via `shouldKeepAliveOnSearchTimeout()` in `WAITING_FOR_START`, tracked `pausedOfflineYieldListeners` set for alias-expansion transitions, logged exact `timeoutMs`, and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
+| `1.0.15` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `REQ-SET-120` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9384` @ `d2c4953f`) `164/164 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`Rule 7.5`, `0` `app/` drift since `d2c4953f`), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
+| `1.0.16` | 2026-11-21 | Lane B Flash (`ATT-6048`, `--as agent1`) | `ATT-6048` | Added and verified `REQ-SET-121` (`saveTuningConfig` 4 missing Auto-Pause keys, `BoundedPref` descriptors, and centralized `SettingsDataStore` zone defaults; Stage 4 verified `167/167` PASS @ `2038d89b`). |

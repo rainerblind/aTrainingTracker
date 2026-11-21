@@ -60,6 +60,7 @@ import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 
+import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
@@ -231,6 +232,19 @@ public class TrackerService extends Service {
             Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", t);
         }
     });
+    @Nullable
+    private volatile DebugHeapWatchdog mDebugHeapWatchdog;
+
+    @NonNull
+    @VisibleForTesting
+    DebugHeapWatchdog getDebugHeapWatchdog() {
+        DebugHeapWatchdog existing = mDebugHeapWatchdog;
+        if (existing == null) {
+            existing = new DebugHeapWatchdog(getSafeContext());
+            mDebugHeapWatchdog = existing;
+        }
+        return existing;
+    }
 
     private Context getSafeContext() {
         try {
@@ -888,6 +902,9 @@ public class TrackerService extends Service {
 
                     sampleAndWriteToDb(banalService);
                     maybeFlushLiveRrQueue();
+                    if (BuildConfig.DEBUG) {
+                        getDebugHeapWatchdog().onTick(mBaseFileName, banalService);
+                    }
 
                     // update notification
                     if (DEBUG) Log.i(TAG, "updating notification");
@@ -1243,6 +1260,9 @@ public class TrackerService extends Service {
                 }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
+                if (BuildConfig.DEBUG) {
+                    getDebugHeapWatchdog().startSession(mBaseFileName);
+                }
                 try {
                     com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.startActiveSession(
                             getApplicationContext(),
@@ -1452,6 +1472,9 @@ public class TrackerService extends Service {
         RadarTrafficSimulator.INSTANCE.stop();
 
         cancelTrackerHandle();
+        if (BuildConfig.DEBUG && mDebugHeapWatchdog != null) {
+            mDebugHeapWatchdog.stopSession();
+        }
         // ATT-7746 (REQ-TRK-076.1): Do NOT call mScheduler.shutdownNow() here.
         // Complete executor shutdown is deferred strictly to onDestroy().
 
@@ -1652,6 +1675,9 @@ public class TrackerService extends Service {
         // Stop the periodic 1 Hz tracker task and shut down the scheduler pool (REQ-TRK-033.1)
         cancelTrackerHandle();
         mScheduler.shutdownNow();
+        if (BuildConfig.DEBUG && mDebugHeapWatchdog != null) {
+            mDebugHeapWatchdog.shutdown();
+        }
 
         // Release main-thread resources immediately while keeping mBanalService and wakeLock
         // valid until the terminal finalization task on mDbExecutor completes (REQ-TRK-033.2).
@@ -1749,41 +1775,31 @@ public class TrackerService extends Service {
         public final double descent;
         public final int timeLap_s;
         public final double distanceLap_m;
+        public final double lastAltitudeM;
 
         public ResumedWorkoutState(
-                @NonNull String baseFileName,
-                long workoutId,
-                int timeTotal_s,
-                int timeActive_s,
-                int calories,
-                int lapNr,
-                double distanceTotal_m,
-                double ascent,
-                double descent,
-                int timeLap_s,
-                double distanceLap_m) {
-            this.baseFileName = baseFileName;
-            this.workoutId = workoutId;
-            this.timeTotal_s = timeTotal_s;
-            this.timeActive_s = timeActive_s;
-            this.calories = calories;
-            this.lapNr = lapNr;
-            this.distanceTotal_m = distanceTotal_m;
-            this.ascent = ascent;
-            this.descent = descent;
-            this.timeLap_s = timeLap_s;
-            this.distanceLap_m = distanceLap_m;
+                @NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s,
+                int calories, int lapNr, double distanceTotal_m, double ascent, double descent,
+                int timeLap_s, double distanceLap_m, double lastAltitudeM) {
+            this.baseFileName = baseFileName; this.workoutId = workoutId;
+            this.timeTotal_s = timeTotal_s; this.timeActive_s = timeActive_s;
+            this.calories = calories; this.lapNr = lapNr;
+            this.distanceTotal_m = distanceTotal_m; this.ascent = ascent; this.descent = descent;
+            this.timeLap_s = timeLap_s; this.distanceLap_m = distanceLap_m;
+            this.lastAltitudeM = lastAltitudeM;
         }
 
         public ResumedWorkoutState(
-                @NonNull String baseFileName,
-                long workoutId,
-                int timeTotal_s,
-                int timeActive_s,
-                int calories,
-                int lapNr,
-                double distanceTotal_m) {
-            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, 0.0, 0.0, timeActive_s, distanceTotal_m);
+                @NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s,
+                int calories, int lapNr, double distanceTotal_m, double ascent, double descent,
+                int timeLap_s, double distanceLap_m) {
+            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, ascent, descent, timeLap_s, distanceLap_m, Double.NaN);
+        }
+
+        public ResumedWorkoutState(
+                @NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s,
+                int calories, int lapNr, double distanceTotal_m) {
+            this(baseFileName, workoutId, timeTotal_s, timeActive_s, calories, lapNr, distanceTotal_m, 0.0, 0.0, timeActive_s, distanceTotal_m, Double.NaN);
         }
     }
 
@@ -1886,6 +1902,16 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.DESCENT, state.descent);
         BANALService.setInitialSensorValue(SensorType.TIME_LAP, state.timeLap_s);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m_LAP, state.distanceLap_m);
+        if (Double.isFinite(state.lastAltitudeM)) {
+            BANALService.reanchorBarometricAltitudeOnResume(state.lastAltitudeM);
+        }
+        try {
+            long resumedStartEpochMs = Math.max(0L, System.currentTimeMillis() - mTimeTotal_s * 1000L);
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder.resumeOrStartActiveSession(
+                    getApplicationContext(), mBaseFileName, resumedStartEpochMs, (int) getSportTypeId());
+        } catch (Throwable t) {
+            Log.w(TAG, "Error resuming PolarRawTelemetryRecorder active session: " + t.getMessage());
+        }
 
         final long resumedWorkoutId = mWorkoutID;
         final int resumedActiveTimeS = mTimeActive_s;

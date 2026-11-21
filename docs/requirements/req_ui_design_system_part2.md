@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 2 of 5)
 
 **Document ID**: `DOC-REQ-UI-P2`  
-**Version**: 1.0.0  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part2`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 95
+**Total Requirements**: 96
 
 ---
 
@@ -3953,8 +3953,31 @@ e. Dismiss / Done button.
 
 ---
 
+### REQ-UI-2789: Cards & Graphs UI Deduplication — Parameterized Marginal Histograms, X-Axis Ticks & PathPreviewMap Cluster Thumbnails [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2789`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TelemetryChartCanvasHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`
+- **Rationale**: Consolidates 5 duplicated marginal histogram loops, 4 duplicated time/distance X-axis tick loops, and ~190 LoC of duplicated Lite-Mode `GoogleMap` boilerplate in `WorkoutClusterComponents.kt` into parameterized shared helpers without visual or behavioral regressions (`ATT-6041`, refining `REQ-UI-220`, `REQ-UI-251`, `REQ-UI-431`, `REQ-UI-443`, `REQ-UI-446`, `REQ-UI-493.3`, `REQ-UI-505.3`, `REQ-MAP-068`).
+- **Description**:
+  1. *Parameterized Marginal Histogram Helper (`REQ-UI-2789.1`)*: `TelemetryChartCanvasHelpers.kt` SHALL unify all 5 marginal histogram loops (`ElevationProfile.kt`, `TelemetryMetricGraph.kt`) across `LinearHistogramBin`/`TelemetryHistogramBin`, enforcing `Rule 70` domain filtering/clamping (`rectHeight <= 0f -> continue` before any optional `minBarHeightPx`), `Rule 69` unconditional `alpha = 0.15f` background tracks, `durationSec > 0L && barWidthPx > 0f` foreground gating, and parameterized `cornerRadiusPx`, `foregroundAlpha`, and `onBinDrawn`.
+  2. *Parameterized X-Axis Tick Helper (`REQ-UI-2789.2`)*: `TelemetryChartCanvasHelpers.kt` SHALL unify all 4 time/distance X-axis tick loops via `(step, formatLabel, shouldRenderLabel, onTickInBounds, onLabelRendered)`, preserving `ElevationProfile`'s bottom-tick-on-label-render (`24.dp` spacing, locale formatter) and `TelemetryMetricGraph`'s full-height vertical gridlines (`12.dp` spacing, `formatMilestoneLabel`).
+  3. *`PathPreviewMap` Extension & Cluster Thumbnail Delegation (`REQ-UI-2789.3`)*: `PathPreviewMap.kt` SHALL add styled `additionalPaths` (`alpha = 0.2f` heatmap, `4f`/`6f` width, `RoundCap`/`JointType.ROUND`, `zIndex = 10f`), `boundsPaddingPx: Int = PREVIEW_BOUNDS_PADDING_PX` threaded into both `estimateInitialCameraPosition` and `newLatLngBounds`, `onMapLongClick: (() -> Unit)? = null` overlay above `GoogleMap` + `DarkMapAntiFlashOverlay`, composite bounds inclusion of valid `additionalPaths` without polluting `actualStart`/`actualEnd` fallback, and `PathPreviewInspectionCanvas` stub-polyline fallback + `combinedClickable`. `ClusterItem` and `UnclusteredWorkoutItem` SHALL delegate to `PathPreviewMap` (`boundsPaddingPx = THUMBNAIL_BOUNDS_PADDING_PX = 18`); interactive `ClusterNamingDialog` (`ImportBackupTabsScreen.kt:992-1022`) MUST remain untouched.
+  4. *Contract, LoC, Localization & Visual Invariants (`REQ-UI-2789.4`)*: Preserve `AlignedMarginal*` in `TelemetryMetricGraph.kt`, legacy contract tokens (`WorkoutClusterSplitMapPreviewTest`, `WorkoutLapsIconContractTest`, `ClusterItemAndFilterPolishTest`, `ClusterNamingDialogLabelsVisualContractTest`, `HardcodedStringsAndUnitsContractTest`), zero `Color(0x...)` outside `Color.kt`, LoC ceilings (ratchet `MAX_MONOLITH_FILE_LOC_BASELINE` if `TelemetryMetricGraph.kt <= 1,500`), `Localization Parity: N/A - no UI strings`, and dedicated `Rule 8.5` PNGs (`ATT-6041_*.png`) without modifying historical PNGs.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `ElevationProfile` and `TelemetryMetricGraph`, *When* marginal histograms and X-axis ticks render across portrait/landscape and time/distance domains, *Then* shared `DrawScope` helpers produce identical visual output under Rules 69/70.
+  • *Given* `ClusterItem` and `UnclusteredWorkoutItem`, *When* rendered via `PathPreviewMap`, *Then* `boundsPaddingPx = 18`, multi-polyline heatmap/authoritative overlays, `175×120 dp`/`360 dp` bounds, and long-click menu work identically while `ClusterNamingDialog` remains interactive and untouched.
+- **Invariants**: 1:1 stacked plot alignment (`50.dp`/`52.dp`/`72%-28%`), Rules 69/70, `PathPreviewMap` 7-caller compatibility, `LiteMode(true)` + `DarkMapAntiFlashOverlay`, `ClusterNamingDialog` untouched, zero `Color(0x...)` outside `Color.kt`, zero reflection-only/source-grep UI tests.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.1` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Added `REQ-UI-2789` `[Planned]` for marginal histogram, X-axis tick, and `PathPreviewMap` cluster thumbnail deduplication. |
+| `1.0.2` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `REQ-UI-2789` to `[Implemented]` in Stage 4 (`TelemetryChartCanvasHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`). |
+| `1.0.3` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `REQ-UI-2789` to `[Verified]` in Stage 5 (Rule 7.5 Fast Path reusing Gate 4 `ATT-9433` @ `2b4277ca`: `277/277` PASS across 61 suites, `4/4` linters, both `Rule 8.5` PNGs PASS). |

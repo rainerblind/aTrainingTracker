@@ -21,6 +21,8 @@
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.floor
 
 /**
  * Channel identifier for raw Polar telemetry streams (REQ-SET-117.2).
@@ -49,26 +51,78 @@ data class RawTelemetryRow(
     val rrMs: Double? = null
 ) {
     /**
+     * Appends the 11-column CSV representation directly into [sb] without per-row `String.format` /
+     * `Formatter` allocations (`REQ-SET-117.2`, `REQ-STB-023.4`):
+     * `sensorTimestampNs,elapsedMs,channel,ax_mg,ay_mg,az_mg,gx_mdps,gy_mdps,gz_mdps,hr_bpm,rr_ms`
+     */
+    fun appendCsvLine(sb: StringBuilder) {
+        sb.append(sensorTimestampNs).append(',')
+            .append(elapsedMs).append(',')
+            .append(channel.name).append(',')
+        axMg?.let { sb.append(it) }
+        sb.append(',')
+        ayMg?.let { sb.append(it) }
+        sb.append(',')
+        azMg?.let { sb.append(it) }
+        sb.append(',')
+        gxMdps?.let { appendFixedDecimal(sb, it.toDouble(), decimals = 2) }
+        sb.append(',')
+        gyMdps?.let { appendFixedDecimal(sb, it.toDouble(), decimals = 2) }
+        sb.append(',')
+        gzMdps?.let { appendFixedDecimal(sb, it.toDouble(), decimals = 2) }
+        sb.append(',')
+        hrBpm?.let { sb.append(it) }
+        sb.append(',')
+        rrMs?.let { appendFixedDecimal(sb, it, decimals = 1) }
+    }
+
+    /**
      * Serializes row to CSV string:
      * sensorTimestampNs,elapsedMs,channel,ax_mg,ay_mg,az_mg,gx_mdps,gy_mdps,gz_mdps,hr_bpm,rr_ms
      */
-    fun toCsvLine(): String {
-        val axStr = axMg?.toString() ?: ""
-        val ayStr = ayMg?.toString() ?: ""
-        val azStr = azMg?.toString() ?: ""
-        val gxStr = gxMdps?.let { String.format(Locale.US, "%.2f", it) } ?: ""
-        val gyStr = gyMdps?.let { String.format(Locale.US, "%.2f", it) } ?: ""
-        val gzStr = gzMdps?.let { String.format(Locale.US, "%.2f", it) } ?: ""
-        val hrStr = hrBpm?.toString() ?: ""
-        val rrStr = rrMs?.let { String.format(Locale.US, "%.1f", it) } ?: ""
-
-        return "$sensorTimestampNs,$elapsedMs,${channel.name},$axStr,$ayStr,$azStr,$gxStr,$gyStr,$gzStr,$hrStr,$rrStr"
-    }
+    fun toCsvLine(): String = StringBuilder(CSV_LINE_INITIAL_CAPACITY).also { appendCsvLine(it) }.toString()
 
     companion object {
         const val CSV_COLUMN_COUNT = 11
+        private const val CSV_LINE_INITIAL_CAPACITY = 96
+        private const val MAX_FAST_FORMAT_ABS = 1e13
         const val CSV_HEADER =
             "sensorTimestampNs,elapsedMs,channel,ax_mg,ay_mg,az_mg,gx_mdps,gy_mdps,gz_mdps,hr_bpm,rr_ms"
+
+        private fun appendFixedDecimal(sb: StringBuilder, value: Double, decimals: Int) {
+            if (value.isNaN()) {
+                sb.append("NaN")
+                return
+            }
+            if (value.isInfinite()) {
+                if (value < 0.0) sb.append("-Infinity") else sb.append("Infinity")
+                return
+            }
+            val absVal = abs(value)
+            if (absVal >= MAX_FAST_FORMAT_ABS) {
+                val pattern = if (decimals == 2) "%.2f" else "%.1f"
+                sb.append(String.format(Locale.US, pattern, value))
+                return
+            }
+            // Raw sign-bit check preserves "-0.00" / "-0.0" parity with String.format(Locale.US, "%.2f"/"%.1f")
+            if (java.lang.Double.doubleToRawLongBits(value) < 0L) {
+                sb.append('-')
+            }
+            if (decimals == 2) {
+                val scaled = floor(absVal * 100.0 + 0.5).toLong()
+                val intPart = scaled / 100L
+                val fracPart = (scaled % 100L).toInt()
+                sb.append(intPart).append('.')
+                    .append(('0'.code + (fracPart / 10)).toChar())
+                    .append(('0'.code + (fracPart % 10)).toChar())
+            } else {
+                val scaled = floor(absVal * 10.0 + 0.5).toLong()
+                val intPart = scaled / 10L
+                val fracPart = (scaled % 10L).toInt()
+                sb.append(intPart).append('.')
+                    .append(('0'.code + fracPart).toChar())
+            }
+        }
 
         fun fromCsvLine(line: String): RawTelemetryRow? {
             val parts = line.split(",")

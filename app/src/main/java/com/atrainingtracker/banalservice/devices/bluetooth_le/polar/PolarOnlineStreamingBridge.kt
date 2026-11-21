@@ -116,6 +116,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         private const val H10_FALLBACK_ACC_HZ = 50
         private const val H10_HIGH_RATE_ACC_HZ = 200
         private const val VERITY_IMU_HZ = 52
+        internal const val DEFAULT_CONNECTING_HANDSHAKE_TIMEOUT_MS = 15_000L
 
         private val activeBridges = CopyOnWriteArrayList<PolarOnlineStreamingBridge>()
 
@@ -293,16 +294,88 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
-    private var searchTimeoutJob: Job? = null
+    private val searchTimeoutLock = Any()
+    @Volatile private var searchTimeoutJob: Job? = null
+    private var searchAttemptGeneration: Long = 0L
+    private var handshakeGraceExtendedInAttempt: Boolean = false
+    @VisibleForTesting internal var connectingHandshakeTimeoutMs: Long = DEFAULT_CONNECTING_HANDSHAKE_TIMEOUT_MS
+    private val resumeSearchAfterOfflineSync = AtomicBoolean(false)
+    private val resumeSilentWatchdogAfterOfflineSync = AtomicBoolean(false)
 
     private val silentHrWatchdog = BleHrmSilentConnectionWatchdog()
     private val silentHrWatchdogLock = Any()
+    @Volatile private var silentHrWatchdogJob: Job? = null
+    @VisibleForTesting internal var silentHrWatchdogTimeoutMs: Long = BleHrmSilentConnectionWatchdog.DEFAULT_WATCHDOG_TIMEOUT_MS
 
-    @Volatile
-    private var silentHrWatchdogJob: Job? = null
+    private fun matchesBridgeIdentifier(candidate: String?): Boolean =
+        PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, candidate) ||
+            PolarOfflineGattCoordinator.matchesDeviceIdentifier(macAddress, candidate) ||
+            PolarOfflineGattCoordinator.matchesDeviceIdentifier(activeSdkStreamId, candidate) ||
+            PolarOfflineGattCoordinator.matchesDeviceIdentifier(coordinatorSessionKey, candidate)
 
-    @VisibleForTesting
-    internal var silentHrWatchdogTimeoutMs: Long = BleHrmSilentConnectionWatchdog.DEFAULT_WATCHDOG_TIMEOUT_MS
+    private val offlineYieldListener = object : PolarOfflineGattCoordinator.OfflineYieldListener {
+        override fun matchesDevice(polarId: String?, macAddress: String?): Boolean =
+            matchesBridgeIdentifier(polarId) || matchesBridgeIdentifier(macAddress)
+        override fun onOfflineYieldStarted() = pauseForOfflineSync()
+        override fun onOfflineYieldFinished() = resumeAfterOfflineSync()
+    }
+
+    init { PolarOfflineGattCoordinator.registerOfflineYieldListener(offlineYieldListener) }
+
+    internal fun isOfflineGattYielded(): Boolean =
+        PolarOfflineGattCoordinator.isOfflineGattYieldActive(polarId, macAddress, activeSdkStreamId, coordinatorSessionKey)
+
+    /** Pauses reconnect, search-timeout teardown, and silent-HR watchdog during offline PFTP sync (`ATT-9175`, `REQ-SET-120.2`). */
+    internal fun pauseForOfflineSync() {
+        if (isShutDown.get() || !isOfflineGattYielded()) return
+        if (isSearching) resumeSearchAfterOfflineSync.set(true)
+        if (isConnectedFlag.get() && silentHrWatchdog.getState() != BleHrmSilentConnectionWatchdog.State.DISARMED) {
+            resumeSilentWatchdogAfterOfflineSync.set(true)
+        }
+        cancelReconnectJob()
+        cancelSearchTimeoutWatchdog()
+        cancelSilentHrWatchdog(resetState = true)
+    }
+
+    /** Resumes session sync, silent-HR watchdog, or reconnect cleanly after the final offline GATT lease releases (`REQ-SET-120.2`). */
+    internal fun resumeAfterOfflineSync() {
+        if (isShutDown.get() || isOfflineGattYielded()) return
+        if (isConnectedFlag.get()) {
+            val needsWatchdog = resumeSilentWatchdogAfterOfflineSync.getAndSet(false) ||
+                synchronized(silentHrWatchdogLock) { silentHrWatchdogJob == null }
+            if (needsWatchdog && silentHrWatchdog.getState() != BleHrmSilentConnectionWatchdog.State.DISARMED) {
+                armSilentHrWatchdog()
+            }
+            return
+        }
+        resumeSilentWatchdogAfterOfflineSync.set(false)
+        polarApi?.let { syncAlreadyOpenSessionIfReady(it) }
+        if (isConnectedFlag.get()) {
+            resumeSearchAfterOfflineSync.set(false)
+            if (silentHrWatchdog.getState() != BleHrmSilentConnectionWatchdog.State.DISARMED &&
+                synchronized(silentHrWatchdogLock) { silentHrWatchdogJob == null }
+            ) armSilentHrWatchdog()
+            return
+        }
+        if (resumeSearchAfterOfflineSync.getAndSet(false)) {
+            startSearching()
+        } else if (bleEnabled.get() && (isMidSessionOrWorkoutActive() || SensorSearchSettings.isPeriodicResearchEnabled(mContext))) {
+            scheduleBackoffReconnect()
+        }
+    }
+
+    private fun detachBridgeSessionState() {
+        sessionOpenPendingFeatures.set(false)
+        isConnectedFlag.set(false)
+        activeBridges.remove(this@PolarOnlineStreamingBridge)
+        cancelActiveStreamJobs()
+        streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
+        unregisterSensors()
+        PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
+            removeImuFrameListener(recorder)
+            removeRrBeatListener(recorder)
+        }
+    }
 
     @VisibleForTesting
     internal fun getSilentHrWatchdogGenerationForTesting(): Long = silentHrWatchdog.getGeneration()
@@ -323,6 +396,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private fun scheduleSilentHrWatchdogTimer(expectedGeneration: Long) {
         val jobToCancel = synchronized(silentHrWatchdogLock) {
             if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) {
+                return
+            }
+            if (isOfflineGattYielded()) {
+                resumeSilentWatchdogAfterOfflineSync.set(true)
                 return
             }
             val previous = silentHrWatchdogJob
@@ -362,7 +439,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     private fun onSilentHrWatchdogTimeout(expectedGeneration: Long) {
-        if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) return
+        if (isShutDown.get() || !isConnectedFlag.get() || isOfflineGattYielded() || silentHrWatchdog.getGeneration() != expectedGeneration) return
         when (silentHrWatchdog.onWatchdogElapsed(expectedGeneration)) {
             BleHrmSilentConnectionWatchdog.Action.REENABLE_CCCD -> {
                 if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) return
@@ -375,51 +452,65 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             BleHrmSilentConnectionWatchdog.Action.DISCONNECT_AND_RECONNECT -> {
                 Log.w(TAG, "Persistent silent Polar HR connection on $sdkSessionId after HR re-subscribe; disconnecting aliases and reconnecting")
                 cancelSilentHrWatchdog(resetState = true)
-                sessionOpenPendingFeatures.set(false)
-                isConnectedFlag.set(false)
-                activeBridges.remove(this@PolarOnlineStreamingBridge)
-                cancelActiveStreamJobs()
-                streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
-                unregisterSensors()
-                PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
-                    removeImuFrameListener(recorder)
-                    removeRrBeatListener(recorder)
-                }
+                detachBridgeSessionState()
                 val sessionId = sdkSessionId
                 PolarOfflineGattCoordinator.registerDeviceAliases(coordinatorSessionKey, activeSdkStreamId, polarId, macAddress)
-                PolarOfflineGattCoordinator.forceDisconnectDevice(
-                    context = mContext,
-                    macAddress = macAddress,
-                    polarId = sessionId,
-                    clearRegistrations = false
-                )
-                if (!isShutDown.get()) {
-                    scheduleBackoffReconnect()
-                }
+                PolarOfflineGattCoordinator.forceDisconnectDevice(mContext, macAddress, sessionId, clearRegistrations = false)
+                if (!isShutDown.get()) scheduleBackoffReconnect()
             }
             BleHrmSilentConnectionWatchdog.Action.NONE -> Unit
         }
     }
 
-    private fun armSearchTimeoutWatchdog() {
-        cancelSearchTimeoutWatchdog()
-        val timeoutMs = searchTimeoutMsProvider()
-        searchTimeoutJob = scope.launch {
-            delay(timeoutMs)
-            onSearchTimeout()
+    private fun armSearchTimeoutWatchdog(
+        timeoutMs: Long = searchTimeoutMsProvider(),
+        resetHandshakeGrace: Boolean = true
+    ) {
+        val previous = synchronized(searchTimeoutLock) {
+            val existing = searchTimeoutJob
+            val generation = ++searchAttemptGeneration
+            if (isShutDown.get() || isOfflineGattYielded() || isConnectedFlag.get()) {
+                searchTimeoutJob = null
+                handshakeGraceExtendedInAttempt = false
+            } else {
+                if (resetHandshakeGrace) handshakeGraceExtendedInAttempt = false
+                searchTimeoutJob = scope.launch {
+                    try {
+                        delay(timeoutMs)
+                        synchronized(searchTimeoutLock) {
+                            if (coroutineContext[Job] === searchTimeoutJob) searchTimeoutJob = null
+                        }
+                        onSearchTimeout(generation, timeoutMs)
+                    } finally {
+                        synchronized(searchTimeoutLock) {
+                            if (coroutineContext[Job] === searchTimeoutJob) searchTimeoutJob = null
+                        }
+                    }
+                }
+            }
+            existing
         }
+        previous?.cancel()
     }
 
     private fun cancelSearchTimeoutWatchdog() {
-        searchTimeoutJob?.cancel()
-        searchTimeoutJob = null
+        val previous = synchronized(searchTimeoutLock) {
+            val existing = searchTimeoutJob
+            searchTimeoutJob = null
+            searchAttemptGeneration++
+            handshakeGraceExtendedInAttempt = false
+            existing
+        }
+        previous?.cancel()
     }
 
     private fun cancelReconnectJob() {
-        synchronized(reconnectLock) {
-            reconnectJob?.cancel()
+        val previous = synchronized(reconnectLock) {
+            val existing = reconnectJob
             reconnectJob = null
+            existing
         }
+        previous?.cancel()
     }
 
     private fun isMidSessionOrWorkoutActive(): Boolean {
@@ -430,14 +521,14 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     override fun shouldKeepAliveOnSearchTimeout(): Boolean =
-        !isShutDown.get() && isMidSessionOrWorkoutActive()
+        !isShutDown.get() && (isMidSessionOrWorkoutActive() || isOfflineGattYielded())
 
     @SuppressLint("NewApi")
     private fun scheduleBackoffReconnect() {
-        if (isShutDown.get() || !bleEnabled.get() || sdkIntProvider() < Build.VERSION_CODES.TIRAMISU) return
+        if (isShutDown.get() || !bleEnabled.get() || isOfflineGattYielded() || sdkIntProvider() < Build.VERSION_CODES.TIRAMISU) return
         if (!isMidSessionOrWorkoutActive() && !SensorSearchSettings.isPeriodicResearchEnabled(mContext)) return
         synchronized(reconnectLock) {
-            if (isShutDown.get() || !bleEnabled.get() || isReceivingData()) return
+            if (isShutDown.get() || !bleEnabled.get() || isOfflineGattYielded() || isReceivingData()) return
             // Keep an already-armed reconnect timer intact (prevents double-advance on timeout disconnect echo).
             if (reconnectJob?.isActive == true) return
             val delayMs = SensorReconnectBackoffPolicy.effectiveDelayMs(currentReconnectDelayMs, mContext)
@@ -450,7 +541,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                             reconnectJob = null
                         }
                     }
-                    if (isShutDown.get() || !bleEnabled.get() || isReceivingData()) return@launch
+                    if (isShutDown.get() || !bleEnabled.get() || isOfflineGattYielded() || isReceivingData()) return@launch
                     Log.i(TAG, "Polar background reconnect firing for $polarId after ${delayMs}ms backoff")
                     PolarOfflineGattCoordinator.registerDeviceAliases(polarId, macAddress)
                     armSearchTimeoutWatchdog()
@@ -466,11 +557,13 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
-    private fun onSearchTimeout() {
-        if (isShutDown.get()) return
+    private fun onSearchTimeout(expectedGeneration: Long, timeoutMs: Long) {
+        if (isShutDown.get() || isOfflineGattYielded()) return
+        val generationMatches = synchronized(searchTimeoutLock) { searchAttemptGeneration == expectedGeneration }
+        if (!generationMatches) return
         if (!isReceivingData()) {
             val sessionId = sdkSessionId
-            Log.i(TAG, "Search timed out for Polar sensor $sessionId after ${searchTimeoutMsProvider()} ms")
+            Log.i(TAG, "Search timed out for Polar sensor $sessionId after $timeoutMs ms")
             try {
                 polarApi?.disconnectFromDevice(sessionId)
             } catch (t: Throwable) {
@@ -479,7 +572,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             if (isSearching) {
                 notifyStopSearching(false)
             }
-            if (isMidSessionOrWorkoutActive()) {
+            if (isMidSessionOrWorkoutActive() && !isOfflineGattYielded()) {
                 scheduleBackoffReconnect()
             }
         }
@@ -523,38 +616,44 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
     }
 
+    private fun matchesBridgeDeviceInfo(info: PolarDeviceInfo): Boolean =
+        PolarOfflineGattCoordinator.matchesDeviceInfo(polarId, macAddress, info) ||
+            PolarOfflineGattCoordinator.matchesDeviceInfo(activeSdkStreamId, macAddress, info) ||
+            PolarOfflineGattCoordinator.matchesDeviceInfo(coordinatorSessionKey, macAddress, info)
+
     private val sdkCallback = object : PolarBleApiCallback() {
         override fun blePowerStateChanged(powered: Boolean) {
             bleEnabled.set(powered)
             if (!powered) {
-                sessionOpenPendingFeatures.set(false)
                 cancelReconnectJob()
                 cancelSearchTimeoutWatchdog()
                 cancelSilentHrWatchdog(resetState = true)
-                isConnectedFlag.set(false)
-                activeBridges.remove(this@PolarOnlineStreamingBridge)
-                cancelActiveStreamJobs()
-                streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
-                unregisterSensors()
-                PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
-                    removeImuFrameListener(recorder)
-                    removeRrBeatListener(recorder)
-                }
-                if (isSearching) {
-                    notifyStopSearching(false)
-                }
-            } else if (!isShutDown.get() && !isReceivingData() && isMidSessionOrWorkoutActive()) {
+                detachBridgeSessionState()
+                if (isSearching) notifyStopSearching(false)
+            } else if (!isShutDown.get() && !isReceivingData() && !isOfflineGattYielded() && isMidSessionOrWorkoutActive()) {
                 scheduleBackoffReconnect()
             }
         }
 
-        override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
-            if (!PolarOfflineGattCoordinator.matchesDeviceInfo(polarId, macAddress, polarDeviceInfo) &&
-                !PolarOfflineGattCoordinator.matchesDeviceInfo(activeSdkStreamId, macAddress, polarDeviceInfo) &&
-                !PolarOfflineGattCoordinator.matchesDeviceInfo(coordinatorSessionKey, macAddress, polarDeviceInfo)
-            ) {
-                return
+        override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
+            if (!matchesBridgeDeviceInfo(polarDeviceInfo) || isShutDown.get() || isConnectedFlag.get() || isOfflineGattYielded()) return
+            val shouldExtend = synchronized(searchTimeoutLock) {
+                if (searchTimeoutJob?.isActive == true && !handshakeGraceExtendedInAttempt) {
+                    handshakeGraceExtendedInAttempt = true
+                    true
+                } else {
+                    false
+                }
             }
+            if (shouldExtend) {
+                val graceMs = maxOf(searchTimeoutMsProvider(), connectingHandshakeTimeoutMs)
+                Log.i(TAG, "Polar sensor ${polarDeviceInfo.deviceId} connecting; extending handshake timeout to ${graceMs}ms")
+                armSearchTimeoutWatchdog(timeoutMs = graceMs, resetHandshakeGrace = false)
+            }
+        }
+
+        override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
+            if (!matchesBridgeDeviceInfo(polarDeviceInfo)) return
             PolarOfflineCapabilityStore.recordDisMetadata(
                 mContext,
                 macAddress,
@@ -564,24 +663,10 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
-            if (!PolarOfflineGattCoordinator.matchesDeviceInfo(polarId, macAddress, polarDeviceInfo) &&
-                !PolarOfflineGattCoordinator.matchesDeviceInfo(activeSdkStreamId, macAddress, polarDeviceInfo) &&
-                !PolarOfflineGattCoordinator.matchesDeviceInfo(coordinatorSessionKey, macAddress, polarDeviceInfo)
-            ) {
-                return
-            }
-            sessionOpenPendingFeatures.set(false)
+            if (!matchesBridgeDeviceInfo(polarDeviceInfo)) return
             cancelSilentHrWatchdog(resetState = true)
-            isConnectedFlag.set(false)
-            activeBridges.remove(this@PolarOnlineStreamingBridge)
-            cancelActiveStreamJobs()
-            streamCoordinator.resetSessionWarningState(polarId, activeSdkStreamId, macAddress)
-            unregisterSensors()
-            PolarRawTelemetryRecorder.getActiveRecorder()?.let { recorder ->
-                removeImuFrameListener(recorder)
-                removeRrBeatListener(recorder)
-            }
-            if (!isShutDown.get() && isMidSessionOrWorkoutActive()) {
+            detachBridgeSessionState()
+            if (!isShutDown.get() && !isOfflineGattYielded() && isMidSessionOrWorkoutActive()) {
                 scheduleBackoffReconnect()
             }
         }
@@ -590,13 +675,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             identifier: String,
             feature: PolarBleApi.PolarBleSdkFeature
         ) {
-            if (!PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, identifier) &&
-                !PolarOfflineGattCoordinator.matchesDeviceIdentifier(activeSdkStreamId, identifier) &&
-                !PolarOfflineGattCoordinator.matchesDeviceIdentifier(coordinatorSessionKey, identifier) &&
-                !PolarOfflineGattCoordinator.matchesDeviceIdentifier(macAddress, identifier)
-            ) {
-                return
-            }
+            if (!matchesBridgeIdentifier(identifier)) return
             if (!isConnectedFlag.get() && sessionOpenPendingFeatures.get()) {
                 val currentStreamId = activeSdkStreamId
                 if (currentStreamId == null ||
@@ -708,6 +787,11 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             notifyStopSearching(false)
             return
         }
+        if (isOfflineGattYielded()) {
+            resumeSearchAfterOfflineSync.set(true)
+            notifyStopSearching(false)
+            return
+        }
         if (isReceivingData()) {
             notifyStopSearching(true)
             return
@@ -746,7 +830,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             if (isSearching) {
                 notifyStopSearching(false)
             }
-            if (!isShutDown.get() && bleEnabled.get() && isMidSessionOrWorkoutActive()) {
+            if (!isShutDown.get() && bleEnabled.get() && !isOfflineGattYielded() && isMidSessionOrWorkoutActive()) {
                 scheduleBackoffReconnect()
             }
         }
@@ -855,7 +939,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         val api = polarApi ?: return
         val sessionId = sdkSessionId
         streamCoordinator.launchStream(PolarPmdStreamCoordinator.StreamSlot.HR) {
-            api.startHrStreaming(sessionId).collect { hrData ->
+            streamCoordinator.collectBounded(api.startHrStreaming(sessionId)) { hrData ->
                 processHrData(hrData, System.currentTimeMillis())
             }
         }
@@ -1252,7 +1336,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     fun isPpiStreamingForTesting(): Boolean = streamCoordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.PPI)
 
     @VisibleForTesting
-    fun getSearchTimeoutJobForTesting(): Job? = searchTimeoutJob
+    fun getSearchTimeoutJobForTesting(): Job? = synchronized(searchTimeoutLock) { searchTimeoutJob }
 
     @VisibleForTesting
     fun getReconnectJobForTesting(): Job? = reconnectJob
@@ -1309,6 +1393,9 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
             onTeardownComplete?.run()
             return
         }
+        PolarOfflineGattCoordinator.unregisterOfflineYieldListener(offlineYieldListener)
+        resumeSearchAfterOfflineSync.set(false)
+        resumeSilentWatchdogAfterOfflineSync.set(false)
         sessionOpenPendingFeatures.set(false)
         hasConnectedInSession.set(false)
         cancelSearchTimeoutWatchdog()

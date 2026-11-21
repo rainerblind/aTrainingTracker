@@ -63,16 +63,25 @@ class SensorSparklineViewTest {
 
     @Test
     fun testResolveSparklineHeight() {
-        assertEquals(26.dp, resolveSparklineHeight(ViewSize.XSMALL, isGraphOnly = false))
-        assertEquals(26.dp, resolveSparklineHeight(ViewSize.SMALL, isGraphOnly = false))
-        assertEquals(34.dp, resolveSparklineHeight(ViewSize.NORMAL, isGraphOnly = false))
-        assertEquals(44.dp, resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = false))
-        assertEquals(52.dp, resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = false))
+        // TST-UI-2788, TST-UI-2788.1 (REQ-UI-2788.1, ATT-8995)
+        assertEquals(46.dp, resolveSparklineHeight(ViewSize.XSMALL, isGraphOnly = false))
+        assertEquals(46.dp, resolveSparklineHeight(ViewSize.SMALL, isGraphOnly = false))
+        assertEquals(52.dp, resolveSparklineHeight(ViewSize.NORMAL, isGraphOnly = false))
+        assertEquals(60.dp, resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = false))
+        assertEquals(68.dp, resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = false))
 
-        assertEquals(24.dp, resolveSparklineHeight(ViewSize.SMALL, isGraphOnly = true))
-        assertEquals(36.dp, resolveSparklineHeight(ViewSize.NORMAL, isGraphOnly = true))
-        assertEquals(52.dp, resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = true))
-        assertEquals(68.dp, resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = true))
+        assertEquals(48.dp, resolveSparklineHeight(ViewSize.XSMALL, isGraphOnly = true))
+        assertEquals(48.dp, resolveSparklineHeight(ViewSize.SMALL, isGraphOnly = true))
+        assertEquals(56.dp, resolveSparklineHeight(ViewSize.NORMAL, isGraphOnly = true))
+        assertEquals(68.dp, resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = true))
+        assertEquals(84.dp, resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = true))
+
+        // Graph-only minimum height must stay strictly taller than Value+Graph for every ViewSize
+        for (size in ViewSize.values()) {
+            val valueGraphH = resolveSparklineHeight(size, isGraphOnly = false)
+            val graphOnlyH = resolveSparklineHeight(size, isGraphOnly = true)
+            assertTrue("Graph-only height ($graphOnlyH) must exceed Value+Graph ($valueGraphH) for $size", graphOnlyH > valueGraphH)
+        }
     }
 
     @Test

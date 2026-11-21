@@ -81,7 +81,6 @@ data class ParsedLap(
  */
 object LegacyImportEngine {
     private const val TAG = "LegacyImportEngine"
-    private val tcxTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
 
     private val recalculationMutex = Mutex()
     internal val importMutex = Mutex()

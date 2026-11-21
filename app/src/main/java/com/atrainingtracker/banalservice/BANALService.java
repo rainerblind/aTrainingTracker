@@ -388,6 +388,29 @@ public class BANALService
     }
 
     /**
+     * Silently re-anchors live barometric altitude devices to the last persisted finite workout
+     * altitude upon mid-workout crash/service recovery without broadcasting retroactive shifts
+     * ({@code REQ-STB-025.3}).
+     */
+    public static void reanchorBarometricAltitudeOnResume(double lastAltitudeM) {
+        if (!Double.isFinite(lastAltitudeM) || lastAltitudeM <= -500.0 || lastAltitudeM >= 9000.0) {
+            return;
+        }
+        DeviceManager dm = cDeviceManager;
+        if (dm == null) {
+            return;
+        }
+        com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice baroDevice = dm.getAltitudeFromPressureDevice();
+        if (baroDevice != null) {
+            baroDevice.reanchorSilently(lastAltitudeM);
+        }
+        com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFused fusedAltDevice = dm.getAltitudeAndSlopeDevice_ATTFused();
+        if (fusedAltDevice != null) {
+            fusedAltDevice.reanchorOnResume(lastAltitudeM);
+        }
+    }
+
+    /**
      * Lazily initializes GPS and Fused location devices when ACCESS_FINE_LOCATION
      * permission is granted during an active service session (REQ-PRI-004, ATT-2357).
      */

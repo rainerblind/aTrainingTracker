@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.13  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 45
+**Total Tests**: 46
 
 ---
 
@@ -895,6 +895,16 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
+### TST-UI-2788: **Cockpit Sparkline Canvas Height, Compact X-Axis Leading & Flexible Value+Graph Layout Suite** (`ATT-8995`) [Verified]
+- **Requirement(s)**: `REQ-UI-2788` (`REQ-UI-2788.1`..`REQ-UI-2788.3`)
+- **Component**: `SensorSparklineView.kt`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `SensorSparklineViewTest.kt`, `SensorFieldViewGraphOnlyLayoutTest.kt`, `SensorFieldViewSparklineLayoutComposeTest.kt`, `SensorFieldViewDynamicZoneScreenshotTest.kt`, `EditSensorFieldDialogScreenshotTest.kt`
+- **Jira**: `ATT-8995` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Height Resolver & Monotonicity Unit Tests (`TST-UI-2788.1`)*: Verify `resolveSparklineHeight` returns `46/52/60/68.dp` for `isGraphOnly = false` and strictly taller monotonic `48/56/68/84.dp` for `isGraphOnly = true` across `XSMALL..XLARGE` (`SensorSparklineViewTest`, `SensorFieldViewGraphOnlyLayoutTest`).
+  2. *Behavioral Compose Layout & Exact Canvas Height Verification (`TST-UI-2788.2`)*: Using `androidx.compose.ui.test.junit4.v2.createComposeRule()` under Robolectric (`SensorFieldViewSparklineLayoutComposeTest`), verify (a) `NORMAL` Value+Graph inside `Row(Modifier.height(IntrinsicSize.Min))` yields `sensor_sparkline_canvas` `getUnclippedBoundsInRoot().height >= 34.dp` (`>= 28.dp` net curve amplitude after `6.dp` padding) with `-T`, `-T/2`, and `Now` labels visible and unclipped, (b) multi-column `IntrinsicSize.Min` row beside a taller `XLARGE` sibling expands `sensor_sparkline_canvas` beyond its `NORMAL` baseline, and (c) externally constrained `132.dp`/`116.dp` cards preserve visible primary Value text and X-axis labels without clipping.
+  3. *Rule 8.5 Visual PNG Screenshot & Regression Contracts (`TST-UI-2788.3`)*: Capture and visually inspect Light & Dark/AMOLED PNG (`docs/engineering/walkthroughs/img/ATT-8995_sparkline_value_graph_layout.png`) covering stacked `Test RR`-style `NORMAL` Value+Graph tiles, multi-column surplus expansion, compact `SMALL`, and Graph-only comparison; verify `SensorFieldViewDynamicZoneScreenshotTest`, `EditSensorFieldDialogScreenshotTest`, `ArchitectureConformanceContractTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, and `UiReflectionOnlyTestAuditContractTest` PASS (`Localization Parity: N/A - no new or modified UI strings`).
+- **Verified Evidence (`a5cbbd1b`, `ATT-9382` PASS, `6/6`)**: `SensorSparklineViewTest#testResolveSparklineHeight`, `SensorFieldViewGraphOnlyLayoutTest#testResolveSparklineHeight_graphOnlyMode_enforcesStrictlyPositiveHeights`, `SensorFieldViewSparklineLayoutComposeTest#testNormalValueAndGraphInIntrinsicMinRow_canvasHeightAtLeast34dpAndLabelsVisible_tstUi2788_2`, `SensorFieldViewSparklineLayoutComposeTest#testMultiColumnRowWithTallerSibling_valueAndGraphSparklineExpandsIntoSurplusHeight_tstUi2788_2`, `SensorFieldViewSparklineLayoutComposeTest#testFixedHeightCompactCards_preserveUnclippedValueAndXAxisLabels_tstUi2788_2`, `SensorFieldViewSparklineLayoutComposeTest#testCaptureSparklineValueGraphComparisonScreenshot_tstUi2788_3`.
+
 ---
 
 ## Change History
@@ -913,3 +923,6 @@
 | `1.0.11` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `TST-UI-2787` to `[Implemented]` in Stage 4 (`WorkoutDetailTabsTest`, `WorkoutDetailSummaryDecouplingTest`, `WorkoutDetailHeaderActionsComposeTest`, `WorkoutMasksAndCardsBehaviorTest`, `AdvancedTuningAccordionTest`). |
 | `1.0.12` | 2026-11-18 | AI Agent (`ATT-8079`) | `ATT-8079` | Promoted `TST-UI-2787` to `[Verified]` in Stage 5 (`94/94` Tier 1 JUnit XMLs PASS, `Rule 8.5` PNG inspected). |
 | `1.0.13` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Rebalanced `TST-UI-250..254` from `tst_ui_design_system_part1.md` to satisfy `<= 4,000` line shard limit (`REQ-PRO-093.3`). |
+| `1.0.14` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Added `TST-UI-2788` (`[Planned]`, `.1`–`.3`, strictly symmetric `REQ-UI-2788`) covering `resolveSparklineHeight` monotonicity, `v2.createComposeRule()` exact `sensor_sparkline_canvas` height & fixed-card safety, and `Rule 8.5` Light/Dark visual PNG (`N/A - no new or modified UI strings`). |
+| `1.0.15` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `TST-UI-2788` to `[Implemented]` (`SensorSparklineViewTest`, `SensorFieldViewGraphOnlyLayoutTest`, `SensorFieldViewSparklineLayoutComposeTest` `4/4`, `Rule 8.5` PNG `ATT-8995_sparkline_value_graph_layout.png`, `6/6` verbatim `TestClass#testMethod` citations). |
+| `1.0.16` | 2026-11-20 | Lane A Author (`ATT-8995`, `--as agent1`) | `ATT-8995` | Promoted `TST-UI-2788` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9382` @ `a5cbbd1b`) `57/57 PASS` across 11 suites + `:app:assembleDebug` + `0` new Kotlin/deprecation warnings (`Rule 7.5`, `0` `app/` diff since `a5cbbd1b`, `6/6` verbatim `TestClass#testMethod` citations, `Rule 8.5` Light/Dark PNG certified, `4/4` safety linters PASS, `--check-verified-evidence` `exit 0`). |

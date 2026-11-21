@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.odometry
 
+import java.util.ArrayDeque
 import java.util.Collections
 import kotlin.math.PI
 import kotlin.math.abs
@@ -69,6 +70,8 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         const val ZUPT_SPEED_VARIANCE = 2.0
         const val GNSS_OUTAGE_RECOVERY_GAP_MS = 15_000L
         const val GNSS_CLUSTER_MAX_STEP_GAP_MS = 5_000L
+        /** Hard drop-oldest snapshot capacity ceiling preventing unbounded heap growth (`REQ-STB-023.1`). */
+        const val MAX_SNAPSHOTS = 4096
 
         // Process noise intensities per second
         private const val Q_POS = 0.01 // m^2 / s
@@ -120,8 +123,8 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
     private var lastMovingOutlierTimestampMs: Long = 0L
     private var postOutageClusterGapMs: Long = 0L
 
-    // Snapshot buffer for offline RTS backward smoother
-    private val snapshotList = mutableListOf<OdometrySnapshot>()
+    // Bounded drop-oldest snapshot ring buffer for offline RTS backward smoother (`REQ-STB-023.1`)
+    private val snapshotList = ArrayDeque<OdometrySnapshot>()
 
     // Current step working buffers for snapshot capture
     private val priorState = DoubleArray(STATE_DIM)
@@ -792,10 +795,10 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
     }
 
     /**
-     * Returns an unmodifiable view of all recorded step snapshots.
+     * Returns an unmodifiable view of all recorded step snapshots (bounded to [MAX_SNAPSHOTS]).
      */
     fun getSnapshots(): List<OdometrySnapshot> {
-        return Collections.unmodifiableList(snapshotList)
+        return Collections.unmodifiableList(ArrayList(snapshotList))
     }
 
     fun getCovarianceCopy(): Array<DoubleArray> = Array(STATE_DIM) { i -> p[i].clone() }
@@ -826,7 +829,10 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
             statePosterior = postStateCopy,
             covariancePosterior = postCovCopy
         )
-        snapshotList.add(snapshot)
+        if (snapshotList.size >= MAX_SNAPSHOTS) {
+            snapshotList.removeFirst()
+        }
+        snapshotList.addLast(snapshot)
     }
 
     private fun symmetrizeCovariance() {

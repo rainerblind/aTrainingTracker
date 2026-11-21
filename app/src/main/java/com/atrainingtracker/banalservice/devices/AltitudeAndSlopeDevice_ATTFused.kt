@@ -456,6 +456,21 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         return max(0.0, speedVal)
     }
 
+    /**
+     * Silently re-anchors the live EKF and ascent/descent hysteresis anchor to [lastAltitudeM]
+     * upon mid-workout crash/service resume without introducing an artificial altitude step or
+     * phantom ascent/descent increment (`REQ-STB-025.3`).
+     */
+    @Synchronized
+    fun reanchorOnResume(lastAltitudeM: Double) {
+        if (!lastAltitudeM.isFinite() || lastAltitudeM <= -500.0 || lastAltitudeM >= 9000.0) return
+        ekf.setMode(isEffectiveDem || isEffectiveGps)
+        ekf.reanchorOnResume(lastAltitudeM)
+        mAscentDescentAnchorAltitude = lastAltitudeM
+        mLastAltitude = lastAltitudeM
+        mAltitudeSensor?.newValue(lastAltitudeM)
+    }
+
     @Synchronized
     private fun resetAscentDescentAnchor() {
         mAscentDescentAnchorAltitude = Double.NaN

@@ -138,7 +138,9 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
                 }
             }
         }
-        mInitialValue = initialVal;
+        // Normalize against zeroValue so getValue() = mInitialValue + mValue equals initialVal
+        // even for 1-based accumulators like SensorType.LAP_NR (mZeroValue = 1, REQ-STB-025.1).
+        mInitialValue = sub(initialVal, zeroValue);
         newValue(zeroValue);
     }
 
@@ -146,7 +148,7 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
         N currentTotal;
         boolean active;
         synchronized (this) {
-            mInitialValue = value;
+            mInitialValue = sub(value, mZeroValue);
             currentTotal = add(mInitialValue, mValue);
             active = mActivated;
         }

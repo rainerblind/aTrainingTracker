@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.9  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 107
+**Total Tests**: 109
 
 ---
 
@@ -1557,6 +1557,37 @@
 
 ---
 
+### TST-SET-122: **Polar Online Bridge Offline-Sync Yield & `deviceConnecting` Handshake Grace Suite (`ATT-9175`)** [Verified]
+- **Requirement(s)**: `REQ-SET-120` (`REQ-SET-120.1`..`REQ-SET-120.4`)
+- **Component**: `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarOnlineStreamingBridgeTest.kt`
+- **Jira**: `ATT-9175`
+- **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Alias-Aware Ref-Counted Offline Yield & Sibling Isolation (`TST-SET-122.1`, `PolarOfflineGattCoordinatorCoexistenceTest#testWithGattYieldAndPolarApi_pausesAndResumesTargetAliasesWithoutHarmingSibling_TST_SET_122_1`, `PolarOfflineGattCoordinatorCoexistenceTest#testWithGattYieldAndPolarApi_nestedLeasesAndExceptionOrCancellationReleaseCleanly_TST_SET_122_1`, `PolarOfflineGattCoordinatorCoexistenceTest#testWithGattYieldAndPolarApi_aliasExpansionAcrossOverlappingLeases_transitionsPausedSetOnce_TST_SET_122_1`)*: Verify `withGattYieldAndPolarApi()` acquires per-device alias-aware (`MAC` <-> `8-hex`) lease tokens, tracks `pausedOfflineYieldListeners` membership across nested & alias-expanding overlapping leases strictly outside coordinator locks without pausing sibling Polar devices (`REQ-SET-118.3`), releases cleanly in `finally` (including exception & `CancellationException`), and resets in `resetForTesting()`.
+  2. *Bridge Pause/Resume, Keep-Alive & Silent-HR Watchdog Deferral (`TST-SET-122.2`, `PolarOnlineStreamingBridgeTest#testOfflineGattYield_pausesReconnectSearchTimeoutAndSilentWatchdogThenResumes_TST_SET_122_2`, `PolarOnlineStreamingBridgeTest#testOfflineGattYield_whenSharedSessionConnectedDuringBackfill_syncsOpenSessionOnResume_TST_SET_122_2`, `PolarOnlineStreamingBridgeTest#testOfflineGattYield_deviceConnectedDuringYield_armsSilentWatchdogOnResumeUnlessDisarmedByHr_TST_SET_122_2`, `PolarOnlineStreamingBridgeTest#testOfflineGattYield_stalePauseCallDoesNotWedgeAndShouldKeepAliveInWaitingForStartMode_TST_SET_122_2`)*: Verify coordinator-backed `isOfflineGattYielded()` cancels active `reconnectJob`/`searchTimeoutJob`/`silentHrWatchdogJob`, blocks competing `connectToDevice()`/`disconnectFromDevice()`, keeps `shouldKeepAliveOnSearchTimeout() == true` in `WAITING_FOR_START` while yielded, ignores stale out-of-order `pauseForOfflineSync()`, arms deferred `silentHrWatchdog` on resume after mid-yield `deviceConnected` (unless disarmed by HR), and syncs already-open shared sessions or resumes reconnect cleanly.
+  3. *Single-Shot Bounded `deviceConnecting()` Handshake Grace (`TST-SET-122.3`, `PolarOnlineStreamingBridgeTest#testDeviceConnecting_extendsSearchTimeoutOnceToHandshakeGraceAndPreserves5sAbsentTimeout_TST_SET_122_3`, `PolarOnlineStreamingBridgeTest#testDeviceConnecting_ignoresSiblingAndDuplicateCallbacksAndTimesOutAfterHandshakeGrace_TST_SET_122_3`)*: Verify `deviceConnecting()` for a matching Polar device extends `searchTimeoutJob` once per attempt from `5_000 ms` to `15_000 ms` (logging exact `timeoutMs`), ignores duplicate `deviceConnecting()` callbacks and sibling Polar devices, still times out cleanly after `15_000 ms` if the handshake stalls, and preserves `5_000 ms` timeout when `deviceConnecting()` never fires (`REQ-CON-045.1`).
+  4. *Monolith Ceilings & Governance Contracts (`TST-SET-122.4`)*: Verify `ArchitectureConformanceContractTest` (`PolarOnlineStreamingBridge.kt <= 1,500`, `PolarOfflineGattCoordinator.kt <= 1,500`, `0` edits to `PolarVeritySenseOfflineController.kt`/`DeviceManager.java`), `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest`, `DetailedDesignParityContractTest`, `SourceTextReadingAuditContractTest`, `SystemDataExchangeRequirementsContractTest`, and `SystemLiveTrackingRequirementsContractTest` (`Localization Parity: N/A`).
+- **Verification Evidence**: Gate 4 Bounce 1 (`ATT-9384` @ `d2c4953f`, `Rule 7.5`, `0` `app/` drift) — `164/164 PASS` (`0` fail, `0` err, `0` skip) across 15 suites + `:app:assembleDebug` PASS + `0` new production Kotlin warnings (`9/9` verbatim `TST-SET-122` methods verified); `4/4` Python safety linters PASS; `--check-verified-evidence` EXIT `0`.
+
+### TST-SET-123: **`TuningPreferencesDataStore` Round-Trip, `BoundedPref` & `SettingsDataStore` Zone Defaults Verification Suite (`ATT-6048`)** [Verified]
+- **Requirement(s)**: `REQ-SET-121` (`REQ-SET-121.1`..`REQ-SET-121.4`)
+- **Component**: `TuningPreferencesDataStore.kt`, `SettingsDataStore.kt`, `TuningPreferencesDataStoreRoundTripTest.kt`, `TuningPreferencesDataStoreAutoPauseTest.kt`, `TuningConfigTest.kt`, `SettingsDataStoreZoneAtomicTest.kt`, `DataStoreHotPathContractTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-6048`
+- **Status**: Verified
+- **Verification Evidence**: Verified (`ATT-6048`, SHA `2038d89b`, Gate 4 `167/167` PASS across 31 suites): `TuningPreferencesDataStoreRoundTripTest.kt` (`saveTuningConfig_roundTripsAllPersistedFieldsIncluding4AutoPauseKeys_TST_SET_123_1`, `boundedPref_dependentClampsZeroRuleAndLegacyMirrors_preserveExactBehavior_TST_SET_123_2`, `boundedPref_contractAndPrivateConstructor_verified_TST_SET_123_3`), `SettingsDataStoreZoneAtomicTest.kt` (`dataStore_centralizedZoneDefaults_matchAllReadAndResetPaths_TST_SET_123_2`), `DataStoreHotPathContractTest.kt` (`3/3`), `ArchitectureConformanceContractTest.kt` (`11/11`).
+- **Test Description**:
+  1. *Full `TuningConfig` Round-Trip Persistence (`TST-SET-123.1`)*:
+  • Construct a `TuningConfig` where all non-derived, non-hardcoded fields (including `startInAutoPauseEnabled`, `autoPauseBikeResumeDebounceSec`, `autoPauseRunResumeDebounceSec`, `autoPauseOtherResumeDebounceSec`) differ from `TuningConfig()` defaults, keeping the 7 `REQ-MAP-050` `mapFollowMe*` fields at defaults, `autoPauseSpeedThresholdKmh`/`autoPauseDebounceSec` consistent with Bike values, and `radarAutoLightControl`/`radarSmartLightAutomation` consistent with `radarLightControlMode`.
+  • Invoke `saveTuningConfig(config)`, read `tuningConfigFlow.first()`, and assert via Kotlin reflection over `TuningConfig` properties that every property round-trips identically.
+  2. *`BoundedPref`, Dependent Clamps, `0 -> DEFAULT` & Legacy Mirror Characterization (`TST-SET-123.2`)*:
+  • Verify out-of-range values clamp identically across `mapPreferencesToConfig`, `saveTuningConfig`, and `update*` via `BoundedPref` descriptors.
+  • Verify dependent clamps (`mediumDimFactor < fullDimFactor` clamps `>= clampedFullDim`, `slopeSteepThreshold < slopeFlatThreshold` clamps `>= clampedSlopeFlat`, `dfaA1 T1/T2` gap enforcement), `navigationCueDismissDurationSec == 0 -> DEFAULT`, legacy fallbacks/mirrors (`KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH`, `KEY_AUTO_PAUSE_DEBOUNCE_SEC`, `KEY_PROFILE_X_AXIS_DOMAIN`, radar modes), `TrainingApplication` cluster sync, and existing `invalidateAutoPauseCache()` behavior remain unchanged.
+  3. *Centralized `SettingsDataStore` Zone Defaults & Architectural Contracts (`TST-SET-123.3`)*:
+  • Verify `SettingsSnapshot.DEFAULT`, `getDefaultValue`, `calculateProportionalPowerDefaults`, `mapSettingsSnapshot`, `checkAndMigratePowerZones`, and `resetToDefaults` return identical `HR_RUN` (`132, 145, 158, 171`), `HR_BIKE` (`127, 140, 153, 166`), and `PWR_BIKE` (`149, 203, 243, 284, 324, 405`) boundaries.
+  • Run `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.settings.*"` and `ArchitectureConformanceContractTest` confirming `TuningPreferencesDataStore.kt <= 2,410` LoC, non-public constructor, and zero new `runBlocking` in `SettingsDataStore.kt`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1570,3 +1601,9 @@
 | `1.0.7` | 2026-11-19 | AI Agent (`ATT-8969`) | `ATT-8969` | Promoted `TST-SET-121` to `[Verified]` following Stage 5 verification. |
 | `1.0.8` | 2026-11-20 | AI Agent (`ATT-8328`) | `ATT-8328` | Reconciled legacy test descriptions (`TST-SET-003`, `TST-SET-006`, `TST-SET-027`) via Chesterton's Fence audit; all 43 triage TSTs remain `[Implemented]` pending Stage 4/5 execution. |
 | `1.0.9` | 2026-11-20 | AI Agent (`ATT-8328`) | `ATT-8328` | Promoted 39 verified `TST-SET-*` specifications to `[Verified]` following Gate 4 (`2a149eca`, `119/119` PASS across 22 suites); retained Bucket C (`TST-SET-006`, `011`, `013`, `058`) at `[Implemented]`. |
+| `1.0.10` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Added `TST-SET-122` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-120`) covering alias-aware ref-counted offline yield, `PolarOnlineStreamingBridge` pause/resume + watchdog deferral, single-shot bounded `deviceConnecting` handshake grace, and architecture/governance contracts (`N/A - no UI strings`). |
+| `1.0.11` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `TST-SET-122` to `[Implemented]` with all `6/6` verbatim `TestClass#testMethod` citations across `PolarOfflineGattCoordinatorCoexistenceTest` and `PolarOnlineStreamingBridgeTest`. |
+| `1.0.12` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `TST-SET-122` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9378` @ `cbe8ef29`, `Rule 7.5`, `0` `app/` drift) `161/161 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`6/6` verbatim `TST-SET-122` methods verified), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
+| `1.0.13` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Stage 6 Bounce 1/3 heal: added 3 regression tests (`9/9` verbatim `TST-SET-122` methods covering overlapping-lease alias expansion, mid-yield `deviceConnected` silent-HR watchdog deferral/resume, `shouldKeepAliveOnSearchTimeout()` in `WAITING_FOR_START`, and stale out-of-order `pauseForOfflineSync()` non-wedge) and set `[Implemented]` pending Gate 4 / Stage 5 re-verification. |
+| `1.0.14` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Promoted `TST-SET-122` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9384` @ `d2c4953f`, `Rule 7.5`, `0` `app/` drift) `164/164 PASS` across 15 suites + `:app:assembleDebug` + `0` new production Kotlin warnings (`9/9` verbatim `TST-SET-122` methods verified), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9175_walkthrough.md`. |
+| `1.0.15` | 2026-11-21 | Lane B Flash (`ATT-6048`, `--as agent1`) | `ATT-6048` | Added and verified `TST-SET-123` (`TuningPreferencesDataStoreRoundTripTest.kt`, `SettingsDataStoreZoneAtomicTest.kt`, `167/167` PASS @ `2038d89b`, Stage 6 PASS). |

@@ -128,4 +128,39 @@ class MyAccumulatorSensorTest {
         assertEquals(0.0, sensor.value, 0.001)
         assertEquals("Listener must be notified of 0.0 on reset", 0.0, reportedOnReset ?: -1.0, 0.001)
     }
+
+    // REQ-STB-025.1 / TST-STB-025.1: 1-based LAP_NR accumulator must never double-count mZeroValue=1 on resume
+    @Test
+    fun testLapNrAccumulator_withNonZeroZeroValue_restoresExactLapWithoutDoubleCount_TST_STB_025_1() {
+        val mockManager = mockk<MySensorManager>()
+        every { mockManager.getInitialValue(SensorType.LAP_NR) } returns 1
+
+        val mockDevice = mockk<MyDevice>()
+        every { mockDevice.mySensorManager } returns mockManager
+
+        // 1. Fresh ClockDevice construction with MySensorManager default LAP_NR=1 must yield 1 (not 2)
+        val lapSensor = MyIntegerAccumulatorSensor(mockDevice, SensorType.LAP_NR, false, 1)
+        lapSensor.activateSensor()
+        assertEquals("Fresh LAP_NR sensor must start at 1 (never 1+1=2)", 1, lapSensor.value)
+
+        // 2. Crash recovery / user resume seeding state.lapNr=1 must remain 1 (not jump to 2)
+        lapSensor.setInitialValue(1)
+        assertEquals("Resumed LAP_NR=1 must remain 1", 1, lapSensor.value)
+
+        // 3. Crash recovery in Lap 3 must report 3 (not 4), and next newLap() must advance to 4
+        lapSensor.setInitialValue(3)
+        assertEquals("Resumed LAP_NR=3 must report 3", 3, lapSensor.value)
+        lapSensor.increment(1)
+        assertEquals("Subsequent newLap() after resume must advance 3 -> 4", 4, lapSensor.value)
+
+        // 4. Late-constructed LAP_NR sensor after resume seeded MySensorManager with lapNr=3 must start at 3
+        every { mockManager.getInitialValue(SensorType.LAP_NR) } returns 3
+        val lateLapSensor = MyIntegerAccumulatorSensor(mockDevice, SensorType.LAP_NR, false, 1)
+        lateLapSensor.activateSensor()
+        assertEquals("Late-constructed LAP_NR sensor must inherit exact resumed lap 3", 3, lateLapSensor.value)
+
+        // 5. reset() must still return mZeroValue = 1
+        lapSensor.reset()
+        assertEquals("reset() on LAP_NR must restore mZeroValue=1", 1, lapSensor.value)
+    }
 }

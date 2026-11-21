@@ -337,4 +337,34 @@ class SettingsDataStoreZoneAtomicTest {
         val hrRun = dataStore.getZoneDisplayOptionsFlow(ZoneType.HR_RUN).first()
         assertTrue("HR_RUN background must remain untouched", hrRun.showBackground)
     }
+
+    /**
+     * TST-SET-123.2: Verifies centralized SettingsDataStore default zone constants match
+     * SettingsSnapshot.DEFAULT, getDefaultValue, and resetToDefaults across HR_RUN, HR_BIKE, PWR_BIKE.
+     */
+    // Linked test specs: TST-SET-123, TST-SET-123.2
+    @Test
+    fun dataStore_centralizedZoneDefaults_matchAllReadAndResetPaths_TST_SET_123_2() = runTest(testDispatcher) {
+        assertEquals(listOf(132, 145, 158, 171), SettingsDataStore.DEFAULT_HR_RUN_ZONES)
+        assertEquals(listOf(127, 140, 153, 166), SettingsDataStore.DEFAULT_HR_BIKE_ZONES)
+        assertEquals(listOf(149, 203, 243, 284, 324, 405), SettingsDataStore.DEFAULT_PWR_BIKE_ZONES)
+
+        assertEquals(SettingsDataStore.DEFAULT_HR_RUN_ZONES, SettingsSnapshot.DEFAULT.hrRunZoneMax)
+        assertEquals(SettingsDataStore.DEFAULT_HR_BIKE_ZONES, SettingsSnapshot.DEFAULT.hrBikeZoneMax)
+        assertEquals(SettingsDataStore.DEFAULT_PWR_BIKE_ZONES, SettingsSnapshot.DEFAULT.pwrBikeZoneMax)
+
+        assertEquals(Pair(324, 405), dataStore.calculateProportionalPowerDefaults(0))
+
+        // Mutate then resetToDefaults and verify snapshot matches centralized defaults
+        dataStore.saveCalculatedPowerZones(350, listOf(190, 260, 315, 368, 420, 525))
+        dataStore.resetToDefaults(ZoneType.PWR_BIKE)
+        dataStore.resetToDefaults(ZoneType.HR_RUN)
+        dataStore.resetToDefaults(ZoneType.HR_BIKE)
+        advanceUntilIdle()
+
+        val snapshot = dataStore.snapshotFlow.first { it.pwrBikeZoneMax == SettingsDataStore.DEFAULT_PWR_BIKE_ZONES }
+        assertEquals(SettingsDataStore.DEFAULT_HR_RUN_ZONES, snapshot.hrRunZoneMax)
+        assertEquals(SettingsDataStore.DEFAULT_HR_BIKE_ZONES, snapshot.hrBikeZoneMax)
+        assertEquals(SettingsDataStore.DEFAULT_PWR_BIKE_ZONES, snapshot.pwrBikeZoneMax)
+    }
 }

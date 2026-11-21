@@ -122,6 +122,8 @@ class KinematicAltitudeSlopeEkf(
     private var lastBaroDeltaM: Double = 0.0
     private var hasPrevBaroDelta: Boolean = false
     private var lastBaroResidualM: Double = Double.NaN
+    private var twoStateBaroOffsetM: Double = 0.0
+    private var pendingTwoStateResumeAnchor: Boolean = false
 
     // Covariance elements
     @Volatile var p00: Double = 1.0 // var(h)
@@ -160,7 +162,57 @@ class KinematicAltitudeSlopeEkf(
         lastBaroDeltaM = 0.0
         hasPrevBaroDelta = false
         lastBaroResidualM = Double.NaN
+        twoStateBaroOffsetM = 0.0
+        pendingTwoStateResumeAnchor = false
         isInitialized = false
+    }
+
+    /**
+     * Silently re-anchors the live EKF to [lastAltitudeM] upon mid-workout crash/service resume
+     * (`REQ-STB-025.3`). Explicitly marks [isInitialized] `true` with well-posed covariances and
+     * absorbs any ISA pressure offset into [baroBias] (3-State) or [twoStateBaroOffsetM] (2-State)
+     * whether invoked before or after the first barometer sample.
+     */
+    @Synchronized
+    fun reanchorOnResume(lastAltitudeM: Double) {
+        if (!lastAltitudeM.isFinite() || lastAltitudeM <= -500.0 || lastAltitudeM >= 9000.0) return
+        altitude = lastAltitudeM
+        slope = 0.0
+        p01 = 0.0
+        p10 = 0.0
+        p11 = 0.01
+        p02 = 0.0
+        p20 = 0.0
+        p12 = 0.0
+        p21 = 0.0
+        if (is3StateMode) {
+            p00 = DEFAULT_VAR_DEM
+            p22 = 100.0
+            hasReferenceAnchor = true
+            lastRefAltM = lastAltitudeM
+            if (hasBarometerSample && lastBaroAltM.isFinite()) {
+                baroBias = lastBaroAltM - lastAltitudeM
+                lastRefBaroAltM = lastBaroAltM
+                resetJitterTracker(lastBaroAltM)
+            } else {
+                baroBias = 0.0
+                lastRefBaroAltM = Double.NaN
+            }
+            twoStateBaroOffsetM = 0.0
+            pendingTwoStateResumeAnchor = false
+        } else {
+            p00 = rBaro
+            p22 = 100.0
+            if (hasBarometerSample && lastBaroAltM.isFinite()) {
+                twoStateBaroOffsetM = lastBaroAltM - lastAltitudeM
+                pendingTwoStateResumeAnchor = false
+                resetJitterTracker(lastBaroAltM)
+            } else {
+                twoStateBaroOffsetM = 0.0
+                pendingTwoStateResumeAnchor = true
+            }
+        }
+        isInitialized = true
     }
 
     @Synchronized
@@ -173,6 +225,8 @@ class KinematicAltitudeSlopeEkf(
         adaptiveBaroJitterVar = 0.0
         hasPrevBaroDelta = false
         lastBaroResidualM = Double.NaN
+        twoStateBaroOffsetM = 0.0
+        pendingTwoStateResumeAnchor = false
         if (threeState) {
             baroBias = 0.0
             if (isInitialized) {
@@ -292,6 +346,15 @@ class KinematicAltitudeSlopeEkf(
             return
         }
 
+        if (!is3StateMode && pendingTwoStateResumeAnchor && !hasBarometerSample) {
+            twoStateBaroOffsetM = baroAltM - altitude
+            pendingTwoStateResumeAnchor = false
+            hasBarometerSample = true
+            lastBaroAltM = baroAltM
+            resetJitterTracker(baroAltM)
+            return
+        }
+
         if (is3StateMode && hasReferenceAnchor && !hasBarometerSample) {
             // Ref-before-Baro: absorb initial weather-pressure offset into baroBias without pulling altitude
             // and seed step-gating baro reference so the first post-anchor DEM update computes true deltaBaro (REQ-FIL-037.2)
@@ -324,7 +387,7 @@ class KinematicAltitudeSlopeEkf(
         }
 
         val gainScale = lowSpeedSlopeGainFactor(max(0.0, speedMps))
-        val rawResidual = if (!is3StateMode) baroAltM - altitude else baroAltM - (altitude + baroBias)
+        val rawResidual = if (!is3StateMode) (baroAltM - twoStateBaroOffsetM) - altitude else baroAltM - (altitude + baroBias)
         val effectiveVarBaro = varBaro + updateAdaptiveJitterVariance(baroAltM, rawResidual)
 
         if (!is3StateMode) {

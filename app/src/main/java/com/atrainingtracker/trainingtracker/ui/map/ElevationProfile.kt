@@ -772,71 +772,43 @@ fun ElevationProfile(
 
                 val startClearanceThreshold = if (isZoomedOrSliced) startLabelWidth + minSpacingPx else minSpacingPx
                 val endClearanceThreshold = width - endLabelWidth - minSpacingPx
-                var lastDrawnRightX = if (currentZoomScale > 1.01f) startLabelWidth else if (isZoomedOrSliced) startLabelWidth else -1f
-
-                if (isTimeDomain) {
-                    val adaptiveTimeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
-                    var currentT = (ceil(currentStartDist / adaptiveTimeStep) * adaptiveTimeStep)
-                    if (currentT <= currentStartDist) {
-                        currentT += adaptiveTimeStep
-                    }
-                    while (currentT < currentStartDist + visibleSpan) {
-                        val x = ElevationProfileZoomMath.distanceToCanvasX(currentT, currentStartDist, visibleSpan, width)
-                        val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
-                        val lWidth = textPaint.measureText(label)
-                        val labelLeft = x - (lWidth / 2f)
-                        val labelRight = x + (lWidth / 2f)
-                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
-                                labelLeft = labelLeft,
-                                labelRight = labelRight,
-                                lastDrawnRightX = lastDrawnRightX,
-                                startClearanceThreshold = startClearanceThreshold,
-                                endClearanceThreshold = endClearanceThreshold,
-                                minSpacing = minSpacingPx
-                            )
-                        ) {
-                            canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
-                            lastDrawnRightX = labelRight
-                        }
-                        currentT += adaptiveTimeStep
-                    }
+                val initialLastDrawnRightX = if (isZoomedOrSliced) startLabelWidth else -1f
+                val xAxisStep = if (isTimeDomain) {
+                    ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
                 } else {
-                    val adaptiveDistStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(visibleSpan, unit).toDouble()
-                    var currentD = (ceil(currentStartDist / adaptiveDistStep) * adaptiveDistStep)
-                    if (currentD <= currentStartDist) {
-                        currentD += adaptiveDistStep
-                    }
-                    while (currentD < currentStartDist + visibleSpan) {
-                        val x = ElevationProfileZoomMath.distanceToCanvasX(currentD, currentStartDist, visibleSpan, width)
-                        val label = if (unit == MyUnits.METRIC) {
-                            if (visibleSpan < 1500) "${currentD.toInt()}m"
-                            else if (currentD % 1000.0 != 0.0) String.format(currentLocale, "%.1f", currentD / 1000.0)
-                            else "${(currentD / 1000.0).toInt()}"
-                        } else {
-                            val miles = currentD / BANALService.METER_PER_MILE
-                            if (miles % 1.0 != 0.0) String.format(currentLocale, "%.1f", miles)
-                            else "${miles.toInt()}"
-                        }
-                        val lWidth = textPaint.measureText(label)
-                        val labelLeft = x - (lWidth / 2f)
-                        val labelRight = x + (lWidth / 2f)
-                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
-                                labelLeft = labelLeft,
-                                labelRight = labelRight,
-                                lastDrawnRightX = lastDrawnRightX,
-                                startClearanceThreshold = startClearanceThreshold,
-                                endClearanceThreshold = endClearanceThreshold,
-                                minSpacing = minSpacingPx
-                            )
-                        ) {
-                            canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
-                            lastDrawnRightX = labelRight
-                        }
-                        currentD += adaptiveDistStep
-                    }
+                    ElevationProfileZoomMath.calculateAdaptiveDistanceStep(visibleSpan, unit).toDouble()
                 }
+                drawXAxisTicks(
+                    startValue = currentStartDist,
+                    visibleSpan = visibleSpan,
+                    step = xAxisStep,
+                    plotStartX = 0f,
+                    plotWidth = width,
+                    paint = textPaint,
+                    labelY = height + 45f,
+                    initialLastDrawnRightX = initialLastDrawnRightX,
+                    formatLabel = { value ->
+                        if (isTimeDomain) {
+                            ElevationProfileZoomMath.formatTimeTick(value.toLong())
+                        } else {
+                            formatElevationDistanceTickLabel(value, visibleSpan, unit, currentLocale)
+                        }
+                    },
+                    shouldRenderLabel = { labelLeft, labelRight, lastDrawnRightX ->
+                        ElevationProfileZoomMath.shouldRenderTickLabel(
+                            labelLeft = labelLeft,
+                            labelRight = labelRight,
+                            lastDrawnRightX = lastDrawnRightX,
+                            startClearanceThreshold = startClearanceThreshold,
+                            endClearanceThreshold = endClearanceThreshold,
+                            minSpacing = minSpacingPx
+                        )
+                    },
+                    onLabelRendered = { x, label, labelLeft, labelY ->
+                        canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
+                        canvas.nativeCanvas.drawText(label, labelLeft, labelY, textPaint)
+                    }
+                )
 
                 var currentA = (ceil(cachedData.minAlt / cachedData.altStep) * cachedData.altStep).toFloat()
                 var lastY = -1000f
@@ -1097,40 +1069,19 @@ fun ElevationProfile(
                         val ratio = ((alt - cachedData.minAlt) / valRange).coerceIn(0.0, 1.0)
                         return ((1.0 - ratio) * chartHeightPx).toFloat()
                     }
-                    val maxBinPct = altitudeHistogram.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
-
-                    for (bin in altitudeHistogram) {
-                        // Rule 70: Domain boundary filtering & clamping
-                        if (bin.rangeMax <= cachedData.minAlt || bin.rangeMin >= cachedData.maxAlt) continue
-                        val clampedMin = maxOf(cachedData.minAlt, bin.rangeMin)
-                        val clampedMax = minOf(cachedData.maxAlt, bin.rangeMax)
-                        if (clampedMin >= clampedMax) continue
-
-                        val yTop = valueToY(clampedMax)
-                        val yBottom = valueToY(clampedMin)
-                        val rectTop = minOf(yTop, yBottom)
-                        val rectHeight = abs(yTop - yBottom)
-                        if (rectHeight <= 0f) continue
-
-                        // Rule 69: Unconditional background track
-                        drawRect(
-                            color = bin.color.copy(alpha = 0.15f),
-                            topLeft = Offset(stripStartPx, rectTop),
-                            size = Size(stripWidthPx, rectHeight)
-                        )
-
-                        // Foreground bar
-                        if (bin.durationSec > 0L) {
-                            val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
-                            if (barWidthPx > 0f) {
-                                drawRect(
-                                    color = bin.color,
-                                    topLeft = Offset(stripStartPx, rectTop),
-                                    size = Size(barWidthPx, rectHeight)
-                                )
-                            }
-                        }
-                    }
+                    drawMarginalHistogramBars(
+                        bins = altitudeHistogram,
+                        dataMin = cachedData.minAlt,
+                        dataMax = cachedData.maxAlt,
+                        stripStartPx = stripStartPx,
+                        stripWidthPx = stripWidthPx,
+                        valueToY = ::valueToY,
+                        rangeMinOf = { it.rangeMin },
+                        rangeMaxOf = { it.rangeMax },
+                        durationSecOf = { it.durationSec },
+                        percentageOf = { it.percentage },
+                        colorOf = { it.color }
+                    )
                 }
             }
         }

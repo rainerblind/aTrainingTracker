@@ -19,4 +19,6 @@
 
 <full-backup-content>
     <exclude domain="sharedpref" path="auth_credentials_prefs.xml" />
+    <exclude domain="file" path="debug_heap" />
+    <exclude domain="file" path="debug_hprof" />
 </full-backup-content>

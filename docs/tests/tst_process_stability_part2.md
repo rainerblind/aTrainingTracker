@@ -1,14 +1,16 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.41  
+**Version**: 1.0.49  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 93
+**Total Tests**: 97
+
+**Total Tests**: 94
 
 ---
 
@@ -1608,6 +1610,75 @@
   5. *Instrumented Click-Through & Local `emulator-5554` Smoke Execution (`TST-PRO-135.5`, `app/src/androidTest/` & `tools/run_multi_os_emulator_sweep.py`)*:
      • *Given* `MultiLocaleUiSweepAndroidTest.kt` and a booted local `emulator-5554` AVD (`REQ-TST-004`, never physical `66020DLCR002FL`), *When* `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest` and a targeted smoke run of `run_multi_os_emulator_sweep.py` with `--apk` and `--test-apk` execute against `emulator-5554`, *Then* `am instrument` passes with `OK (`, `uiautomator dump` confirms target app package UI (not launcher), and captured PNG screenshot renders active App UI. Tag with `TST-PRO-135.5`.
 
+### TST-STB-022: **Headless Debug Heap Watchdog, Backup Exclusions & Device Hygiene Verification Suite (ATT-9352)** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration / Review
+- **Requirement(s)**: `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`)
+- **Component**: `DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `BackupRulesXmlValidationTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `tools/verify_skills.py`, `tools/test_agent_emulator.py`
+- **Jira**: `ATT-9352`
+- **Test Description**:
+  1. *Release-Build Zero-Overhead No-Op & Headless Guard (`TST-STB-022.1`, `DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`)*:
+     • *Given* `isDebug = false` (`BuildConfig.DEBUG == false`), *When* `DebugHeapWatchdog` start/tick/stop methods or `TrackerService` watchdog hooks execute, *Then* zero background executors are allocated, zero files or directories (`debug_heap`/`debug_hprof`) are created, zero notifications/UI/strings are emitted, and `TrackerService.java <= 3,559` LoC holds (`ArchitectureConformanceContractTest`). Tag with `TST-STB-022.1`.
+  2. *Periodic 30 s CSV Telemetry & Latest-20 Pruning (`TST-STB-022.2`, `DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`)*:
+     • *Given* `isDebug = true` and simulated ticks across `30 s` intervals (plus deferred `mBaseFileName` on `RESUME_SERVICE_RECREATION`), *When* `DebugHeapWatchdog` runs on its background executor, *Then* `files/debug_heap/<fileBaseName>.heap.csv` appends header + `timestamp,elapsedSec,javaUsedMb,javaMaxMb,javaPct,nativeAllocatedMb,activeSensorCount` rows every `30 s` cleanly off UI/`mDbExecutor` threads, and creating `21+` `.heap.csv` files auto-prunes oldest logs to `<= 20`. Tag with `TST-STB-022.2`.
+  3. *One-Shot `.hprof` Capture, Consecutive-Check Debounce, Disk Guard, Exception Shielding & Latest-2 Pruning (`TST-STB-022.3`, `DebugHeapWatchdogTest.kt`)*:
+     • *Given* injected memory/disk/dumper doubles under: (a) transient single `>= 70%` spike, (b) `2` consecutive `>= 70%` checks with `>= 1 GB` free space, (c) additional high-water checks in the same session or after `RESUME_SERVICE_RECREATION` with an existing `<fileBaseName>_*.hprof`, (d) `< 1 GB` free space, (e) dumper throwing `RuntimeException` / `OutOfMemoryError`, and (f) `> 2` `.hprof` files in `files/debug_hprof/`, *When* evaluated, *Then* transient spikes do NOT dump, sustained checks dump exactly `1` `<fileBaseName>_<usedMb>MB.hprof`, restarts do not re-dump, low disk skips safely, `Throwable` is caught without crashing tracking, and `files/debug_hprof/` retains at most `2` newest `.hprof` files. Tag with `TST-STB-022.3`.
+  4. *Backup Exclusion XMLs, Agent Hygiene Rules & Emulator Live Smoke (`TST-STB-022.4`, `BackupRulesXmlValidationTest.kt`, `tools/verify_skills.py`, `tools/test_*.py`, `emulator-5554`)*:
+     • *Given* `data_extraction_rules.xml`, `full_backup_content.xml`, `.agents/rules/aspice_governance.md`, and `.agents/skills/sprint-planner/SKILL.md`, *When* `BackupRulesXmlValidationTest`, `verify_skills.py`, `test_agent_emulator.py`, `test_jira_accounts.py`, and a live `emulator-5554` tracking smoke check execute, *Then* both backup XMLs exclude `debug_heap` and `debug_hprof` (preserving `auth_credentials_prefs.xml`), rules/skills document Pixel 10 inspect/Bug-file/delete hygiene, and `emulator-5554` creates `<fileBaseName>.heap.csv` cleanly (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-022.4`.
+
+### TST-STB-023: **Dual Polar Live-IMU & ATT Fused Bounded-Heap / Drop-Oldest Backpressure Suite (`ATT-9343`)** [Verified]
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-STB-023` (`REQ-STB-023.1`–`REQ-STB-023.5`)
+- **Component**: `SpeedAndLocationDevice_ATTFused.kt`, `UnicycleOdometryEkf.kt`, `PolarOfflineGattCoordinator.kt`, `PolarPmdStreamCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarRawTelemetryRecorder.kt`, `RawTelemetryRow.kt`, `UnicycleOdometryEkfTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarRawTelemetryRecorderTest.kt`, `PolarPmdStreamCoordinatorTest.kt`, `PolarDualImuBoundedHeapStressTest.kt`
+- **Jira**: `ATT-9343`
+- **Test Description**:
+  1. *Zero Live EKF Snapshot Leak, Bounded `UnicycleOdometryEkf` Ring & Throttled `setLastActive()` (`TST-STB-023.1`, `UnicycleOdometryEkfTest`, `SpeedAndLocationDevice_ATTFusedTest`)*:
+     • *Given* `SpeedAndLocationDevice_ATTFused` receiving `60 min` of `50 Hz` gyro + `1 Hz` GNSS updates (`180,000` predicts) and a standalone `UnicycleOdometryEkf(recordSnapshots = true)` receiving `> 4,096` predicts, *When* executed, *Then* `device.ekf.getSnapshots()` remains empty (`0`), `setLastActive()` DB updates are throttled to `>= 5,000 ms`, and the snapshot-recording EKF caps `getSnapshots().size` at `MAX_SNAPSHOTS` (`4096`) retaining newest entries while preserving `@JvmOverloads` & small-run snapshot tests. Tag with `TST-STB-023.1`.
+  2. *Polar SDK `BleLogger` Hex Churn Elimination (`TST-STB-023.2`, `PolarOfflineGattCoordinatorCoexistenceTest`)*:
+     • *Given* `PolarOfflineGattCoordinator.acquirePolarApi()` creating a new shared `PolarBleApi` singleton, *When* acquired, *Then* `BleLogger.setLoggerInterface(null)` is invoked once per newly created singleton (preventing `BleLogger.d_hex` hex serialization & mutex contention) while preserving ref-counting and `ATT-9175` offline yield. Tag with `TST-STB-023.2`.
+  3. *`DROP_OLDEST` Backpressure, `onUndeliveredElement` Drop Accounting, Zero-`String.format` CSV & Scope Teardown (`TST-STB-023.3`, `PolarRawTelemetryRecorderTest`, `PolarPmdStreamCoordinatorTest`)*:
+     • *Given* `PolarRawTelemetryRecorder` receiving `> 8,192` rows while drain is stalled and `PolarPmdStreamCoordinator` under slow downstream collection (`> 64` bursts), *When* executed, *Then* `DROP_OLDEST` retains newest frames, `getDroppedFrameCount()` matches exact evicted count via `onUndeliveredElement`, `RawTelemetryRow.appendCsvLine()` matches `toCsvLine()` byte-for-byte across ACC/GYRO/HR/RR edge cases, `stop()` cancels the internal `CoroutineScope`, and `ATT-9161` recovery remains intact. Tag with `TST-STB-023.3`.
+  4. *60-Min Dual Polar Live-IMU Stress & Architecture Contracts (`TST-STB-023.4`, `PolarDualImuBoundedHeapStressTest`, `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`)*:
+     • *Given* `60 min` simulated dual Polar streaming (`200 Hz` H10 ACC + `52 Hz` Verity ACC/GYRO + `1 Hz` PPI + `PolarRawTelemetryRecorder` + `HrvRollingEngine`), *When* replayed end-to-end, *Then* retained estimator/HRV/recorder footprint stays strictly flat/bounded without OOM, `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC, `PolarOnlineStreamingBridge.kt <= 1,500` LoC, and `InterfaceSignatureDriftContractTest` passes (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-023.4`.
+
+### TST-STB-024: **PebbleService Unsupported-Host Teardown & PebbleView.db Connection Closure Verification Suite (ATT-9244)** [Verified]
+- **Requirement(s)**: `REQ-STB-024`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleServiceLifecycleTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/LifecycleServiceReceiverSafetyAuditTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/TryWithResourcesCursorAuditTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9244`
+- **Test Description**:
+  1. *Unsupported-Host Immediate Exit & Crash-Free `onDestroy()` (`TST-STB-024.1`, `PebbleServiceLifecycleTest.kt`)*:
+     • *Given* a Robolectric `PebbleService` instance where `PebbleKit.areAppMessagesSupported` returns `false`, *When* `onCreate()`, `onStartCommand(...)`, and `onDestroy()` execute, *Then* `stopSelf()` is triggered, `onStartCommand` returns `Service.START_NOT_STICKY`, `BANALService` is never bound, `mUpdatePebbleReceiver` / base / PebbleKit receivers are never registered, `PebbleView.db` is never opened, and `onDestroy()` completes without throwing `IllegalArgumentException` (including mid-session support loss inside `startPebbleWatchApp()`). Tag tests with `TST-STB-024.1`.
+  2. *Supported-Host Lifecycle, Singleton `updateSensorTypeList()`, `mRows` Parity & Teardown Reset (`TST-STB-024.2`, `PebbleServiceLifecycleTest.kt`)*:
+     • *Given* a Robolectric `PebbleService` instance where `PebbleKit.areAppMessagesSupported` returns `true` and `PebbleView.db` contains configured rows, *When* `onCreate()`, `onStartCommand(...)`, `updateSensorTypeList()`, `stopPebbleWatchApp()`, and `onDestroy()` execute, *Then* `onStartCommand` returns `Service.START_STICKY`, `mSensorTypeList` & `mRows` populate via `PebbleDatabaseManager.getSensorTypeList(mViewId)` without raw `PebbleDbHelper` leaks, `stopPebbleWatchApp()` resets `mReceiversRegistered = false` (and skips `closeAppOnPebble()` when unregistered), and `onDestroy()` unbinds, unregisters, and invokes `PebbleDatabaseManager.closeIfInitialized()`. Tag tests with `TST-STB-024.2`.
+  3. *`PebbleDatabaseManager` Clean Closure & Transparent Reopen (`TST-STB-024.3`, `PebbleDatabaseManagerTest.kt`)*:
+     • *Given* real Robolectric SQLite `PebbleView.db` initialized via `PebbleDatabaseManager.getInstance(context)`, *When* `close()` / `closeIfInitialized()` runs and subsequently `ConfigPebbleViews*` callers (`getName()`, `getSensorTypeList()`, `getFirstViewId()`) query the manager, *Then* open `SQLiteDatabase` handles are closed (`isOpen == false`), subsequent queries transparently reopen `PebbleView.db` via `isOpen()` check without `IllegalStateException`, and final `close()` leaves zero open handles. Tag tests with `TST-STB-024.3`.
+  4. *Architecture & Static Contract Parity (`TST-STB-024.4`, `LifecycleServiceReceiverSafetyAuditTest.kt`, `TryWithResourcesCursorAuditTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • *Given* `LifecycleServiceReceiverSafetyAuditTest`, `TryWithResourcesCursorAuditTest`, `ArchitectureConformanceContractTest`, and `verify_requirement_governance.py`, *When* executed, *Then* `0` unshielded `startService`/`unregisterReceiver` calls exist, `0` unclosed `Cursor` leaks exist in `smartwatch/pebble/`, `TrainingApplication.java` remains `<= 2,135` LoC, `Localization Parity: N/A - no UI strings`, and governance exits `0`. Tag tests with `TST-STB-024.4`.
+
+
+### TST-STB-025: **Mid-Workout Crash-Recovery Lap Continuity, Polar Raw `.tmp` Salvage, and Barometer Reset ERTS Resilience Suite (`ATT-9344`)** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Requirement(s)**: `REQ-STB-025` (`REQ-STB-025.1`–`REQ-STB-025.4`)
+- **Component**: `MyAccumulatorSensor.java`, `WorkoutRepository.kt`, `TrackerService.java`, `BANALService.java`, `PolarRawSidecarRecovery.kt`, `PolarRawTelemetryRecorder.kt`, `RawSensorFileExporter.kt`, `AltitudeFromPressureDevice.java`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkf.kt`, `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `MyAccumulatorSensorTest.kt`, `TrackerServiceCrashRecoveryCharacterisationTest.kt`, `PolarRawTelemetryRecorderTest.kt`, `RawSensorFileExporterTest.kt`, `AltitudeFromPressureDeviceTest.kt`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`, `ErtsPostWorkoutRecomputerTest.kt`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`
+- **Jira**: `ATT-9344`
+- **Test Description**:
+  1. *Seamless `LAP_NR` Continuity Across Crash & User Resume (`TST-STB-025.1`, `MyAccumulatorSensorTest`, `TrackerServiceCrashRecoveryCharacterisationTest`)*:
+     • *Given* `MyIntegerAccumulatorSensor(SensorType.LAP_NR, zeroValue = 1)` and `TrackerService.applyResumedState()` for both `RESUME_SERVICE_RECREATION` and `RESUME_BY_USER`, *When* restored with `lapNr = 1`, `lapNr = 3`, or clamped `lapNr = 0`, *Then* `getValue()` equals exact `1`/`3`/`1` (never `2`/`4`), subsequent `newLap()` increments to `2`/`4`, `reset()` returns `1`, and `zeroValue == 0` accumulators remain unchanged. Tag with `TST-STB-025.1`.
+  2. *Truncated `.polar_raw.csv.gz.tmp` Salvage, Resume & Export Fallback (`TST-STB-025.2`, `PolarRawTelemetryRecorderTest`, `RawSensorFileExporterTest`)*:
+     • *Given* a crash-truncated `.polar_raw.csv.gz.tmp` (chopped mid-deflate stream with incomplete final line), *When* `resumeOrStartActiveSession()` salvages pre-crash rows, appends post-crash rows, and `stop()` runs (or `RawSensorFileExporter.doExport()` encounters an abandoned `.tmp`), *Then* a valid `.polar_raw.csv.gz` is produced containing preserved `# metadata:` + all complete pre-crash rows + post-crash rows (partial trailing line dropped via `RawTelemetryRow.fromCsvLine`) readable by `PolarRawTelemetryReader`, and corrupt/empty `.tmp` leaves zero orphans. Tag with `TST-STB-025.2`.
+  3. *Silent Live Barometer Re-Anchoring on Resume (`TST-STB-025.3`, `AltitudeFromPressureDeviceTest`, `AltitudeAndSlopeDevice_ATTFusedTest`)*:
+     • *Given* restarted `AltitudeFromPressureDevice` (both before and after first `TYPE_PRESSURE` event) and `AltitudeAndSlopeDevice_ATTFused` re-anchored via `lastAltitudeM = 430.6 m` while raw ISA pressure reads `450.8 m`, *When* pressure arrives, *Then* both publish `~430.6 m` without `+20.2 m` step, zero `ALTITUDE_CORRECTION_INTENT` broadcast is emitted, and ascent/descent accumulators do not jump. Tag with `TST-STB-025.3`.
+  4. *Pre-Slew Sustained Barometer Step Detection, ERTS Re-Anchor & LoC Contracts (`TST-STB-025.4`, `ErtsPostWorkoutRecomputerTest`, `ExtendedRtsAltitudeSlopeSmootherTest`, `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`)*:
+     • *Given* a raw barometer series containing a sustained `+20.2 m` reset step at `t = 920` (across a `4 s` restart gap), *When* `ErtsPostWorkoutRecomputer.resolveCarriageModesAndFilterBaro()` and `ExtendedRtsAltitudeSlopeSmoother.smooth()` execute, *Then* `|slopePercent| < 5%` across `t = 915..945` (zero `+35%` spike), transient 2-sample `+25 m` pocket spikes stay rejected (`REQ-TRK-057.1`), genuine `10%` climbs remain unattenuated (`REQ-FIL-033.2`), and `TrackerService.java <= 3,559` LoC & `WorkoutRepository.kt <= 5,117` LoC hold (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-025.4`.
+
 ---
 
 ## Change History
@@ -1656,3 +1727,11 @@
 | `1.0.39` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Promoted `TST-PRO-132` to `[Verified]` in Stage 5 with verbatim test evidence (`ATT-9179_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9342` @ `10bde5ec`, `24/24 PASS` across 5 suites). |
 | `1.0.40` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Set `TST-PRO-135` (`TST-PRO-135.1`, `.2`, `.5`) to `[Planned]` for `ATT-9319`: added `--test-apk`, fail-closed `adb install` / `am instrument` / launcher & empty XML / missing PNG assertions, API < 33 `adb root` + `uid=0` + `persist.sys.locale` tests, and `emulator-5554` smoke verification. |
 | `1.0.41` | 2026-11-20 | Lane C Flash (`ATT-9319`, `--as agent1`) | `ATT-9319` | Promoted `TST-PRO-135` to `[Verified]` in Stage 5 (`ATT-9319_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9369` @ `06623b57`): `TestMultiOsEmulatorSweep` `4/4` OK (`test_tst_pro_135_1_serial_multi_os_and_9_locale_sweep_and_cleanup_on_failure`, `test_tst_pro_135_1_api31_locale_fallback_and_non_rootable_error`, `test_tst_pro_135_2_fail_closed_install_instrument_launcher_and_screencap`, `test_tst_pro_135_2_physical_device_refusal_and_logcat_and_bounds_defects`), `530/530` `tools/test_*.py` OK, live `Pixel_5_Android_12` smoke verified. |
+| `1.0.42` | 2026-11-20 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Added `[Planned]` `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`: release no-op & headless guard, 30 s CSV + 20-file prune, one-shot `>= 70%` 2-sample `.hprof` + `>= 1 GB` disk + `Throwable` isolation + 2-file prune, backup XML exclusions, rules/skills hygiene & `emulator-5554` smoke). |
+| `1.0.43` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` to `[Implemented]` in Stage 4 (`DebugHeapWatchdogTest.kt`, `TrackerServiceHeapWatchdogTest.kt`, `BackupRulesXmlValidationTest.kt`, `tools/test_agent_emulator.py`). |
+| `1.0.44` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9402` @ `7feb5c06`): `41/41` targeted Gradle tests across 7 suites (`DebugHeapWatchdogTest` `7/7`, `TrackerServiceHeapWatchdogTest` `2/2`, `TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
+| `1.0.45` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Stage 6 Bounce 1/3 heal: added `DebugHeapWatchdogTest.onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds` (`TST-STB-022.2`); reset `TST-STB-022` to `[Implemented]` pending Stage 5 re-verification. |
+| `1.0.46` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 Bounce 1 `ATT-9404` @ `c4035319`): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
+| `1.0.47` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `TST-STB-023` (`TST-STB-023.1`–`TST-STB-023.4`, `141/141` PASS across 11 suites incl. `PolarDualImuBoundedHeapStressTest` @ `344ad639`, Stage 6 PASS). |
+| `1.0.48` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `TST-STB-024` (`TST-STB-024.1`–`TST-STB-024.4`, `PebbleServiceLifecycleTest` + `PebbleDatabaseManagerTest`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |
+| `1.0.49` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Added and verified `TST-STB-025` (`TST-STB-025.1`–`TST-STB-025.4`, `130/130` PASS across 18 suites @ `a98d0157`, live `am crash` recovery verified on `emulator-5554`, Stage 6 PASS). |

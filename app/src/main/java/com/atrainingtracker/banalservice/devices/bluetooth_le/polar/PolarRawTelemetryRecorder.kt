@@ -22,6 +22,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
@@ -33,6 +34,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -55,16 +58,18 @@ import java.util.zip.GZIPOutputStream
  * bounded [Channel] of capacity 8192 drained on [Dispatchers.IO]. BLE GATT event loops
  * are strictly never blocked. Discards empty or aborted recording sessions leaving zero orphan files.
  */
-class PolarRawTelemetryRecorder(
+class PolarRawTelemetryRecorder @JvmOverloads constructor(
     private val context: Context,
     val fileBaseName: String,
     val sessionStartTimeMs: Long,
-    var metadata: PolarRawMetadata = PolarRawMetadata()
+    var metadata: PolarRawMetadata = PolarRawMetadata(),
+    private val resumeExisting: Boolean = false
 ) : PolarOnlineStreamingBridge.ImuFrameListener, RrBeatListener {
 
     private val isRunning = AtomicBoolean(false)
     private val isClosed = AtomicBoolean(false)
     private val rowCount = AtomicLong(0)
+    private val droppedFrameCount = AtomicLong(0)
 
     private val firstAccNs = AtomicLong(-1L)
     private val accBaseElapsedMs = AtomicLong(0L)
@@ -78,7 +83,11 @@ class PolarRawTelemetryRecorder(
     private val firstRrNs = AtomicLong(-1L)
     private val rrBaseElapsedMs = AtomicLong(0L)
 
-    private val channel = Channel<RawTelemetryRow>(capacity = CHANNEL_CAPACITY)
+    private val channel = Channel<RawTelemetryRow>(
+        capacity = CHANNEL_CAPACITY,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        onUndeliveredElement = { droppedFrameCount.incrementAndGet() }
+    )
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var writeJob: Job? = null
 
@@ -104,6 +113,11 @@ class PolarRawTelemetryRecorder(
                 if (!dir.exists()) {
                     dir.mkdirs()
                 }
+                val salvageFile = if (resumeExisting) {
+                    PolarRawSidecarRecovery.prepareSalvageSource(tempFile, targetFile)
+                } else {
+                    null
+                }
                 if (tempFile.exists()) {
                     tempFile.delete()
                 }
@@ -112,16 +126,28 @@ class PolarRawTelemetryRecorder(
                 val gzipOut = GZIPOutputStream(fos)
                 writer = BufferedWriter(OutputStreamWriter(gzipOut, StandardCharsets.UTF_8))
 
-                // Write self-describing metadata header
-                writer.write("# metadata: ${metadata.toJsonString()}")
-                writer.newLine()
-                // Write CSV column header
-                writer.write(RawTelemetryRow.CSV_HEADER)
-                writer.newLine()
+                if (salvageFile != null) {
+                    val salvageResult = PolarRawSidecarRecovery.salvageIntoWriter(salvageFile, writer, metadata)
+                    metadata = salvageResult.metadata
+                    if (salvageResult.salvagedRowCount > 0L) {
+                        rowCount.addAndGet(salvageResult.salvagedRowCount)
+                        Log.i(TAG, "Salvaged ${salvageResult.salvagedRowCount} pre-crash rows for $fileBaseName")
+                    }
+                } else {
+                    // Write self-describing metadata header
+                    writer.write("# metadata: ${metadata.toJsonString()}")
+                    writer.newLine()
+                    // Write CSV column header
+                    writer.write(RawTelemetryRow.CSV_HEADER)
+                    writer.newLine()
+                }
 
-                // Drain channel loop
+                // Drain channel loop reusing a single line buffer (zero per-row String.format churn, REQ-STB-023.4)
+                val lineBuffer = StringBuilder(LINE_BUFFER_CAPACITY)
                 for (row in channel) {
-                    writer.write(row.toCsvLine())
+                    lineBuffer.setLength(0)
+                    row.appendCsvLine(lineBuffer)
+                    writer.append(lineBuffer)
                     writer.newLine()
                     rowCount.incrementAndGet()
                 }
@@ -154,7 +180,8 @@ class PolarRawTelemetryRecorder(
                     targetFile.delete()
                 }
                 val renamed = tempFile.renameTo(targetFile)
-                Log.i(TAG, "Finalized raw telemetry sidecar $targetFile with $count frames (renamed=$renamed)")
+                val dropped = droppedFrameCount.get()
+                Log.i(TAG, "Finalized raw telemetry sidecar $targetFile with $count frames (dropped=$dropped, renamed=$renamed)")
             }
         }
     }
@@ -281,25 +308,44 @@ class PolarRawTelemetryRecorder(
     }
 
     /**
-     * Closes the recorder, drains the channel buffer, and flushes output to disk.
+     * Closes the recorder, drains the channel buffer, flushes output to disk, and cancels the
+     * private coroutine scope (`REQ-STB-023.4`).
      */
     @Synchronized
     fun stop(timeoutMs: Long = DEFAULT_TIMEOUT_MS) {
         if (isClosed.getAndSet(true)) return
         channel.close()
-        runBlocking {
-            withTimeoutOrNull(timeoutMs) {
-                writeJob?.join()
+        try {
+            runBlocking {
+                withTimeoutOrNull(timeoutMs) {
+                    writeJob?.join()
+                }
             }
+        } finally {
+            scope.cancel()
+            isRunning.set(false)
         }
-        isRunning.set(false)
     }
 
     fun getRecordedRowCount(): Long = rowCount.get()
 
+    /**
+     * Returns total rows evicted under [BufferOverflow.DROP_OLDEST] backpressure (`REQ-STB-023.3`).
+     */
+    fun getDroppedFrameCount(): Long = droppedFrameCount.get()
+
+    @VisibleForTesting
+    internal fun isScopeActiveForTesting(): Boolean = scope.coroutineContext[Job]?.isActive == true
+
+    @VisibleForTesting
+    internal fun enqueueRowForBackpressureTest(row: RawTelemetryRow) {
+        channel.trySend(row)
+    }
+
     companion object {
         private const val TAG = "PolarRawTelemetryRec"
         const val CHANNEL_CAPACITY = 8192
+        private const val LINE_BUFFER_CAPACITY = 128
         const val NS_PER_MS = 1_000_000L
         const val EPOCH_THRESHOLD_NS = 1_000_000_000_000_000_000L
         const val DEFAULT_TIMEOUT_MS = 5000L
@@ -360,6 +406,49 @@ class PolarRawTelemetryRecorder(
             return recorder
         }
 
+        /**
+         * Resumes an active raw telemetry session across service recreation or user resume,
+         * preserving an already-active recorder for [fileBaseName] or salvaging any existing
+         * `.polar_raw.csv.gz.tmp` / prior archive into the continued stream (`REQ-STB-025.2`).
+         */
+        @JvmStatic
+        @Synchronized
+        fun resumeOrStartActiveSession(
+            context: Context,
+            fileBaseName: String,
+            startTimeMs: Long,
+            sportId: Int = 0
+        ): PolarRawTelemetryRecorder? {
+            if (fileBaseName.isBlank()) return null
+            val existing = activeRecorder
+            if (existing != null && existing.fileBaseName == fileBaseName) {
+                return existing
+            }
+            val policy = SettingsDataStoreJavaHelper.getRawSensorRetentionPolicy(context)
+            if (policy == RawSensorRetentionPolicy.OFF) {
+                Log.d(TAG, "Raw telemetry retention is OFF; skipping recorder resume")
+                return null
+            }
+            stopActiveSession()
+
+            val metadata = PolarRawMetadata(
+                streamMode = "LIVE",
+                sportId = sportId
+            )
+            val recorder = PolarRawTelemetryRecorder(
+                context = context,
+                fileBaseName = fileBaseName,
+                sessionStartTimeMs = startTimeMs,
+                metadata = metadata,
+                resumeExisting = true
+            )
+            recorder.start()
+            activeRecorder = recorder
+            PolarOnlineStreamingBridge.attachActiveRecorder(recorder)
+            Log.i(TAG, "Resumed active PolarRawTelemetryRecorder session for $fileBaseName")
+            return recorder
+        }
+
         @JvmStatic
         @Synchronized
         fun stopActiveSession() {
@@ -414,6 +503,7 @@ class PolarRawTelemetryRecorder(
                 writer.newLine()
 
                 var cumulativeMs = 0L
+                val lineBuffer = StringBuilder(LINE_BUFFER_CAPACITY)
                 for (rr in hrSamples) {
                     cumulativeMs += rr
                     val beatTsMs = startTimeMs + cumulativeMs
@@ -425,7 +515,9 @@ class PolarRawTelemetryRecorder(
                         hrBpm = bpm,
                         rrMs = rr.toDouble()
                     )
-                    writer.write(row.toCsvLine())
+                    lineBuffer.setLength(0)
+                    row.appendCsvLine(lineBuffer)
+                    writer.append(lineBuffer)
                     writer.newLine()
                 }
 

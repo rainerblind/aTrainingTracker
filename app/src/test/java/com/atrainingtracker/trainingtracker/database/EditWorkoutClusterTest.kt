@@ -39,7 +39,7 @@ import java.time.LocalDateTime
  * Unit tests verifying explicit workout cluster management (unassign, create new, assign)
  * in accordance with REQ-SET-059 and TST-SET-050 (ATT-318, ATT-666).
  */
-// Linked test specs: TST-SET-043, TST-SET-028
+// Linked test specs: TST-SET-043, TST-SET-028, TST-REV-018, TST-REV-018.2
 class EditWorkoutClusterTest {
 
     private lateinit var mockContext: Context
@@ -655,5 +655,123 @@ class EditWorkoutClusterTest {
         assertEquals(2, finalNew.hitCount)
         assertEquals(2L, finalNew.probableSportId)
         assertEquals(BSportType.BIKE, finalNew.bSportType)
+    }
+
+    /**
+     * TST-REV-018.2: moveWorkoutToCluster updates altitude extrema on both clusters,
+     * expands target bounds from getWorkoutBounds, and recalculates source bounds via recalculateClusterAnchors.
+     */
+    @Test
+    fun testMoveWorkoutToCluster_updatesAltitudeExtremaAndRecalculatesBounds() {
+        val workoutId = 109L
+        val oldClusterId = 30L
+        val newClusterId = 40L
+
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns LatLng(12.0, 12.0)
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns LatLng(12.1, 12.1)
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) } returns LatLng(12.2, 12.2)
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN) } returns LatLng(12.04, 12.04)
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX) } returns LatLng(12.18, 12.18)
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m) } returns 6000.0
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LAT) } returns 9.8
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG) } returns 9.8
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LAT) } returns 12.5
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG) } returns 12.6
+
+        val oldCluster = WorkoutCluster(
+            id = oldClusterId,
+            name = "Old Cluster",
+            probableSportId = 1L,
+            startLat = 11.0,
+            startLng = 11.0,
+            endLat = 11.1,
+            endLng = 11.1,
+            maxDispLat = 11.2,
+            maxDispLng = 11.2,
+            refDistance = 5500.0,
+            hitCount = 2,
+            bSportType = BSportType.RUN,
+            minLat = 9.5,
+            minLng = 9.5,
+            maxLat = 12.5,
+            maxLng = 12.6,
+            minAltLat = 11.02,
+            minAltLng = 11.02,
+            maxAltLat = 11.14,
+            maxAltLng = 11.14
+        )
+        val newCluster = WorkoutCluster(
+            id = newClusterId,
+            name = "New Cluster",
+            probableSportId = 1L,
+            startLat = 10.0,
+            startLng = 10.0,
+            endLat = 10.1,
+            endLng = 10.1,
+            maxDispLat = 10.2,
+            maxDispLng = 10.2,
+            refDistance = 5000.0,
+            hitCount = 1,
+            bSportType = BSportType.RUN,
+            minLat = 9.9,
+            minLng = 9.9,
+            maxLat = 10.3,
+            maxLng = 10.3,
+            minAltLat = 10.00,
+            minAltLng = 10.00,
+            maxAltLat = 10.10,
+            maxAltLng = 10.10
+        )
+
+        val clustersDbState = mutableMapOf(oldClusterId to oldCluster, newClusterId to newCluster)
+        every { mockClusterDb.getClusterById(any()) } answers { clustersDbState[firstArg()] }
+        every { mockClusterDb.updateCluster(any()) } answers {
+            val c = firstArg<WorkoutCluster>()
+            clustersDbState[c.id] = c
+        }
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) } returns oldClusterId
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE) } returns null
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME) } returns "Track 109"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "Track 109"
+        every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
+        every { mockSummariesManager.getMostFrequentSportIdForCluster(any()) } returns 1L
+        every { mockSportDb.getBSportType(1L) } returns BSportType.RUN
+
+        val portSpy = spyk(SummariesManagerClusterWorkoutDataPort(mockContext))
+        every { portSpy.forEachWorkoutBoundsForCluster(oldClusterId, any()) } answers {
+            val cb = secondArg<(WorkoutBoundsDto) -> Unit>()
+            cb(WorkoutBoundsDto(minLat = 10.0, minLng = 10.1, maxLat = 10.4, maxLng = 10.5))
+        }
+        ClusterWorkoutDataPortRegistry.setTestOverride(portSpy)
+        try {
+            clusterEngine.moveWorkoutToCluster(mockContext, workoutId, oldClusterId, newClusterId)
+        } finally {
+            ClusterWorkoutDataPortRegistry.setTestOverride(null)
+        }
+
+        val finalOld = clustersDbState[oldClusterId]!!
+        val finalNew = clustersDbState[newClusterId]!!
+
+        // Old cluster: altitude extrema reversed ((11.02*2 - 12.04)/1 = 10.00; (11.14*2 - 12.18)/1 = 10.10)
+        assertEquals(10.00, finalOld.minAltLat!!, 0.0001)
+        assertEquals(10.00, finalOld.minAltLng!!, 0.0001)
+        assertEquals(10.10, finalOld.maxAltLat!!, 0.0001)
+        assertEquals(10.10, finalOld.maxAltLng!!, 0.0001)
+        // Old cluster: spatial bounds shrunk via recalculateClusterAnchors to surviving workout's bounds
+        assertEquals(10.0, finalOld.minLat!!, 0.0001)
+        assertEquals(10.1, finalOld.minLng!!, 0.0001)
+        assertEquals(10.4, finalOld.maxLat!!, 0.0001)
+        assertEquals(10.5, finalOld.maxLng!!, 0.0001)
+
+        // New cluster: altitude extrema updated ((10.00*1 + 12.04)/2 = 11.02; (10.10*1 + 12.18)/2 = 11.14)
+        assertEquals(11.02, finalNew.minAltLat!!, 0.0001)
+        assertEquals(11.02, finalNew.minAltLng!!, 0.0001)
+        assertEquals(11.14, finalNew.maxAltLat!!, 0.0001)
+        assertEquals(11.14, finalNew.maxAltLng!!, 0.0001)
+        // New cluster: bounds expanded from getWorkoutBounds
+        assertEquals(9.8, finalNew.minLat!!, 0.0001)
+        assertEquals(9.8, finalNew.minLng!!, 0.0001)
+        assertEquals(12.5, finalNew.maxLat!!, 0.0001)
+        assertEquals(12.6, finalNew.maxLng!!, 0.0001)
     }
 }

@@ -389,6 +389,7 @@ object ErtsPostWorkoutRecomputer {
      */
     internal fun resolveCarriageModesAndFilterBaro(rows: List<RawSampleRow>): List<RawSampleRow> {
         if (rows.isEmpty()) return rows
+        val (compensatedBaro, resetStepIndices) = detectAndCompensateBaroResetSteps(rows)
         val baroFilter = BarometricAltitudeFilter()
         val n = rows.size
         val resolved = ArrayList<RawSampleRow>(n)
@@ -399,21 +400,97 @@ object ErtsPostWorkoutRecomputer {
             val epochSpeedMps = row.wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
                 ?: row.speedMps?.takeIf { it.isFinite() && it >= 0.0 }
                 ?: 0.0
+            val baroInput = compensatedBaro[i]
             val filteredAlt = when {
-                row.rawBaroAltitude != null -> {
+                baroInput != null -> {
                     baroFilter.setFilterParameters(mode.profile.baroMaxSlewRateMps, mode.profile.baroMedianWindowSize)
-                    baroFilter.filterSlewOnly(row.rawBaroAltitude, row.timestampMs, epochSpeedMps).takeIf { it.isFinite() }
+                    baroFilter.filterSlewOnly(baroInput, row.timestampMs, epochSpeedMps).takeIf { it.isFinite() }
                 }
                 else -> row.rawAltitude
             }
             resolved.add(
                 row.copy(
                     rawAltitude = filteredAlt,
-                    effectiveCarriageMode = mode
+                    effectiveCarriageMode = mode,
+                    baroResetStep = resetStepIndices.contains(i)
                 )
             )
         }
         return resolved
+    }
+
+    /**
+     * Detects sustained barometer reset/calibration steps (e.g., `+20.2 m` after mid-workout crash
+     * recovery) on raw un-slewed barometer readings BEFORE [BarometricAltitudeFilter.filterSlewOnly]
+     * can smear the step into a multi-second `+1.2 m/s` (`+35%` grade) ramp (`REQ-STB-025.4`).
+     *
+     * Distinguishes sustained steps (`>= 3` shifted post-step samples) from transient 1–2 sample
+     * pocket-compression pulses (`REQ-TRK-057.1`) and genuine alpine climbs (`REQ-FIL-033.2`).
+     */
+    internal fun detectAndCompensateBaroResetSteps(
+        rows: List<RawSampleRow>
+    ): Pair<List<Double?>, Set<Int>> {
+        val compensated = rows.map { it.rawBaroAltitude }.toMutableList()
+        val validIndices = rows.indices.filter { rows[it].rawBaroAltitude?.isFinite() == true }
+        if (validIndices.size < 4) {
+            return compensated to emptySet()
+        }
+
+        val resetIndices = mutableSetOf<Int>()
+        var cumulativeShift = 0.0
+
+        for (pos in 1 until validIndices.size) {
+            val prevIdx = validIndices[pos - 1]
+            val currIdx = validIndices[pos]
+            val prevRaw = rows[prevIdx].rawBaroAltitude!!
+            val currRaw = rows[currIdx].rawBaroAltitude!!
+
+            val dtSec = max(1.0, (rows[currIdx].timestampMs - rows[prevIdx].timestampMs) / 1000.0)
+            val vPrev = rows[prevIdx].wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                ?: rows[prevIdx].speedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                ?: 0.0
+            val vCurr = rows[currIdx].wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                ?: rows[currIdx].speedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                ?: 0.0
+            val refSpeed = max(max(vPrev, vCurr), 2.0)
+            val stepThresholdM = max(
+                ExtendedRtsAltitudeSlopeSmoother.BARO_RESET_STEP_MIN_M,
+                ExtendedRtsAltitudeSlopeSmoother.MAX_PHYSICAL_SLOPE * refSpeed * min(dtSec, 15.0) + 3.0
+            )
+
+            val jump = currRaw - prevRaw
+            if (abs(jump) >= stepThresholdM) {
+                val preStart = max(0, pos - 5)
+                val preVals = (preStart until pos).map { rows[validIndices[it]].rawBaroAltitude!! }.sorted()
+                val preMedian = (preVals[(preVals.size - 1) / 2] + preVals[preVals.size / 2]) / 2.0
+                val preStableCount = preVals.count { abs(it - preMedian) <= 0.5 * stepThresholdM }
+                val preBaselineStable = preStableCount >= min(3, preVals.size) &&
+                    abs(prevRaw - preMedian) <= 0.5 * stepThresholdM
+
+                val postEnd = min(validIndices.size, pos + 4)
+                if (preBaselineStable && postEnd - pos >= 3) {
+                    val postVals = (pos until postEnd).map { rows[validIndices[it]].rawBaroAltitude!! }
+                    val sortedPost = postVals.sorted()
+                    val postMedian = (sortedPost[(sortedPost.size - 1) / 2] + sortedPost[sortedPost.size / 2]) / 2.0
+                    val stepOffset = postMedian - preMedian
+
+                    val sustainedCount = postVals.count { v ->
+                        (v - preMedian) * stepOffset > 0.0 && abs(v - preMedian) >= 0.5 * abs(stepOffset)
+                    }
+                    if (abs(stepOffset) >= stepThresholdM && stepOffset * jump > 0.0 && sustainedCount >= 3) {
+                        cumulativeShift += stepOffset
+                        resetIndices.add(currIdx)
+                        Log.i(
+                            TAG,
+                            "Compensated sustained barometric reset step of ${"%.2f".format(Locale.US, stepOffset)} m " +
+                                "at row=${rows[currIdx].rowId} (dt=${"%.1f".format(Locale.US, dtSec)} s)"
+                        )
+                    }
+                }
+            }
+            compensated[currIdx] = currRaw - cumulativeShift
+        }
+        return compensated to resetIndices
     }
 
     internal fun inferLegacyCarriageModeAt(rows: List<RawSampleRow>, idx: Int): PhoneCarriageMode {
@@ -507,7 +584,8 @@ object ErtsPostWorkoutRecomputer {
                 rawAltitudeM = row.rawAltitude ?: Double.NaN,
                 referenceAltitudeM = row.referenceAltitude,
                 smoothedSpeedMps = speed,
-                carriageMode = row.effectiveCarriageMode
+                carriageMode = row.effectiveCarriageMode,
+                baroResetStep = row.baroResetStep
             )
         }
         return ExtendedRtsAltitudeSlopeSmoother.smooth(rawAltSamples)
@@ -1049,6 +1127,7 @@ object ErtsPostWorkoutRecomputer {
         val lapNr: Long? = null,
         val recordedCarriageMode: PhoneCarriageMode? = null,
         val effectiveCarriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN,
-        val rawBaroAltitude: Double? = null
+        val rawBaroAltitude: Double? = null,
+        val baroResetStep: Boolean = false
     )
 }
