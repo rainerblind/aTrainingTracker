@@ -33,7 +33,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
 public class BTLEBikePowerDevice extends MyBTLEDevice {
-    protected static final int MAX_IDENTICAL = 4;
+    private static final int CPS_WHEEL_TIME_RESOLUTION_HZ = 2048;
     private static final boolean DEBUG = BANALService.getDebug(false);
 
     private static final int PEDAL_POWER_BALANCE_SUPPORTED_MASK = 1;
@@ -76,16 +76,7 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
     private static final int ACCUMULATED_ENERGY_WIDTH = 2;
 
 
-    // some variables to calc the speed, distance, and cadence
-    protected boolean mLastWheelRevolutionsValid = false;
-    protected boolean mLastCrankRevolutionsValid = false;
-    protected long mInitWheelRevolutions = 0;
-    protected long mLastWheelRevolutions = 0;
-    protected long mLastWheelEventTime = 0;
-    protected long mLastCrankRevolutions = 0;
-    protected long mLastCrankEventTime = 0;
-    protected int mIdenticalWheelTime = 0;
-    protected int mIdenticalCrankTime = 0;
+    protected final CscRevolutionTracker mCscRevolutionTracker = new CscRevolutionTracker(CPS_WHEEL_TIME_RESOLUTION_HZ);
     protected MySensor<Double> mCadenceSensor;
     protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mPaceSensor;
@@ -289,10 +280,7 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
     @Override
     protected void unregisterSensors() {
         super.unregisterSensors();
-        mLastCrankRevolutionsValid = false;
-        mLastWheelRevolutionsValid = false;
-        mIdenticalCrankTime = 0;
-        mIdenticalWheelTime = 0;
+        mCscRevolutionTracker.reset();
     }
 
     // TODO: also check whether the corresponding features are supported
@@ -373,43 +361,19 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
 
                             if (DEBUG)
                                 Log.i(TAG, "revolutions: " + cumulativeWheelRevolutions + ", time: " + wheelEventTime);
-                            // TODO: what to do when these values are negative?
 
-                            // calc speed and distance
-                            if (mLastWheelRevolutionsValid) {
-                                if (wheelEventTime > mLastWheelEventTime) {  // avoiding negative values
-                                    mIdenticalWheelTime = 0;
-
-                                    long revDiff = cumulativeWheelRevolutions - mLastWheelRevolutions;
-                                    long timeDiff = wheelEventTime - mLastWheelEventTime;
-                                    if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
-
-                                    double speed = mCalibrationFactor * revDiff * 2048 / timeDiff;   // Note that this value differs from the one of the bike speed case
-                                    if (DEBUG) Log.i(TAG, "got new speed: " + speed);
-                                    mSpeedSensor.newValue(speed);
-                                    if (revDiff != 0) {
-                                        mPaceSensor.newValue(1 / speed);
-                                    }
-
-                                    double distance = mCalibrationFactor * (cumulativeWheelRevolutions - mInitWheelRevolutions);
-                                    if (DEBUG) Log.i(TAG, "got new distance: " + distance);
-                                    mDistanceSensor.accumulate(distance);
-                                    mLapDistanceSensor.accumulate(distance);
-                                } else {
-                                    mIdenticalWheelTime++;
-                                    if (mIdenticalWheelTime >= MAX_IDENTICAL) {
-                                        if (DEBUG)
-                                            Log.i(TAG, mIdenticalWheelTime + " identical wheel times => reset speed to zero");
-                                        mSpeedSensor.newValue(0.0);
-                                        mPaceSensor.newValue(null);
-                                    }
-                                }
-                            } else {
-                                mInitWheelRevolutions = cumulativeWheelRevolutions;
-                            }
-                            mLastWheelRevolutions = cumulativeWheelRevolutions;
-                            mLastWheelEventTime = wheelEventTime;
-                            mLastWheelRevolutionsValid = true;
+                            BTLEBikeDevice.applyWheelSample(
+                                    mCscRevolutionTracker,
+                                    cumulativeWheelRevolutions,
+                                    wheelEventTime,
+                                    mCalibrationFactor,
+                                    mSpeedSensor,
+                                    mPaceSensor,
+                                    mDistanceSensor,
+                                    mLapDistanceSensor,
+                                    null,
+                                    TAG,
+                                    DEBUG);
                         }
                     } else {
                         Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Wheel Revolution Data present but was not supported");
@@ -437,34 +401,13 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
                             if (DEBUG)
                                 Log.i(TAG, "revolutions: " + cumulativeCrankRevolutions + ", time: " + crankEventTime);
 
-                            // calc cadence
-                            if (mLastCrankRevolutionsValid) {
-                                if (crankEventTime > mLastCrankEventTime) { // avoiding negative values
-                                    mIdenticalCrankTime = 0;
-
-                                    long revDiff = (cumulativeCrankRevolutions - mLastCrankRevolutions) & 0xFFFFL;
-                                    long timeDiff = crankEventTime - mLastCrankEventTime;
-                                    if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
-
-                                    double cadence = (60.0 * revDiff * 1024.0) / timeDiff;         // Furthermore, note that this time multiplier is different from the one for the speed
-                                    if (DEBUG) Log.i(TAG, "got new cadence: " + cadence);
-                                    if (cadence >= 0.0 && cadence <= 250.0) {
-                                        mCadenceSensor.newValue(cadence);
-                                    } else {
-                                        Log.w(TAG, "Discarded unplausible cadence value: " + cadence + " rpm (revDiff=" + revDiff + ", timeDiff=" + timeDiff + ")");
-                                    }
-                                } else {
-                                    mIdenticalCrankTime++;
-                                    if (mIdenticalCrankTime >= MAX_IDENTICAL) {
-                                        if (DEBUG)
-                                            Log.i(TAG, mIdenticalCrankTime + " identical crank times => reset cadence to zero");
-                                        mCadenceSensor.newValue(0.0);
-                                    }
-                                }
-                            }
-                            mLastCrankRevolutions = cumulativeCrankRevolutions;
-                            mLastCrankEventTime = crankEventTime;
-                            mLastCrankRevolutionsValid = true;
+                            BTLEBikeDevice.applyCrankSample(
+                                    mCscRevolutionTracker,
+                                    cumulativeCrankRevolutions,
+                                    crankEventTime,
+                                    mCadenceSensor,
+                                    TAG,
+                                    DEBUG);
                         }
                     } else {
                         Log.d(TAG, "WTF: BTLE Power Profile not properly implemented: Crank Revolution Data present but was not supported");

@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.28  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 122
+**Total Requirements**: 123
 
 ---
 
@@ -2927,6 +2927,30 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-124: Shared `CscRevolutionTracker` Extraction & Unsigned `UINT16` Event-Time Rollover Preservation (`ATT-6042`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-126`
+- **System Requirement(s)**: `SYSREQ-TRK-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `CscRevolutionTracker.kt`, `BTLEBikeDevice.java`, `BTLEBikePowerDevice.java`
+- **Localization Parity**: `N/A - no new or modified UI strings` (`0` edits to `res/values*/strings*.xml`)
+- **Rationale**: `BTLEBikeDevice.java` (`236` LoC) and `BTLEBikePowerDevice.java` (`482` LoC) duplicate `9` wheel/crank state fields, `MAX_IDENTICAL = 4`, `unregisterSensors()` resets (`REQ-CON-024`, `ATT-6162`), and `~90` LoC of delta math differing only in wheel time resolution (`1024 Hz` vs `2048 Hz`), null-sensor guards, and `notifyWheelRevolutions`. Furthermore, guarding with `eventTime > mLastEventTime` drops one valid sample on every `UINT16` timer rollover (`32 s` CPS / `64 s` CSC) as identical time.
+- **Description**:
+  1. *Pure-JVM `CscRevolutionTracker` & Parameterization (`REQ-SET-124.1`)*: `CscRevolutionTracker(wheelTimeResolution: Int, crankTimeResolution: Int = 1024, maxIdenticalTicks: Int = 4)` (pure JVM under `banalservice/devices/bluetooth_le/`, `0` `android.*` dependencies) SHALL encapsulate wheel/crank baseline state (`last*Valid`, `initWheelRevs`, `last*Revs`, `last*EventTime`, `identical*Time`) and `reset()`. `BTLEBikeDevice` SHALL instantiate with `wheelTimeResolution = 1024` (`0x2A5B` CSC); `BTLEBikePowerDevice` SHALL instantiate with `wheelTimeResolution = 2048` (`0x2A63` CPS); both use `crankTimeResolution = 1024` and `maxIdenticalTicks = 4`.
+  2. *Modular `UINT16` Event-Time Rollover & Counter Wrap Handling (`REQ-SET-124.2`)*: Both wheel and crank processing SHALL compute `timeDiff = (eventTime - lastEventTime) & 0xFFFFL` so `UINT16` timer rollovers (e.g., `65000 -> 500`, `timeDiff = 1036`) evaluate normally without dropping the wrap sample, while `timeDiff == 0L` increments `identical*Time` and triggers identical-time coasting (`0.0` speed / `null` pace, or `0.0` cadence) once `identical*Time >= maxIdenticalTicks` (`4`). Wheel evaluations SHALL compute `UINT32` modular deltas (`& 0xFFFFFFFFL`) for `revDiff` and cumulative distance, omit `mPaceSensor` update when `revDiff == 0L` (preventing `Infinity`), and preserve `REQ-CON-024` crank `UINT16` masking (`& 0xFFFFL`), floating-point cadence `(60.0 * revDiff * crankTimeResolution) / timeDiff`, and `0.0..250.0` rpm plausibility gate. Baseline `last*Revs`, `last*EventTime`, and `last*Valid = true` MUST update unconditionally on every processed packet.
+  3. *Driver Delegation, Null-Sensor Guards & Disconnect Reset (`REQ-SET-124.3`)*: `BTLEBikeDevice` and `BTLEBikePowerDevice` SHALL delegate wheel/crank packets to `CscRevolutionTracker` and override `unregisterSensors()` to call `super.unregisterSensors()` and `tracker.reset()`. `BTLEBikeDevice` SHALL preserve null-sensor guards (`mSpeedSensor != null`, `mCadenceSensor != null` for `BTLEBikeSpeedDevice` / `BTLEBikeCadenceDevice`) and `mMySensorManager.notifyWheelRevolutions(revDiff, cumulativeWheelRevs, System.currentTimeMillis())` on `timeDiff > 0` wheel updates (`BTLEBikePowerDevice` retains `mIs*Supported` gates and omits `notifyWheelRevolutions`).
+  4. *Preserved Guarantees & Localization (`REQ-SET-124.4`)*: All `REQ-CON-024` (`ATT-6162`), `REQ-CON-002`, and `REQ-CON-014` guarantees and existing protected sensor fields/signatures remain intact (`Localization Parity: N/A`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `CscRevolutionTracker` (or `BTLEBikeDevice` / `BTLEBikePowerDevice`) with `lastEventTime = 65000`, *When* a measurement arrives with rolled-over `eventTime = 500`, *Then* `timeDiff = 1036` is computed positively and the speed/distance or cadence sample is emitted normally without being discarded as identical time.
+• *Given* `BTLEBikeDevice` (`1024 Hz`) and `BTLEBikePowerDevice` (`2048 Hz`), *When* wheel/crank packets (including `UINT16` crank wrap `65535 -> 1`, `> 250 rpm` spike, `MAX_IDENTICAL = 4` identical timestamps, single-sensor `SpeedDevice`/`CadenceDevice` null-sensor subsets) or `unregisterSensors()` occur, *Then* both delegate cleanly to `CscRevolutionTracker` with exact `ATT-6162` & `TST-CON-005` parity.
+
+**Invariants**: `wheelTimeResolution` (`1024` vs `2048`); `crankTimeResolution = 1024`; `MAX_IDENTICAL = 4`; `0.0..250.0` rpm gate; `revDiff != 0` pace guard; unconditional baseline update; `notifyWheelRevolutions` on `BTLEBikeDevice` only; null-sensor guards intact; `0` `strings*.xml` edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2959,3 +2983,6 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.26` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Added `REQ-SET-123` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-TRK-002`) for never-connected paired BLE passive workout convergence (`READY -> TRACKING` edge), scan-assist gating & `attemptBackgroundReconnect` timeout skipping, `>= 60 s` disconnect floor, and `DeviceSearchPeriodicRetryCoordinator` keep-alive `deviceTries` cleanup (`N/A - no UI strings`). |
 | `1.0.27` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Promoted `REQ-SET-123` to `[Implemented]` following Stage 4 construction (`MyBTLEDevice.java` `1,424` LoC, `DeviceSearchPeriodicRetryCoordinator.kt` `236` LoC, `my_btle_device.md` `v1.0.8`, `DeviceManager.java` & `PolarOnlineStreamingBridge.kt` untouched; `88/88 PASS` across 9 Tier-1 suites + `3/3` Python safety linters, `0` new production warnings). |
 | `1.0.28` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Promoted `REQ-SET-123` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9483` @ `85386e63`, `Rule 7.5`, `0` `app/` drift) `88/88 PASS` across 9 Tier-1 suites (`8/8` verbatim `TST-SET-125` methods verified, `0` new production warnings), `3/3` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9243_walkthrough.md`. |
+| `1.0.29` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Added `REQ-SET-124` `[Planned]` (`SYSREQ-TRK-002`) for shared pure-JVM `CscRevolutionTracker` extraction and modular `UINT16` event-time rollover preservation across `BTLEBikeDevice` (`1024 Hz`) and `BTLEBikePowerDevice` (`2048 Hz`). |
+| `1.0.30` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `REQ-SET-124` to `[Implemented]` following Stage 4 construction (`CscRevolutionTracker.kt` `209` LoC, `BTLEBikeDevice.java` `258` LoC, `BTLEBikePowerDevice.java` `425` LoC; zero `android.*` dependencies in tracker, zero string edits). |
+| `1.0.31` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `REQ-SET-124` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9493` @ `a49ad12d`, `Rule 7.5`, `0` `app/` drift): Stage 4 `55/55 PASS` across 6 suites + Gate 4 independent `35/35 PASS` (`0` new warnings), safety & baseline checks PASS, and `docs/engineering/walkthroughs/ATT-6042_walkthrough.md`. |

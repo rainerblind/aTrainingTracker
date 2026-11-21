@@ -31,19 +31,10 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
 abstract public class BTLEBikeDevice extends MyBTLEDevice {
-    protected static final int MAX_IDENTICAL = 4;
+    private static final int CSC_TIME_RESOLUTION_HZ = 1024;
     private static final boolean DEBUG = BANALService.getDebug(false);
 
-    // some variables to calc the speed, distance, and cadence
-    protected boolean mLastWheelRevolutionsValid = false;
-    protected boolean mLastCrankRevolutionsValid = false;
-    protected long mInitWheelRevolutions = 0;
-    protected long mLastWheelRevolutions = 0;
-    protected long mLastWheelEventTime = 0;
-    protected long mLastCrankRevolutions = 0;
-    protected long mLastCrankEventTime = 0;
-    protected int mIdenticalWheelTime = 0;
-    protected int mIdenticalCrankTime = 0;
+    protected final CscRevolutionTracker mCscRevolutionTracker = new CscRevolutionTracker(CSC_TIME_RESOLUTION_HZ);
     protected MySensor<Double> mCadenceSensor;
     protected MySensor<Double> mSpeedSensor;
     protected MySensor<Double> mPaceSensor;
@@ -90,10 +81,7 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
     @Override
     protected void unregisterSensors() {
         super.unregisterSensors();
-        mLastCrankRevolutionsValid = false;
-        mLastWheelRevolutionsValid = false;
-        mIdenticalCrankTime = 0;
-        mIdenticalWheelTime = 0;
+        mCscRevolutionTracker.reset();
     }
 
     @Override
@@ -132,48 +120,21 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
 
                         if (DEBUG)
                             Log.i(TAG, "revolutions: " + cumulativeWheelRevolutions + ", time: " + wheelEventTime);
-                        // TODO: what to do when these values are negative?
 
-                        // calc speed and distance
-                        if (mLastWheelRevolutionsValid
-                                && mSpeedSensor != null) {  // necessary because there was a crash with this case in production.
-                            if (wheelEventTime > mLastWheelEventTime) {  // avoiding negative values
-                                mIdenticalWheelTime = 0;
-
-                                long revDiff = cumulativeWheelRevolutions - mLastWheelRevolutions;
-                                long timeDiff = wheelEventTime - mLastWheelEventTime;
-                                if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
-
-                                double speed = mCalibrationFactor * revDiff * 1024 / timeDiff;
-                                if (DEBUG) Log.i(TAG, "got new speed: " + speed);
-                                mSpeedSensor.newValue(speed);
-                                if (revDiff != 0) {
-                                    mPaceSensor.newValue(1 / speed);
-                                }
-
-                                double distance = mCalibrationFactor * (cumulativeWheelRevolutions - mInitWheelRevolutions);
-                                if (DEBUG) Log.i(TAG, "got new distance: " + distance);
-                                mDistanceSensor.accumulate(distance);
-                                mLapDistanceSensor.accumulate(distance);
-
-                                if (mMySensorManager != null) {
-                                    mMySensorManager.notifyWheelRevolutions(revDiff, cumulativeWheelRevolutions, System.currentTimeMillis());
-                                }
-                            } else {
-                                mIdenticalWheelTime++;
-                                if (mIdenticalWheelTime >= MAX_IDENTICAL) {
-                                    if (DEBUG)
-                                        Log.i(TAG, mIdenticalWheelTime + " identical wheel times => reset speed to zero");
-                                    mSpeedSensor.newValue(0.0);
-                                    mPaceSensor.newValue(null);
-                                }
-                            }
-                        } else {
-                            mInitWheelRevolutions = cumulativeWheelRevolutions;
+                        if (mSpeedSensor != null) {  // necessary because there was a crash with this case in production.
+                            applyWheelSample(
+                                    mCscRevolutionTracker,
+                                    cumulativeWheelRevolutions,
+                                    wheelEventTime,
+                                    mCalibrationFactor,
+                                    mSpeedSensor,
+                                    mPaceSensor,
+                                    mDistanceSensor,
+                                    mLapDistanceSensor,
+                                    mMySensorManager,
+                                    TAG,
+                                    DEBUG);
                         }
-                        mLastWheelRevolutions = cumulativeWheelRevolutions;
-                        mLastWheelEventTime = wheelEventTime;
-                        mLastWheelRevolutionsValid = true;
                     }
                 } else {
                     Log.w(TAG, "Wheel Revolution Data present in flags but packet truncated: length=" + value.length);
@@ -195,35 +156,15 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
                         if (DEBUG)
                             Log.i(TAG, "revolutions: " + cumulativeCrankRevolutions + ", time: " + crankEventTime);
 
-                        // calc cadence
-                        if (mLastCrankRevolutionsValid
-                                && mCadenceSensor != null) {
-                            if (crankEventTime > mLastCrankEventTime) { // avoiding negative values
-                                mIdenticalCrankTime = 0;
-
-                                long revDiff = (cumulativeCrankRevolutions - mLastCrankRevolutions) & 0xFFFFL;
-                                long timeDiff = crankEventTime - mLastCrankEventTime;
-                                if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
-
-                                double cadence = (60.0 * revDiff * 1024.0) / timeDiff;
-                                if (DEBUG) Log.i(TAG, "got new cadence: " + cadence);
-                                if (cadence >= 0.0 && cadence <= 250.0) {
-                                    mCadenceSensor.newValue(cadence);
-                                } else {
-                                    Log.w(TAG, "Discarded unplausible cadence value: " + cadence + " rpm (revDiff=" + revDiff + ", timeDiff=" + timeDiff + ")");
-                                }
-                            } else {
-                                mIdenticalCrankTime++;
-                                if (mIdenticalCrankTime >= MAX_IDENTICAL) {
-                                    if (DEBUG)
-                                        Log.i(TAG, mIdenticalCrankTime + " identical crank times => reset cadence to zero");
-                                    mCadenceSensor.newValue(0.0);
-                                }
-                            }
+                        if (mCadenceSensor != null) {
+                            applyCrankSample(
+                                    mCscRevolutionTracker,
+                                    cumulativeCrankRevolutions,
+                                    crankEventTime,
+                                    mCadenceSensor,
+                                    TAG,
+                                    DEBUG);
                         }
-                        mLastCrankRevolutions = cumulativeCrankRevolutions;
-                        mLastCrankEventTime = crankEventTime;
-                        mLastCrankRevolutionsValid = true;
                     }
                 } else {
                     Log.w(TAG, "Crank Revolution Data present in flags but packet truncated: length=" + value.length + ", offset=" + crankDataOffset);
@@ -231,6 +172,87 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
             }
         } catch (Exception e) {
             Log.w(TAG, "Error parsing CSC characteristic notification", e);
+        }
+    }
+
+    static void applyWheelSample(
+            CscRevolutionTracker tracker,
+            long cumulativeWheelRevolutions,
+            long wheelEventTime,
+            double calibrationFactor,
+            MySensor<Double> speedSensor,
+            MySensor<Double> paceSensor,
+            MyDoubleAccumulatorSensor distanceSensor,
+            MyDoubleAccumulatorSensor lapDistanceSensor,
+            MySensorManager wheelNotificationTarget,
+            String tag,
+            boolean debug) {
+        if (speedSensor == null) {
+            return;
+        }
+        CscRevolutionTracker.WheelUpdate update = tracker.processWheel(
+                cumulativeWheelRevolutions, wheelEventTime, calibrationFactor);
+        switch (update.getStatus()) {
+            case COMPUTED:
+                if (debug) Log.i(tag, "got new speed: " + update.getSpeedMps());
+                speedSensor.newValue(update.getSpeedMps());
+                Double paceSpm = update.getPaceSpm();
+                if (paceSpm != null && paceSensor != null) {
+                    paceSensor.newValue(paceSpm);
+                }
+                if (debug) Log.i(tag, "got new distance: " + update.getDistanceMeters());
+                if (distanceSensor != null) {
+                    distanceSensor.accumulate(update.getDistanceMeters());
+                }
+                if (lapDistanceSensor != null) {
+                    lapDistanceSensor.accumulate(update.getDistanceMeters());
+                }
+                if (wheelNotificationTarget != null) {
+                    wheelNotificationTarget.notifyWheelRevolutions(
+                            update.getRevDiff(), cumulativeWheelRevolutions, System.currentTimeMillis());
+                }
+                break;
+            case IDENTICAL_TICK_ZEROED:
+                if (debug) Log.i(tag, "identical wheel times => reset speed to zero");
+                speedSensor.newValue(0.0);
+                if (paceSensor != null) {
+                    paceSensor.newValue(null);
+                }
+                break;
+            case INITIAL_BASELINE:
+            case NO_UPDATE:
+                break;
+        }
+    }
+
+    static void applyCrankSample(
+            CscRevolutionTracker tracker,
+            long cumulativeCrankRevolutions,
+            long crankEventTime,
+            MySensor<Double> cadenceSensor,
+            String tag,
+            boolean debug) {
+        if (cadenceSensor == null) {
+            return;
+        }
+        CscRevolutionTracker.CrankUpdate update = tracker.processCrank(
+                cumulativeCrankRevolutions, crankEventTime);
+        switch (update.getStatus()) {
+            case COMPUTED:
+                if (debug) Log.i(tag, "got new cadence: " + update.getCadenceRpm());
+                cadenceSensor.newValue(update.getCadenceRpm());
+                break;
+            case IDENTICAL_TICK_ZEROED:
+                if (debug) Log.i(tag, "identical crank times => reset cadence to zero");
+                cadenceSensor.newValue(0.0);
+                break;
+            case IGNORED_OUT_OF_RANGE:
+                Log.w(tag, "Discarded unplausible cadence value: " + update.getCadenceRpm()
+                        + " rpm (revDiff=" + update.getRevDiff() + ", timeDiff=" + update.getTimeDiff() + ")");
+                break;
+            case INITIAL_BASELINE:
+            case NO_UPDATE:
+                break;
         }
     }
 }

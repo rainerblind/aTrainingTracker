@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.27  
+**Version**: 1.0.30  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 111
+**Total Tests**: 112
 
 ---
 
@@ -1633,6 +1633,22 @@
 
 ---
 
+### TST-SET-126: **Shared `CscRevolutionTracker` & `UINT16` Event-Time Rollover Verification Suite** (`ATT-6042`) [Verified]
+- **Requirement(s)**: `REQ-SET-124` (`REQ-SET-124.1`–`REQ-SET-124.4`)
+- **Component**: `CscRevolutionTracker.kt`, `BTLEBikeDevice.java`, `BTLEBikePowerDevice.java`, `CscRevolutionTrackerTest.kt`, `BTLEMeasurementParsingTest.kt`, `HardwareHalIngestionIntegrationTest.kt`
+- **Jira**: `ATT-6042` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Pure-JVM `CscRevolutionTracker` Rollover & Boundary Unit Tests (`TST-SET-126.1`, `CscRevolutionTrackerTest#testWheel_uint16EventTimeRollover_csc1024AndCps2048_computesWithoutDrop`, `CscRevolutionTrackerTest#testCrank_uint16EventTimeRollover_computesWithoutDrop`, `CscRevolutionTrackerTest#testWheel_uint32RevolutionWrap_andCumulativeDistance_preservesUnsignedDelta`, `CscRevolutionTrackerTest#testCrank_uint16RevolutionWrap_calculates120Rpm`, `CscRevolutionTrackerTest#testWheel_identicalTimestamps_zeroesSpeedAndNullsPaceOnFourthPacket_thenRecovers`, `CscRevolutionTrackerTest#testCrank_identicalTimestamps_zeroesCadenceOnFourthPacket_thenRecovers`, `CscRevolutionTrackerTest#testWheel_advancingTimeWithZeroRevolutions_omitsPaceUpdate`, `CscRevolutionTrackerTest#testCrank_implausibleCadenceOver250Rpm_isIgnoredAndUpdatesBaseline`, `CscRevolutionTrackerTest#testReset_clearsAllBaselinesAndIdenticalCounters`, `CscRevolutionTrackerTest#testConstructorValidation_rejectsNonPositiveWheelResolution`, `CscRevolutionTrackerTest#testConstructorValidation_rejectsNonPositiveMaxIdenticalTicks`)*:
+     • Verify `UINT16` event-time rollover (`lastEventTime = 65000 -> eventTime = 500` yields `timeDiff = 1036`, and `0xFF00 -> 0x0100` yields `512`) for both `1024 Hz` (CSC wheel/crank) and `2048 Hz` (CPS wheel) without dropping the wrap sample.
+     • Verify `UINT32` wheel revolution wrap (`0xFFFFFFFE -> 2`) and `UINT16` crank revolution wrap (`65535 -> 1` $\rightarrow$ `120.0 rpm` at `1024` ticks), `MAX_IDENTICAL = 4` identical-time coasting (`timeDiff == 0` zeroes speed + `null` pace / zeroes cadence on 4th identical packet), `revDiff == 0` advancing wheel time omitting pace update (no `Infinity`), `> 250.0` rpm rejection still updating baseline, and `reset()` restoring initial state.
+  2. *Driver Delegation & Null-Sensor Parity Tests (`TST-SET-126.2`, `BTLEMeasurementParsingTest#testBikeDevice_uint16WheelAndCrankEventTimeRollover_computesSpeedDistanceCadenceAndNotifiesWheel`, `BTLEMeasurementParsingTest#testBikePower_uint16WheelAndCrankEventTimeRollover_computes2048HzSpeedCadenceAndOmitsNotifyWheel`, `BTLEMeasurementParsingTest#testBikeDevice_and_BikePower_identicalEventTimeZeroesAfterFourPackets`, `BTLEMeasurementParsingTest#testBikeSpeedOnly_and_BikeCadenceOnly_ignoreMissingSensorsWithoutCrash`)*:
+     • Verify all existing `ATT-6162` (`TST-CON-024.1`–`.4`) and `TST-CON-005` tests pass unchanged; verify CSC (`BTLEBikeDevice` `1024 Hz`) and CPS (`BTLEBikePowerDevice` `2048 Hz`) `UINT16` wheel & crank event-time rollover tests (`lastEventTime = 65000 -> eventTime = 500`, `timeDiff = 1036`), `MAX_IDENTICAL = 4` identical-time zeroing, single-sensor subclass null-safety (`BTLEBikeSpeedDevice`, `BTLEBikeCadenceDevice`), and `notifyWheelRevolutions` parity (`BTLEBikeDevice` calls it, `BTLEBikePowerDevice` omits it).
+  3. *Targeted Regression & Contract Hygiene (`TST-SET-126.3`)*:
+     • Run `CscRevolutionTrackerTest`, `BTLEMeasurementParsingTest`, `HardwareHalIngestionIntegrationTest`, `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`, `DeadCodeEliminationContractTest`, and `verify_requirement_governance.py` (`Localization Parity: N/A - 0 string changes`).
+- **Verification Evidence**: Gate 4 (`ATT-9493` @ `a49ad12d`, `Rule 7.5`, `0` `app/` drift) — Stage 4 `55/55 PASS` (`0` fail, `0` err, `0` skip) across 6 suites (`CscRevolutionTrackerTest` `11/11`, `BTLEMeasurementParsingTest` `19/19`, `HardwareHalIngestionIntegrationTest` `5/5`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`, `DeadCodeEliminationContractTest` `6/6`) + Gate 4 independent `35/35 PASS` (`--rerun`, `0` new warnings); Python safety & baseline checks PASS; `docs/engineering/walkthroughs/ATT-6042_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1664,3 +1680,6 @@
 | `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Added `TST-SET-125` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-123`) covering never-connected BLE passive workout convergence (`READY -> TRACKING` edge), scan-assist gating & `attemptBackgroundReconnect` timeout skipping, `>= 60 s` disconnect floor, `DeviceSearchPeriodicRetryCoordinator` keep-alive `deviceTries` cleanup, and design/governance parity (`N/A - no UI strings`). |
 | `1.0.26` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Promoted `TST-SET-125` to `[Implemented]` with verbatim `TestClass#testMethod` citations (`88/88 PASS` across 9 Tier-1 suites including `DetailedDesignParityContractTest` `3/3`, `SystemLiveTrackingRequirementsContractTest` `4/4`, and `ArchitectureConformanceContractTest` `11/11`; `3/3` Python safety linters PASS). |
 | `1.0.27` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Promoted `TST-SET-125` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9483` @ `85386e63`, `Rule 7.5`, `0` `app/` drift) `88/88 PASS` across 9 Tier-1 suites (`0` new production compiler warnings), `3/3` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9243_walkthrough.md`. |
+| `1.0.28` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Added `TST-SET-126` `[Planned]` covering pure-JVM `CscRevolutionTracker` wrap/coasting/reset math, `BTLEBikeDevice` (`1024 Hz`) & `BTLEBikePowerDevice` (`2048 Hz`) rollover delegation, null-sensor guards, and `ATT-6162` parity. |
+| `1.0.29` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `TST-SET-126` to `[Implemented]` with all `11/11` `CscRevolutionTrackerTest` + `4/4` new `BTLEMeasurementParsingTest` verbatim method citations. |
+| `1.0.30` | 2026-11-21 | Lane 2 Author (`ATT-6042`, `--as agent1`) | `ATT-6042` | Promoted `TST-SET-126` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9493` @ `a49ad12d`, `Rule 7.5`, `0` `app/` drift): Stage 4 `55/55 PASS` across 6 suites + Gate 4 independent `35/35 PASS`, safety/baseline checks PASS, and `docs/engineering/walkthroughs/ATT-6042_walkthrough.md`. |
