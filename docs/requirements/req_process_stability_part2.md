@@ -1,14 +1,16 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.54  
+**Version**: 1.0.55  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 79
+**Total Requirements**: 80
+
+**Total Requirements**: 78
 
 ---
 
@@ -2606,6 +2608,39 @@
 
 ---
 
+### REQ-STB-024: Immediate `PebbleService` Exit When `appMessages` Unsupported & Clean `PebbleView.db` Connection Closure (ATT-9244) [Verified]
+- **Tests**: `TST-STB-024`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `PebbleService.java`, `PebbleDatabaseManager.java`
+- **Rationale**: On Pixel 10 (`com.atrainingtracker.debug`), `PebbleService` started despite `PebbleKit.areAppMessagesSupported(this) == false` (`com.getpebble.android.provider` absent), remained alive as `START_STICKY` running the 1-Hz `mUpdatePebbleReceiver` loop for the entire ride, and leaked 4 `SQLiteConnection` objects on `PebbleView.db` because `updateSensorTypeList()` opened unclosed `new PebbleDbHelper(this)` instances and `PebbleDatabaseManager` lacked `close()` lifecycle management (`ATT-9244`, Epic `ATT-235`).
+- **Description**:
+  1. *Immediate Unsupported-Host Exit & Early Lifecycle Guard (`REQ-STB-024.1`, `PebbleService.java`)*:
+     - `PebbleService` SHALL evaluate an injectable/testable `isAppMessagesSupported()` predicate delegating to `PebbleKit.areAppMessagesSupported(this)` before binding `BANALService`, registering base receivers (including `mUpdatePebbleReceiver`), or opening `PebbleView.db`.
+     - When `isAppMessagesSupported()` returns `false` in `onCreate()`, `PebbleService` SHALL skip `bindService(...)` and receiver registration and invoke `stopSelf()`. Because Android still delivers `onStartCommand()` after `onCreate()` calls `stopSelf()`, `onStartCommand()` SHALL re-check `isAppMessagesSupported()` before invoking `PebbleDatabaseManager` or `startPebbleWatchApp()`, call `stopSelf(startId)`, and return `Service.START_NOT_STICKY`.
+     - If `isAppMessagesSupported()` returns `false` inside `startPebbleWatchApp()`, `PebbleService` SHALL invoke `stopSelf()` and return immediately before calling `updateSensorTypeList()` or `PebbleKit.startAppOnPebble(...)`.
+  2. *Guarded `onDestroy()` Teardown & `mReceiversRegistered` Reset (`REQ-STB-024.2`, `PebbleService.java`)*:
+     - `PebbleService` SHALL track `mIsBanalBound` and `mBaseReceiversRegistered` so `onDestroy()` invokes `unbindService(mBanalConnection)` strictly when `mIsBanalBound` is `true` (preventing `IllegalArgumentException: Service not registered`) and unregisters base receivers strictly via `LifecycleUtils.safeUnregisterReceiver(...)` when registered (`REQ-STB-016`).
+     - `stopPebbleWatchApp()` SHALL invoke `PebbleKit.closeAppOnPebble(...)` and unregister PebbleKit receivers strictly when `mReceiversRegistered` is `true`, and SHALL reset `mReceiversRegistered = false`.
+  3. *Singleton `PebbleView.db` Access & Clean Connection Closure (`REQ-STB-024.3`, `PebbleService.java`, `PebbleDatabaseManager.java`)*:
+     - `PebbleService.updateSensorTypeList()` SHALL delegate to `PebbleDatabaseManager.getInstance(this).getSensorTypeList(mViewId)` instead of instantiating raw `new PebbleDbHelper(this)` connections, while preserving `mRows` updates (`mRows = mSensorTypeList.size()`).
+     - `PebbleDatabaseManager` SHALL maintain a synchronized `getDatabase()` helper checking `mDatabase != null && mDatabase.isOpen()` with transparent reopen (`TrackingViewsDatabaseManager.getDatabase()` pattern) and expose synchronized `close()` and static `closeIfInitialized()` methods closing `mDatabase` and `cPebbleDbHelper` cleanly; `PebbleService.onDestroy()` SHALL invoke `PebbleDatabaseManager.closeIfInitialized()` so zero `SQLiteConnectionPool` leak warnings occur while `ConfigPebbleViewsActivity`/`ConfigPebbleViewFragment` transparently reopen on subsequent access.
+  4. *Scope, Compatibility & Governance Invariants (`REQ-STB-024.4`)*:
+     - When `isAppMessagesSupported()` is `true`, `REQ-WEA-001` (`START_STICKY`, all 8 base receivers, PebbleKit handlers, `BANALService` binding) MUST remain intact; `TrainingApplication.java` MUST remain untouched (`<= 2,135` LoC ceiling); zero `SYS.2`/`SYS.3` external interface impact (`REQ-PRO-131.4`); `Localization Parity: N/A - no UI strings`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-STB-024` (`REQ-STB-024.1`–`REQ-STB-024.4`) under Epic `ATT-235`, complementing `REQ-WEA-001` (`PebbleService.java`), `REQ-STB-016` (`LifecycleUtils`), and `REQ-DAT-043` (`TryWithResourcesCursorAuditTest`).
+  2. *Historical Origin & Commit Trace*: `d5a3d1bb` (`ATT-8145`), `cef6aefe` (`ATT-3563`), `b46920f6` (`ATT-3550`), `fc78e971`.
+  3. *Root Reason for Existing Formulation*: Legacy `PebbleService` left `// TODO: close this service` (`L431`) and bypassed `PebbleDatabaseManager.getSensorTypeList()` with raw `new PebbleDbHelper(this)`, while PO kept Pebble support intact for future revival (`ATT-40`, `ATT-7910` cancelled).
+  4. *Preservation of Core Invariants*: Supported Pebble live metrics (`REQ-WEA-001`), `ConfigPebbleViews*` editing via transparent DB reopen, `TrainingApplication.java <= 2,135` LoC, and `LifecycleUtils` / `try (Cursor)` invariants remain preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a host without Pebble (`isAppMessagesSupported() == false`), *When* `PebbleService.onCreate()` and `onStartCommand()` execute followed by `onDestroy()`, *Then* `stopSelf()` is invoked, `onStartCommand()` returns `START_NOT_STICKY`, `bindService` / receivers / `PebbleView.db` are never opened, and `onDestroy()` exits without `IllegalArgumentException`.
+  • *Given* a host with Pebble (`isAppMessagesSupported() == true`), *When* `PebbleService` starts, calls `updateSensorTypeList()`, and stops, *Then* `onStartCommand()` returns `START_STICKY`, `mSensorTypeList` & `mRows` populate via `PebbleDatabaseManager.getSensorTypeList(mViewId)` without raw `PebbleDbHelper` leaks, `stopPebbleWatchApp()` resets `mReceiversRegistered = false`, and `onDestroy()` unbinds/unregisters and invokes `PebbleDatabaseManager.closeIfInitialized()`.
+  • *Given* `PebbleDatabaseManager` closed via `close()` / `closeIfInitialized()`, *When* `ConfigPebbleViews*` or a test subsequently queries `getSensorTypeList()` / `getName()`, *Then* `getDatabase()` reopens `PebbleView.db` cleanly without `IllegalStateException` and `close()` leaves zero open handles.
+- **Invariants**: `REQ-WEA-001` supported-Pebble behavior intact; `TrainingApplication.java <= 2,135` LoC untouched; `PebbleServiceBuildIn.java` & `DatabaseSchemaRegistry.kt` untouched; `0` `SYS.2`/`SYS.3` impact; `Localization Parity: N/A - no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2665,3 +2700,4 @@
 | `1.0.52` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Stage 6 Bounce 1/3 heal: deferred `countActiveDevicesSafely(banalService)` strictly behind the 30-second sampling gate in `DebugHeapWatchdog.kt` via `onTickWithCountProvider` (`0` per-second `LinkedList` allocations on intermediate ticks); reset `REQ-STB-022` to `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.53` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `REQ-STB-022` (`REQ-STB-022.1`–`REQ-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9404` @ `c4035319`, `Rule 7.5` doc-only fast path): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`, `verify_skills.py` `11/11`, `test_agent_emulator.py` `21/21`, `4/4` linters, `ATT-9352_walkthrough.md`). |
 | `1.0.54` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `REQ-STB-023` (`REQ-STB-023.1`–`REQ-STB-023.5`: live EKF `recordSnapshots = false` & bounded `MAX_SNAPSHOTS = 4096` ring, throttled `setLastActive()`, Polar SDK `BleLogger.setLoggerInterface(null)`, `DROP_OLDEST` backpressure + zero-`String.format` CSV + `scope.cancel()`; Gate 4 `ATT-9406` & Stage 6 PASS @ `344ad639`, `141/141` PASS). |
+| `1.0.55` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `REQ-STB-024` (`REQ-STB-024.1`–`REQ-STB-024.4`: immediate `PebbleService` stopSelf/START_NOT_STICKY when appMessages unsupported, guarded teardown, `PebbleDatabaseManager` reopen guard + `closeIfInitialized()`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |

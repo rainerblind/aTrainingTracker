@@ -28,6 +28,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
@@ -51,6 +52,8 @@ public class PebbleDatabaseManager {
     private static volatile PebbleDatabaseManager cInstance;
     private final PebbleDbHelper cPebbleDbHelper;
     private final Context mContext;
+    @Nullable
+    private SQLiteDatabase mDatabase = null;
 
     private PebbleDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
@@ -70,10 +73,65 @@ public class PebbleDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance, managed by the helper.
+     * Returns a writable database instance and ensures it remains open,
+     * transparently reopening if previously closed ({@code REQ-STB-024.3}).
      */
     private SQLiteDatabase getDatabase() {
-        return cPebbleDbHelper.getWritableDatabase();
+        if (mDatabase != null && mDatabase.isOpen()) {
+            return mDatabase;
+        }
+        synchronized (this) {
+            if (mDatabase != null && mDatabase.isOpen()) {
+                return mDatabase;
+            }
+            if (mDatabase != null) {
+                cPebbleDbHelper.close();
+            }
+            mDatabase = cPebbleDbHelper.getWritableDatabase();
+            return mDatabase;
+        }
+    }
+
+    /**
+     * Closes the active {@code PebbleView.db} database and helper handles cleanly ({@code REQ-STB-024.3}).
+     */
+    public synchronized void close() {
+        if (mDatabase != null && mDatabase.isOpen()) {
+            mDatabase.close();
+        }
+        mDatabase = null;
+        cPebbleDbHelper.close();
+    }
+
+    /**
+     * Closes the singleton {@code PebbleView.db} connection if {@link #cInstance} was initialized,
+     * without instantiating the helper when Pebble was never opened ({@code REQ-STB-024.3}).
+     */
+    public static void closeIfInitialized() {
+        PebbleDatabaseManager instance = cInstance;
+        if (instance != null) {
+            instance.close();
+        }
+    }
+
+    @VisibleForTesting
+    public static boolean isInitialized() {
+        return cInstance != null;
+    }
+
+    @VisibleForTesting
+    public synchronized boolean isDatabaseOpen() {
+        return mDatabase != null && mDatabase.isOpen();
+    }
+
+    @VisibleForTesting
+    public static void resetInstanceForTesting() {
+        synchronized (PebbleDatabaseManager.class) {
+            if (cInstance != null) {
+                cInstance.close();
+                cInstance = null;
+            }
+        }
     }
     // --- End of Singleton Pattern ---
 

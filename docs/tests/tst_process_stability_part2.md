@@ -1,14 +1,16 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.47  
+**Version**: 1.0.48  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 95
+**Total Tests**: 96
+
+**Total Tests**: 94
 
 ---
 
@@ -1642,6 +1644,23 @@
   4. *60-Min Dual Polar Live-IMU Stress & Architecture Contracts (`TST-STB-023.4`, `PolarDualImuBoundedHeapStressTest`, `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`)*:
      • *Given* `60 min` simulated dual Polar streaming (`200 Hz` H10 ACC + `52 Hz` Verity ACC/GYRO + `1 Hz` PPI + `PolarRawTelemetryRecorder` + `HrvRollingEngine`), *When* replayed end-to-end, *Then* retained estimator/HRV/recorder footprint stays strictly flat/bounded without OOM, `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC, `PolarOnlineStreamingBridge.kt <= 1,500` LoC, and `InterfaceSignatureDriftContractTest` passes (`Localization Parity: N/A - no UI strings`). Tag with `TST-STB-023.4`.
 
+### TST-STB-024: **PebbleService Unsupported-Host Teardown & PebbleView.db Connection Closure Verification Suite (ATT-9244)** [Verified]
+- **Requirement(s)**: `REQ-STB-024`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleServiceLifecycleTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/LifecycleServiceReceiverSafetyAuditTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/TryWithResourcesCursorAuditTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9244`
+- **Test Description**:
+  1. *Unsupported-Host Immediate Exit & Crash-Free `onDestroy()` (`TST-STB-024.1`, `PebbleServiceLifecycleTest.kt`)*:
+     • *Given* a Robolectric `PebbleService` instance where `PebbleKit.areAppMessagesSupported` returns `false`, *When* `onCreate()`, `onStartCommand(...)`, and `onDestroy()` execute, *Then* `stopSelf()` is triggered, `onStartCommand` returns `Service.START_NOT_STICKY`, `BANALService` is never bound, `mUpdatePebbleReceiver` / base / PebbleKit receivers are never registered, `PebbleView.db` is never opened, and `onDestroy()` completes without throwing `IllegalArgumentException` (including mid-session support loss inside `startPebbleWatchApp()`). Tag tests with `TST-STB-024.1`.
+  2. *Supported-Host Lifecycle, Singleton `updateSensorTypeList()`, `mRows` Parity & Teardown Reset (`TST-STB-024.2`, `PebbleServiceLifecycleTest.kt`)*:
+     • *Given* a Robolectric `PebbleService` instance where `PebbleKit.areAppMessagesSupported` returns `true` and `PebbleView.db` contains configured rows, *When* `onCreate()`, `onStartCommand(...)`, `updateSensorTypeList()`, `stopPebbleWatchApp()`, and `onDestroy()` execute, *Then* `onStartCommand` returns `Service.START_STICKY`, `mSensorTypeList` & `mRows` populate via `PebbleDatabaseManager.getSensorTypeList(mViewId)` without raw `PebbleDbHelper` leaks, `stopPebbleWatchApp()` resets `mReceiversRegistered = false` (and skips `closeAppOnPebble()` when unregistered), and `onDestroy()` unbinds, unregisters, and invokes `PebbleDatabaseManager.closeIfInitialized()`. Tag tests with `TST-STB-024.2`.
+  3. *`PebbleDatabaseManager` Clean Closure & Transparent Reopen (`TST-STB-024.3`, `PebbleDatabaseManagerTest.kt`)*:
+     • *Given* real Robolectric SQLite `PebbleView.db` initialized via `PebbleDatabaseManager.getInstance(context)`, *When* `close()` / `closeIfInitialized()` runs and subsequently `ConfigPebbleViews*` callers (`getName()`, `getSensorTypeList()`, `getFirstViewId()`) query the manager, *Then* open `SQLiteDatabase` handles are closed (`isOpen == false`), subsequent queries transparently reopen `PebbleView.db` via `isOpen()` check without `IllegalStateException`, and final `close()` leaves zero open handles. Tag tests with `TST-STB-024.3`.
+  4. *Architecture & Static Contract Parity (`TST-STB-024.4`, `LifecycleServiceReceiverSafetyAuditTest.kt`, `TryWithResourcesCursorAuditTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • *Given* `LifecycleServiceReceiverSafetyAuditTest`, `TryWithResourcesCursorAuditTest`, `ArchitectureConformanceContractTest`, and `verify_requirement_governance.py`, *When* executed, *Then* `0` unshielded `startService`/`unregisterReceiver` calls exist, `0` unclosed `Cursor` leaks exist in `smartwatch/pebble/`, `TrainingApplication.java` remains `<= 2,135` LoC, `Localization Parity: N/A - no UI strings`, and governance exits `0`. Tag tests with `TST-STB-024.4`.
+
 ---
 
 ## Change History
@@ -1696,3 +1715,4 @@
 | `1.0.45` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Stage 6 Bounce 1/3 heal: added `DebugHeapWatchdogTest.onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds` (`TST-STB-022.2`); reset `TST-STB-022` to `[Implemented]` pending Stage 5 re-verification. |
 | `1.0.46` | 2026-11-21 | Lane C Flash (`ATT-9352`, `--as agent1`) | `ATT-9352` | Promoted `TST-STB-022` (`TST-STB-022.1`–`TST-STB-022.4`) to `[Verified]` in Stage 5 Bounce 1 (`ATT-9352_walkthrough.md`, `Rule 7.5` Gate 4 Bounce 1 `ATT-9404` @ `c4035319`): `21/21` targeted Gradle tests (`DebugHeapWatchdogTest` `8/8` incl. `onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds`, `TrackerServiceHeapWatchdogTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`) plus unchanged `7feb5c06` suites (`TrackerServiceStateMachineCharacterisationTest` `8/8`, `BackupRulesXmlValidationTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `SourceTextReadingAuditContractTest` `6/6`), `11/11` `verify_skills.py`, `21/21` `test_agent_emulator.py`, `4/4` linters, governance `exit 0`. |
 | `1.0.47` | 2026-11-21 | Lane A Neon (`ATT-9343`, `--as agent1`) | `ATT-9343` | Added and verified `TST-STB-023` (`TST-STB-023.1`–`TST-STB-023.4`, `141/141` PASS across 11 suites incl. `PolarDualImuBoundedHeapStressTest` @ `344ad639`, Stage 6 PASS). |
+| `1.0.48` | 2026-11-21 | Lane C Flash (`ATT-9244`, `--as agent1`) | `ATT-9244` | Added and verified `TST-STB-024` (`TST-STB-024.1`–`TST-STB-024.4`, `PebbleServiceLifecycleTest` + `PebbleDatabaseManagerTest`, `23/23` PASS @ `146eb843`, Stage 6 PASS). |
