@@ -22,6 +22,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
 import android.content.Context
 import android.util.Log
+import com.atrainingtracker.banalservice.devices.raw.RawSensorSidecarFiles
 import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import kotlinx.coroutines.CoroutineScope
@@ -42,38 +43,29 @@ object PolarRawTelemetryPruner {
     private const val MS_PER_DAY = 24L * 60L * 60L * 1000L
 
     /**
-     * Checks whether a raw telemetry sidecar file exists and is non-empty for [fileBaseName].
+     * Checks whether any raw telemetry sidecar file (`.polar_raw.csv.gz` or `.phone_raw.csv.gz`)
+     * exists and is non-empty for [fileBaseName] (REQ-SET-117.3, REQ-EXP-045.4).
      */
     @JvmStatic
     fun hasSidecar(context: Context?, fileBaseName: String?): Boolean {
-        if (context == null || fileBaseName.isNullOrBlank()) return false
-        val dir = PolarRawTelemetryRecorder.getRawSensorDir(context)
-        val sidecarName = "$fileBaseName${PolarRawTelemetryRecorder.SIDECAR_EXTENSION}"
-        val sidecar = File(dir, sidecarName)
-        return sidecar.exists() && sidecar.length() > 0L
+        return RawSensorSidecarFiles.hasAnySidecar(context, fileBaseName)
     }
 
     /**
-     * Deletes raw telemetry sidecar files matching [fileBaseName] during workout deletion cascade (REQ-DAT-042).
+     * Deletes all raw telemetry sidecar files matching [fileBaseName] (`.polar_raw.csv.gz*` and
+     * `.phone_raw.csv.gz*`) during workout deletion cascade (REQ-DAT-042, REQ-EXP-045.4).
      */
     @JvmStatic
     fun deleteSidecar(context: Context?, fileBaseName: String?): Boolean {
         if (context == null || fileBaseName.isNullOrBlank()) return false
-        val dir = PolarRawTelemetryRecorder.getRawSensorDir(context)
-        val sidecarName = "$fileBaseName${PolarRawTelemetryRecorder.SIDECAR_EXTENSION}"
-        val tmpName = "$sidecarName${PolarRawTelemetryRecorder.TMP_EXTENSION}"
-        val sidecar = File(dir, sidecarName)
-        val tmp = File(dir, tmpName)
-
         var deleted = false
-        if (sidecar.exists()) {
-            deleted = sidecar.delete() || deleted
-        }
-        if (tmp.exists()) {
-            deleted = tmp.delete() || deleted
+        for (candidate in RawSensorSidecarFiles.getAllSidecarAndTmpFiles(context, fileBaseName)) {
+            if (candidate.exists()) {
+                deleted = candidate.delete() || deleted
+            }
         }
         if (deleted) {
-            Log.d(TAG, "Cascade deleted raw telemetry sidecar for $fileBaseName")
+            Log.d(TAG, "Cascade deleted raw telemetry sidecar(s) for $fileBaseName")
         }
         return deleted
     }
@@ -115,14 +107,11 @@ object PolarRawTelemetryPruner {
     }
 
     private fun isEligibleSidecarFile(file: File): Boolean {
-        return file.name.endsWith(PolarRawTelemetryRecorder.SIDECAR_EXTENSION) ||
-            file.name.endsWith(PolarRawTelemetryRecorder.TMP_EXTENSION)
+        return RawSensorSidecarFiles.isManagedSidecarFile(file)
     }
 
     private fun resolveFileTimestamp(file: File, dateFormat: SimpleDateFormat): Long {
-        val fileBaseName = file.name
-            .removeSuffix(PolarRawTelemetryRecorder.TMP_EXTENSION)
-            .removeSuffix(PolarRawTelemetryRecorder.SIDECAR_EXTENSION)
+        val fileBaseName = RawSensorSidecarFiles.extractFileBaseName(file)
 
         return try {
             dateFormat.parse(fileBaseName)?.time ?: file.lastModified()

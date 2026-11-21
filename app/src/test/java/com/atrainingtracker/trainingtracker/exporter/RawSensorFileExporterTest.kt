@@ -116,4 +116,48 @@ class RawSensorFileExporterTest {
         assertEquals("Polar Verity Sense", parsed.metadata.sensorModel)
         assertTrue("Salvaged sidecar must contain complete pre-crash rows (got ${parsed.rows.size})", parsed.rows.size >= 20)
     }
+
+    // REQ-EXP-045.3 / TST-EXP-045.3: Multi-file export (Phone-only, Both, and .phone_raw.csv.gz.tmp salvage)
+    @Test
+    fun testDoExport_phoneOnlyAndBothSidecarsAndPhoneTmpSalvage_TST_EXP_045_3() {
+        val rawDir = File(context.filesDir, "raw_sensor").apply { mkdirs() }
+
+        // 1. Phone-only sidecar
+        val phoneOnlyBase = "workout_phone_only_9348"
+        File(rawDir, "$phoneOnlyBase.phone_raw.csv.gz").writeBytes(byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00))
+        val phoneOnlyRes = exporter.export(ExportInfo(phoneOnlyBase, FileFormat.RAW_SENSOR, ExportType.FILE))
+        assertTrue(phoneOnlyRes.success())
+        assertEquals("Successfully exported raw sensor sidecar", phoneOnlyRes.answer())
+
+        // 2. Both Polar + Phone sidecars
+        val bothBase = "workout_both_9348"
+        File(rawDir, "$bothBase.polar_raw.csv.gz").writeBytes(byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00))
+        File(rawDir, "$bothBase.phone_raw.csv.gz").writeBytes(byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00))
+        val bothRes = exporter.export(ExportInfo(bothBase, FileFormat.RAW_SENSOR, ExportType.FILE))
+        assertTrue(bothRes.success())
+        assertEquals("Successfully exported 2 raw sensor sidecars", bothRes.answer())
+
+        // 3. Abandoned .phone_raw.csv.gz.tmp salvage on export
+        val tmpBase = "workout_phone_tmp_9348"
+        val tmpFile = File(rawDir, "$tmpBase.phone_raw.csv.gz.tmp")
+        val baos = java.io.ByteArrayOutputStream()
+        java.util.zip.GZIPOutputStream(baos, true).use { gzip ->
+            val w = java.io.OutputStreamWriter(gzip, java.nio.charset.StandardCharsets.UTF_8)
+            w.write("${com.atrainingtracker.banalservice.devices.raw.PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Pixel", sportId = 1L, sessionStartTimeMs = 1000L).toHeaderLine()}\n")
+            w.write("${com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryRow.CSV_HEADER}\n")
+            for (i in 1..20) {
+                w.write("${com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryRow(i * 10L, 1000L + i, com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.ACC, 0.1, 0.2, 9.8).toCsvLine()}\n")
+            }
+            w.flush()
+        }
+        val bytes = baos.toByteArray()
+        tmpFile.writeBytes(bytes.copyOfRange(0, bytes.size - 8))
+
+        val tmpRes = exporter.export(ExportInfo(tmpBase, FileFormat.RAW_SENSOR, ExportType.FILE))
+        assertTrue(tmpRes.success())
+        val finalPhone = File(rawDir, "$tmpBase.phone_raw.csv.gz")
+        assertTrue("Salvaged .phone_raw.csv.gz must exist on disk", finalPhone.exists())
+        val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(finalPhone)
+        assertTrue("Must salvage pre-crash smartphone rows (got ${parsed.rows.size})", parsed.rows.size >= 15)
+    }
 }

@@ -57,7 +57,9 @@ fun SensorsGpsFilterSection(
     hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
     onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {},
     rawSensorRetentionPolicy: RawSensorRetentionPolicy = TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY,
-    onRawSensorRetentionPolicyChange: (RawSensorRetentionPolicy) -> Unit = {}
+    onRawSensorRetentionPolicyChange: (RawSensorRetentionPolicy) -> Unit = {},
+    recordSmartphoneRawTelemetryEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED,
+    onRecordSmartphoneRawTelemetryChange: (Boolean) -> Unit = {}
 ) {
     val currentLocale = LocalConfiguration.current.locales[0]
     Column(
@@ -135,7 +137,15 @@ fun SensorsGpsFilterSection(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-        // Raw Polar IMU / RR streaming telemetry retention (REQ-SET-117.4, ATT-8019)
+        // Opt-in smartphone raw sensor sidecar recording (REQ-EXP-045.5, ATT-9348)
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_record_smartphone_raw_title),
+            isChecked = recordSmartphoneRawTelemetryEnabled,
+            onCheckedChange = onRecordSmartphoneRawTelemetryChange,
+            summary = stringResource(R.string.tuning_record_smartphone_raw_desc)
+        )
+
+        // Raw Polar & smartphone IMU / telemetry retention (REQ-SET-117.4, REQ-EXP-045.4, ATT-8019, ATT-9348)
         RawTelemetryRetentionControl(
             policy = rawSensorRetentionPolicy,
             onPolicyChange = onRawSensorRetentionPolicyChange

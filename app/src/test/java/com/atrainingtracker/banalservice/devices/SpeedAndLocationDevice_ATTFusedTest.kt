@@ -2497,6 +2497,126 @@ class SpeedAndLocationDevice_ATTFusedTest {
         }
     }
 
+    // REQ-EXP-045.1 / TST-EXP-045.1: Raw WHEEL & GNSS tap records before ATT-Fused feature guards using CLOCK_BOOTTIME
+    @Test
+    fun wheelAndGnssRawTap_recordsBeforeFeatureGuardsWithElapsedRealtimeClock_TST_EXP_045_1() = kotlinx.coroutines.runBlocking {
+        val tempFile = java.io.File.createTempFile("att_fused_raw_", ".phone_raw.csv.gz")
+        tempFile.delete()
+        val recorder = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder(
+            targetFile = tempFile,
+            metadata = com.atrainingtracker.banalservice.devices.raw.PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Test", sportId = 1L, sessionStartTimeMs = 1000L)
+        )
+        recorder.start()
+        val prevClock = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider = { 888_000_000_000L }
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder)
+
+        every { AttFusedPreferences.isEffectiveWheelActive(any()) } returns false
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns false
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        try {
+            device.onWheelMeasurement(speedMps = 6.25, variance = 0.04, timestampMs = 1_760_000_001_000L)
+            val loc = mockk<android.location.Location>(relaxed = true) {
+                every { latitude } returns 48.137
+                every { longitude } returns 11.576
+                every { time } returns 1_760_000_002_000L
+                every { elapsedRealtimeNanos } returns 889_000_000_000L
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 4.5f
+            }
+            device.onLocationChanged(loc)
+        } finally {
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider = prevClock
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder.stop()
+            device.shutDown()
+        }
+
+        try {
+            val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(tempFile)
+            assertEquals(2, parsed.rows.size)
+            assertEquals(com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.WHEEL, parsed.rows[0].channel)
+            assertEquals(888_000_000_000L, parsed.rows[0].elapsedRealtimeNs)
+            assertEquals(6.25, parsed.rows[0].v0, 1e-6)
+            assertEquals(com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS, parsed.rows[1].channel)
+            assertEquals(889_000_000_000L, parsed.rows[1].elapsedRealtimeNs)
+            assertEquals(48.137, parsed.rows[1].v0, 1e-6)
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    // REQ-EXP-045.1 / TST-EXP-045.1: Pre-EKF raw GNSS recorded once (no duplicates, no EKF mutation, includes rejected/stationary fixes)
+    @Test
+    fun onLocationChanged_whenGnssActive_recordsPreEkfRawFixExactlyOnceIncludingRejectedFixes_TST_EXP_045_1() = kotlinx.coroutines.runBlocking {
+        val tempFile = java.io.File.createTempFile("att_fused_pre_ekf_", ".phone_raw.csv.gz")
+        tempFile.delete()
+        val recorder = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder(
+            targetFile = tempFile,
+            metadata = com.atrainingtracker.banalservice.devices.raw.PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Test", sportId = 1L, sessionStartTimeMs = 1000L)
+        )
+        recorder.start()
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder)
+
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns true
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        try {
+            // 1. Valid moving fix (onLocationChanged mutates Location in-place before calling onNewLocation)
+            var mutatedLat = 48.137154
+            var mutatedLon = 11.576124
+            var mutatedSpeed = 3.75f
+            val movingLoc = mockk<android.location.Location>(relaxed = true) {
+                every { latitude } answers { mutatedLat }
+                every { longitude } answers { mutatedLon }
+                every { latitude = any() } answers { mutatedLat = firstArg() }
+                every { longitude = any() } answers { mutatedLon = firstArg() }
+                every { hasSpeed() } returns true
+                every { speed } answers { mutatedSpeed }
+                every { speed = any() } answers { mutatedSpeed = firstArg() }
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 5.2f
+                every { hasAltitude() } returns true
+                every { altitude } returns 520.0
+                every { hasBearing() } returns true
+                every { bearing } returns 90.0f
+                every { time } returns 1_760_000_010_000L
+                every { elapsedRealtimeNanos } returns 910_000_000_000L
+            }
+            device.onLocationChanged(movingLoc)
+
+            // 2. Coarse/rejected fix (exceeds MAX_GNSS_ACCURACY_METERS -> early return path)
+            val rejectedLoc = mockk<android.location.Location>(relaxed = true) {
+                every { latitude } returns 48.138000
+                every { longitude } returns 11.577000
+                every { hasSpeed() } returns true
+                every { speed } returns 0.0f
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 120.0f
+                every { time } returns 1_760_000_011_000L
+                every { elapsedRealtimeNanos } returns 911_000_000_000L
+            }
+            device.onLocationChanged(rejectedLoc)
+        } finally {
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder.stop()
+            device.shutDown()
+        }
+
+        try {
+            val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(tempFile)
+            val gnssRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS }
+            assertEquals("Must record exactly 2 GNSS rows (1 per fix, zero duplicates)", 2, gnssRows.size)
+            assertEquals(48.137154, gnssRows[0].v0, 1e-6)
+            assertEquals(11.576124, gnssRows[0].v1, 1e-6)
+            assertEquals(3.75, gnssRows[0].v3, 1e-4)
+            assertEquals(5.2, gnssRows[0].v5, 1e-4)
+            assertEquals(48.138000, gnssRows[1].v0, 1e-6)
+            assertEquals(120.0, gnssRows[1].v5, 1e-4)
+        } finally {
+            tempFile.delete()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType

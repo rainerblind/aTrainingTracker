@@ -152,6 +152,7 @@ object TuningPreferencesDefaults {
     const val SLOPE_MIN_SPEED_MPS = 0.5f
     const val DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED = false
     val RAW_SENSOR_RETENTION_POLICY = RawSensorRetentionPolicy.DAYS_30
+    const val DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED = false
 
     const val MIN_FULL_DIM_FACTOR = 0.05f
     const val MAX_FULL_DIM_FACTOR = 0.50f
@@ -399,6 +400,7 @@ data class TuningConfig(
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
     val postWorkoutErtsSmoothingEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED,
     val rawSensorRetentionPolicy: RawSensorRetentionPolicy = TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY,
+    val recordSmartphoneRawTelemetryEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED,
     val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
     val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
     val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
@@ -576,6 +578,7 @@ class TuningPreferencesDataStore private constructor(
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
         val KEY_POST_WORKOUT_ERTS_SMOOTHING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_post_workout_erts_smoothing")
         val KEY_RAW_SENSOR_RETENTION_POLICY: Preferences.Key<String> = stringPreferencesKey("tuning_raw_sensor_retention_policy")
+        val KEY_RECORD_SMARTPHONE_RAW_TELEMETRY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_record_smartphone_raw_telemetry")
         val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
         val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
         val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
@@ -774,6 +777,7 @@ class TuningPreferencesDataStore private constructor(
             KEY_SLOPE_MIN_SPEED,
             KEY_POST_WORKOUT_ERTS_SMOOTHING,
             KEY_RAW_SENSOR_RETENTION_POLICY,
+            KEY_RECORD_SMARTPHONE_RAW_TELEMETRY,
             KEY_PACE_CEILING_MIN_KM,
             KEY_SHOW_LIVE_CLIMBS,
             KEY_CLIMB_MIN_LENGTH_METERS,
@@ -1186,6 +1190,7 @@ data class AutoPausePreferences(
             slopeMinSpeedMps = clampedSlopeSpeed,
             postWorkoutErtsSmoothingEnabled = prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED,
             rawSensorRetentionPolicy = safeEnumValueOf(prefs[KEY_RAW_SENSOR_RETENTION_POLICY], TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY),
+            recordSmartphoneRawTelemetryEnabled = prefs[KEY_RECORD_SMARTPHONE_RAW_TELEMETRY] ?: TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED,
             paceCeilingMinKm = clampedPaceCeiling,
             showLiveClimbs = showLiveClimbs,
             climbMinLengthMeters = climbMinLength,
@@ -1444,6 +1449,7 @@ data class AutoPausePreferences(
             PREF_SLOPE_MIN_SPEED.write(prefs, config.slopeMinSpeedMps)
             prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = config.postWorkoutErtsSmoothingEnabled
             prefs[KEY_RAW_SENSOR_RETENTION_POLICY] = config.rawSensorRetentionPolicy.name
+            prefs[KEY_RECORD_SMARTPHONE_RAW_TELEMETRY] = config.recordSmartphoneRawTelemetryEnabled
             PREF_PACE_CEILING_MIN_KM.write(prefs, config.paceCeilingMinKm)
             prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
             prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
@@ -1651,6 +1657,24 @@ data class AutoPausePreferences(
     suspend fun updateRawSensorRetentionPolicy(policy: RawSensorRetentionPolicy) {
         dataStore.edit { prefs ->
             prefs[KEY_RAW_SENSOR_RETENTION_POLICY] = policy.name
+        }
+    }
+
+    val recordSmartphoneRawTelemetryFlow: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_RECORD_SMARTPHONE_RAW_TELEMETRY] ?: TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+    }
+
+    val recordSmartphoneRawTelemetryEnabled: StateFlow<Boolean> by lazy {
+        recordSmartphoneRawTelemetryFlow.stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+        )
+    }
+
+    suspend fun updateRecordSmartphoneRawTelemetryEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_RECORD_SMARTPHONE_RAW_TELEMETRY] = enabled
         }
     }
 

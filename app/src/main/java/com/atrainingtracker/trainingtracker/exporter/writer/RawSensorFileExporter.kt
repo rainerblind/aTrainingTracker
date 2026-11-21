@@ -13,32 +13,36 @@ package com.atrainingtracker.trainingtracker.exporter.writer
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawSidecarRecovery
-import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorder
+import com.atrainingtracker.banalservice.devices.raw.RawSensorSidecarFiles
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 
 /**
- * Exporter for raw Polar sensor sidecar files (.polar_raw.csv.gz).
- * Traceable to REQ-EXP-044.1, REQ-STB-025.2.
+ * Exporter for raw sensor sidecar files (`.polar_raw.csv.gz` and `.phone_raw.csv.gz`).
+ * Traceable to REQ-EXP-044.1, REQ-EXP-045.3, REQ-STB-025.2.
  */
 class RawSensorFileExporter(context: Context) : BaseExporter(context) {
 
     override fun doExport(exportInfo: ExportInfo): ExportResult {
-        val sidecarFile = PolarRawTelemetryRecorder.getSidecarFile(mContext, exportInfo.fileBaseName)
-        if (!sidecarFile.exists() || sidecarFile.length() == 0L) {
-            PolarRawSidecarRecovery.recoverAbandonedTmpToFinal(mContext, exportInfo.fileBaseName)
-        }
-        if (!sidecarFile.exists() || sidecarFile.length() == 0L) {
+        val sidecars = RawSensorSidecarFiles.resolveExportableSidecars(mContext, exportInfo.fileBaseName)
+        if (sidecars.isEmpty()) {
             Log.i(TAG, "Raw sensor sidecar does not exist for ${exportInfo.fileBaseName} (graceful skip)")
             return ExportResult(true, false, "Raw sensor sidecar does not exist (graceful skip)")
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            copyFileToDownloads(exportInfo)
+            val mimeType = exportInfo.fileFormat.mimeType
+            for (sidecar in sidecars) {
+                copyFileToDownloads(sidecar, mimeType)
+            }
         }
 
-        return ExportResult(true, false, "Successfully exported raw sensor sidecar")
+        val msg = if (sidecars.size == 1) {
+            "Successfully exported raw sensor sidecar"
+        } else {
+            "Successfully exported ${sidecars.size} raw sensor sidecars"
+        }
+        return ExportResult(true, false, msg)
     }
 
     companion object {

@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.13  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 125
+**Total Tests**: 126
 
 ---
 
@@ -2330,10 +2330,47 @@
 
 ---
 
+### TST-EXP-045: **Bounded Crash-Safe Smartphone Raw Sensor Sidecar, Pure-JVM Replay & Multi-File Cloud Export Verification** [Verified]
+- **Requirement(s)**: `REQ-EXP-045`
+- **Component**: `SmartphoneRawTelemetryRecorder.kt`, `SmartphoneRawSensorCapture.kt`, `PhoneRawSidecarRecovery.kt`, `PhoneRawTelemetryReader.kt`, `RawSensorSidecarFiles.kt`, `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `RawSensorFileExporter.kt`, `DropboxUploader.java`, `GoogleDriveUploader.kt`, `PolarRawTelemetryPruner.kt`, `SensorDiagnosticBundlePackager.kt`, `SensorsGpsFilterSection.kt`, `BackupRulesXmlValidationTest.kt`
+- **Jira**: `ATT-9348`
+- **Verification Evidence**: Verified (`ATT-9348`, SHA `94e7f204`, Gate 4 Bounce 1 `ATT-9471` `141/141` PASS across 21 suites, `0` fail, `0` skip, `Rule 7.5`):
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/raw/SmartphoneRawTelemetryRecorderTest.kt`: `disabledByDefault_andMockContextWithoutFilesDir_neverThrowsAndCreatesZeroFiles_TST_EXP_045_1`, `plainJvmRelaxedMockContext_withoutFilesDirStub_returnsFalseWithoutInitializingDataStore_TST_EXP_045_1`, `emptySession_discardsWithoutCreatingArchiveOrTmp_TST_EXP_045_1`, `boundedDropOldestBackpressure_tracksExactDroppedFrameCountAndKeepsNewest_TST_EXP_045_1`, `rotationVector_threeFloatArray_derivesUnitQuaternionQw_TST_EXP_045_1`, `sensorCapture_registersAndRecordsWithoutAttFusedPaired_TST_EXP_045_1`, `sensorCapture_whenZeroSensorsRegistered_cleansUpHandlerThreadAndReturnsFalse_TST_EXP_045_1`, `stateLifecycleAndClockDomain_emitsInitialSportSwitchCarriageWithElapsedRealtimeNanos_TST_EXP_045_1`, `stopBlocking_isTimeoutBoundedWhenWriterStalls_TST_EXP_045_2`, `recordLocation_rejectsNonFiniteLatLonAndSanitizesNonFiniteOptionalFloats_TST_EXP_045_1` (`TST-EXP-045.1`, `TST-EXP-045.2`)
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFusedTest.kt`: `wheelAndGnssRawTap_recordsBeforeFeatureGuardsWithElapsedRealtimeClock_TST_EXP_045_1`, `onLocationChanged_whenGnssActive_recordsPreEkfRawFixExactlyOnceIncludingRejectedFixes_TST_EXP_045_1` (`TST-EXP-045.1`)
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/raw/PhoneRawSidecarRecoveryTest.kt`: `recoverAbandonedTmpToFinal_salvagesIntactPreCrashRowsAndDropsPartialTail_TST_EXP_045_2`, `resumeRecorder_salvagesTruncatedTmpAndAppendsPostCrashRows_TST_EXP_045_2`, `truncatedNonNewlineTrailingGnssRow_isStrictlyDroppedByRecoveryAndReader_TST_EXP_045_2` (`TST-EXP-045.2`)
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/raw/PhoneRawTelemetryReaderTest.kt`: `roundTripAllEightChannelsAndMetadata_pureJvm_TST_EXP_045_2`, `truncatedGzipEof_isHandledGracefullyWithIntactRowsPreserved_TST_EXP_045_2` (`TST-EXP-045.2`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/RawSensorFileExporterTest.kt`: `testDoExport_phoneOnlyAndBothSidecarsAndPhoneTmpSalvage_TST_EXP_045_3` (`TST-EXP-045.3`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/uploader/DropboxUploaderRawSensorTest.kt`: `testDoExport_multiFileRawSensorAndPartialFailure_TST_EXP_045_3` (`TST-EXP-045.3`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/uploader/GoogleDriveUploaderRawSensorTest.kt`: `testDoExport_multiFileRawSensorAndPartialFailure_TST_EXP_045_3` (`TST-EXP-045.3`)
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarRawTelemetryPrunerTest.kt`: `smartphoneRawSidecar_hasSidecarDeleteAndRetentionPrune_TST_EXP_045_4` (`TST-EXP-045.4`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/dialogs/SensorDiagnosticBundlePrivacyTest.kt`: `testPhoneRawSidecar_omittedWhenIncludeGpsFalseAndIncludedWhenTrue_TST_EXP_045_4` (`TST-EXP-045.4`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/security/BackupRulesXmlValidationTest.kt`: `testBackupRules_excludeDebugHeapAndHprofDirectories` (`TST-EXP-045.4`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/SensorsGpsFilterSectionTest.kt`: `smartphoneRawTelemetryToggle_rendersAndInvokesCallback_TST_EXP_045_5`, `tuningPreferencesDataStore_persistsAndResetsSmartphoneRawTelemetryFlag_TST_EXP_045_5`, `coldStartFreshInstance_isEnabledImmediatelyReturnsTrueAfterPersistedOptIn_TST_EXP_045_1` (`TST-EXP-045.1`, `TST-EXP-045.5`)
+- **Test Description**:
+  1. *Opt-In Guard, Cold-Start Persistence, Bounded `DROP_OLDEST` Backpressure & Sensor Tap (`TST-EXP-045.1` — `SmartphoneRawTelemetryRecorderTest.kt`, `SensorsGpsFilterSectionTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     - Verify default `recordSmartphoneRawTelemetryEnabled == false` produces `0` `.phone_raw.csv.gz*` files and `0` writers, plain-JVM relaxed MockK `Context` (with or without `filesDir` stub) returns `false` without initializing `TuningPreferencesDataStore`, and a cold-start fresh instance (`setInstanceForTesting(null)`) immediately returns `true` after persisted opt-in.
+     - Flood `SmartphoneRawTelemetryRecorder` beyond `8,192` rows under a paused/slow writer; verify `DROP_OLDEST` retains newest rows, `getDroppedFrameCount()` matches exact drop count, empty sessions discard cleanly (`0` files), and `stop()` cancels its `CoroutineScope`.
+     - Verify `SpeedAndLocationDevice_ATTFused` forwards `ROTVEC` with `values.size == 3` (deriving `qw`) and `size == 4`, and records raw `GYRO` when `isEffectiveGyroActive == false` without altering EKF gyro gating.
+  2. *Self-Describing Schema, `.tmp` Crash Salvage & Pure-JVM `ATT-9349` Reader (`TST-EXP-045.2` — `PhoneRawSidecarRecoveryTest.kt`, `PhoneRawTelemetryReaderTest.kt`)*:
+     - Record and round-trip `# metadata` JSON plus all 8 channels (`ACC`, `GYRO`, `ROTVEC`, `BARO`, `STEP`, `GNSS`, `WHEEL`, `STATE`) through pure-JVM `PhoneRawTelemetryReader`.
+     - Truncate a flushed `.phone_raw.csv.gz.tmp` archive mid-stream; verify `PhoneRawSidecarRecovery` salvages intact pre-crash rows via `.salvage`, drops partial trailing lines cleanly, resumes/appends without corruption, and produces a valid RFC-1952 `.phone_raw.csv.gz`.
+  3. *Multi-File `FileFormat.RAW_SENSOR` Export & Cloud Upload Matrix (`TST-EXP-045.3` — `RawSensorFileExporterTest.kt`, `DropboxUploaderRawSensorTest.kt`, `GoogleDriveUploaderRawSensorTest.kt`)*:
+     - Verify `RawSensorSidecarFiles.resolveExportableSidecars()` salvages `.tmp` and resolves `(Polar-only, Phone-only, Both, Neither)` across Local Downloads (`RawSensorFileExporter`), Dropbox (`DropboxUploader`), and Google Drive (`GoogleDriveUploader`) without impacting FIT/TCX/GPX/CSV exports.
+  4. *Retention, Cascade Deletion, Diagnostic Bundle Privacy & Auto-Backup Rules (`TST-EXP-045.4` — `PolarRawTelemetryPrunerTest.kt`, `SensorDiagnosticBundlePrivacyTest.kt`, `BackupRulesXmlValidationTest.kt`)*:
+     - Verify `PolarRawTelemetryPruner.hasSidecar()`, `deleteSidecar()`, and `pruneExpiredSidecars()` cover `.phone_raw.csv.gz*` identically to `.polar_raw.csv.gz*`.
+     - Verify `SensorDiagnosticBundlePackager` omits `.phone_raw.csv.gz` when `includeGps == false` (`0` lat/lon leakage) and includes it when `includeGps == true`.
+     - Verify `BackupRulesXmlValidationTest` asserts `<exclude domain="file" path="raw_sensor" />` in `full_backup_content.xml` and `data_extraction_rules.xml` (`cloud-backup` & `device-transfer`).
+  5. *Dual-Host Tuning UI, 9-Locale Parity & Architecture Contracts (`TST-EXP-045.5` — `SensorsGpsFilterSectionTest.kt`, `TranslationParityTest`, `TuningDesignGuidelinesContractTest`, `ArchitectureConformanceContractTest`)*:
+     - Verify `TuningToggleItem` persistence and `initial = null` async form hydration (`Rule 82`) in both `AdvancedTuningScreen` and `AdvancedTuningDialog`.
+     - Verify all 9 locales (`EN`, `DE`, `ES`, `FR`, `IT`, `JA`, `NL`, `PL`, `PT`) define `tuning_record_smartphone_raw_title` and `tuning_record_smartphone_raw_desc` in `strings_devices.xml` with `0` emojis, and monolith LoC ceilings (`SpeedAndLocationDevice_ATTFused.kt <= 1,500`, `TrackerService.java <= 3,559`, `TuningPreferencesDataStore.kt <= 2,410`, `TrainingApplication.java` untouched) pass.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.14` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Added & verified `TST-EXP-045` (`TST-EXP-045.1`..`TST-EXP-045.5`) for `REQ-EXP-045` (`141/141` PASS across 21 suites @ `94e7f204`, `3/3` linters PASS, live `emulator-5554` default-config `.phone_raw.csv.gz` verified). |
 | `1.0.9` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Added `[Planned]` `TST-DAT-041` (`TST-DAT-041.1`..`TST-DAT-041.5`) for `REQ-DAT-045` (`BatchMetadataLoader`, `<= 500`-chunked export/Strava queries, query-count contract, `fromCursor` delegation parity, and `ArchitectureConformanceContractTest`). |
 | `1.0.10` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `TST-DAT-041` to `[Implemented]` with unit tests (`ExportStatusBatchQueryTest.kt`, `ExportStatusDataProviderTest.kt`, `BatchMetadataLoaderTest.kt`, `WorkoutRepositoryBatchLoadTest.kt`, `WorkoutDataMappingSymmetryTest.kt`). |
 | `1.0.11` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `TST-DAT-041` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9452`) `99/99` PASS across 18 suites @ `df4b48ee`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6038_walkthrough.md`. |

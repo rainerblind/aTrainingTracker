@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.12  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 5
+**Total Requirements**: 6
 
 ---
 
@@ -173,6 +173,47 @@
 
 ---
 
+### REQ-EXP-045: Bounded Crash-Safe Smartphone Raw Sensor Sidecar Recording, Pure-JVM Replay Schema & Multi-File Cloud Export (`ATT-9348`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-045`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-004`, `SYSREQ-TRK-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `SmartphoneRawTelemetryRecorder.kt`, `SmartphoneRawSensorCapture.kt`, `PhoneRawTelemetryRow.kt`, `PhoneRawMetadata.kt`, `PhoneRawSidecarRecovery.kt`, `PhoneRawTelemetryReader.kt`, `RawSensorSidecarFiles.kt`, `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RawSensorFileExporter.kt`, `BaseExporter.java`, `DropboxUploader.java`, `GoogleDriveUploader.kt`, `PolarRawTelemetryPruner.kt`, `SensorDiagnosticBundlePackager.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `strings_devices.xml`
+- **Rationale**: Offline validation of `PhoneCarriageClassifier`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, and cadence filters (`ATT-9349`) requires bounded, crash-safe, opt-in recording of raw smartphone IMU, gyroscope, rotation-vector, barometer, step-detector, GNSS, wheel, and sport/carriage state streams alongside workouts with multi-destination export (local Downloads, Dropbox, Google Drive) symmetrical to Polar raw sidecars (`REQ-SET-117`, `REQ-EXP-044`, `REQ-STB-023`, `REQ-STB-025`).
+- **Description**:
+  1. *Opt-In Bounded Zero-OOM Smartphone Recorder & Sensor Tap (`REQ-EXP-045.1`)*:
+     - `TuningPreferencesDataStore` (`<= 2,410` LoC) SHALL persist `recordSmartphoneRawTelemetryEnabled: Boolean` (default `false`, key `tuning_record_smartphone_raw_telemetry`) with a plain-JVM-safe guarded accessor so unit tests without Android DataStore or `filesDir` never throw.
+     - When disabled (`false`), `0` files, `0` background writer coroutines, and `0` per-sample recording allocations SHALL occur. When enabled (`true`), `TrackerService` (`<= 3,559` LoC) SHALL start, resume, and stop `SmartphoneRawTelemetryRecorder` symmetrically with `PolarRawTelemetryRecorder` targeting `files/raw_sensor/<fileBaseName>.phone_raw.csv.gz` (active `.phone_raw.csv.gz.tmp`, lazy open on first frame so empty sessions discard cleanly with `0` files).
+     - `SmartphoneRawTelemetryRecorder` SHALL buffer frames via `Channel<PhoneRawTelemetryRow>(capacity = 8192, onBufferOverflow = BufferOverflow.DROP_OLDEST, onUndeliveredElement = { droppedFrameCount.incrementAndGet() })` exposing `getDroppedFrameCount(): Long`, drain on `Dispatchers.IO` using a single reusable `StringBuilder` (`appendCsvLine`, **zero `String.format` per row**), periodically flush (`<= 256` rows / `<= 5 s`) into `GZIPOutputStream(..., syncFlush = true)`, and cancel its private `CoroutineScope` after `writeJob?.join()` on `stop()`.
+     - `SpeedAndLocationDevice_ATTFused` (`<= 1,500` LoC) SHALL forward `TYPE_ACCELEROMETER`, `TYPE_GYROSCOPE` (registered when `isEffectiveGyroActive || recorderActive` and recorded **before** the `!isEffectiveGyroActive` EKF return guard so EKF gyro opt-out behavior stays intact), `TYPE_GAME_ROTATION_VECTOR`/`TYPE_ROTATION_VECTOR` (`values.size >= 3`, deriving `qw = sqrt(max(0.0, 1.0 - qx*qx - qy*qy - qz*qz))` when `size == 3`), `TYPE_PRESSURE`, `TYPE_STEP_DETECTOR`, GNSS `Location`, `onWheelMeasurement`, and `SportContextHint`/`PhoneCarriageMode` state updates.
+  2. *Self-Describing Schema, Crash-Safe `.tmp` Salvage & Pure-JVM `ATT-9349` Reader (`REQ-EXP-045.2`)*:
+     - Archives SHALL prepend `# metadata: {"schemaVersion":1,"appVersion":"...","deviceModel":"...","sportId":...,"sessionStartTimeMs":...}` followed by CSV header `elapsedRealtimeNs,epochMs,channel,v0,v1,v2,v3,v4,v5` supporting all 8 channels: `ACC(ax,ay,az)`, `GYRO(gx,gy,gz)`, `ROTVEC(qx,qy,qz,qw)`, `BARO(pressureHpa,altM)`, `STEP()`, `GNSS(lat,lon,altM,speedMps,bearingDeg,accM)`, `WHEEL(speedMps,var)`, `STATE(sportId,bSportCode,carriageCode)`.
+     - `PhoneRawSidecarRecovery` SHALL salvage truncated `.phone_raw.csv.gz.tmp` archives via atomic `.salvage` staging, small-chunk `GZIPInputStream` decompression, and strict CSV validation (`PhoneRawTelemetryRow.fromCsvLine`) during both `TrackerService` crash-resume and export-time fallback.
+     - Pure-JVM `PhoneRawTelemetryReader` (zero Android framework dependencies) SHALL parse `# metadata` JSON and stream typed `PhoneRawTelemetryRow` entries with graceful truncated-EOF recovery for downstream `ATT-9349`.
+  3. *Multi-File `FileFormat.RAW_SENSOR` Export & Cloud Upload Parity (`REQ-EXP-045.3`)*:
+     - `FileFormat.RAW_SENSOR` enum constant and SQLite export tables MUST remain unchanged.
+     - Shared `RawSensorSidecarFiles.resolveExportableSidecars(context, fileBaseName)` SHALL invoke `.tmp` salvage for both Polar and smartphone sidecars and return all existing non-empty sidecar files (`[.polar_raw.csv.gz, .phone_raw.csv.gz]`).
+     - `RawSensorFileExporter` (via `BaseExporter`), `DropboxUploader`, and `GoogleDriveUploader` SHALL export/upload every resolved sidecar (`Polar-only`, `Phone-only`, or `Both`) and return graceful skip/success when neither exists without impacting FIT/TCX/GPX/CSV exports.
+  4. *Retention, Cascade Deletion, Diagnostic Bundle Privacy & Auto-Backup Exclusion (`REQ-EXP-045.4`)*:
+     - `PolarRawTelemetryPruner` (`hasSidecar`, `deleteSidecar`, `pruneExpiredSidecars`) SHALL recognize and manage BOTH `.polar_raw.csv.gz*` and `.phone_raw.csv.gz*` symmetrically under `RawSensorRetentionPolicy` and workout cascade deletion.
+     - `SensorDiagnosticBundlePackager` SHALL include `.phone_raw.csv.gz` ONLY when `includeGps == true` (omitting it when `includeGps == false` so zero GNSS coordinates leak).
+     - `full_backup_content.xml` and `data_extraction_rules.xml` (`cloud-backup` and `device-transfer`) SHALL include `<exclude domain="file" path="raw_sensor" />` to protect Android's 25 MB Auto Backup quota.
+  5. *Dual-Host Tuning UI & 9-Locale Localization Parity (`REQ-EXP-045.5`)*:
+     - `SensorsGpsFilterSection` SHALL expose a `TuningToggleItem` (`design_guidelines.md` §1.4, no raw `Switch`) right above `RawTelemetryRetentionControl`, wired in BOTH `AdvancedTuningScreen` and `AdvancedTuningDialog` with `initial = null` async form hydration (`Rule 82`).
+     - All new string keys SHALL be defined across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/` in `strings_devices.xml`) with zero emojis.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `recordSmartphoneRawTelemetryEnabled == false` (default), *When* a workout runs on `SpeedAndLocationDevice_ATTFused`, *Then* `0` `.phone_raw.csv.gz*` files, `0` writers, and `0` per-sample recording allocations occur.
+• *Given* recording is enabled and `ACC`, `GYRO` (including when `isEffectiveGyroActive == false`), `ROTVEC` (`size == 3` or `4`), `BARO`, `STEP`, `GNSS`, `WHEEL`, and `STATE` frames stream (including `> 8,192` burst overflow), *When* stopped cleanly or killed mid-stream leaving a truncated `.tmp`, *Then* `DROP_OLDEST` retains newest frames with exact `getDroppedFrameCount()`, `.phone_raw.csv.gz` is finalized or salvaged via `.salvage`, and pure-JVM `PhoneRawTelemetryReader` replays metadata and all 8 channels losslessly.
+• *Given* a workout with Polar-only, Phone-only, both, or neither sidecar and `export_raw_sensor == true`, *When* exported to Local Downloads, Dropbox, or Google Drive, *Then* every present sidecar is salvaged and exported/uploaded without breaking standard formats, and absent sidecars skip gracefully.
+• *Given* a workout with `.phone_raw.csv.gz`, *When* pruned/deleted via `PolarRawTelemetryPruner`, *Then* `.phone_raw.csv.gz*` is removed; *When* packaged with `includeGps == false`, *Then* zero lat/lon coordinates leak; *When* backup XML rules are validated, *Then* `raw_sensor` is excluded from `full_backup_content.xml` and `data_extraction_rules.xml`.
+
+**Invariants**: Polar `.polar_raw.csv.gz` format/path/recovery/export stays 100% byte-compatible (`REQ-SET-117`, `REQ-EXP-044`); `FileFormat.RAW_SENSOR` enum & SQLite schema stay unchanged; `SpeedAndLocationDevice_ATTFused.kt <= 1,500`, `TrackerService.java <= 3,559`, `TuningPreferencesDataStore.kt <= 2,410`, `TrainingApplication.java` untouched; `0` emojis across 9-locale `strings_devices.xml`; `ANT-Android-SDKs` untouched at `160000`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -190,3 +231,4 @@
 | `1.0.10` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9452`) `99/99` PASS across 18 suites @ `df4b48ee`. |
 | `1.0.11` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Stage 6 Bounce 1 remediation: aligned `REQ-DAT-045.3`/`.4` with `PeriodsRepository.performHierarchicalMigration` & `BatchMetadataLoader.loadForSingleWorkout`, set `[Implemented]` for Gate 4 Bounce 1 re-verification. |
 | `1.0.12` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 Bounce 1 reusing Gate 4 (`ATT-9463`) `33/33` PASS (`0` warnings) @ `34ef13d5` + `99/99` PASS @ `df4b48ee`. |
+| `1.0.13` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Added & verified `REQ-EXP-045` (`SYSREQ-DEX-001`, `SYSREQ-DEX-004`, `SYSREQ-TRK-010`) for opt-in bounded crash-safe smartphone raw sensor sidecar (`SmartphoneRawTelemetryRecorder`, `SmartphoneRawSensorCapture`, `PhoneRawSidecarRecovery`, `PhoneRawTelemetryReader`, `RawSensorSidecarFiles`), unified `CLOCK_BOOTTIME`, multi-file `RAW_SENSOR` export, pruner/privacy/backup exclusions, and 9-locale dual-host tuning UI (`141/141` PASS @ `94e7f204`). |

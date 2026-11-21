@@ -263,4 +263,7 @@
     <string name="devices_wheel_circumference_auto_hint">Starting tire size for new sensors — automatically calibrated via GNSS during rides.</string>
     <string name="devices_wheel_baseline_format">Baseline: %1$d mm</string>
     <string name="devices_wheel_history_empty">No calibration history yet. Complete a ride with GNSS and this wheel sensor to view circumference trends.</string>
+    <!-- Smartphone Raw Sensor Sidecar Recording (ATT-9348, REQ-EXP-045.5) -->
+    <string name="tuning_record_smartphone_raw_title">Record smartphone raw sensors</string>
+    <string name="tuning_record_smartphone_raw_desc">Save compressed IMU, barometer, step and GNSS sidecar per workout for offline replay</string>
 </resources>

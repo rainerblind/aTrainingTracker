@@ -24,6 +24,8 @@ import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
  * A helper object to allow synchronous, non-blocking access to DataStore values from Java code.
@@ -360,6 +362,30 @@ object SettingsDataStoreJavaHelper {
             TuningPreferencesDataStore.getInstance(context).rawSensorRetentionPolicy.value
         } catch (_: Throwable) {
             TuningPreferencesDefaults.RAW_SENSOR_RETENTION_POLICY
+        }
+    }
+
+    /**
+     * Synchronous bridge to retrieve whether opt-in smartphone raw sensor sidecar recording is enabled
+     * (REQ-EXP-045.1, ATT-9348). Guards plain-JVM MockK contexts lacking a real `filesDir` and
+     * awaits the first persisted DataStore emission so cold-start / post-crash lifecycle checks
+     * never observe a stale `StateFlow` `initialValue = false`.
+     */
+    @JvmStatic
+    fun isRecordSmartphoneRawTelemetryEnabled(context: Context): Boolean {
+        return try {
+            val appCtx = context.applicationContext ?: context
+            val canReadStore = TuningPreferencesDataStore.hasInitializedInstance() ||
+                isRealFilesDir(appCtx.filesDir)
+            if (canReadStore) {
+                runBlocking {
+                    TuningPreferencesDataStore.getInstance(context).recordSmartphoneRawTelemetryFlow.first()
+                }
+            } else {
+                TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+            }
+        } catch (_: Throwable) {
+            TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
         }
     }
 

@@ -24,6 +24,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.BuildConfig;
+import com.atrainingtracker.banalservice.devices.raw.RawSensorSidecarFiles;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
@@ -38,6 +39,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
 
 public class DropboxUploader extends BaseExporter {
     private static final String TAG = "DropboxUploader";
@@ -47,17 +50,27 @@ public class DropboxUploader extends BaseExporter {
         super(context);
     }
 
+    protected DbxClientV2 createDbxClient(@NonNull DbxCredential credential) {
+        return new DbxClientV2(new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), credential);
+    }
+
     @NonNull
     @Override
     protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, IllegalArgumentException {
-        String filename = exportInfo.getShortPath();
-        File file = new File(getBaseDirFile(mContext), filename);
-        if (!file.exists()) {
-            if (exportInfo.getFileFormat() == FileFormat.RAW_SENSOR) {
+        final List<File> filesToUpload;
+        if (exportInfo.getFileFormat() == FileFormat.RAW_SENSOR) {
+            filesToUpload = RawSensorSidecarFiles.resolveExportableSidecars(mContext, exportInfo.getFileBaseName());
+            if (filesToUpload.isEmpty()) {
                 Log.i(TAG, "Raw sensor sidecar does not exist for " + exportInfo.getFileBaseName() + " (graceful skip)");
                 return new ExportResult(true, false, "Raw sensor sidecar does not exist (graceful skip)");
             }
-            return new ExportResult(false, false,"Dropbox file does not exist: " + file);
+        } else {
+            String filename = exportInfo.getShortPath();
+            File file = new File(getBaseDirFile(mContext), filename);
+            if (!file.exists()) {
+                return new ExportResult(false, false, "Dropbox file does not exist: " + file);
+            }
+            filesToUpload = Collections.singletonList(file);
         }
 
         DbxCredential credential = TrainingApplication.readDropboxCredential();
@@ -65,24 +78,30 @@ public class DropboxUploader extends BaseExporter {
             return new ExportResult(false, false, "Dropbox credential is null or not linked");
         }
 
-        try (InputStream inputStream = new FileInputStream(file)) {
-            DbxClientV2 dbxClientV2 = new DbxClientV2(new DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY), credential);
-            dbxClientV2.files().uploadBuilder("/" + filename)
-                    .withMode(WriteMode.OVERWRITE)
-                    .uploadAndFinish(inputStream);
-        } catch (DbxException e) {
-            Log.e(TAG, "DropboxException: " + e.getMessage(), e);
-            boolean shallRetry = isTransientDbxException(e);
-            return new ExportResult(false, shallRetry, "DropboxException: " + e.getMessage());
-        } catch (IOException e) {
-            Log.e(TAG, "IOException: " + e.getMessage(), e);
-            return new ExportResult(false, true, "IOException: " + e.getMessage());
+        DbxClientV2 dbxClientV2 = createDbxClient(credential);
+        String lastUploadedPath = exportInfo.getShortPath();
+        for (File file : filesToUpload) {
+            String remotePath = exportInfo.getFileFormat() == FileFormat.RAW_SENSOR
+                    ? RawSensorSidecarFiles.shortPathFor(file)
+                    : exportInfo.getShortPath();
+            try (InputStream inputStream = new FileInputStream(file)) {
+                dbxClientV2.files().uploadBuilder("/" + remotePath)
+                        .withMode(WriteMode.OVERWRITE)
+                        .uploadAndFinish(inputStream);
+                lastUploadedPath = remotePath;
+            } catch (DbxException e) {
+                Log.e(TAG, "DropboxException: " + e.getMessage(), e);
+                boolean shallRetry = isTransientDbxException(e);
+                return new ExportResult(false, shallRetry, "DropboxException: " + e.getMessage());
+            } catch (IOException e) {
+                Log.e(TAG, "IOException: " + e.getMessage(), e);
+                return new ExportResult(false, true, "IOException: " + e.getMessage());
+            }
         }
 
-
         TrainingApplication.setDropboxLastSyncTimestamp(System.currentTimeMillis());
-        if (DEBUG) Log.i(TAG, "successfully uploaded " + filename + " to Dropbox");
-        return new ExportResult(true, false, "successfully uploaded " + filename + " to Dropbox");
+        if (DEBUG) Log.i(TAG, "successfully uploaded " + lastUploadedPath + " to Dropbox");
+        return new ExportResult(true, false, "successfully uploaded " + lastUploadedPath + " to Dropbox");
     }
 
     private boolean isTransientDbxException(DbxException e) {
