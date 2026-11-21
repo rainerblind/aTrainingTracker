@@ -5661,8 +5661,17 @@ def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_rol
             deliv_pass = all(deliv_checks.values()) or combined_ticket_doc
 
         # 2. Stage Subtask Lifecycle Progression
+        parent_comments = item.get("fields", {}).get("comment", {}).get("comments", []) or []
+        has_auto_gate_pass = any(
+            f"[auto-gate:{key}:" in extract_text_from_comment_body(c.get("body", ""))
+            and ":PASS]" in extract_text_from_comment_body(c.get("body", ""))
+            for c in parent_comments
+        )
         if ticket_tier == "tier-c":
             # ATT-9542: Tier C Fast Lane uses tests + 1x Stage 6 Flash review without Stages 1-5 subtasks
+            gate_pass = True
+        elif ticket_tier == "tier-b" and has_auto_gate_pass:
+            # ATT-9543: Tier B automated gate replaces agent2 prose Gates 1-5 subtasks
             gate_pass = True
         else:
             found_gates = {}
