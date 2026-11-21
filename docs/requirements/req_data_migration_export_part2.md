@@ -1,7 +1,7 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.22  
+**Version**: 1.0.23  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -278,7 +278,7 @@
 ### REQ-MIG-056: Dropbox Remote Filename Path-Traversal Sanitization & `SecureZipExtractor.sanitizeDriveFileName` Hardening (`ATT-6174`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MIG-056`
-- **System Requirement(s)**: Derived (SW-only) — Internal local cache-path sanitization parity for Dropbox bulk recovery without external sensor, REST API, or backup archive schema changes (extending `REQ-MIG-016`, `REQ-MIG-034`, and `REQ-MIG-040`).
+- **System Requirement(s)**: `SYSREQ-DEX-004`
 - **Priority**: Low
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -304,6 +304,7 @@
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.23` | 2026-11-21 | Sprint Coordinator (`ATT-6174`) | `ATT-6174` | Aligned `REQ-MIG-056` `System Requirement(s)` to `SYSREQ-DEX-004` (Cloud Storage Sync parity with `REQ-MIG-054`/`REQ-MIG-055`) to prevent `Derived (SW-only)` + Change-History `SYSREQ-*` double-count in `TST-PRO-103.2`. |
 | `1.0.22` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `REQ-MIG-056` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9555`) independently verified `30/30` PASS across 4 suites (`0` fail, `0` skip) + `4/4` linters PASS @ `993be8d5`. |
 | `1.0.21` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `REQ-MIG-056` to `[Implemented]` (`SecureZipExtractor.sanitizeDriveFileName` `\u0000`/`"."` hardening + `LegacyImportEngine.sanitizeRemoteTempFile` in `bulkRecoverFromDropbox` & `bulkRecoverFromGoogleDrive`). |
 | `1.0.20` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Added `[Planned]` `REQ-MIG-056` (`Derived (SW-only)`) specifying `SecureZipExtractor.sanitizeDriveFileName` enforcement in `LegacyImportEngine.bulkRecoverFromDropbox` and `\u0000`/`"."` `SecurityException` hardening. |
