@@ -1,0 +1,45 @@
+# Stage 2: Requirement & Test Specification - ATT-9347: Refine PhoneCarriageClassifier Front-Hip Running Belt Discrimination & Eliminate Residual BIKE_FRONT_POCKET Bleed
+
+**Ticket**: `ATT-9347` (`2 SP`, `Bug`, `severity-minor`) | **Parent Epic**: `ATT-166` | **Target Release**: `V5.0.0`  
+**Active Sprint**: `2026-11-21_01_Früh` (ID `468`) | **Branch**: `feature/ATT-9347`  
+**Requirement Mapping**: `REQ-FIL-039` (`REQ-FIL-039.1`–`.3`, refining `REQ-FIL-028.1`, `REQ-FIL-034.2`/`.4`, `REQ-FIL-035.1`–`.3`)  
+**Test Spec ID**: `TST-FIL-039` (`TST-FIL-039.1`–`.3`) | **Author**: Lane B Author (`--as agent1`) | **Date**: 2026-11-21
+
+## 1. Requirement Specification (`REQ-FIL-039`)
+* **Attributes**: **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit | **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-010` | **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/odometry/PhoneCarriageClassifier.kt` (`0` edits to `SpeedAndLocationDevice_ATTFused.kt` or protected monoliths).
+* **Normative Clauses**:
+  1. **Active-Footstrike Cycling Mask & High-Impact Step-Batching Guard (`REQ-FIL-039.1`)**:
+     - `PhoneCarriageClassifier.evaluateRawCandidate()` SHALL define `suppressCyclingForFootstrikes = !wheelActiveMoving && (wheelSpeed == null || wheelSpeed <= 0.5) && effectiveRunStepFreqHz != null && effectiveRunStepFreqHz >= 2.25` and `suppressCycling = suppressCyclingForRun || suppressCyclingForFootstrikes`.
+     - Whenever `suppressCycling` holds, `BIKE_HANDLEBAR`, `BIKE_JERSEY_BACK`, and `BIKE_FRONT_POCKET` SHALL be masked (`Double.NEGATIVE_INFINITY`, including zero-IMU fallback and stale `BIKE_*` `committedScore = -Inf`), guaranteeing `0%` (`0 s`) cycling modes during `Sport = RUN` (`< 5.5 m/s`, no moving wheel) AND during active running footstrikes even under `sportHint == UNKNOWN` (post-crash fallback) or transient `>= 5.5 m/s` GNSS spikes.
+     - Neither `stepDetectorActiveAndZero` nor `evaluateAccelFootstrike()` MUST set `confirmedNoFootstrikes = true` when `accelEval.impactRmsMps2 >= 1.8 m/s²`, preventing SensorHub step-batching gaps on high-impact trail running from awarding `cyclingPrior += 1.5` while preserving uphill MTB (`impactRms < 1.2 m/s²`) and footstrike-free brick overrides (`wheel > 0.5` or `speed >= 5.5`).
+  2. **Viewing-Inclination Glance Guard (`REQ-FIL-039.2`)**:
+     - `PhoneCarriageClassifier.detectGlanceShift()` SHALL compute recent/previous gravity inclinations (`acos(|mz|)`) and MUST reject any orientation shift where `recInclinationDeg > 60.0°` OR `(prevInclinationDeg - recInclinationDeg) < 10.0°`.
+     - Large lateral/vertical belt rolls (including `deltaDeg >= 30°` when `recInclinationDeg > 60.0°`), hill torso-leans (`85° -> 68°`), and post-glance stow (`20° -> 75°`) SHALL emit `0` glance events, while genuine wrist glances (`70–72° -> 18–35°`, `55° -> 30°`) and `ATT-9062` cyclic thigh-flexion rejection remain preserved.
+  3. **Calibrated Front-Hip Belt Scoring & Asymmetric Non-Glance Dwell (`REQ-FIL-039.3`)**:
+     - `scoreRunWaistHip()` SHALL score: `swingSd < 10.0 -> +2.6`, `< 16.0 -> +2.0`, `< 18.0 -> +0.8`, `< 22.0 -> -0.5`, else `-2.0`; `yaw < 0.06 -> +0.8`, `<= 0.48 -> +2.2`, `<= 0.85 -> +1.8`, `<= 1.15 -> +0.4`, else `-1.2`; `baro < 0.45 -> +1.2`, `< 0.65 -> +0.5`, else `-0.6`; `step >= 2.15 -> +0.8`; `glance == 0 -> +1.4`, else `-1.8`.
+     - `scoreRunBicepArm()` SHALL score `yaw > 0.60 -> -0.8` (retaining `0.16..0.48 -> +2.0`, `0.48..0.60 -> +0.3`).
+     - `scoreRunHandheld()` SHALL score: `swingSd >= 17.5 -> +1.8`, `>= 13.5 -> +0.4`, else `-1.6`; `yaw >= 0.72 -> +2.4`, `>= 0.55 -> +0.6`, else `-1.5`; `baro >= 0.65 -> +2.4`, `>= 0.48 -> +0.4`, else `-0.4`; `glance >= 1 -> +3.2`, `== 0 -> -1.8`.
+     - `requiredDwellMs()` SHALL enforce `maxOf(mountHysteresisMs, 10_000L)` for non-glance `RUN_WAIST_HIP -> RUN_HANDHELD`, while preserving `0 ms` verified glance, `4 s` `RUN -> WALK`, `6 s` general intra-run, and `2 s` `WALK -> RUN` / `STATIONARY`.
+
+### 1.1 Verified Winning Score Margins (9-Mode Separation Invariant)
+| Profile | `swingSd` | `yawRms` | `baro` | `glance` | `WAIST` | `BICEP` | `HAND` | Winner & Margin |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| Rear waist clip | `3.5°` | `0.21` | `0.32` | `0` | `+8.2` | `+3.6` | `-5.3` | `RUN_WAIST_HIP` (`+4.6`) |
+| Lively/bouncy front-hip belt | `16.5–17°` | `0.75–0.82` | `0.30–0.55` | `0` | `+5.3..+6.0` | `+4.3..+5.6` | `+0.6..+1.4` | `RUN_WAIST_HIP` (`+0.4..+1.7` vs Bicep, `+3.9..+5.4` vs Hand) |
+| Strong pelvic-yaw belt | `15.0°` | `1.05` | `0.52` | `0` | `+5.1` | `+2.5` | `+1.4` | `RUN_WAIST_HIP` (`+2.6` vs Bicep, `+3.7` vs Hand) |
+| Bicep armband (`TST-FIL-028`) | `17.0°` | `0.27` | `0.25` | `0` | `+6.4` | `+8.4` | `-3.3` | `RUN_BICEP_ARM` (`+2.0`) |
+| Unglanced handheld (`TST-FIL-035`) | `18.4°` | `0.74` | `0.83` | `0` | `+2.9` | `+3.2` | `+4.8` | `RUN_HANDHELD` (`+1.6` vs Bicep, `+1.9` vs Waist) |
+| Post-glance handheld (`ATTFusedTest:865`) | `15.6°` | `0.00` | `0.57` | `>= 1` | `+2.3` | `+0.7` | `+2.5` | `RUN_HANDHELD` (`+0.2` + `SCORE_MARGIN 0.85`) |
+
+### 1.2 Acceptance Criteria (Given-When-Then) & Invariants
+* **AC-1 (`REQ-FIL-039.1`)**: *Given* `Sport = RUN` without a cycling speed sensor (`< 5.5 m/s`), OR `sportHint == UNKNOWN` / transient `>= 5.5 m/s` GNSS spike with active running footstrikes (`>= 2.25 Hz`) or high-impact step-batching gaps (`impactRms >= 1.8 m/s²`), *When* `PhoneCarriageClassifier` scores candidates, *Then* `BIKE_FRONT_POCKET` and all `BIKE_*` modes record `0%` (`0 s`), while uphill MTB (`impactRms < 1.2`) and footstrike-free brick transitions (`wheel > 0.5` or `speed >= 5.5`) still classify `BIKE_*`.
+* **AC-2 (`REQ-FIL-039.2`)**: *Given* vertical-plane belt slips/rolls (`18°` and `35°` lateral roll at `recIncl > 60°`), hill torso-lean (`85° -> 68°`), or stow (`20° -> 75°`), *When* `detectGlanceShift()` runs, *Then* `0` false glances fire; *Given* genuine wrist glances (`70–72° -> 18–35°`, `55° -> 30°`), *Then* `isGlanceActive == true` and `RUN_* -> RUN_HANDHELD` commits in `0 ms`.
+* **AC-3 (`REQ-FIL-039.3`)**: *Given* a 45-min synthetic Salomon front-hip belt run (`155–170 spm`, `swingSd 10–17.5°`, `yaw 0.45–1.05`, `baro 0.25–0.58`, vertical slips, 8 s bounce burst, obstacle walk, and wrist glance), *When* `classify()` runs, *Then* steady running classifies `>= 85%` as `RUN_WAIST_HIP` with low transitions (`<< 111`), `0` switches on `8 s` non-glance burst (`10 s` dwell), and intact obstacle walk (`4 s`), bicep armband, handheld, and `BIKE_*` separation.
+* **System Invariants & Localization**: Pure-JVM determinism; `PhoneCarriageMode` codes (`-1..7`) & `CarriageFilterProfile` immutable; `PhoneCarriageClassifier.kt <= 1,500` LoC (`0` edits to `SpeedAndLocationDevice_ATTFused.kt` & monoliths); `0` DB bumps; `0` `src/main` test reads; **9-Language Localization Parity**: `N/A - no UI strings`.
+
+## 2. Test Specification (`TST-FIL-039`) & Traceability Matrix
+| Test Case | Requirement | Concrete Procedure & Expected Result (`PhoneCarriageClassifierTest.kt` + Regression Suites) | Status |
+| :--- | :--- | :--- | :---: |
+| `TST-FIL-039.1` | `REQ-FIL-039.1` | Replay cycling-like front-pocket IMU (`swing 17°`, `yaw 0.8`, `baro 0.45`, `dom 1.35 Hz`) under (a) `Sport = RUN` `< 5.5 m/s`, (b) `sportHint == UNKNOWN` + `2.75 Hz` steps/accel, (c) `5.8 m/s` GNSS spike + `2.8 Hz` steps, and (d) `3.0 s` step-batching gap + `impactRms = 2.6 m/s²`: assert `0%` (`0 s`) `BIKE_*`. Re-verify uphill MTB (`PhoneCarriageClassifierTest:526`, `impactRms < 1.2`) and brick override (`:636`, `wheel = 6.0` / `gnss = 6.5`, zero steps) still classify `BIKE_*`. | Planned |
+| `TST-FIL-039.2` | `REQ-FIL-039.2` | Feed vertical-plane belt rolls (`80°` pitch, `0° -> 18°` and `0° -> 35°` roll, `recIncl > 60°`), hill torso-lean (`85° -> 68°`), and stow (`20° -> 75°`): assert `isGlanceActive == false` (`0` glance events). Re-verify wrist glances (`70° -> 20°`, `70° -> 35°`, `72° -> 18°`, `55° -> 30°`) assert `isGlanceActive == true` & `0 ms` switch to `RUN_HANDHELD`, plus `ATT-9062` cyclic thigh rejection. | Planned |
+| `TST-FIL-039.3` | `REQ-FIL-039.3` | Replay synthetic front-hip belt session spanning calm/lively/bouncy/strong-yaw/hill regimes + `35°` vertical belt slips + `8 s` bounce burst (`< 10 s` dwell) + obstacle walk (`1.2 m/s`, `4 s`) + genuine wrist glance: assert steady running `>= 85%` `RUN_WAIST_HIP`, `0%` `BIKE_*`, low transitions (`<< 111`), `0` switches during `8 s` burst, and intact obstacle walk & glance detection. Run full 9-mode regression (`PhoneCarriageClassifierTest`, `SpeedAndLocationDevice_ATTFusedTest` incl. `:865` `yaw = 0`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest`, `AltitudeAndSlopeDevice_ATTFusedTest`, `SmartphoneImuCadenceEstimatorTest`, `KinematicSportTypeDiscriminatorTest`, `MultisportTransitionDetectorTest`, `ArchitectureConformanceContractTest`, `SystemLiveTrackingRequirementsContractTest`, `SourceTextReadingAuditContractTest`). | Planned |
