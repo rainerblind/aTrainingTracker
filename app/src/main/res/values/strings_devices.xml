@@ -196,6 +196,7 @@
     <string name="polar_h10_retry_sync_dismiss">Dismiss</string>
     <string name="polar_h10_retry_syncing">Syncing Polar H10…</string>
     <string name="polar_h10_retry_sync_failed">Could not connect to Polar H10. Please wake the sensor and try again.</string>
+    <string name="polar_h10_retry_sync_unpaired_hint">Polar H10 is currently not paired. Pair the sensor in Devices first before syncing.</string>
 
     <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
     <string name="device_polar_verity_backup_recording_title">Polar Verity Sense Backup Recording</string>
@@ -208,6 +209,7 @@
     <string name="polar_verity_retry_sync_desc">The optical heart rate sensor was unreachable when tracking stopped. Turn on your Polar Verity Sense in Blue Sensor Mode and tap Sync Now.</string>
     <string name="polar_verity_retry_syncing">Syncing Polar Verity Sense…</string>
     <string name="polar_verity_retry_sync_failed">Could not connect to Polar Verity Sense. Turn it on in Blue Sensor Mode and try again.</string>
+    <string name="polar_verity_retry_sync_unpaired_hint">Polar Verity Sense is currently not paired. Pair the sensor in Devices first before syncing.</string>
 
     <!-- Polar Verity Sense Swim Mode & SYSTEM_BUSY Guidance (ATT-8000, REQ-SET-110) -->
     <string name="polar_verity_swim_busy_title">Polar Verity Sense in Swim Mode</string>

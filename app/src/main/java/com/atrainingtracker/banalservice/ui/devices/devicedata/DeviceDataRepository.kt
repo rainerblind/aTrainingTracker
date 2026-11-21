@@ -37,6 +37,8 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProvider
 import com.atrainingtracker.util.EnumUtils
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -732,8 +734,63 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         }
         val name = devicesDatabaseManager.getDeviceName(deviceId) ?: ""
         val manufacturer = devicesDatabaseManager.getManufacturerName(deviceId) ?: ""
-        return com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
+        return PolarOfflineGattCoordinator
             .isPolarOfflineCapableDevice(application, name, manufacturer, btAddress)
+    }
+
+    /**
+     * Checks live persistence in `Devices.db` to determine whether the target Polar sensor for an
+     * Aftermath offline retry sync is currently paired (`REQ-SET-125.1`, `ATT-9509`).
+     *
+     * Explicitly checks `isPaired(dev.id)` (`PAIRED > 0`) rather than trusting unfiltered cache rows.
+     * When [polarDeviceId] is non-blank, matches strictly against the target sensor's MAC address,
+     * persisted 8-hex Polar ID, extracted Polar ID, or device name so a paired sibling Polar sensor
+     * never masks an unpaired target. Strictly when [polarDeviceId] is null or blank, falls back to
+     * matching any paired BLE HRM of the requested Polar family (`isVeritySense`) using `name`,
+     * `manufacturer`, and MAC capability metadata.
+     */
+    fun isPolarRetrySensorPaired(polarDeviceId: String?, isVeritySense: Boolean): Boolean {
+        val targetId = polarDeviceId?.trim()?.takeIf { it.isNotEmpty() }
+        val devices = devicesDatabaseManager.allDevicesForCache.orEmpty()
+        return devices.any { dev ->
+            if (dev.type != DeviceType.HRM || dev.protocol != Protocol.BLUETOOTH_LE) {
+                return@any false
+            }
+            if (!devicesDatabaseManager.isPaired(dev.id)) {
+                return@any false
+            }
+            val mac = devicesDatabaseManager.getBluetoothMACAddress(dev.id)
+            val name = dev.name ?: ""
+            if (targetId != null) {
+                val storedPolarId = PolarOfflineCapabilityStore.getPolarDeviceId(application, mac)
+                val extractedPolarId = if (!mac.isNullOrBlank()) {
+                    PolarOfflineGattCoordinator.extractPolarId(application, name, mac)
+                } else {
+                    null
+                }
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier(mac, targetId) ||
+                    PolarOfflineGattCoordinator.matchesDeviceIdentifier(storedPolarId, targetId) ||
+                    PolarOfflineGattCoordinator.matchesDeviceIdentifier(extractedPolarId, targetId) ||
+                    name.contains(targetId, ignoreCase = true)
+            } else {
+                val manufacturer = devicesDatabaseManager.getManufacturerName(dev.id) ?: ""
+                if (isVeritySense) {
+                    PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+                        context = application,
+                        name = name,
+                        manufacturer = manufacturer,
+                        macAddress = mac
+                    )
+                } else {
+                    PolarOfflineGattCoordinator.isPolarH10Device(
+                        context = application,
+                        name = name,
+                        manufacturer = manufacturer,
+                        macAddress = mac
+                    )
+                }
+            }
+        }
     }
 
     fun getPairedRemoteDevices(protocol: Protocol): List<PairedRemoteDeviceDto> {

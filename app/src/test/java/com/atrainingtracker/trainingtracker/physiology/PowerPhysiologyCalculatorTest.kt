@@ -18,7 +18,7 @@ import kotlin.math.exp
  * - Skiba 1-Hz $W'_{\text{bal}}$ depletion ($P > CP$), zero floor, and exponential reconstitution ($P \le CP$)
  * - Series evaluation and empty-tank warning ($< 10\%$).
  */
-// Linked test specs: TST-UI-363, TST-UI-459
+// Linked test specs: TST-UI-363, TST-UI-459, TST-WKO-039, TST-WKO-039.1, TST-WKO-039.2
 class PowerPhysiologyCalculatorTest {
 
     @Test
@@ -340,7 +340,7 @@ class PowerPhysiologyCalculatorTest {
             1e-4
         )
 
-        // Tier 4: Session-RPE (sRPE) fallback when no power and no HR data exists (REQ-WKO-039 / TST-WKO-039)
+        // Tier 4: TSS-normalized Session-RPE fallback when no power and no HR data exists (REQ-WKO-039 / TST-WKO-039)
         val tier4Sample = WorkoutTrainingLoadSample(
             timestampMs = 1_760_000_000_000L,
             activeTimeSeconds = 3600,
@@ -350,12 +350,52 @@ class PowerPhysiologyCalculatorTest {
             avgHrBpm = null,
             rpe = 7
         )
-        // 7 * (3600 / 60.0) = 420.0
+        // 1h @ RPE 7 -> 80.0 TSS (TSS-normalized per REQ-WKO-039.2)
         assertEquals(
-            420.0,
+            80.0,
             PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(tier4Sample),
             1e-4
         )
+    }
+
+    @Test
+    fun calculateRpeTss_mapsAllTenBorgCr10LevelsScalesLinearlyAndGuardsInvalidInputs_tstWko039_2() {
+        val expectedTssPerHour = mapOf(
+            1 to 20.0,
+            2 to 30.0,
+            3 to 40.0,
+            4 to 50.0,
+            5 to 60.0,
+            6 to 70.0,
+            7 to 80.0,
+            8 to 100.0,
+            9 to 120.0,
+            10 to 140.0
+        )
+        for ((rpe, tssPerHour) in expectedTssPerHour) {
+            assertEquals("1h @ RPE $rpe", tssPerHour, PowerPhysiologyCalculator.calculateRpeTss(rpe, 3600.0), 1e-4)
+            assertEquals("30m @ RPE $rpe", tssPerHour * 0.5, PowerPhysiologyCalculator.calculateRpeTss(rpe, 1800.0), 1e-4)
+        }
+
+        // Tier-4 resolution for 1h @ RPE 8 equals 100.0 TSS (calibrated to 1h @ FTP / LTHR)
+        val rpe8Sample = WorkoutTrainingLoadSample(
+            timestampMs = 1_760_000_000_000L,
+            activeTimeSeconds = 3600,
+            rpe = 8
+        )
+        assertEquals(100.0, PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(rpe8Sample), 1e-4)
+
+        // Out-of-range RPE or non-positive / non-finite durations return 0.0
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(0, 3600.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(-2, 3600.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(11, 3600.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(8, 0.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(8, -60.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(8, Double.NaN), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateRpeTss(8, Double.POSITIVE_INFINITY), 1e-4)
+
+        // Strict REQ-WKO-038 invariant: Foster calculateSessionRpe remains untouched (7 * 60 = 420.0)
+        assertEquals(420.0, PowerPhysiologyCalculator.calculateSessionRpe(7, 3600.0), 1e-4)
     }
 
     @Test
@@ -372,7 +412,7 @@ class PowerPhysiologyCalculatorTest {
 
     @Test
     fun computePerformanceManagementChart_computesCtlAtlTsbAcwrRampRateAndZones() {
-        // TST-UI-364 (REQ-UI-401.1)
+        // TST-UI-364 (REQ-UI-401.1) & TST-WKO-039.1 (REQ-WKO-039.1)
         val dayMs = 86_400_000L
         val startDay = 20_000L
         val startMs = startDay * dayMs
@@ -394,16 +434,19 @@ class PowerPhysiologyCalculatorTest {
 
         assertEquals(21, pmc.dailyPoints.size)
 
-        // Day 0: TSB_0 = 0.0, CTL_0 = 100/42, ATL_0 = 100/7
+        // Day 0: TSB_0 = 0.0, CTL_0 = 100/42 = 2.38 (< MIN_CTL_FOR_ACWR = 15.0) -> ACWR gated to null
         val day0 = pmc.dailyPoints[0]
         assertEquals(0.0, day0.tsb, 1e-6)
         assertEquals(100.0 / 42.0, day0.ctl, 1e-6)
         assertEquals(100.0 / 7.0, day0.atl, 1e-6)
-        assertEquals(6.0, day0.acwr!!, 1e-4)
-        assertEquals(AcwrZone.DANGER_ZONE, day0.acwrZone)
+        assertNull("ACWR must be gated to null while CTL < 15.0", day0.acwr)
+        assertNull("ACWR zone must be null while CTL < 15.0", day0.acwrZone)
 
-        // Day 7: CTL has ramped > 8 CTL/wk -> aggressive ramp warning
+        // Day 7: CTL >= 15.0 -> ACWR active and ramp > 8 CTL/wk -> aggressive ramp warning
         val day7 = pmc.dailyPoints[7]
+        assertTrue("Expected day 7 CTL >= 15.0, got ${day7.ctl}", day7.ctl >= PowerPhysiologyCalculator.MIN_CTL_FOR_ACWR)
+        assertEquals(day7.atl / day7.ctl, day7.acwr!!, 1e-4)
+        assertEquals(AcwrZone.DANGER_ZONE, day7.acwrZone)
         assertTrue(day7.rampRate7d > 8.0)
         assertTrue(day7.isAggressiveRampUp)
         assertEquals(TsbReadinessZone.HIGH_FATIGUE_RISK, day7.tsbZone)
@@ -418,6 +461,41 @@ class PowerPhysiologyCalculatorTest {
         assertEquals(AcwrZone.SWEET_SPOT, PowerPhysiologyCalculator.classifyAcwrZone(1.05))
         assertEquals(AcwrZone.HIGH_LOAD_CAUTION, PowerPhysiologyCalculator.classifyAcwrZone(1.40))
         assertEquals(AcwrZone.DANGER_ZONE, PowerPhysiologyCalculator.classifyAcwrZone(1.65))
+    }
+
+    @Test
+    fun computePerformanceManagementChart_gatesAcwrStrictlyAtMinCtl15_tstWko039_1() {
+        val dayMs = 86_400_000L
+        val baseMs = 20_000L * dayMs + 3600_000L
+
+        // Exact below-threshold boundary: CTL = 14.99 (< 15.0) -> acwr == null, acwrZone == null
+        val belowSample = WorkoutTrainingLoadSample(
+            timestampMs = baseMs,
+            activeTimeSeconds = 3600,
+            powerTss = 14.99 * PowerPhysiologyCalculator.CTL_TAU_DAYS
+        )
+        val belowPmc = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = listOf(belowSample),
+            nowMs = baseMs
+        )
+        assertEquals(14.99, belowPmc.currentCtl, 1e-4)
+        assertNull("currentAcwr must be null at CTL=14.99", belowPmc.currentAcwr)
+        assertNull("currentAcwrZone must be null at CTL=14.99", belowPmc.currentAcwrZone)
+        assertNull("daily acwr must be null at CTL=14.99", belowPmc.dailyPoints.last().acwr)
+
+        // Exact threshold boundary: CTL = 15.0 (>= 15.0) -> acwr == atl / ctl and zone classified
+        val atThresholdSample = WorkoutTrainingLoadSample(
+            timestampMs = baseMs,
+            activeTimeSeconds = 3600,
+            powerTss = 15.0 * PowerPhysiologyCalculator.CTL_TAU_DAYS
+        )
+        val atThresholdPmc = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = listOf(atThresholdSample),
+            nowMs = baseMs
+        )
+        assertEquals(15.0, atThresholdPmc.currentCtl, 1e-4)
+        assertEquals(atThresholdPmc.currentAtl / atThresholdPmc.currentCtl, atThresholdPmc.currentAcwr!!, 1e-4)
+        assertEquals(AcwrZone.DANGER_ZONE, atThresholdPmc.currentAcwrZone)
     }
 
     @Test

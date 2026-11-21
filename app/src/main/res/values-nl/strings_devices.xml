@@ -155,6 +155,7 @@
     <string name="polar_h10_retry_sync_dismiss">Negeren</string>
     <string name="polar_h10_retry_syncing">Polar H10 synchroniseren…</string>
     <string name="polar_h10_retry_sync_failed">Kan geen verbinding maken met Polar H10. Maak de sensor wakker en probeer het opnieuw.</string>
+    <string name="polar_h10_retry_sync_unpaired_hint">Polar H10 is momenteel niet gekoppeld. Koppel de sensor eerst bij Apparaten voordat u synchroniseert.</string>
 
     <!-- Polar Verity Sense Optical Offline HR Backup (ATT-7923, REQ-SET-108) -->
     <string name="device_polar_verity_backup_recording_title">Polar Verity Sense back-upopname</string>
@@ -167,6 +168,7 @@
     <string name="polar_verity_retry_sync_desc">De optische hartslagsensor was onbereikbaar bij het stoppen. Schakel uw Polar Verity Sense in via de blauwe sensormodus en tik op Nu synchroniseren.</string>
     <string name="polar_verity_retry_syncing">Polar Verity Sense synchroniseren…</string>
     <string name="polar_verity_retry_sync_failed">Kan geen verbinding maken met Polar Verity Sense. Schakel deze in via de blauwe sensormodus en probeer het opnieuw.</string>
+    <string name="polar_verity_retry_sync_unpaired_hint">Polar Verity Sense is momenteel niet gekoppeld. Koppel de sensor eerst bij Apparaten voordat u synchroniseert.</string>
 
     <!-- Polar Verity Sense Swim Mode & SYSTEM_BUSY Guidance (ATT-8000, REQ-SET-110) -->
     <string name="polar_verity_swim_busy_title">Polar Verity Sense in zwemmodus</string>

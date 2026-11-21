@@ -2338,6 +2338,7 @@
     <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
     <string name="athlete_profile_pmc_acwr_caution">High Load</string>
     <string name="athlete_profile_pmc_acwr_danger">Danger Zone</string>
+    <string name="athlete_profile_pmc_acwr_building_base">Building base</string>
     <string name="athlete_profile_pmc_empty">No workout training load data yet.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->

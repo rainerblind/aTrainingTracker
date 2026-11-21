@@ -202,6 +202,9 @@ object PowerPhysiologyCalculator {
     /** Weekly CTL ramp rate threshold ($+8.0\text{ CTL/week}$) above which aggressive build is flagged (`REQ-UI-401.1`). */
     const val AGGRESSIVE_RAMP_RATE_THRESHOLD: Double = 8.0
 
+    /** Minimum Chronic Training Load ($\text{CTL} \ge 15.0$) required before evaluating ACWR (`REQ-WKO-039.1`, `ATT-9360`). */
+    const val MIN_CTL_FOR_ACWR: Double = 15.0
+
     /** Default Resting Heart Rate ($60\text{ bpm}$) used for $\text{hrTSS}$ fallback when unconfigured. */
     const val DEFAULT_HR_REST_BPM: Double = 60.0
 
@@ -987,12 +990,12 @@ object PowerPhysiologyCalculator {
             }
         }
 
-        // Tier 4: Session-RPE fallback (REQ-WKO-039 / ATT-6879)
+        // Tier 4: TSS-normalized Session-RPE fallback (REQ-WKO-039 / ATT-6879, ATT-9360)
         val rpe = sample.rpe
         if (activeSec > 0.0 && rpe != null && rpe in 1..10) {
-            val srpe = calculateSessionRpe(rpe, activeSec)
-            if (srpe > 0.0) {
-                return srpe
+            val rpeTss = calculateRpeTss(rpe, activeSec)
+            if (rpeTss > 0.0) {
+                return rpeTss
             }
         }
 
@@ -1000,7 +1003,32 @@ object PowerPhysiologyCalculator {
     }
 
     /**
-     * Calculates Foster's Session-RPE training load ($sRPE = \text{RPE} \times \text{duration\_minutes}$) (`REQ-WKO-039`, `ATT-6879`).
+     * Converts a Borg CR10 perceived exertion rating (`1..10`) and active duration into a
+     * TSS-equivalent training load calibrated to 1 hour at RPE 8 = `100.0` TSS (`REQ-WKO-039.2`, `ATT-9360`).
+     *
+     * Mapping (TSS/hour): `1->20`, `2->30`, `3->40`, `4->50`, `5->60`, `6->70`, `7->80`, `8->100`, `9->120`, `10->140`.
+     */
+    @JvmStatic
+    fun calculateRpeTss(rpe: Int, activeTimeSeconds: Double): Double {
+        if (rpe !in 1..10 || !activeTimeSeconds.isFinite() || activeTimeSeconds <= 0.0) return 0.0
+        val tssPerHour = when (rpe) {
+            1 -> 20.0
+            2 -> 30.0
+            3 -> 40.0
+            4 -> 50.0
+            5 -> 60.0
+            6 -> 70.0
+            7 -> 80.0
+            8 -> 100.0
+            9 -> 120.0
+            10 -> 140.0
+            else -> return 0.0
+        }
+        return tssPerHour * (activeTimeSeconds / 3600.0)
+    }
+
+    /**
+     * Calculates Foster's Session-RPE training load ($sRPE = \text{RPE} \times \text{duration\_minutes}$) (`REQ-WKO-038`, `ATT-6879`).
      */
     @JvmStatic
     fun calculateSessionRpe(rpe: Int, activeTimeSeconds: Double): Double {
@@ -1070,11 +1098,11 @@ object PowerPhysiologyCalculator {
             val tsb = prevCtl - prevAtl
             val ctl = prevCtl + (tss - prevCtl) / CTL_TAU_DAYS
             val atl = prevAtl + (tss - prevAtl) / ATL_TAU_DAYS
-            val acwr = if (ctl > 0.01) atl / ctl else null
+            val acwr = if (ctl >= MIN_CTL_FOR_ACWR) atl / ctl else null
             val ctl7DaysAgo = if (i >= 7) points[i - 7].ctl else 0.0
             val rampRate7d = ctl - ctl7DaysAgo
             val tsbZone = classifyTsbZone(tsb)
-            val acwrZone = classifyAcwrZone(acwr)
+            val acwrZone = acwr?.let { classifyAcwrZone(it) }
             val aggressiveRamp = rampRate7d > AGGRESSIVE_RAMP_RATE_THRESHOLD
 
             points.add(

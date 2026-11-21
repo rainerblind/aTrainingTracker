@@ -506,6 +506,7 @@ fun TrackOnMapScreen(
                     PolarPendingRetrySyncSection(
                         workoutId = workoutData.id,
                         polarExerciseId = workoutData.polarExerciseId,
+                        polarDeviceId = workoutData.polarDeviceId,
                         onDismiss = {
                             repository.dismissPolarSyncPending(workoutData.id)
                         }

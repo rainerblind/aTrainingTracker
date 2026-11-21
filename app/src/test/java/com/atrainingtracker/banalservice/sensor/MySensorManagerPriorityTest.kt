@@ -454,4 +454,74 @@ class MySensorManagerPriorityTest {
             MySensorManager.getPriorityRank(null, null)
         )
     }
+
+    private abstract class FakeHealthHrDevice : MyDevice(null, null, null), HrSensorHealthProvider
+
+    @Test
+    fun hrPriority_prefersHealthyEcgOverOpticalRegardlessOfRegistrationAndSwitchesDynamicallyOutsideLock() {
+        // Verifies REQ-SET-126 / TST-SET-128
+        var verityTier = HrHealthTier.HEALTHY
+        var h10Tier = HrHealthTier.HEALTHY
+
+        val verityDevice = mockk<FakeHealthHrDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.HRM
+            every { getHrModality() } returns HrModality.OPTICAL_PPG
+            every { getHrHealthTier(any()) } answers { verityTier }
+        }
+        val h10Device = mockk<FakeHealthHrDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.HRM
+            every { getHrModality() } returns HrModality.ECG
+            every { getHrHealthTier(any()) } answers { h10Tier }
+        }
+
+        val verityHr = MySensor<Int>(verityDevice, SensorType.HR).apply {
+            activateSensor()
+            newValue(79)
+        }
+        val h10Hr = MySensor<Int>(h10Device, SensorType.HR).apply {
+            activateSensor()
+            newValue(148)
+        }
+
+        // Register Verity Sense FIRST, then Polar H10 -> canonical HR must switch to healthy ECG H10
+        sensorManager.registerSensor(verityHr)
+        assertSame(verityHr, sensorManager.getBestSensor(SensorType.HR))
+        assertEquals(79, sensorManager.getSensor(SensorType.HR).value)
+
+        sensorManager.registerSensor(h10Hr)
+        assertSame(
+            "Healthy Polar H10 (ECG) must beat healthy Verity Sense (Optical PPG) even when registered second",
+            h10Hr,
+            sensorManager.getBestSensor(SensorType.HR)
+        )
+        assertEquals(148, sensorManager.getSensor(SensorType.HR).value)
+
+        // Track lock discipline (REQ-SEN-021.3): ProxySensor listener notification must run outside synchronized(sensorManager)
+        var lockHeldDuringListener = false
+        sensorManager.getSensor(SensorType.HR).addSensorListener {
+            if (Thread.holdsLock(sensorManager)) {
+                lockHeldDuringListener = true
+            }
+        }
+
+        // H10 becomes stale -> reevaluatePrimaryHrSensor() fails over to healthy Verity Sense
+        h10Tier = HrHealthTier.STALE_OR_NULL
+        sensorManager.reevaluatePrimaryHrSensor()
+        assertSame(verityHr, sensorManager.getBestSensor(SensorType.HR))
+        assertEquals(79, sensorManager.getSensor(SensorType.HR).value)
+        assertEquals("ProxySensor dispatch must never hold MySensorManager monitor lock", false, lockHeldDuringListener)
+
+        // H10 recovers healthy while Verity flatlines (DEGRADED) -> switches back to H10
+        h10Tier = HrHealthTier.HEALTHY
+        verityTier = HrHealthTier.DEGRADED
+        sensorManager.reevaluatePrimaryHrSensor()
+        assertSame(h10Hr, sensorManager.getBestSensor(SensorType.HR))
+        assertEquals(148, sensorManager.getSensor(SensorType.HR).value)
+
+        // Both stale -> retains highest-modality (H10 ECG) binding instead of dropping to null
+        h10Tier = HrHealthTier.STALE_OR_NULL
+        verityTier = HrHealthTier.STALE_OR_NULL
+        sensorManager.reevaluatePrimaryHrSensor()
+        assertSame(h10Hr, sensorManager.getBestSensor(SensorType.HR))
+    }
 }

@@ -2137,6 +2137,7 @@
     <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
     <string name="athlete_profile_pmc_acwr_caution">Duże obciążenie</string>
     <string name="athlete_profile_pmc_acwr_danger">Strefa ryzyka</string>
+    <string name="athlete_profile_pmc_acwr_building_base">Budowanie bazy</string>
     <string name="athlete_profile_pmc_empty">Brak danych o obciążeniu treningowym.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->

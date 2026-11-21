@@ -36,14 +36,19 @@ import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarHrStreamHealthMonitor;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator;
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult;
 import com.atrainingtracker.banalservice.devices.hrv.HrvTelemetryProvider;
 import com.atrainingtracker.banalservice.devices.hrv.PerDeviceHrvController;
+import com.atrainingtracker.banalservice.sensor.HrHealthTier;
+import com.atrainingtracker.banalservice.sensor.HrModality;
+import com.atrainingtracker.banalservice.sensor.HrSensorHealthProvider;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +59,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Bluetooth Low Energy Heart Rate Device (GATT Service 0x180D, Characteristic 0x2A37).
  * Parses instant heart rate and beat-to-beat RR intervals with cumulative timestamping (REQ-CON-027, ATT-3540).
  */
-public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, HrvTelemetryProvider {
+public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, HrvTelemetryProvider, HrSensorHealthProvider {
     private static final boolean DEBUG = BANALService.getDebug(false);
     private static final String TAG = "BTLEHeartRateDevice";
 
@@ -73,15 +78,80 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
     private volatile boolean mHrCccdFailureRetried = false;
     @Nullable
     private volatile Runnable mSilentHrWatchdogRunnable = null;
+    private final PolarHrStreamHealthMonitor mHrHealthMonitor;
+    @Nullable
+    private volatile Runnable mHrStalenessRunnable = null;
 
     /**
      * Constructor
      */
     public BTLEHeartRateDevice(Context context, MySensorManager mySensorManager, long deviceID, String address) {
         super(context, mySensorManager, DeviceType.HRM, deviceID, address);
+        mHrHealthMonitor = new PolarHrStreamHealthMonitor(
+                () -> getHrModality() == HrModality.OPTICAL_PPG
+        );
         mPerDeviceHrvController = createPerDeviceHrvController();
         if (DEBUG) {
             Log.d(TAG, "creating HR device");
+        }
+    }
+
+    @NonNull
+    @Override
+    public HrHealthTier getHrHealthTier(long nowMs) {
+        return mHrHealthMonitor.getHrHealthTier(nowMs);
+    }
+
+    @NonNull
+    @Override
+    public HrModality getHrModality() {
+        String name = getName();
+        String manufacturer = getManufacturerName();
+        boolean isOptical = PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+                mContext,
+                name != null ? name : "",
+                manufacturer != null ? manufacturer : "",
+                getAddress()
+        );
+        return isOptical ? HrModality.OPTICAL_PPG : HrModality.ECG;
+    }
+
+    private void scheduleHrStalenessTimer(long delayMs) {
+        if (mHandler == null || mIsShutDown) {
+            return;
+        }
+        Runnable previous = mHrStalenessRunnable;
+        if (previous != null) {
+            mHandler.removeCallbacks(previous);
+        }
+        Runnable task = () -> {
+            if (mIsShutDown || mState != State.CONNECTED_WITH_SERVICE) {
+                return;
+            }
+            PolarHrStreamHealthMonitor.StalenessTickDecision tick = mHrHealthMonitor.evaluateStaleness(
+                    System.currentTimeMillis(),
+                    PolarHrStreamHealthMonitor.isWorkoutActive(TrainingApplication.getTrackingMode()),
+                    getLatestArtifactRatePercent()
+            );
+            if (tick.getShouldClearHr() && mHeartRateSensor != null) {
+                mHeartRateSensor.newValue(null);
+            }
+            if (tick.getShouldClearRr() && mRrIntervalSensor != null) {
+                mRrIntervalSensor.newValue(null);
+            }
+            if (tick.getHealthTierChanged() && mMySensorManager != null) {
+                mMySensorManager.reevaluatePrimaryHrSensor();
+            }
+        };
+        mHrStalenessRunnable = task;
+        mHandler.postDelayed(task, delayMs);
+    }
+
+    private void cancelHrStalenessTimer() {
+        Runnable pending = mHrStalenessRunnable;
+        mHrStalenessRunnable = null;
+        if (pending != null && mHandler != null) {
+            mHandler.removeCallbacks(pending);
         }
     }
 
@@ -385,18 +455,45 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
                 heartRate = value[1] & 0xFF;
             }
 
+            boolean contactSupported = (flag & 0x04) != 0;
+            boolean contactDetected = (flag & 0x02) != 0;
+
             if (DEBUG) Log.i(TAG, String.format("Received heart rate: %d", heartRate));
-            if (mSilentHrWatchdog.onHrPacketReceived() && mHandler != null) {
-                Runnable pending = mSilentHrWatchdogRunnable;
-                mSilentHrWatchdogRunnable = null;
-                if (pending != null) {
-                    mHandler.removeCallbacks(pending);
+            PolarHrStreamHealthMonitor.HrSampleDecision decision = mHrHealthMonitor.onHrSample(
+                    heartRate,
+                    contactSupported,
+                    contactDetected,
+                    packetArrivalMs,
+                    PolarHrStreamHealthMonitor.isWorkoutActive(TrainingApplication.getTrackingMode()),
+                    getLatestArtifactRatePercent()
+            );
+            if (decision.getAcceptForSensor()) {
+                if (mSilentHrWatchdog.onHrPacketReceived() && mHandler != null) {
+                    Runnable pending = mSilentHrWatchdogRunnable;
+                    mSilentHrWatchdogRunnable = null;
+                    if (pending != null) {
+                        mHandler.removeCallbacks(pending);
+                    }
+                }
+                mHeartRateSensor.newValue(heartRate);
+            } else {
+                if (decision.getShouldClearHr()) {
+                    mHeartRateSensor.newValue(null);
+                }
+                if (decision.getShouldClearRr() && mRrIntervalSensor != null) {
+                    mRrIntervalSensor.newValue(null);
                 }
             }
-            mHeartRateSensor.newValue(heartRate);
+            Long nextCheckDelay = mHrHealthMonitor.nextCheckDelayMs(packetArrivalMs);
+            if (nextCheckDelay != null) {
+                scheduleHrStalenessTimer(nextCheckDelay);
+            }
+            if (decision.getHealthTierChanged() && mMySensorManager != null) {
+                mMySensorManager.reevaluatePrimaryHrSensor();
+            }
 
-            // Bit 4: RR-Interval values present
-            if ((flag & 0x10) != 0) {
+            // Bit 4: RR-Interval values present (only accept when HR sample itself passed validity/contact gate)
+            if (decision.getAcceptForSensor() && (flag & 0x10) != 0) {
                 if (mRrIntervalSensor == null) {
                     mRrIntervalSensor = new MySensor<>(this, SensorType.RR_INTERVAL);
                     addAndRegisterSensor(mRrIntervalSensor);
@@ -448,6 +545,8 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
     @Override
     protected void unregisterSensors() {
         cancelSilentHrWatchdog();
+        cancelHrStalenessTimer();
+        mHrHealthMonitor.reset();
         mHrCccdFailureRetried = false;
         if (mPerDeviceHrvController != null) {
             mPerDeviceHrvController.onDisconnect();
@@ -469,6 +568,8 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
     @Override
     public void shutDown() {
         cancelSilentHrWatchdog();
+        cancelHrStalenessTimer();
+        mHrHealthMonitor.reset();
         mHrCccdFailureRetried = false;
         PolarOfflineGattCoordinator.forceDisconnectDevice(mContext, getAddress(), null);
         if (mPerDeviceHrvController != null) {

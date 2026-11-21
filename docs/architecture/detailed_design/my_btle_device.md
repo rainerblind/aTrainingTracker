@@ -1,14 +1,14 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BTLE`  
-**Version**: 1.0.8  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,424 LOC)  
 **Superclass / Subclasses**: Extends `MyRemoteDevice`; specialized by BLE profiles (`BTLEHeartRateDevice`, `BTLERadarDevice`, cycling speed/cadence/power devices)  
 **SWE.2 Alignment**: `docs/architecture.md` §3.4, §4.5, §4.9 (`IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`, `REQ-SET-120`, `REQ-SET-123`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`, `REQ-SET-120`, `REQ-SET-123`, `REQ-SET-126`
 
 ---
 
@@ -86,7 +86,7 @@ stateDiagram-v2
 | Interface | Direction | Contract / Symbols |
 | :--- | :--- | :--- |
 | Android BLE HAL -> `MyBTLEDevice` | Callback | `BluetoothGattCallback` (`mGattCallback`) & `ScanCallback` (`mScanCallback`) deliver connection, discovery, read, write, MTU, and notification events |
-| `MyBTLEDevice` -> `MySensorManager` | Registration & Telemetry | Subclasses implement `addSensors()` and `measurementCharacteristicUpdate(gatt, characteristic)` emitting into `MySensor` instances |
+| `MyBTLEDevice` -> `MySensorManager` | Registration & Telemetry | Subclasses implement `addSensors()` and `measurementCharacteristicUpdate(gatt, characteristic)` emitting into `MySensor` instances; `BTLEHeartRateDevice` and `PolarOnlineStreamingBridge` additionally implement lock-free `HrSensorHealthProvider` (`getHrHealthTier`, `getHrModality`) for `PrimaryHrSensorArbitrator` in `MySensorManager.getBestSensor(SensorType.HR)` (`REQ-SET-126`) |
 | `MyBTLEDevice` <-> `PolarOfflineGattCoordinator` | Yield Coordination | `pauseGattOperations()`, `resumeGattOperations()`, `isGattPaused()` yield the radio link cleanly without `shutDown()`; `PolarOfflineGattCoordinator` symmetrically pauses/resumes `PolarOnlineStreamingBridge` via alias-aware ref-counted lease tokens (`REQ-SET-120.1`) |
 
 ### 4.2 Threading & Serialized GATT Queue
@@ -99,6 +99,7 @@ stateDiagram-v2
 * **TOCTOU & Permission Guards**: `triggerGattConnect`, `readNextCharacteristic`, `configureServices`, `processNextGattOperation`, and `disconnectFromGatt` re-check `BLUETOOTH_CONNECT`/`BLUETOOTH_SCAN`, `mIsShutDown`, and non-null `mBluetoothGatt` inside posted `mHandler` runnables and catch `SecurityException` / `IllegalStateException`.
 * **Failed Queue Execution Recovery**: If `op.execute(currentGatt)` returns `false` or throws, `processNextGattOperation` immediately calls `onGattOperationCompleted()` so the queue never deadlocks; `mGattTimeoutRunnable` (`2500 ms`) prevents hung BLE stacks from stalling subsequent writes/reads.
 * **Immutable Payload Snapshots**: `obtainSnapshotCharacteristic` clones incoming `byte[]` payloads before posting to `mHandler`, preventing ring-buffer overwrites (`REQ-CON-020.1`).
+* **HR Stream Health, Stale/Flatline Clearing & Verity Sense Workout PPI Gating (`REQ-SET-126`)**: Both `BTLEHeartRateDevice` and `PolarOnlineStreamingBridge` delegate HR/RR sample health tracking to `PolarHrStreamHealthMonitor` (lock-free `@Volatile` tier snapshot for `MySensorManager.reevaluatePrimaryHrSensor()` outside `synchronized (this)` per `REQ-SEN-021.3`): `hr <= 0` or lost skin contact never disarms `BleHrmSilentConnectionWatchdog` and clears latched HR/RR to `null` after `>= 10 s`; HR silence `> 15 s` clears HR/RR to `null` and triggers cooldown-bounded (`60 s`) HR re-subscription; `ARTIFACT_GAP`-only RR bursts `>= 10 s` clear latched RR to `null`; constant-HR flatlines (`>= 60 s` AND `>= 30` consecutive identical samples) mark `DEGRADED` during active workouts (`TRACKING`/`PAUSED`) or `>= 95%` optical artifact saturation with immediate non-sticky recovery on the first changing valid `hr > 0` sample. On `PolarOnlineStreamingBridge`, Verity Sense optical PMD `PPI` streams strictly in `READY`/`IDLE` and is explicitly stopped (`stopStreaming(PPI)` + immediate `mRrIntervalSensor = null` + `PolarPpiStreamProcessor.reset()` + `resetRrAndOpticalArtifactState()`) upon `TRACKING_STATE_CHANGED` into `TRACKING`/`PAUSED` without interrupting `HR`/`ACC`/`GYRO`. `PrimaryHrSensorArbitrator` selects canonical `SensorType.HR` deterministically by `(healthTier, modalityTier [ECG < ANT+ < Optical PPG < Other], registrationOrder)` while retaining the highest-modality binding when all candidates are `STALE_OR_NULL`.
 
 ---
 
@@ -110,6 +111,7 @@ stateDiagram-v2
 | `MyBTLEDeviceQueueTest` | Sequential `mGattQueue` execution without dropping, queue clear on `disconnectFromGatt`, read-behind-descriptor serialization, `mBatteryReadRunnable` & `mReadCharacteristicQueue` routing through `mGattQueue`, `WriteCharacteristicOp` write-type selection, `onCharacteristicWriteCompleted` failure status propagation (`TST-CON-028.1`) |
 | `MyBTLEDeviceAddressAndSearchTest` | `isRandomStaticAddress` MAC classification, scan-assist `ScanFilter` & stop on timeout/disconnect/shutdown, scan-resolved GATT replacement & stale callback rejection, `onScanFailed` direct-connect fallback (`REQ-CON-023`, `TST-CON-023`) |
 | `BLEReconnectRobustnessTest` | Search timeout release (`notifyStopSearching(false)` + `State.DISCONNECTED`), passive never-connected workout convergence (`0` `mReconnectRunnable`, `READY -> TRACKING` replacement, `>= 60 s` disconnect floor, `0` background scan-assist), and session-connected fast `mReconnectRunnable` (`1s..16s`) + `autoConnect = true` (`REQ-CON-036`, `REQ-CON-051`, `REQ-SET-123`, `TST-CON-051`, `TST-SET-125`) |
+| `PolarHrStreamHealthMonitorTest`, `PrimaryHrSensorArbitratorTest`, `PolarOnlineStreamingBridgeTest`, `MySensorManagerPriorityTest`, `BTLEHeartRateDeviceTest` | Verity Sense resting-only PPI gating (`READY`/`IDLE` vs `TRACKING`/`PAUSED` explicit `stopStreaming(PPI)` + RR clear), `hr <= 0`/lost-contact watchdog preservation & `10 s` clear, `> 15 s` stale HR clear, `>= 10 s` artifact-only RR clear, dual-gated flatline (`>= 60 s` & `>= 30` samples) + non-sticky recovery, and deterministic `(healthTier, modalityTier, registrationOrder)` primary HR arbitration (`REQ-SET-126`, `TST-SET-128`) |
 
 ---
 
@@ -126,3 +128,4 @@ stateDiagram-v2
 | `1.0.6` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Added null-safe same-looper synchronous `disconnectFromGatt()` (`onGattClosed == null`), strict `mIsShutDown == true` late `onConnectionStateChange` GATT close guard, and `triggerSilentConnectionReconnect()` for `BTLEHeartRateDevice` silent-HR recovery (`REQ-CON-054`, `1,324 LOC`). |
 | `1.0.7` | 2026-11-20 | Lane B Author (`ATT-9175`, `--as agent1`) | `ATT-9175` | Documented symmetric `PolarOfflineGattCoordinator` alias-aware lease-token yield for `PolarOnlineStreamingBridge` alongside `MyBTLEDevice.pauseGattOperations()` (`REQ-SET-120`). |
 | `1.0.8` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Split `mSearchTimeoutRunnable` on `mHasConnectedInSession` vs. never-connected active-workout passive `autoConnect = true` convergence (`0` `mReconnectRunnable`, `mCurrentGattAutoConnect` + atomic `disconnectFromGattInternal` for `READY -> TRACKING`), gated `startScanAssistance()` & `mSearchTimeoutRunnable` in `attemptBackgroundReconnect()`, and floored never-connected workout disconnect delay `>= 60_000 ms` (`REQ-SET-123`, `1,424 LOC`). |
+| `1.0.9` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Documented `PolarHrStreamHealthMonitor`, lock-free `HrSensorHealthProvider`, `PrimaryHrSensorArbitrator` in `MySensorManager`, `BTLEHeartRateDevice` invalid/stale HR clearing, and `PolarOnlineStreamingBridge` Verity Sense workout PPI gating (`REQ-SET-126`, `TST-SET-128`). |

@@ -1,7 +1,7 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.35  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1022,16 +1022,14 @@
 
 ---
 
-### TST-WKO-039: Tier 4 Session-RPE Fallback in PMC Training Load Verification [Verified]
-- **Target Requirement**: `REQ-WKO-039`
-- **Target Verification Component**: `WorkoutRpeFeelTest.kt`, `PowerPhysiologyCalculatorTest.kt`
-- **Verification Type**: Unit
-- **Priority**: High
-- **Type**: Functional
-- **Verification Method**: Unit
+### TST-WKO-039: PMC Low-CTL ACWR Gate & Tier-4 TSS-Normalized Session-RPE Fallback Verification (`ATT-9360`) [Verified]
+- **Requirement(s)**: `REQ-WKO-039` (`REQ-WKO-039.1`–`REQ-WKO-039.3`)
+- **Component**: `PowerPhysiologyCalculator.kt`, `PowerPhysiologyCalculatorTest.kt`, `WorkoutRpeFeelTest.kt`
+- **Jira**: `ATT-6879`, `ATT-9360` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
 - **Test Description**:
-  1. *Tier 4 Fallback Resolution Test (`TST-WKO-039`)*:
-  • Verify `resolveWorkoutTrainingLoad()` resolves Session-RPE when power and HR are absent, while preserving power TSS precedence when present.
+  1. *Low-CTL ACWR Gate Test (`TST-WKO-039.1`, `PowerPhysiologyCalculatorTest#computePerformanceManagementChart_gatesAcwrStrictlyAtMinCtl15_tstWko039_1`, `PowerPhysiologyCalculatorTest#computePerformanceManagementChart_computesCtlAtlTsbAcwrRampRateAndZones`)*: Verify `computePerformanceManagementChart()` returns `acwr == null` and `acwrZone == null` for every day with `ctl < 15.0` (cold-start Day 0 `ctl = 2.38` and exact boundary `ctl = 14.99`), and returns exact `atl / ctl` with classified `AcwrZone` as soon as `ctl >= 15.0` (`MIN_CTL_FOR_ACWR`).
+  2. *Tier-4 RPE-to-TSS Scale & Foster sRPE Preservation Test (`TST-WKO-039.2`, `PowerPhysiologyCalculatorTest#calculateRpeTss_mapsAllTenBorgCr10LevelsScalesLinearlyAndGuardsInvalidInputs_tstWko039_2`, `PowerPhysiologyCalculatorTest#calculateHrTss_andResolveWorkoutTrainingLoad_followThreeTierHierarchy`, `WorkoutRpeFeelTest#testTier4TrainingLoadFallback`, `WorkoutRpeFeelTest#testSessionRpeCalculation`)*: Verify `calculateRpeTss()` maps all 10 Borg CR10 levels (`1..10`) to `20, 30, 40, 50, 60, 70, 80, 100, 120, 140` TSS/h scaled proportionally by duration (`1800 s` = `0.5x`), returns `0.0` for invalid RPE (`0, -2, 11`) or non-positive/non-finite durations (`0.0, -60.0, NaN, Infinity`), `resolveWorkoutTrainingLoad()` resolves Tier-4 to TSS scale (`1h @ RPE 8 == 100.0`, `RPE 7 == 80.0`, `RPE 6 == 70.0`) while preserving Tier 1–3 precedence, and `calculateSessionRpe(7, 3600.0)` still returns `420.0` (`REQ-WKO-038`).
+- **Verified Evidence (`51ce6830`, `ATT-9534` PASS, `67/67` Tier-1 PASS)**: `PowerPhysiologyCalculatorTest#computePerformanceManagementChart_gatesAcwrStrictlyAtMinCtl15_tstWko039_1`, `PowerPhysiologyCalculatorTest#computePerformanceManagementChart_computesCtlAtlTsbAcwrRampRateAndZones`, `PowerPhysiologyCalculatorTest#calculateRpeTss_mapsAllTenBorgCr10LevelsScalesLinearlyAndGuardsInvalidInputs_tstWko039_2`, `PowerPhysiologyCalculatorTest#calculateHrTss_andResolveWorkoutTrainingLoad_followThreeTierHierarchy`, `WorkoutRpeFeelTest#testTier4TrainingLoadFallback`, `WorkoutRpeFeelTest#testSessionRpeCalculation`.
 
 ---
 
@@ -1452,3 +1450,6 @@
 | `1.0.33` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Added `TST-PER-054` `[Planned]` (`TST-PER-054.1`–`.4`, strictly symmetric `REQ-PER-046`) covering full-period primary-region selection vs extrema outliers, sport-toggle re-ranking & indoor isolation, primary-region-keyed LRU/`produceState` cache invalidation & center geocoding parity, and `REQ-PER-039` memory bounds & contracts (`Localization Parity: N/A - no UI strings`). |
 | `1.0.34` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `TST-PER-054` to `[Implemented]` with exact verbatim `PeriodPrimaryRegionSelectionTest` method citations (`4/4 PASS`) and `99/99 PASS` across all 13 targeted/contract suites + `:app:assembleDebug` + `0` new Kotlin compiler warnings. |
 | `1.0.35` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `TST-PER-054` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9311`) verified `99/99 PASS` evidence across all 13 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `a68fb43a`), verbatim `TestClass#testMethod` citations, `4/4` Python safety linters PASS, and clean-checkout governance sync. |
+| `1.0.36` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Refined `TST-WKO-039` (`[Planned]`, `.1`–`.2`) covering `MIN_CTL_FOR_ACWR = 15.0` low-CTL gating, all 10 `calculateRpeTss` levels (`20..140` TSS/h) + invalid/non-finite guards, Tier-4 TSS equivalence (`1h @ RPE 8 == 100.0`), and `REQ-WKO-038` Foster sRPE preservation. |
+| `1.0.37` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-WKO-039` to `[Implemented]` with exact verbatim `PowerPhysiologyCalculatorTest` and `WorkoutRpeFeelTest` method citations. |
+| `1.0.38` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 suites, `0` `app/` drift, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |

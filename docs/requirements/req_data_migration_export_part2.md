@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.16  
+**Version**: 1.0.23  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 7
+**Total Requirements**: 9
 
 ---
 
@@ -248,10 +248,69 @@
 
 ---
 
+### REQ-DAT-046: Lossless In-Memory Merge in `WorkoutRepository.loadWorkout` Preserving `exportStatuses` and Transient Cache Fields (`ATT-6170`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-042`
+- **System Requirement(s)**: Derived (SW-only) — Internal in-memory repository cache merge in `WorkoutRepository.loadWorkout` without external sensor, REST API, or SQLite schema changes (extending `REQ-DAT-045.4` / `REQ-STB-018.3`).
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutRepository.kt`
+- **Rationale**: `WorkoutDataMapper.fromCursor` delegates to `fromSnapshot` (`REQ-DAT-045.4`), which initializes `exportStatuses = emptyList()`. Because `WorkoutRepository.loadWorkout(id)` is invoked both when opening the Edit Workout dialog (`EditWorkoutViewModel.loadWorkoutData`) and directly after `reloadWorkoutData(id)` across cluster actions (`assignClusterToWorkout`, `unassignClusterFromWorkout`, `createNewClusterFromWorkout`, and `WorkoutClusterRepository` move/assign/create/unassign), overwriting `_allWorkouts` via `newList[index] = workout` wipes cached `exportStatuses` chips and transient in-memory fields.
+- **Description**:
+  1. *Initial Workout Event & Radar Enrichment Preservation (`REQ-DAT-046.1`)*:
+     - `WorkoutRepository.loadWorkout(id)` SHALL continue enriching `radarTrafficSummary` when applicable and posting the freshly mapped `WorkoutData` (including refreshed SQLite cluster, sport, equipment, and name fields) to `_initialWorkoutLoaded` for `EditWorkoutViewModel`.
+  2. *Surgical Cache Merge via `addOrUpdateWorkout` (`REQ-DAT-046.2`)*:
+     - `WorkoutRepository.loadWorkout(id)` SHALL delegate the `_allWorkouts` list update to `addOrUpdateWorkout(workout)` rather than performing `newList[index] = workout`.
+     - When `id` already exists in `_allWorkouts`, `addOrUpdateWorkout(workout)` SHALL preserve existing `exportStatuses` (when `workout.exportStatuses.isEmpty()`), `mapPolyline`, `encodedAltitudes`, `encodedDistances`, and `extremaRows` (including per-row `minLatLng`/`maxLatLng`), while propagating all refreshed persisted fields (`clusterId`, `clusterName`, `workoutName`, `description`, `sportId`, `sportName`, `bSportType`, `equipmentId`, `equipmentName`, `stravaSportName`).
+  3. *Uncached Insertion, CAS Purity & Scope Boundary (`REQ-DAT-046.3`)*:
+     - When `id` is absent from `_allWorkouts`, `addOrUpdateWorkout(workout)` SHALL append `workout` and sort `_allWorkouts` descending by `headerData.startTimeS` under pure functional `_allWorkouts.update` CAS semantics (`REQ-STB-018.3`).
+     - Sequential callers (`reloadWorkoutData(id)` followed by `loadWorkout(id)`) remain safe without adding a new per-ID lock (`1 SP` scope boundary); `WorkoutDataMapper.fromSnapshot` SHALL retain `exportStatuses = emptyList()` (`REQ-DAT-045.4`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout cached in `_allWorkouts` with non-empty `exportStatuses`, `mapPolyline`, `encodedAltitudes`, `encodedDistances`, and `extremaRows` (`minLatLng`/`maxLatLng`), *When* SQLite fields (`clusterId`, `clusterName`, `workoutName`, `sportId`, `equipmentId`) change and `WorkoutRepository.loadWorkout(id)` executes (with `fromCursor` returning `exportStatuses = emptyList()`), *Then* `_allWorkouts` preserves all existing `exportStatuses` and transient fields while reflecting the updated SQLite fields, and `_initialWorkoutLoaded` receives the refreshed `WorkoutData`.
+• *Given* a workout absent from `_allWorkouts`, *When* `WorkoutRepository.loadWorkout(id)` executes, *Then* `_allWorkouts` inserts it in descending `headerData.startTimeS` order and `_initialWorkoutLoaded` receives it.
+
+**Invariants**: `WorkoutRepository.kt <= 5,117` LoC (`ArchitectureConformanceContractTest`); `_initialWorkoutLoaded` emission preserved (`EditWorkoutViewModel`); `fromSnapshot` `exportStatuses = emptyList()` untouched (`REQ-DAT-045.4`); pure CAS `_allWorkouts.update` (`REQ-STB-018.3`); `0` DB schema or `strings*.xml` edits (`Localization Parity: N/A`).
+
+---
+
+### REQ-MIG-056: Dropbox Remote Filename Path-Traversal Sanitization & `SecureZipExtractor.sanitizeDriveFileName` Hardening (`ATT-6174`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-056`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `LegacyImportEngine.kt`, `SecureZipExtractor.kt`
+- **Rationale**: `LegacyImportEngine.bulkRecoverFromGoogleDrive` sanitizes remote filenames via `SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)`, whereas `bulkRecoverFromDropbox` passes `entry.name` directly into `File(workerDir, entry.name)` before writing via `FileOutputStream`. Additionally, `SecureZipExtractor.sanitizeDriveFileName` does not explicitly reject null bytes (`\u0000`) or single-dot `"."` before path resolution (`targetPath == workerPath` passes `startsWith(workerPath)`).
+- **Description**:
+  1. *Dropbox Filename Sanitization Parity (`REQ-MIG-056.1`)*:
+     - `LegacyImportEngine.bulkRecoverFromDropbox` SHALL validate every remote `entry.name` via `SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)` prior to invoking `downloadFileWithRetry`.
+     - Upon `SecurityException`, `bulkRecoverFromDropbox` SHALL log the violation, delete the empty `workerDir`, increment `failedCount`, and skip downloading/importing so zero files are written outside `workerDir`.
+  2. *`SecureZipExtractor.sanitizeDriveFileName` Edge-Case Hardening (`REQ-MIG-056.2`)*:
+     - `SecureZipExtractor.sanitizeDriveFileName(fileName, workerDir)` SHALL retain its exact function name and signature (preserving `BackupImportSecurityTest` and `bulkRecoverFromGoogleDrive` callers) and SHALL additionally reject null bytes (`\u0000`) and self-referential single-dot paths (`safeName == "."` / `targetPath == workerPath`) with `SecurityException`.
+     - Existing rejection of `/`, `\`, `..` (including filenames containing literal `..` such as `ride..fit`), and blank strings SHALL remain preserved, while benign filenames (e.g., `2026-10-18-run.tcx`) resolve strictly inside `workerDir`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Dropbox entry with traversal, separator, `..`, null-byte (`\u0000`), blank, or `"."` name (e.g., `../../evil.tcx`, `sub/evil.tcx`, `sub\evil.tcx`, `ride..fit`), *When* `bulkRecoverFromDropbox` executes, *Then* `SecurityException` is caught, `failedCount` increments, the violation is logged, empty `workerDir` is cleaned up, `downloadFileWithRetry` is never invoked, and zero files are written outside `workerDir`.
+• *Given* a valid filename without path separators, `..`, `\u0000`, or `"."`, *When* `bulkRecoverFromDropbox` or `SecureZipExtractor.sanitizeDriveFileName` executes, *Then* the resolved `File` sits directly inside `workerDir` and imports normally.
+
+**Invariants**: `SecureZipExtractor.sanitizeDriveFileName` signature & `BackupImportSecurityTest` compatibility preserved; `bulkRecoverFromGoogleDrive` parity preserved; `0` DB manager calls in `LegacyImportEngine.kt` (`RepositoryEngineCleanlinessContractTest`); `0` `strings*.xml` edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.23` | 2026-11-21 | Sprint Coordinator (`ATT-6174`) | `ATT-6174` | Aligned `REQ-MIG-056` `System Requirement(s)` to `SYSREQ-DEX-004` (Cloud Storage Sync parity with `REQ-MIG-054`/`REQ-MIG-055`) to prevent `Derived (SW-only)` + Change-History `SYSREQ-*` double-count in `TST-PRO-103.2`. |
+| `1.0.22` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `REQ-MIG-056` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9555`) independently verified `30/30` PASS across 4 suites (`0` fail, `0` skip) + `4/4` linters PASS @ `993be8d5`. |
+| `1.0.21` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `REQ-MIG-056` to `[Implemented]` (`SecureZipExtractor.sanitizeDriveFileName` `\u0000`/`"."` hardening + `LegacyImportEngine.sanitizeRemoteTempFile` in `bulkRecoverFromDropbox` & `bulkRecoverFromGoogleDrive`). |
+| `1.0.20` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Added `[Planned]` `REQ-MIG-056` (`Derived (SW-only)`) specifying `SecureZipExtractor.sanitizeDriveFileName` enforcement in `LegacyImportEngine.bulkRecoverFromDropbox` and `\u0000`/`"."` `SecurityException` hardening. |
+| `1.0.19` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `REQ-DAT-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9533`) independently verified `25/25` PASS across 4 suites (`0` fail, `0` skip) + `4/4` linters PASS @ `36609fff`. |
+| `1.0.18` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Promoted `REQ-DAT-046` to `[Implemented]` (`WorkoutRepository.loadWorkout` delegates `_allWorkouts` updates to `addOrUpdateWorkout`). |
+| `1.0.17` | 2026-11-21 | Lane 2 Author (`ATT-6170`, `--as agent1`) | `ATT-6170` | Added `[Planned]` `REQ-DAT-046` (`Derived (SW-only)`) specifying lossless `addOrUpdateWorkout` merge in `WorkoutRepository.loadWorkout` preserving `exportStatuses` and transient cache fields while keeping `_initialWorkoutLoaded` and descending insertion intact. |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
 | `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Added `REQ-MIG-054` (`[Planned]`, `SYSREQ-DEX-004`) preserving explicit `UPLOAD_TO_STRAVA = 0` opt-outs and `1` opt-ins while resolving undecided `-1`/SQL `NULL` rows. |

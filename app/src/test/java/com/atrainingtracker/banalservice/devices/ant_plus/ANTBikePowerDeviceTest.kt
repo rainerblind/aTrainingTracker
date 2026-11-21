@@ -25,6 +25,8 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc
+import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc.CalculatedWheelSpeedReceiver
+import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc.DataSource
 import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc.IPedalPowerBalanceReceiver
 import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc.IPedalSmoothnessReceiver
 import com.dsi.ant.plugins.antplus.pcc.defines.EventFlag
@@ -45,8 +47,10 @@ class ANTBikePowerDeviceTest {
     private lateinit var mockContext: Context
     private lateinit var mockSensorManager: MySensorManager
     private lateinit var mockPcc: AntPlusBikePowerPcc
+    private lateinit var mockDevicesDb: DevicesDatabaseManager
     private var capturedReceiver: IPedalPowerBalanceReceiver? = null
     private var capturedSmoothnessReceiver: IPedalSmoothnessReceiver? = null
+    private var capturedWheelSpeedReceiver: CalculatedWheelSpeedReceiver? = null
 
     private class TestANTBikePowerDevice(
         context: Context,
@@ -70,6 +74,10 @@ class ANTBikePowerDeviceTest {
 
         fun getPedalSmoothnessSensor(): MySensor<Int>? = mPedalSmoothnessSensor
 
+        fun getSpeedSensor(): MySensor<Double>? = mSpeedSensor
+
+        fun getPaceSensor(): MySensor<Double>? = mPaceSensor
+
         fun getDevicesDatabaseManager(): DevicesDatabaseManager = mDevicesDatabaseManager
     }
 
@@ -85,7 +93,7 @@ class ANTBikePowerDeviceTest {
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
 
         mockkStatic(DevicesDatabaseManager::class)
-        val mockDevicesDb = mockk<DevicesDatabaseManager>(relaxed = true)
+        mockDevicesDb = mockk(relaxed = true)
         every { mockDevicesDb.getBikePowerSensorFlags(any()) } returns 0
         every { mockDevicesDb.putBikePowerSensorFlags(any(), any()) } just Runs
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
@@ -103,6 +111,11 @@ class ANTBikePowerDeviceTest {
         val smoothnessSlot = slot<IPedalSmoothnessReceiver>()
         every { mockPcc.subscribePedalSmoothnessEvent(capture(smoothnessSlot)) } answers {
             capturedSmoothnessReceiver = smoothnessSlot.captured
+        }
+
+        val wheelSpeedSlot = slot<CalculatedWheelSpeedReceiver>()
+        every { mockPcc.subscribeCalculatedWheelSpeedEvent(capture(wheelSpeedSlot)) } answers {
+            capturedWheelSpeedReceiver = wheelSpeedSlot.captured
         }
     }
 
@@ -232,5 +245,119 @@ class ANTBikePowerDeviceTest {
             "Inherited mDevicesDatabaseManager from MyDevice must be initialized",
             device.getDevicesDatabaseManager()
         )
+    }
+
+    /**
+     * TST-STB-026.1: Verify null calculatedWheelSpeed returns before sensor creation,
+     * throwing zero NPEs and leaving speed/pace sensors null without DB flag mutation.
+     */
+    @Test
+    fun testANTBikePower_nullCalculatedWheelSpeed_returnsWithoutCreatingSensorsOrMutatingDb() {
+        // Verifies REQ-STB-026 / TST-STB-026
+        val device = TestANTBikePowerDevice(mockContext, mockSensorManager, 207L, 12351)
+        device.setMockPcc(mockPcc)
+        device.subscribeSpecificEvents()
+
+        assertNotNull("CalculatedWheelSpeedReceiver must be subscribed", capturedWheelSpeedReceiver)
+
+        capturedWheelSpeedReceiver?.onNewCalculatedWheelSpeed(
+            1000L,
+            EnumSet.noneOf(EventFlag::class.java),
+            DataSource.WHEEL_TORQUE_DATA,
+            null
+        )
+
+        assertNull("Speed sensor must not be created on null callback", device.getSpeedSensor())
+        assertNull("Pace sensor must not be created on null callback", device.getPaceSensor())
+        verify(exactly = 0) { mockDevicesDb.putBikePowerSensorFlags(any(), any()) }
+    }
+
+    /**
+     * TST-STB-026.2: Verify initial BigDecimal.ZERO standstill reports 0.0 m/s speed and null pace (never Infinity).
+     */
+    @Test
+    fun testANTBikePower_initialZeroWheelSpeed_setsZeroSpeedAndNullPace() {
+        // Verifies REQ-STB-026 / TST-STB-026
+        val device = TestANTBikePowerDevice(mockContext, mockSensorManager, 208L, 12352)
+        device.setMockPcc(mockPcc)
+        device.subscribeSpecificEvents()
+
+        capturedWheelSpeedReceiver?.onNewCalculatedWheelSpeed(
+            1000L,
+            EnumSet.noneOf(EventFlag::class.java),
+            DataSource.COAST_OR_STOP_DETECTED,
+            BigDecimal.ZERO
+        )
+
+        assertNotNull("Speed sensor must be created on non-null standstill speed", device.getSpeedSensor())
+        assertNotNull("Pace sensor must be created on non-null standstill speed", device.getPaceSensor())
+        assertEquals(0.0, device.getSpeedSensor()?.value ?: Double.NaN, 1e-9)
+        assertNull("Standstill pace must remain null rather than PositiveInfinity", device.getPaceSensor()?.value)
+    }
+
+    /**
+     * TST-STB-026.2: Verify positive wheel speed (36.0 km/h) converts to 10.0 m/s and 0.1 s/m pace.
+     */
+    @Test
+    fun testANTBikePower_positiveWheelSpeed_computesMetersPerSecondAndFinitePace() {
+        // Verifies REQ-STB-026 / TST-STB-026
+        val device = TestANTBikePowerDevice(mockContext, mockSensorManager, 209L, 12353)
+        device.setMockPcc(mockPcc)
+        device.subscribeSpecificEvents()
+
+        capturedWheelSpeedReceiver?.onNewCalculatedWheelSpeed(
+            1000L,
+            EnumSet.noneOf(EventFlag::class.java),
+            DataSource.WHEEL_TORQUE_DATA,
+            BigDecimal("36.0")
+        )
+
+        assertEquals(10.0, device.getSpeedSensor()?.value ?: Double.NaN, 1e-9)
+        assertEquals(0.1, device.getPaceSensor()?.value ?: Double.NaN, 1e-9)
+    }
+
+    /**
+     * TST-STB-026.2: Verify 8 consecutive BigDecimal.ZERO standstill ticks (SPEED_THRESHOLD = 8)
+     * after positive speed decay mPaceSensor cleanly back to null (never Infinity).
+     */
+    @Test
+    fun testANTBikePower_zeroWheelSpeedAfterMotion_decaysPaceToNullAtThreshold() {
+        // Verifies REQ-STB-026 / TST-STB-026
+        val device = TestANTBikePowerDevice(mockContext, mockSensorManager, 210L, 12354)
+        device.setMockPcc(mockPcc)
+        device.subscribeSpecificEvents()
+
+        capturedWheelSpeedReceiver?.onNewCalculatedWheelSpeed(
+            1000L,
+            EnumSet.noneOf(EventFlag::class.java),
+            DataSource.WHEEL_TORQUE_DATA,
+            BigDecimal("36.0")
+        )
+        assertEquals(0.1, device.getPaceSensor()?.value ?: Double.NaN, 1e-9)
+
+        for (tick in 1..7) {
+            capturedWheelSpeedReceiver?.onNewCalculatedWheelSpeed(
+                1000L + tick,
+                EnumSet.noneOf(EventFlag::class.java),
+                DataSource.COAST_OR_STOP_DETECTED,
+                BigDecimal.ZERO
+            )
+            assertEquals(
+                "Pace should hold prior finite value before SPEED_THRESHOLD ($tick/8)",
+                0.1,
+                device.getPaceSensor()?.value ?: Double.NaN,
+                1e-9
+            )
+        }
+
+        capturedWheelSpeedReceiver?.onNewCalculatedWheelSpeed(
+            1008L,
+            EnumSet.noneOf(EventFlag::class.java),
+            DataSource.COAST_OR_STOP_DETECTED,
+            BigDecimal.ZERO
+        )
+
+        assertEquals(0.0, device.getSpeedSensor()?.value ?: Double.NaN, 1e-9)
+        assertNull("Pace sensor must decay cleanly to null at SPEED_THRESHOLD = 8", device.getPaceSensor()?.value)
     }
 }

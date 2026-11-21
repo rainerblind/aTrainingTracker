@@ -2135,6 +2135,7 @@
     <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
     <string name="athlete_profile_pmc_acwr_caution">Hoge belasting</string>
     <string name="athlete_profile_pmc_acwr_danger">Gevarenzone</string>
+    <string name="athlete_profile_pmc_acwr_building_base">Basis opbouwen</string>
     <string name="athlete_profile_pmc_empty">Nog geen trainingsbelastingsgegevens beschikbaar.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->

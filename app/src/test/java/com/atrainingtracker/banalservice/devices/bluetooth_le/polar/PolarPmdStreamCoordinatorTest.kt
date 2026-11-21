@@ -793,4 +793,27 @@ class PolarPmdStreamCoordinatorTest {
         coordinator.cancelAllStreams()
         assertFalse(coordinator.isActive(PolarPmdStreamCoordinator.StreamSlot.ACC))
     }
+
+    @Test
+    fun testOneShotTimer_supersededTimerNeverInvokesStaleOnElapsed() = runTest {
+        // Verifies REQ-SET-126 / TST-SET-128
+        val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+        val timer = PolarPmdStreamCoordinator.OneShotTimer(scope)
+        val fired = mutableListOf<String>()
+
+        timer.schedule(delayMs = 1_000L) { fired.add("first") }
+        testScheduler.advanceTimeBy(500L)
+        testScheduler.runCurrent()
+
+        // Supersede before first fires -> only "second" may invoke onElapsed
+        timer.schedule(delayMs = 2_000L) { fired.add("second") }
+        testScheduler.advanceTimeBy(1_000L)
+        testScheduler.runCurrent()
+        assertEquals("Superseded first timer must NEVER fire", emptyList<String>(), fired)
+
+        testScheduler.advanceTimeBy(1_500L)
+        testScheduler.runCurrent()
+        assertEquals(listOf("second"), fired)
+        assertNull(timer.currentJob())
+    }
 }

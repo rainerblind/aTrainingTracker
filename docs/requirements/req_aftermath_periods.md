@@ -1,7 +1,7 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.31  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1572,19 +1572,29 @@
 
 ---
 
-### REQ-WKO-039: Performance Management Chart (PMC) Tier 4 Training Load Fallback via Session-RPE [Implemented]
+### REQ-WKO-039: Performance Management Chart (PMC) Low-CTL ACWR Gate & Tier-4 TSS-Normalized Session-RPE Fallback [Verified]
+- **Target Release**: `V5.0.0`
 - **Tests**: `TST-WKO-039`
+- **System Requirement(s)**: Derived (SW-only — pure physiology training-load & ACWR math in `PowerPhysiologyCalculator.kt`)
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Target**: `PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`
 - **Implementation**: `PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`
-- **Rationale**: Provide Tier 4 training load resolution in PMC when power TSS and hrTSS telemetry are unavailable, plus FIT protocol field round-trip (ATT-6879, ATT-8196).
-- **Description**: `PowerPhysiologyCalculator.resolveWorkoutTrainingLoad()` SHALL fall back to Session-RPE load (Tier 4) when neither power nor heart rate metrics are present, and `FitFileWriter` SHALL serialize subjective feel and RPE metadata.
+- **Localization Parity**: `N/A - domain math only (UI badge localization covered in REQ-UI-2792)`
+- **Rationale**: Prevents low-denominator ACWR false injury-risk spikes during cold starts (`CTL < 15.0`) and eliminates 4–5x PMC load inflation caused by feeding raw Foster sRPE (`RPE * minutes`) directly into the TSS-scaled PMC (`ATT-6879`, `ATT-8196`, `ATT-9360`).
+- **Description**:
+  1. *Minimum Chronic Fitness Gate for ACWR (`REQ-WKO-039.1`)*: `PowerPhysiologyCalculator` SHALL define `const val MIN_CTL_FOR_ACWR: Double = 15.0`. In `computePerformanceManagementChart()`, per-day `acwr` SHALL be computed as `atl / ctl` strictly when `ctl >= MIN_CTL_FOR_ACWR` and SHALL be `null` (with `acwrZone = null`, propagating to `PmcSummaryResult.currentAcwr` / `currentAcwrZone`) whenever `ctl < MIN_CTL_FOR_ACWR`.
+  2. *Tier-4 RPE-to-TSS Normalization (`REQ-WKO-039.2`)*: `PowerPhysiologyCalculator` SHALL provide `@JvmStatic fun calculateRpeTss(rpe: Int, activeTimeSeconds: Double): Double` mapping Borg CR10 `rpe` `1..10` to `20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 100.0, 120.0, 140.0` TSS/hour scaled linearly by `(activeTimeSeconds / 3600.0)` (calibrating 1h @ RPE 8 = `100.0` TSS, and returning `0.0` when `rpe !in 1..10` or `!activeTimeSeconds.isFinite() || activeTimeSeconds <= 0.0`).
+  3. *Tier-4 Resolution & Foster sRPE Isolation (`REQ-WKO-039.3`)*: `resolveWorkoutTrainingLoad()` SHALL delegate Tier 4 (no power or HR telemetry) to `calculateRpeTss(rpe, activeSec)` while preserving Tier 1–3 precedence (`powerTss` -> derived power `TSS` -> `hrTSS`) and `FitFileWriter` feel/RPE serialization. `PowerPhysiologyCalculator.calculateSessionRpe()` (`REQ-WKO-038`) MUST remain 100% unchanged as authentic Foster sRPE (`RPE * minutes`) for `WorkoutRpeFeelSection.kt`.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* a workout sample with RPE but lacking power and HR metrics,
-  • *When* resolving workout training load,
-  • *Then* Tier 4 Session-RPE score is resolved.
+  • *Given* a workout history where `CTL_t < 15.0` (e.g., `CTL = 7.0`, `ATL = 22.7`), *When* `computePerformanceManagementChart()` evaluates day `t`, *Then* `acwr == null` and `acwrZone == null`; once `CTL_t >= 15.0`, `acwr == ATL_t / CTL_t` and `acwrZone` classifies normally.
+  • *Given* a 60-minute (`3600 s`) RPE-only workout with `RPE = 8`, *When* `resolveWorkoutTrainingLoad()` resolves Tier 4, *Then* it returns `100.0` TSS (and `calculateRpeTss` matches `20..140` TSS/h across `RPE 1..10`, returning `0.0` on invalid/non-finite inputs), while `calculateSessionRpe(7, 3600.0)` continues returning `420.0`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-WKO-039` (`PowerPhysiologyCalculator.kt`, `FitFileWriter.kt`) and `REQ-UI-401.1` ACWR threshold.
+  2. *Historical Origin & Commit Trace*: `ATT-3859` (`dc62bb3c`) added `ctl > 0.01` ACWR guard; `ATT-6879` (`2c999318`) introduced `REQ-WKO-038`/`REQ-WKO-039` wiring raw `calculateSessionRpe()` into Tier 4; `ATT-8196` added FIT feel/RPE serialization.
+  3. *Root Reason for Existing Formulation*: `ctl > 0.01` only guarded divide-by-zero; `ATT-6879` reused `calculateSessionRpe()` directly as a fast Tier-4 fallback without TSS scale calibration.
+  4. *Preservation of Core Invariants*: Preserves `REQ-WKO-038` authentic Foster sRPE (`calculateSessionRpe()` untouched for `WorkoutRpeFeelSection.kt:144`), Banister/Coggan `CTL`/`ATL`/`TSB`/`RampRate`, Tier 1–3 precedence, `AcwrZone` thresholds (`0.80 / 1.30 / 1.50`), and `FitFileWriter` metadata export.
 
 ---
 
@@ -2200,3 +2210,6 @@
 | `1.0.29` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Added `REQ-PER-046` `[Planned]` (`REQ-PER-046.1`–`.4`) for authoritative full-period primary region selection (`PeriodRegionPreview`), sport-aware preview track curation (`<= 8` from winning region, indoor isolation, `workoutIdToAllPolylinesMap == emptyMap()`), primary-region-keyed LRU/`produceState` caching & center geocoding parity, and strict `REQ-PER-039` memory bounds (`Localization Parity: N/A - no UI strings`). |
 | `1.0.30` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `REQ-PER-046` to `[Implemented]` following Stage 4 construction (`PeriodData.kt` `288/300`, `PeriodsRepository.kt` `1,211/1,500`, `PeriodsViewModel.kt` `430/1,500`, `PeriodMapUtils.kt` `474/1,500`, `PeriodSummaryCard.kt` `792/1,500`), `:app:assembleDebug`, `0` new Kotlin compiler warnings, and `99/99 PASS` across all 13 targeted/contract suites with `0` edits to `SpatialRegionEngine.kt`, `PeriodsScreen.kt`, and protected monoliths. |
 | `1.0.31` | 2026-11-20 | AI Agent (`ATT-8664`, `--as agent1`) | `ATT-8664` | Promoted `REQ-PER-046` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9311`) verified `99/99 PASS` evidence across all 13 suites + `:app:assembleDebug` + `0` new warnings (`Rule 7.5`, `0` `app/` code drift since `a68fb43a`), `4/4` Python safety linters PASS, clean-checkout `TST-PER-054` traceability parity, and governance sync. |
+| `1.0.32` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Refined `REQ-WKO-039` (`[Planned]`, `.1`–`.3`, with 4-field Chesterton's Fence Audit) to gate PMC ACWR on `MIN_CTL_FOR_ACWR = 15.0` and normalize Tier-4 RPE fallback onto the TSS scale via `calculateRpeTss()` (`RPE 1..10 -> 20..140` TSS/h, 1h @ RPE 8 = `100.0` TSS) while keeping `REQ-WKO-038` `calculateSessionRpe()` untouched. |
+| `1.0.33` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Implemented]` (`PowerPhysiologyCalculator.kt`: `MIN_CTL_FOR_ACWR = 15.0`, `calculateRpeTss()`, Tier-4 delegation, `calculateSessionRpe()` untouched). |
+| `1.0.34` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 Tier-1 suites, `0` `app/` drift, `0` new warnings, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |

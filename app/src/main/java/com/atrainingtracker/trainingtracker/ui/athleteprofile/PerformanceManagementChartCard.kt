@@ -170,13 +170,19 @@ fun PerformanceManagementChartCard(
                 )
             }
 
-            // Row 2: Derived non-plotted KPIs — neutral borders avoid colliding with curve colors (REQ-UI-2791.1, .5)
+            // Row 2: Derived non-plotted KPIs — neutral borders avoid colliding with curve colors (REQ-UI-2791.1, .5; REQ-UI-2792.1)
+            val isAcwrBuildingBase = pmcSummary.currentAcwr == null &&
+                (pmcSummary.dailyPoints.isNotEmpty() || pmcPlotPoints.isNotEmpty())
             val acwrZoneText = when (pmcSummary.currentAcwrZone) {
                 AcwrZone.UNDER_TRAINING -> stringResource(R.string.athlete_profile_pmc_acwr_under)
                 AcwrZone.SWEET_SPOT -> stringResource(R.string.athlete_profile_pmc_acwr_sweet_spot)
                 AcwrZone.HIGH_LOAD_CAUTION -> stringResource(R.string.athlete_profile_pmc_acwr_caution)
                 AcwrZone.DANGER_ZONE -> stringResource(R.string.athlete_profile_pmc_acwr_danger)
-                null -> null
+                null -> if (isAcwrBuildingBase) {
+                    stringResource(R.string.athlete_profile_pmc_acwr_building_base)
+                } else {
+                    null
+                }
             }
             val acwrStatusColor = when (pmcSummary.currentAcwrZone) {
                 AcwrZone.SWEET_SPOT -> TTColor.PmcFreshGreen
@@ -201,6 +207,7 @@ fun PerformanceManagementChartCard(
                     curveSwatchColor = null,
                     cardTestTag = "pmc_card_acwr",
                     valueTextTestTag = "pmc_acwr_value_text",
+                    badgeTextTestTag = "pmc_acwr_zone_text",
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
@@ -567,10 +574,10 @@ private fun previewSamplePmcSummary(): PmcSummaryResult = PmcSummaryResult(
     currentCtl = 7.0,
     currentAtl = 22.7,
     currentTsb = -13.4,
-    currentAcwr = 3.26,
+    currentAcwr = null,
     currentRampRate7d = 4.2,
     currentTsbZone = TsbReadinessZone.OPTIMAL_OVERLOAD,
-    currentAcwrZone = AcwrZone.DANGER_ZONE,
+    currentAcwrZone = null,
     isAggressiveRampUp = false
 )
 

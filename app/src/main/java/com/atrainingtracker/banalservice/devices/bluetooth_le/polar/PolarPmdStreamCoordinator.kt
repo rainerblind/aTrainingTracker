@@ -20,11 +20,14 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
+import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.polar.androidcommunications.api.ble.exceptions.BleControlPointCommandError
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdControlPointResponse
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdMeasurementType
+import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.model.PolarSensorSetting
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -75,6 +79,54 @@ class PolarPmdStreamCoordinator(
 ) {
 
     enum class StreamSlot { HR, ACC, GYRO, PPI }
+
+    /** Single-flight cancellable one-shot timer with identity-safe cleanup (`REQ-SET-126`, `REQ-CON-054`). */
+    class OneShotTimer(private val scope: CoroutineScope) {
+        private val lock = Any()
+        @Volatile private var job: Job? = null
+
+        fun currentJob(): Job? = synchronized(lock) { job }
+
+        fun schedule(delayMs: Long, shouldArm: () -> Boolean = { true }, onElapsed: () -> Unit) {
+            val previous = synchronized(lock) {
+                val existing = job
+                if (!shouldArm()) {
+                    job = null
+                } else {
+                    job = scope.launch {
+                        try {
+                            delay(delayMs)
+                            val isActiveOwner = synchronized(lock) {
+                                if (coroutineContext[Job] === job) {
+                                    job = null
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            if (isActiveOwner) {
+                                onElapsed()
+                            }
+                        } finally {
+                            synchronized(lock) { if (coroutineContext[Job] === job) job = null }
+                        }
+                    }
+                }
+                existing
+            }
+            previous?.cancel()
+        }
+
+        fun cancel(onLockedCancel: () -> Unit = {}) {
+            val previous = synchronized(lock) {
+                val existing = job
+                job = null
+                onLockedCancel()
+                existing
+            }
+            previous?.cancel()
+        }
+    }
 
     companion object {
         private const val TAG = "PolarOnlineImuBridge"
@@ -126,6 +178,56 @@ class PolarPmdStreamCoordinator(
                 }
             }
             return if (selected.isEmpty()) available.maxSettings() else PolarSensorSetting(selected)
+        }
+
+        /** Queries advertised ACC settings and picks the optimal sample rate + max range/resolution. */
+        suspend fun resolveAccSetting(
+            api: PolarBleApi,
+            sessionId: String,
+            isVeritySense: Boolean,
+            highRateRunningDynamicsActive: Boolean
+        ): Pair<PolarSensorSetting, Set<Int>> {
+            val available = api.requestStreamSettings(sessionId, PolarBleApi.PolarDeviceDataType.ACC)
+            val rates = available.settings[PolarSensorSetting.SettingType.SAMPLE_RATE].orEmpty()
+            val desiredRate = computeDesiredAccRateHz(rates, isVeritySense, highRateRunningDynamicsActive)
+            return buildSettingWithRate(available, desiredRate) to rates
+        }
+
+        /** Queries advertised GYRO settings and pins Verity Sense to [VERITY_IMU_HZ] when advertised. */
+        suspend fun resolveGyroSetting(api: PolarBleApi, sessionId: String): PolarSensorSetting {
+            val available = api.requestStreamSettings(sessionId, PolarBleApi.PolarDeviceDataType.GYRO)
+            val rates = available.settings[PolarSensorSetting.SettingType.SAMPLE_RATE].orEmpty()
+            val desiredRate = if (rates.contains(VERITY_IMU_HZ)) VERITY_IMU_HZ else null
+            return buildSettingWithRate(available, desiredRate)
+        }
+
+        /** Best-effort quiet PMD teardown for one or more [types] (never throws). */
+        fun stopPmdStreamsQuietly(api: PolarBleApi, sessionId: String, vararg types: PmdMeasurementType) {
+            for (type in types) {
+                runCatching { api.stopStreaming(sessionId, type) }
+            }
+        }
+
+        /** Persists DIS model/serial characteristics and returns `true` when model metadata updated. */
+        fun recordDisCharacteristic(context: Context, macAddress: String, key: String, value: String): Boolean {
+            val lowerKey = key.trim().lowercase(Locale.ROOT)
+            val trimmedValue = value.trim()
+            if (trimmedValue.isEmpty()) return false
+            return when {
+                lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.toString() ||
+                    lowerKey.contains("2a24") || lowerKey.contains("model") -> {
+                    PolarOfflineCapabilityStore.recordDisMetadata(context, macAddress, modelNumber = trimmedValue)
+                    true
+                }
+                lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.toString() ||
+                    lowerKey.contains("2a25") || lowerKey.contains("serial") -> {
+                    if (PolarOfflineCapabilityStore.isValidCanonicalPolarId(trimmedValue)) {
+                        PolarOfflineCapabilityStore.recordDisMetadata(context, macAddress, serialNumber = trimmedValue)
+                    }
+                    false
+                }
+                else -> false
+            }
         }
 
         private val _streamWarning = MutableStateFlow<PolarPmdStreamWarning?>(null)

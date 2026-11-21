@@ -68,7 +68,7 @@ import kotlin.math.exp
  * Behavioral Compose UI & Rule 8.5 Light/Dark visual verification tests for
  * [PerformanceManagementChartCard] and [PerformanceManagementChartCanvas] (`REQ-UI-2791`, `TST-UI-2791`).
  */
-// Linked test specs: TST-UI-2791, TST-UI-2791.2, TST-UI-2791.3
+// Linked test specs: TST-UI-2791, TST-UI-2791.2, TST-UI-2791.3, TST-UI-2792, TST-UI-2792.1, TST-UI-2792.3
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "de-rDE-w800dp-h1200dp-xhdpi")
@@ -270,5 +270,132 @@ class PerformanceManagementChartCardTest {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
         }
         assertTrue("Screenshot PNG must be written and non-empty", outFile.exists() && outFile.length() > 1024L)
+    }
+
+    @Test
+    fun testAcwrBuildingBaseHint_shownNeutrallyWhenLowCtlAndOmittedWhenEmpty_tstUi2792_1() {
+        val lowCtlSummary = pixel10SampleSummary().copy(
+            currentCtl = 7.0,
+            currentAtl = 22.7,
+            currentAcwr = null,
+            currentAcwrZone = null
+        )
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val deConfig = Configuration(baseConfig).apply { setLocale(Locale.GERMANY) }
+            CompositionLocalProvider(LocalConfiguration provides deConfig) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(360.dp).padding(16.dp)) {
+                        PerformanceManagementChartCard(
+                            pmcSummary = lowCtlSummary,
+                            pmcPlotPoints = pixel10ZeroCtlNegativeTsbPoints(),
+                            selectedPmcTimeRange = MetricsTimeRange.THREE_MONTHS
+                        )
+                    }
+                }
+            }
+        }
+
+        // Low-CTL with populated plot points displays "—" + unclipped localized "Aufbauphase" (no Risikobereich!)
+        composeTestRule.onNodeWithTag("pmc_acwr_value_text", useUnmergedTree = true)
+            .assertIsDisplayed()
+            .assertTextEquals("—")
+        val zoneNode = composeTestRule.onNodeWithTag("pmc_acwr_zone_text", useUnmergedTree = true)
+        zoneNode.assertIsDisplayed()
+        zoneNode.assertTextEquals("Aufbauphase")
+
+        val layoutResults = mutableListOf<TextLayoutResult>()
+        zoneNode.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(layoutResults)
+        assertTrue("Expected TextLayoutResult for pmc_acwr_zone_text", layoutResults.isNotEmpty())
+        val lr = layoutResults.first()
+        assertFalse("Building base badge must not ellipsize", lr.isLineEllipsized(lr.lineCount - 1))
+        assertFalse("Building base badge must not clip vertically", lr.didOverflowHeight)
+        composeTestRule.onNodeWithText("Risikobereich").assertDoesNotExist()
+    }
+
+    @Test
+    fun testAcwrBuildingBaseHint_omittedWhenPmcHistoryCompletelyEmpty_tstUi2792_1() {
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val deConfig = Configuration(baseConfig).apply { setLocale(Locale.GERMANY) }
+            CompositionLocalProvider(LocalConfiguration provides deConfig) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(360.dp).padding(16.dp)) {
+                        PerformanceManagementChartCard(
+                            pmcSummary = PmcSummaryResult(),
+                            pmcPlotPoints = emptyList(),
+                            selectedPmcTimeRange = MetricsTimeRange.THREE_MONTHS
+                        )
+                    }
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag("pmc_acwr_value_text", useUnmergedTree = true)
+            .assertIsDisplayed()
+            .assertTextEquals("—")
+        composeTestRule.onNodeWithTag("pmc_acwr_zone_text", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun testCapturePmcBuildingBaseLightAndDarkComparisonPng_tstUi2792_3() {
+        val lowCtlSummary = pixel10SampleSummary().copy(
+            currentCtl = 7.0,
+            currentAtl = 22.7,
+            currentAcwr = null,
+            currentAcwrZone = null
+        )
+        composeTestRule.setContent {
+            val baseConfig = LocalConfiguration.current
+            val deConfig = Configuration(baseConfig).apply { setLocale(Locale.GERMANY) }
+            CompositionLocalProvider(LocalConfiguration provides deConfig) {
+                Row(
+                    modifier = Modifier
+                        .testTag("pmc_building_base_light_dark")
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ATrainingTrackerTheme(darkTheme = false) {
+                        Surface(modifier = Modifier.width(360.dp)) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Light — Building Base (360dp DE)")
+                                PerformanceManagementChartCard(
+                                    pmcSummary = lowCtlSummary,
+                                    pmcPlotPoints = pixel10ZeroCtlNegativeTsbPoints(),
+                                    selectedPmcTimeRange = MetricsTimeRange.THREE_MONTHS
+                                )
+                            }
+                        }
+                    }
+                    ATrainingTrackerTheme(darkTheme = true, amoled = true) {
+                        Surface(modifier = Modifier.width(360.dp)) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Dark AMOLED — Building Base (360dp DE)")
+                                PerformanceManagementChartCard(
+                                    pmcSummary = lowCtlSummary,
+                                    pmcPlotPoints = pixel10ZeroCtlNegativeTsbPoints(),
+                                    selectedPmcTimeRange = MetricsTimeRange.THREE_MONTHS
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val bitmap = composeTestRule
+            .onNodeWithTag("pmc_building_base_light_dark")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        assertTrue("Captured building-base PMC PNG must have positive dimensions", bitmap.width > 100 && bitmap.height > 100)
+
+        val outDir = File("/tmp/att9360_verify")
+        outDir.mkdirs()
+        val outFile = File(outDir, "ATT-9360_pmc_building_base_light_dark.png")
+        FileOutputStream(outFile).use { fos ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+        }
+        assertTrue("Building-base PNG must be written and non-empty", outFile.exists() && outFile.length() > 1024L)
     }
 }

@@ -227,7 +227,7 @@ object LegacyImportEngine {
 
                                 listener?.onStatus(context.getString(R.string.legacy_import__downloading_dropbox, entry.name))
                                 val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                                val tempFile = File(workerDir, entry.name)
+                                val tempFile = sanitizeRemoteTempFile(entry.name, workerDir, failedCount) ?: continue
                                 try {
                                     val downloaded = downloadFileWithRetry(dbxClient, entry.pathLower ?: entry.name, tempFile)
                                     if (!downloaded) {
@@ -284,6 +284,25 @@ object LegacyImportEngine {
             failedCount = failedCount.get(),
             totalScanned = entries.size
         )
+    }
+
+    /**
+     * Validates a remote cloud recovery filename inside [workerDir], cleaning up [workerDir]
+     * and incrementing [failedCount] when traversal or invalid filename characters are detected.
+     */
+    private fun sanitizeRemoteTempFile(
+        entryName: String,
+        workerDir: File,
+        failedCount: java.util.concurrent.atomic.AtomicInteger
+    ): File? {
+        return try {
+            SecureZipExtractor.sanitizeDriveFileName(entryName, workerDir)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security violation: Invalid remote file name: $entryName", e)
+            workerDir.delete()
+            failedCount.incrementAndGet()
+            null
+        }
     }
 
     private suspend fun downloadFileWithRetry(
@@ -448,13 +467,7 @@ object LegacyImportEngine {
 
                                 listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
                                 val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                                val tempFile = try {
-                                    SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)
-                                } catch (e: SecurityException) {
-                                    Log.e(TAG, "Security violation: Invalid remote file name: ${entry.name}", e)
-                                    failedCount.incrementAndGet()
-                                    continue
-                                }
+                                val tempFile = sanitizeRemoteTempFile(entry.name, workerDir, failedCount) ?: continue
                                 try {
                                     val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
                                     if (!downloaded) {

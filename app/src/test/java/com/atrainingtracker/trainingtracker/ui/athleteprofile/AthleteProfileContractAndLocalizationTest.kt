@@ -150,6 +150,7 @@ class AthleteProfileContractAndLocalizationTest {
             "athlete_profile_pmc_acwr_sweet_spot",
             "athlete_profile_pmc_acwr_caution",
             "athlete_profile_pmc_acwr_danger",
+            "athlete_profile_pmc_acwr_building_base",
             "athlete_profile_pmc_empty",
             "workout_power_metrics_np_format",
             "workout_power_metrics_if_format",
