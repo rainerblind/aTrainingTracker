@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.14  
+**Version**: 1.0.18  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 126
+**Total Tests**: 127
 
 ---
 
@@ -2366,10 +2366,34 @@
 
 ---
 
+### TST-EXP-046: **Pure-JVM Offline Simulation Replay Harness & Pure-JVM Polar Reader Verification** [Verified]
+- **Requirement(s)**: `REQ-EXP-046`
+- **Component**: `PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, `OfflineReplayModels.kt`, `OfflineTelemetryReplayHarness.kt`, `OfflineReplayGroundTruth.kt`, `OfflineReplayCli.kt`, `app/build.gradle`
+- **Jira**: `ATT-9349`
+- **Implemented Tests**:
+  - `app/src/test/java/com/atrainingtracker/banalservice/devices/bluetooth_le/polar/PolarRawTelemetryReaderTest.kt`: `readFile_emptyOrMissingFile_returnsEmptySession`, `readFile_validGzipSidecar_parsesMetadataAndRowsCorrectly`, `readFile_corruptGzip_handledGracefullyWithoutException`, `metadata_roundTripWithEscapedCharactersAndUnicode_pureJvm`, `metadata_malformedJson_fallsBackToDefaultsWithoutException`, `readFile_truncatedGzip_salvagesCompleteLinesAndDropsPartialTrailingRow` (`TST-EXP-046.1`, pure JVM without Robolectric)
+  - `app/src/test/java/com/atrainingtracker/banalservice/replay/OfflineTelemetryReplayHarnessTest.kt`: `polarMetadataAndReader_executeOnPureJvmWithoutRobolectric`, `replay_syntheticRunningWorkout_phoneOnly_computesCarriageCadenceEkfAndErtsMetrics`, `replay_syntheticRunningWorkout_polarOnly_computesH10AndVerityCadenceAndDynamics`, `replay_veritySenseGyroOnlySidecar_preservesUnscaledDegPerSecAndRoutesSenseModel`, `replay_syntheticRunningWorkout_pairedPhoneAndPolar_isBitExactDeterministicAcrossRuns`, `diff_compareBaselineAndCandidate_computesExactQuantitativeDeltas`, `writeCsv_emitsDotDecimalOneHzRowsWithCanonicalHeader`, `groundTruth_verify_passesWithinBoundsAndReportsExplicitViolationsOnRegression` (`TST-EXP-046.1`, `TST-EXP-046.2`, `TST-EXP-046.3`)
+  - `app/src/test/java/com/atrainingtracker/banalservice/replay/OfflineReplayCliTest.kt`: `cli_validInputsWithPassingTruth_printsScorecardWritesCsvAndJsonAndReturnsZero`, `cli_failingGroundTruth_printsViolationsAndReturnsNonZero`, `cli_missingOrInvalidArguments_returnsUsageErrorCode` (`TST-EXP-046.4`)
+- **Test Description**:
+  1. *Pure-JVM Polar Metadata & Chunked Reader (`TST-EXP-046.1` — `PolarRawTelemetryReaderTest.kt`, `OfflineTelemetryReplayHarnessTest.kt`)*:
+     - Run on plain JVM (zero Robolectric) verifying `PolarRawMetadata` round-trip (including escaped quotes, `poolLength_m`, and malformed-JSON default fallback) and `PolarRawTelemetryReader.readFile()` small-chunk truncated-GZIP EOF recovery + strict non-newline trailing-row drop without `android.util.Log` or `org.json` errors.
+  2. *Deterministic Multi-Sidecar Replay Across Production Estimators (`TST-EXP-046.2` — `OfflineTelemetryReplayHarnessTest.kt`)*:
+     - Generate realistic synthetic `.phone_raw.csv.gz` (all 8 channels: running belt/pocket motion, baro climb, GNSS track, wheel/state) + `.polar_raw.csv.gz` (H10 200-Hz ACC + Verity Sense 52-Hz GYRO+ACC); replay phone-only, Polar-only, and paired archives twice and assert bit-exact identical `OfflineReplayScorecard` outputs (carriage mode %, transition count, Phone/H10/Verity cadence + pairwise MAE/bias, H10 VO/GCT, live EKF + ERTS distance/ascent/descent/min-max slope, cold-start time-to-motion latency).
+  3. *Before-vs-After Diff, 1-Hz CSV Export & Ground-Truth Assertions (`TST-EXP-046.3` — `OfflineTelemetryReplayHarnessTest.kt`)*:
+     - Verify `OfflineReplayDiff.compare(baseline, candidate)` computes exact metric deltas; verify `--csv` writes valid dot-decimal 1-Hz rows; verify `OfflineReplayGroundTruth` passes compliant replays (`violations.isEmpty()`) and fails out-of-tolerance replays with explicit violation messages.
+  4. *Live Pure-JVM Gradle CLI Execution & Contract Verification (`TST-EXP-046.4` — `OfflineReplayCliTest.kt`, `./gradlew :app:replayRawTelemetry`, `ArchitectureConformanceContractTest`)*:
+     - Verify `OfflineReplayCli` argument parsing, scorecard formatting, JSON/CSV emission, and non-zero exit status on ground-truth failure; execute `./gradlew :app:replayRawTelemetry -PphoneRaw=... -PpolarRaw=...` end-to-end on plain JVM confirming exit `0` and scorecard output; verify `ArchitectureConformanceContractTest` and `SystemArchitectureDesignContractTest` pass.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.18` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `TST-EXP-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9476`) independently verified `56/56` PASS across 9 suites (`0` warnings) @ `d889e9ca` + live `:app:replayRawTelemetry` PASS (`9s`) / FAIL (`4s`), `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9349_walkthrough.md`. |
+| `1.0.17` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Gate 4 (`ATT-9476`) revision: added `replay_veritySenseGyroOnlySidecar_preservesUnscaledDegPerSecAndRoutesSenseModel` verifying unscaled Verity gyro deg/s, `"Polar Sense ..."` model routing, and H10 external cadence wiring parity. |
+| `1.0.16` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `TST-EXP-046` to `[Implemented]` with pure-JVM suites (`PolarRawTelemetryReaderTest`, `OfflineTelemetryReplayHarnessTest`, `OfflineReplayCliTest`: `55/55` PASS across 9 suites + live `:app:replayRawTelemetry` PASS `exit 0` and FAIL `exit 1`). |
+| `1.0.15` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Added `[Planned]` `TST-EXP-046` (`TST-EXP-046.1`..`TST-EXP-046.4`) verifying pure-JVM Polar reader, deterministic multi-sidecar replay across all 9 production estimators, scorecard/diff/CSV/ground-truth assertions, and live `:app:replayRawTelemetry` Gradle CLI execution. |
 | `1.0.14` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Added & verified `TST-EXP-045` (`TST-EXP-045.1`..`TST-EXP-045.5`) for `REQ-EXP-045` (`141/141` PASS across 21 suites @ `94e7f204`, `3/3` linters PASS, live `emulator-5554` default-config `.phone_raw.csv.gz` verified). |
 | `1.0.9` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Added `[Planned]` `TST-DAT-041` (`TST-DAT-041.1`..`TST-DAT-041.5`) for `REQ-DAT-045` (`BatchMetadataLoader`, `<= 500`-chunked export/Strava queries, query-count contract, `fromCursor` delegation parity, and `ArchitectureConformanceContractTest`). |
 | `1.0.10` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `TST-DAT-041` to `[Implemented]` with unit tests (`ExportStatusBatchQueryTest.kt`, `ExportStatusDataProviderTest.kt`, `BatchMetadataLoaderTest.kt`, `WorkoutRepositoryBatchLoadTest.kt`, `WorkoutDataMappingSymmetryTest.kt`). |

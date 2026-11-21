@@ -20,10 +20,11 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
-import org.json.JSONObject
-
 /**
- * Metadata header for Polar raw telemetry sidecars (REQ-SET-117.2, ATT-8019).
+ * Metadata header for Polar raw telemetry sidecars (REQ-SET-117.2, REQ-EXP-046.1, ATT-8019, ATT-9349).
+ *
+ * Pure JVM (zero Android or `org.json` dependencies) so standalone offline replay (`:app:replayRawTelemetry`)
+ * parses `.polar_raw.csv.gz` archives identically on JVM and Android.
  */
 data class PolarRawMetadata(
     val schemaVersion: Int = 1,
@@ -37,35 +38,104 @@ data class PolarRawMetadata(
     val poolLengthM: Float? = null
 ) {
     fun toJsonString(): String {
-        val json = JSONObject()
-        json.put("schemaVersion", schemaVersion)
-        json.put("appVersion", appVersion)
-        json.put("sensorModel", sensorModel)
-        json.put("firmwareVersion", firmwareVersion)
-        json.put("streamMode", streamMode)
-        json.put("accRateHz", accRateHz)
-        json.put("gyroRateHz", gyroRateHz)
-        json.put("sportId", sportId)
-        if (poolLengthM != null) {
-            json.put("poolLength_m", poolLengthM.toDouble())
+        val sb = StringBuilder(192)
+        sb.append('{')
+        sb.append("\"schemaVersion\":").append(schemaVersion)
+        sb.append(",\"appVersion\":\"").append(escapeJson(appVersion)).append('"')
+        sb.append(",\"sensorModel\":\"").append(escapeJson(sensorModel)).append('"')
+        sb.append(",\"firmwareVersion\":\"").append(escapeJson(firmwareVersion)).append('"')
+        sb.append(",\"streamMode\":\"").append(escapeJson(streamMode)).append('"')
+        sb.append(",\"accRateHz\":").append(accRateHz)
+        sb.append(",\"gyroRateHz\":").append(gyroRateHz)
+        sb.append(",\"sportId\":").append(sportId)
+        if (poolLengthM != null && poolLengthM.isFinite()) {
+            sb.append(",\"poolLength_m\":").append(poolLengthM.toDouble())
         }
-        return json.toString()
+        sb.append('}')
+        return sb.toString()
     }
 
     companion object {
+        private val SCHEMA_VER_RE = Regex("\"schemaVersion\"\\s*:\\s*(-?\\d+)")
+        private val ACC_RATE_RE = Regex("\"accRateHz\"\\s*:\\s*(-?\\d+)")
+        private val GYRO_RATE_RE = Regex("\"gyroRateHz\"\\s*:\\s*(-?\\d+)")
+        private val SPORT_ID_RE = Regex("\"sportId\"\\s*:\\s*(-?\\d+)")
+        private val POOL_LEN_RE = Regex("\"poolLength_m\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)")
+        private val APP_VER_RE = Regex("\"appVersion\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+        private val SENSOR_MODEL_RE = Regex("\"sensorModel\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+        private val FIRMWARE_RE = Regex("\"firmwareVersion\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+        private val STREAM_MODE_RE = Regex("\"streamMode\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+
+        /**
+         * Parses a JSON object string into [PolarRawMetadata], returning default [PolarRawMetadata]
+         * if malformed rather than throwing Android-specific exceptions.
+         */
+        @JvmStatic
         fun fromJsonString(jsonStr: String): PolarRawMetadata {
-            val json = JSONObject(jsonStr)
+            val trimmed = jsonStr.trim()
+            if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+                return PolarRawMetadata()
+            }
             return PolarRawMetadata(
-                schemaVersion = json.optInt("schemaVersion", 1),
-                appVersion = json.optString("appVersion", "5.0.0"),
-                sensorModel = json.optString("sensorModel", ""),
-                firmwareVersion = json.optString("firmwareVersion", ""),
-                streamMode = json.optString("streamMode", "LIVE"),
-                accRateHz = json.optInt("accRateHz", 0),
-                gyroRateHz = json.optInt("gyroRateHz", 0),
-                sportId = json.optInt("sportId", 0),
-                poolLengthM = if (json.has("poolLength_m")) json.optDouble("poolLength_m").toFloat() else null
+                schemaVersion = SCHEMA_VER_RE.find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 1,
+                appVersion = APP_VER_RE.find(trimmed)?.groupValues?.get(1)?.let(::unescapeJson) ?: "5.0.0",
+                sensorModel = SENSOR_MODEL_RE.find(trimmed)?.groupValues?.get(1)?.let(::unescapeJson) ?: "",
+                firmwareVersion = FIRMWARE_RE.find(trimmed)?.groupValues?.get(1)?.let(::unescapeJson) ?: "",
+                streamMode = STREAM_MODE_RE.find(trimmed)?.groupValues?.get(1)?.let(::unescapeJson) ?: "LIVE",
+                accRateHz = ACC_RATE_RE.find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0,
+                gyroRateHz = GYRO_RATE_RE.find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0,
+                sportId = SPORT_ID_RE.find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0,
+                poolLengthM = POOL_LEN_RE.find(trimmed)?.groupValues?.get(1)?.toDoubleOrNull()?.toFloat()
             )
+        }
+
+        private fun escapeJson(value: String): String {
+            val out = StringBuilder(value.length + 8)
+            for (ch in value) {
+                when (ch) {
+                    '\\' -> out.append("\\\\")
+                    '"' -> out.append("\\\"")
+                    '\n' -> out.append("\\n")
+                    '\r' -> out.append("\\r")
+                    '\t' -> out.append("\\t")
+                    else -> if (ch.code >= 0x20) out.append(ch)
+                }
+            }
+            return out.toString()
+        }
+
+        private fun unescapeJson(value: String): String {
+            val out = StringBuilder(value.length)
+            var i = 0
+            while (i < value.length) {
+                val ch = value[i]
+                if (ch == '\\' && i + 1 < value.length) {
+                    when (val next = value[i + 1]) {
+                        '\\' -> out.append('\\')
+                        '"' -> out.append('"')
+                        'n' -> out.append('\n')
+                        'r' -> out.append('\r')
+                        't' -> out.append('\t')
+                        'u' -> {
+                            if (i + 5 < value.length) {
+                                val code = value.substring(i + 2, i + 6).toIntOrNull(16)
+                                if (code != null) {
+                                    out.append(code.toChar())
+                                    i += 6
+                                    continue
+                                }
+                            }
+                            out.append('u')
+                        }
+                        else -> out.append(next)
+                    }
+                    i += 2
+                } else {
+                    out.append(ch)
+                    i++
+                }
+            }
+            return out.toString()
         }
     }
 }

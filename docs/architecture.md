@@ -1,7 +1,7 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
 **Document ID**: `DOC-ARC-MAIN`  
-**Version**: 1.0.20  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -244,6 +244,7 @@ To support forensic telemetry diagnostics without impacting standard workout exp
 2. **1-Tap Diagnostic ZIP Packaging**: When viewing a workout with a raw sidecar, Aftermath exposes a "Report Raw Sensor Data" action in the header menu. `SensorDiagnosticBundlePackager` operates on `Dispatchers.IO` to assemble `cache/diagnostics/sensor_diagnostic_<fileBaseName>.zip` containing the raw sidecar, `workout_summary.json`, `laps.json`, `samples_1hz.csv`, and `diagnostic_metadata.json` with user symptom notes (`REQ-EXP-044.2`).
 3. **Privacy-Preserving GPS Stripping**: When "Include GPS Location" is unchecked in `SensorDiagnosticShareSheet`, latitude and longitude columns are omitted from `samples_1hz.csv` and GPS map polylines are cleared from `workout_summary.json` (`REQ-EXP-044.3`).
 4. **Secure Sharing & Localization Parity**: The bundle is shared via `Intent.ACTION_SEND` using Android `FileProvider` (`<cache-path name="diagnostics" path="diagnostics/" />`). All user-facing strings across all 9 supported locales are verified in `strings_export.xml` without emojis (`REQ-EXP-044.4`, `Rule 38`).
+5. **Pure-JVM Offline Telemetry Replay Harness (`REQ-EXP-046`, `ATT-9349`)**: Both `PhoneRawTelemetryReader` and `PolarRawTelemetryReader` / `PolarRawMetadata` execute on pure JVM with zero Android or `org.json` dependencies. A test-scoped offline replay harness (`:app:replayRawTelemetry`, zero release APK impact) merges recorded `.phone_raw.csv.gz` and `.polar_raw.csv.gz` sidecars chronologically and drives the exact production estimators (`PhoneCarriageClassifier`, `SmartphoneImuCadenceEstimator`, `QuaternionGyroProjector`, `KinematicSportTypeDiscriminator`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, `ExtendedRtsOdometrySmoother`, `ExtendedRtsAltitudeSlopeSmoother`, `PolarLiveRunningCadenceEstimator`, `PolarH10RunningDynamicsEstimator`) to emit deterministic scorecards, A/B candidate diffs, 1-Hz CSV trajectories, JSON reports, and ground-truth pass/fail exit codes.
 
 ### 3.5 Unit-Level Living Detailed Design & State Machine Models (ASPICE SWE.3, `REQ-PRO-114`)
 Unit-level dynamic state machine models, event/guard/transition tables, `IF-SWE-*` interface mappings, threading contracts, error-handling mechanisms, and `ATT-7902` characterisation-test traceability for the four core service, peripheral, and repository units are maintained under `docs/architecture/detailed_design/`:
@@ -436,3 +437,4 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 | `1.0.18` | 2026-11-21 | Lane A Neon (`ATT-9344`, `--as agent1`) | `ATT-9344` | Registered `PolarRawSidecarRecovery` in §2.3 & documented crash-recovery `.polar_raw.csv.gz.tmp` salvage/resume and `RawSensorFileExporter` fallback in §3.3.3 (`REQ-STB-025.2`). |
 | `1.0.19` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Registered `BatchMetadataLoader`, `ExportStatusDatabaseManager`, and `ExportStatusRepository` in §2 (`Persistence, Migration & Cloud Export`) for O(1) batch workout metadata preloading and chunked export-status queries (`REQ-DAT-045`). |
 | `1.0.20` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Registered `SmartphoneRawTelemetryRecorder`, `SmartphoneRawSensorCapture`, `PhoneRawSidecarRecovery`, `PhoneRawTelemetryReader`, and `RawSensorSidecarFiles` in §2.3 & §3.3.4 for opt-in bounded crash-safe smartphone raw sidecar recording, multi-file `RAW_SENSOR` export, `includeGps` privacy gating, and `raw_sensor` Auto Backup exclusion (`REQ-EXP-045`). |
+| `1.0.21` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Documented pure-JVM `PolarRawMetadata` / `PolarRawTelemetryReader` and test-scoped `:app:replayRawTelemetry` offline simulation replay harness in §3.3.4 (`REQ-EXP-046`). |

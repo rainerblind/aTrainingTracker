@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.13  
+**Version**: 1.0.16  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 6
+**Total Requirements**: 7
 
 ---
 
@@ -214,6 +214,40 @@
 
 ---
 
+### REQ-EXP-046: Pure-JVM Offline Simulation Replay Harness for Smartphone and Polar Raw Sensor Sidecars (`ATT-9349`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-046`
+- **System Requirement(s)**: `SYSREQ-TRK-010`, `SYSREQ-DEX-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Integration
+- **Implementation**: `PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, `OfflineReplayModels.kt`, `OfflineTelemetryReplayHarness.kt`, `OfflineReplayGroundTruth.kt`, `OfflineReplayCli.kt`, `app/build.gradle`
+- **Rationale**: Validating parameter adjustments to `PhoneCarriageClassifier`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, ERTS smoothers, and smartphone/Polar cadence & running-dynamics estimators on real recorded `.phone_raw.csv.gz` and `.polar_raw.csv.gz` sidecars (`REQ-SET-117`, `REQ-EXP-045`) requires a fast, deterministic, pure-JVM offline replay engine runnable via Gradle/CLI without an Android device, emulator, or production APK bloat.
+- **Description**:
+  1. *Pure-JVM Polar Sidecar Metadata & Chunked Reader (`REQ-EXP-046.1`)*:
+     - `PolarRawMetadata.kt` and `PolarRawTelemetryReader.kt` SHALL have zero `android.*` and zero `org.json.*` imports so `.polar_raw.csv.gz` sidecars parse natively on standalone pure JVM (`JavaExec`) as well as Android.
+     - `PolarRawMetadata.toJsonString()` and `fromJsonString()` SHALL preserve exact JSON keys (`schemaVersion`, `appVersion`, `sensorModel`, `firmwareVersion`, `streamMode`, `accRateHz`, `gyroRateHz`, `sportId`, optional `poolLength_m`), JSON string escaping/unescaping, and safe default fallback on malformed JSON.
+     - `PolarRawTelemetryReader.readStream()` SHALL read small chunks directly from `GZIPInputStream` (mirroring `PhoneRawTelemetryReader`), gracefully handle truncated GZIP EOF, and strictly drop non-newline-terminated trailing bytes.
+  2. *Deterministic Chronological Multi-Sidecar Replay Engine (`REQ-EXP-046.2`)*:
+     - `OfflineTelemetryReplayHarness` (residing strictly under `app/src/test/java/com/atrainingtracker/banalservice/replay/` so `0` bytes are added to the production APK) SHALL ingest a `.phone_raw.csv.gz` sidecar, one or more `.polar_raw.csv.gz` sidecars (Polar H10 and/or Verity Sense routed via `PolarRawMetadata.sensorModel`), or both together.
+     - Cross-sidecar timestamps SHALL align deterministically onto a unified relative elapsed-millisecond axis (`tRelMs`: smartphone `CLOCK_BOOTTIME` `elapsedRealtimeNs` offset vs Polar `elapsedMs`, stably tie-broken by `(tRelMs, sourceOrder, seqIndex)`), feeding exact recorded frames through the production pure-Kotlin classes: `PhoneCarriageClassifier`, `QuaternionGyroProjector`, `SmartphoneImuCadenceEstimator`, `KinematicSportTypeDiscriminator`, `UnicycleOdometryEkf`, `KinematicAltitudeSlopeEkf`, `ExtendedRtsOdometrySmoother`, `ExtendedRtsAltitudeSlopeSmoother`, `PolarLiveRunningCadenceEstimator`, and `PolarH10RunningDynamicsEstimator`.
+  3. *Quantitative Scorecard, Before-vs-After Diff, 1-Hz CSV & Ground-Truth Assertions (`REQ-EXP-046.3`)*:
+     - The harness SHALL emit a deterministic `OfflineReplayScorecard` reporting: carriage-mode `%` distribution & transition count; cadence statistics (`mean`, `count`, pairwise `MAE` & signed bias across Phone IMU vs Polar H10 vs Polar Verity Sense) plus H10 vertical oscillation (cm) & ground contact time (ms) means; live EKF & ERTS total distance (m), ascent/descent (m), min/max slope (%), and cold-start time-to-motion latency (s).
+     - `OfflineReplayDiff` SHALL compute structured before-vs-after deltas between two `OfflineReplayScorecard`s for offline parameter benchmarking.
+     - The harness SHALL support optional 1-Hz CSV export (`--csv`) and optional pure-JVM JSON ground-truth sidecar assertions (`--truth`, checking expected dominant carriage mode, min dominant %, max transitions, distance/ascent tolerances, and max cadence MAE) returning explicit `GroundTruthCheckResult` pass/fail violations.
+  4. *Lazy Gradle Pure-JVM CLI Task (`REQ-EXP-046.4`)*:
+     - `app/build.gradle` SHALL register a lazy `JavaExec` task `:app:replayRawTelemetry` (`tasks.register("replayRawTelemetry", JavaExec)`) executing `OfflineReplayCliKt` against debug + unit-test compiled classes (`-PphoneRaw`, `-PpolarRaw`, `-Ppolar2Raw`, `-PcsvOut`, `-Ptruth`, `-PjsonOut`) without busting Gradle's `Rule 8.6` build cache or requiring Android SDK runtime mocks.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a recorded `.phone_raw.csv.gz` and/or `.polar_raw.csv.gz` (H10 and/or Verity Sense) sidecar, *When* replayed via `OfflineTelemetryReplayHarness` or `./gradlew :app:replayRawTelemetry`, *Then* replay executes deterministically on pure JVM with zero Android device/emulator and produces identical scorecards across repeated runs (carriage mode %, transition count, cadence stats & pairwise MAE/bias, H10 VO/GCT, EKF & ERTS distance/ascent/descent/min-max slope, cold-start latency).
+• *Given* a parameter change or alternative replay configuration producing a candidate scorecard, *When* compared via `OfflineReplayDiff`, *Then* exact before-vs-after metric deltas are emitted offline alongside optional 1-Hz CSV output.
+• *Given* a JSON ground-truth sidecar defining expected carriage mode, distance, ascent, or cadence bounds, *When* evaluated by `OfflineReplayGroundTruth`, *Then* compliant replays pass with zero violations and out-of-tolerance replays fail with explicit violation descriptions.
+• *Given* a `.polar_raw.csv.gz` archive containing special JSON characters or a crash-truncated non-newline trailing line, *When* read via `PolarRawTelemetryReader.readFile()` on plain JVM (without Robolectric), *Then* metadata and complete pre-truncation rows parse cleanly with zero `android.util.Log` or `org.json` runtime errors.
+
+**Invariants**: Zero `android.*`/`org.json.*` dependencies in `PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, and `app/src/test/.../replay/`; 100% backward compatibility with `PolarRawTelemetryReaderTest` & `PolarRawTelemetryRecorderTest`; `0` bytes added to release APK; `0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, or `TrainingApplication.java`; `Localization Parity: N/A - pure-JVM developer replay tool with no UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -232,3 +266,6 @@
 | `1.0.11` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Stage 6 Bounce 1 remediation: aligned `REQ-DAT-045.3`/`.4` with `PeriodsRepository.performHierarchicalMigration` & `BatchMetadataLoader.loadForSingleWorkout`, set `[Implemented]` for Gate 4 Bounce 1 re-verification. |
 | `1.0.12` | 2026-11-21 | Lane C Author (`ATT-6038`, `--as agent1`) | `ATT-6038` | Promoted `REQ-DAT-045` to `[Verified]` in Rule 7.5 doc-only Stage 5 Bounce 1 reusing Gate 4 (`ATT-9463`) `33/33` PASS (`0` warnings) @ `34ef13d5` + `99/99` PASS @ `df4b48ee`. |
 | `1.0.13` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Added & verified `REQ-EXP-045` (`SYSREQ-DEX-001`, `SYSREQ-DEX-004`, `SYSREQ-TRK-010`) for opt-in bounded crash-safe smartphone raw sensor sidecar (`SmartphoneRawTelemetryRecorder`, `SmartphoneRawSensorCapture`, `PhoneRawSidecarRecovery`, `PhoneRawTelemetryReader`, `RawSensorSidecarFiles`), unified `CLOCK_BOOTTIME`, multi-file `RAW_SENSOR` export, pruner/privacy/backup exclusions, and 9-locale dual-host tuning UI (`141/141` PASS @ `94e7f204`). |
+| `1.0.14` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Added `[Planned]` `REQ-EXP-046` (`SYSREQ-TRK-010`, `SYSREQ-DEX-001`) for pure-JVM `PolarRawMetadata`/`PolarRawTelemetryReader`, deterministic multi-sidecar offline replay harness, scorecard/diff/CSV/ground-truth verifier, and lazy Gradle `JavaExec` CLI task `:app:replayRawTelemetry`. |
+| `1.0.15` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `REQ-EXP-046` to `[Implemented]` following Stage 4 implementation (`PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, `app/src/test/.../replay/` harness + CLI, lazy `:app:replayRawTelemetry` task in `app/build.gradle`, `55/55` PASS + live CLI smoke PASS/FAIL). |
+| `1.0.16` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `REQ-EXP-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9476`) independently verified `56/56` PASS across 9 suites (`0` warnings) @ `d889e9ca` + live `:app:replayRawTelemetry` PASS (`9s`) / FAIL (`4s`). |
