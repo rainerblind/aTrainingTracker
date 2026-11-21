@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0.0",
+  "ticket": "ATT-9538",
+  "epic": "ATT-9537",
+  "iso_week": "2026-KW47",
+  "process_version": "2.0",
+  "experiment_target_process_version": "aaa-v2",
+  "baseline_anchor": {
+    "branch": "develop",
+    "commit_sha": "508e528d",
+    "window_start": "2026-11-15T00:00:00+01:00",
+    "window_end": "2026-11-21T23:59:59+01:00",
+    "recorded_at": "2026-11-21T18:32:00+01:00"
+  },
+  "effort_split_by_path_class": {
+    "data_source": "git log (develop @ 508e528d, 2026-11-15..2026-11-21, --no-merges --numstat)",
+    "command": "git log 508e528d --since='2026-11-15T00:00:00+01:00' --until='2026-11-21T23:59:59+01:00' --no-merges --numstat --format='COMMIT:%H'",
+    "total_lines_added": 315473,
+    "classes": {
+      "production_code": {
+        "paths": "app/src/main/**",
+        "lines_added": 58726,
+        "share_percent": 18.6
+      },
+      "tests": {
+        "paths": "app/src/test/**, app/src/androidTest/**",
+        "lines_added": 85920,
+        "share_percent": 27.2
+      },
+      "per_ticket_docs": {
+        "paths": "docs/engineering/{analysis,test_specs,plans,walkthroughs}/**",
+        "lines_added": 41730,
+        "share_percent": 13.2
+      },
+      "living_specs": {
+        "paths": "docs/requirements/**, docs/tests/**, docs/requirements.md, docs/tests.md, docs/system/**, docs/architecture*",
+        "lines_added": 50101,
+        "share_percent": 15.9
+      },
+      "process_tooling_and_other_docs": {
+        "paths": "all remaining tracked paths (tools/**, .agents/**, retros/gates/audits/metrics, docs/management/**, etc.)",
+        "lines_added": 78996,
+        "share_percent": 25.0
+      }
+    }
+  },
+  "commits": {
+    "data_source": "git log (develop @ 508e528d, 2026-11-15..2026-11-21, --no-merges)",
+    "command": "git log 508e528d --since='2026-11-15T00:00:00+01:00' --until='2026-11-21T23:59:59+01:00' --no-merges --numstat --format='COMMIT:%H'",
+    "total_non_merge_commits": 308,
+    "commits_touching_production_code": 161,
+    "commits_touching_production_code_percent": 52.3,
+    "commits_without_production_code": 147,
+    "commits_without_production_code_percent": 47.7
+  },
+  "repository_footprint_at_anchor": {
+    "data_source": "git ls-tree / git cat-file / git grep at 508e528d",
+    "command": "git ls-tree -r --name-only 508e528d; git grep -l 'Pending PO Sign-Off' 508e528d -- docs/ .agents/",
+    "docs_engineering_files": 5866,
+    "tools_python_files_excluding_hoechstmass": 57,
+    "tools_python_loc_excluding_hoechstmass": 47595,
+    "app_main_source_files": 1289,
+    "app_main_loc": 330464,
+    "app_test_source_files": 1279,
+    "app_test_loc": 307537,
+    "pending_po_signoff_docs": 93
+  },
+  "gate_and_review_effectiveness": {
+    "data_source": "docs/engineering/metrics/process_metrics.jsonl (15 KW47 Schicht records: 2026-11-16_02_Spät .. 2026-11-21_01_Früh) + 2026-11-21_claude_aspice_audit.md",
+    "command": "python3 -c \"import json, pathlib; ...\" (filter process_metrics.jsonl sprint_name 2026-11-15..2026-11-21)",
+    "schicht_records_count": 15,
+    "gates_1_to_5": {
+      "total_subtasks_evaluated": 877,
+      "revisions": 54,
+      "revision_rate_percent": 6.16,
+      "claude_audit_forensic_sample": {
+        "sampled_gates": 64,
+        "revisions": 1,
+        "revision_rate_percent": 1.56,
+        "source": "docs/engineering/aspice_audits/2026-11-21_claude_aspice_audit.md"
+      }
+    },
+    "stage_6_cold_review": {
+      "tickets_evaluated": 145,
+      "tickets_bounced": 50,
+      "ticket_bounce_rate_percent": 34.5,
+      "total_bounces": 65,
+      "claude_audit_forensic_trace": {
+        "traced_tickets": 10,
+        "tickets_bounced_for_real_defects": 6,
+        "bounce_rate_percent": 60.0,
+        "source": "docs/engineering/aspice_audits/2026-11-21_claude_aspice_audit.md"
+      }
+    }
+  },
+  "escapes": {
+    "data_source": "Jira JQL search (process-escape label created in KW47)",
+    "command": "python3 tools/jira_util.py search \"project = ATT AND labels = process-escape AND created >= '2026-11-15' AND created <= '2026-11-22'\"",
+    "process_escape_bugs_count": 5,
+    "process_escape_bug_keys": [
+      "ATT-9179",
+      "ATT-8876",
+      "ATT-8875",
+      "ATT-8848",
+      "ATT-8823"
+    ],
+    "field_escapes_note": "No separate field-escape label tracked in KW47; physical PO device testing tracked via Bereit für PO Systemtest (ID 454) and ad-hoc Bug tickets."
+  },
+  "throughput_and_cost": {
+    "data_source": "docs/engineering/metrics/process_metrics.jsonl (15 KW47 Schicht records)",
+    "command": "Aggregate throughput.completed_tickets and throughput.completed_story_points across 15 KW47 Schicht records in process_metrics.jsonl",
+    "schichten_completed": 15,
+    "completed_tickets": 160,
+    "completed_story_points": 313.0,
+    "mean_sp_per_ticket": 1.96,
+    "estimated_schicht_wall_hours_total": 117.0,
+    "mean_wall_minutes_per_ticket_across_3_lanes": 43.9,
+    "agent_quota_per_ticket": null,
+    "agent_quota_note": "Per-ticket token/quota telemetry was not logged in KW47."
+  },
+  "human_po_effort": {
+    "data_source": "docs/engineering/reviews/, docs/engineering/metrics/process_metrics.jsonl, 2026-11-21_claude_aspice_audit.md",
+    "command": "Inspect latest human review date in docs/engineering/reviews/ and human_acceptance_rate_percent in process_metrics.jsonl",
+    "weekly_po_minutes_measured": null,
+    "weekly_po_minutes_note": "Not logged systematically in KW47; Layer-4 human sprint review last performed 2026-11-13; target under aaa-v2 is 30-60 min/week in one structured weekly PO decision session.",
+    "last_layer4_human_review_date": "2026-11-13",
+    "latest_schicht_human_acceptance_rate_percent": 0.0
+  },
+  "assessed_capability_profile": {
+    "data_source": "docs/project_protocol.md (v1.0.3, 2026-11-21 dual-vendor assessment of develop @ d5960809)",
+    "command": "Read Assessed Capability Profile table in docs/project_protocol.md",
+    "summary": {
+      "total_vda_scope_processes": 15,
+      "claimed_cl1_or_higher": 9,
+      "claimed_cl2_or_higher": 0,
+      "gemini_cl1_or_higher": 13,
+      "gemini_cl2_or_higher": 0,
+      "claiming_policy": "Stricter independent vendor (Anthropic Claude Opus 5.5) rating governs claimed CL."
+    },
+    "processes": {
+      "SYS.2": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SYS.3": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SYS.4": {"claimed_cl_claude": 0, "gemini_cl": 0},
+      "SYS.5": {"claimed_cl_claude": 0, "gemini_cl": 0},
+      "SWE.1": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SWE.2": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SWE.3": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SWE.4": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SWE.5": {"claimed_cl_claude": 0, "gemini_cl": 1},
+      "SWE.6": {"claimed_cl_claude": 0, "gemini_cl": 0},
+      "MAN.3": {"claimed_cl_claude": 0, "gemini_cl": 1},
+      "SUP.1": {"claimed_cl_claude": 0, "gemini_cl": 1},
+      "SUP.8": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SUP.9": {"claimed_cl_claude": 1, "gemini_cl": 1},
+      "SUP.10": {"claimed_cl_claude": 1, "gemini_cl": 1}
+    }
+  }
+}
