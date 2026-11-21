@@ -37,10 +37,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.util.TimeZone
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
- * Targeted unit tests for [TcxWorkoutParser] (REQ-MIG-038, TST-MIG-035).
+ * Targeted unit tests for [TcxWorkoutParser] (REQ-MIG-038, TST-MIG-035, REQ-MIG-055, TST-MIG-055).
  */
+// Linked test specs: TST-MIG-035, TST-MIG-055, TST-MIG-055.1, TST-MIG-055.2
 class TcxWorkoutParserTest {
 
     private lateinit var mockContext: Context
@@ -273,6 +279,104 @@ class TcxWorkoutParserTest {
             assertEquals(250, sample2[SensorType.POWER.name])
         } finally {
             tempFile.delete()
+        }
+    }
+
+    /**
+     * TST-MIG-055.2: Verifies DST spring-forward/fall-back boundaries under Europe/Berlin,
+     * numeric offsets (+02:00, -05:00), fractional seconds (.SSS), bare local ISO, and
+     * malformed fallback across TCX Lap StartTime and Trackpoint Time.
+     */
+    @Test
+    fun testParseDstBoundariesOffsetsAndMalformedFallback_TST_MIG_055_2() {
+        val originalTz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            val tcxContent = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                  <Activities>
+                    <Activity Sport="Running">
+                      <Id>2026-03-29T02:30:00Z</Id>
+                      <Lap StartTime="2026-03-29T02:30:00Z">
+                        <TotalTimeSeconds>600.0</TotalTimeSeconds>
+                        <DistanceMeters>1500.0</DistanceMeters>
+                        <Track>
+                          <Trackpoint><Time>2026-03-29T02:30:00.250Z</Time></Trackpoint>
+                          <Trackpoint><Time>2026-10-25T04:30:00+02:00</Time></Trackpoint>
+                          <Trackpoint><Time>2026-10-25T00:00:00-05:00</Time></Trackpoint>
+                          <Trackpoint><Time>2026-10-25T06:00:00</Time></Trackpoint>
+                        </Track>
+                      </Lap>
+                      <Lap StartTime="bad-lap-time">
+                        <TotalTimeSeconds>10.0</TotalTimeSeconds>
+                        <DistanceMeters>50.0</DistanceMeters>
+                      </Lap>
+                    </Activity>
+                  </Activities>
+                </TrainingCenterDatabase>
+            """.trimIndent()
+
+            val workout = TcxWorkoutParser.parse(tcxContent.byteInputStream(), mockContext).getOrThrow()
+            assertEquals("2026-03-29 02:30:00", workout.parsedLaps[0].startTime)
+            assertEquals("2026-03-29 02:30:00", workout.firstTime)
+            assertEquals("2026-10-25 06:00:00", workout.lastTime)
+            assertEquals("2026-10-25 02:30:00", contentValueStores[workout.bufferedSamples[1]]!!["time"])
+            assertEquals("2026-10-25 05:00:00", contentValueStores[workout.bufferedSamples[2]]!!["time"])
+            assertEquals("bad-lap-time", workout.parsedLaps[1].startTime)
+        } finally {
+            TimeZone.setDefault(originalTz)
+        }
+    }
+
+    /**
+     * TST-MIG-055.1: Concurrent multi-thread TCX parsing across 4 worker threads produces
+     * deterministic Lap StartTime and Trackpoint timestamps with zero race corruption.
+     */
+    @Test
+    fun testConcurrentMultiThreadTcxParsing_isDeterministic_TST_MIG_055_1() {
+        val threadCount = 4
+        val iterationsPerThread = 25
+        val pool = Executors.newFixedThreadPool(threadCount)
+        val ready = CountDownLatch(threadCount)
+        val go = CountDownLatch(1)
+        try {
+            val futures = (0 until threadCount).map { workerIdx ->
+                val day = 10 + workerIdx
+                val xml = """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                      <Activities>
+                        <Activity Sport="Running">
+                          <Id>2026-06-${day}T07:00:00Z</Id>
+                          <Lap StartTime="2026-06-${day}T07:00:00Z">
+                            <TotalTimeSeconds>300.0</TotalTimeSeconds>
+                            <DistanceMeters>1000.0</DistanceMeters>
+                            <Track>
+                              <Trackpoint><Time>2026-06-${day}T07:00:00Z</Time></Trackpoint>
+                              <Trackpoint><Time>2026-06-${day}T07:05:00Z</Time></Trackpoint>
+                            </Track>
+                          </Lap>
+                        </Activity>
+                      </Activities>
+                    </TrainingCenterDatabase>
+                """.trimIndent()
+                pool.submit(Callable {
+                    ready.countDown()
+                    assertTrue(go.await(5, TimeUnit.SECONDS))
+                    repeat(iterationsPerThread) {
+                        val workout = TcxWorkoutParser.parse(xml.byteInputStream(), mockContext).getOrThrow()
+                        assertEquals("2026-06-$day 07:00:00", workout.parsedLaps[0].startTime)
+                        assertEquals("2026-06-$day 07:00:00", workout.firstTime)
+                        assertEquals("2026-06-$day 07:05:00", workout.lastTime)
+                    }
+                })
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS))
+            go.countDown()
+            futures.forEach { it.get(15, TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
         }
     }
 }

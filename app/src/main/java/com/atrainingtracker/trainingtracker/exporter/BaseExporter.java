@@ -301,7 +301,7 @@ public abstract class BaseExporter {
     @Nullable
     protected String myGetStringFromCursor(@NonNull Cursor cursor, String key) {
         int index = cursor.getColumnIndex(key);
-        if (index <= 0) {
+        if (index < 0) {
             if (DEBUG) Log.d(TAG, "myGetStringFromCursor: no such columnIndex!: " + key);
             return null;
         }
@@ -319,7 +319,7 @@ public abstract class BaseExporter {
 
     protected boolean myGetBooleanFromCursor(@NonNull Cursor cursor, String key) {
         int index = cursor.getColumnIndex(key);
-        if (index <= 0) {
+        if (index < 0) {
             if (DEBUG) Log.d(TAG, "myGetBooleanFromCursor: no such columnIndex!: " + key);
             return false;
         }

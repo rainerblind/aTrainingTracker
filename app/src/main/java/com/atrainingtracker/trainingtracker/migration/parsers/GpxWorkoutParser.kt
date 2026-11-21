@@ -31,18 +31,15 @@ import com.atrainingtracker.trainingtracker.routes.parsers.GpxTrackpointParser
 import com.google.android.gms.maps.model.LatLng
 import java.io.File
 import java.io.FileInputStream
-import java.text.SimpleDateFormat
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * Dedicated parser for GPX workout XML files (GPX 1.0 and 1.1).
  *
- * Enforces REQ-MIG-038.
+ * Enforces REQ-MIG-038 and REQ-MIG-055.
  */
 object GpxWorkoutParser {
     private const val TAG = "GpxWorkoutParser"
-    private val tcxTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
 
     /**
      * Parses a GPX file into [ParsedWorkoutData].
@@ -165,10 +162,7 @@ object GpxWorkoutParser {
                     }
 
                     pt.time?.let { rawTime ->
-                        val formatted = try {
-                            val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                        } catch (_: Exception) { rawTime }
+                        val formatted = WorkoutTimestampParser.formatIsoToUtcDbString(rawTime)
 
                         values.put("time", formatted)
                         if (firstTime == null) firstTime = formatted
@@ -209,16 +203,12 @@ object GpxWorkoutParser {
                 // Finalize lap stats
                 parsedLap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
                 if (lapFirstTime != null && lapLastTime != null) {
-                    try {
-                        val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                        val t1 = format.parse(lapFirstTime)?.time ?: 0L
-                        val t2 = format.parse(lapLastTime)?.time ?: 0L
-                        val duration = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
+                    WorkoutTimestampParser.computeDurationSeconds(lapFirstTime, lapLastTime)?.let { duration ->
                         parsedLap.totalTimeSeconds = duration
                         if (duration > 0) {
                             parsedLap.maxSpeed = parsedLap.distanceMeters / duration
                         }
-                    } catch (_: Exception) {}
+                    }
                 }
             }
 

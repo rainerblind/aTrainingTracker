@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.4  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 3
+**Total Requirements**: 4
 
 ---
 
@@ -113,6 +113,33 @@
 
 ---
 
+### REQ-MIG-055: Thread- & DST-Safe `java.time` ISO-8601 Timestamp Parsing in GPX/TCX Parsers & `BaseExporter` Column Index-0 Contract (`ATT-6045`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-055`
+- **System Requirement(s)**: `SYSREQ-DEX-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `TcxWorkoutParser.kt`, `LegacyImportEngine.kt`, `BaseExporter.java`
+- **Rationale**: `GpxWorkoutParser.kt:45` and `TcxWorkoutParser.kt:42` share unsynchronized `SimpleDateFormat` singletons invoked concurrently across 3 `Dispatchers.IO` workers outside `importMutex` (`LegacyImportEngine.kt:215-248,437,560,623,745`), causing race-condition corruption, DST spring-forward `+1h` shifts via local-timezone lenient parsing, truncation at index 19 (`.SSS` & explicit offsets dropped), and per-sample allocations. Meanwhile `BaseExporter.java:304,322` reject valid column index `0` (`index <= 0`), and `LegacyImportEngine.kt:84` retains an unused `tcxTimeFormat` field (`ATT-6045`).
+- **Description**:
+  1. *Immutable `java.time` ISO-8601 UTC-Wall-Clock Parsing (`REQ-MIG-055.1`)*:
+     - `GpxWorkoutParser` and `TcxWorkoutParser` SHALL replace all `SimpleDateFormat` fields and per-sample/per-lap allocations with shared immutable, thread-safe `java.time` (`DateTimeFormatter`, `OffsetDateTime`/`LocalDateTime`, `ZoneOffset.UTC`, `Duration`) helpers (`minSdk 26`).
+     - Timestamp normalization SHALL convert offset-aware ISO-8601 strings (`Z`, `+HH:MM`, `-HH:MM`, optional fractional seconds `.SSS`) via `OffsetDateTime` -> `.withOffsetSameInstant(ZoneOffset.UTC)` and bare offset-less ISO timestamps via `LocalDateTime`, formatting identically to `"yyyy-MM-dd HH:mm:ss"` (UTC-Wall-Clock) outside DST gaps with zero DST gap/fall-back offset distortion, while returning the raw input string unchanged on malformed inputs.
+     - `GpxWorkoutParser` SHALL compute lap duration from `"yyyy-MM-dd HH:mm:ss"` bounds via `java.time.Duration` in UTC without allocating `SimpleDateFormat`.
+  2. *`BaseExporter` Column Index `0` & Dead-Code Cleanup (`REQ-MIG-055.2`)*:
+     - `BaseExporter.myGetStringFromCursor` (`:304`) and `myGetBooleanFromCursor` (`:322`) SHALL check `if (index < 0)` (matching `dataValid` at `:279`) so column index `0` is read cleanly while preserving `"" -> null` and `> 0` boolean semantics.
+     - Unused `LegacyImportEngine.tcxTimeFormat` (`:84`) SHALL be removed, while `ExportStatusDatabaseManager.getDatabase()` MUST remain intact for `DatabaseConnectionManager.getActiveDatabases()`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* concurrent calls to `GpxWorkoutParser.parse` and `TcxWorkoutParser.parse` across 3+ threads plus timestamps with `Z`, `+02:00`, `-05:00`, `.SSS`, bare local ISO, and DST spring-forward/fall-back times (`2026-03-29T02:30:00Z`, `2026-10-25T02:30:00Z`) under a DST-observing `TimeZone` (e.g., `Europe/Berlin`), *When* parsed, *Then* outputs are deterministic, byte-identical to `"yyyy-MM-dd HH:mm:ss"` UTC-Wall-Clock outside DST gaps with zero `+1h` DST distortion, and malformed strings fall back to raw text.
+• *Given* a `Cursor` projecting target string/boolean columns at column index `0` vs missing `-1`, *When* `BaseExporter.myGetStringFromCursor` / `myGetBooleanFromCursor` are invoked, *Then* index `0` returns the non-empty string / `> 0` boolean and index `-1` returns `null` / `false`.
+• *Given* the built codebase, *When* inspected, *Then* `LegacyImportEngine.tcxTimeFormat` is removed, `ExportStatusDatabaseManager.getDatabase()` remains preserved, and `ArchitectureConformanceContractTest` bounds remain intact.
+
+**Invariants**: Byte-identical `"yyyy-MM-dd HH:mm:ss"` UTC-Wall-Clock output outside DST gaps; `FitWorkoutParser` local-time contract (`REQ-MIG-038`); raw-string fallback on malformed timestamps; `ExportStatusDatabaseManager.getDatabase()` (`DatabaseConnectionManager.kt:122`); `BaseExporter` empty-string-to-`null` & `> 0` boolean semantics; `Localization Parity: N/A - no new or modified UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -122,3 +149,6 @@
 | `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Added `REQ-MIG-054` (`[Planned]`, `SYSREQ-DEX-004`) preserving explicit `UPLOAD_TO_STRAVA = 0` opt-outs and `1` opt-ins while resolving undecided `-1`/SQL `NULL` rows. |
 | `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `REQ-MIG-054` to `[Implemented]` (`WorkoutSummariesDatabaseManager.applyInferredIdentity()` tri-state SQL `NULL`/`-1` guard, `<= 3,148` LoC). |
 | `1.0.4` | 2026-11-20 | Lane A Flash (`ATT-9150`, `--as agent1`) | `ATT-9150` | Promoted `REQ-MIG-054` to `[Verified]` reusing Gate 4 verified SHA `aa9a407c` (`46/46` PASS across 7 suites, `Rule 7.5`). |
+| `1.0.5` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Added `[Planned]` `REQ-MIG-055` (`SYSREQ-DEX-004`) for thread-/DST-safe `java.time` parsing in GPX/TCX parsers, dead `LegacyImportEngine.tcxTimeFormat` removal, and `BaseExporter` `< 0` index-0 fix (`ExportStatusDatabaseManager.getDatabase()` preserved). |
+| `1.0.6` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `REQ-MIG-055` to `[Implemented]` following Stage 4 implementation (`WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `TcxWorkoutParser.kt`, `LegacyImportEngine.kt`, `BaseExporter.java`). |
+| `1.0.7` | 2026-11-21 | Lane B Flash (`ATT-6045`, `--as agent1`) | `ATT-6045` | Promoted `REQ-MIG-055` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9420`) `89/89` PASS across 20 suites + `4/4` linters PASS @ `529a9ee8`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6045_walkthrough.md`. |

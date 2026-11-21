@@ -29,17 +29,14 @@ import com.atrainingtracker.trainingtracker.tcx.parser.TcxParser
 import com.google.android.gms.maps.model.LatLng
 import java.io.File
 import java.io.FileInputStream
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 /**
  * Dedicated parser for Garmin TCX workout XML files refactored to route through structured [TcxParser] DTOs.
  *
- * Enforces REQ-MIG-038 and REQ-DAT-040 (TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity).
+ * Enforces REQ-MIG-038, REQ-DAT-040 (TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity), and REQ-MIG-055.
  */
 object TcxWorkoutParser {
     private const val TAG = "TcxWorkoutParser"
-    private val tcxTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
 
     /**
      * Parses a TCX file into [ParsedWorkoutData].
@@ -95,12 +92,8 @@ object TcxWorkoutParser {
             val bufferedSamples = mutableListOf<ContentValues>()
 
             for ((lapIndex, lap) in activity.laps.withIndex()) {
-                val formattedStartTime = lap.startTime.takeIf { it.isNotBlank() }?.let { raw ->
-                    try {
-                        val date = tcxTimeFormat.parse(raw.substring(0, 19))
-                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                    } catch (_: Exception) { raw }
-                }
+                val formattedStartTime = lap.startTime.takeIf { it.isNotBlank() }
+                    ?.let(WorkoutTimestampParser::formatIsoToUtcDbString)
 
                 val parsedLap = ParsedLap(
                     lapNr = lapIndex.toLong(),
@@ -121,10 +114,7 @@ object TcxWorkoutParser {
                     }
 
                     pt.time.takeIf { it.isNotBlank() }?.let { rawTime ->
-                        val formatted = try {
-                            val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                        } catch (_: Exception) { rawTime }
+                        val formatted = WorkoutTimestampParser.formatIsoToUtcDbString(rawTime)
                         values.put("time", formatted)
                         if (firstTime == null) firstTime = formatted
                         lastTime = formatted
