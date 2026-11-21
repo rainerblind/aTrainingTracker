@@ -1,7 +1,7 @@
 # Weekly Dual-Vendor ASPICE 4.0 Cross-Audit: 2026-11-21
 
 **Document ID**: `DOC-AUD-20261121`  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Status**: Draft  
 **Approver**: Pending PO Sign-Off  
 **Date**: 2026-11-21  
@@ -11,7 +11,7 @@
 **Audited Baseline**: `develop` @ `d5960809` (`sprint/2026-11-20_03_Nacht`, Sprint 467, merged `2026-11-21T05:32:10+01:00`)  
 **Dual-Vendor Attestation (`REQ-PRO-096` / `ATT-8426`)**:
 * **Google Gemini Pass**: Completed `2026-11-21` (Independent Assessor Session, read-only forensic inspection of `develop` @ `d5960809` and Jira).
-* **Anthropic Claude Pass**: **`PENDING / EXTERNAL HANDOFF REQUIRED`** — tracked in [ATT-9502](https://atrainingtracker.atlassian.net/browse/ATT-9502) (per `ATT-8426` Claude Non-Simulation Mandate; this audit record remains `Draft` until independent Claude reconciliation completes).
+* **Anthropic Claude Pass**: Completed `2026-11-21` (Claude Opus 5.5, independent read-only assessment of `develop` @ `d5960809` and Jira; tracked in [ATT-9502](https://atrainingtracker.atlassian.net/browse/ATT-9502)). Full record: [`2026-11-21_claude_aspice_audit.md`](2026-11-21_claude_aspice_audit.md); reconciliation in §4 below. Record remains `Draft` pending PO acceptance of the reconciled ratings.
 **Scope**: ASPICE 4.0 VDA Scope + `SYS.2`–`SYS.5` + `MAN.5` (Target: Capability Level 2)
 
 ---
@@ -88,8 +88,49 @@ However, **ASPICE 4.0 Capability Level 2 (`PA 1.1 = F`, `PA 2.1 = L/F`, `PA 2.2 
 
 ## 4. Anthropic Claude Independent Cross-Audit Section
 
-> [!IMPORTANT]
-> **`PENDING / EXTERNAL HANDOFF REQUIRED` (`REQ-PRO-096` / `ATT-8426`)**: Per the Claude Non-Simulation Mandate, Google Gemini agents SHALL NOT simulate or author Anthropic Claude findings. This section is reserved for the independent Anthropic Claude assessor pass tracked in [ATT-9502](https://atrainingtracker.atlassian.net/browse/ATT-9502).
+> [!NOTE]
+> Authored by Anthropic Claude (Claude Opus 5.5) on 2026-11-21 (`ATT-9502`). Full record, BP-level ratings and evidence: [`2026-11-21_claude_aspice_audit.md`](2026-11-21_claude_aspice_audit.md) and [`2026-11-21_claude_annex/`](2026-11-21_claude_annex/). Sections 1–3 above remain the unmodified Gemini findings.
+
+**Overall:** Concurs that **CL2 is not attained** and that **V5.0.0 is blocked**. Claude rates **9/15 processes CL1** and **6 at CL0** (SYS.4, SYS.5, SWE.5, SWE.6, MAN.3, SUP.1). Project-wide PA 2.1 ≈ P+, PA 2.2 ≈ L-.
+
+**Rating reconciliation (PA 1.1, Gemini → Claude):**
+
+| Process | Gemini | Claude | Reason for difference |
+| :--- | :---: | :---: | :--- |
+| SYS.2 / SYS.3 | F | L- / L- | No stakeholder requirements (4.0 SYS.2.BP5 target), white-box SYSREQs, no analysis/rationale, no system mode model, no agreement |
+| SWE.2 | F | L- | Architecture statements contradicted by code (ProxySensor pass-through, 13 activities vs "single-activity"); 89/1,303 REQs allocated |
+| SWE.5 | L (CL1) | P+ (CL0) | Integration results not kept as primary record (re-runs replace failing Tier-2 runs) |
+| SUP.1 | L- (CL1) | P (CL0) | QA audits by the same agent2 account/vendor as gate & Stage 6 reviews; hard-coded "independent" text (SUP.1.BP1) |
+| MAN.3 | L (CL1) | P+ (CL0) | No V5.0.0 release plan (date, effort, feasibility, milestones); risks never re-scored |
+| All other rows | — | — | Agreement within one rating step, same CL |
+
+**Factual correction:** §1 states "`1,265/1,265` executable-backed `[Verified]` TSTs … backed by behavioral tests". `verify_requirement_governance.py` (l.3040-3078) counts a TST as backed if its ID string appears anywhere in a test source file, comments included, and correlates results per class (TST-INT-009: 17 cases claimed, 4 real). The figure does not demonstrate behavioural verification → [ATT-9515](https://atrainingtracker.atlassian.net/browse/ATT-9515).
+
+**Citation correction:** QA independence is **SUP.1.BP1** in PAM 4.0, not `GP 2.1.6` (= *Manage the interfaces between involved parties*). This also applies to the header of this record, `README.md` and `qa_plan.md` → [ATT-9517](https://atrainingtracker.atlassian.net/browse/ATT-9517).
+
+**Independence note:** the Gemini pass was performed by the same vendor as the producing agents. Under SUP.1.BP1 it is therefore a producer-side self-assessment. The systematic upward offset (no Claude rating is higher than Gemini's) is consistent with this.
+
+**Gemini findings confirmed by Claude:** K1-R (residual synthetic sensor IDs), K2-R, K3, M12, M13, M14, M16, M17, m1, m3.
+**Gemini findings not examined by Claude (accepted as valid):** K1-R parser bug, **M11 FGS crash in 8/12 sweep runs** (the only real product defect in either pass), M15, PMD gap (M17), m2.
+
+**Additional Claude findings (new tickets in Epic ATT-9494):**
+
+| ID | Finding | Ticket |
+| :--- | :--- | :--- |
+| C-01 | `[Verified]` = string presence; class-level correlation; doc-lint tests counted as SW verification | [ATT-9515](https://atrainingtracker.atlassian.net/browse/ATT-9515) |
+| C-02 | Integration before human acceptance; rejected device review does not revert `[Verified]` (ATT-8733/ATT-8958) | [ATT-9516](https://atrainingtracker.atlassian.net/browse/ATT-9516) |
+| C-03 | QA not independent; hard-coded independence claim; GP 2.1.6 mis-citation | [ATT-9517](https://atrainingtracker.atlassian.net/browse/ATT-9517) |
+| C-04 | Regression selection misses dependent tests; fix-ups bypass gates | [ATT-9518](https://atrainingtracker.atlassian.net/browse/ATT-9518) |
+| C-05 | Shell backtick substitution corrupts gate records; empty bounce bodies; missing Stage 6 records | [ATT-9519](https://atrainingtracker.atlassian.net/browse/ATT-9519) |
+| C-06 | SYS.4 simulator-only; SYSREQ verification via doc-lint | [ATT-9520](https://atrainingtracker.atlassian.net/browse/ATT-9520) |
+| C-07 | No stakeholder requirements; white-box SYSREQs; bulk SYS→SWE allocation | [ATT-9521](https://atrainingtracker.atlassian.net/browse/ATT-9521) |
+| C-08 | SWE requirements structured as per-ticket change log | [ATT-9522](https://atrainingtracker.atlassian.net/browse/ATT-9522) |
+| C-09 | Architecture/code contradictions; living detailed design for 4 units only | [ATT-9523](https://atrainingtracker.atlassian.net/browse/ATT-9523) |
+| C-10 | No V5.0.0 release-level plan; risks never re-scored | [ATT-9524](https://atrainingtracker.atlassian.net/browse/ATT-9524) |
+| C-11 | Agent commits authored as the human; shifted trailers; hook not enforced server-side | [ATT-9525](https://atrainingtracker.atlassian.net/browse/ATT-9525) |
+| C-12 | Strava/Dropbox credentials in git history not rotated or tracked | [ATT-9526](https://atrainingtracker.atlassian.net/browse/ATT-9526) |
+
+Scope additions posted as comments on ATT-9495, ATT-9497 and ATT-9501.
 
 ---
 
@@ -98,3 +139,4 @@ However, **ASPICE 4.0 Capability Level 2 (`PA 1.1 = F`, `PA 2.1 = L/F`, `PA 2.2 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-21 | Independent ASPICE Auditor (Gemini) | `ATT-9494` | Initial Gemini-side independent ASPICE 4.0 audit against `develop` @ `d5960809`; Epic `ATT-9494` & CAPA tickets `ATT-9495`–`ATT-9504` filed; Claude cross-audit marked `PENDING / EXTERNAL HANDOFF REQUIRED`. |
+| `1.1.0` | 2026-11-21 | Independent ASPICE Assessor (Anthropic Claude Opus 5.5) | `ATT-9502` | Completed §4 Claude cross-audit reconciliation (rating comparison, factual & citation corrections, 12 additional findings → ATT-9515..ATT-9526); Claude attestation line updated. Gemini §1–§3 unchanged. |
