@@ -1,7 +1,7 @@
 # Agile Agentic ASPICE (AAA) Protocol & Architecture Pointer: aTrainingTracker
 
 **Document ID**: `DOC-GOV-PROTOCOL`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -40,12 +40,12 @@ To allow frictionless human review of source code (`.kt`, `.java`, `.py`, `.xml`
 
 ## ASPICE Process Capability Level 1–5 Governance Matrix (ISO/IEC 33020 / PAM)
 
-Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` through `PA 5.2`) to deterministic AI pair-programming and verification mechanisms *(Level 1–2 active baseline; **Level 3–5 entries are `[Target / Not Yet Claimed]`** pending verified CL2 attainment)*:
+Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` through `PA 5.2`) to deterministic AI pair-programming and verification mechanisms *(**Assessed status 2026-11-21: Capability Level 1 partially achieved; Level 2 is `[Target / Not Yet Claimed]`** — see [Assessed Capability Profile](#assessed-capability-profile-2026-11-21) below. Level 3–5 entries remain `[Target / Not Yet Claimed]` pending verified CL2 attainment. The Level 2 row describes the target mechanisms, not an attained level.)*:
 
 | Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation / Target Status |
 | :--- | :--- | :--- | :--- |
-| **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **6-Stage ASPICE Lifecycle**: Stages 1–5 execution (`SWE.1`–`SWE.6` sub-tasks) + Stage 6 Cold Final Review (`Final Review (Agent)`); atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
-| **Level 2: Managed** | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
+| **Level 1: Performed** `[Partially Achieved — 9/15 processes]` | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **6-Stage ASPICE Lifecycle**: Stages 1–5 execution (`SWE.1`–`SWE.6` sub-tasks) + Stage 6 Cold Final Review (`Final Review (Agent)`); atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
+| **Level 2: Managed** `[Target / Not Yet Claimed]` | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
 | | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Rule 67 Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
 | **Level 3: Established** `[Target / Not Yet Claimed]` | **PA 3.1: Process Definition** | A standard process is established across the organization. | **`[Target / Not Yet Claimed]` — Document Triad & Skills**: Universal 9 Core In-Sprint Governance Rules (`aspice_governance.md`); 11 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
 | | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **`[Target / Not Yet Claimed]` — Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
@@ -53,6 +53,30 @@ Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` th
 | | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **`[Target / Not Yet Claimed]` — Statistical Process Control (SPC)**: Bounded `[0, 100]` p-chart / clamped control bands ($UCL$, $LCL$) partitioned by `process_version`; automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
 | **Level 5: Innovating** `[Target / Not Yet Claimed]` | **PA 5.1: Process Innovation** | Continuous, systematic evaluation of process innovations. | **`[Target / Not Yet Claimed]` — AI Architectural Innovations**: Multi-model adversarial reviews (intra-sprint `pro` $\leftrightarrow$ `flash` plus cross-vendor **Claude** & **ChatGPT**); isolated in-place `.reviews/` Emacs sandbox; dynamic contract tests. |
 | | **PA 5.2: Process Optimization** | Continuous closed-loop improvement based on quantitative feedback. | **`[Target / Not Yet Claimed]` — Closed-Loop Ceremony 2 Retro Countermeasures**: Mandatory root-cause analysis (RCA) and concrete process/skill adjustments in the Retrospective prior to sprint merge whenever a PA 4.2 Special Cause Variation is detected. |
+
+### Assessed Capability Profile (2026-11-21)
+
+Source: independent dual-vendor ASPICE 4.0 assessment of `develop` @ `d5960809` — Anthropic Claude pass ([`2026-11-21_claude_aspice_audit.md`](engineering/aspice_audits/2026-11-21_claude_aspice_audit.md)) and Google Gemini pass ([`2026-11-21_dual_vendor_aspice_audit.md`](engineering/aspice_audits/2026-11-21_dual_vendor_aspice_audit.md)); remediation in Epic `ATT-9494`. Both passes conclude **CL2 is not attained**. The stricter (Claude) rating is used as the claimed status.
+
+| Process | Claimed CL (Claude) | Gemini CL | Key blocker to next level |
+| :--- | :---: | :---: | :--- |
+| SYS.2 System Requirements Analysis | 1 | 1 | Stakeholder requirements, PO agreement (`ATT-9521`, `ATT-9501`) |
+| SYS.3 System Architectural Design | 1 | 1 | System mode model, rationale, PO agreement (`ATT-9521`, `ATT-9501`) |
+| SYS.4 System Integration & Integration Verification | **0** | 0 | Real integration verification per SYS-IF on the APK (`ATT-9520`) |
+| SYS.5 System Verification | **0** | 0 | Execute attested Pixel 10 field runs (`ATT-8423`..`ATT-8434`) |
+| SWE.1 Software Requirements Analysis | 1 | 1 | Requirement structure & agreement (`ATT-9522`, `ATT-9501`) |
+| SWE.2 Software Architectural Design | 1 | 1 | Architecture/code conformance (`ATT-9523`) |
+| SWE.3 Software Detailed Design & Unit Construction | 1 | 1 | Living detailed design (`ATT-9523`), static analysis (`ATT-9503`) |
+| SWE.4 Software Unit Verification | 1 | 1 | Result-based `[Verified]` status, regression selection (`ATT-9515`, `ATT-9518`) |
+| SWE.5 Software Component & Integration Verification | **0** | 1 | Primary, untruncated integration results (`ATT-9497`) |
+| SWE.6 Software Verification | **0** | 0 | Release-level SW verification record (`ATT-9495`) |
+| MAN.3 Project Management | **0** | 1 | V5.0.0 release plan, risk re-scoring (`ATT-9524`) |
+| SUP.1 Quality Assurance | **0** | 1 | QA independent of authoring/gate roles (`ATT-9517`) |
+| SUP.8 Configuration Management | 1 | 1 | Commit attribution, baseline/evidence integrity (`ATT-9525`, `ATT-9500`) |
+| SUP.9 Problem Resolution Management | 1 | 1 | Rejection/defect feedback into `[Verified]` status (`ATT-9516`) |
+| SUP.10 Change Request Management | 1 | 1 | Recorded human approval of changes (`ATT-9516`, `ATT-9501`) |
+
+**Claim rule:** This profile SHALL only be raised on the basis of a subsequent independent assessment record in `docs/engineering/aspice_audits/` and PO sign-off; agents SHALL NOT upgrade claimed levels on their own.
 
 ## Two-Tier Device Verification Policy (ATT-6506 / REQ-TST-004)
 To ensure 24/7 autonomous agent execution without disrupting the Product Owner's physical daily driver smartphone (`Pixel 10`), a strict Two-Tier Device Policy is enforced across all tooling and governance:
@@ -72,3 +96,4 @@ To ensure 24/7 autonomous agent execution without disrupting the Product Owner's
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8164`) | `ATT-8164` | Added `DOC-GOV-PROTOCOL` header and reconciled `9 Core Rules`, `Rules 1–85+`, and `6-Stage` lifecycle (`Stages 1–5` + `Stage 6`). |
 | `1.0.1` | 2026-11-17 | AI Agent (`ATT-8165`) | `ATT-8165` | Documented SUP.9 commit-key/conflict-marker hooks, bug resolution states, and `process-escape` problem records (`REQ-PRO-121`). |
 | `1.0.2` | 2026-11-17 | AI Agent (`ATT-8168`) | `ATT-8168` | Suspended unsupported CL3–CL5 claims as `[Target / Not Yet Claimed]` pending verified CL2 attainment (`REQ-PRO-122.6`). |
+| `1.0.3` | 2026-11-21 | Independent ASPICE Assessor (Anthropic Claude Opus 5.5) | `ATT-9494` | Interactive-PO: replaced unsubstantiated "Level 1–2 active baseline" claim with assessed status (CL1 partially achieved, CL2 `[Target / Not Yet Claimed]`); added per-process Assessed Capability Profile from the 2026-11-21 dual-vendor audit and claim rule. |
