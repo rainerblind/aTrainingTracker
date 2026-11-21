@@ -723,79 +723,39 @@ fun TelemetryMetricGraph(
                         }
                     }
                 } else if (zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM && zoneDistribution.histogram != null) {
-                    // Fine-grained histogram mode: frequency bars for each histogram bin (REQ-UI-443)
-                    val histogram = zoneDistribution.histogram
-                    val linearBins = histogram.linearBins
-                    val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
-
-                    for (bin in linearBins) {
-                        // Domain boundary filtering & clamping (Rule 70 / ATT-5311)
-                        if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
-                        val clampedMin = maxOf(dataMin, bin.rangeMin.toDouble())
-                        val clampedMax = minOf(dataMax, bin.rangeMax.toDouble())
-                        if (clampedMin >= clampedMax) continue
-
-                        val yTop = valueToY(clampedMax)
-                        val yBottom = valueToY(clampedMin)
-                        val rectTop = minOf(yTop, yBottom)
-                        val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
-
-                        // Background container track (unconditional across linearBins within [dataMin, dataMax], REQ-UI-443.2 / ATT-5281 / ATT-5311)
-                        drawRect(
-                            color = bin.color.copy(alpha = 0.15f),
-                            topLeft = Offset(stripStartPx, rectTop),
-                            size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
-                        )
-
-                        // Weighted horizontal frequency bar
-                        val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
-                        if (barWidthPx > 0f) {
-                            drawRect(
-                                color = bin.color,
-                                topLeft = Offset(stripStartPx, rectTop),
-                                size = androidx.compose.ui.geometry.Size(barWidthPx, rectHeight)
-                            )
-                        }
-                    }
+                    // Fine-grained histogram mode: frequency bars for each histogram bin (REQ-UI-443, REQ-UI-2789.1)
+                    drawMarginalHistogramBars(
+                        bins = zoneDistribution.histogram.linearBins,
+                        dataMin = dataMin,
+                        dataMax = dataMax,
+                        stripStartPx = stripStartPx,
+                        stripWidthPx = stripWidthPx,
+                        valueToY = ::valueToY,
+                        rangeMinOf = { it.rangeMin.toDouble() },
+                        rangeMaxOf = { it.rangeMax.toDouble() },
+                        durationSecOf = { it.durationSec },
+                        percentageOf = { it.percentage },
+                        colorOf = { it.color },
+                        minBarHeightPx = 1f
+                    )
                 }
             } else if (nonZonedHistogram.isNotEmpty() && !isLandscape) {
-                // Non-zoned uniform linear marginal histogram in series color (REQ-UI-446 / ATT-5370)
+                // Non-zoned uniform linear marginal histogram in series color (REQ-UI-446 / ATT-5370, REQ-UI-2789.1)
                 val stripStartPx = startPaddingPx + chartWidthPx + 3.dp.toPx()
                 val stripWidthPx = (endPaddingPx - 8.dp.toPx()).coerceAtLeast(10.dp.toPx())
-                val maxBinPct = nonZonedHistogram.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
-
-                for (bin in nonZonedHistogram) {
-                    // Domain boundary filtering & clamping (Rule 70 / ATT-5311)
-                    if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
-                    val clampedMin = maxOf(dataMin, bin.rangeMin)
-                    val clampedMax = minOf(dataMax, bin.rangeMax)
-                    if (clampedMin >= clampedMax) continue
-
-                    val yTop = valueToY(clampedMax)
-                    val yBottom = valueToY(clampedMin)
-                    val rectTop = minOf(yTop, yBottom)
-                    val rectHeight = abs(yTop - yBottom)
-                    if (rectHeight <= 0f) continue
-
-                    // Background container track (unconditional across linearBins within [dataMin, dataMax], Rule 69)
-                    drawRect(
-                        color = bin.color.copy(alpha = 0.15f),
-                        topLeft = Offset(stripStartPx, rectTop),
-                        size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
-                    )
-
-                    // Weighted horizontal frequency bar
-                    if (bin.durationSec > 0L) {
-                        val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
-                        if (barWidthPx > 0f) {
-                            drawRect(
-                                color = bin.color,
-                                topLeft = Offset(stripStartPx, rectTop),
-                                size = androidx.compose.ui.geometry.Size(barWidthPx, rectHeight)
-                            )
-                        }
-                    }
-                }
+                drawMarginalHistogramBars(
+                    bins = nonZonedHistogram,
+                    dataMin = dataMin,
+                    dataMax = dataMax,
+                    stripStartPx = stripStartPx,
+                    stripWidthPx = stripWidthPx,
+                    valueToY = ::valueToY,
+                    rangeMinOf = { it.rangeMin },
+                    rangeMaxOf = { it.rangeMax },
+                    durationSecOf = { it.durationSec },
+                    percentageOf = { it.percentage },
+                    colorOf = { it.color }
+                )
             }
 
             // 2. Draw horizontal threshold / zero-reference boundary guidelines (REQ-UI-230 / ATT-1839)
@@ -902,78 +862,50 @@ fun TelemetryMetricGraph(
             val endBoundaryThreshold = startPaddingPx + chartWidthPx - (endLabelWidth + 16.dp.toPx())
             val minMilestoneSpacing = 12.dp.toPx()
 
-            // Draw X-axis ticks along bottom
-            if (isTimeDomain) {
-                val timeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
-                var currentSec = (kotlin.math.ceil(startDist / timeStep) * timeStep)
-                if (currentSec <= startDist) {
-                    currentSec += timeStep
-                }
-                while (currentSec < startDist + visibleSpan) {
-                    val tickX = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(currentSec, startDist, visibleSpan, chartWidthPx)
-                    if (tickX in startPaddingPx..(startPaddingPx + chartWidthPx)) {
-                        drawLine(
-                            color = colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            start = Offset(tickX, topPaddingPx),
-                            end = Offset(tickX, topPaddingPx + chartHeightPx),
-                            strokeWidth = 1f
-                        )
-                        val tickLabel = ElevationProfileZoomMath.formatTimeTick(currentSec.toLong())
-                        val labelWidth = axisTextPaint.measureText(tickLabel)
-                        val labelLeft = tickX - (labelWidth / 2f)
-                        val labelRight = tickX + (labelWidth / 2f)
-
-                        if (TelemetryMetricUtils.shouldRenderMilestoneLabel(
-                                labelLeft = labelLeft,
-                                labelRight = labelRight,
-                                lastDrawnRightX = lastDrawnRightX,
-                                startBoundaryThreshold = startBoundaryThreshold,
-                                endBoundaryThreshold = endBoundaryThreshold,
-                                minSpacing = minMilestoneSpacing
-                            )
-                        ) {
-                            nativeCanvas.drawText(tickLabel, labelLeft, labelY, axisTextPaint)
-                            lastDrawnRightX = labelRight
-                        }
-                    }
-                    currentSec += timeStep
-                }
+            // Draw X-axis ticks along bottom (REQ-UI-220, REQ-UI-2789.2)
+            val xAxisStep = if (isTimeDomain) {
+                ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
             } else {
-                val distStep = ElevationProfileZoomMath.calculateAdaptiveDistanceStep(visibleSpan, unit).toDouble()
-                var currentDist = (kotlin.math.ceil(startDist / distStep) * distStep)
-                if (currentDist <= startDist) {
-                    currentDist += distStep
-                }
-                while (currentDist < startDist + visibleSpan) {
-                    val tickX = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(currentDist, startDist, visibleSpan, chartWidthPx)
-                    if (tickX in startPaddingPx..(startPaddingPx + chartWidthPx)) {
-                        drawLine(
-                            color = colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            start = Offset(tickX, topPaddingPx),
-                            end = Offset(tickX, topPaddingPx + chartHeightPx),
-                            strokeWidth = 1f
-                        )
-                        val label = TelemetryMetricUtils.formatMilestoneLabel(currentDist, visibleSpan, unit)
-                        val labelWidth = axisTextPaint.measureText(label)
-                        val labelLeft = tickX - (labelWidth / 2f)
-                        val labelRight = tickX + (labelWidth / 2f)
-
-                        if (TelemetryMetricUtils.shouldRenderMilestoneLabel(
-                                labelLeft = labelLeft,
-                                labelRight = labelRight,
-                                lastDrawnRightX = lastDrawnRightX,
-                                startBoundaryThreshold = startBoundaryThreshold,
-                                endBoundaryThreshold = endBoundaryThreshold,
-                                minSpacing = minMilestoneSpacing
-                            )
-                        ) {
-                            nativeCanvas.drawText(label, labelLeft, labelY, axisTextPaint)
-                            lastDrawnRightX = labelRight
-                        }
-                    }
-                    currentDist += distStep
-                }
+                ElevationProfileZoomMath.calculateAdaptiveDistanceStep(visibleSpan, unit).toDouble()
             }
+            drawXAxisTicks(
+                startValue = startDist,
+                visibleSpan = visibleSpan,
+                step = xAxisStep,
+                plotStartX = startPaddingPx,
+                plotWidth = chartWidthPx,
+                paint = axisTextPaint,
+                labelY = labelY,
+                initialLastDrawnRightX = lastDrawnRightX,
+                formatLabel = { value ->
+                    if (isTimeDomain) {
+                        ElevationProfileZoomMath.formatTimeTick(value.toLong())
+                    } else {
+                        TelemetryMetricUtils.formatMilestoneLabel(value, visibleSpan, unit)
+                    }
+                },
+                shouldRenderLabel = { labelLeft, labelRight, prevRightX ->
+                    TelemetryMetricUtils.shouldRenderMilestoneLabel(
+                        labelLeft = labelLeft,
+                        labelRight = labelRight,
+                        lastDrawnRightX = prevRightX,
+                        startBoundaryThreshold = startBoundaryThreshold,
+                        endBoundaryThreshold = endBoundaryThreshold,
+                        minSpacing = minMilestoneSpacing
+                    )
+                },
+                onTickInBounds = { tickX ->
+                    drawLine(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        start = Offset(tickX, topPaddingPx),
+                        end = Offset(tickX, topPaddingPx + chartHeightPx),
+                        strokeWidth = 1f
+                    )
+                },
+                onLabelRendered = { _, label, labelLeft, y ->
+                    nativeCanvas.drawText(label, labelLeft, y, axisTextPaint)
+                }
+            )
 
             // Construct and render curve path (with artifact gap breaking & hatching per REQ-PER-035.2)
             clipRect(
@@ -1494,42 +1426,21 @@ fun AlignedMarginalLinearDistribution(
             )
         }
 
-        val maxBinPct = bins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
-
-        for (bin in bins) {
-            // Rule 70: Domain boundary filtering & clamping
-            if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
-            val clampedMin = maxOf(dataMin, bin.rangeMin)
-            val clampedMax = minOf(dataMax, bin.rangeMax)
-            if (clampedMin >= clampedMax) continue
-
-            val yTop = valueToY(clampedMax)
-            val yBottom = valueToY(clampedMin)
-            val rectTop = minOf(yTop, yBottom)
-            val rectHeight = abs(yTop - yBottom)
-            if (rectHeight <= 0f) continue
-
-            // Rule 69: Unconditional background container track
-            drawRoundRect(
-                color = bin.color.copy(alpha = 0.15f),
-                topLeft = Offset(0f, rectTop),
-                size = Size(availableWidthPx, rectHeight),
-                cornerRadius = CornerRadius(2.dp.toPx())
-            )
-
-            // Weighted horizontal frequency bar
-            if (bin.durationSec > 0L) {
-                val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * availableWidthPx
-                if (barWidthPx > 0f) {
-                    drawRoundRect(
-                        color = bin.color.copy(alpha = 0.85f),
-                        topLeft = Offset(0f, rectTop),
-                        size = Size(barWidthPx, rectHeight),
-                        cornerRadius = CornerRadius(2.dp.toPx())
-                    )
-                }
-            }
-        }
+        drawMarginalHistogramBars(
+            bins = bins,
+            dataMin = dataMin,
+            dataMax = dataMax,
+            stripStartPx = 0f,
+            stripWidthPx = availableWidthPx,
+            valueToY = ::valueToY,
+            rangeMinOf = { it.rangeMin },
+            rangeMaxOf = { it.rangeMax },
+            durationSecOf = { it.durationSec },
+            percentageOf = { it.percentage },
+            colorOf = { it.color },
+            cornerRadiusPx = 2.dp.toPx(),
+            foregroundAlpha = 0.85f
+        )
 
         // Draw horizontal boundary grid lines matching adjacent graph
         drawLine(
@@ -1661,50 +1572,31 @@ fun AlignedMarginalZoneDistribution(
                 }
             }
         } else if (zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM && zoneDistribution.histogram != null) {
-            val histogram = zoneDistribution.histogram
-            val linearBins = histogram.linearBins
-            val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
-
-            for (bin in linearBins) {
-                // Domain boundary filtering & clamping (Rule 70 / ATT-5311)
-                if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
-                val clampedMin = maxOf(dataMin, bin.rangeMin.toDouble())
-                val clampedMax = minOf(dataMax, bin.rangeMax.toDouble())
-                if (clampedMin >= clampedMax) continue
-
-                val yTop = valueToY(clampedMax)
-                val yBottom = valueToY(clampedMin)
-                val rectTop = minOf(yTop, yBottom)
-                val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
-
-                // Background container track (unconditional across linearBins within [dataMin, dataMax], REQ-UI-443.3 / ATT-5281 / ATT-5311)
-                drawRoundRect(
-                    color = bin.color.copy(alpha = 0.15f),
-                    topLeft = Offset(0f, rectTop),
-                    size = Size(availableWidthPx, rectHeight),
-                    cornerRadius = CornerRadius(2.dp.toPx())
-                )
-
-                // Weighted horizontal frequency bar
-                val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * availableWidthPx
-                if (barWidthPx > 0f) {
-                    drawRoundRect(
-                        color = bin.color.copy(alpha = 0.85f),
-                        topLeft = Offset(0f, rectTop),
-                        size = Size(barWidthPx, rectHeight),
-                        cornerRadius = CornerRadius(2.dp.toPx())
-                    )
+            drawMarginalHistogramBars(
+                bins = zoneDistribution.histogram.linearBins,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                stripStartPx = 0f,
+                stripWidthPx = availableWidthPx,
+                valueToY = ::valueToY,
+                rangeMinOf = { it.rangeMin.toDouble() },
+                rangeMaxOf = { it.rangeMax.toDouble() },
+                durationSecOf = { it.durationSec },
+                percentageOf = { it.percentage },
+                colorOf = { it.color },
+                cornerRadiusPx = 2.dp.toPx(),
+                foregroundAlpha = 0.85f,
+                minBarHeightPx = 1f,
+                onBinDrawn = { bin, rectTop, rectHeight ->
+                    if (rectHeight >= 12.dp.toPx() && bin.durationSec > 0L) {
+                        textPaint.textSize = (rectHeight * 0.50f).coerceIn(14f, 20f)
+                        val binText = "${bin.percentage.toInt()}%"
+                        val yCenter = rectTop + (rectHeight / 2f)
+                        val textBaseline = yCenter - ((textPaint.descent() + textPaint.ascent()) / 2f)
+                        nativeCanvas.drawText(binText, 4.dp.toPx(), textBaseline, textPaint)
+                    }
                 }
-
-                // Text overlay for bins with sufficient height
-                if (rectHeight >= 12.dp.toPx() && bin.durationSec > 0L) {
-                    textPaint.textSize = (rectHeight * 0.50f).coerceIn(14f, 20f)
-                    val binText = "${bin.percentage.toInt()}%"
-                    val yCenter = rectTop + (rectHeight / 2f)
-                    val textBaseline = yCenter - ((textPaint.descent() + textPaint.ascent()) / 2f)
-                    nativeCanvas.drawText(binText, 4.dp.toPx(), textBaseline, textPaint)
-                }
-            }
+            )
         }
 
         // Draw horizontal boundary grid lines matching adjacent graph

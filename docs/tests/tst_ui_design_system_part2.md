@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 2 of 3)
 
 **Document ID**: `DOC-TST-UI-P2`  
-**Version**: 1.0.2  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part2`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 192
+**Total Tests**: 193
 
 ---
 
@@ -3969,6 +3969,16 @@
   6. *Tier 1 Targeted Unit Test Regression (`TST-UI-492.6`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.equipment.*`, `com.atrainingtracker.banalservice.ui.devices.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-2789: **Cards & Graphs UI Deduplication Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-2789`
+- **Component**: `TelemetryChartCanvasHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`, `TelemetryChartCanvasHelpersTest.kt`, `ClusterThumbnailPathPreviewDelegationTest.kt`, `PathPreviewMapBoundsTest.kt`, `ClusterItemThumbnailComposeTest.kt`
+- **Verification Evidence**: Gate 4 `ATT-9433` @ `2b4277ca` (`277/277` PASS across 61 suites, `4/4` linters, Light/Dark `Rule 8.5` PNGs): `TelemetryChartCanvasHelpersTest` (`7/7`: `computeMarginalBarVerticalBounds_filtersOutOfDomainAndClampsWithoutZeroHeightStacking`, `drawMarginalHistogramBars_rendersUnconditionalTrackAndGatesForegroundOnDuration`, `drawXAxisTicks_separatesGridlinesFromLabelCollisionGating`, `captureChartsMarginalHistogramsAndTicksLightDarkPng_forRule85`), `ClusterThumbnailPathPreviewDelegationTest` (`4/4`: `buildClusterThumbnailPolylines_preservesHeatmapAlphaAndAuthoritativeZIndex`, `pathPreviewMap_compositeBoundsIncludesAdditionalPathsAndPaddingAffectsCamera`, `clusterItem_longClickOnPathPreviewMapThumbnailOpensContextMenu`, `captureClusterThumbnailsViaPathPreviewMapLightDarkPng_forRule85`), `PathPreviewMapBoundsTest` (`8/8`), `ClusterItemThumbnailComposeTest` (`5/5`), `ArchitectureConformanceContractTest` (`11/11`), `ThemeColorCentralizationAuditTest` (`5/5`).
+- **Jira**: `ATT-6041`
+- **Test Description**:
+  1. *Histogram & X-Axis Tick Characterization (`TST-UI-2789.1`, `TelemetryChartCanvasHelpersTest.kt`)*: Verify Rules 69/70 clamping (`rectHeight <= 0f -> continue`), `0.15f` unconditional tracks, `durationSec > 0L` fg gating, `drawRect`/`drawRoundRect`, `1.0f`/`0.85f` alpha, `onBinDrawn`, and `onTickInBounds` vs `onLabelRendered` across time/distance steps.
+  2. *`PathPreviewMap` & Cluster Thumbnail Parity (`TST-UI-2789.2`, `PathPreviewMapBoundsTest.kt`, `ClusterItemThumbnailComposeTest.kt`)*: Verify `boundsPaddingPx` in camera seeding + move, `additionalPaths` composite bounds without `actualStart`/`actualEnd` fallback pollution, `onMapLongClick` overlay, stub-polyline inspection fallback, `175×120 dp`/`360 dp` bounds, and untouched interactive `ClusterNamingDialog`.
+  3. *`Rule 8.5` PNG Visual Inspection & Targeted Regression (`TST-UI-2789.3`)*: Capture dedicated Light/Dark `docs/engineering/walkthroughs/img/ATT-6041_*.png` via Robolectric (leaving historical PNGs untouched), inspect via `read_file` against the 4-point checklist (+ live `emulator-5554` check in Stage 5/6), and run Tier-1 targeted `ui.map.*`, `ui.clusters.*`, `WorkoutLapsIconContractTest`, `HardcodedStringsAndUnitsContractTest`, `ThemeColorCentralizationAuditTest`, `ArchitectureConformanceContractTest`, and `UiReflectionOnlyTestAuditContractTest`.
+
 ---
 
 ## Change History
@@ -3978,3 +3988,6 @@
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Set `TST-UI-334` to `[Planned]` for `ATT-9179`: replace stale `ElevationProfileKt` reflection stubs in `ElevationProfileGradeColorTest.kt` with behavioral `createComposeRule()` rendering of `GradeLegend()` (`ElevationProfileOverlayComponents.kt:180`) across all 7 `grade_legend_*` labels. |
 | `1.0.2` | 2026-11-20 | Lane C Flash (`ATT-9179`, `--as agent1`) | `ATT-9179` | Promoted `TST-UI-334` to `[Verified]` in Stage 5 with verbatim test citations (`ATT-9179_walkthrough.md`, `Rule 7.5` Gate 4 `ATT-9342` @ `10bde5ec`, `ElevationProfileGradeColorTest` `5/5`, `ElevationProfileOverlayTest` `5/5`, `ElevationProfileClimbShadingTest` `4/4`). |
+| `1.0.3` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Added `TST-UI-2789` `[Planned]` covering marginal histogram/tick helpers, `PathPreviewMap` cluster thumbnail delegation, and `Rule 8.5` PNG inspection. |
+| `1.0.4` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `TST-UI-2789` to `[Implemented]` in Stage 4 (`TelemetryChartCanvasHelpersTest.kt`, `ClusterThumbnailPathPreviewDelegationTest.kt`). |
+| `1.0.5` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `TST-UI-2789` to `[Verified]` in Stage 5 (Rule 7.5 Fast Path reusing Gate 4 `ATT-9433` @ `2b4277ca`: `277/277` PASS across 61 suites). |

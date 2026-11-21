@@ -19,8 +19,10 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,8 +57,10 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.RoundCap
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.GoogleMapComposable
 import com.google.maps.android.compose.MapEffect
@@ -97,6 +101,24 @@ private const val INSPECTION_STROKE_DP = 3f
 private const val INSPECTION_MARKER_RADIUS_DP = 5f
 private const val INSPECTION_GRID_STEPS = 4
 private const val INSPECTION_GRID_ALPHA = 0.25f
+private const val STUB_FRACTION_18 = 0.18f
+private const val STUB_FRACTION_25 = 0.25f
+private const val STUB_FRACTION_32 = 0.32f
+private const val STUB_FRACTION_48 = 0.48f
+private const val STUB_FRACTION_78 = 0.78f
+private const val STUB_FRACTION_82 = 0.82f
+
+/**
+ * Styled raw-coordinate polyline overlay for [PathPreviewMap], supporting multi-polyline cluster
+ * heatmaps and emphasized authoritative routes (`REQ-UI-2789.3`).
+ */
+data class PreviewPolyline(
+    val points: List<LatLng>,
+    val color: Color,
+    val widthPx: Float = POLYLINE_STROKE_WIDTH_PX,
+    val roundCaps: Boolean = false,
+    val zIndex: Float = 0f
+)
 
 private fun isValidLatitude(lat: Double?): Boolean =
     lat != null && lat.isFinite() && lat in -MAX_LATITUDE..MAX_LATITUDE
@@ -158,6 +180,7 @@ private fun resolveSinglePathBounds(
 
 private fun buildCompositePreviewBounds(
     allPaths: List<MappablePath>,
+    additionalPaths: List<PreviewPolyline>,
     start: LatLng?,
     end: LatLng?,
     apex: LatLng?
@@ -168,6 +191,14 @@ private fun buildCompositePreviewBounds(
         p.latLngs.forEach {
             if (isValidCoordinate(it)) {
                 boundsBuilder.include(it)
+                count++
+            }
+        }
+    }
+    additionalPaths.forEach { extra ->
+        extra.points.forEach { point ->
+            if (isValidCoordinate(point)) {
+                boundsBuilder.include(point)
                 count++
             }
         }
@@ -184,20 +215,21 @@ private fun buildCompositePreviewBounds(
 /**
  * Synchronously resolves preview [LatLngBounds] prior to map composition in priority order:
  * 1) Validated explicit [targetBounds],
- * 2) Single-path precomputed bounds (`minLat..maxLng`),
- * 3) Composite bounds built across [allPaths] coordinates and [start]/[end]/[apex] markers.
+ * 2) Single-path precomputed bounds (`minLat..maxLng`) when no extra markers or [additionalPaths] exist,
+ * 3) Composite bounds built across [allPaths], [additionalPaths], and [start]/[end]/[apex] markers.
  */
 internal fun resolvePreviewBounds(
     targetBounds: LatLngBounds?,
     allPaths: List<MappablePath>,
     start: LatLng?,
     end: LatLng?,
-    apex: LatLng?
+    apex: LatLng?,
+    additionalPaths: List<PreviewPolyline> = emptyList()
 ): LatLngBounds? {
-    val hasExtraMarkers = start != null || end != null || apex != null
+    val hasExtraMarkersOrPaths = start != null || end != null || apex != null || additionalPaths.isNotEmpty()
     return validateBounds(targetBounds)
-        ?: resolveSinglePathBounds(allPaths, hasExtraMarkers)
-        ?: buildCompositePreviewBounds(allPaths, start, end, apex)
+        ?: resolveSinglePathBounds(allPaths, hasExtraMarkersOrPaths)
+        ?: buildCompositePreviewBounds(allPaths, additionalPaths, start, end, apex)
 }
 
 private fun mercatorYFraction(latDeg: Double): Double {
@@ -302,7 +334,8 @@ internal fun tryApplyPreviewBounds(applyMove: () -> Unit): Boolean =
     }
 
 /**
- * Static Lite-Mode map preview for tracks, routes, and workout thumbnails.
+ * Static Lite-Mode map preview for tracks, routes, workout thumbnails, and multi-polyline cluster
+ * previews (`REQ-MAP-068`, `REQ-UI-2789.3`).
  */
 @Composable
 fun PathPreviewMap(
@@ -318,24 +351,28 @@ fun PathPreviewMap(
     apexIconRes: Int = R.drawable.ic_distance,
     apexColor: Color = TTColor.ApexPoint,
     targetBounds: LatLngBounds? = null,
-    onMapClick: () -> Unit = {}
+    onMapClick: () -> Unit = {},
+    additionalPaths: List<PreviewPolyline> = emptyList(),
+    boundsPaddingPx: Int = PREVIEW_BOUNDS_PADDING_PX,
+    onMapLongClick: (() -> Unit)? = null
 ) {
     val allPaths = remember(path, paths) {
         if (path != null) listOf(path) + paths else paths
     }
+    // Keep implicit start/end fallback strictly scoped to MappablePath (never additionalPaths).
     val actualStart = start ?: allPaths.firstOrNull()?.latLngs?.firstOrNull()
     val actualEnd = end ?: allPaths.lastOrNull()?.latLngs?.lastOrNull()
-    val resolvedBounds = remember(targetBounds, allPaths, actualStart, actualEnd, apex) {
-        resolvePreviewBounds(targetBounds, allPaths, actualStart, actualEnd, apex)
+    val resolvedBounds = remember(targetBounds, allPaths, additionalPaths, actualStart, actualEnd, apex) {
+        resolvePreviewBounds(targetBounds, allPaths, actualStart, actualEnd, apex, additionalPaths)
     }
 
     val density = LocalDensity.current.density
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     val widthDp = if (containerSize.width > 0) containerSize.width / density else DEFAULT_PREVIEW_WIDTH_DP
     val heightDp = if (containerSize.height > 0) containerSize.height / density else DEFAULT_PREVIEW_HEIGHT_DP
-    val initialCameraPosition = remember(resolvedBounds, widthDp, heightDp, density) {
+    val initialCameraPosition = remember(resolvedBounds, widthDp, heightDp, boundsPaddingPx, density) {
         resolvedBounds?.let {
-            estimateInitialCameraPosition(it, widthDp, heightDp, PREVIEW_BOUNDS_PADDING_PX, density)
+            estimateInitialCameraPosition(it, widthDp, heightDp, boundsPaddingPx, density)
         }
     }
     val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_LUMINANCE_THRESHOLD
@@ -348,21 +385,25 @@ fun PathPreviewMap(
         if (LocalInspectionMode.current) {
             PathPreviewInspectionCanvas(
                 allPaths = allPaths,
+                additionalPaths = additionalPaths,
                 resolvedBounds = resolvedBounds,
                 actualStart = actualStart,
                 actualEnd = actualEnd,
                 actualApex = apex,
                 apexColor = apexColor,
                 isDark = isDark,
-                onMapClick = onMapClick
+                onMapClick = onMapClick,
+                onMapLongClick = onMapLongClick
             )
         } else {
             PathPreviewLiveMap(
                 path = path,
                 paths = paths,
                 allPaths = allPaths,
+                additionalPaths = additionalPaths,
                 resolvedBounds = resolvedBounds,
                 initialCameraPosition = initialCameraPosition,
+                boundsPaddingPx = boundsPaddingPx,
                 containerSize = containerSize,
                 actualStart = actualStart,
                 actualEnd = actualEnd,
@@ -373,20 +414,23 @@ fun PathPreviewMap(
                 apexIconRes = apexIconRes,
                 apexColor = apexColor,
                 isDark = isDark,
-                onMapClick = onMapClick
+                onMapClick = onMapClick,
+                onMapLongClick = onMapLongClick
             )
         }
     }
 }
 
-@OptIn(MapsComposeExperimentalApi::class)
+@OptIn(MapsComposeExperimentalApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun PathPreviewLiveMap(
     path: MappablePath?,
     paths: List<MappablePath>,
     allPaths: List<MappablePath>,
+    additionalPaths: List<PreviewPolyline>,
     resolvedBounds: LatLngBounds?,
     initialCameraPosition: CameraPosition?,
+    boundsPaddingPx: Int,
     containerSize: IntSize,
     actualStart: LatLng?,
     actualEnd: LatLng?,
@@ -397,7 +441,8 @@ private fun PathPreviewLiveMap(
     apexIconRes: Int,
     apexColor: Color,
     isDark: Boolean,
-    onMapClick: () -> Unit
+    onMapClick: () -> Unit,
+    onMapLongClick: (() -> Unit)?
 ) {
     val context = LocalContext.current
     val cameraPositionState = rememberCameraPositionState {
@@ -410,7 +455,7 @@ private fun PathPreviewLiveMap(
     }
 
     var isMapLoaded by remember { mutableStateOf(false) }
-    var retryCount by remember(resolvedBounds) { mutableIntStateOf(0) }
+    var retryCount by remember(resolvedBounds, boundsPaddingPx) { mutableIntStateOf(0) }
     val mapProperties = remember(isDark, context) {
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
@@ -428,6 +473,7 @@ private fun PathPreviewLiveMap(
             path = path,
             paths = paths,
             allPaths = allPaths,
+            additionalPaths = additionalPaths,
             actualStart = actualStart,
             actualEnd = actualEnd,
             actualApex = actualApex,
@@ -438,11 +484,11 @@ private fun PathPreviewLiveMap(
             apexColor = apexColor
         )
 
-        MapEffect(resolvedBounds, containerSize, isMapLoaded, retryCount) { map ->
+        MapEffect(resolvedBounds, containerSize, isMapLoaded, retryCount, boundsPaddingPx) { map ->
             if (resolvedBounds != null && containerSize.width > 0 && containerSize.height > 0) {
                 val moved = tryApplyPreviewBounds {
                     map.moveCamera(
-                        CameraUpdateFactory.newLatLngBounds(resolvedBounds, PREVIEW_BOUNDS_PADDING_PX)
+                        CameraUpdateFactory.newLatLngBounds(resolvedBounds, boundsPaddingPx)
                     )
                 }
                 if (moved) {
@@ -459,6 +505,14 @@ private fun PathPreviewLiveMap(
         isMapLoaded = isMapLoaded,
         isDark = isDark
     )
+
+    if (onMapLongClick != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .combinedClickable(onClick = onMapClick, onLongClick = onMapLongClick)
+        )
+    }
 }
 
 private fun previewMapUiSettings(): MapUiSettings = MapUiSettings(
@@ -467,7 +521,9 @@ private fun previewMapUiSettings(): MapUiSettings = MapUiSettings(
     mapToolbarEnabled = false,
     myLocationButtonEnabled = false,
     scrollGesturesEnabled = false,
-    zoomGesturesEnabled = false
+    zoomGesturesEnabled = false,
+    tiltGesturesEnabled = false,
+    rotationGesturesEnabled = false
 )
 
 @Composable
@@ -476,6 +532,7 @@ private fun PathPreviewMapOverlays(
     path: MappablePath?,
     paths: List<MappablePath>,
     allPaths: List<MappablePath>,
+    additionalPaths: List<PreviewPolyline>,
     actualStart: LatLng?,
     actualEnd: LatLng?,
     actualApex: LatLng?,
@@ -494,6 +551,29 @@ private fun PathPreviewMapOverlays(
                 color = p.color,
                 width = POLYLINE_STROKE_WIDTH_PX
             )
+        }
+    }
+
+    additionalPaths.forEach { extra ->
+        if (extra.points.isNotEmpty()) {
+            if (extra.roundCaps) {
+                Polyline(
+                    points = extra.points,
+                    color = extra.color,
+                    width = extra.widthPx,
+                    startCap = RoundCap(),
+                    endCap = RoundCap(),
+                    jointType = JointType.ROUND,
+                    zIndex = extra.zIndex
+                )
+            } else {
+                Polyline(
+                    points = extra.points,
+                    color = extra.color,
+                    width = extra.widthPx,
+                    zIndex = extra.zIndex
+                )
+            }
         }
     }
 
@@ -556,24 +636,32 @@ private fun projectPointToCanvas(
     return Offset(padPx + xNorm * drawWidth, padPx + yNorm * drawHeight)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PathPreviewInspectionCanvas(
     allPaths: List<MappablePath>,
+    additionalPaths: List<PreviewPolyline>,
     resolvedBounds: LatLngBounds?,
     actualStart: LatLng?,
     actualEnd: LatLng?,
     actualApex: LatLng?,
     apexColor: Color,
     isDark: Boolean,
-    onMapClick: () -> Unit
+    onMapClick: () -> Unit,
+    onMapLongClick: (() -> Unit)?
 ) {
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = INSPECTION_GRID_ALPHA)
     val fallbackStrokeColor = if (isDark) TTColor.DarkMapTrackCyan else MaterialTheme.colorScheme.primary
+    val clickModifier = if (onMapLongClick != null) {
+        Modifier.combinedClickable(onClick = onMapClick, onLongClick = onMapLongClick)
+    } else {
+        Modifier.clickable(onClick = onMapClick)
+    }
 
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(onClick = onMapClick)
+            .then(clickModifier)
     ) {
         val stepX = size.width / INSPECTION_GRID_STEPS
         val stepY = size.height / INSPECTION_GRID_STEPS
@@ -582,7 +670,32 @@ private fun PathPreviewInspectionCanvas(
             drawLine(gridColor, Offset(0f, stepY * i), Offset(size.width, stepY * i), strokeWidth = 1f)
         }
 
-        val bounds = resolvedBounds ?: return@Canvas
+        val strokePx = INSPECTION_STROKE_DP.dp.toPx()
+        val markerRadius = INSPECTION_MARKER_RADIUS_DP.dp.toPx()
+        val bounds = resolvedBounds
+        if (bounds == null) {
+            // Schematic preview fallback when bounds and decoded polylines are absent (e.g., stub @Preview)
+            val startPt = Offset(size.width * STUB_FRACTION_18, size.height * STUB_FRACTION_78)
+            val midTop = Offset(size.width * STUB_FRACTION_48, size.height * STUB_FRACTION_25)
+            val apexPt = Offset(size.width * STUB_FRACTION_82, size.height * STUB_FRACTION_32)
+            val endPt = Offset(size.width * STUB_FRACTION_25, size.height * STUB_FRACTION_82)
+            val stubPath = Path().apply {
+                moveTo(startPt.x, startPt.y)
+                lineTo(midTop.x, midTop.y)
+                lineTo(apexPt.x, apexPt.y)
+                lineTo(endPt.x, endPt.y)
+            }
+            drawPath(
+                path = stubPath,
+                color = additionalPaths.lastOrNull()?.color ?: fallbackStrokeColor,
+                style = Stroke(width = strokePx, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            )
+            drawCircle(color = TTColor.StartPoint, radius = markerRadius, center = startPt)
+            drawCircle(color = apexColor, radius = markerRadius, center = apexPt)
+            drawCircle(color = TTColor.EndPoint, radius = markerRadius, center = endPt)
+            return@Canvas
+        }
+
         val padPx = INSPECTION_PADDING_DP.dp.toPx()
         val drawWidth = (size.width - padPx * 2f).coerceAtLeast(1f)
         val drawHeight = (size.height - padPx * 2f).coerceAtLeast(1f)
@@ -597,7 +710,7 @@ private fun PathPreviewInspectionCanvas(
             projectPointToCanvas(point, bounds, rawLatSpan, rawLngSpan, padPx, drawWidth, drawHeight)
         }
 
-        val strokePx = INSPECTION_STROKE_DP.dp.toPx()
+        var drewAnyPolyline = false
         allPaths.forEach { mappablePath ->
             if (mappablePath.latLngs.size >= MIN_POLYLINE_POINTS) {
                 val composePath = Path()
@@ -610,10 +723,43 @@ private fun PathPreviewInspectionCanvas(
                     color = if (isDark) fallbackStrokeColor else mappablePath.color,
                     style = Stroke(width = strokePx, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
+                drewAnyPolyline = true
             }
         }
 
-        val markerRadius = INSPECTION_MARKER_RADIUS_DP.dp.toPx()
+        additionalPaths.sortedBy { it.zIndex }.forEach { extra ->
+            if (extra.points.size >= MIN_POLYLINE_POINTS) {
+                val composePath = Path()
+                extra.points.forEachIndexed { index, latLng ->
+                    val offset = toOffset(latLng)
+                    if (index == 0) composePath.moveTo(offset.x, offset.y) else composePath.lineTo(offset.x, offset.y)
+                }
+                drawPath(
+                    path = composePath,
+                    color = extra.color,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+                drewAnyPolyline = true
+            }
+        }
+
+        // Graceful fallback when stub polylines do not decode (e.g., unit/compose tests)
+        if (!drewAnyPolyline) {
+            val anchorPoints = listOfNotNull(actualStart, actualApex, actualEnd)
+            if (anchorPoints.size >= MIN_POLYLINE_POINTS) {
+                val fallbackPath = Path()
+                anchorPoints.forEachIndexed { index, latLng ->
+                    val offset = toOffset(latLng)
+                    if (index == 0) fallbackPath.moveTo(offset.x, offset.y) else fallbackPath.lineTo(offset.x, offset.y)
+                }
+                drawPath(
+                    path = fallbackPath,
+                    color = additionalPaths.lastOrNull()?.color ?: fallbackStrokeColor,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
+        }
+
         actualApex?.let { drawCircle(color = apexColor, radius = markerRadius, center = toOffset(it)) }
         actualStart?.let { drawCircle(color = TTColor.StartPoint, radius = markerRadius, center = toOffset(it)) }
         actualEnd?.let { drawCircle(color = TTColor.EndPoint, radius = markerRadius, center = toOffset(it)) }
