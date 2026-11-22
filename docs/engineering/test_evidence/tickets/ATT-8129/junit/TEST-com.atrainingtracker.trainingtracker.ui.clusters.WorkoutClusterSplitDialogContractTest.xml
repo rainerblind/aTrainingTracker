@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:30.613Z" hostname="rainer-HP-EliteBook-850-G5" time="0.274">
+  <properties/>
+  <testcase name="testSplitActionEligibility_onlyWhenHitCountAtLeastTwo" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest" time="0.002"/>
+  <testcase name="testLocalizationParity_allEightKeysExistInAllNineLocales" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest" time="0.195"/>
+  <testcase name="testSourceCompliance_headerAndSheetStructure" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest" time="0.003"/>
+  <testcase name="testSplitDialogStateTransitions" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest" time="0.001"/>
+  <testcase name="testPositionalSpecifiers_inAllLocales" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest" time="0.072"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

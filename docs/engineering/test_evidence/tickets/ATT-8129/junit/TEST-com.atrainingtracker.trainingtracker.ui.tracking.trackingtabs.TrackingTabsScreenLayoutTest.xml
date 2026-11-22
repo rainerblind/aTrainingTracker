@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreenLayoutTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:42.711Z" hostname="rainer-HP-EliteBook-850-G5" time="0.015">
+  <properties/>
+  <testcase name="testTrackingTabsScreen_snackbarHost_appliesNavigationBarsPaddingAndLapButtonClearance" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreenLayoutTest" time="0.015"/>
+  <testcase name="testTrackingTabsScreen_bottomOverlayLayoutAndConfigurationSuppression" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreenLayoutTest" time="0.0"/>
+  <testcase name="testTrackingTabsScreen_snackbarHost_usesDynamicBatteryColorsAndPreemption" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreenLayoutTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

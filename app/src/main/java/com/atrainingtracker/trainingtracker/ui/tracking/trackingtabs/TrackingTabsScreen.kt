@@ -92,6 +92,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,15 +108,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
+import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
-import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
-import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
+import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeAlertDialog
+import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.batterysaver.BatterySaverController
@@ -251,6 +252,8 @@ fun TrackingTabsScreen(
     val screenMode by trackingTabsViewModel.screenMode.collectAsState()
 
     var isAutoPaused by remember { mutableStateOf(TrainingApplication.isAutoPaused()) }
+    var editingDeviceId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showFallbackRecoveryDialog by rememberSaveable { mutableStateOf(false) }
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
@@ -519,18 +522,7 @@ fun TrackingTabsScreen(
                         )
                     }
                     is TabNavigationEvent.EditDevice -> {
-                        if (activity != null && activity.canShowDialogFragments()) {
-                            val editDeviceDialog = EditDeviceFragmentFactory.create(
-                                deviceId = tabNavigationEvent.deviceId,
-                                deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
-                            )
-                            editDeviceDialog.show(
-                                activity.supportFragmentManager,
-                                "EditDeviceDialog"
-                            )
-                        } else {
-                            Log.w(TAG, "Skipping EditDeviceDialog: host activity unavailable or state already saved")
-                        }
+                        editingDeviceId = tabNavigationEvent.deviceId
                     }
                 }
             }
@@ -883,40 +875,14 @@ fun TrackingTabsScreen(
                                     controlViewModel.navigationEvent.collect { navigation ->
                                         when (navigation) {
                                             is ControlNavigation.ToEditDevice -> {
-                                                if (activity != null && activity.canShowDialogFragments()) {
-                                                    val editDeviceDialog =
-                                                        EditDeviceFragmentFactory.create(
-                                                            deviceId = navigation.deviceId,
-                                                            deviceType = navigation.deviceType
-                                                        )
-                                                    editDeviceDialog.show(
-                                                        activity.supportFragmentManager,
-                                                        "EditDeviceDialog"
-                                                    )
-                                                } else {
-                                                    Log.w(TAG, "Skipping EditDeviceDialog from ControlTab: host activity unavailable or state already saved")
-                                                }
+                                                editingDeviceId = navigation.deviceId
                                             }
 
                                             is ControlNavigation.ShowRecoveryDialog -> {
-                                                val recoveryHandler = activity as? StartOrResumeInterface
-                                                if (recoveryHandler != null) {
-                                                    if (activity.canShowDialogFragments()) {
-                                                        recoveryHandler.showStartOrResumeDialog()
-                                                    } else {
-                                                        Log.w(TAG, "Skipping recovery dialog via handler: host activity state already saved")
-                                                    }
-                                                } else if (
-                                                    activity != null &&
-                                                    activity.canShowDialogFragments() &&
-                                                    activity.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null
-                                                ) {
-                                                    StartOrResumeDialog().show(
-                                                        activity.supportFragmentManager,
-                                                        StartOrResumeDialog.TAG
-                                                    )
+                                                if (mainActivity != null) {
+                                                    mainActivity.showStartOrResumeDialog()
                                                 } else {
-                                                    Log.w(TAG, "Skipping StartOrResumeDialog: host activity unavailable or state already saved")
+                                                    showFallbackRecoveryDialog = true
                                                 }
                                             }
                                         }
@@ -1218,6 +1184,35 @@ fun TrackingTabsScreen(
                     },
                     onDismiss = {
                         trackingTabsViewModel.onDismissCopyTabDialog()
+                    }
+                )
+            }
+
+            // Pure Compose EditDeviceDialog overlay (REQ-UI-2801.3 / ATT-8129 — Rule 47 composition retention)
+            editingDeviceId?.let { idToEdit ->
+                EditDeviceDialog(
+                    deviceId = idToEdit,
+                    onDismiss = { editingDeviceId = null }
+                )
+            }
+
+            // Pure Compose StartOrResumeAlertDialog fallback for standalone non-MainActivity hosts (REQ-UI-2801.3)
+            if (showFallbackRecoveryDialog) {
+                val diagnosis = remember { ProcessExitReasonHelper.resolveKillReason(context) }
+                StartOrResumeAlertDialog(
+                    diagnosis = diagnosis,
+                    onDismissRequest = { showFallbackRecoveryDialog = false },
+                    onStartNew = {
+                        showFallbackRecoveryDialog = false
+                        mainActivity?.chooseStart()
+                    },
+                    onResume = {
+                        showFallbackRecoveryDialog = false
+                        mainActivity?.chooseResume()
+                    },
+                    onDisableBatteryOptimization = {
+                        showFallbackRecoveryDialog = false
+                        ProcessExitReasonHelper.openBatteryOptimizationSettings(context)
                     }
                 )
             }

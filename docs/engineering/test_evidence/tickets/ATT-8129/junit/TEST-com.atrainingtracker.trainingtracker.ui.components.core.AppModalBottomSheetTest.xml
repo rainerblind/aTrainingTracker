@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:45:34.806Z" hostname="rainer-HP-EliteBook-850-G5" time="0.036">
+  <properties/>
+  <testcase name="testAppBottomSheetContent_functionExistsInCorePackage" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest" time="0.025"/>
+  <testcase name="testAppModalBottomSheet_dynamicCloseButtonContractLogic" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest" time="0.0"/>
+  <testcase name="testAppModalBottomSheet_functionExistsInCorePackage" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest" time="0.0"/>
+  <testcase name="testAppTableHeader_functionExistsInCorePackage" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest" time="0.006"/>
+  <testcase name="testActivityTypeSelectionDialog_functionExistsInSettingsPackage" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

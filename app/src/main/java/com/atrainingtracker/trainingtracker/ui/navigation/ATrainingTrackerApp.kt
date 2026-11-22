@@ -25,6 +25,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -88,6 +90,9 @@ import com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreen
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.activities.ZoneSettingsScreen
+import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledAlertDialog
+import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeAlertDialog
+import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModel
 import com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreen
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
@@ -970,6 +975,44 @@ fun ATrainingTrackerApp(
                 }
             )
         }
+    }
+
+    // Pure Compose Workout Crash Recovery Dialog (REQ-UI-2801.3, REQ-UI-329 / ATT-8129)
+    if (activity.showStartOrResumeDialogState) {
+        val diagnosis = remember { ProcessExitReasonHelper.resolveKillReason(context) }
+        StartOrResumeAlertDialog(
+            diagnosis = diagnosis,
+            onDismissRequest = { activity.showStartOrResumeDialogState = false },
+            onStartNew = {
+                activity.showStartOrResumeDialogState = false
+                activity.chooseStart()
+            },
+            onResume = {
+                activity.showStartOrResumeDialogState = false
+                activity.chooseResume()
+            },
+            onDisableBatteryOptimization = {
+                activity.showStartOrResumeDialogState = false
+                ProcessExitReasonHelper.openBatteryOptimizationSettings(context)
+            }
+        )
+    }
+
+    // Pure Compose GPS Disabled Alert Dialog (REQ-UI-2801.3 / ATT-8129)
+    if (activity.showGpsDisabledDialog) {
+        GPSDisabledAlertDialog(
+            onOpenLocationSettings = {
+                activity.showGpsDisabledDialog = false
+                try {
+                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                } catch (e: Exception) {
+                    Log.w("ATrainingTrackerApp", "Unable to open location settings: ${e.message}")
+                }
+            },
+            onDismiss = {
+                activity.showGpsDisabledDialog = false
+            }
+        )
     }
 
     // First-install Permission Onboarding Flow (REQ-PRI-007 / ATT-4455 / Rule 47)

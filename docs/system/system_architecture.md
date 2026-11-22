@@ -1,13 +1,13 @@
 # System Architectural Design Specification (ASPICE SYS.3)
 
 **Document ID**: `DOC-SYS-ARC`  
-**Version**: 1.2.6  
+**Version**: 1.2.7  
 **ASPICE Process Areas**: SYS.3 (System Architectural Design, BP1–BP6)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) / [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE CL2 – System Level & Remediation*)  
 **Requirement Reference**: `REQ-PRO-056` (`REQ-PRO-056.1`, `REQ-PRO-056.2`)  
 **Test Reference**: `TST-PRO-056` (`TST-PRO-056.1`–`TST-PRO-056.4`)  
-**Status**: Approved  
-**Approver**: Rainer Blind (PO)  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -204,7 +204,7 @@ Every system requirement across both functional domains is allocated to designat
 | **`SYSREQ-TRK-010`** | Smartphone IMU Kinematics, Carriage Classification, Cadence & iTPMS | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageMode.kt`, `PhoneCarriageClassifier.kt`, `ImuCadenceDsp.kt`, `SmartphoneImuCadenceEstimator.kt`, `KinematicSportTypeDiscriminator.kt`, `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, `MultisportLapCoordinator.kt`, `PolarLiveRunningCadenceEstimator.kt`, `MySensorManager.java`, `DeviceType.java`, `QuaternionGyroProjector.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `ErtsPostWorkoutRecomputer.kt`, `SpeedAndLocationDevice.java`, `IndirectTpmsEstimator.kt`, `DualWheelTpmsEstimator.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-011`** | Swimming Telemetry & Lap Adjustment | `SYS-EL-01`, `SYS-EL-02` | `SYS-IF-01`, `SYS-IF-06` | `SwimWorkoutAdjustCard.kt`, `SwimmingSection.kt`, `PolarVeritySenseOfflineController.kt`, `FitFileWriter.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-012`** | Live HRV & DFA Alpha-1 Thresholds | `SYS-EL-01`, `SYS-EL-02` | `SYS-IF-01`, `SYS-IF-04`, `SYS-IF-06` | `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvRampTestScreen.kt`, `HrvThresholdEstimator.kt`, `HrvPostWorkoutRecomputer.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
-| **`SYSREQ-TRK-013`** | Process-Death Session Recovery | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `TrackerService.java`, `StartOrResumeDialog.kt`, `StartOrResumeInterface.java`, `WorkoutSamplesDatabaseManager.java` | Test / `SystemLiveTrackingRequirementsContractTest` |
+| **`SYSREQ-TRK-013`** | Process-Death Session Recovery | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `TrackerService.java`, `StartOrResumeDialog.kt`, `MainActivityWithNavigation.kt`, `WorkoutSamplesDatabaseManager.java` | Test / `SystemLiveTrackingRequirementsContractTest` |
 
 ### 5.2 Domain 2: Data Exchange & Cloud Sync (SYSREQ-DEX-001..008)
 
@@ -249,3 +249,4 @@ Every system requirement across both functional domains is allocated to designat
 | `1.2.4` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Allocated `KinematicSportTypeDiscriminator.kt` under `SYSREQ-TRK-010` (`REQ-FIL-030`). |
 | `1.2.5` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Allocated `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, and `MultisportLapCoordinator.kt` under `SYSREQ-TRK-010` (`REQ-FIL-031`). |
 | `1.2.6` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Updated `SYS-IF-04` FGS payload schema to include post-workout `FOREGROUND_SERVICE_TYPE_SHORT_SERVICE` (API 34+, zero new manifest permissions; `REQ-TRK-091`, new `.kt` filenames deferred until Stage 4 per `Rule 81`). |
+| `1.2.7` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Replaced excised `StartOrResumeInterface` with `MainActivityWithNavigation.kt` under `SYSREQ-TRK-013` (`Rule 8.7` code-grounding) and reset `Status` to `Reviewed` (`Pending PO Sign-Off`) per `REQ-PRO-120.2`. |

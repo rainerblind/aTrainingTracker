@@ -130,7 +130,7 @@ fun AppModalBottomSheet(
 
 /**
  * Standalone bottom sheet content container with Material 3 [Surface], drag handle, header, body, and actions.
- * Used directly within [AppBottomSheetDialogFragment] to render inside the single BottomSheetDialog window.
+ * Used directly inside native Compose ModalBottomSheet containers to render a single bottom sheet window.
  *
  * @param title Localized title text for the sheet.
  * @param onDismissRequest Callback invoked when the sheet is dismissed.

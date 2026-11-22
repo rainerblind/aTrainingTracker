@@ -35,7 +35,6 @@ class AdvancedTuningModularityTest {
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogFragment",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningPaceCeilingFormatter",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt",
@@ -53,6 +52,14 @@ class AdvancedTuningModularityTest {
         for (className in expectedClasses) {
             val clazz = Class.forName(className)
             assertNotNull("Expected modular class $className must exist", clazz)
+        }
+
+        // REQ-UI-2801.1 / ATT-8129: Legacy AdvancedTuningDialogFragment wrapper must be eliminated
+        try {
+            Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogFragment")
+            org.junit.Assert.fail("Legacy AdvancedTuningDialogFragment must be eliminated from classpath")
+        } catch (_: ClassNotFoundException) {
+            // Expected
         }
     }
 

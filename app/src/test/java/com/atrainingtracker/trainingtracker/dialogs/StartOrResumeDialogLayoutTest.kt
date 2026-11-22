@@ -18,80 +18,204 @@
 
 package com.atrainingtracker.trainingtracker.dialogs
 
+import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.KillDiagnosis
 import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.KillReason
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
+import kotlin.math.abs
 
 /**
- * Structural contract, layout verification, and 9-language localization parity tests
- * for modernized Material 3 [StartOrResumeDialog] (REQ-UI-329, TST-UI-289, ATT-2948).
+ * Behavioral Compose UI layout verification, German 360dp / 1.3x font-scale non-truncation,
+ * and 9-language localization parity tests for pure Compose [StartOrResumeAlertDialog] /
+ * [StartOrResumeDialogContent] (REQ-UI-329, TST-UI-289, REQ-UI-2801 / ATT-2948, ATT-3165, ATT-8129).
  */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], qualifiers = "w412dp-h915dp-xhdpi")
 class StartOrResumeDialogLayoutTest {
 
-    private fun resolveSourceFile(relativePath: String): File {
-        val direct = File(relativePath)
-        if (direct.exists()) return direct
-        val fromRepoRoot = File(System.getProperty("user.dir", "."), relativePath)
-        if (fromRepoRoot.exists()) return fromRepoRoot
-        val parent = File("..", relativePath)
-        if (parent.exists()) return parent
-        throw IllegalStateException("Cannot resolve source file: $relativePath from ${File(".").absolutePath}")
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private val context: Context
+        get() = ApplicationProvider.getApplicationContext()
+
+    private fun resolveResourceFile(locale: String): File {
+        val candidates = listOf(
+            File("app/src/main/res/$locale/strings.xml"),
+            File("src/main/res/$locale/strings.xml"),
+            File("../app/src/main/res/$locale/strings.xml")
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("Cannot resolve strings.xml for locale $locale")
     }
 
-    @Test
-    fun testStartOrResumeDialog_eliminationOfLegacyAlertDialogBuilder() {
-        val sourceFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialog.kt")
-        val content = sourceFile.readText()
-
-        // Verify absence of legacy AlertDialog.Builder
-        assertFalse(
-            "StartOrResumeDialog must eliminate legacy AlertDialog.Builder",
-            content.contains("AlertDialog.Builder")
+    private fun assertNoVisualOverflow(
+        node: SemanticsNodeInteraction,
+        labelName: String,
+        expectedFontScale: Float,
+        maxAllowedLines: Int = 1
+    ) {
+        node.assertIsDisplayed()
+        val semanticsNode = node.fetchSemanticsNode("Expected node for '$labelName'")
+        val getTextLayout = semanticsNode.config.getOrNull(SemanticsActions.GetTextLayoutResult)
+        assertNotNull("Text node '$labelName' must expose GetTextLayoutResult", getTextLayout)
+        val results = mutableListOf<TextLayoutResult>()
+        val ok = getTextLayout!!.action?.invoke(results) == true
+        assertTrue("GetTextLayoutResult failed for '$labelName'", ok && results.isNotEmpty())
+        val layout = results.first()
+        assertEquals(
+            "Dialog must actually render at requested fontScale=$expectedFontScale",
+            expectedFontScale,
+            layout.layoutInput.density.fontScale,
+            0.05f
         )
-        assertFalse(
-            "StartOrResumeDialog must eliminate androidx.appcompat.app.AlertDialog import",
-            content.contains("import androidx.appcompat.app.AlertDialog")
-        )
-
-        // Verify Compose hosting
-        assertTrue("Must use ComposeView", content.contains("ComposeView"))
-        assertTrue("Must use ATrainingTrackerTheme", content.contains("ATrainingTrackerTheme"))
-        assertTrue("Must declare StartOrResumeDialogContent", content.contains("fun StartOrResumeDialogContent("))
-        assertTrue("Must declare StartOrResumeAlertDialog", content.contains("fun StartOrResumeAlertDialog("))
-    }
-
-    @Test
-    fun testStartOrResumeDialog_contextualIconographyAndTokens() {
-        val sourceFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialog.kt")
-        val content = sourceFile.readText()
-
-        // Semantic icons for all 4 reasons
-        assertTrue("Must include BatteryAlert icon", content.contains("Icons.Default.BatteryAlert"))
-        assertTrue("Must include Memory icon", content.contains("Icons.Default.Memory"))
-        assertTrue("Must include Security icon", content.contains("Icons.Default.Security"))
-        assertTrue("Must include DirectionsRun icon", content.contains("Icons.Default.DirectionsRun"))
-
-        // Icon sizing
-        assertTrue("Must apply 36.dp icon size", content.contains("size(36.dp)"))
-
-        // Headline typography
-        assertTrue("Must use titleLarge bold typography", content.contains("MaterialTheme.typography.titleLarge"))
-        assertTrue("Must use FontWeight.Bold", content.contains("FontWeight.Bold"))
-
-        // Button hierarchy
-        assertTrue("Must use filled Button for resume", content.contains("Button(onClick = onResume)"))
-        assertTrue("Must use OutlinedButton for start new", content.contains("OutlinedButton(onClick = onStartNew)"))
         assertTrue(
-            "Must use FilledTonalButton for battery optimization",
-            content.contains("FilledTonalButton(\n                    onClick = onDisableBatteryOptimization") ||
-                content.contains("FilledTonalButton(onClick = onDisableBatteryOptimization") ||
-                content.contains("FilledTonalButton(")
+            "Button '$labelName' lineCount=${layout.lineCount} must be <= $maxAllowedLines",
+            layout.lineCount <= maxAllowedLines
+        )
+        assertFalse(
+            "Button '$labelName' must not overflow vertically at 360dp/fontScale=$expectedFontScale",
+            layout.didOverflowHeight
+        )
+        for (line in 0 until layout.lineCount) {
+            assertFalse(
+                "Button '$labelName' line $line must not ellipsize at 360dp/fontScale=$expectedFontScale",
+                layout.isLineEllipsized(line)
+            )
+            val lineWidth = layout.getLineRight(line) - layout.getLineLeft(line)
+            assertTrue(
+                "Button '$labelName' line $line width ($lineWidth px) must fit within maxWidth (${layout.layoutInput.constraints.maxWidth} px)",
+                lineWidth <= layout.layoutInput.constraints.maxWidth + 1f
+            )
+        }
+        assertEquals(
+            "All characters of '$labelName' must be visibly rendered without truncation",
+            labelName.length,
+            layout.getLineEnd(layout.lineCount - 1, visibleEnd = true)
+        )
+    }
+
+    @Test
+    fun testStartOrResumeDialog_allKillReasonsRenderContextualTitleAndActions() {
+        val cases = listOf(
+            KillDiagnosis(KillReason.BATTERY_KILL, 2, false, true) to R.string.unfinished_workout_title_battery,
+            KillDiagnosis(KillReason.LOW_MEMORY, 1, false, false) to R.string.unfinished_workout_title_memory,
+            KillDiagnosis(KillReason.PERMISSION_REVOKED, 1, false, false) to R.string.unfinished_workout_title_permission,
+            KillDiagnosis(KillReason.GENERIC_UNFINISHED, 0, false, false) to R.string.unfinished_workout_title
+        )
+
+        val currentDiagnosis = androidx.compose.runtime.mutableStateOf(cases.first().first)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                StartOrResumeDialogContent(
+                    diagnosis = currentDiagnosis.value,
+                    onStartNew = {},
+                    onResume = {},
+                    onDisableBatteryOptimization = {}
+                )
+            }
+        }
+
+        for ((diagnosis, expectedTitleRes) in cases) {
+            currentDiagnosis.value = diagnosis
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithText(context.getString(expectedTitleRes)).assertIsDisplayed()
+            composeTestRule.onNodeWithText(context.getString(R.string.start_new_workout)).assertIsDisplayed()
+            composeTestRule.onNodeWithText(context.getString(R.string.resume_workout)).assertIsDisplayed()
+            if (diagnosis.shouldShowBatteryButton) {
+                composeTestRule.onNodeWithText(context.getString(R.string.action_disable_battery_optimization))
+                    .assertIsDisplayed()
+            } else {
+                composeTestRule.onNodeWithText(context.getString(R.string.action_disable_battery_optimization))
+                    .assertDoesNotExist()
+            }
+        }
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "de-w360dp-h800dp-xhdpi", fontScale = 1.0f)
+    fun testStartOrResumeAlertDialog_german360dp_1_0x_stackedFullWidthNoTruncation() {
+        verifyGermanStackedButtonsNonTruncation(fontScale = 1.0f)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "de-w360dp-h800dp-xhdpi", fontScale = 1.3f)
+    fun testStartOrResumeAlertDialog_german360dp_1_3x_stackedFullWidthNoTruncation() {
+        verifyGermanStackedButtonsNonTruncation(fontScale = 1.3f)
+    }
+
+    private fun verifyGermanStackedButtonsNonTruncation(fontScale: Float) {
+        val diagnosis = KillDiagnosis(
+            reason = KillReason.BATTERY_KILL,
+            escalationLevel = 1,
+            isStravaActive = false,
+            shouldShowBatteryButton = true
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                StartOrResumeAlertDialog(
+                    diagnosis = diagnosis,
+                    onDismissRequest = {},
+                    onStartNew = {},
+                    onResume = {},
+                    onDisableBatteryOptimization = {}
+                )
+            }
+        }
+
+        val batteryText = context.getString(R.string.action_disable_battery_optimization)
+        val resumeText = context.getString(R.string.resume_workout)
+        val startNewText = context.getString(R.string.start_new_workout)
+
+        val batteryNode = composeTestRule.onNodeWithText(batteryText)
+        val resumeNode = composeTestRule.onNodeWithText(resumeText)
+        val startNewNode = composeTestRule.onNodeWithText(startNewText)
+
+        assertNoVisualOverflow(batteryNode, batteryText, expectedFontScale = fontScale, maxAllowedLines = if (fontScale > 1.0f) 2 else 1)
+        assertNoVisualOverflow(resumeNode, resumeText, expectedFontScale = fontScale, maxAllowedLines = 1)
+        assertNoVisualOverflow(startNewNode, startNewText, expectedFontScale = fontScale, maxAllowedLines = 1)
+
+        // Verify stacked vertical full-width ergonomics (docs/design_guidelines.md §2.8, ATT-3165)
+        val resumeBounds = resumeNode.getUnclippedBoundsInRoot()
+        val startNewBounds = startNewNode.getUnclippedBoundsInRoot()
+        assertTrue(
+            "Primary Resume button must stack above secondary Start New button (resume.bottom=${resumeBounds.bottom}, startNew.top=${startNewBounds.top})",
+            resumeBounds.bottom.value <= startNewBounds.top.value
+        )
+        val resumeWidth = (resumeBounds.right - resumeBounds.left).value
+        val startNewWidth = (startNewBounds.right - startNewBounds.left).value
+        assertTrue(
+            "Stacked full-width buttons must match width (resume=$resumeWidth dp, startNew=$startNewWidth dp)",
+            abs(resumeWidth - startNewWidth) < 2f
+        )
+        assertTrue(
+            "Dialog must preserve full-width phone ergonomics via usePlatformDefaultWidth=false (button width=$resumeWidth dp)",
+            resumeWidth >= 240f
         )
     }
 
@@ -135,7 +259,7 @@ class StartOrResumeDialogLayoutTest {
     }
 
     @Test
-    fun testRecoveryDialog_9LanguageLocalizationParity() {
+    fun testRecoveryAndGpsDialogs_9LanguageLocalizationParity() {
         val locales = listOf(
             "values",
             "values-de",
@@ -162,12 +286,14 @@ class StartOrResumeDialogLayoutTest {
             "action_disable_battery_optimization",
             "start_or_resume_dialog_message",
             "start_new_workout",
-            "resume_workout"
+            "resume_workout",
+            "gps_disabled_on_device",
+            "gps_goto_settings"
         )
 
         val factory = DocumentBuilderFactory.newInstance()
         for (locale in locales) {
-            val file = resolveSourceFile("app/src/main/res/$locale/strings.xml")
+            val file = resolveResourceFile(locale)
             assertTrue("strings.xml must exist for locale $locale", file.exists())
 
             val doc = factory.newDocumentBuilder().parse(file)
@@ -190,28 +316,4 @@ class StartOrResumeDialogLayoutTest {
             }
         }
     }
-
-    @Test
-    fun testStartOrResumeDialog_overridesOnStartWithExplicitWindowBounds() {
-        val sourceFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialog.kt")
-        val content = sourceFile.readText()
-
-        assertTrue(
-            "StartOrResumeDialog must override onStart()",
-            content.contains("override fun onStart()")
-        )
-        assertTrue(
-            "onStart() must invoke dialog?.window?.setLayout",
-            content.contains("dialog?.window?.setLayout(")
-        )
-        assertTrue(
-            "onStart() must specify MATCH_PARENT width",
-            content.contains("LayoutParams.MATCH_PARENT")
-        )
-        assertTrue(
-            "onStart() must specify WRAP_CONTENT height",
-            content.contains("LayoutParams.WRAP_CONTENT")
-        )
-    }
 }
-

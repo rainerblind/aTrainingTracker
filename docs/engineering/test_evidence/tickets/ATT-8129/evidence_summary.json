@@ -1,0 +1,117 @@
+{
+  "android_test_summary": {
+    "details": "Failed Android test(s): com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls",
+    "failing_tests": [
+      "com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls"
+    ],
+    "passed": false,
+    "ran": 407
+  },
+  "checks": [
+    {
+      "details": "Android: Failed Android test(s): com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls | Python: No Python tests selected.",
+      "failing_tests": [
+        "com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls"
+      ],
+      "name": "dependent_unit_tests",
+      "passed": false
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10050 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "5b61c5473ebdf881ace34bff592f5781b400526e",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.DeviceManagementUiTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.ant.AntStartupCheckContractTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityGoogleDriveStartupRecoveryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityStartupPermissionContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AdrCompletenessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.notifications.NotificationDeepLinkTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsNavigationFilterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsScreenComposeNavigationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.branding.SupporterBadgeContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButtonTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActionsIntegrityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetInsetsComposeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticBottomSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.LegacyUiDecommissioningComposeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorMidRideContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningModularityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenClimbSuppressionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsLandscapeLayoutTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreenLayoutTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.ZoneOnboardingBannerContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-22T20:43:45.418096+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att8129_dialogs_light_dark.png",
+    "screenshots/att8129_emulator_smoke.png",
+    "screenshots/att8129_emulator_cockpit.png"
+  ],
+  "ticket_key": "ATT-8129",
+  "ui_touching": true,
+  "verdict": "FAIL"
+}

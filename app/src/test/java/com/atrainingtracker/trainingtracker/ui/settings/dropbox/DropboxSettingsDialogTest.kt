@@ -106,13 +106,13 @@ class DropboxSettingsDialogTest {
     }
 
     @Test
-    fun testDropboxSettingsDialogFragment_doesNotOverrideOnResume() {
-        val fragmentClass = DropboxSettingsDialogFragment::class.java
-        val declaredOnResume = fragmentClass.declaredMethods.find { it.name == "onResume" }
-        assertNull(
-            "DropboxSettingsDialogFragment MUST NOT declare onResume to guarantee single-authority credential capture in Compose dialog",
-            declaredOnResume
-        )
+    fun testDropboxSettingsDialogFragment_isEliminatedForPureComposeSingleAuthority() {
+        try {
+            Class.forName("com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment")
+            fail("Legacy DropboxSettingsDialogFragment must be eliminated so pure Compose DropboxSettingsDialog is single authority (REQ-UI-2801.1)")
+        } catch (_: ClassNotFoundException) {
+            // Expected
+        }
     }
 
     @Test

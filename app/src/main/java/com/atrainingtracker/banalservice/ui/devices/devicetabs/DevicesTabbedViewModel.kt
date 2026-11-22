@@ -70,7 +70,7 @@ data class ZoneOnboardingPrompt(
 )
 
 /**
- * ViewModel for the DevicesTabbedContainerFragment.
+ * ViewModel for DevicesTabbedScreen.
  * It manages UI state and business logic, surviving configuration changes.
  */
 @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")

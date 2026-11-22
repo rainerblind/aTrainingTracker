@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:45:31.147Z" hostname="rainer-HP-EliteBook-850-G5" time="3.535">
+  <properties/>
+  <testcase name="testSensorSearchTuningSection_structuralToggleWiring" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.207"/>
+  <testcase name="testShowANTAdapterMissingDialog_whenUnsuppressed_showsMissingAdapterDialog" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="2.07"/>
+  <testcase name="testShowANTAdapterMissingDialog_whenSuppressed_discardsBroadcast" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.233"/>
+  <testcase name="testShowANTAdapterMissingDialog_whenAlreadyShowing_doesNotOverwriteExistingState" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.222"/>
+  <testcase name="testMainActivityWithNavigation_structuralSuppressionWiring" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.203"/>
+  <testcase name="testAdvancedTuningHosts_structuralBindingWiring" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.202"/>
+  <testcase name="testSensorsGpsFilterSection_toggleRemoved" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.199"/>
+  <testcase name="testATrainingTrackerApp_structuralDismissalPersistenceWiring" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest" time="0.198"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

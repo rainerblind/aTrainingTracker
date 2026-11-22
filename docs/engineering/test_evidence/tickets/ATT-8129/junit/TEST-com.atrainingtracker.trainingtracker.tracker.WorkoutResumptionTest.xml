@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:17.270Z" hostname="rainer-HP-EliteBook-850-G5" time="2.964">
+  <properties/>
+  <testcase name="testHasUnfinishedWorkout_ReturnsTrueWhenFinishedIsZero" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.779"/>
+  <testcase name="testResumeIntentExtrasAreConfiguredCorrectly" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.401"/>
+  <testcase name="testDiscardOrFinishUnfinishedWorkout_ExecutesDatabaseUpdate" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.399"/>
+  <testcase name="testHasUnfinishedWorkout_ReturnsFalseWhenTableEmpty" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.372"/>
+  <testcase name="testHasUnfinishedWorkout_ReturnsFalseWhenFinishedIsOne" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.347"/>
+  <testcase name="testExtraResumeInterruptedWorkoutConstantValue" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.335"/>
+  <testcase name="testResumeFromCrashStateLifecycle" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest" time="0.331"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

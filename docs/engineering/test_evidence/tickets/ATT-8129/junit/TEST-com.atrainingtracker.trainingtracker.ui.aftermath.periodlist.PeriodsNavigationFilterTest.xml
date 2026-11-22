@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsNavigationFilterTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:45:29.368Z" hostname="rainer-HP-EliteBook-850-G5" time="1.583">
+  <properties/>
+  <testcase name="startWorkoutSummaryList_propagatesSportAndTemporalBoundsArguments_TST_PER_009" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsNavigationFilterTest" time="1.582"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -18,22 +18,35 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
-import android.app.Application
-import android.widget.FrameLayout
-import androidx.fragment.app.FragmentActivity
-import com.atrainingtracker.R
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavGraph
+import androidx.navigation.NavGraphNavigator
+import androidx.navigation.NavHostController
+import androidx.navigation.NavigatorProvider
+import androidx.navigation.NavDestination
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.google.android.gms.common.GooglePlayServicesUtil
+import com.google.android.gms.maps.MapsInitializer
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,16 +55,22 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Robolectric Fragment navigation verification for [PeriodsFragment.startWorkoutSummaryList]
- * ensuring sport & period boundary arguments propagate cleanly into [WorkoutSummariesListFragment]
- * (REQ-PER-008, TST-PER-009, ATT-8324).
+ * Pure Compose navigation verification for [MainActivityWithNavigation.startWorkoutSummaryListFromPeriod]
+ * ensuring sport & period boundary arguments propagate cleanly into [WorkoutSummariesViewModel]
+ * after removal of legacy `PeriodsFragment` & `WorkoutSummariesListFragment`
+ * (REQ-PER-008, TST-PER-009, REQ-UI-2801 / ATT-8324, ATT-8129).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = Application::class)
+@Config(sdk = [34])
 class PeriodsNavigationFilterTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+        MainActivityWithNavigation.defaultIoDispatcher = testDispatcher
         val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true) {
             every { allWorkouts } returns MutableStateFlow(emptyList())
         }
@@ -62,6 +81,17 @@ class PeriodsNavigationFilterTest {
         }
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
+
+        mockkStatic(MapsInitializer::class)
+        every { MapsInitializer.initialize(any(), any(), any()) } returns 0
+        every { MapsInitializer.initialize(any()) } returns 0
+
+        @Suppress("DEPRECATION")
+        run {
+            mockkStatic(GooglePlayServicesUtil::class)
+            every { GooglePlayServicesUtil.isGooglePlayServicesAvailable(any()) } returns 0
+            every { GooglePlayServicesUtil.getErrorDialog(any(), any(), any()) } returns null
+        }
     }
 
     @After
@@ -69,23 +99,41 @@ class PeriodsNavigationFilterTest {
         PeriodsRepository.resetInstanceForTesting()
         WorkoutRepository.resetForTesting(null)
         unmockkAll()
+        MainActivityWithNavigation.defaultIoDispatcher = Dispatchers.IO
+        Dispatchers.resetMain()
     }
 
     /**
-     * TST-PER-009 (REQ-PER-008): Clicking a sport row on a PeriodSummary launches
-     * WorkoutSummariesListFragment with matching ARG_BSPORT_TYPE, ARG_START_S, and ARG_END_S.
+     * TST-PER-009 (REQ-PER-008, REQ-UI-2801.1): Clicking a sport row on a PeriodSummary routes
+     * through MainActivityWithNavigation.startWorkoutSummaryListFromPeriod into Compose NavHost
+     * with matching bSportType, startDateS, and endDateS filter criteria, while legacy
+     * PeriodsFragment and WorkoutSummariesListFragment remain excised.
      */
     @Test
     fun startWorkoutSummaryList_propagatesSportAndTemporalBoundsArguments_TST_PER_009() {
-        val controller = Robolectric.buildActivity(FragmentActivity::class.java).setup()
-        val activity = controller.get()
-        val container = FrameLayout(activity).apply { id = R.id.content }
-        activity.setContentView(container)
+        for (retired in listOf(
+            "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragment",
+            "com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment"
+        )) {
+            try {
+                Class.forName(retired)
+                fail("Retired legacy fragment $retired must be eliminated")
+            } catch (_: ClassNotFoundException) {
+                // Expected
+            }
+        }
 
-        val periodsFragment = PeriodsFragment.newInstance()
-        activity.supportFragmentManager.beginTransaction()
-            .replace(R.id.content, periodsFragment)
-            .commitNow()
+        val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
+
+        val readyController = mockk<NavHostController>(relaxed = true)
+        val navigatorProvider = NavigatorProvider()
+        val graphNavigator = NavGraphNavigator(navigatorProvider)
+        val realGraph = NavGraph(graphNavigator)
+        val destination = NavDestination("test").apply { id = 123 }
+        realGraph.addDestination(destination)
+        realGraph.setStartDestination(123)
+        every { readyController.graph } returns realGraph
+        activity.navController = readyController
 
         val summary = PeriodSummary(
             periodLabel = "March 2026",
@@ -103,20 +151,17 @@ class PeriodsNavigationFilterTest {
             sortKey = "2026-03"
         )
 
-        periodsFragment.startWorkoutSummaryList(
+        activity.startWorkoutSummaryListFromPeriod(
             periodSummary = summary,
-            bSportType = BSportType.RUN
+            bSportType = BSportType.RUN,
+            scrollToWorkoutId = null
         )
-        activity.supportFragmentManager.executePendingTransactions()
 
-        val launched = activity.supportFragmentManager.findFragmentById(R.id.content)
-        val args = (launched as? WorkoutSummariesListFragment)?.arguments
-        assertNotNull("Expected WorkoutSummariesListFragment in R.id.content", args)
-        assertEquals(
-            BSportType.RUN,
-            args!!.getSerializable(WorkoutSummariesListFragment.ARG_BSPORT_TYPE)
-        )
-        assertEquals(summary.startTimestampS, args.getLong(WorkoutSummariesListFragment.ARG_START_S))
-        assertEquals(summary.endTimestampS, args.getLong(WorkoutSummariesListFragment.ARG_END_S))
+        val summariesViewModel = ViewModelProvider(activity)[WorkoutSummariesViewModel::class.java]
+        val criteria = summariesViewModel.filterCriteria.value
+        assertEquals(BSportType.RUN, criteria.bSportType)
+        assertEquals(summary.startTimestampS, criteria.startDateS)
+        assertEquals(summary.endTimestampS, criteria.endDateS)
+        verify { readyController.navigate(NavRoutes.workouts(pushed = true)) }
     }
 }

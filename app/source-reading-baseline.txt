@@ -8,7 +8,6 @@ com/atrainingtracker/trainingtracker/activities/PermissionOnboardingLaunchContra
 com/atrainingtracker/trainingtracker/cloud/healthconnect/HealthConnectHrvImporterTest.kt
 com/atrainingtracker/trainingtracker/database/WorkoutClusterApexMigrationTest.kt
 com/atrainingtracker/trainingtracker/database/WorkoutClusterMapperTest.kt
-com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialogLayoutTest.kt
 com/atrainingtracker/trainingtracker/exporter/LegacyHttpClientPurgeContractTest.kt
 com/atrainingtracker/trainingtracker/helpers/ShareUtilsTest.kt
 com/atrainingtracker/trainingtracker/helpers/SpeedConversionContractTest.kt
