@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:39.331Z" hostname="rainer-HP-EliteBook-850-G5" time="3.087">
+  <properties/>
+  <testcase name="testFirstJubileeActionHelper_feedbackEmailIntentCreation" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="1.453"/>
+  <testcase name="testFirstJubileeCelebrationDialog_sourceContractVerification" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.001"/>
+  <testcase name="testJubileePromptResources_exist" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.0"/>
+  <testcase name="testContext_findActivity_unwrapsContextWrappers" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.024"/>
+  <testcase name="testSupporterDebugSection_containsJubileePreviewTrigger" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.001"/>
+  <testcase name="testFinancialSupportVisibilityLogic_visibleForFreeAndPioneerOnly" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.0"/>
+  <testcase name="testFirstJubileeActionHelper_openPlayStorePage_fallsBackToWebWhenMarketThrows" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.804"/>
+  <testcase name="testFirstJubileeActionHelper_debugBuildLaunchesPlayStoreFallback" classname="com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest" time="0.801"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

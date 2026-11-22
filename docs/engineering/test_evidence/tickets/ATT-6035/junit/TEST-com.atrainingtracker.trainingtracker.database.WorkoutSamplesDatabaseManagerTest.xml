@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:00:54.680Z" hostname="rainer-HP-EliteBook-850-G5" time="0.808">
+  <properties/>
+  <testcase name="testApplyAltitudeDriftCorrection_caseA_epochAndUpperBoundsProtectPreCrashAndPostCalRows" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.084"/>
+  <testcase name="testApplyAltitudeDriftCorrection_negativeOffset_shiftsDownwardsSymmetrically" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.094"/>
+  <testcase name="testPatchSwimKinematics_nonExistentTable_returnsSafelyWithoutException" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.085"/>
+  <testcase name="testApplyAltitudeDriftCorrection_caseB_piecewiseLinear_updatesAllAltitudeColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.079"/>
+  <testcase name="testApplyAltitudeDriftCorrection_caseA_uniformShift_updatesAllAltitudeColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.077"/>
+  <testcase name="testApplyAltitudeDriftCorrection_isolatesNonBarometricColumnsAndChecksCanonicalSource" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.083"/>
+  <testcase name="testCalcExtremaValue_allNullAndMissingColumn_returnsNullAcrossAllExtremaTypes" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.1"/>
+  <testcase name="testApplyAltitudeDriftCorrection_withoutBarometricColumn_leavesDemAndCanonicalUntouched" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.085"/>
+  <testcase name="testApplyAltitudeDriftCorrection_nearZeroOffset_skipsExecution" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.121"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

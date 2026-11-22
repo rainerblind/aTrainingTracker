@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:32.757Z" hostname="rainer-HP-EliteBook-850-G5" time="0.173">
+  <properties/>
+  <testcase name="fastOnly_suppressesRoutineAlertsWhilePreservingFastThreats" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.02"/>
+  <testcase name="testDefaultTimeProvider_usesMonotonicClock" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="restOfRide_suppressesAllAlertsWithoutCountdown" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="resumeAudio_overridesPelotonAndUrbanAutoMuteUntilStateTransition" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.001"/>
+  <testcase name="initialState_isInactive" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="toggleRadarAudioSnooze_alternatesBetween15mAndResume" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.001"/>
+  <testcase name="reset_restoresCleanInactiveStateAcrossRepository" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="snoozeState_isPreservedAcrossWorkoutPauseAndResetOnWorkoutStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="tickerCoroutine_decrementsRemainingSecondsAndAutoExpires" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.141"/>
+  <testcase name="snooze30m_setsDurationAndSuppressesAlerts" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="testSnoozeExpiry_unaffectedByBackwardWallClockShift" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.002"/>
+  <testcase name="snooze15m_setsDurationAndSuppressesRoutineAlerts" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.001"/>
+  <testcase name="pelotonSync_suppressesRoutineAlertsAndPermitsFastThreats" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.0"/>
+  <testcase name="resumeAudio_clearsActiveSnooze" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.001"/>
+  <testcase name="testReset_restoresDefaultTimeProvider" classname="com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@62ca8eb3], context=[android.app.ContextImpl@66f50632], intentFilter=[android.content.IntentFilter@23f78488]]]
+]]></system-err>
+</testsuite>

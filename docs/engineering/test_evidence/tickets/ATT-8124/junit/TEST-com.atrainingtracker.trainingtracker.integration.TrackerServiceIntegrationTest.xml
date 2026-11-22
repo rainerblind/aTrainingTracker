@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:14:30.516Z" hostname="rainer-HP-EliteBook-850-G5" time="1.266">
+  <properties/>
+  <testcase name="autoPause_transitionsStateOnSpeedDropAndResumesOnMotion" classname="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" time="0.203"/>
+  <testcase name="startTracking_ingestsMultiSensorSamplesAndPopulatesSqlite" classname="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" time="0.238"/>
+  <testcase name="pauseTracking_suspendsSampleWritesAndFreezesActiveTime" classname="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" time="0.224"/>
+  <testcase name="testSampleAndWriteToDb_andEndWorkout_filtersNullValuedVirtualSensorsInSqlite" classname="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" time="0.203"/>
+  <testcase name="stopTracking_persistsLapsAndFinalSummaryMetricsInSqlite" classname="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" time="0.239"/>
+  <testcase name="resumeTracking_resumesSampleIngestionAndActiveTimeAccumulation" classname="com.atrainingtracker.trainingtracker.integration.TrackerServiceIntegrationTest" time="0.151"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@11f1888], context=[android.app.ContextImpl@41a2561f], intentFilter=[android.content.IntentFilter@50a653bc]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@1ed7433f], context=[android.app.ContextImpl@41a2561f], intentFilter=[android.content.IntentFilter@31f484cc]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$5@5e7259d1], context=[android.app.ContextImpl@41a2561f], intentFilter=[android.content.IntentFilter@196f1490]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$5@5e7259d1], context=[android.app.ContextImpl@41a2561f], intentFilter=[android.content.IntentFilter@196f1490]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@4f77393c], context=[android.app.ContextImpl@41a2561f], intentFilter=[android.content.IntentFilter@4011fce7]]]
+Invalid ID 0x00000000.
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@353f397d], context=[android.app.ContextImpl@48ad0613], intentFilter=[android.content.IntentFilter@628c969a]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@e7435d6], context=[android.app.ContextImpl@48ad0613], intentFilter=[android.content.IntentFilter@19aabc40]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@2cf8a65e], context=[android.app.ContextImpl@48ad0613], intentFilter=[android.content.IntentFilter@4482579a]]]
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@2eb879fe], context=[android.app.ContextImpl@48ad0613], intentFilter=[android.content.IntentFilter@365ffa40]]]
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'AbstractCursor.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.AbstractCursor.$$robo$$android_database_AbstractCursor$__constructor__(AbstractCursor.java:227)
+	at android.database.AbstractCursor.<init>(AbstractCursor.java:225)
+	at android.database.AbstractWindowedCursor.<init>(AbstractWindowedCursor.java:39)
+	at android.database.sqlite.SQLiteCursor.<init>(SQLiteCursor.java:98)
+	at android.database.sqlite.SQLiteDirectCursorDriver.$$robo$$android_database_sqlite_SQLiteDirectCursorDriver$query(SQLiteDirectCursorDriver.java:52)
+	at android.database.sqlite.SQLiteDirectCursorDriver.query(SQLiteDirectCursorDriver.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$rawQueryWithFactory(SQLiteDatabase.java:1714)
+	at android.database.sqlite.SQLiteDatabase.rawQueryWithFactory(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$queryWithFactory(SQLiteDatabase.java:1561)
+	at android.database.sqlite.SQLiteDatabase.queryWithFactory(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$query(SQLiteDatabase.java:1432)
+	at android.database.sqlite.SQLiteDatabase.query(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$query(SQLiteDatabase.java:1600)
+	at android.database.sqlite.SQLiteDatabase.query(SQLiteDatabase.java)
+	at com.atrainingtracker.banalservice.database.DevicesDatabaseManager.getCursor(DevicesDatabaseManager.java:861)
+	at com.atrainingtracker.banalservice.database.DevicesDatabaseManager.getCalibrationFactor(DevicesDatabaseManager.java:600)
+	at com.atrainingtracker.banalservice.devices.MyRemoteDevice.<init>(MyRemoteDevice.java:63)
+	at com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice.<init>(MyBTLEDevice.java:841)
+	at com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice.<init>(BTLERadarDevice.java:197)
+	at com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest$TestBTLERadarDevice.<init>(HardwareHalIngestionIntegrationTest.kt:118)
+	at com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest.testSensorDropout_realWatchdogTimeoutDebounce(HardwareHalIngestionIntegrationTest.kt:350)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Invalid ID 0x00000000.
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@2eb879fe], context=[android.app.ContextImpl@48ad0613], intentFilter=[android.content.IntentFilter@365ffa40]], Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@39b9a653], context=[android.app.ContextImpl@5302a74a], intentFilter=[android.content.IntentFilter@171717a]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@93507d6], context=[android.app.ContextImpl@5302a74a], intentFilter=[android.content.IntentFilter@3f5c029b]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@62c9a605], context=[android.app.ContextImpl@5302a74a], intentFilter=[android.content.IntentFilter@4b01b701]]]
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@2eb879fe], context=[android.app.ContextImpl@48ad0613], intentFilter=[android.content.IntentFilter@365ffa40]], Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@39b9a653], context=[android.app.ContextImpl@5302a74a], intentFilter=[android.content.IntentFilter@171717a]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Invalid ID 0x00000000.
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@6138199d], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@41cb95fc]], Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@211b83ba], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@faf66cd]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@47800653], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@6f1bdbd7]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@378028b4], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@5c4df464]]]
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@6138199d], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@41cb95fc]], Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@211b83ba], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@faf66cd]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@378028b4], context=[android.app.ContextImpl@59ee12ce], intentFilter=[android.content.IntentFilter@5c4df464]]]
+Invalid ID 0x00000000.
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@6c6437fa], context=[android.app.ContextImpl@14b8e795], intentFilter=[android.content.IntentFilter@133a74a3]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@5ab3ab9d], context=[android.app.ContextImpl@14b8e795], intentFilter=[android.content.IntentFilter@42e8b798]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@1e470191], context=[android.app.ContextImpl@14b8e795], intentFilter=[android.content.IntentFilter@53c27234]]]
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@6c6437fa], context=[android.app.ContextImpl@14b8e795], intentFilter=[android.content.IntentFilter@133a74a3]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@1e470191], context=[android.app.ContextImpl@14b8e795], intentFilter=[android.content.IntentFilter@53c27234]]]
+Invalid ID 0x00000000.
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@5d3b45c1], context=[android.app.ContextImpl@7740a7fc], intentFilter=[android.content.IntentFilter@7fc4a7fb]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@5e88c7d6], context=[android.app.ContextImpl@7740a7fc], intentFilter=[android.content.IntentFilter@7525704d]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@4cb7d444], context=[android.app.ContextImpl@7740a7fc], intentFilter=[android.content.IntentFilter@24230a81]]]
+]]></system-err>
+</testsuite>

@@ -89,11 +89,13 @@ class BANALServiceRepositoryMemoryTest {
         every { mockContext.applicationContext } returns mockContext
 
         resetSingleton()
+        BANALServiceRepository.setDispatcherForTesting(testDispatcher)
         setTrackingMode(TrackingMode.READY)
     }
 
     @After
     fun tearDown() {
+        BANALServiceRepository.resetForTesting(null)
         resetSingleton()
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()

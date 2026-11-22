@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:30:59.527Z" hostname="rainer-HP-EliteBook-850-G5" time="10.858">
+  <properties/>
+  <testcase name="testChooseResume_whenNotTrackingAndUnfinishedWorkoutExists_broadcastsRequestStartTracking" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="4.467"/>
+  <testcase name="testColdStart_resumeInterruptedWorkout_triggersChooseResumeAndStripsExtras" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.953"/>
+  <testcase name="testColdStart_drawerItemIdExtra_updatesFragmentAndStripsExtra" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.672"/>
+  <testcase name="testColdStart_filterCriticalBatteryExtra_stripsExtra" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.744"/>
+  <testcase name="testOnNewIntent_processesAndConsumesExtrasWhileRunning" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.651"/>
+  <testcase name="testRecreationWithSavedInstanceState_doesNotInvokeHandleIntentOrClobberScreen" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.676"/>
+  <testcase name="testCheckPreferences_whenDropboxEnabledWithoutCredentials_resetsUploadToDropboxToFalse" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.745"/>
+  <testcase name="testColdStart_selectedFragmentExtra_updatesFragmentAndStripsExtra" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.653"/>
+  <testcase name="testChooseResume_whenAlreadyTracking_doesNotBroadcastRequestStartTracking" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.662"/>
+  <testcase name="testChooseResume_whenNoUnfinishedWorkout_doesNotBroadcastRequestStartTracking" classname="com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest" time="0.631"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@8b5bf7], context=[android.app.ContextImpl@7da71f13], intentFilter=[android.content.IntentFilter@29665654]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@59ddafbe], context=[android.app.ContextImpl@10081079], intentFilter=[android.content.IntentFilter@15710b7d]]]
+]]></system-err>
+</testsuite>

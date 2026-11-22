@@ -57,7 +57,7 @@ class SettingsDataStoreConfiguredTest {
         )
 
         val context = mockk<Context>(relaxed = true)
-        val settingsDataStore = SettingsDataStore(context, testDataStore)
+        val settingsDataStore = SettingsDataStore.createForTesting(context, testDataStore)
         return Pair(testDataStore, settingsDataStore)
     }
 

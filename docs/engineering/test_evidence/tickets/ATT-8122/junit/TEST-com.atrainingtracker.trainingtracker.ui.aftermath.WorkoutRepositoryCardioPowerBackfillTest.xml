@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCardioPowerBackfillTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:27:42.764Z" hostname="rainer-HP-EliteBook-850-G5" time="12.286">
+  <properties/>
+  <testcase name="testIneligibleWorkoutIsCachedToPreventRepeatedQueries" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCardioPowerBackfillTest" time="4.504"/>
+  <testcase name="testLazyBackfillProjectsColumnsAndSavesRecord" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCardioPowerBackfillTest" time="4.045"/>
+  <testcase name="testBackfillHistoricalCardioPowerDynamicsBoundsExecutionToLimit" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCardioPowerBackfillTest" time="3.736"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>

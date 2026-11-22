@@ -798,7 +798,13 @@ class EditSensorFieldViewModel(
         val newFilterConstant = getFinalFilterConstant()
 
         // when the filter has changed, the BANALService must create this filter.
-        val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
+        val filterData = FilterData(
+            newSourceDeviceName,
+            newSensorType,
+            newFilterType,
+            newFilterConstant,
+            newSourceDeviceId ?: -1L
+        )
         banalServiceRepository.createFilter(filterData)
 
         val showValue = if (currentState.isBarSupported || currentState.isGraphSupported) currentState.showValue else true

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:32:56.727Z" hostname="rainer-HP-EliteBook-850-G5" time="0.086">
+  <properties/>
+  <testcase name="fromCursor and fromCursorBatch map columns symmetrically without closing cursor" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.026"/>
+  <testcase name="ZoneSnapshotEntry validates monotonic boundaries and counts" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.008"/>
+  <testcase name="computePmcYAxisScale produces clean rounded ticks including single explicit zero across ranges (TST-UI-2791_1)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.01"/>
+  <testcase name="ZoneSnapshotEntry fromCursor and fromCursorBatch map columns symmetrically without closing cursor" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.021"/>
+  <testcase name="format functions use default locale and support German comma and US dot (REQ-UI-495_2, TST-UI-495_2)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.001"/>
+  <testcase name="computePmcZeroBaselineY clamps CTL area baseline to zeroY or plot bounds (TST-UI-2791_1)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.0"/>
+  <testcase name="computeDerivedPowerToWeightSeries pairs active FTP and Weight chronologically and formats to 2 decimals" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.006"/>
+  <testcase name="AthleteMetricType validates canonical bounds" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.0"/>
+  <testcase name="computePmcYAxisScale synchronizes yMin and yMax with tick bounds for narrow ranges (TST-UI-2791_1)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.006"/>
+  <testcase name="filterAndConvertSeries filters by MetricsTimeRange and converts weight for Imperial units" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

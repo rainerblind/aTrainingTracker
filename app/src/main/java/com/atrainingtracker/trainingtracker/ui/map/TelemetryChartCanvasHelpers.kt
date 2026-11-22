@@ -23,7 +23,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.MyUnits
 import java.util.Locale
@@ -276,4 +279,180 @@ internal fun DrawScope.drawXAxisTicks(
         }
         current += step
     }
+}
+
+/** Priority tier for the `Ø` entire-workout average Y-axis label (always wins collisions; `REQ-UI-2797.2`). */
+internal const val Y_AXIS_PRIORITY_AVERAGE = 100
+
+/** Priority tier for threshold / zone-boundary Y-axis labels (e.g., `DFA α1` thresholds, `ATT-9164` zones). */
+internal const val Y_AXIS_PRIORITY_THRESHOLD = 50
+
+/** Priority tier for top/bottom min/max Y-axis boundary labels. */
+internal const val Y_AXIS_PRIORITY_EXTREMA = 20
+
+/** Opacity for the muted dotted grey average reference line (`REQ-UI-2797.3`). */
+internal const val AVERAGE_LINE_ALPHA = 0.60f
+
+/** Horizontal alignment of a Y-axis label within the `50.dp` left gutter (`REQ-UI-2797.2`). */
+internal enum class TelemetryYAxisLabelAlignment {
+    LEFT_GUTTER,
+    RIGHT_GUTTER
+}
+
+/** Candidate Y-axis label submitted to [resolveTelemetryYAxisLabels] (`REQ-UI-2797.2`). */
+internal data class TelemetryYAxisLabelCandidate(
+    val id: String,
+    val text: String,
+    val baselineY: Float,
+    val priority: Int,
+    val alignment: TelemetryYAxisLabelAlignment = TelemetryYAxisLabelAlignment.LEFT_GUTTER
+)
+
+/** Non-overlapping placed Y-axis label returned by [resolveTelemetryYAxisLabels] (`REQ-UI-2797.2`). */
+internal data class PlacedTelemetryYAxisLabel(
+    val id: String,
+    val text: String,
+    val baselineY: Float,
+    val boxTop: Float,
+    val boxBottom: Float,
+    val priority: Int,
+    val alignment: TelemetryYAxisLabelAlignment
+)
+
+/**
+ * Returns [averageValue] when it is finite and lies within the plotted `[dataMin, dataMax]` domain,
+ * or `null` otherwise so off-scale/invalid average lines and `Ø` labels are cleanly hidden (`REQ-UI-2797.1`).
+ */
+internal fun resolveVisibleAverageValue(
+    averageValue: Double?,
+    dataMin: Double,
+    dataMax: Double
+): Double? {
+    if (averageValue == null || !averageValue.isFinite()) return null
+    if (!dataMin.isFinite() || !dataMax.isFinite() || dataMax <= dataMin) return null
+    return averageValue.takeIf { it in dataMin..dataMax }
+}
+
+/**
+ * Computes a vertically centered baseline Y coordinate around [anchorY] clamped strictly within
+ * `[minBaselineY, maxBaselineY]` (`REQ-UI-2797.2`).
+ */
+internal fun computeCenteredYAxisBaseline(
+    anchorY: Float,
+    ascent: Float,
+    descent: Float,
+    minBaselineY: Float,
+    maxBaselineY: Float
+): Float {
+    val centered = anchorY - ((ascent + descent) / 2f)
+    if (maxBaselineY <= minBaselineY) return minBaselineY
+    return centered.coerceIn(minBaselineY, maxBaselineY)
+}
+
+/**
+ * Resolves non-overlapping Y-axis labels in descending [TelemetryYAxisLabelCandidate.priority] order
+ * (`Y_AXIS_PRIORITY_AVERAGE > Y_AXIS_PRIORITY_THRESHOLD > Y_AXIS_PRIORITY_EXTREMA`) so the `Ø` average
+ * label always takes strict visual priority over colliding min/max, `DFA α1` threshold, or zone boundary
+ * labels (`REQ-UI-2797.2` / `ATT-9170`).
+ */
+internal fun resolveTelemetryYAxisLabels(
+    candidates: List<TelemetryYAxisLabelCandidate>,
+    ascent: Float,
+    descent: Float,
+    minVerticalGapPx: Float = 2f
+): List<PlacedTelemetryYAxisLabel> {
+    if (candidates.isEmpty()) return emptyList()
+    val effAscent = minOf(ascent, 0f)
+    val effDescent = maxOf(descent, 0f)
+    val gap = minVerticalGapPx.coerceAtLeast(0f)
+    val placed = mutableListOf<PlacedTelemetryYAxisLabel>()
+    val ordered = candidates
+        .filter { it.text.isNotEmpty() && it.baselineY.isFinite() }
+        .sortedByDescending { it.priority }
+
+    for (candidate in ordered) {
+        val boxTop = candidate.baselineY + effAscent
+        val boxBottom = candidate.baselineY + effDescent
+        val collides = placed.any { existing ->
+            boxTop < existing.boxBottom + gap && existing.boxTop < boxBottom + gap
+        }
+        if (!collides) {
+            placed.add(
+                PlacedTelemetryYAxisLabel(
+                    id = candidate.id,
+                    text = candidate.text,
+                    baselineY = candidate.baselineY,
+                    boxTop = boxTop,
+                    boxBottom = boxBottom,
+                    priority = candidate.priority,
+                    alignment = candidate.alignment
+                )
+            )
+        }
+    }
+    return placed
+}
+
+/**
+ * Computes an auto-fitted text size so wide `Ø`-prefixed labels (e.g., `Ø10:45`, `Ø0,83`) never
+ * overflow the `50.dp` left gutter or clip into the plot area across any screen density (`REQ-UI-2797.2`).
+ */
+internal fun computeFittedGutterTextSize(
+    baseTextSizePx: Float,
+    measuredTextWidthPx: Float,
+    maxGutterWidthPx: Float,
+    minTextSizePx: Float = 14f
+): Float {
+    if (!baseTextSizePx.isFinite() || baseTextSizePx <= 0f) return minTextSizePx
+    val effMin = minTextSizePx.coerceAtMost(baseTextSizePx)
+    if (!measuredTextWidthPx.isFinite() || measuredTextWidthPx <= 0f) return baseTextSizePx
+    if (!maxGutterWidthPx.isFinite() || maxGutterWidthPx <= 0f) return effMin
+    if (measuredTextWidthPx <= maxGutterWidthPx) return baseTextSizePx
+    val scaled = baseTextSizePx * (maxGutterWidthPx / measuredTextWidthPx)
+    return scaled.coerceIn(effMin, baseTextSizePx)
+}
+
+/**
+ * Computes the left X draw coordinate for a label right-aligned against [gutterRightPx] without
+ * crossing past [gutterLeftPx] (`REQ-UI-2797.2`).
+ */
+internal fun computeRightAlignedGutterX(
+    textWidthPx: Float,
+    gutterLeftPx: Float,
+    gutterRightPx: Float
+): Float {
+    if (!textWidthPx.isFinite() || !gutterLeftPx.isFinite() || !gutterRightPx.isFinite()) {
+        return gutterLeftPx.takeIf { it.isFinite() } ?: 0f
+    }
+    return (gutterRightPx - textWidthPx).coerceAtLeast(gutterLeftPx)
+}
+
+/**
+ * Draws the horizontal dotted grey entire-workout average reference line across
+ * `[plotStartX, plotStartX + plotWidth]` at [avgY] using crisp round dots (`0.5.dp` on / `5.dp` off,
+ * `StrokeCap.Round`) visually distinct from `6.dp / 6.dp` dashed guidelines (`REQ-UI-2797.3` / `ATT-9170`).
+ *
+ * Safely no-ops on narrow/zero-width canvases (`plotWidth <= 0f`) or non-finite coordinates.
+ */
+internal fun DrawScope.drawAverageReferenceLine(
+    avgY: Float,
+    plotStartX: Float,
+    plotWidth: Float,
+    color: Color,
+    alpha: Float = AVERAGE_LINE_ALPHA
+) {
+    if (plotWidth <= 0f || !plotWidth.isFinite() || !plotStartX.isFinite() || !avgY.isFinite()) {
+        return
+    }
+    val strokeWidthPx = 1.5.dp.toPx()
+    val dotOnPx = 0.5.dp.toPx()
+    val dotOffPx = 5.dp.toPx()
+    drawLine(
+        color = color.copy(alpha = alpha),
+        start = Offset(plotStartX, avgY),
+        end = Offset(plotStartX + plotWidth, avgY),
+        strokeWidth = strokeWidthPx,
+        cap = StrokeCap.Round,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dotOnPx, dotOffPx), 0f)
+    )
 }

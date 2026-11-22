@@ -745,6 +745,12 @@ class BTLEHeartRateDeviceTest {
         val mac = "24:AC:AC:24:82:56"
         val polarId = "24825632"
         val mockPolarApi = mockk<com.polar.sdk.api.PolarBleApi>(relaxed = true)
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockk<android.bluetooth.BluetoothManager>(relaxed = true)
+        mockkConstructor(android.content.Intent::class)
+        every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Long>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<String>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as android.content.Intent }
         PolarOfflineGattCoordinator.resetForTesting()
         PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> mockPolarApi }
         try {
@@ -775,16 +781,28 @@ class BTLEHeartRateDeviceTest {
             device.onDescriptorWriteCompleted(mockGatt, hrDescriptor, BluetoothGatt.GATT_FAILURE)
             io.mockk.verify(exactly = 2) { mockGatt.setCharacteristicNotification(hrChar, true) }
 
-            // While GATT-paused for PFTP yield, watchdog defers without escalating
+            // While GATT-paused for PFTP yield (REQ-TRK-093.4), pauseGattOperations synchronously closes GATT,
+            // unregisters sensors (cancelling & resetting the watchdog to IDLE), and a stale watchdog tick while paused does not escalate
+            val capturedWatchdogRunnable = device.silentHrWatchdogRunnableForTesting
             device.pauseGattOperations()
-            device.silentHrWatchdogRunnableForTesting.run()
-            assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+            io.mockk.verify(exactly = 1) { mockGatt.disconnect() }
+            io.mockk.verify(exactly = 1) { mockGatt.close() }
+            assertEquals(BleHrmSilentConnectionWatchdog.State.IDLE, device.silentHrWatchdogStateForTesting)
+            capturedWatchdogRunnable?.run()
+            assertEquals(BleHrmSilentConnectionWatchdog.State.IDLE, device.silentHrWatchdogStateForTesting)
             device.resumeGattOperations()
 
-            // 1st silent watchdog tick -> REENABLE_CCCD (3rd setCharacteristicNotification)
+            // Re-attach GATT after reconnect and re-configure services -> watchdog re-arms (3rd setCharacteristicNotification)
+            device.setBluetoothGattForTesting(mockGatt)
+            device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+            device.callConfigureServices(mockGatt)
+            assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_INITIAL, device.silentHrWatchdogStateForTesting)
+            io.mockk.verify(exactly = 3) { mockGatt.setCharacteristicNotification(hrChar, true) }
+
+            // 1st silent watchdog tick -> REENABLE_CCCD (4th setCharacteristicNotification)
             device.silentHrWatchdogRunnableForTesting.run()
             assertEquals(BleHrmSilentConnectionWatchdog.State.ARMED_AFTER_RESUBSCRIBE, device.silentHrWatchdogStateForTesting)
-            io.mockk.verify(exactly = 3) { mockGatt.setCharacteristicNotification(hrChar, true) }
+            io.mockk.verify(exactly = 4) { mockGatt.setCharacteristicNotification(hrChar, true) }
 
             // Receiving an HR packet disarms the watchdog cleanly
             device.parseHeartRateMeasurement(byteArrayOf(0x00, 72), 10_000L)

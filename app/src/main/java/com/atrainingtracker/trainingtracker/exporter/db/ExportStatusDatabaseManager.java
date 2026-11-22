@@ -22,7 +22,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.database.SqliteSchemaUtils;
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -50,14 +52,12 @@ import java.util.List;
  * Dies ist ein Singleton und der EINZIGE Ort, an dem Datenbankzugriffe
  * für den Export-Status stattfinden. Alle Methoden sind Thread-sicher.
  */
-public class ExportStatusDatabaseManager {
+public class ExportStatusDatabaseManager extends BaseDatabaseManager<ExportStatusDatabaseManager.ExportStatusDbHelper> {
 
     private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String TAG = "ExportStatusRepo";
     private static ExportStatusDatabaseManager sInstance;
     private final Context mContext;
-    private final ExportStatusDbHelper mDbHelper;
-    private SQLiteDatabase mDatabase = null;
 
 
     public static final String FORMAT = "Format";
@@ -75,8 +75,8 @@ public class ExportStatusDatabaseManager {
     }
 
     private ExportStatusDatabaseManager(Context context) {
+        super(ExportStatusDbHelper.getInstance(context));
         mContext = context.getApplicationContext();
-        mDbHelper = ExportStatusDbHelper.getInstance(context);
     }
 
     public static synchronized ExportStatusDatabaseManager getInstance(Context context) {
@@ -89,27 +89,6 @@ public class ExportStatusDatabaseManager {
     @androidx.annotation.VisibleForTesting
     public static synchronized void resetForTesting(ExportStatusDatabaseManager newInstance) {
         sInstance = newInstance;
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                mDbHelper.close();
-            }
-            mDatabase = mDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
     }
 
 
@@ -682,7 +661,7 @@ public class ExportStatusDatabaseManager {
     }
 
 
-    protected static class ExportStatusDbHelper extends SQLiteOpenHelper {
+    public static class ExportStatusDbHelper extends TrackingSQLiteOpenHelper {
         public static final String DB_NAME = "ExportStatus.db";
         public static final int DB_VERSION = 2;
         static final String TAG = "ExportStatusDbHelper";
@@ -753,21 +732,7 @@ public class ExportStatusDatabaseManager {
         }
 
         private void ensureColumnExists(SQLiteDatabase db, String columnName, String columnDef) {
-            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TABLE + ")", null)) {
-                boolean exists = false;
-                int nameIdx = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (nameIdx >= 0 && columnName.equalsIgnoreCase(cursor.getString(nameIdx))) {
-                        exists = true;
-                        break;
-                    }
-                }
-                if (!exists) {
-                    db.execSQL("ALTER TABLE " + TABLE + " ADD COLUMN " + columnName + " " + columnDef);
-                }
-            } catch (Throwable t) {
-                Log.w(TAG, "Could not verify/add column " + columnName + ": " + t.getMessage());
-            }
+            SqliteSchemaUtils.addColumnIfNotExistsLenient(db, TABLE, columnName, columnDef);
         }
 
     }

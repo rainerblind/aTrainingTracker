@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:33:53.155Z" hostname="rainer-HP-EliteBook-850-G5" time="2.253">
+  <properties/>
+  <testcase name="testApplyDesiredLauncherIconResolvesFromProFeatureManager" classname="com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest" time="1.689"/>
+  <testcase name="testUnlockHierarchy" classname="com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest" time="0.106"/>
+  <testcase name="testDeferredActivationSuppressedDuringActiveTracking" classname="com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest" time="0.245"/>
+  <testcase name="testApplyLauncherIconEnablesTargetAndDisablesOthersWithDontKillApp" classname="com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest" time="0.114"/>
+  <testcase name="testFromTierMapping" classname="com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest" time="0.098"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

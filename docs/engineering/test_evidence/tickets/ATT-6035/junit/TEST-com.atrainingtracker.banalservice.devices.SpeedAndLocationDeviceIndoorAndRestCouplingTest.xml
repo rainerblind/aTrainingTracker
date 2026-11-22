@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:56:12.363Z" hostname="rainer-HP-EliteBook-850-G5" time="14.816">
+  <properties/>
+  <testcase name="testColdStartReleaseHook_cannotBypassIndoorExternalWheelOrAccelRestVetoes_tstFil036_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.425"/>
+  <testcase name="testExternalSpeedSensor_staleDataDoesNotBlockUnpinning" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.417"/>
+  <testcase name="testAccelerometerRestVariance_staleDataReleasesRestGate" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.415"/>
+  <testcase name="testNeutralFallback_whenExternalSensorsAndImuAbsent" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.352"/>
+  <testcase name="testIndoorMode_toggleRestoresNormalUnpinning" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.318"/>
+  <testcase name="testExternalSpeedSensor_motionImmediatelyReleasesPinning" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.313"/>
+  <testcase name="testExternalSpeedSensor_supportsRunSpeedAndBikePower" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.286"/>
+  <testcase name="testAccelerometerRestVariance_lowVarianceHoldsPinningAgainstDopplerSpikes" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.313"/>
+  <testcase name="testAccelerometerRestVariance_dynamicMotionReleasesGatePromptly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.336"/>
+  <testcase name="testIndoorMode_suppressesGpsDistanceCreepAndPinsAnchorCoordinates" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.309"/>
+  <testcase name="testExternalSpeedSensor_zeroSpeedBlocksUnpinningOnMultipathJumps" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" time="1.331"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

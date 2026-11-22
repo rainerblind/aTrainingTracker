@@ -665,4 +665,110 @@ class WorkoutPostProcessingCoordinatorTest {
         )
         assertFalse(WorkoutPostProcessingCoordinator.hasActiveWork())
     }
+
+    // REQ-TRK-093.3 / TST-TRK-093.3
+    @Test
+    fun testPostBackfillPhysiologyRecompute_runsStrictlyOnceAfterBackfillAndBeforeHrvReloadExport_TST_TRK_093_3() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        WorkoutPostProcessingCoordinator.dispatcher = dispatcher
+
+        val events = mutableListOf<String>()
+        var capturedEndMs = -1L
+
+        WorkoutPostProcessingCoordinator.hostControllerOverride = object : HostController {
+            override fun startForegroundHost(context: Context): Boolean = true
+            override fun stopForegroundHost(context: Context) {}
+            override fun onStageStarted(context: Context, stage: PostProcessingStage, currentStep: Int, totalSteps: Int) {}
+            override fun onBatchCompleted(context: Context, hadWarning: Boolean) {}
+        }
+
+        WorkoutPostProcessingCoordinator.stepsOverride = object : PostProcessingSteps {
+            override suspend fun runPolarH10Backfill(context: Context, request: PostProcessingRequest): Boolean {
+                capturedEndMs = request.workoutEndMs
+                events.add("H10_BACKFILL")
+                return true
+            }
+            override suspend fun runPolarVerityBackfill(context: Context, request: PostProcessingRequest): Boolean {
+                events.add("VERITY_BACKFILL")
+                return true
+            }
+            override suspend fun runPhysiologyRecompute(context: Context, request: PostProcessingRequest): Boolean {
+                events.add("PHYS_RECOMPUTE_${request.workoutId}")
+                return true
+            }
+            override suspend fun runHrvRecompute(context: Context, workoutId: Long): Boolean {
+                events.add("HRV_RECOMPUTE_$workoutId")
+                return true
+            }
+            override suspend fun runErtsRecompute(context: Context, workoutId: Long): Boolean = true
+            override suspend fun reloadWorkout(context: Context, workoutId: Long) {
+                events.add("RELOAD_$workoutId")
+            }
+            override suspend fun markExportWorkoutFinished(context: Context, baseFileName: String) {
+                events.add("EXPORT_$baseFileName")
+            }
+            override suspend fun loadFreshWorkoutForExport(context: Context, workoutId: Long): WorkoutData? = null
+            override suspend fun triggerDeferredExport(context: Context, workoutData: WorkoutData) {}
+        }
+
+        // 1. H10 armed: runs physiology recompute strictly after backfill and before HRV -> reload -> export
+        WorkoutPostProcessingCoordinator.enqueue(
+            mockContext,
+            PostProcessingRequest(
+                workoutId = 6001L,
+                baseFileName = "w6001",
+                h10Armed = true,
+                h10StartMs = 100_000L,
+                h10ArmedToken = 1L,
+                verityArmed = false,
+                verityStartMs = 0L,
+                verityArmedToken = 0L,
+                ertsEnabled = false,
+                workoutEndMs = 200_000L
+            )
+        )
+        // 2. Neither H10 nor Verity armed: skips physiology recompute
+        WorkoutPostProcessingCoordinator.enqueue(
+            mockContext,
+            PostProcessingRequest(
+                workoutId = 6002L,
+                baseFileName = "w6002",
+                h10Armed = false,
+                h10StartMs = 0L,
+                h10ArmedToken = 0L,
+                verityArmed = false,
+                verityStartMs = 0L,
+                verityArmedToken = 0L,
+                ertsEnabled = false,
+                workoutEndMs = 300_000L
+            )
+        )
+        // 3. Verity armed & backfilled: triggers physiology recompute once
+        WorkoutPostProcessingCoordinator.enqueue(
+            mockContext,
+            PostProcessingRequest(
+                workoutId = 6003L,
+                baseFileName = "w6003",
+                h10Armed = false,
+                h10StartMs = 0L,
+                h10ArmedToken = 0L,
+                verityArmed = true,
+                verityStartMs = 400_000L,
+                verityArmedToken = 2L,
+                ertsEnabled = false,
+                workoutEndMs = 500_000L
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(200_000L, capturedEndMs)
+        assertEquals(
+            listOf(
+                "H10_BACKFILL", "PHYS_RECOMPUTE_6001", "HRV_RECOMPUTE_6001", "RELOAD_6001", "EXPORT_w6001",
+                "HRV_RECOMPUTE_6002", "RELOAD_6002", "EXPORT_w6002",
+                "VERITY_BACKFILL", "PHYS_RECOMPUTE_6003", "HRV_RECOMPUTE_6003", "RELOAD_6003", "EXPORT_w6003"
+            ),
+            events
+        )
+    }
 }

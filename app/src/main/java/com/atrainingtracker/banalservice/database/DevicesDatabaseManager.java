@@ -52,24 +52,24 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.database.SqliteSchemaUtils;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-public class DevicesDatabaseManager {
+public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseManager.DevicesDbHelper> {
     private static final String TAG = DevicesDatabaseManager.class.getName();
     private static final boolean DEBUG = BANALService.getDebug(false);
 
     // --- Modern Singleton Pattern ---
     private static volatile DevicesDatabaseManager cInstance;
-    private final DevicesDbHelper cDevicesDbHelper;
     private final Context mContext;
-    private SQLiteDatabase mDatabase = null;
 
     @androidx.annotation.VisibleForTesting
     protected DevicesDatabaseManager(@NonNull Context context) {
+        super(new DevicesDbHelper(context.getApplicationContext()));
         this.mContext = context.getApplicationContext();
-        this.cDevicesDbHelper = new DevicesDbHelper(mContext);
     }
 
     @NonNull
@@ -89,35 +89,11 @@ public class DevicesDatabaseManager {
         synchronized (DevicesDatabaseManager.class) {
             if (cInstance != null) {
                 try {
-                    if (cInstance.mDatabase != null && cInstance.mDatabase.isOpen()) {
-                        cInstance.mDatabase.close();
-                    }
-                    cInstance.cDevicesDbHelper.close();
+                    cInstance.closeDatabase();
                 } catch (Throwable ignored) {
                 }
                 cInstance = null;
             }
-        }
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cDevicesDbHelper.close();
-            }
-            mDatabase = cDevicesDbHelper.getWritableDatabase();
-            return mDatabase;
         }
     }
     // --- End of Singleton Pattern ---
@@ -1460,19 +1436,7 @@ public class DevicesDatabaseManager {
         }
 
         private static void addColumnIfMissing(SQLiteDatabase db, String columnName, String columnDef) {
-            boolean columnExists = false;
-            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + DEVICES + ")", null)) {
-                int nameColIdx = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (columnName.equalsIgnoreCase(cursor.getString(nameColIdx))) {
-                        columnExists = true;
-                        break;
-                    }
-                }
-            }
-            if (!columnExists) {
-                db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + columnName + " " + columnDef);
-            }
+            SqliteSchemaUtils.addColumnIfNotExists(db, DEVICES, columnName, columnDef);
         }
 
         /**

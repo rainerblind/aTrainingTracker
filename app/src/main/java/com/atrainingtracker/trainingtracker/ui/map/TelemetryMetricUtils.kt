@@ -243,7 +243,7 @@ object TelemetryMetricUtils {
                 point.hr?.takeIf { it > 0 }?.toDouble()
             }
             TelemetryMetricType.SPEED -> {
-                point.speedMps?.takeIf { it > 0.0 }?.let { mps ->
+                point.speedMps?.takeIf { it.isFinite() && it > 0.0 }?.let { mps ->
                     MyHelper.mps2userUnit(mps, unit)
                 }
             }
@@ -265,15 +265,138 @@ object TelemetryMetricUtils {
                 point.altitude?.takeIf { it.isFinite() }
             }
             TelemetryMetricType.W_PRIME_BAL -> {
-                point.wPrimeBalKj?.takeIf { it >= 0.0 }
+                point.wPrimeBalKj?.takeIf { it.isFinite() && it >= 0.0 }
             }
             TelemetryMetricType.HRV_DFA_A1 -> {
-                point.hrvDfaA1
+                point.hrvDfaA1?.takeIf { it.isFinite() }
             }
             TelemetryMetricType.HRV_RMSSD -> {
-                point.hrvRmssd?.takeIf { it >= 0.0 }
+                point.hrvRmssd?.takeIf { it.isFinite() && it >= 0.0 }
             }
         }
+    }
+
+    /** Mathematical average symbol (`U+00D8`) used on telemetry Y-axis average reference labels (`REQ-UI-2797.2`). */
+    const val AVERAGE_SYMBOL = "\u00D8"
+
+    /**
+     * Computes the entire-workout overall average for [metricType] across all valid samples in [points]
+     * (`REQ-UI-2797.1` / `ATT-9170`).
+     *
+     * - For [TelemetryMetricType.PACE], derives average pace from overall mean positive finite speed
+     *   (`unitMeters / mean(speedMps) / 60.0`) rather than an arithmetic mean of per-point pace values,
+     *   preventing brief slow/walking segments from skewing the reference line.
+     * - For [TelemetryMetricType.HRV_DFA_A1] and [TelemetryMetricType.HRV_RMSSD], excludes high-artifact
+     *   samples (`hrvArtifactRate > 5.0`) when clean samples exist, falling back to all valid finite samples
+     *   otherwise.
+     * - For all other metrics, computes the arithmetic mean across all valid finite extracted values.
+     *
+     * Returns `null` when no valid finite average exists.
+     */
+    fun computeWorkoutAverage(
+        points: List<PathPoint>,
+        metricType: TelemetryMetricType,
+        unit: MyUnits = MyUnits.METRIC
+    ): Double? {
+        if (points.isEmpty()) return null
+        return when (metricType) {
+            TelemetryMetricType.PACE -> {
+                var speedSum = 0.0
+                var speedCount = 0
+                for (pt in points) {
+                    val mps = pt.speedMps
+                    if (mps != null && mps.isFinite() && mps > 0.0) {
+                        speedSum += mps
+                        speedCount++
+                    }
+                }
+                if (speedCount == 0) return null
+                val meanSpeedMps = speedSum / speedCount
+                if (!meanSpeedMps.isFinite() || meanSpeedMps <= 0.0) return null
+                val unitMeters = if (unit == MyUnits.METRIC) 1000.0 else BANALService.METER_PER_MILE
+                val paceMinutes = (unitMeters / meanSpeedMps) / 60.0
+                paceMinutes.takeIf { it.isFinite() && it > 0.0 }
+            }
+            TelemetryMetricType.HRV_DFA_A1, TelemetryMetricType.HRV_RMSSD -> {
+                var cleanSum = 0.0
+                var cleanCount = 0
+                var allSum = 0.0
+                var allCount = 0
+                for (pt in points) {
+                    val value = extractMetricValue(pt, metricType, unit)
+                    if (value != null && value.isFinite()) {
+                        allSum += value
+                        allCount++
+                        val artifactRate = pt.hrvArtifactRate
+                        if (artifactRate == null || artifactRate <= 5.0) {
+                            cleanSum += value
+                            cleanCount++
+                        }
+                    }
+                }
+                val mean = when {
+                    cleanCount > 0 -> cleanSum / cleanCount
+                    allCount > 0 -> allSum / allCount
+                    else -> return null
+                }
+                mean.takeIf { it.isFinite() }
+            }
+            else -> {
+                var sum = 0.0
+                var count = 0
+                for (pt in points) {
+                    val value = extractMetricValue(pt, metricType, unit)
+                    if (value != null && value.isFinite()) {
+                        sum += value
+                        count++
+                    }
+                }
+                if (count == 0) return null
+                (sum / count).takeIf { it.isFinite() }
+            }
+        }
+    }
+
+    /**
+     * Formats a scalar metric value using the canonical compact Y-axis style for [metricType]
+     * (`REQ-UI-2797.2` / `ATT-9170`).
+     */
+    fun formatYAxisValue(
+        value: Double,
+        metricType: TelemetryMetricType,
+        locale: Locale = Locale.getDefault(),
+        roundIntegerMetrics: Boolean = false
+    ): String {
+        if (!value.isFinite()) return ""
+        return when (metricType) {
+            TelemetryMetricType.PACE -> formatPaceMinutes(value)
+            TelemetryMetricType.HRV_DFA_A1 -> String.format(locale, "%.2f", value)
+            TelemetryMetricType.HRV_RMSSD -> TelemetryZoneMath.formatHrvRmssdAxisLabel(value, locale)
+            TelemetryMetricType.SLOPE -> {
+                val rounded = kotlin.math.round(value).toInt().let { if (it == 0) 0 else it }
+                "$rounded%"
+            }
+            else -> if (roundIntegerMetrics) "${kotlin.math.round(value).toInt()}" else "${value.toInt()}"
+        }
+    }
+
+    /**
+     * Formats the `Ø`-prefixed entire-workout average Y-axis label for [metricType]
+     * (e.g., `Ø155`, `Ø8:15`, `Ø0,83`, `Ø235`, `Ø1%`) (`REQ-UI-2797.2` / `ATT-9170`).
+     */
+    fun formatAverageYAxisLabel(
+        value: Double,
+        metricType: TelemetryMetricType,
+        locale: Locale = Locale.getDefault()
+    ): String {
+        if (!value.isFinite()) return ""
+        val formatted = formatYAxisValue(
+            value = value,
+            metricType = metricType,
+            locale = locale,
+            roundIntegerMetrics = true
+        )
+        return if (formatted.isEmpty()) "" else "$AVERAGE_SYMBOL$formatted"
     }
 
     /**

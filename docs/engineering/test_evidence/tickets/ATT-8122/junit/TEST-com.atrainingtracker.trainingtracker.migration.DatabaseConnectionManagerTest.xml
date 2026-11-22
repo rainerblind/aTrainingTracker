@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManagerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:24:28.635Z" hostname="rainer-HP-EliteBook-850-G5" time="1.128">
+  <properties/>
+  <testcase name="testGetActiveDatabases_reusesSingletonsAcrossInvocations" classname="com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManagerTest" time="0.21"/>
+  <testcase name="testCheckpointWithRetry_returnsTrueWhenNotBusy" classname="com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManagerTest" time="0.221"/>
+  <testcase name="testCheckpointWithRetry_returnsFalseWhenContinuouslyBusy" classname="com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManagerTest" time="0.256"/>
+  <testcase name="testDatabaseLock_isAccessibleAndReentrant" classname="com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManagerTest" time="0.209"/>
+  <testcase name="testCheckpointWithRetry_retriesAndSucceedsAfterInitialBusy" classname="com.atrainingtracker.trainingtracker.migration.DatabaseConnectionManagerTest" time="0.231"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:06:58.067Z" hostname="rainer-HP-EliteBook-850-G5" time="4.534">
+  <properties/>
+  <testcase name="testIllegalStateExceptionDuringStartForegroundCaughtGracefully" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="1.321"/>
+  <testcase name="testVolatileBanalServiceAndLocalSnapshotPreventsMidTickNullPointerException" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="1.374"/>
+  <testcase name="testOnDestroySkipsEndWorkoutWhenTrackingInterrupted" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.125"/>
+  <testcase name="testOnDestroyCallsEndWorkoutWhenTrackingNotInterrupted" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.122"/>
+  <testcase name="testSamplingLoopContinuesAfterTransientUncheckedException" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="1.332"/>
+  <testcase name="testRecreationWithoutBackgroundLocationStopsSelfAndReturnsSticky" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.125"/>
+  <testcase name="testSecurityExceptionDuringStartForegroundCaughtGracefully" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.135"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

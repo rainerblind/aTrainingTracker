@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.R
+import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -716,7 +717,7 @@ class WorkoutClusterRepository internal constructor(
      */
     private suspend fun loadWorkoutsWithBatchMetadata(selection: String, args: Array<String>?): List<WorkoutData> = withContext(Dispatchers.IO) {
         val workouts = mutableListOf<WorkoutData>()
-        val db = summariesManager.getDatabase()
+        val db = summariesManager.database
         
         db.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
@@ -851,14 +852,6 @@ class WorkoutClusterRepository internal constructor(
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)
 
     fun <T> runInTransaction(block: () -> T): T {
-        val db = clusterDb.getDatabase()
-        db.beginTransaction()
-        return try {
-            val result = block()
-            db.setTransactionSuccessful()
-            result
-        } finally {
-            db.endTransaction()
-        }
+        return clusterDb.getDatabase().inTransaction { block() }
     }
 }

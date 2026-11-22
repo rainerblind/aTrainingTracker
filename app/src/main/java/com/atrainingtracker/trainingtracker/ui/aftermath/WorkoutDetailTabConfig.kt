@@ -37,6 +37,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
     DESCRIPTION(R.string.settings_workout_card_description),
     EXTREMA(R.string.settings_workout_card_extrema),
     MAP(R.string.settings_workout_card_map),
+    ACTIVITY_CARRIAGE_BAR(R.string.workout_detail_section_activity_carriage_bar),
     ELEVATION(R.string.settings_workout_card_elevation),
     CHARTS(R.string.settings_workout_card_charts),
     ZONES(R.string.settings_workout_card_zones),
@@ -56,6 +57,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
         DESCRIPTION -> WorkoutSectionType.DESCRIPTION
         EXTREMA -> WorkoutSectionType.EXTREMA
         MAP -> WorkoutSectionType.MAP
+        ACTIVITY_CARRIAGE_BAR -> null
         ELEVATION -> WorkoutSectionType.ELEVATION
         CHARTS -> WorkoutSectionType.CHARTS
         ZONES -> WorkoutSectionType.ZONES
@@ -138,6 +140,7 @@ data class WorkoutDetailSectionAvailability(
     val hasDescription: Boolean = false,
     val hasExtrema: Boolean = false,
     val hasMap: Boolean = false,
+    val hasActivityCarriageBar: Boolean = false,
     val hasElevation: Boolean = false,
     val hasCharts: Boolean = false,
     val hasZones: Boolean = false,
@@ -162,6 +165,7 @@ data class WorkoutDetailSectionAvailability(
         WorkoutDetailSectionType.DESCRIPTION -> hasDescription
         WorkoutDetailSectionType.EXTREMA -> hasExtrema
         WorkoutDetailSectionType.MAP -> hasMap
+        WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR -> hasActivityCarriageBar
         WorkoutDetailSectionType.ELEVATION -> hasElevation
         WorkoutDetailSectionType.CHARTS -> hasCharts
         WorkoutDetailSectionType.ZONES -> hasZones
@@ -188,7 +192,8 @@ data class WorkoutDetailSectionAvailability(
             hasLapsData: Boolean,
             hasPhotos: Boolean = true,
             hasGradeDistribution: Boolean = false,
-            hasHrvData: Boolean = false
+            hasHrvData: Boolean = false,
+            hasActivityCarriageBar: Boolean = false
         ): WorkoutDetailSectionAvailability {
             val desc = workoutData.descriptionData
             val hasDescriptionContent = !desc.description.isNullOrBlank() ||
@@ -200,6 +205,7 @@ data class WorkoutDetailSectionAvailability(
                 hasDescription = hasDescriptionContent,
                 hasExtrema = workoutData.extremaData.dataRows.isNotEmpty(),
                 hasMap = showMap && hasGpsTrack,
+                hasActivityCarriageBar = hasActivityCarriageBar,
                 hasElevation = (hasGpsTrack || hasTracklessAltitude) && hasAltitudeData,
                 hasCharts = hasTelemetrySeries,
                 hasZones = hasZonesData,
@@ -281,13 +287,15 @@ data class WorkoutDetailTabConfig(
         val activeSections = normalizedSections.filter { availability.isSectionActive(it, detailPreferences) }
         return activeSections.any {
             it == WorkoutDetailSectionType.MAP ||
+                it == WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR ||
                 it == WorkoutDetailSectionType.ELEVATION ||
                 it == WorkoutDetailSectionType.CHARTS
         }
     }
 
     companion object {
-        private const val SCHEMA_PREFIX = "v3|"
+        private const val SCHEMA_PREFIX = "v4|"
+        private const val SCHEMA_PREFIX_V3 = "v3|"
         private const val SCHEMA_PREFIX_V2 = "v2|"
         private const val SCHEMA_PREFIX_V1 = "v1|"
 
@@ -336,6 +344,7 @@ data class WorkoutDetailTabConfig(
                 customTitle = "",
                 sections = listOf(
                     WorkoutDetailSectionType.MAP,
+                    WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR,
                     WorkoutDetailSectionType.ELEVATION,
                     WorkoutDetailSectionType.CHARTS
                 )
@@ -448,10 +457,12 @@ data class WorkoutDetailTabConfig(
             if (raw.isNullOrBlank()) return DEFAULT_TABS
             return runCatching {
                 val isV1 = raw.startsWith(SCHEMA_PREFIX_V1) ||
-                    (!raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V2) && !raw.startsWith(SCHEMA_PREFIX_V1))
-                val isLegacyPreV3 = !raw.startsWith(SCHEMA_PREFIX)
+                    (!raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V3) && !raw.startsWith(SCHEMA_PREFIX_V2) && !raw.startsWith(SCHEMA_PREFIX_V1))
+                val isLegacyPreV3 = !raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V3)
+                val isLegacyPreV4 = !raw.startsWith(SCHEMA_PREFIX)
                 val payload = when {
                     raw.startsWith(SCHEMA_PREFIX) -> raw.removePrefix(SCHEMA_PREFIX)
+                    raw.startsWith(SCHEMA_PREFIX_V3) -> raw.removePrefix(SCHEMA_PREFIX_V3)
                     raw.startsWith(SCHEMA_PREFIX_V2) -> raw.removePrefix(SCHEMA_PREFIX_V2)
                     raw.startsWith(SCHEMA_PREFIX_V1) -> raw.removePrefix(SCHEMA_PREFIX_V1)
                     else -> raw
@@ -569,7 +580,27 @@ data class WorkoutDetailTabConfig(
                 } else {
                     withRpe
                 }
-                withHrv
+                // ATT-9172 / REQ-UI-2796: For legacy pre-v4 payloads only, if ACTIVITY_CARRIAGE_BAR is missing,
+                // auto-migrate ACTIVITY_CARRIAGE_BAR into tab_map_graphs directly after MAP.
+                val withCarriageBar = if (isLegacyPreV4 && withHrv.none { tab -> WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR in tab.sections }) {
+                    withHrv.map { tab ->
+                        if (tab.id == "tab_map_graphs" || tab.preset == WorkoutDetailTabPreset.MAP_AND_GRAPHS) {
+                            val currentSections = tab.sections.toMutableList()
+                            val mapIndex = currentSections.indexOf(WorkoutDetailSectionType.MAP)
+                            if (mapIndex >= 0) {
+                                currentSections.add(mapIndex + 1, WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR)
+                            } else {
+                                currentSections.add(0, WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR)
+                            }
+                            tab.copy(sections = normalizeTabSections(currentSections))
+                        } else {
+                            tab
+                        }
+                    }
+                } else {
+                    withHrv
+                }
+                withCarriageBar
             }.getOrElse { DEFAULT_TABS }
         }
 

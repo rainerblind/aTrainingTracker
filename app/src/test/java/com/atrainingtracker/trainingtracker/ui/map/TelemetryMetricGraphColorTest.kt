@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.AmoledDarkColorScheme
 import com.atrainingtracker.trainingtracker.ui.theme.DarkColorScheme
@@ -150,6 +152,7 @@ class TelemetryMetricGraphColorTest {
                     metricType = TelemetryMetricType.HEART_RATE,
                     currentDistance = null,
                     onDistanceSelected = {},
+                    hrZoneThresholds = HeartRateZoneThresholds(0, 0, 0, 0),
                     enableGestures = false,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -226,6 +229,8 @@ class TelemetryMetricGraphColorTest {
                             metricType = metric,
                             currentDistance = null,
                             onDistanceSelected = {},
+                            hrZoneThresholds = HeartRateZoneThresholds(0, 0, 0, 0),
+                            powerZoneThresholds = PowerZoneThresholds(0, 0, 0, 0, 0, 0),
                             enableGestures = false
                         )
                     }

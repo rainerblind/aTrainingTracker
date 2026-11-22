@@ -416,4 +416,52 @@ class BikeBellAudioSynthesizerTest {
         verify { mockHandler.removeCallbacks(any<Runnable>()) }
         verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 4, 0) }
     }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_fiveModeStrikeAndRollParity_TST_PRO_137_3() {
+        val fundamental = BikeBellAudioSynthesizer.STRIKE_2_FUNDAMENTAL
+        val ratio = fundamental / BikeBellAudioSynthesizer.FUNDAMENTAL_FREQ
+        val dts = listOf(-0.001, 0.0, 0.0005, 0.002, 0.02, 0.15, 0.45)
+
+        for (dt in dts) {
+            if (dt < 0.0) {
+                assertEquals(0.0, BikeBellAudioSynthesizer.calculateStrikeSample(dt, fundamental), 0.0)
+                assertEquals(0.0, BikeBellAudioSynthesizer.calculateRollStrikeSample(dt, fundamental), 0.0)
+                continue
+            }
+            val attack = 1.0 - Math.exp(-dt / BikeBellAudioSynthesizer.TAU_ATTACK)
+            val freqs = doubleArrayOf(
+                BikeBellAudioSynthesizer.HUM_FREQ * ratio,
+                BikeBellAudioSynthesizer.FUNDAMENTAL_FREQ * ratio,
+                BikeBellAudioSynthesizer.TIERCE_FREQ * ratio,
+                BikeBellAudioSynthesizer.NOMINAL_FREQ * ratio,
+                BikeBellAudioSynthesizer.CLAPPER_FREQ * ratio
+            )
+            val amps = doubleArrayOf(
+                BikeBellAudioSynthesizer.AMP_HUM,
+                BikeBellAudioSynthesizer.AMP_FUNDAMENTAL,
+                BikeBellAudioSynthesizer.AMP_TIERCE,
+                BikeBellAudioSynthesizer.AMP_NOMINAL,
+                BikeBellAudioSynthesizer.AMP_CLAPPER
+            )
+            val strikeTaus = doubleArrayOf(
+                BikeBellAudioSynthesizer.TAU_HUM,
+                BikeBellAudioSynthesizer.TAU_FUNDAMENTAL,
+                BikeBellAudioSynthesizer.TAU_TIERCE,
+                BikeBellAudioSynthesizer.TAU_NOMINAL,
+                BikeBellAudioSynthesizer.TAU_CLAPPER
+            )
+            val rollTaus = doubleArrayOf(0.10, 0.08, 0.05, 0.025, 0.012)
+
+            val expectedStrike = attack * (0..4).sumOf { i ->
+                amps[i] * Math.exp(-dt / strikeTaus[i]) * Math.sin(2.0 * Math.PI * freqs[i] * dt)
+            }
+            val expectedRoll = attack * (0..4).sumOf { i ->
+                amps[i] * Math.exp(-dt / rollTaus[i]) * Math.sin(2.0 * Math.PI * freqs[i] * dt)
+            }
+
+            assertEquals(expectedStrike, BikeBellAudioSynthesizer.calculateStrikeSample(dt, fundamental), 1e-12)
+            assertEquals(expectedRoll, BikeBellAudioSynthesizer.calculateRollStrikeSample(dt, fundamental), 1e-12)
+        }
+    }
 }

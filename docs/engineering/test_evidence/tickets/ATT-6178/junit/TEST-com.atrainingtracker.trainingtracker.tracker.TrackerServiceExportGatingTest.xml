@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceExportGatingTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:50:44.529Z" hostname="rainer-HP-EliteBook-850-G5" time="0.944">
+  <properties/>
+  <testcase name="testEndWorkout_withArmedPolarH10_executesBackfillBeforeExportManager" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceExportGatingTest" time="0.944"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

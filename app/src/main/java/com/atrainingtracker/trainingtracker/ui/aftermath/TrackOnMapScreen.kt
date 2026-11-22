@@ -124,7 +124,7 @@ fun TrackOnMapScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val preferenceManager = remember { MyPreferenceManager.getInstance(context.applicationContext) }
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
@@ -261,6 +261,7 @@ fun TrackOnMapScreen(
     val hasGradeDistribution = gradeZoneDistribution != null
     val hasHrvData = remember(activeScrubPath) { TelemetryMetricUtils.hasHrvData(activeScrubPath) }
     val hasLapsData = workoutData.laps.isNotEmpty()
+    val hasActivityCarriageBar = activityCarriageTimeline != null && activityCarriageTimeline.segments.isNotEmpty()
     val sectionAvailability = remember(
         workoutData,
         showMap,
@@ -271,7 +272,8 @@ fun TrackOnMapScreen(
         hasZonesData,
         hasGradeDistribution,
         hasHrvData,
-        hasLapsData
+        hasLapsData,
+        hasActivityCarriageBar
     ) {
         WorkoutDetailSectionAvailability.fromWorkoutState(
             workoutData = workoutData,
@@ -283,7 +285,8 @@ fun TrackOnMapScreen(
             hasZonesData = hasZonesData,
             hasLapsData = hasLapsData,
             hasGradeDistribution = hasGradeDistribution,
-            hasHrvData = hasHrvData
+            hasHrvData = hasHrvData,
+            hasActivityCarriageBar = hasActivityCarriageBar
         )
     }
 
@@ -481,6 +484,8 @@ fun TrackOnMapScreen(
         multiSensorOverlays = multiSensorOverlays,
         hiddenCharts = persistedHiddenCharts,
         onToggleChartVisibility = handleToggleChartVisibility,
+        activityCarriageTimeline = activityCarriageTimeline,
+        showActivityCarriageBar = hasActivityCarriageBar,
         onCreateLapClick = { scrubDist ->
             candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
             showCreateLapSheet = true

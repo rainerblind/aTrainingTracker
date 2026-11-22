@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:24:08.052Z" hostname="rainer-HP-EliteBook-850-G5" time="0.455">
+  <properties/>
+  <testcase name="testUpdateOrInsert_usesAtomicTransaction" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperTest" time="0.227"/>
+  <testcase name="testGetStravaActivityDataForWorkouts_usesParameterizedQuery" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperTest" time="0.227"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

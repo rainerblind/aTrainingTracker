@@ -69,20 +69,40 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColor
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * Shared multi-sensor overlay helpers for [TelemetryMetricGraph] and [ElevationProfile]
- * (`REQ-PER-042.3`, `REQ-PER-044.3`). Handles chart-boundary unit conversion (`SPEED` m/s -> user
- * speed, `PACE` m/s -> user pace, `ALTITUDE` m -> m/ft), progressive-disclosure `Layers` menus,
- * `Ø` mean legends, secondary curve/dot rendering, and scrub header readouts.
+ * (`REQ-PER-042.3`, `REQ-PER-044.3`, `REQ-UI-2798.2`). Handles chart-boundary unit conversion
+ * (`SPEED` m/s -> user speed, `PACE` m/s -> user pace, `ALTITUDE` m -> m/ft), progressive-disclosure
+ * `Layers` menus, `Ø` mean legends, secondary curve/dot rendering, and scrub header readouts.
+ *
+ * When [avoidZoneColors] is `true` (zone-colored `HEART_RATE` / `POWER` primary curves), resolves
+ * zone-orthogonal theme-adapted contrast colors (`CYAN`, `THEME_DEFAULT`, `MAGENTA`, `TEAL`) so
+ * secondary sensor overlays remain clearly distinguishable across all training zones.
  */
-internal fun overlayStrokeColor(index: Int): Color = when (index % 4) {
-    0 -> TTColor.Zone2
-    1 -> TTColor.Zone4
-    2 -> TTColor.Zone5
-    else -> TTColor.Zone3
+internal fun overlayStrokeColor(
+    index: Int,
+    isDarkSurface: Boolean = false,
+    avoidZoneColors: Boolean = false
+): Color {
+    if (avoidZoneColors) {
+        val token = when (index % 4) {
+            0 -> TelemetryGraphColor.CYAN
+            1 -> TelemetryGraphColor.THEME_DEFAULT
+            2 -> TelemetryGraphColor.MAGENTA
+            else -> TelemetryGraphColor.TEAL
+        }
+        return if (isDarkSurface) token.darkColor else token.lightColor
+    }
+    return when (index % 4) {
+        0 -> TTColor.Zone2
+        1 -> TTColor.Zone4
+        2 -> TTColor.Zone5
+        else -> TTColor.Zone3
+    }
 }
 
 internal data class OverlayXViewport(
@@ -122,11 +142,13 @@ internal fun DrawScope.drawMultiSensorOverlayCurves(
     metricType: TelemetryMetricType,
     unit: MyUnits,
     paceCeilingMinKm: Float,
-    valueToY: (Double) -> Float
+    valueToY: (Double) -> Float,
+    isDarkSurface: Boolean = false,
+    avoidZoneColors: Boolean = false
 ) {
     for (series in overlaySeries) {
         val colorIdx = allOverlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
-        val color = overlayStrokeColor(colorIdx)
+        val color = overlayStrokeColor(colorIdx, isDarkSurface = isDarkSurface, avoidZoneColors = avoidZoneColors)
         val dashLength = if (colorIdx % 2 == 0) 6.dp.toPx() else 3.dp.toPx()
         val gapLength = 3.dp.toPx()
         val path = Path()
@@ -177,7 +199,9 @@ internal fun DrawScope.drawMultiSensorOverlayScrubDots(
     metricType: TelemetryMetricType,
     unit: MyUnits,
     paceCeilingMinKm: Float,
-    valueToY: (Double) -> Float
+    valueToY: (Double) -> Float,
+    isDarkSurface: Boolean = false,
+    avoidZoneColors: Boolean = false
 ) {
     for (series in overlaySeries) {
         val rawSample = TelemetryMetricUtils.findNearestSourceValue(series.points, targetValue, isTimeDomain)
@@ -186,7 +210,7 @@ internal fun DrawScope.drawMultiSensorOverlayScrubDots(
             ?: continue
         val colorIdx = allOverlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
         drawCircle(
-            color = overlayStrokeColor(colorIdx),
+            color = overlayStrokeColor(colorIdx, isDarkSurface = isDarkSurface, avoidZoneColors = avoidZoneColors),
             radius = 3.dp.toPx(),
             center = Offset(cursorX, valueToY(chartValue))
         )
@@ -292,7 +316,9 @@ internal fun MultiSensorOverlayControls(
     onToggleOverlay: (String) -> Unit,
     isLandscape: Boolean,
     unit: MyUnits = MyUnits.METRIC,
-    paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+    paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
+    isDarkSurface: Boolean = false,
+    avoidZoneColors: Boolean = false
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -309,6 +335,8 @@ internal fun MultiSensorOverlayControls(
                 activeOverlaySeries = activeOverlaySeries,
                 unit = unit,
                 paceCeilingMinKm = paceCeilingMinKm,
+                isDarkSurface = isDarkSurface,
+                avoidZoneColors = avoidZoneColors,
                 modifier = Modifier.weight(1f)
             )
         } else {
@@ -341,7 +369,9 @@ internal fun MultiSensorOverlayControls(
                 enabledOverlayIds = enabledOverlayIds,
                 onToggleOverlay = onToggleOverlay,
                 unit = unit,
-                paceCeilingMinKm = paceCeilingMinKm
+                paceCeilingMinKm = paceCeilingMinKm,
+                isDarkSurface = isDarkSurface,
+                avoidZoneColors = avoidZoneColors
             )
         }
     }
@@ -355,6 +385,8 @@ private fun MultiSensorMeanLegendRow(
     activeOverlaySeries: List<TelemetrySourceSeries>,
     unit: MyUnits,
     paceCeilingMinKm: Float,
+    isDarkSurface: Boolean,
+    avoidZoneColors: Boolean,
     modifier: Modifier = Modifier
 ) {
     FlowRow(
@@ -369,7 +401,7 @@ private fun MultiSensorMeanLegendRow(
                 Box(
                     modifier = Modifier
                         .size(8.dp)
-                        .background(overlayStrokeColor(colorIdx), CircleShape)
+                        .background(overlayStrokeColor(colorIdx, isDarkSurface = isDarkSurface, avoidZoneColors = avoidZoneColors), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
@@ -393,7 +425,9 @@ private fun MultiSensorOverlayDropdownMenu(
     enabledOverlayIds: Set<String>,
     onToggleOverlay: (String) -> Unit,
     unit: MyUnits,
-    paceCeilingMinKm: Float
+    paceCeilingMinKm: Float,
+    isDarkSurface: Boolean,
+    avoidZoneColors: Boolean
 ) {
     DropdownMenu(
         expanded = expanded,
@@ -411,7 +445,7 @@ private fun MultiSensorOverlayDropdownMenu(
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(overlayStrokeColor(idx), CircleShape)
+                                .background(overlayStrokeColor(idx, isDarkSurface = isDarkSurface, avoidZoneColors = avoidZoneColors), CircleShape)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(

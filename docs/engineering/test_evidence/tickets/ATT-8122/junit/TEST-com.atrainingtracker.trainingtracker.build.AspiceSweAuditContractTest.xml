@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:20:40.150Z" hostname="rainer-HP-EliteBook-850-G5" time="82.061">
+  <properties/>
+  <testcase name="testArchitectureDocuments_allAllocatedAndSpecifiedComponentsExistInCodebase" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="5.203"/>
+  <testcase name="testArchitectureDocument_authenticComponentNomenclature" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.009"/>
+  <testcase name="testArchitectureDocument_fulfillsAspiceSwe2" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.005"/>
+  <testcase name="testLivingDocShards_allHeadingsStandardized" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.557"/>
+  <testcase name="testArchitectureDocument_softwareInterfaceGrounding" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="75.186"/>
+  <testcase name="testSoftwareIntegrationVerification_intSwe05to08_testClassesAndStrategyParity" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.007"/>
+  <testcase name="testProtocolIntegrity_positionalFormatHardeningAndParityTest_TST_STR_017" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.014"/>
+  <testcase name="testAutonomousRetroWriteAllowlist_protectedRulesAndSkillsContract" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.003"/>
+  <testcase name="testMasterTableParity_matchesDomainShards" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.585"/>
+  <testcase name="testWorkProductHeadersAndGovernanceReconciliation_contract" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.474"/>
+  <testcase name="testGovernanceRulesAndSkills_containSweAndImageContracts" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.002"/>
+  <testcase name="testArchitectureDocument_softwareIntegrationStrategy" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.003"/>
+  <testcase name="testSoftwareIntegrationVerification_intSwe01to04_testClassesAndGovernance" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.003"/>
+  <testcase name="testArchitectureDocument_softwareInterfaceSpecifications" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.002"/>
+  <testcase name="testSubtaskAutomationContract_jiraUtilAndReqLink_TST_STR_012" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

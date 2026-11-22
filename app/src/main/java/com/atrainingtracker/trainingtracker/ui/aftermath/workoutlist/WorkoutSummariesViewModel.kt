@@ -65,7 +65,7 @@ enum class WorkoutSortOrder(@StringRes override val labelResId: Int) : MappableS
 class WorkoutSummariesViewModel(application: Application) : 
     BaseMappableListViewModel<WorkoutData, WorkoutSortOrder>(application, WorkoutSortOrder.DATE) {
     private val workoutRepo = WorkoutRepository.getInstance(application)
-    private val prefManager = MyPreferenceManager(application)
+    private val prefManager = MyPreferenceManager.getInstance(application)
     private val knownLocationsRepo = KnownLocationsRepository.getInstance(application)
     private val clusterRepo = WorkoutClusterRepository.getInstance(application)
 

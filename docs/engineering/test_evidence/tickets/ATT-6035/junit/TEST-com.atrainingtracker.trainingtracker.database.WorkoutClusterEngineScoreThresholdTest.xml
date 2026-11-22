@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:00:26.306Z" hostname="rainer-HP-EliteBook-850-G5" time="2.253">
+  <properties/>
+  <testcase name="testSuggestCluster_respectsExplicitScoreThreshold" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.77"/>
+  <testcase name="testTrainingApplication_clusterScoreThresholdDefaultsAndPersistence" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.744"/>
+  <testcase name="testSuggestCluster_dynamicallyReadsTrainingApplicationPreference" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.739"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

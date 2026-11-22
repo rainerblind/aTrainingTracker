@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:59:36.479Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="testATrainingTrackerApp_wiresAntDialogsAndStatusSheet" classname="com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest" time="0.002"/>
+  <testcase name="testAntAlertDialogs_structuralComposition" classname="com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest" time="0.001"/>
+  <testcase name="testMainActivityWithNavigation_eliminationOfLegacyAlertDialogBuilderForAnt" classname="com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest" time="0.001"/>
+  <testcase name="testAntDialogState_hierarchy" classname="com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

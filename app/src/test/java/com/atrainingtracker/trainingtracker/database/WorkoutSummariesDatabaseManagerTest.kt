@@ -74,9 +74,7 @@ class WorkoutSummariesDatabaseManagerTest {
 
         // Create manager via reflection or singleton
         manager = WorkoutSummariesDatabaseManager.getInstance(mockContext)
-        val dbField = WorkoutSummariesDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, mockDb)
+        manager.setDatabaseForTesting(mockDb)
     }
 
     @After

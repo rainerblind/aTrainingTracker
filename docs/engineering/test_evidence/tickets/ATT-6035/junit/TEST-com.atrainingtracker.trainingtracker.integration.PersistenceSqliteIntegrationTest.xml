@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:03:06.772Z" hostname="rainer-HP-EliteBook-850-G5" time="1.533">
+  <properties/>
+  <testcase name="testKnownLocationsDbHelper_onUpgradeV1ToV5_preservesExistingData" classname="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" time="0.541"/>
+  <testcase name="testKnownLocationsRepository_recordWorkoutStart_persistsToRealSqlite" classname="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" time="0.634"/>
+  <testcase name="testSqliteManagers_dynamicSamplesTable_lapsAndWalConcurrency" classname="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" time="0.358"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

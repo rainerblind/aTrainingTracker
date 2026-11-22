@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:11:17.821Z" hostname="rainer-HP-EliteBook-850-G5" time="0.25">
+  <properties/>
+  <testcase name="testRouteNamePreservation_stripHitCountInvariant" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest" time="0.0"/>
+  <testcase name="testClusterEscapeStrings_existAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest" time="0.184"/>
+  <testcase name="testWorkoutClusterSelectionDialog_exposesCreateNewComposableContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest" time="0.062"/>
+  <testcase name="testRoutePickerTextField_bindsInteractionSourceContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:08:35.874Z" hostname="rainer-HP-EliteBook-850-G5" time="17.132">
+  <properties/>
+  <testcase name="testGetWorkoutTrackPoints_forAllTrackTypes_executesWithoutException" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest" time="3.439"/>
+  <testcase name="testQuoteSqlIdentifier_escapesQuotesAndWrapsInDoubleQuotes" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest" time="3.393"/>
+  <testcase name="testStreamSamples_projectsVerticalOscillationAndGroundContactTime" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest" time="3.321"/>
+  <testcase name="testGetZoneDistributions_executeWithoutException" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest" time="3.436"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_withSourceQualifiedLocationColumns_executesWithoutException" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest" time="3.542"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>

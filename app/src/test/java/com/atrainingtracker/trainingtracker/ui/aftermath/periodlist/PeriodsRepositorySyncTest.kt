@@ -106,7 +106,7 @@ class PeriodsRepositorySyncTest {
         } returns mockk(relaxed = true)
 
         val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         manager.getWorkoutsInRangeCursor(1700000000L, 1700086399L)

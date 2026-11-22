@@ -76,6 +76,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public static final long STALE_TRACK_MOVING_MS = 800L;
     public static final long STALE_TRACK_PARKED_MS = 5000L;
     public static final long V2_SILENCE_TIMEOUT_MS = 1500L;
+    public static final long MODEL_NUMBER_READ_TIMEOUT_MS = 3000L;
 
     public static class TrackState {
         public final float rangeMeters;
@@ -101,14 +102,20 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     protected MySensor<Integer> mLargeVehicleCountSensor;
 
     private boolean mIsV2Stream = false;
-    private BluetoothGattCharacteristic mLightControlCharacteristic;
-    private BluetoothGattCharacteristic mRadarControlWriteChar;
-    private BluetoothGattCharacteristic mRadarControlNotifyChar;
+    private volatile BluetoothGattCharacteristic mLightControlCharacteristic;
+    private volatile BluetoothGattCharacteristic mRadarControlWriteChar;
+    private volatile BluetoothGattCharacteristic mRadarControlNotifyChar;
     private volatile long mLastLightModeCommandTimeMs = 0L;
     public static final long ECHO_GUARD_WINDOW_MS = 1000L;
     private volatile boolean mIsLightControlSupported = false;
     private volatile boolean mIsStvzo = false;
+    private volatile boolean mHasHardwareBrakeSensor = false;
     private volatile String mModelNumber = null;
+    private final Object mLightRegistrationLock = new Object();
+    private boolean mAwaitingModelNumberForRegistration = false;
+    private boolean mDisconnectedSinceConfigure = false;
+    @Nullable
+    private BluetoothGatt mActiveRegistrationGatt = null;
     private volatile RadarLightMode mLastConfiguredLightMode = null;
     private volatile RadarLightMode mPendingLightMode = null;
     private volatile RadarLightMode mConfirmedLightMode = null;
@@ -142,6 +149,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             }
         }
     };
+
+    private final Runnable mModelNumberFallbackRunnable = () ->
+            completeLightControlRegistration(null, null, false, false, true, true);
 
     private final Runnable mWatchdogRunnable = new Runnable() {
         @Override
@@ -294,11 +304,25 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             }
         }
 
-        // Device Information Service discovery for StVZO model number detection (ATT-6707 / REQ-CON-031.1)
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mModelNumberFallbackRunnable);
+        }
+        synchronized (mLightRegistrationLock) {
+            mDisconnectedSinceConfigure = false;
+            mActiveRegistrationGatt = gatt;
+            mAwaitingModelNumberForRegistration = false;
+            mIsStvzo = false;
+            mHasHardwareBrakeSensor = false;
+            mModelNumber = null;
+        }
+
+        // Device Information Service discovery for StVZO model number detection (ATT-6707 / REQ-CON-031.1 / REQ-CON-055.2)
+        boolean awaitingModelRead = false;
         BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
         if (disService != null) {
             BluetoothGattCharacteristic modelChar = disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
             if (modelChar != null) {
+                awaitingModelRead = true;
                 enqueueReadCharacteristic(modelChar);
             }
         }
@@ -351,18 +375,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             mRadarControlNotifyChar = controlNotifyChar;
             mLightControlCharacteristic = controlWriteChar;
             mIsLightControlSupported = true;
-            RadarLightController.registerRadarDevice(this, true, mIsStvzo);
 
             // Garmin RearVue 820 requires subscribing 6a4e2f11 (WRITE, INDICATE) CCCD before control writes (REQ-CON-031.1).
             enableCharacteristicSubscription(gatt, controlWriteChar, true, "radar control write 6a4e2f11");
             enableCharacteristicSubscription(gatt, controlNotifyChar, false, "radar control notify 6a4e2f14");
-
-            // Mid-ride reconnect: re-apply active workout light mode (queued after CCCD writes)
-            RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
-            if (activeMode != RadarLightMode.OFF) {
-                if (DEBUG) Log.i(TAG, "Re-applying active workout light mode upon reconnect: " + activeMode);
-                setLightMode(activeMode);
-            }
         } else {
             mRadarControlWriteChar = null;
             mRadarControlNotifyChar = null;
@@ -373,7 +389,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 lightChar.setWriteType(resolveControlWriteType(lightChar));
                 mLightControlCharacteristic = lightChar;
                 mIsLightControlSupported = true;
-                RadarLightController.registerRadarDevice(this, true, mIsStvzo);
 
                 // Subscribe or read initial physical light mode
                 if ((lightChar.getProperties() & (BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0) {
@@ -381,17 +396,63 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 } else if ((lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
                     enqueueReadCharacteristic(lightChar);
                 }
-
-                // Mid-ride reconnect: re-apply active workout light mode
-                RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
-                if (activeMode != RadarLightMode.OFF) {
-                    if (DEBUG) Log.i(TAG, "Re-applying active workout light mode upon reconnect: " + activeMode);
-                    enqueueWriteCharacteristic(lightChar, new byte[]{activeMode.getCommandByte()});
-                }
             } else {
                 mLightControlCharacteristic = null;
                 mIsLightControlSupported = false;
-                RadarLightController.registerRadarDevice(this, false, false);
+            }
+        }
+
+        // Defer RadarLightController registration and initial light mode dispatch until Model Number read resolves (REQ-CON-055.2)
+        if (mIsLightControlSupported && awaitingModelRead) {
+            synchronized (mLightRegistrationLock) {
+                if (!mIsShutDown && !mDisconnectedSinceConfigure) {
+                    mAwaitingModelNumberForRegistration = true;
+                    if (mHandler != null) mHandler.postDelayed(mModelNumberFallbackRunnable, MODEL_NUMBER_READ_TIMEOUT_MS);
+                }
+            }
+        } else {
+            completeLightControlRegistration(gatt, null, false, false, mIsLightControlSupported, false);
+        }
+    }
+
+    private void completeLightControlRegistration(
+            @Nullable BluetoothGatt sourceGatt, @Nullable String model, boolean isStvzo,
+            boolean hasHardwareBrake, boolean reapplyActiveMode, boolean requirePending) {
+        final RadarLightMode modeToApply;
+        final boolean clamped;
+        final boolean isLegacyLightOnly;
+        synchronized (mLightRegistrationLock) {
+            if (mIsShutDown || mDisconnectedSinceConfigure
+                    || (sourceGatt != null && mActiveRegistrationGatt != null && sourceGatt != mActiveRegistrationGatt)
+                    || (requirePending && !mAwaitingModelNumberForRegistration)) return;
+            if (mHandler != null) mHandler.removeCallbacks(mModelNumberFallbackRunnable);
+            boolean wasPending = mAwaitingModelNumberForRegistration;
+            mAwaitingModelNumberForRegistration = false;
+            if (model != null) mModelNumber = model;
+            mIsStvzo = isStvzo;
+            mHasHardwareBrakeSensor = hasHardwareBrake;
+            boolean lightSupported = mIsLightControlSupported;
+            isLegacyLightOnly = (mRadarControlWriteChar == null);
+            RadarLightController.registerRadarDevice(this, lightSupported, isStvzo, hasHardwareBrake);
+            RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
+            boolean needsStvzoSelfHeal = isStvzo && activeMode != RadarLightMode.OFF && !activeMode.isStvzoCompliant();
+            if (lightSupported && activeMode != RadarLightMode.OFF && (reapplyActiveMode || wasPending || needsStvzoSelfHeal)) {
+                modeToApply = needsStvzoSelfHeal ? RadarLightMode.SOLID : activeMode;
+                clamped = modeToApply != activeMode;
+            } else {
+                modeToApply = null;
+                clamped = false;
+            }
+        }
+        if (modeToApply != null) {
+            boolean writeQueued = setLightMode(modeToApply);
+            if (writeQueued && clamped && isLegacyLightOnly) {
+                synchronized (mLightRegistrationLock) {
+                    if (!mIsShutDown && !mDisconnectedSinceConfigure
+                            && (sourceGatt == null || mActiveRegistrationGatt == null || sourceGatt == mActiveRegistrationGatt)) {
+                        RadarLightController.updateHardwareLightMode(modeToApply);
+                    }
+                }
             }
         }
     }
@@ -572,17 +633,25 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
     }
 
-    @Override
-    protected void disconnectFromGatt() {
+    private void resetConnectionState() {
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
             mHandler.removeCallbacks(mV2SilenceRunnable);
+            mHandler.removeCallbacks(mModelNumberFallbackRunnable);
         }
         mIsV2Stream = false;
         synchronized (mTrackHistory) {
             mTrackHistory.clear();
         }
-        RadarLightController.unregisterRadarDevice(this);
+        synchronized (mLightRegistrationLock) {
+            mDisconnectedSinceConfigure = true;
+            mActiveRegistrationGatt = null;
+            mAwaitingModelNumberForRegistration = false;
+            mIsStvzo = false;
+            mHasHardwareBrakeSensor = false;
+            mModelNumber = null;
+            RadarLightController.unregisterRadarDevice(this);
+        }
         mLightControlCharacteristic = null;
         mRadarControlWriteChar = null;
         mRadarControlNotifyChar = null;
@@ -591,6 +660,11 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         mPendingLightMode = null;
         mConfirmedLightMode = null;
         mIsLightControlSupported = false;
+    }
+
+    @Override
+    protected void disconnectFromGatt() {
+        resetConnectionState();
         RadarStateRepository.updateTelemetryState(currentState -> createBleRadarState(
                 RadarConnectionState.DISCONNECTED,
                 ThreatLevel.NONE,
@@ -605,23 +679,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     @Override
     public void shutDown() {
-        if (mHandler != null) {
-            mHandler.removeCallbacks(mWatchdogRunnable);
-            mHandler.removeCallbacks(mV2SilenceRunnable);
-        }
-        mIsV2Stream = false;
-        synchronized (mTrackHistory) {
-            mTrackHistory.clear();
-        }
-        RadarLightController.unregisterRadarDevice(this);
-        mLightControlCharacteristic = null;
-        mRadarControlWriteChar = null;
-        mRadarControlNotifyChar = null;
-        mLastLightModeCommandTimeMs = 0L;
-        mLastConfiguredLightMode = null;
-        mPendingLightMode = null;
-        mConfirmedLightMode = null;
-        mIsLightControlSupported = false;
+        resetConnectionState();
         mWindowAggregator.resetSession();
         super.shutDown();
     }
@@ -685,14 +743,15 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     }
 
     public boolean setLightMode(@NonNull RadarLightMode mode) {
-        if (mRadarControlWriteChar != null) {
-            mRadarControlWriteChar.setWriteType(resolveControlWriteType(mRadarControlWriteChar));
+        final BluetoothGattCharacteristic radarWriteChar = mRadarControlWriteChar;
+        if (radarWriteChar != null) {
+            radarWriteChar.setWriteType(resolveControlWriteType(radarWriteChar));
             byte type = getRearVueModeType(mode);
             byte[] cmd = new byte[]{0x06, 0x09, 0x01, type};
             mPendingLightMode = mode;
             mLastLightModeCommandTimeMs = SystemClock.elapsedRealtime();
             mLastConfiguredLightMode = mode;
-            enqueueWriteCharacteristic(mRadarControlWriteChar, cmd);
+            enqueueWriteCharacteristic(radarWriteChar, cmd);
             RadarLightController.updateHardwareLightMode(mode);
             return true;
         }
@@ -737,13 +796,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
         if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
             String model = characteristic.getStringValue(0);
-            if (model != null) {
-                mModelNumber = model;
-                boolean stvzo = isStvzoModel(model);
-                boolean hasHardwareBrake = RadarLightController.isRearVue820Model(model);
-                mIsStvzo = stvzo;
-                if (DEBUG) Log.i(TAG, "Read model number: " + model + " (isStvzo=" + stvzo + ", hasHardwareBrake=" + hasHardwareBrake + ")");
-                RadarLightController.registerRadarDevice(this, mIsLightControlSupported, mIsStvzo, hasHardwareBrake);
+            if (model != null && !model.isEmpty()) {
+                completeLightControlRegistration(gatt, model, isStvzoModel(model), RadarLightController.isRearVue820Model(model), false, false);
+            } else {
+                completeLightControlRegistration(gatt, null, false, false, true, true);
             }
         } else if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL.equals(characteristic.getUuid())) {
             byte[] val = characteristic.getValue();
@@ -1306,6 +1362,11 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     public Runnable getV2SilenceRunnableForTesting() {
         return mV2SilenceRunnable;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public Runnable getModelNumberFallbackRunnableForTesting() {
+        return mModelNumberFallbackRunnable;
     }
 
     public boolean isV2Stream() {

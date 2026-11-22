@@ -1,0 +1,19 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "6ff54788ed72c939fba0eebc8fb240db7722c7e9",
+  "files": {
+    "evidence_summary.json": "ffcc7c1777a46cc5e36c688f572d3386e9ba82d7111fcc22dd22030a788b391a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "d1d71ca1b03f3ad33fa6de1a11ea1844d620635ffee83f65194da211171f3053",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.LiveWorkoutBroadcastTrackerTest.xml": "68a713d9925bf30f97c3244f8d1dc2ff33cc6a7fc7babd4f4485b36ee289162d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest.xml": "b105574c2f68b38157896ba10283bbf02abf8c3662254b6673555a71daa37318",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutMarkFinishedTest.xml": "e2620937ca543bca55f0117519964e1419da3ea474d2eba509f10d13aab20892",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryClickContractTest.xml": "5b3aaf02860f635e7b1430af9c92d1489d6803460c35170e5d258fdd74de4ed8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryCompactMenuTest.xml": "14721ebd276836f94a337ada115f77e0347a3f50633fc9f35845d7841bf259a8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryLiveUpdateUiTest.xml": "0480ab17fbecca15c967962868dac61ef5d11f5ee85bab0a15c4219dc181e15e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummarySectionsTest.xml": "a68a4721b79b562ad37cd59b8fc7ea041e1a345fc49c8ea562fa90a5bd11954a",
+    "screenshots/att9069_live_active_workout_card_light_dark.png": "7903a9375792783d74ea53dabfb241f203651f4b42bb785422209f5416e0c94f"
+  },
+  "run_started_utc": "2026-11-22T12:40:42.267447+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9069"
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:05:45.077Z" hostname="rainer-HP-EliteBook-850-G5" time="0.012">
+  <properties/>
+  <testcase name="testCreateLapOnMapSheet_wiresCanonicalBlueTrackAndScissorsIcons" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest" time="0.001"/>
+  <testcase name="testVectorDrawables_existAndAreValidXml" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest" time="0.007"/>
+  <testcase name="testAftermathActionButtons_wireDedicatedIcons" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest" time="0.003"/>
+  <testcase name="testMoveLapBoundaryOnMapSheet_wiresCanonicalBlueTrackAndMoveIcons" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest" time="0.001"/>
+  <testcase name="testPathPreviewMap_declaresCustomMarkerParametersWithDefaults" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -246,15 +246,83 @@ class EditDeviceViewModelTest {
     }
 
     /**
-     * REQ-CON-031.5 / TST-CON-031.5: Verify EditDeviceViewModel isolates draft state from live tail light controls.
-     * EditDeviceViewModel has zero radar tail light fields or callbacks; tail light mode operates directly via RadarLightController.
+     * REQ-CON-031.5 / REQ-UI-2799.2 / ATT-8125: Verify EditDeviceViewModel stages radar tail light
+     * edits strictly in draft state (zero RadarLightController mutations until saveChanges()) and
+     * discards them cleanly on discardDraft() (Cancel).
      */
     @Test
-    fun testEditDeviceViewModel_isolatesRadarTailLightStateFromDraftData() {
-        val methodNames = EditDeviceViewModel::class.java.declaredMethods.map { it.name }
-        assertFalse(
-            "EditDeviceViewModel must NOT manage radar tail light mode in draft state",
-            methodNames.any { it.contains("RadarLight", ignoreCase = true) || it.contains("TailLight", ignoreCase = true) }
+    fun testEditDeviceViewModel_stagesRadarTailLightInDraftAndDiscardsOnCancel() {
+        val mockRepo = mockk<DeviceDataRepository>(relaxed = true)
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val mockDiscovery = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
+        val mockEquipmentRepo = mockk<EquipmentRepository>(relaxed = true)
+
+        val radarDevice = DeviceUiData(
+            id = 88L,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = DeviceType.BIKE_RADAR,
+            lastSeen = "Now",
+            manufacturer = "Garmin",
+            deviceName = "Varia RTL515",
+            isPaired = true,
+            linkedEquipment = emptyList(),
+            availableEquipment = emptyList(),
+            powerFeaturesFlags = null,
+            batteryPercentage = 90,
+            linkedSportTypes = emptyList(),
+            deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0,
+            onEquipmentResId = 0,
+            wheelCircumference = null,
+            calibrationFactor = null,
+            powerFeatures = null,
+            isConnected = false,
+            mainValue = null,
+            allValues = null
         )
+        every { mockRepo.getDeviceSnapshotById(88L) } returns radarDevice
+
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.reset()
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.updateCachedPreferences(
+            autoMode = true,
+            defaultMode = com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID
+        )
+
+        val viewModel = EditDeviceViewModel(
+            application = mockApplication,
+            devicesRepository = mockRepo,
+            banalServiceRepository = mockBanalRepo,
+            discoveryManager = mockDiscovery,
+            equipmentRepository = mockEquipmentRepo
+        )
+        viewModel.loadInitialDeviceData(88L)
+        viewModel.onRadarLightSelectionChanged(
+            isAutoMode = false,
+            mode = com.atrainingtracker.banalservice.devices.radar.RadarLightMode.DAY_FLASH
+        )
+
+        // Staged in draft only: RadarLightController untouched before Save
+        assertEquals(
+            RadarLightDraftSelection(
+                isAutoMode = false,
+                mode = com.atrainingtracker.banalservice.devices.radar.RadarLightMode.DAY_FLASH
+            ),
+            viewModel.radarLightDraft.value
+        )
+        assertTrue(com.atrainingtracker.banalservice.devices.radar.RadarLightController.isAutoMode.value)
+        assertEquals(
+            com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID,
+            com.atrainingtracker.banalservice.devices.radar.RadarLightController.preferredMode.value
+        )
+
+        // Cancel discards draft with zero RadarLightController mutation
+        viewModel.discardDraft()
+        assertEquals(null, viewModel.radarLightDraft.value)
+        assertTrue(com.atrainingtracker.banalservice.devices.radar.RadarLightController.isAutoMode.value)
+        assertEquals(
+            com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID,
+            com.atrainingtracker.banalservice.devices.radar.RadarLightController.preferredMode.value
+        )
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.reset()
     }
 }

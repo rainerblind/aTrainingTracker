@@ -18,7 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
-import android.location.Location
+import com.atrainingtracker.trainingtracker.routes.AndroidGeoDistance
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -77,24 +77,14 @@ object SpatialRegionEngine {
     const val MIN_BOUNDS_DELTA_DEGREES = 0.005
 
     /**
-     * Computes the Great-Circle Haversine distance between two coordinates in meters.
-     * Includes fallback calculation for JVM unit test execution where android.location.Location is stubbed.
+     * Computes the WGS-84 ellipsoidal distance between two coordinates in meters, with deterministic
+     * Haversine fallback for JVM unit test execution where android.location.Location is unmocked.
      */
     fun distanceBetween(p1: LatLng, p2: LatLng): Double {
-        return try {
-            val res = FloatArray(1)
-            Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, res)
-            res[0].toDouble()
-        } catch (_: RuntimeException) {
-            val earthRadius = 6371000.0
-            val dLat = Math.toRadians(p2.latitude - p1.latitude)
-            val dLon = Math.toRadians(p2.longitude - p1.longitude)
-            val a = sin(dLat / 2).pow(2.0) +
-                    cos(Math.toRadians(p1.latitude)) * cos(Math.toRadians(p2.latitude)) *
-                    sin(dLon / 2).pow(2.0)
-            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-            earthRadius * c
-        }
+        return AndroidGeoDistance.ellipsoidalDistanceMeters(
+            p1.latitude, p1.longitude,
+            p2.latitude, p2.longitude
+        )
     }
 
     /**

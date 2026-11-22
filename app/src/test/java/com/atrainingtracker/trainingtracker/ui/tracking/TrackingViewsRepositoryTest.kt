@@ -557,4 +557,39 @@ class TrackingViewsRepositoryTest {
             )
         }
     }
+
+    // Verifies REQ-DAT-047 / TST-DAT-043
+    @Test
+    fun mutateViewConfig_incrementsTriggerAndPreservesReturnValuesForMoveAndCopy() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+        val triggerField = TrackingViewsRepository::class.java.getDeclaredField("configUpdateTrigger")
+        triggerField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val triggerFlow = triggerField.get(repository) as kotlinx.coroutines.flow.MutableStateFlow<Int>
+        val initial = triggerFlow.value
+
+        every { mockViewsDbManager.moveTabView(10L, true) } returns 2
+        every {
+            mockViewsDbManager.copyTabViewToActivityTypes(
+                10L,
+                listOf(com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE)
+            )
+        } returns listOf(101L, 102L)
+
+        repository.updateTabName(10L, "Renamed")
+        val newIndex = repository.moveTabView(10L, true)
+        val copiedIds = repository.copyTabView(10L, listOf(com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE))
+
+        assertEquals(2, newIndex)
+        assertEquals(listOf(101L, 102L), copiedIds)
+        assertEquals(initial + 3, triggerFlow.value)
+        verify(exactly = 1) { mockViewsDbManager.updateNameOfTabView(10L, "Renamed") }
+        verify(exactly = 1) { mockViewsDbManager.moveTabView(10L, true) }
+        verify(exactly = 1) {
+            mockViewsDbManager.copyTabViewToActivityTypes(
+                10L,
+                listOf(com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE)
+            )
+        }
+    }
 }

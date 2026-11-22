@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:21:34.639Z" hostname="rainer-HP-EliteBook-850-G5" time="1.666">
+  <properties/>
+  <testcase name="testMapCursorToRouteSummary_allFieldsExtracted" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.242"/>
+  <testcase name="testMapCursorToRouteWaypoint_nullElevation_defaultsToZero" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.236"/>
+  <testcase name="testMapCursorToPathPoint_allFieldsExtracted" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.229"/>
+  <testcase name="testMapCursorToRouteWaypoint_invalidType_fallsBackToGeneric" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.228"/>
+  <testcase name="testBatchMappers_singlePassIndexCaching_matchesRowByRow" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.256"/>
+  <testcase name="testMapCursorToRouteWaypoint_allFieldsExtractedCorrectly" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.241"/>
+  <testcase name="testRowMapper_doesNotAdvanceOrCloseCursor" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest" time="0.233"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

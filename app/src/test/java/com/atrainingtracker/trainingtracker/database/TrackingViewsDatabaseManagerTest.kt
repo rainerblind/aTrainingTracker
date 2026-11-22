@@ -86,9 +86,7 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     private fun injectMockDatabase(manager: TrackingViewsDatabaseManager, db: SQLiteDatabase) {
-        val dbField: Field = TrackingViewsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, db)
+        manager.setDatabaseForTesting(db)
     }
 
     @Test

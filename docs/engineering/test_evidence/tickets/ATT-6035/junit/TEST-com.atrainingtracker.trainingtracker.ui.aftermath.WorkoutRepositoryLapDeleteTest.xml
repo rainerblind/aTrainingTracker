@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapDeleteTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:08:22.047Z" hostname="rainer-HP-EliteBook-850-G5" time="6.803">
+  <properties/>
+  <testcase name="deleteLap rejects deletion when workout has less than 2 laps" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapDeleteTest" time="2.26"/>
+  <testcase name="deleteLap rejects invalid boundary lap numbers" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapDeleteTest" time="2.264"/>
+  <testcase name="deleteLap successfully merges adjacent laps and persists updated sequence" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapDeleteTest" time="2.279"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

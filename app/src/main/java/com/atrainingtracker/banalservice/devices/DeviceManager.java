@@ -1225,55 +1225,27 @@ public class DeviceManager {
     protected List<MyDevice> getMyDeviceList() {
         if (DEBUG) Log.d(TAG, "getMyDeviceList");
 
-        List<MyDevice> myDeviceList = new ArrayList<MyDevice>();
-
-        ClockDevice clockDevice = mClockDevice;
-        if (clockDevice != null) {
-            myDeviceList.add(clockDevice);
-        }
-        BatteryDevice batteryDevice = mBatteryDevice;
-        if (batteryDevice != null) {
-            myDeviceList.add(batteryDevice);
-        }
-        SpeedAndLocationDevice gps = mSpeedAndLocationDevice_GPS;
-        if (gps != null) {
-            myDeviceList.add(gps);
-        }
-        SpeedAndLocationDevice fused = mSpeedAndLocationDevice_GoogleFused;
-        if (fused != null) {
-            myDeviceList.add(fused);
-        }
-        SpeedAndLocationDevice attFused = mSpeedAndLocationDevice_ATTFused;
-        if (attFused != null) {
-            myDeviceList.add(attFused);
-        }
-        AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
-        if (altDevice != null) {
-            myDeviceList.add(altDevice);
-        }
-        AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
-        if (altPosDevice != null) {
-            myDeviceList.add(altPosDevice);
-        }
-        AltitudeAndSlopeDevice_ATTFused attFusedAlt = mAltitudeAndSlopeDevice_ATTFused;
-        if (attFusedAlt != null) {
-            myDeviceList.add(attFusedAlt);
-        }
-        VerticalSpeedAndSlopeDevice vSpeedDevice = mVerticalSpeedAndSlopeDevice;
-        if (vSpeedDevice != null) {
-            myDeviceList.add(vSpeedDevice);
-        }
-        CyclingPowerMetricsDevice powerMetricsDevice = mCyclingPowerMetricsDevice;
-        if (powerMetricsDevice != null) {
-            myDeviceList.add(powerMetricsDevice);
-        }
-        HRVMetricsDevice hrvMetricsDevice = mHrvMetricsDevice;
-        if (hrvMetricsDevice != null) {
-            myDeviceList.add(hrvMetricsDevice);
+        List<MyDevice> myDeviceList = new ArrayList<>();
+        MyDevice[] localDevices = {
+                mClockDevice, mBatteryDevice, mSpeedAndLocationDevice_GPS,
+                mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_ATTFused,
+                mAltitudeFromPressureDevice, mAltitudeFromPositionDevice,
+                mAltitudeAndSlopeDevice_ATTFused, mVerticalSpeedAndSlopeDevice,
+                mCyclingPowerMetricsDevice, mHrvMetricsDevice
+        };
+        for (MyDevice d : localDevices) {
+            if (d != null) myDeviceList.add(d);
         }
         myDeviceList.addAll(getRemoteDeviceList());
-
         return myDeviceList;
+    }
+
+    public MyDevice getMyDeviceById(long deviceId) {
+        if (deviceId <= 0L) return null;
+        for (MyDevice myDevice : getMyDeviceList()) {
+            if (myDevice.getDeviceId() == deviceId) return myDevice;
+        }
+        return null;
     }
 
     public MyDevice getMyDeviceByName(String deviceName) {

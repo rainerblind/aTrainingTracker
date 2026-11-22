@@ -18,11 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.domain.crop
 
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.google.android.gms.maps.model.LatLng
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
  * Pure domain math engine for cropping recorded workouts (ATT-3274 / REQ-UI-368).
@@ -53,11 +50,6 @@ object CropWorkoutMath {
      * Multiplier for dynamic database file size storage pre-flight safety check.
      */
     const val STORAGE_DB_MULTIPLIER = 5
-
-    /**
-     * Earth radius in meters used for Haversine straight-line displacement calculations.
-     */
-    private const val EARTH_RADIUS_METERS = 6371000.0
 
     /**
      * Encapsulates recalculated extrema metrics for an instantaneous telemetry stream.
@@ -134,16 +126,12 @@ object CropWorkoutMath {
      * Pure Haversine formula distance between two coordinates in meters.
      */
     fun haversineDistanceMeters(start: LatLng, end: LatLng): Double {
-        val dLat = Math.toRadians(end.latitude - start.latitude)
-        val dLon = Math.toRadians(end.longitude - start.longitude)
-        val lat1 = Math.toRadians(start.latitude)
-        val lat2 = Math.toRadians(end.latitude)
-
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(lat1) * cos(lat2) *
-                sin(dLon / 2) * sin(dLon / 2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        val distance = EARTH_RADIUS_METERS * c
+        val distance = GeoUtils.haversineDistanceMeters(
+            start.latitude,
+            start.longitude,
+            end.latitude,
+            end.longitude
+        )
         return if (distance < EPSILON) 0.0 else distance
     }
 

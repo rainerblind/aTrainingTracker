@@ -18,9 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.tracker
 
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -32,6 +34,16 @@ import org.junit.Test
  *   live lap, and sport changes.
  */
 class LiveWorkoutBroadcastTrackerTest {
+
+    @Before
+    fun setUp() {
+        LiveWorkoutCardStateStore.Default.clear()
+    }
+
+    @After
+    fun tearDown() {
+        LiveWorkoutCardStateStore.Default.clear()
+    }
 
     @Test
     fun onSessionInitialized_dispatchesOnceAndSuppressesSteadyStateTicks_TST_STB_020_1() {

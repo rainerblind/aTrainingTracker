@@ -85,7 +85,9 @@ import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.atrainingtracker.database.SqliteSchemaUtils;
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator;
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController;
@@ -204,6 +206,7 @@ public class TrackerService extends Service {
     private final AtomicInteger mSessionGeneration = new AtomicInteger(0);
     private volatile boolean mReceiversRegistered = false;
     @Nullable private volatile MilestoneAutoNamingManager.MilestoneCelebrationData mFirstJubileeCelebrationData = null;
+    private volatile boolean mDeferHrPhysiologyToPostProcessing = false;
     // we assume that we start while the BANAL Service is searching
     protected volatile boolean mSearching = true;
     protected volatile boolean mCreateNewLapWhenConnectedToBanalService = false;
@@ -335,6 +338,28 @@ public class TrackerService extends Service {
         }
     }
 
+    private void submitOrInsertRrBatch(List<WorkoutRrInterval> batch, long workoutId, String mode) {
+        if (!mRrFlushExecutor.isShutdown()) {
+            try {
+                mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
+                    try {
+                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error " + mode + " flushing live RR intervals for workout " + workoutId, t);
+                    }
+                });
+                return;
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                Log.w(TAG, "mRrFlushExecutor shut down concurrently; flushing live RR inline for workout " + workoutId);
+            }
+        }
+        try {
+            getWorkoutRrRepository().insertIntervalsBlocking(batch);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
+        }
+    }
+
     @VisibleForTesting
     void flushLiveRrQueueAsync() {
         if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0) {
@@ -349,21 +374,7 @@ public class TrackerService extends Service {
                 batch.add(item);
             }
             if (!batch.isEmpty()) {
-                if (!mRrFlushExecutor.isShutdown()) {
-                    mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
-                        try {
-                            getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                        } catch (Throwable t) {
-                            Log.e(TAG, "Error asynchronously flushing live RR intervals for workout " + workoutId, t);
-                        }
-                    });
-                } else {
-                    try {
-                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
-                    }
-                }
+                submitOrInsertRrBatch(batch, workoutId, "asynchronously");
             }
         }
     }
@@ -378,21 +389,7 @@ public class TrackerService extends Service {
                 batch.add(item);
             }
             if (!batch.isEmpty()) {
-                if (!mRrFlushExecutor.isShutdown()) {
-                    mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
-                        try {
-                            getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                        } catch (Throwable t) {
-                            Log.e(TAG, "Error synchronously flushing live RR intervals for workout " + workoutId, t);
-                        }
-                    });
-                } else {
-                    try {
-                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
-                    }
-                }
+                submitOrInsertRrBatch(batch, workoutId, "synchronously");
             }
             pending = mPendingRrFlushFuture;
         }
@@ -1095,11 +1092,16 @@ public class TrackerService extends Service {
         }
     }
 
-    private void releaseWakeLock() {
-        if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
+    protected synchronized void releaseWakeLock() {
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) {
+                wakeLock.release();
+                if (DEBUG) Log.d(TAG, "WakeLock released");
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Error releasing WakeLock", t);
+        } finally {
             wakeLock = null;
-            if (DEBUG) Log.d(TAG, "WakeLock released");
         }
     }
 
@@ -1424,7 +1426,11 @@ public class TrackerService extends Service {
     protected synchronized void safeUnbindBanalService() {
         try {
             if (mBanalService != null) {
-                mBanalService.removeRrBeatListener(mRrBeatListener);
+                try {
+                    mBanalService.removeRrBeatListener(mRrBeatListener);
+                } catch (Throwable t) {
+                    Log.w(TAG, "Error removing RR beat listener during unbind", t);
+                }
             }
             if (mBanalBound || mBanalService != null) {
                 unbindService(mBanalConnection);
@@ -1433,6 +1439,24 @@ public class TrackerService extends Service {
             Log.w(TAG, "Error unbinding BANALService", t);
         } finally {
             mBanalBound = false;
+        }
+    }
+
+    private void performIdempotentMainThreadTeardown(boolean stopSelf) {
+        safeUnbindBanalService();
+        mBanalService = null;
+        releaseWakeLock();
+        try {
+            performStopForeground();
+        } catch (Throwable t) {
+            Log.w(TAG, "Error stopping foreground state during teardown", t);
+        }
+        if (stopSelf) {
+            try {
+                performStopSelf();
+            } catch (Throwable t) {
+                Log.w(TAG, "Error calling stopSelf during teardown", t);
+            }
         }
     }
 
@@ -1511,17 +1535,11 @@ public class TrackerService extends Service {
                 runOnMainThread(() -> {
                     try {
                         if (mSessionGeneration.get() == stoppingGeneration && mIsStopping) {
-                            mBanalService = null;
-                            releaseWakeLock();
-                            safeUnbindBanalService();
-                            performStopForeground();
-                            performStopSelf();
-                        } else {
-                            if (DEBUG) {
-                                Log.d(TAG, "handleActionStop: New session started (generation="
-                                        + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
-                                        + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
-                            }
+                            performIdempotentMainThreadTeardown(true);
+                        } else if (DEBUG) {
+                            Log.d(TAG, "handleActionStop: New session started (generation="
+                                    + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
+                                    + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
                         }
                     } finally {
                         finalizationFuture.complete(null);
@@ -1710,17 +1728,18 @@ public class TrackerService extends Service {
         unregisterTransientReceivers();
 
         if (mIsStopping) {
-            CompletableFuture<Void> future = mFinalizationFuture;
-            if (future != null && !future.isDone()) {
-                try {
-                    future.get(2, java.util.concurrent.TimeUnit.SECONDS);
-                } catch (Throwable ignored) {
-                }
-            }
+            // ATT-6178 (REQ-TRK-034.4, REQ-TRK-033.2, REQ-TRK-076.1): Shut down executors without
+            // blocking the Main Thread on mFinalizationFuture.get(...) or unbinding BANALService
+            // while endWorkout() is still executing; the posted Main-Thread cleanup Runnable owns
+            // idempotent teardown once endWorkout() finishes.
             mRrFlushExecutor.shutdown();
             mDbExecutor.shutdown();
-            safeUnbindBanalService();
-            performStopForeground();
+            CompletableFuture<Void> future = mFinalizationFuture;
+            if (future == null || future.isDone()) {
+                safeUnbindBanalService();
+                mBanalService = null;
+                releaseWakeLock();
+            }
             return;
         }
 
@@ -1743,12 +1762,9 @@ public class TrackerService extends Service {
                 Log.e(TAG, "Unexpected error during async workout finalization in onDestroy", t);
             } finally {
                 mRrFlushExecutor.shutdown();
-                mBanalService = null;
-                releaseWakeLock();
                 runOnMainThread(() -> {
                     try {
-                        safeUnbindBanalService();
-                        performStopForeground();
+                        performIdempotentMainThreadTeardown(false);
                     } finally {
                         finalizationFuture.complete(null);
                     }
@@ -2491,6 +2507,8 @@ public class TrackerService extends Service {
             Log.e(TAG, "Error accessing WorkoutRepository during endWorkout", t);
         }
 
+        final boolean h10Armed = PolarH10OfflineController.isRecordingArmed();
+        mDeferHrPhysiologyToPostProcessing = h10Armed;
         try {
             // Finalize Live Session (Auto Name, Commute, Trainer)
             if (liveSession != null) {
@@ -2498,6 +2516,8 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error finalizing live session during endWorkout", t);
+        } finally {
+            mDeferHrPhysiologyToPostProcessing = false;
         }
 
         try {
@@ -2515,13 +2535,11 @@ public class TrackerService extends Service {
         }
 
         try {
-            // ATT-9154 (REQ-TRK-091.1): Capture armed-state snapshot synchronously and enqueue
-            // Polar backfill, HRV/ERTS recompute, and export finalization asynchronously so
-            // TRACKING_FINISHED_INTENT -> EditWorkoutScreen navigation completes immediately (< 1 s).
+            // ATT-9154 (REQ-TRK-091.1) & ATT-8124 (REQ-TRK-093): Capture armed-state snapshot once and enqueue
+            // Polar backfill, post-backfill physiology/HRV/ERTS recompute, and export asynchronously (< 1 s).
             final Context appContext = getApplicationContext();
             if (workoutId > 0 || (baseFileName != null && !baseFileName.trim().isEmpty())) {
-                boolean h10Armed = PolarH10OfflineController.isRecordingArmed();
-                long h10StartMs = h10Armed ? PolarH10OfflineController.getSessionStartTimeMs() : 0L;
+                long h10StartMs = h10Armed ? PolarH10OfflineController.getEffectiveAnchorStartTimeMs() : 0L;
                 long h10Token = h10Armed ? PolarH10OfflineController.getArmedSessionToken() : 0L;
                 boolean verityArmed = PolarVeritySenseOfflineController.isRecordingArmed();
                 long verityStartMs = verityArmed ? PolarVeritySenseOfflineController.getSessionStartTimeMs() : 0L;
@@ -2530,7 +2548,7 @@ public class TrackerService extends Service {
                 WorkoutPostProcessingCoordinator.PostProcessingRequest request =
                         new WorkoutPostProcessingCoordinator.PostProcessingRequest(
                                 workoutId, baseFileName, h10Armed, h10StartMs, h10Token,
-                                verityArmed, verityStartMs, verityToken, ertsEnabled);
+                                verityArmed, verityStartMs, verityToken, ertsEnabled, System.currentTimeMillis());
                 WorkoutPostProcessingCoordinator.enqueue(appContext, request);
             }
         } catch (Throwable t) {
@@ -2977,22 +2995,7 @@ public class TrackerService extends Service {
      */
     @VisibleForTesting
     public static Set<String> getTableColumnNames(@NonNull SQLiteDatabase db, @NonNull String tableName) {
-        Set<String> columnNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        String quotedTable = quoteSqlColumnIdentifier(unquoteSqlColumnIdentifier(tableName));
-        String sql = "PRAGMA table_info(" + quotedTable + ")";
-        try (Cursor cursor = db.rawQuery(sql, null)) {
-            if (cursor != null) {
-                int nameIndex = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (nameIndex >= 0) {
-                        columnNames.add(cursor.getString(nameIndex));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to read PRAGMA table_info for " + tableName, e);
-        }
-        return columnNames;
+        return SqliteSchemaUtils.getTableColumnNames(db, tableName);
     }
 
     /**
@@ -3186,14 +3189,13 @@ public class TrackerService extends Service {
             if (pointsToSimplify == null || pointsToSimplify.isEmpty()) {
                 pointsToSimplify = liveSession.getSampledLatLngs();
             }
-            List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
-                    ? PolyUtil.simplify(pointsToSimplify, 10.0)
-                    : Collections.emptyList();
-            String polyline = PolyUtil.encode(simplifiedPoints);
-            List<Double> sampledAltitudes = liveSession.getSampledAltitudes();
-            List<Double> sampledDistances = liveSession.getSampledDistances();
-            String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes != null ? sampledAltitudes : Collections.emptyList());
-            String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledDistances != null ? sampledDistances : Collections.emptyList());
+            String encodedPolyline = StreamSummaryCalculator.encodePolyline(
+                    pointsToSimplify,
+                    StreamSummaryCalculator.DEFAULT_POLYLINE_SIMPLIFY_TOLERANCE_M
+            );
+            String polyline = encodedPolyline != null ? encodedPolyline : "";
+            String altStream = StreamSummaryCalculator.encodeDoubleStreamOrEmpty(liveSession.getSampledAltitudes());
+            String distStream = StreamSummaryCalculator.encodeDoubleStreamOrEmpty(liveSession.getSampledDistances());
             repository.updateMapAndStreams(workoutId, polyline, altStream, distStream);
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting map polyline and elevation/distance streams", t);
@@ -3268,32 +3270,34 @@ public class TrackerService extends Service {
                 java.util.List<Double> speedSamples = samples.getSpeedSamples();
                 java.util.List<Double> hrSamples = samples.getHrSamples();
                 if (!powerSamples.isEmpty() || !speedSamples.isEmpty() || !hrSamples.isEmpty()) {
-                    BSportType liveSport = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
-                            ? snapshot.bSportType
-                            : ((banalService != null && banalService.getBSportType() != null)
-                                    ? banalService.getBSportType()
-                                    : BSportType.UNKNOWN);
-                    com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
-                            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
-                                    powerSamples, speedSamples, hrSamples, liveSport
-                            );
-                    SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
-                    if (aerobicResult.getEfficiencyFactor() != null) {
-                        double ef = aerobicResult.getEfficiencyFactor();
-                        repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
-                    }
-                    if (aerobicResult.getDecouplingPct() != null) {
-                        double dec = aerobicResult.getDecouplingPct();
-                        repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
-                    }
+                    if (!mDeferHrPhysiologyToPostProcessing) {
+                        BSportType liveSport = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
+                                ? snapshot.bSportType
+                                : ((banalService != null && banalService.getBSportType() != null)
+                                        ? banalService.getBSportType()
+                                        : BSportType.UNKNOWN);
+                        com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
+                                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                                        powerSamples, speedSamples, hrSamples, liveSport
+                                );
+                        SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
+                        if (aerobicResult.getEfficiencyFactor() != null) {
+                            double ef = aerobicResult.getEfficiencyFactor();
+                            repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        }
+                        if (aerobicResult.getDecouplingPct() != null) {
+                            double dec = aerobicResult.getDecouplingPct();
+                            repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        }
 
-                    // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
-                    com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord dynamics =
-                            com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
-                                    powerSamples, hrSamples, workoutId, 1.0
-                            );
-                    if (dynamics != null) {
-                        repository.saveCardioPowerDynamics(workoutId, dynamics);
+                        // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
+                        com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord dynamics =
+                                com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
+                                        powerSamples, hrSamples, workoutId, 1.0
+                                );
+                        if (dynamics != null) {
+                            repository.saveCardioPowerDynamics(workoutId, dynamics);
+                        }
                     }
 
                     // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)

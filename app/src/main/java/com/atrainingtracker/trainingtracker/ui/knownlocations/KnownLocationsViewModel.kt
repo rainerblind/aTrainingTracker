@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.knownlocations
 
 import android.app.Application
 import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyUnits
@@ -37,14 +36,20 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -95,7 +100,23 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     private val clusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application),
     workoutRepository: WorkoutRepository? = null,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
-) : AndroidViewModel(application) {
+) : BaseMappableListViewModel<KnownLocationItem, KnownLocationSortOrder>(
+    application = application,
+    initialSortOrder = KnownLocationSortOrder.STARTS,
+    distanceSortOrder = KnownLocationSortOrder.DISTANCE_TO_USER
+) {
+
+    private data class SpatialGroupingResult(
+        val locations: List<KnownLocationItem> = emptyList(),
+        val clustersByLocationId: Map<Long, List<WorkoutCluster>> = emptyMap(),
+        val startsByLocationId: Map<Long, Int> = emptyMap(),
+        val sportStartsByLocationId: Map<Long, SportStartsCount> = emptyMap()
+    )
+
+    private data class EditDialogState(
+        val selected: KnownLocationItem? = null,
+        val showMap: Boolean = false
+    )
 
     private val banalRepo: BANALServiceRepository? = banalServiceRepository ?: try {
         BANALServiceRepository.getInstance(application)
@@ -115,6 +136,19 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         true
     }
 
+    private val _filterCriteria = MutableStateFlow(KnownLocationsFilterCriteria())
+    private val _editDialogState = MutableStateFlow(EditDialogState())
+
+    private val locationFlow: Flow<LatLng?> = banalRepo?.currentLocation ?: flowOf(null)
+
+    override val isLocationAvailable: StateFlow<Boolean> = locationFlow
+        .map { it != null }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = banalRepo?.currentLocation?.value != null
+        )
+
     private val _uiState = MutableStateFlow(
         KnownLocationsUiState(
             isMetric = isMetricSetting,
@@ -124,96 +158,71 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     val uiState: StateFlow<KnownLocationsUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            repository.locationsFlow.collect { items ->
-                val currentWorkouts = (workoutRepo?.allWorkouts?.value ?: emptyList()).filter { it.finished }
-                val currentClusters = clusterRepository.allClusters.value
-                val (sportStartsMapping, mapping) = withContext(defaultDispatcher) {
+        // REQ-STB-020.4: Only finished workouts participate in O(locations * N) start counting.
+        val finishedWorkoutsFlow: Flow<List<WorkoutData>> = workoutRepo?.allWorkouts
+            ?.map { workouts -> workouts.filter { it.finished } }
+            ?.distinctUntilChangedBy { finishedWorkouts ->
+                finishedWorkouts.map { Triple(it.id, it.startLatLng, it.bSportType) }
+            }
+            ?: flowOf(emptyList())
+
+        // Declarative spatial grouping flow; skips heavy O(locations * N) work on GPS/sort/filter/dialog updates.
+        val spatialGroupingFlow: Flow<SpatialGroupingResult> = combine(
+            repository.locationsFlow,
+            clusterRepository.allClusters,
+            finishedWorkoutsFlow
+        ) { locations, clusters, finishedWorkouts ->
+            Triple(locations, clusters, finishedWorkouts)
+        }.map { (locations, clusters, finishedWorkouts) ->
+            if (locations.isEmpty()) {
+                SpatialGroupingResult(locations = locations)
+            } else {
+                val (sportStartsMapping, clustersMapping) = withContext(defaultDispatcher) {
                     Pair(
-                        groupSportStartsByLocation(items, currentWorkouts),
-                        groupClustersByLocation(items, currentClusters)
+                        groupSportStartsByLocation(locations, finishedWorkouts),
+                        groupClustersByLocation(locations, clusters)
                     )
                 }
-                val startsMapping = sportStartsMapping.mapValues { it.value.total }
-                _uiState.update { state ->
-                    val sorted = applySort(items, state.sortOrder, state.userLocation, startsMapping)
-                    val filtered = applyFilter(sorted, state.filterCriteria, startsMapping)
-                    state.copy(
-                        locations = sorted,
-                        filteredLocations = filtered,
-                        clustersByLocationId = mapping,
-                        startsByLocationId = startsMapping,
-                        sportStartsByLocationId = sportStartsMapping,
-                        isLoading = false,
-                        selectedLocationForEdit = items.find { it.id == state.selectedLocationForEdit?.id }
-                    )
-                }
+                SpatialGroupingResult(
+                    locations = locations,
+                    clustersByLocationId = clustersMapping,
+                    startsByLocationId = sportStartsMapping.mapValues { it.value.total },
+                    sportStartsByLocationId = sportStartsMapping
+                )
             }
         }
 
         viewModelScope.launch {
-            clusterRepository.allClusters.collect { clusters ->
-                _uiState.update { state ->
-                    val mapping = groupClustersByLocation(state.locations, clusters)
-                    state.copy(clustersByLocationId = mapping)
+            combine(
+                spatialGroupingFlow,
+                _sortOrder,
+                _filterCriteria,
+                locationFlow,
+                _editDialogState
+            ) { spatial, sortOrder, filterCriteria, userLoc, dialogState ->
+                val sorted = applySort(spatial.locations, sortOrder, userLoc, spatial.startsByLocationId)
+                val filtered = applyFilter(sorted, filterCriteria, spatial.startsByLocationId)
+                val resolvedEditSelection = dialogState.selected?.let { sel ->
+                    if (sel.id == 0L) sel else spatial.locations.find { it.id == sel.id } ?: sel
                 }
-            }
-        }
-
-        workoutRepo?.allWorkouts?.let { workoutsFlow ->
-            viewModelScope.launch {
-                // REQ-STB-020.4: Only finished workouts participate in O(locations * N) start counting.
-                workoutsFlow
-                    .map { workouts -> workouts.filter { it.finished } }
-                    .distinctUntilChangedBy { finishedWorkouts ->
-                        finishedWorkouts.map { Triple(it.id, it.startLatLng, it.bSportType) }
-                    }
-                    .collect { workouts ->
-                    val currentLocations = repository.locationsFlow.value
-                    if (currentLocations.isEmpty()) {
-                        _uiState.update { it.copy(startsByLocationId = emptyMap(), sportStartsByLocationId = emptyMap()) }
-                        return@collect
-                    }
-                    val sportStartsMapping = withContext(defaultDispatcher) {
-                        groupSportStartsByLocation(currentLocations, workouts)
-                    }
-                    val startsMapping = sportStartsMapping.mapValues { it.value.total }
-                    _uiState.update { state ->
-                        val sorted = if (state.sortOrder == KnownLocationSortOrder.STARTS) {
-                            applySort(currentLocations, state.sortOrder, state.userLocation, startsMapping)
-                        } else {
-                            state.locations
-                        }
-                        val filtered = applyFilter(sorted, state.filterCriteria, startsMapping)
-                        state.copy(
-                            startsByLocationId = startsMapping,
-                            sportStartsByLocationId = sportStartsMapping,
-                            locations = sorted,
-                            filteredLocations = filtered
-                        )
-                    }
-                }
-            }
-        }
-
-        banalRepo?.currentLocation?.let { locFlow ->
-            viewModelScope.launch {
-                locFlow.collect { loc ->
-                    _uiState.update { state ->
-                        val locationAvailable = loc != null
-                        val sorted = if (state.sortOrder == KnownLocationSortOrder.DISTANCE_TO_USER) {
-                            applySort(state.locations, state.sortOrder, loc, state.startsByLocationId)
-                        } else {
-                            state.locations
-                        }
-                        state.copy(
-                            userLocation = loc,
-                            isLocationAvailable = locationAvailable,
-                            locations = sorted,
-                            filteredLocations = applyFilter(sorted, state.filterCriteria, state.startsByLocationId)
-                        )
-                    }
-                }
+                KnownLocationsUiState(
+                    locations = sorted,
+                    filteredLocations = filtered,
+                    clustersByLocationId = spatial.clustersByLocationId,
+                    startsByLocationId = spatial.startsByLocationId,
+                    sportStartsByLocationId = spatial.sportStartsByLocationId,
+                    sortOrder = sortOrder,
+                    isLocationAvailable = userLoc != null,
+                    userLocation = userLoc,
+                    searchQuery = filterCriteria.query,
+                    filterCriteria = filterCriteria,
+                    isMetric = isMetricSetting,
+                    isLoading = false,
+                    selectedLocationForEdit = resolvedEditSelection,
+                    showMapInEditDialog = dialogState.showMap
+                )
+            }.collect { nextState ->
+                _uiState.value = nextState
             }
         }
 
@@ -227,7 +236,8 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     /**
      * Sets the active sort order for known locations.
      */
-    fun setSortOrder(order: KnownLocationSortOrder) {
+    override fun setSortOrder(order: KnownLocationSortOrder) {
+        super.setSortOrder(order)
         _uiState.update { state ->
             val sorted = applySort(state.locations, order, state.userLocation, state.startsByLocationId)
             val filtered = applyFilter(sorted, state.filterCriteria, state.startsByLocationId)
@@ -243,6 +253,8 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Updates active text search query and recomputes filtered locations.
      */
     fun setSearchQuery(query: String) {
+        val updatedCriteria = _filterCriteria.value.copy(query = query)
+        _filterCriteria.value = updatedCriteria
         _uiState.update { state ->
             val newCriteria = state.filterCriteria.copy(query = query)
             val filtered = applyFilter(state.locations, newCriteria, state.startsByLocationId)
@@ -258,6 +270,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Applies new multi-dimensional filter criteria (REQ-UI-466).
      */
     fun setFilterCriteria(criteria: KnownLocationsFilterCriteria) {
+        _filterCriteria.value = criteria
         _uiState.update { state ->
             val filtered = applyFilter(state.locations, criteria, state.startsByLocationId)
             state.copy(
@@ -272,6 +285,8 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Updates minimum starts threshold without affecting active query (REQ-UI-466.1, REQ-UI-466.3).
      */
     fun setMinStarts(minStarts: Int?) {
+        val updatedCriteria = _filterCriteria.value.copy(minStarts = minStarts)
+        _filterCriteria.value = updatedCriteria
         _uiState.update { state ->
             val newCriteria = state.filterCriteria.copy(minStarts = minStarts)
             val filtered = applyFilter(state.locations, newCriteria, state.startsByLocationId)
@@ -293,6 +308,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Opens modal edit dialog for the specified location item.
      */
     fun openEditDialog(location: KnownLocationItem, showMap: Boolean = false) {
+        _editDialogState.value = EditDialogState(selected = location, showMap = showMap)
         _uiState.update {
             it.copy(
                 selectedLocationForEdit = location,
@@ -324,6 +340,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
             source = ElevationSource.MANUAL_USER,
             isHome = false
         )
+        _editDialogState.value = EditDialogState(selected = newTemplate, showMap = false)
         _uiState.update {
             it.copy(
                 selectedLocationForEdit = newTemplate,
@@ -336,6 +353,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Dismisses modal edit dialog.
      */
     fun dismissEditDialog() {
+        _editDialogState.value = EditDialogState(selected = null, showMap = false)
         _uiState.update { it.copy(selectedLocationForEdit = null) }
     }
 
@@ -504,13 +522,10 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 } else {
                     items.sortedWith(
                         compareBy<KnownLocationItem> { item ->
-                            val results = FloatArray(1)
-                            android.location.Location.distanceBetween(
+                            calculateDistance(
                                 userLocation.latitude, userLocation.longitude,
-                                item.latLng.latitude, item.latLng.longitude,
-                                results
+                                item.latLng.latitude, item.latLng.longitude
                             )
-                            results[0]
                         }.thenBy { it.name.lowercase() }
                     )
                 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusBatchQueryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:42.900Z" hostname="rainer-HP-EliteBook-850-G5" time="1.003">
+  <properties/>
+  <testcase name="testStravaUploadDbHelper_getStravaActivityDataForWorkouts_chunksOver999BindArgs_TST_DAT_041_2" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusBatchQueryTest" time="0.159"/>
+  <testcase name="testGetExportRowsForWorkouts_chunksOver999BindArgsAndHealsOnce_TST_DAT_041_1" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusBatchQueryTest" time="0.844"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:11:04.724Z" hostname="rainer-HP-EliteBook-850-G5" time="0.087">
+  <properties/>
+  <testcase name="testWorkoutClusters_forwardsNavigationCallback" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" time="0.002"/>
+  <testcase name="testClusterInfoFingerprintDesc_containsLiteralNewlineEscapesForBulletSeparation" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" time="0.031"/>
+  <testcase name="testClusterInfoFingerprintDesc_containsNoXmlNumericEntitiesAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" time="0.025"/>
+  <testcase name="testClusterInfoDialog_referencesFingerprintDescString" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" time="0.0"/>
+  <testcase name="testClusterInfoFingerprintDesc_existsAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" time="0.028"/>
+  <testcase name="testClusterInfoDialog_hasDirectAdvancedSettingsDeepLinkAndStrictOrdering" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -23,7 +23,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
+import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
@@ -46,6 +50,37 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Staged in-memory draft toggles for ATT Odometry Fusion (`REQ-UI-2799.2`, `ATT-8125`).
+ * Persisted to [AttFusedPreferences] strictly on Save and discarded on Cancel.
+ */
+data class AttFusedDraftConfig(
+    val gnssEnabled: Boolean = true,
+    val wheelEnabled: Boolean = true,
+    val gyroEnabled: Boolean = true,
+    val autoCalibEnabled: Boolean = false
+)
+
+/**
+ * Staged in-memory draft toggles for ATT Altitude & Slope Fusion (`REQ-UI-2799.2`, `ATT-8125`).
+ * Persisted to [AttFusedAltitudePreferences] strictly on Save and discarded on Cancel.
+ */
+data class AttFusedAltitudeDraftConfig(
+    val barometerEnabled: Boolean = true,
+    val demEnabled: Boolean = false,
+    val gpsEnabled: Boolean = false,
+    val speedEnabled: Boolean = true
+)
+
+/**
+ * Staged in-memory draft radar tail light selection (`REQ-UI-2799.2`, `ATT-8125`).
+ * Applied to [RadarLightController] strictly on Save and discarded on Cancel.
+ */
+data class RadarLightDraftSelection(
+    val isAutoMode: Boolean,
+    val mode: RadarLightMode
+)
 
 /**
  * ViewModel for the EditDeviceDialogFragment
@@ -106,14 +141,41 @@ class EditDeviceViewModel internal constructor(
     private val _deviceNotFound = MutableStateFlow(false)
     val deviceNotFound: StateFlow<Boolean> = _deviceNotFound.asStateFlow()
 
+    // Draft-only staged preferences & radar mode persisted strictly on Save (REQ-UI-2799.2, ATT-8125)
+    private val _attFusedDraft = MutableStateFlow<AttFusedDraftConfig?>(null)
+    val attFusedDraft: StateFlow<AttFusedDraftConfig?> = _attFusedDraft.asStateFlow()
+
+    private val _attFusedAltitudeDraft = MutableStateFlow<AttFusedAltitudeDraftConfig?>(null)
+    val attFusedAltitudeDraft: StateFlow<AttFusedAltitudeDraftConfig?> = _attFusedAltitudeDraft.asStateFlow()
+
+    private val _radarLightDraft = MutableStateFlow<RadarLightDraftSelection?>(null)
+    val radarLightDraft: StateFlow<RadarLightDraftSelection?> = _radarLightDraft.asStateFlow()
+
+    private var hasUnsavedChanges: Boolean = false
+    private var hasPendingBaselineReset: Boolean = false
+    private var pendingBaselineResetCircumferenceMm: Int? = null
+
     /**
      * Loads the initial device data from the repository and populates the initial UI state.
-     * This should be called once when the edit dialog is created.
+     * Preserves dirty unsaved draft edits across configuration changes (rotation) for the same
+     * [deviceId] while still reloading fresh persisted snapshots when clean or reopened
+     * (`REQ-UI-2799.2`, `TST-UI-216.3`).
      */
     fun loadInitialDeviceData(deviceId: Long) {
+        if (_editingId.value == deviceId && _deviceSnapshot.value != null && hasUnsavedChanges) {
+            return
+        }
+        hasUnsavedChanges = false
+        hasPendingBaselineReset = false
+        pendingBaselineResetCircumferenceMm = null
+        _attFusedDraft.value = null
+        _attFusedAltitudeDraft.value = null
+        _radarLightDraft.value = null
         _wheelCircumferenceHistory.value = emptyList()
         val snapshot = devicesRepository.getDeviceSnapshotById(deviceId)
         if (snapshot == null) {
+            _editingId.value = null
+            _deviceSnapshot.value = null
             _persistedDeviceIdentity.value = null
             _deviceNotFound.value = true
         } else {
@@ -121,6 +183,26 @@ class EditDeviceViewModel internal constructor(
             _persistedDeviceIdentity.value = snapshot
             _deviceSnapshot.value = snapshot
             _editingId.value = deviceId
+            if (snapshot.deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED) {
+                _attFusedDraft.value = runCatching {
+                    AttFusedDraftConfig(
+                        gnssEnabled = AttFusedPreferences.isGnssEnabled(application),
+                        wheelEnabled = AttFusedPreferences.isWheelEnabled(application),
+                        gyroEnabled = AttFusedPreferences.isGyroEnabled(application),
+                        autoCalibEnabled = AttFusedPreferences.isAutoCalibEnabled(application)
+                    )
+                }.getOrElse { AttFusedDraftConfig() }
+            }
+            if (snapshot.deviceType == DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED) {
+                _attFusedAltitudeDraft.value = runCatching {
+                    AttFusedAltitudeDraftConfig(
+                        barometerEnabled = AttFusedAltitudePreferences.isBarometerEnabled(application),
+                        demEnabled = AttFusedAltitudePreferences.isDemEnabled(application),
+                        gpsEnabled = AttFusedAltitudePreferences.isGpsEnabled(application),
+                        speedEnabled = AttFusedAltitudePreferences.isSpeedEnabled(application)
+                    )
+                }.getOrElse { AttFusedAltitudeDraftConfig() }
+            }
             if (snapshot.protocol == Protocol.BLUETOOTH_LE && snapshot.deviceType == DeviceType.HRM) {
                 runCatching { devicesRepository.backfillLegacyPolarIdentityIfNeeded(snapshot) }
             }
@@ -383,27 +465,64 @@ class EditDeviceViewModel internal constructor(
     }
 
     /**
-     * Resets the persistent tire pressure baseline (iTPMS) to the currently selected wheel circumference,
-     * synchronizing Devices.db and WheelCircumferenceHistory across linked bikes and refreshing the chart
-     * (REQ-TRK-050, REQ-SEN-033.2).
+     * Stages a draft toggle change for ATT Odometry Fusion without writing to [AttFusedPreferences]
+     * until [saveChanges] is invoked (`REQ-UI-2799.2`, `ATT-8125`).
+     */
+    fun onAttFusedConfigChanged(update: (AttFusedDraftConfig) -> AttFusedDraftConfig) {
+        hasUnsavedChanges = true
+        _attFusedDraft.update { current -> update(current ?: AttFusedDraftConfig()) }
+    }
+
+    /**
+     * Stages a draft toggle change for ATT Altitude & Slope Fusion without writing to
+     * [AttFusedAltitudePreferences] until [saveChanges] is invoked (`REQ-UI-2799.2`, `ATT-8125`).
+     */
+    fun onAttFusedAltitudeConfigChanged(update: (AttFusedAltitudeDraftConfig) -> AttFusedAltitudeDraftConfig) {
+        hasUnsavedChanges = true
+        _attFusedAltitudeDraft.update { current -> update(current ?: AttFusedAltitudeDraftConfig()) }
+    }
+
+    /**
+     * Stages a draft radar tail light selection inside EditDeviceDialog without mutating
+     * [RadarLightController] or `TuningPreferencesDataStore` until [saveChanges] is invoked
+     * (`REQ-UI-2799.2`, `ATT-8125`).
+     */
+    fun onRadarLightSelectionChanged(isAutoMode: Boolean, mode: RadarLightMode) {
+        hasUnsavedChanges = true
+        _radarLightDraft.value = RadarLightDraftSelection(isAutoMode = isAutoMode, mode = mode)
+    }
+
+    /**
+     * Stages a tire pressure baseline (iTPMS) reset to the currently selected wheel circumference
+     * in draft state without writing to `Devices.db` or `Equipment.db` until [saveChanges] is called
+     * (`REQ-TRK-050`, `REQ-SEN-033.2`, `REQ-UI-2799.2`, `ATT-8125`).
      */
     fun resetTirePressureBaseline() {
-        val id = _editingId.value ?: deviceSnapshot.value?.id ?: return
+        if (_editingId.value == null && deviceSnapshot.value == null) return
         val currentCircumference = deviceSnapshot.value?.wheelCircumference
         val currentBaselineMeters = currentCircumference?.let { it / 1000.0 } ?: 0.0
+        pendingBaselineResetCircumferenceMm = currentCircumference
+        hasPendingBaselineReset = true
         updateState { it.copy(baselineCircumference = currentBaselineMeters) }
-        viewModelScope.launch {
-            devicesRepository.resetTirePressureBaseline(id, currentCircumference)
-            val refreshedHistory = withContext(ioDispatcher) {
-                if (currentCircumference != null && currentCircumference > 0) {
-                    equipmentRepository.recordManualBaselineResetForDevice(id, currentCircumference)
-                }
-                equipmentRepository.getCircumferenceHistoryForDevice(id)
-            }
-            if (_editingId.value == id) {
-                _wheelCircumferenceHistory.value = refreshedHistory
-            }
-        }
+    }
+
+    /**
+     * Discards all staged in-memory draft changes without writing to SQLite, SharedPreferences,
+     * or DataStore (`REQ-UI-2799.2`, `ATT-8125`). Called on dialog Cancel / dismiss so reopening
+     * the same device reloads fresh persisted values.
+     */
+    fun discardDraft() {
+        hasUnsavedChanges = false
+        hasPendingBaselineReset = false
+        pendingBaselineResetCircumferenceMm = null
+        _attFusedDraft.value = null
+        _attFusedAltitudeDraft.value = null
+        _radarLightDraft.value = null
+        _editingId.value = null
+        _deviceSnapshot.value = null
+        _persistedDeviceIdentity.value = null
+        _wheelCircumferenceHistory.value = emptyList()
+        _deviceNotFound.value = false
     }
 
     /**
@@ -413,6 +532,7 @@ class EditDeviceViewModel internal constructor(
     private fun updateState(updateAction: (currentState: DeviceUiData) -> DeviceUiData) {
         _deviceSnapshot.update { currentState ->
             if (currentState != null) {
+                hasUnsavedChanges = true
                 updateAction(currentState)
             } else {
                 null
@@ -420,16 +540,58 @@ class EditDeviceViewModel internal constructor(
         }
     }
 
-
     /**
-     * Takes the final state from _uiState and passes it to the repository to be saved permanently.
+     * Persists all staged device, preference, TPMS baseline, and radar draft edits permanently
+     * (`REQ-UI-2799.2`, `ATT-8125`).
      */
-
     fun saveChanges() {
         val finalState = _deviceSnapshot.value ?: return
+        val id = _editingId.value ?: finalState.id
+        val fusedDraft = _attFusedDraft.value
+        val fusedAltDraft = _attFusedAltitudeDraft.value
+        val radarDraft = _radarLightDraft.value
+        val shouldResetBaseline = hasPendingBaselineReset
+        val baselineCircumferenceMm = pendingBaselineResetCircumferenceMm ?: finalState.wheelCircumference
+
+        hasUnsavedChanges = false
+        hasPendingBaselineReset = false
+        pendingBaselineResetCircumferenceMm = null
+        _radarLightDraft.value = null
+
+        if (finalState.deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED && fusedDraft != null) {
+            AttFusedPreferences.setGnssEnabled(application, fusedDraft.gnssEnabled)
+            AttFusedPreferences.setWheelEnabled(application, fusedDraft.wheelEnabled)
+            AttFusedPreferences.setGyroEnabled(application, fusedDraft.gyroEnabled)
+            AttFusedPreferences.setAutoCalibEnabled(application, fusedDraft.autoCalibEnabled)
+        }
+        if (finalState.deviceType == DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED && fusedAltDraft != null) {
+            AttFusedAltitudePreferences.setBarometerEnabled(application, fusedAltDraft.barometerEnabled)
+            AttFusedAltitudePreferences.setDemEnabled(application, fusedAltDraft.demEnabled)
+            AttFusedAltitudePreferences.setGpsEnabled(application, fusedAltDraft.gpsEnabled)
+            AttFusedAltitudePreferences.setSpeedEnabled(application, fusedAltDraft.speedEnabled)
+        }
+        if (finalState.deviceType == DeviceType.BIKE_RADAR && radarDraft != null) {
+            if (radarDraft.isAutoMode) {
+                RadarLightController.setAutoMode()
+            } else {
+                RadarLightController.setManualLightMode(radarDraft.mode)
+            }
+        }
 
         viewModelScope.launch {
             devicesRepository.updateDevice(finalState)
+            if (shouldResetBaseline) {
+                devicesRepository.resetTirePressureBaseline(id, baselineCircumferenceMm)
+                val refreshedHistory = withContext(ioDispatcher) {
+                    if (baselineCircumferenceMm != null && baselineCircumferenceMm > 0) {
+                        equipmentRepository.recordManualBaselineResetForDevice(id, baselineCircumferenceMm)
+                    }
+                    equipmentRepository.getCircumferenceHistoryForDevice(id)
+                }
+                if (_editingId.value == id) {
+                    _wheelCircumferenceHistory.value = refreshedHistory
+                }
+            }
         }
     }
 

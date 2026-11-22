@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:21:36.328Z" hostname="rainer-HP-EliteBook-850-G5" time="3.703">
+  <properties/>
+  <testcase name="testDuplicateRouteAsLocal_createsLocalGpxRouteDecoupledFromStrava" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.901"/>
+  <testcase name="testPruneExpiredStravaRoutes_whenNoExpiredRoutes_returnsZero" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.669"/>
+  <testcase name="testPruneOrphanStravaRoutes_deletesRoutesNotPresentInRemoteSet" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.684"/>
+  <testcase name="testPruneExpiredStravaRoutes_deletesExpiredRecords" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.711"/>
+  <testcase name="testSchemaV9_dbVersionIsNine_andOnUpgradeExecutesAlterTableAndBackfill" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.738"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

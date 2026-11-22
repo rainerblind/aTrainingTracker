@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:27:19.375Z" hostname="rainer-HP-EliteBook-850-G5" time="23.371">
+  <properties/>
+  <testcase name="testDeduplicateHistoricalClimbs_purgesDuplicatesAndSetsFlag" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" time="7.423"/>
+  <testcase name="testCleanupCorruptedWorkoutClimbs_purgesCorruptedEntriesAndSetsFlag" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" time="3.128"/>
+  <testcase name="testDeduplicateHistoricalClimbs_whenAlreadyRun_isIdempotentNoOp" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" time="3.093"/>
+  <testcase name="testBackfillHistoricalClimbs_multiWorkoutRefreshesLiveClimbsOnce" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" time="3.702"/>
+  <testcase name="testBackfillHistoricalClimbs_whenAlreadyRun_isIdempotentNoOp" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" time="2.878"/>
+  <testcase name="testBackfillHistoricalClimbs_whenNotYetRun_processesCandidatesAndSetsFlag" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest" time="3.146"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

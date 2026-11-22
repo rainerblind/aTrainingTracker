@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:11:17.775Z" hostname="rainer-HP-EliteBook-850-G5" time="0.036">
+  <properties/>
+  <testcase name="filterBottomSheetScaffold_bindsResetActionSingleLine" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.0"/>
+  <testcase name="clusterComponents_rendersLandscapeThumbnailAndConstrainedEquipment" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.004"/>
+  <testcase name="effectiveHitCount_resolvesMaxOfDbHitCountAndSummaryStats" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.0"/>
+  <testcase name="viewModel_exposesGeneralLocationNameLookup" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.001"/>
+  <testcase name="bidirectionalLocationFormatting_resolvesEndpointsCorrectly" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.002"/>
+  <testcase name="filterReset_existsInAllNineLocalesWithoutEmojis" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.027"/>
+  <testcase name="repository_loadAllClustersLightweight_containsHitCountSelfHealingLogic" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

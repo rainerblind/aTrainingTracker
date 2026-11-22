@@ -557,7 +557,7 @@ class GarageLeagueDetectorTest {
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = { testFile }
         )
-        val store = SettingsDataStore(mockk(relaxed = true), rawDataStore)
+        val store = SettingsDataStore.createForTesting(mockk(relaxed = true), rawDataStore)
 
         // Legacy flag migration
         store.setHasShownGoldGarageNudge(true)

@@ -82,6 +82,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -234,7 +236,7 @@ class TrackingViewModel @JvmOverloads constructor(
     var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
-    private val settingsDataStore = SettingsDataStore(application)
+    private val settingsDataStore = SettingsDataStore.getInstance(application)
     private val tuningPreferencesDataStore by lazy { TuningPreferencesDataStore.getInstance(application) }
     private val _tuningConfig = MutableStateFlow(TuningConfig())
     val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()
@@ -280,6 +282,8 @@ class TrackingViewModel @JvmOverloads constructor(
         observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
+        observeSparklineUpdates()
+        observeWPrimeFreshness()
         observeElevationPathPoints()
         loadActivityType()
         observeTrackingMode()
@@ -575,6 +579,9 @@ class TrackingViewModel @JvmOverloads constructor(
                 } else {
                     val newBaseFields = configs.map { config ->
                         val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
+                        val deviceIdHash = if (config.sourceDeviceId > 0L) {
+                            Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceId)
+                        } else 0
                         var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
                         if (config.sourceDeviceName != null) {
                             filterDescription = if (filterDescription.isNotEmpty()) {
@@ -627,7 +634,8 @@ class TrackingViewModel @JvmOverloads constructor(
                                 sensorType = config.sensorType,
                                 filterType = config.filterType,
                                 filterConstant = config.filterConstant,
-                                sourceDeviceName = config.sourceDeviceName
+                                sourceDeviceName = config.sourceDeviceName,
+                                sourceDeviceId = config.sourceDeviceId
                             )
                             buffer.getSamples()
                         } else {
@@ -685,7 +693,9 @@ class TrackingViewModel @JvmOverloads constructor(
                             dfaA1ThresholdT1 = currentTuning.dfaA1ThresholdT1,
                             dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2,
                             hrvSignalQualityStatus = initialSignalQuality,
-                            sourceDeviceName = config.sourceDeviceName
+                            sourceDeviceName = config.sourceDeviceName,
+                            sourceDeviceId = config.sourceDeviceId,
+                            deviceIdConfigHash = deviceIdHash
                         )
                     }
                     cachedConfigs = configs
@@ -732,6 +742,85 @@ class TrackingViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Keeps steady-value `showGraph` sparklines progressing at 1 Hz even when `_allFilteredSensorData`
+     * conflates unchanged telemetry snapshots (REQ-UI-2800.1). Wakes 0 times on views without sparklines.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeSparklineUpdates() {
+        val tickFlow = try {
+            banalServiceRepository.sparklineTick
+        } catch (_: Throwable) {
+            null
+        } ?: return
+
+        viewModelScope.launch {
+            trackingViewsRepository.getSensorFieldConfigsForView(viewId)
+                .map { configs -> configs.any { it.showGraph } }
+                .distinctUntilChanged()
+                .flatMapLatest { hasSparklines ->
+                    if (hasSparklines) tickFlow.filter { it > 0L } else emptyFlow()
+                }
+                .collect {
+                    _uiState.update { current ->
+                        var changed = false
+                        val updatedFields = current.fields.map { field ->
+                            if (field.showGraph) {
+                                val currentSamples = banalServiceRepository.getSparklineSamples(field.sensorFieldId)
+                                val currentSpan = banalServiceRepository.getSparklineSpanSeconds(field.sensorFieldId)
+                                if (field.sparklineSamples != currentSamples || field.sparklineSpanSeconds != currentSpan) {
+                                    changed = true
+                                    field.copy(
+                                        sparklineSamples = currentSamples,
+                                        sparklineSpanSeconds = currentSpan
+                                    )
+                                } else {
+                                    field
+                                }
+                            } else {
+                                field
+                            }
+                        }
+                        if (changed) current.copy(fields = updatedFields) else current
+                    }
+                }
+        }
+    }
+
+    /**
+     * Keeps the `W_PRIME_BAL` stale watchdog alive during steady numeric values while `_allFilteredSensorData`
+     * conflates unchanged snapshots, without triggering UI recompositions (REQ-UI-2800.1).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeWPrimeFreshness() {
+        val heartbeatFlow = try {
+            banalServiceRepository.wPrimeTelemetryHeartbeat
+        } catch (_: Throwable) {
+            null
+        } ?: return
+
+        viewModelScope.launch {
+            trackingViewsRepository.getSensorFieldConfigsForView(viewId)
+                .map { configs -> configs.any { it.sensorType == SensorType.W_PRIME_BAL } }
+                .distinctUntilChanged()
+                .flatMapLatest { hasWPrime ->
+                    if (hasWPrime) heartbeatFlow.filter { it > 0L } else emptyFlow()
+                }
+                .collect {
+                    scheduleWPrimeStaleCheck()
+                    val current = _uiState.value
+                    if (current.fields.any { it.sensorType == SensorType.W_PRIME_BAL && it.wPrimeBatteryState?.isStale == true }) {
+                        val latestData = banalServiceRepository.allFilteredSensorData.value
+                        val currentActivity = banalServiceRepository.activityType.value
+                        val refreshedFields = applySensorData(current.fields, latestData, currentActivity)
+                        if (refreshedFields !== current.fields) {
+                            _uiState.update { it.copy(fields = refreshedFields) }
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
      * Decouples live [BANALServiceRepository.currentPathPoints] from [loadSensorFieldStates],
      * observing path points strictly when the elevation profile is active (REQ-TRK-042.4, ATT-4923).
      */
@@ -766,17 +855,27 @@ class TrackingViewModel @JvmOverloads constructor(
         allSensorData: List<FilteredSensorData<*>>,
         activityType: ActivityType
     ): List<SensorFieldState> {
-        // 1. Group fields by their hash. Now we have a map of Hash -> List<SensorFieldState>.
+        // 1. Group fields by deviceId hash (for renamed pinned devices, REQ-UI-2800.3) and legacy name hash.
         val fieldsByHash = currentFields.groupBy { it.configHash }
+        val fieldsByDeviceIdHash = currentFields
+            .filter { it.sourceDeviceId > 0L && it.deviceIdConfigHash != 0 }
+            .groupBy { it.deviceIdConfigHash }
         val updatedFields = currentFields.toMutableList() // Start with a mutable copy of the original list
         var hasChanged = false
 
         // Iterate through all the live data coming from the service
         for (sensorData in allSensorData) {
             val uniqueHash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
+            val deviceIdHash = if (sensorData.deviceId > 0L) {
+                Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceId)
+            } else 0
 
-            // 2. Find all fields that match this hash.
-            val fieldsToUpdate = fieldsByHash[uniqueHash]
+            // 2. Find all fields that match by stable deviceId first, falling back to name hash.
+            val fieldsToUpdate = if (deviceIdHash != 0) {
+                fieldsByDeviceIdHash[deviceIdHash] ?: fieldsByHash[uniqueHash]
+            } else {
+                fieldsByHash[uniqueHash]
+            }
 
             if (sensorData.sensorType == SensorType.HRV_ARTIFACT_RATE) {
                 val rate = (sensorData.value as? Number)?.toDouble()

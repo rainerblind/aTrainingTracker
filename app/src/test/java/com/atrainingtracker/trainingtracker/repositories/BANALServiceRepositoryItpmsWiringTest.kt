@@ -117,6 +117,7 @@ class BANALServiceRepositoryItpmsWiringTest {
 
         WorkoutNavigationEvents.consumeTpmsAlert()
         BANALServiceRepository.resetForTesting(null)
+        BANALServiceRepository.setDispatcherForTesting(testDispatcher)
         DeviceDataRepository.resetForTesting(null)
         EquipmentRepository.resetForTesting(null)
 

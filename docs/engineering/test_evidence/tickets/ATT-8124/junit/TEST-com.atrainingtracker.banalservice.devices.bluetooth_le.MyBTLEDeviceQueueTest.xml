@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:13:09.123Z" hostname="rainer-HP-EliteBook-850-G5" time="9.469">
+  <properties/>
+  <testcase name="testQueue_executesOperationsSequentiallyWithoutDropping" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.171"/>
+  <testcase name="testOnCharacteristicWrite_propagatesFailureStatusToSubclassHook" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.244"/>
+  <testcase name="testBatteryReadRunnable_enqueuesViaGattQueue" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.208"/>
+  <testcase name="testReadNextCharacteristic_drainsLegacyReadQueueIntoGattQueue" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.188"/>
+  <testcase name="testWriteCharacteristicOp_enforcesNoResponseWhenPropertyMatches" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.145"/>
+  <testcase name="testWriteCharacteristicOp_prefersWriteTypeDefaultWhenPropertyWritePresent" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.138"/>
+  <testcase name="testQueue_clearsOnDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.198"/>
+  <testcase name="testQueue_characteristicReadSerializesWithDescriptorWrite" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.176"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

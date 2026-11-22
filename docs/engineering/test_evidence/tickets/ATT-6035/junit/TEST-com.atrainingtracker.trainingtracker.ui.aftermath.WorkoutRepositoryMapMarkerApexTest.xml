@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMapMarkerApexTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:08:28.878Z" hostname="rainer-HP-EliteBook-850-G5" time="6.978">
+  <properties/>
+  <testcase name="testWorkoutCluster_isPointToPoint" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMapMarkerApexTest" time="2.346"/>
+  <testcase name="testMapMarkerApexLabel_closedLoop_usesMaxLineDistance" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMapMarkerApexTest" time="2.315"/>
+  <testcase name="testMapMarkerApexLabel_pointToPoint_usesRouteApex" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMapMarkerApexTest" time="2.317"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

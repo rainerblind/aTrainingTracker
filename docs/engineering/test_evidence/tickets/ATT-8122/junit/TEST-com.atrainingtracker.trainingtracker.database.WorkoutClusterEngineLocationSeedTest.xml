@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineLocationSeedTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:21.611Z" hostname="rainer-HP-EliteBook-850-G5" time="3.027">
+  <properties/>
+  <testcase name="learnFromWorkout creates cluster and preserves existing known location without re-seeding" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineLocationSeedTest" time="1.512"/>
+  <testcase name="learnFromWorkout creates cluster and seeds known location when starting coordinate is unmapped" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineLocationSeedTest" time="1.515"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

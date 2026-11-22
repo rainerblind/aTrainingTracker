@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbSpanContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:12.167Z" hostname="rainer-HP-EliteBook-850-G5" time="0.0">
+  <properties/>
+  <testcase name="testElevationProfile_rendersClimbSpansAlongXAxisBaseline" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbSpanContractTest" time="0.0"/>
+  <testcase name="testElevationProfile_eliminatesAccentRidgeStrokeOverdraw" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbSpanContractTest" time="0.0"/>
+  <testcase name="testElevationProfile_preservesSummitBadges" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbSpanContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

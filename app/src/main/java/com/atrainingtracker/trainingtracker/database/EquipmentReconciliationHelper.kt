@@ -22,6 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.inTransaction
 import android.util.Log
 
 /**
@@ -152,60 +153,57 @@ object EquipmentReconciliationHelper {
                 1
             }
 
-            eDb.beginTransaction()
             try {
-                // 1. Update canonical row with consolidated attributes
-                val cv = ContentValues().apply {
-                    put(EquipmentDbHelper.NAME, consolidatedName)
-                    put(EquipmentDbHelper.FRAME_TYPE, consolidatedFrameType)
-                    if (consolidatedStravaName != null) {
-                        put(EquipmentDbHelper.STRAVA_NAME, consolidatedStravaName)
-                    } else {
-                        putNull(EquipmentDbHelper.STRAVA_NAME)
-                    }
-                    if (consolidatedStravaId != null) {
-                        put(EquipmentDbHelper.STRAVA_ID, consolidatedStravaId)
-                    } else {
-                        putNull(EquipmentDbHelper.STRAVA_ID)
-                    }
-                    put(EquipmentDbHelper.RETIRED, consolidatedRetired)
-                }
-                eDb.update(EquipmentDbHelper.EQUIPMENT, cv, "${EquipmentDbHelper.C_ID} = ?", arrayOf(canonicalId.toString()))
-
-                for (dup in duplicateRows) {
-                    val dupId = dup.id
-
-                    // 2. Cascade table 'Links' (Sensor Links) in Equipment.db
-                    migrateEquipmentLinks(eDb, canonicalId, dupId)
-
-                    // 3. Cascade table 'SportTypeEquipmentLink' in SportTypeLinks.db
-                    activeSportDb?.let { sDb ->
-                        migrateSportTypeLinks(sDb, canonicalId, dupId)
-                    }
-
-                    // 4. Cascade table 'WorkoutSummaries' in WorkoutSummaries.db
-                    activeSummariesDb?.let { wDb ->
-                        val updateValues = ContentValues().apply {
-                            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID, canonicalId)
+                eDb.inTransaction {
+                    // 1. Update canonical row with consolidated attributes
+                    val cv = ContentValues().apply {
+                        put(EquipmentDbHelper.NAME, consolidatedName)
+                        put(EquipmentDbHelper.FRAME_TYPE, consolidatedFrameType)
+                        if (consolidatedStravaName != null) {
+                            put(EquipmentDbHelper.STRAVA_NAME, consolidatedStravaName)
+                        } else {
+                            putNull(EquipmentDbHelper.STRAVA_NAME)
                         }
-                        wDb.update(
-                            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                            updateValues,
-                            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID} = ?",
-                            arrayOf(dupId.toString())
-                        )
+                        if (consolidatedStravaId != null) {
+                            put(EquipmentDbHelper.STRAVA_ID, consolidatedStravaId)
+                        } else {
+                            putNull(EquipmentDbHelper.STRAVA_ID)
+                        }
+                        put(EquipmentDbHelper.RETIRED, consolidatedRetired)
                     }
+                    eDb.update(EquipmentDbHelper.EQUIPMENT, cv, "${EquipmentDbHelper.C_ID} = ?", arrayOf(canonicalId.toString()))
 
-                    // 5. Delete duplicate equipment row
-                    eDb.delete(EquipmentDbHelper.EQUIPMENT, "${EquipmentDbHelper.C_ID} = ?", arrayOf(dupId.toString()))
-                    totalPruned++
+                    for (dup in duplicateRows) {
+                        val dupId = dup.id
+
+                        // 2. Cascade table 'Links' (Sensor Links) in Equipment.db
+                        migrateEquipmentLinks(eDb, canonicalId, dupId)
+
+                        // 3. Cascade table 'SportTypeEquipmentLink' in SportTypeLinks.db
+                        activeSportDb?.let { sDb ->
+                            migrateSportTypeLinks(sDb, canonicalId, dupId)
+                        }
+
+                        // 4. Cascade table 'WorkoutSummaries' in WorkoutSummaries.db
+                        activeSummariesDb?.let { wDb ->
+                            val updateValues = ContentValues().apply {
+                                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID, canonicalId)
+                            }
+                            wDb.update(
+                                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                                updateValues,
+                                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID} = ?",
+                                arrayOf(dupId.toString())
+                            )
+                        }
+
+                        // 5. Delete duplicate equipment row
+                        eDb.delete(EquipmentDbHelper.EQUIPMENT, "${EquipmentDbHelper.C_ID} = ?", arrayOf(dupId.toString()))
+                        totalPruned++
+                    }
                 }
-
-                eDb.setTransactionSuccessful()
             } catch (e: Exception) {
                 Log.e(TAG, "Error consolidating duplicate group for canonicalId=$canonicalId", e)
-            } finally {
-                eDb.endTransaction()
             }
         }
 

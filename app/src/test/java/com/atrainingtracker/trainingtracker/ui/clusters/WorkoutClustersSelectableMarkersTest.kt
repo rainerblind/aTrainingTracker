@@ -40,7 +40,7 @@ class WorkoutClustersSelectableMarkersTest {
     @Before
     fun setUp() = runBlocking {
         context = ApplicationProvider.getApplicationContext()
-        prefManager = MyPreferenceManager(context)
+        prefManager = MyPreferenceManager.createForTesting(context)
         ClusterMarkerType.entries.forEach { prefManager.setClusterMarkerTypeEnabled(it.name, true) }
         PeriodMarkerType.entries.forEach { prefManager.setPeriodMarkerTypeEnabled(it.name, true) }
     }
@@ -59,7 +59,7 @@ class WorkoutClustersSelectableMarkersTest {
         assertTrue("END must remain checked", updatedCluster.contains(ClusterMarkerType.END.name))
 
         // Verify independent persistence in a fresh MyPreferenceManager instance (simulated restart)
-        val reloadedManager = MyPreferenceManager(context)
+        val reloadedManager = MyPreferenceManager.createForTesting(context)
         val reloadedCluster = reloadedManager.enabledClusterMarkerTypesFlow.first()
         assertFalse("Unchecked START must persist across restarts", reloadedCluster.contains(ClusterMarkerType.START.name))
 

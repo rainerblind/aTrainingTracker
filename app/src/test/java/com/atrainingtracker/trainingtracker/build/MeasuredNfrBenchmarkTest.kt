@@ -409,22 +409,13 @@ class MeasuredNfrBenchmarkTest {
         }
     }
 
-    private fun resetDbManagerSingleton(clazz: Class<*>, dbFieldName: String, helperFieldName: String) {
+    private fun resetDbManagerSingleton(clazz: Class<*>) {
         try {
             val instField = clazz.getDeclaredField("cInstance").apply { isAccessible = true }
             val inst = instField.get(null)
-            if (inst != null) {
+            if (inst is com.atrainingtracker.database.BaseDatabaseManager<*>) {
                 try {
-                    val dbField = clazz.getDeclaredField(dbFieldName).apply { isAccessible = true }
-                    (dbField.get(inst) as? android.database.sqlite.SQLiteDatabase)?.let {
-                        if (it.isOpen) it.close()
-                    }
-                    dbField.set(inst, null)
-                } catch (_: Throwable) {}
-                try {
-                    val helperField = clazz.getDeclaredField(helperFieldName).apply { isAccessible = true }
-                    val target = if (java.lang.reflect.Modifier.isStatic(helperField.modifiers)) null else inst
-                    (helperField.get(target) as? android.database.sqlite.SQLiteOpenHelper)?.close()
+                    inst.closeDatabase()
                 } catch (_: Throwable) {}
             }
             instField.set(null, null)
@@ -433,13 +424,9 @@ class MeasuredNfrBenchmarkTest {
 
     private fun cleanupAllDatabases() {
         WorkoutSamplesDatabaseManager.resetForTesting(null)
-        resetDbManagerSingleton(WorkoutSummariesDatabaseManager::class.java, "mDatabase", "cWorkoutSummariesDbHelper")
+        resetDbManagerSingleton(WorkoutSummariesDatabaseManager::class.java)
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
-        resetDbManagerSingleton(
-            com.atrainingtracker.trainingtracker.database.LapsDatabaseManager::class.java,
-            "mDatabase",
-            "cLapsDbHelper"
-        )
+        com.atrainingtracker.trainingtracker.database.LapsDatabaseManager.resetForTesting(null)
         listOf(
             "WorkoutSummaries.db",
             "WorkoutSamples.db",

@@ -32,21 +32,59 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
- * Top-level Composable for Periods summaries, map view, and drill-downs (REQ-UI-159).
+ * Builds a single-day [PeriodSummary] used to route day-cell clicks through the pure Compose
+ * workout-list navigation callback without legacy Fragment transactions (`REQ-UI-2799.1`, `ATT-8125`).
+ */
+internal fun buildDayPeriodSummary(
+    date: LocalDate,
+    sport: BSportType,
+    activity: DailySportActivity,
+    locale: Locale = Locale.getDefault(),
+    zoneId: ZoneId = ZoneId.systemDefault()
+): PeriodSummary {
+    val dayStartS = date.atStartOfDay(zoneId).toEpochSecond()
+    val dayEndS = date.plusDays(1).atStartOfDay(zoneId).toEpochSecond() - 1L
+    val dateTitle = date.format(DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", locale))
+    return PeriodSummary(
+        periodLabel = dateTitle,
+        periodDateRange = dateTitle,
+        periodType = PeriodType.DAY,
+        startTimestampS = dayStartS,
+        endTimestampS = dayEndS,
+        totalWorkouts = activity.count,
+        totalDurationSec = activity.durationSec,
+        totalDistance = activity.distanceMeters,
+        sportStats = mapOf(
+            sport to SportStats(
+                count = activity.count,
+                totalDurationSec = activity.durationSec,
+                totalDistanceMeters = activity.distanceMeters,
+                totalAscentMeters = activity.ascentMeters,
+                detailedSportStats = emptyMap(),
+                longestWorkout = null
+            )
+        ),
+        sortKey = date.toString()
+    )
+}
+
+/**
+ * Top-level Composable for Periods summaries, map view, and drill-downs (REQ-UI-159, REQ-UI-2799).
  */
 @Composable
 fun PeriodsScreen(
@@ -57,7 +95,6 @@ fun PeriodsScreen(
     trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val appContext = context.applicationContext
     val currentLocale = LocalConfiguration.current.locales[0]
 
     val isPlayAvailable = remember(context) {
@@ -87,64 +124,19 @@ fun PeriodsScreen(
     )
     val listStates = List(groups.size) { rememberLazyListState() }
 
-    val handleStartWorkoutList: (PeriodSummary, BSportType?, Long?) -> Unit = onStartWorkoutList ?: { periodSummary, bSportType, scrollToWorkoutId ->
-        val secondaryTitle = if (bSportType != null) {
-            val count = periodSummary.sportStats[bSportType]?.count ?: 0
-            val workoutsCountString = appContext.resources.getQuantityString(
-                R.plurals.workout_periods__workouts,
-                count,
-                count
-            )
-            "${appContext.getString(bSportType.stringResId)} ($workoutsCountString)"
-        } else {
-            periodSummary.sportStats.entries
-                .filter { it.value.count > 0 }
-                .joinToString(", ") { (sport, stats) ->
-                    "${stats.count} ${appContext.getString(sport.stringResId)}"
-                }
-        }
-
-        val fragment = WorkoutSummariesListFragment.newInstance(
-            primaryTitle = periodSummary.periodLabel,
-            secondaryTitle = secondaryTitle,
-            bSportType = bSportType,
-            startS = periodSummary.startTimestampS,
-            endS = periodSummary.endTimestampS,
-            scrollToWorkoutId = scrollToWorkoutId
-        )
-
-        (context as? FragmentActivity)?.supportFragmentManager?.let { fm ->
-            // Use Android content view ID if available
-            val containerId = android.R.id.content
-            fm.beginTransaction()
-                .add(containerId, fragment)
-                .addToBackStack(null)
-                .commit()
-        }
+    val handleStartWorkoutList: (PeriodSummary, BSportType?, Long?) -> Unit = { periodSummary, bSportType, scrollToWorkoutId ->
+        onStartWorkoutList?.invoke(periodSummary, bSportType, scrollToWorkoutId)
     }
 
-    val handleDayClick: (PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit = { summary, sport, date, activity ->
+    val handleDayClick: (PeriodSummary, BSportType, LocalDate, DailySportActivity?) -> Unit = { _, sport, date, activity ->
         if (activity != null && activity.count > 0) {
-            val dayStartS = date.atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond()
-            val dayEndS = date.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
-            val dateTitle = date.format(java.time.format.DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", currentLocale))
-            val sportName = appContext.getString(sport.stringResId)
-            val firstWorkoutId = activity.workoutIds.firstOrNull()
-
-            val fragment = WorkoutSummariesListFragment.newInstance(
-                primaryTitle = dateTitle,
-                secondaryTitle = sportName,
-                bSportType = sport,
-                startS = dayStartS,
-                endS = dayEndS,
-                scrollToWorkoutId = firstWorkoutId
+            val daySummary = buildDayPeriodSummary(
+                date = date,
+                sport = sport,
+                activity = activity,
+                locale = currentLocale
             )
-            (context as? FragmentActivity)?.supportFragmentManager?.let { fm ->
-                fm.beginTransaction()
-                    .add(android.R.id.content, fragment)
-                    .addToBackStack(null)
-                    .commit()
-            }
+            handleStartWorkoutList(daySummary, sport, activity.workoutIds.firstOrNull())
         }
     }
 

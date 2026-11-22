@@ -84,9 +84,7 @@ class SegmentsDatabaseManagerDeduplicationTest {
 
         SegmentsDatabaseManager.resetForTesting(null)
         manager = SegmentsDatabaseManager.getInstance(mockContext)
-        val dbField = SegmentsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, mockDb)
+        manager.setDatabaseForTesting(mockDb)
     }
 
     @After

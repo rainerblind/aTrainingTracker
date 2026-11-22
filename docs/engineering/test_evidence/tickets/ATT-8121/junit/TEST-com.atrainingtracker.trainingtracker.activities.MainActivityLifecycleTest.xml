@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:30:48.454Z" hostname="rainer-HP-EliteBook-850-G5" time="10.819">
+  <properties/>
+  <testcase name="testOnPause_whenNotTracking_stopsInRideBatteryMonitoring" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="2.195"/>
+  <testcase name="testCheckGpsEnabledIfPermitted_runsOnIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="1.554"/>
+  <testcase name="testChooseStart_dispatchesDiscardToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.416"/>
+  <testcase name="testInRideBatteryAlertDeduplication_survivesActivityRecreation" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.47"/>
+  <testcase name="testOnNavControllerReady_withPendingItemAndReadyGraph_dispatchesAndClearsPending" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="1.24"/>
+  <testcase name="testNavigateToDrawerItem_whenNavGraphNotReady_queuesPendingItemSafely" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.483"/>
+  <testcase name="testChooseResume_dispatchesCheckToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.399"/>
+  <testcase name="testOnDestroy_whenChangingConfigurations_unconditionallyUnbindsAndRemovesRunnable" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.437"/>
+  <testcase name="testIsNavGraphReady_returnsFalseForNullOrThrowingController" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.402"/>
+  <testcase name="testOnPause_whenTracking_maintainsInRideBatteryMonitoring" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.434"/>
+  <testcase name="testPlayServicesDialog_dismissedInOnDestroy" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.531"/>
+  <testcase name="testOnServiceConnected_dispatchesFiltersQueryToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.891"/>
+  <testcase name="testCheckUnfinishedWorkout_dispatchesToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.513"/>
+  <testcase name="testLifecycleScopeCoroutines_automaticallyCancelledOnDestroy" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.429"/>
+  <testcase name="testOnDestroy_unconditionallyUnbindsAndRemovesRunnable" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.423"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@7f8542e6], context=[android.app.ContextImpl@4ee36dec], intentFilter=[android.content.IntentFilter@5ff59e4]]]
+]]></system-err>
+</testsuite>

@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
 import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
@@ -37,7 +38,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-public class LapsDatabaseManager {
+public class LapsDatabaseManager extends BaseDatabaseManager<LapsDatabaseManager.LapsDbHelper> {
 
     private static final String TAG = LapsDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
@@ -46,14 +47,12 @@ public class LapsDatabaseManager {
 
     // --- Singleton Pattern Implementation ---
 
-    private static LapsDbHelper cLapsDbHelper;
     private static volatile LapsDatabaseManager cInstance;
-    private SQLiteDatabase mDatabase = null;
 
     // Private constructor to prevent direct instantiation
     private LapsDatabaseManager(@NonNull Context context) {
         // The helper is instantiated with the application context to prevent leaks.
-        cLapsDbHelper = new LapsDbHelper(context.getApplicationContext());
+        super(new LapsDbHelper(context.getApplicationContext()));
     }
 
     /**
@@ -81,37 +80,9 @@ public class LapsDatabaseManager {
     @androidx.annotation.VisibleForTesting
     public static synchronized void resetForTesting(@Nullable LapsDatabaseManager testInstance) {
         if (cInstance != null && cInstance != testInstance) {
-            if (cInstance.mDatabase != null && cInstance.mDatabase.isOpen()) {
-                cInstance.mDatabase.close();
-            }
-            cInstance.mDatabase = null;
-        }
-        if (cLapsDbHelper != null && testInstance == null) {
-            cLapsDbHelper.close();
-            cLapsDbHelper = null;
+            cInstance.closeDatabase();
         }
         cInstance = testInstance;
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cLapsDbHelper.close();
-            }
-            mDatabase = cLapsDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
     }
 
     // --- End of Singleton Pattern ---

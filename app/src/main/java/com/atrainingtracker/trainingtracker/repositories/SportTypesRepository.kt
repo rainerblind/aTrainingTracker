@@ -43,7 +43,7 @@ class SportTypesRepository private constructor(private val context: Context) :
 
 
     private val job = SupervisorJob()
-    override val coroutineContext = Dispatchers.Main + job
+    override val coroutineContext = Dispatchers.IO + job
 
     private val sportTypeDatabaseManager get() = SportTypeDatabaseManager.getInstance(context)
 

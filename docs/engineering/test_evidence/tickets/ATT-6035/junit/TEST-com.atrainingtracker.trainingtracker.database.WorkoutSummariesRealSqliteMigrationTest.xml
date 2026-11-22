@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:01:02.540Z" hostname="rainer-HP-EliteBook-850-G5" time="1.422">
+  <properties/>
+  <testcase name="testIncrementalUpgradeV27ToV28AddsRecordingErrorsColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.127"/>
+  <testcase name="testSchemaRegistryMatchesV31" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.096"/>
+  <testcase name="testLegacyUpgradeV3ToV25RealSqlite" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.135"/>
+  <testcase name="testIncrementalUpgradeV24ToV25AddsCountColumnToExtrema" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.114"/>
+  <testcase name="testDatabaseOpenIsInstantaneousWithoutSynchronousBackfill" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.108"/>
+  <testcase name="testFullUpgradeV22ToV25PreservesDataAndAllowsNewV25Inserts" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.115"/>
+  <testcase name="testIncrementalUpgradeV23ToV24AddsSourceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.122"/>
+  <testcase name="testIncrementalUpgradeV22ToV23AddsRaceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.11"/>
+  <testcase name="testIncrementalUpgradeV29ToV30AddsRpeAndFeelColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.111"/>
+  <testcase name="testIncrementalUpgradeV28ToV29CreatesCardioPowerDynamicsTable" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.125"/>
+  <testcase name="testIncrementalUpgradeV26ToV27CreatesWorkoutPhotosTableAndIndex" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.117"/>
+  <testcase name="testLegacyUpgradeV10ToV25SyntaxAndColumnGuards" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.14"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

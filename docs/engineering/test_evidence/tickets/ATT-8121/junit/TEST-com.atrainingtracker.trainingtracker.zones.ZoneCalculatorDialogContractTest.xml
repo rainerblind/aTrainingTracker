@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:47:11.491Z" hostname="rainer-HP-EliteBook-850-G5" time="0.092">
+  <properties/>
+  <testcase name="reactiveValidation_karvonenSafetyInvariants" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest" time="0.082"/>
+  <testcase name="onApplyClicked_whenCustomized_triggersOverwriteWarningModal" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest" time="0.005"/>
+  <testcase name="initialState_populatesStoredFtpOrFallback270W" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest" time="0.0"/>
+  <testcase name="mutationLock_disablesCanApplyWhileSaving" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest" time="0.001"/>
+  <testcase name="onApplyClicked_whenNotCustomized_savesDirectlyWithoutModal" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

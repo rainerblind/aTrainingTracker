@@ -26,6 +26,14 @@ abstract class MyFilter<T>(
     @JvmField protected var mSensorType: SensorType
 ) : MySensor.SensorListener<T> {
 
+    @JvmField
+    protected var mDeviceId: Long = -1L
+
+    fun updateDeviceIdentity(deviceId: Long, deviceName: String?) {
+        mDeviceId = deviceId
+        mDeviceName = deviceName
+    }
+
     abstract val filteredValue: T?
 
     abstract val filterType: FilterType
@@ -36,7 +44,7 @@ abstract class MyFilter<T>(
         get() {
             val fv = filteredValue
             val stringValue = mSensorType.myFormatter.format(fv)
-            return FilteredSensorData(mSensorType, fv, stringValue, mDeviceName, filterType, filterConstant)
+            return FilteredSensorData(mSensorType, fv, stringValue, mDeviceName, filterType, filterConstant, mDeviceId)
         }
 
     /**

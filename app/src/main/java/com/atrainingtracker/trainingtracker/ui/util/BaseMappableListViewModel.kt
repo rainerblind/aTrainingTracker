@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.util
 import android.app.Application
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
+import com.atrainingtracker.trainingtracker.routes.AndroidGeoDistance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,7 +54,7 @@ abstract class BaseMappableListViewModel<T, S>(
      */
     open val isLocationAvailable: StateFlow<Boolean> = MutableStateFlow(false)
 
-    fun setSortOrder(order: S) {
+    open fun setSortOrder(order: S) {
         _sortOrder.value = order
     }
 
@@ -77,11 +78,9 @@ abstract class BaseMappableListViewModel<T, S>(
     }
 
     /**
-     * Utility to calculate distance between two points.
+     * Utility to calculate WGS-84 ellipsoidal distance between two points in meters.
      */
     protected fun calculateDistance(uLat: Double, uLon: Double, sLat: Double, sLon: Double): Float {
-        val results = FloatArray(1)
-        android.location.Location.distanceBetween(uLat, uLon, sLat, sLon, results)
-        return results[0]
+        return AndroidGeoDistance.ellipsoidalDistanceMeters(uLat, uLon, sLat, sLon).toFloat()
     }
 }

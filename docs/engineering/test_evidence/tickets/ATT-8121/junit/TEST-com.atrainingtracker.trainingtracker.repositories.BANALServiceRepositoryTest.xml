@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:32:40.449Z" hostname="rainer-HP-EliteBook-850-G5" time="0.013">
+  <properties/>
+  <testcase name="testSparklineRehydrationAndConcurrentMerge_contract_TST_TRK_080_4" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.001"/>
+  <testcase name="testTrainingApplication_clearsBreadcrumbsOnStopAndAbort" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.002"/>
+  <testcase name="testClearBreadcrumbs_sourceContract" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.001"/>
+  <testcase name="testForceUnbindFromBANALService_contract" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.001"/>
+  <testcase name="testRehydrationGatingAndStartTypeNeutrality_contract_TST_TRK_080_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.003"/>
+  <testcase name="testMainActivity_disconnectForcesUnbind" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.001"/>
+  <testcase name="testTrackingModeReceiver_clearsBreadcrumbsOnReady" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.001"/>
+  <testcase name="testRehydrationTelemetry_dataFlowContract_TST_TRK_080_2" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

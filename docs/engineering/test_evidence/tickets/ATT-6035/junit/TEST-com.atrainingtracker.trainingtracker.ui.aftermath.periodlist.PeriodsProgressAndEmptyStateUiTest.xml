@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsProgressAndEmptyStateUiTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:10:46.569Z" hostname="rainer-HP-EliteBook-850-G5" time="2.57">
+  <properties/>
+  <testcase name="periodList_emptyVsPopulated_rendersAndHidesEmptyStatePlaceholder_TST_PER_017" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsProgressAndEmptyStateUiTest" time="1.047"/>
+  <testcase name="periodsTabsScreen_rendersMultiPhaseMigrationCardAndDismissesWhenNull_TST_PERF_006" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsProgressAndEmptyStateUiTest" time="1.21"/>
+  <testcase name="periodsTabsScreen_exposesOnlySportFiltersWithNoHeatmapToggle_TST_PER_010" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsProgressAndEmptyStateUiTest" time="0.312"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

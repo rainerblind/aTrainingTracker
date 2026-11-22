@@ -175,7 +175,7 @@ class DevicesDatabaseManagerLastActiveTest {
         }
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         manager.setLastActive(77L)

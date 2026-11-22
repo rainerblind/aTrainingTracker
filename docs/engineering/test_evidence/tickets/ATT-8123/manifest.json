@@ -1,0 +1,20 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "4a2589b9bf6150c9d2147aa202b5e9829ab94850",
+  "files": {
+    "evidence_summary.json": "c000c1b2d01c9072b70daa7dde00e835cfa5cf64268e41f48207fe91de9ded95",
+    "junit/TEST-com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.xml": "b6f8fc666c7ca360661f6124c2049124e6eee3ee85dbd9a596e8689d52174d1e",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest.xml": "a22c77ce7180fcf24ebab1d19f6c99dc2a31530f59e318cda304cd2299a89da4",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest.xml": "8e4fb66528bab5da5979e97096757a4f296af7aaac7fdf7e46ef07f24f2e5849",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml": "08d985980f87ff7bba0bf0b39a24563a8b9cf122383305b8abf5928399300ac6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest.xml": "17bac7ae60919411c0290ce2b8faaca34b57b014a198e95af408465a87363b1d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest.xml": "9e555298f4e95cd8dce64e36755cca6ff3a416b33710af691cb9753d33f8b831",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.radar.RadarLightModeGridTest.xml": "269d5218f5bb050f824a7d68b7bdb01680fcd646302ea11d9788f66315a76410",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest.xml": "6c56f4067623d1076e6d95bc57d6a843d0821ee9bd2cf460bdcaa4eb0cf8430b",
+    "screenshots/att8123_emulator_smoke.png": "e75af9fb4f91a26b86e6f418ab3ba2ca0602edbacf05d38507ba155eae159f53",
+    "screenshots/att8123_quick_switch_compose.png": "6231dff7dc7082123ea1ccf79b7bb9d691f6fd4a6a1cff28e9c362fd1df4bfbe"
+  },
+  "run_started_utc": "2026-11-22T09:58:25.429181+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8123"
+}

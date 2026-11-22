@@ -337,22 +337,14 @@ fun TrackingTabsScreen(
     val radarState by RadarStateRepository.radarState.collectAsState()
     var showRadarLightQuickSwitch by remember { mutableStateOf(false) }
 
-    val currentLatLng by controlViewModel.banalServiceRepository.currentLocation.collectAsState()
-    LaunchedEffect(currentLatLng) {
-        currentLatLng?.let { latLng ->
-            val location = Location("GPS").apply {
-                latitude = latLng.latitude
-                longitude = latLng.longitude
-                controlViewModel.banalServiceRepository.currentBearing.value?.let {
-                    bearing = it.toFloat()
-                }
-                controlViewModel.banalServiceRepository.currentSpeed.value?.let {
-                    speed = it.toFloat()
-                }
-            }
-            routeSelectorViewModel.onLocationChanged(location)
-        }
-    }
+    // REQ-UI-2800.4: Collect 1-Hz GPS location inside LaunchedEffect instead of root collectAsState()
+    // so TrackingTabsScreen never recomposes on every GPS tick.
+    ObserveRouteSelectorLocation(
+        currentLocationFlow = controlViewModel.banalServiceRepository.currentLocation,
+        currentBearingFlow = controlViewModel.banalServiceRepository.currentBearing,
+        currentSpeedFlow = controlViewModel.banalServiceRepository.currentSpeed,
+        onLocationChanged = routeSelectorViewModel::onLocationChanged
+    )
 
     LaunchedEffect(bSportType) {
         routeSelectorViewModel.setActiveSport(bSportType)
@@ -371,56 +363,18 @@ fun TrackingTabsScreen(
         )
     }
 
-    val filteredSensorData by trackingTabsViewModel.allFilteredSensorData.collectAsState()
     val activityType by trackingTabsViewModel.activityType.collectAsState()
     val liveSegments by trackingTabsViewModel.liveSegments.collectAsState()
 
-    LaunchedEffect(filteredSensorData, activityType, brightnessMode, tuningConfig) {
-        if (brightnessMode != DisplayBrightnessMode.AUTO) return@LaunchedEffect
-
-        val speedData = filteredSensorData.find { it.sensorType == SensorType.SPEED_mps }
-        val speed = (speedData?.value as? Number)?.toDouble() ?: 0.0
-
-        val slopeData = filteredSensorData.find { it.sensorType == SensorType.SLOPE }
-        val rawSlope = (slopeData?.value as? Number)?.toFloat()
-        val slope = if (speed > tuningConfig.slopeMinSpeedMps && rawSlope != null && !rawSlope.isNaN() && !rawSlope.isInfinite()) rawSlope else 0.0f
-
-        val hrData = filteredSensorData.find { it.sensorType == SensorType.HR }
-        val hrValue = (hrData?.value as? Number)?.toDouble()
-
-        val powerData = filteredSensorData.find { it.sensorType == SensorType.POWER }
-        val powerValue = (powerData?.value as? Number)?.toDouble()
-
-        val isCycling = activityType.sportType == BSportType.BIKE
-        val hrZone = if (hrValue != null && hrValue > 0) {
-            val zoneType = if (isCycling) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            calculateZoneIndex(hrValue, listOf(z1, z2, z3, z4))
-        } else null
-
-        val powerZone = if (isCycling && powerValue != null && powerValue > 0) {
-            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            val z5 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
-            val z6 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
-            calculateZoneIndex(powerValue, listOf(z1, z2, z3, z4, z5, z6))
-        } else null
-
-        batterySaverController.updateTelemetry(
-            TelemetrySnapshot(
-                slopePercent = slope,
-                hrZone = hrZone,
-                powerZone = powerZone,
-                isCycling = isCycling
-            )
-        )
-    }
+    // REQ-UI-2800.4: Gate 1-Hz telemetry collection strictly to DisplayBrightnessMode.AUTO inside LaunchedEffect
+    // so SYSTEM/CUSTOM modes skip collection entirely and root TrackingTabsScreen never recomposes at 1 Hz.
+    ObserveAutoBrightnessTelemetry(
+        brightnessMode = brightnessMode,
+        activityType = activityType,
+        tuningConfig = tuningConfig,
+        allFilteredSensorDataFlow = trackingTabsViewModel.allFilteredSensorData,
+        batterySaverController = batterySaverController
+    )
 
     LaunchedEffect(trackingMode) {
         batterySaverController.onWakeupEvent()
@@ -1416,4 +1370,95 @@ fun isRadarOverlayVisible(
         connectionState == com.atrainingtracker.banalservice.devices.radar.RadarConnectionState.DISCONNECTED_ERROR ||
         isSimulating
     )
+}
+
+/**
+ * Collects 1-Hz GPS location updates inside a [LaunchedEffect] without triggering root
+ * recompositions on [TrackingTabsScreen] (REQ-UI-2800.4).
+ */
+@Composable
+internal fun ObserveRouteSelectorLocation(
+    currentLocationFlow: kotlinx.coroutines.flow.StateFlow<com.google.android.gms.maps.model.LatLng?>,
+    currentBearingFlow: kotlinx.coroutines.flow.StateFlow<Double?>,
+    currentSpeedFlow: kotlinx.coroutines.flow.StateFlow<Double?>,
+    onLocationChanged: (Location) -> Unit
+) {
+    val latestOnLocationChanged by rememberUpdatedState(onLocationChanged)
+    LaunchedEffect(currentLocationFlow, currentBearingFlow, currentSpeedFlow) {
+        currentLocationFlow.collect { currentLatLng ->
+            currentLatLng?.let { latLng ->
+                val location = Location("GPS").apply {
+                    latitude = latLng.latitude
+                    longitude = latLng.longitude
+                    currentBearingFlow.value?.let { bearing = it.toFloat() }
+                    currentSpeedFlow.value?.let { speed = it.toFloat() }
+                }
+                latestOnLocationChanged(location)
+            }
+        }
+    }
+}
+
+/**
+ * Collects 1-Hz filtered sensor data strictly when [brightnessMode] is [DisplayBrightnessMode.AUTO],
+ * skipping upstream flow subscription completely in [DisplayBrightnessMode.SYSTEM] /
+ * [DisplayBrightnessMode.CUSTOM] and avoiding root recompositions on [TrackingTabsScreen] (REQ-UI-2800.4).
+ */
+@Composable
+internal fun ObserveAutoBrightnessTelemetry(
+    brightnessMode: DisplayBrightnessMode,
+    activityType: com.atrainingtracker.banalservice.ActivityType,
+    tuningConfig: com.atrainingtracker.trainingtracker.settings.TuningConfig,
+    allFilteredSensorDataFlow: kotlinx.coroutines.flow.StateFlow<List<com.atrainingtracker.banalservice.filters.FilteredSensorData<*>>>,
+    batterySaverController: BatterySaverController
+) {
+    val context = LocalContext.current
+    LaunchedEffect(brightnessMode, activityType, tuningConfig, allFilteredSensorDataFlow, batterySaverController) {
+        if (brightnessMode != DisplayBrightnessMode.AUTO) return@LaunchedEffect
+
+        allFilteredSensorDataFlow.collect { filteredSensorData ->
+            val speedData = filteredSensorData.find { it.sensorType == SensorType.SPEED_mps }
+            val speed = (speedData?.value as? Number)?.toDouble() ?: 0.0
+
+            val slopeData = filteredSensorData.find { it.sensorType == SensorType.SLOPE }
+            val rawSlope = (slopeData?.value as? Number)?.toFloat()
+            val slope = if (speed > tuningConfig.slopeMinSpeedMps && rawSlope != null && !rawSlope.isNaN() && !rawSlope.isInfinite()) rawSlope else 0.0f
+
+            val hrData = filteredSensorData.find { it.sensorType == SensorType.HR }
+            val hrValue = (hrData?.value as? Number)?.toDouble()
+
+            val powerData = filteredSensorData.find { it.sensorType == SensorType.POWER }
+            val powerValue = (powerData?.value as? Number)?.toDouble()
+
+            val isCycling = activityType.sportType == BSportType.BIKE
+            val hrZone = if (hrValue != null && hrValue > 0) {
+                val zoneType = if (isCycling) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+                val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+                val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+                val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+                val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+                calculateZoneIndex(hrValue, listOf(z1, z2, z3, z4))
+            } else null
+
+            val powerZone = if (isCycling && powerValue != null && powerValue > 0) {
+                val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+                val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+                val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+                val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+                val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+                val z5 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
+                val z6 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+                calculateZoneIndex(powerValue, listOf(z1, z2, z3, z4, z5, z6))
+            } else null
+
+            batterySaverController.updateTelemetry(
+                TelemetrySnapshot(
+                    slopePercent = slope,
+                    hrZone = hrZone,
+                    powerZone = powerZone,
+                    isCycling = isCycling
+                )
+            )
+        }
+    }
 }

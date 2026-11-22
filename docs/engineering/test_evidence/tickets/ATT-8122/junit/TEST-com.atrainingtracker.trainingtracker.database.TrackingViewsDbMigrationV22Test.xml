@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV22Test" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:21:43.727Z" hostname="rainer-HP-EliteBook-850-G5" time="0.336">
+  <properties/>
+  <testcase name="testTrackingViewsDbHelper_v21ToV22Migration_seedsDefaultsAndRegistry" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV22Test" time="0.124"/>
+  <testcase name="testTrackingViewsDbHelper_createLayoutsTableV22_containsGraphColor" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV22Test" time="0.113"/>
+  <testcase name="testTrackingViewsDbHelper_v21ToV22Migration_addsGraphColorColumn" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV22Test" time="0.096"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

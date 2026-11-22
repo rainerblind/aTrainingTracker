@@ -95,6 +95,15 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.atrainingtracker.trainingtracker.tracker.LiveExtremaLabels
+import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardSnapshot
+import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStore
+import com.atrainingtracker.trainingtracker.tracker.applyLiveSnapshot
+import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * A comprehensive summary of a workout.
@@ -116,10 +125,40 @@ fun WorkoutSummary(
     onMarkFinished: (() -> Unit)? = null,
     preferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences(),
     workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER,
-    tuningConfig: TuningConfig? = null
+    tuningConfig: TuningConfig? = null,
+    liveSnapshotFlow: StateFlow<LiveWorkoutCardSnapshot?> = LiveWorkoutCardStateStore.snapshot
 ) {
+    val context = LocalContext.current
+    val formatters = LocalMetricFormatter.current
+    val liveExtremaLabels = remember(context, TrainingApplication.getUnit()) { LiveExtremaLabels.from(context) }
+
+    // Card-scoped live telemetry overlay (REQ-PER-047.2):
+    // Finished cards NEVER subscribe to liveSnapshotFlow; unfinished non-matching cards suppress
+    // non-matching emissions via distinctUntilChanged().
+    val activeSnapshot: LiveWorkoutCardSnapshot? = if (!workoutData.finished) {
+        val matchingFlow = remember(workoutData.id, liveSnapshotFlow) {
+            liveSnapshotFlow
+                .map { it?.takeIf { snapshot -> snapshot.workoutId == workoutData.id } }
+                .distinctUntilChanged()
+        }
+        val collected by matchingFlow.collectAsStateWithLifecycle(
+            initialValue = liveSnapshotFlow.value?.takeIf { it.workoutId == workoutData.id }
+        )
+        collected
+    } else {
+        null
+    }
+    val displayWorkoutData = remember(workoutData, activeSnapshot, liveExtremaLabels, formatters) {
+        applyLiveSnapshot(
+            workoutData = workoutData,
+            snapshot = activeSnapshot,
+            extremaLabels = liveExtremaLabels,
+            formatters = formatters
+        )
+    }
+
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
-    val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
+    val contentAlpha = if (displayWorkoutData.headerData.finished) TTAlpha.High else 0.5f
 
     var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
     var hrZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
@@ -128,7 +167,6 @@ fun WorkoutSummary(
     val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: preferences.zoneCardDisplayMode
-    val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
     val tuningDataStore = remember(context) { TuningPreferencesDataStore.getInstance(context) }
     val observedTuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
@@ -224,23 +262,23 @@ fun WorkoutSummary(
         modifier = modifier
     ) {
         // 1. Header & Primary Metrics (PERMANENT TOP IDENTITY ANCHOR - REQ-UI-255)
-        val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
+        val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id) || activeSnapshot != null
         val canDelete = !isActivelyTracked
-        val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked
+        val canMarkFinished = !displayWorkoutData.headerData.finished && !isActivelyTracked
         WorkoutHeader(
-            data = workoutData.headerData,
+            data = displayWorkoutData.headerData,
             onClicked = onMapClick,
             onExport = onExport,
             onSaveAsRoute = onSaveAsRoute,
             onDeleteRequest = onDeleteRequest,
-            menuEnabled = workoutData.headerData.finished,
+            menuEnabled = displayWorkoutData.headerData.finished,
             canDelete = canDelete,
             onMarkFinished = if (canMarkFinished && onMarkFinished != null) onMarkFinished else null,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,
-            onShareWorkout = if (workoutData.headerData.finished) { { showShareModeSheet = true } } else null,
+            onShareWorkout = if (displayWorkoutData.headerData.finished) { { showShareModeSheet = true } } else null,
             onClearRecordingErrors = { coroutineScope.launch { repository.clearRecordingErrors(workoutData.id) } },
-            onSyncHealthConnect = if (workoutData.headerData.finished && HealthConnectManager.isAvailable(context)) {
+            onSyncHealthConnect = if (displayWorkoutData.headerData.finished && HealthConnectManager.isAvailable(context)) {
                 { HealthConnectManager.syncWorkoutAsync(context, workoutData, force = true) }
             } else null
         )
@@ -251,18 +289,18 @@ fun WorkoutSummary(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        val workoutStartMs = workoutData.startTimeS * 1000L
-        val workoutEndMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
+        val workoutStartMs = displayWorkoutData.startTimeS * 1000L
+        val workoutEndMs = (displayWorkoutData.startTimeS + displayWorkoutData.totalTimeSec) * 1000L
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255 / REQ-UI-499)
-        val hasMap = isPlayServiceAvailable && workoutData.mapPolyline != ""
-        val hasElevation = workoutData.encodedAltitudes.isNotEmpty() || hasMap
+        val hasMap = isPlayServiceAvailable && displayWorkoutData.mapPolyline != ""
+        val hasElevation = displayWorkoutData.encodedAltitudes.isNotEmpty() || hasMap
         var renderedAnySection = false
 
         workoutSectionsOrder.forEach { sectionType ->
             when (sectionType) {
                 WorkoutSectionType.RPE_AND_FEEL -> {
-                    if (preferences.showRpeAndFeel && (workoutData.rpe != null || workoutData.feel != null)) {
+                    if (preferences.showRpeAndFeel && (displayWorkoutData.rpe != null || displayWorkoutData.feel != null)) {
                         if (renderedAnySection) {
                             HorizontalDivider(
                                 modifier = Modifier.fillMaxWidth(),
@@ -271,9 +309,9 @@ fun WorkoutSummary(
                             )
                         }
                         WorkoutRpeFeelSection(
-                            rpe = workoutData.rpe,
-                            feel = workoutData.feel,
-                            activeTimeSec = workoutData.activeTimeSec,
+                            rpe = displayWorkoutData.rpe,
+                            feel = displayWorkoutData.feel,
+                            activeTimeSec = displayWorkoutData.activeTimeSec,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -291,7 +329,7 @@ fun WorkoutSummary(
                             )
                         }
                         WorkoutDetails(
-                            data = workoutData.detailsData,
+                            data = displayWorkoutData.detailsData,
                             modifier = mapClickModifier,
                             enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
                             showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
@@ -308,31 +346,31 @@ fun WorkoutSummary(
                 WorkoutSectionType.DESCRIPTION -> {
                     if (preferences.showDescription) {
                         WorkoutDescription(
-                            data = workoutData.descriptionData,
+                            data = displayWorkoutData.descriptionData,
                             modifier = mapClickModifier
                         )
                         renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.EXTREMA -> {
-                    if (preferences.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
+                    if (preferences.showExtrema && displayWorkoutData.extremaData.dataRows.isNotEmpty()) {
                         WorkoutExtrema(
-                            data = workoutData.extremaData,
+                            data = displayWorkoutData.extremaData,
                             modifier = mapClickModifier
                         )
                         renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.LAPS -> {
-                    if (preferences.showLaps && workoutData.laps.isNotEmpty()) {
+                    if (preferences.showLaps && displayWorkoutData.laps.isNotEmpty()) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 12.dp),
                             thickness = 0.5.dp,
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
                         WorkoutLaps(
-                            laps = workoutData.laps,
-                            bSportType = workoutData.bSportType,
+                            laps = displayWorkoutData.laps,
+                            bSportType = displayWorkoutData.bSportType,
                             lapDisplayMode = preferences.lapDisplayMode,
                             onLapClick = { lap -> activeEditingLap = lap },
                             onSplitLapClick = { showCreateLapSheet = true },

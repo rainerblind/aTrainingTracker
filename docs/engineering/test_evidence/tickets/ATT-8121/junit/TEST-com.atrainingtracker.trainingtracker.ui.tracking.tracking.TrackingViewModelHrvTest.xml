@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:36.207Z" hostname="rainer-HP-EliteBook-850-G5" time="2.927">
+  <properties/>
+  <testcase name="testResolveDisplayOptions_hrvDfaA1_resolvesDedicatedOptionsAcrossAllSports" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="0.317"/>
+  <testcase name="testGetZoneType_hrvDfaA1_returnsNullForIndependentResolution" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="0.384"/>
+  <testcase name="applySensorData_dynamicArtifactThreshold_gatesHrvDfaA1" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="0.269"/>
+  <testcase name="testSideBySidePinnedHrvTiles_isolateSignalQualityZoneColorAndArtifactGatingWithoutCoLocatedArtifactTile_TST_HRV_050_4" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="1.957"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

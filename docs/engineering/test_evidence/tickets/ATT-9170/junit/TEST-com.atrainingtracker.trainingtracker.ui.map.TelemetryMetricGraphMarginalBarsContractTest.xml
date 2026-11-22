@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:58:06.105Z" hostname="rainer-HP-EliteBook-850-G5" time="0.125">
+  <properties/>
+  <testcase name="testPortraitMarginalHistogram_usesLinearBinsAndGuardsEmptyTracks_TST_UI_443_2" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.005"/>
+  <testcase name="testMarginalBarMath_5ZonesAndHistogramScaling" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.002"/>
+  <testcase name="testPortraitMarginalHistogram_filtersOutOfDomainBinsAndPreventsTopBarStacking_ATT_5311" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.001"/>
+  <testcase name="testTelemetryMetricGraph_containsMarginalStripParametersAndContract" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.001"/>
+  <testcase name="testZoneCards_hoistDisplayModeParameters" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.006"/>
+  <testcase name="testTrackOnMapScreen_wiresSynchronousModeSwitching" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.109"/>
+  <testcase name="testMapDetailLayout_wiresZoneDistributionsAndDisplayModes" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMarginalBarsContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

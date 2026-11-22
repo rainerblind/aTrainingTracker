@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:15:48.243Z" hostname="rainer-HP-EliteBook-850-G5" time="19.441">
+  <properties/>
+  <testcase name="testDisconnectStopsFlatLineSparklineFeedingAcrossRepeatedTicks_TST_FIL_038_4" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="16.752"/>
+  <testcase name="createFilter_existingFilterWithChangedSensor_rebindsListenerAndDeliversUpdates" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.218"/>
+  <testcase name="rebindFilter_seedsCurrentValueIfPresent" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.16"/>
+  <testcase name="rebindExistingFilters_namedPeripheralDeviceRecreated_migratesFilterListener" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.159"/>
+  <testcase name="testDevicePinnedDisconnect_clearsInstantaneousAndMovingAverage_preservesCumulativeAndStrides_andRebinds_TST_FIL_038_3" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="1.895"/>
+  <testcase name="testBestSensorProxyDisconnect_preservesFallback_clearsOnLastDisconnect_andRetainsProxyBinding_TST_FIL_038_3" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.131"/>
+  <testcase name="testCreateFilter_defersInactiveDevicePinnedSensor_andNeverDefersRetainedProxy_TST_FIL_038_3" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.124"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

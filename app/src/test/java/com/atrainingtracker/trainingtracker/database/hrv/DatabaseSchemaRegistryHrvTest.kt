@@ -55,14 +55,29 @@ class DatabaseSchemaRegistryHrvTest {
     @Test
     fun databaseConnectionManager_includesHrvReadinessDb_inActiveDatabases() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val activeDatabases = DatabaseConnectionManager.getActiveDatabases(context)
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+        HrvReadinessDatabaseManager.resetForTesting(null)
 
-        val found = activeDatabases.any { db ->
-            val path = db.path
-            path != null && File(path).name == HrvReadinessDbHelper.DB_NAME
+        try {
+            // Non-eager invariant (REQ-MIG-057.3): unopened HrvReadiness.db is not eagerly opened
+            val beforeOpen = DatabaseConnectionManager.getActiveDatabases(context).any { db ->
+                val path = db.path
+                path != null && File(path).name == HrvReadinessDbHelper.DB_NAME
+            }
+            assertFalse("Unopened HrvReadiness.db must not be eagerly opened by getActiveDatabases()", beforeOpen)
+
+            // Once opened, HrvReadiness.db must be tracked in getActiveDatabases()
+            HrvReadinessDatabaseManager.getInstance(context).database
+            val activeDatabases = DatabaseConnectionManager.getActiveDatabases(context)
+            val found = activeDatabases.any { db ->
+                val path = db.path
+                path != null && File(path).name == HrvReadinessDbHelper.DB_NAME
+            }
+            assertTrue("DatabaseConnectionManager.getActiveDatabases() must include opened HrvReadiness.db", found)
+        } finally {
+            DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+            HrvReadinessDatabaseManager.resetForTesting(null)
         }
-
-        assertTrue("DatabaseConnectionManager.getActiveDatabases() must include HrvReadiness.db", found)
     }
 
     @Test

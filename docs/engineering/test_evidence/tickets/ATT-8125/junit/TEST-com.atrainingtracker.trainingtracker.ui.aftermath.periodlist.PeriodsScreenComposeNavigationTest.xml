@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsScreenComposeNavigationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:59:46.134Z" hostname="rainer-HP-EliteBook-850-G5" time="17.138">
+  <properties/>
+  <testcase name="testPeriodsScreen_dayClickRoutesStrictlyViaComposeNavHostAndBackReturnsCleanly_tstUi2799_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsScreenComposeNavigationTest" time="16.968"/>
+  <testcase name="testBuildDayPeriodSummary_producesExactDayBoundsAndStats_tstUi2799_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsScreenComposeNavigationTest" time="0.169"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

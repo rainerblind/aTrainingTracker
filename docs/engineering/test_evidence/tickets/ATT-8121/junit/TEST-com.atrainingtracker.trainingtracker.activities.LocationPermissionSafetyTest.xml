@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:30:51.961Z" hostname="rainer-HP-EliteBook-850-G5" time="7.489">
+  <properties/>
+  <testcase name="testPermissionDenied_bypassesProviderQueryWithoutSecurityException" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="3.202"/>
+  <testcase name="testGetProviderThrowsIllegalArgumentException_caughtAndLoggedCleanlyWithoutCrashing" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="0.698"/>
+  <testcase name="testGetProviderThrowsSecurityException_caughtAndLoggedCleanlyWithoutCrashing" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="0.756"/>
+  <testcase name="testNullProvider_handledSafelyWithoutNPE" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="0.748"/>
+  <testcase name="testPermissionGranted_gpsDisabled_showsAlertSafely" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="0.713"/>
+  <testcase name="testTrackLocationDisabled_bypassesPermissionCheckAndProviderQuery" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="0.703"/>
+  <testcase name="testPermissionGranted_gpsEnabled_checksProviderSafelyWithoutDialog" classname="com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest" time="0.668"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

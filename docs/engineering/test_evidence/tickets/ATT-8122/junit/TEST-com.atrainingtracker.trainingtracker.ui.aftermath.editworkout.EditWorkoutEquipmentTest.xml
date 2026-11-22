@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:27:29.207Z" hostname="rainer-HP-EliteBook-850-G5" time="2.005">
+  <properties/>
+  <testcase name="testCrossSportSwitching_differentBaseSport_resetsEquipmentToNoneOrLinked" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.841"/>
+  <testcase name="testCase1_multipleLinkedBikes_showsNoneLinkedAndExpansionToken_zeroShoes" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.198"/>
+  <testcase name="testCase2_singleLinkedEquipment_autoPreselectsLinkedGearAndShowsAllGear" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.187"/>
+  <testcase name="testNonBikeNonRunSport_unknownBaseSport_showsOnlyNone" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.191"/>
+  <testcase name="testCrossSportSwitching_sameBaseSport_retainsValidSelectedEquipment" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.186"/>
+  <testcase name="testCase1_inPlaceExpansion_selectingAllBikes_expandsListToAllBikes" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.214"/>
+  <testcase name="testCase3_zeroLinkedEquipment_preselectsNoneAndShowsAllGear" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest" time="0.187"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

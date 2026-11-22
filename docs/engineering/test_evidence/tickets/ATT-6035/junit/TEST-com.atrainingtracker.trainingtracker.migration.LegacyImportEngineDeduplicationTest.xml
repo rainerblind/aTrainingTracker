@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:03:45.884Z" hostname="rainer-HP-EliteBook-850-G5" time="13.042">
+  <properties/>
+  <testcase name="testDeduplicationWithTimeStartAndSport_constructsSportAwareQuery" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.457"/>
+  <testcase name="testPreDispatchCloudEntryDeduplication_filtersIdenticalBaseNamesAcrossPaths" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.574"/>
+  <testcase name="testConcurrentWorkerMutexProtection_guaranteesAtomicCheckAndInsert" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.53"/>
+  <testcase name="testImportStatusEnum_differentiatesSuccessSkippedAndFailed" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.43"/>
+  <testcase name="testDeduplicationByExactFileName_whenAbsent_returnsFalse" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.401"/>
+  <testcase name="testDeduplicationWithTimeStart_constructsMultiDimensionalQuery" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.438"/>
+  <testcase name="testExistingWorkoutsSnapshot_filtersDuplicateCloudEntriesInMemory" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.391"/>
+  <testcase name="testPreDispatchCloudEntryDeduplication_sortsAscendingByFilename" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.422"/>
+  <testcase name="testDeduplicationByExactFileName_whenPresent_returnsTrue" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineDeduplicationTest" time="1.399"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

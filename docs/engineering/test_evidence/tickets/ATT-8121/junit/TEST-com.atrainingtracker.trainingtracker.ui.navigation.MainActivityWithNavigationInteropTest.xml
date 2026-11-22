@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:54.112Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="testHardwareKeyInterceptor_presenceAndDispatchKeyEvent" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.004"/>
+  <testcase name="testPushedWorkoutsNavigationMethodsPresence" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.001"/>
+  <testcase name="testCompanionObjectConstantsJavaInterop" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.0"/>
+  <testcase name="testPublicMethodsPresence" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.0"/>
+  <testcase name="testClassHierarchyAndInterfaceCompliance" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.0"/>
+  <testcase name="testSelectedFragmentEnumIntegrity" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.001"/>
+  <testcase name="testIsNavGraphReadyMethodPresence" classname="com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

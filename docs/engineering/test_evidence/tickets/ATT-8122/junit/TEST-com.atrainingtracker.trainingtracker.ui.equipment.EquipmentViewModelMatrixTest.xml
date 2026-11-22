@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelMatrixTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:29:36.895Z" hostname="rainer-HP-EliteBook-850-G5" time="0.797">
+  <properties/>
+  <testcase name="testSetSensorLink_invokesDbHelperAndReloadsEquipment" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelMatrixTest" time="0.386"/>
+  <testcase name="testAllRemoteSensors_initializationAndEmission" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelMatrixTest" time="0.203"/>
+  <testcase name="testSportPartitionedSensors_emitsFilteredSensors" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelMatrixTest" time="0.208"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

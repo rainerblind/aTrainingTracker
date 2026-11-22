@@ -22,7 +22,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.SqliteSchemaUtils
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
@@ -282,6 +283,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
 
     companion object {
         private const val TAG = "WorkoutClusterDatabaseManager"
+        const val DB_NAME = "RouteClusters.db"
+        const val DB_VERSION = 11
 
         @Volatile
         private var instance: WorkoutClusterDatabaseManager? = null
@@ -769,8 +772,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         """
     }
 
-    internal class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 11
+    internal class WorkoutClusterDbHelper(private val context: Context) : TrackingSQLiteOpenHelper(
+        context, DB_NAME, null, DB_VERSION
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
@@ -783,24 +786,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             columnType: String,
             defaultValue: String? = null
         ) {
-            try {
-                db.rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
-                    val nameIdx = cursor.getColumnIndex("name")
-                    while (cursor.moveToNext()) {
-                        if (nameIdx != -1 && columnName.equals(cursor.getString(nameIdx), ignoreCase = true)) {
-                            return
-                        }
-                    }
-                }
-                var sql = "ALTER TABLE $tableName ADD COLUMN $columnName $columnType"
-                if (defaultValue != null) {
-                    sql += " DEFAULT $defaultValue"
-                }
-                db.execSQL(sql)
-                Log.i("WorkoutClusterDbHelper", "Added missing column [$columnName] to table [$tableName]")
-            } catch (e: Exception) {
-                Log.e("WorkoutClusterDbHelper", "Error checking/adding column: $columnName", e)
-            }
+            SqliteSchemaUtils.addColumnIfNotExistsLenient(db, tableName, columnName, columnType, defaultValue)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

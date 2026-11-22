@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:58:03.682Z" hostname="rainer-HP-EliteBook-850-G5" time="1.874">
+  <properties/>
+  <testcase name="resolveVisibleAverageValue_hidesOffScaleAndNonFiniteValuesCleanly" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.196"/>
+  <testcase name="resolveTelemetryYAxisLabels_enforcesAverageStrictTopPriorityOverExtremaThresholdsAndZones" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.146"/>
+  <testcase name="computeWorkoutAverage_coversAllMetricsAndFiltersHrvArtifactsAndInvalidSamples" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.141"/>
+  <testcase name="computeWorkoutAverage_paceUsesMeanSpeedNotArithmeticMeanOfPointPaces" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.132"/>
+  <testcase name="renderTelemetryAverageLineGallery_lightAndDarkAmoled_andSaveVisualEvidencePng" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.756"/>
+  <testcase name="drawAverageReferenceLine_guardsNarrowCanvasAndDrawsDistinctDottedPattern" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.224"/>
+  <testcase name="gutterAutoFitAndRightAlignment_preventOverflowIntoPlotArea" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.117"/>
+  <testcase name="formatAverageYAxisLabel_matchesMetricStandardFormatsAndLocales" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest" time="0.161"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

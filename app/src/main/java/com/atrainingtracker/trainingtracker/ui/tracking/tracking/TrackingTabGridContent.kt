@@ -40,45 +40,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSens
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelFactory
 
 @Composable
-fun TrackingTabGridContent(
-    tabViewId: Long,
-    screenMode: ScreenMode,
-    isTabActive: Boolean = true,
-    onRingBikeBell: () -> Unit = {}
-) {
-    val context = LocalContext.current
-    val activity = context as? ComponentActivity
-        ?: throw IllegalStateException("Context must be a ComponentActivity")
-
-    // We use a unique key for each tab so that each tab gets its own ViewModel instance
-    // but the ViewModel survives orientation changes.
-    val viewModel: TrackingViewModel = viewModel(
-        factory = TrackingViewModelFactory(activity.application, tabViewId),
-        key = "tab_$tabViewId"
-    )
-
-    // Sync the local ViewModel screen mode with the parent's mode (ATT-245)
-    LaunchedEffect(screenMode) {
-        viewModel.updateScreenMode(screenMode)
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner, isTabActive) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.setUiActive(isTabActive)
-            try {
-                awaitCancellation()
-            } finally {
-                viewModel.setUiActive(false)
-            }
-        }
-    }
-
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
-    val editingFieldId by viewModel.editingFieldId.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
-    val pendingAddition by viewModel.pendingAddition.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
-    val selectedFieldForMove by viewModel.selectedFieldForMove.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
-    val gridActions = object : GridActions {
+internal fun rememberTrackingGridActions(viewModel: TrackingViewModel): GridActions = remember(viewModel) {
+    object : GridActions {
         override fun onEditField(fieldState: SensorFieldState) {
             viewModel.onEditField(fieldState)
         }
@@ -119,6 +82,48 @@ fun TrackingTabGridContent(
             viewModel.onDeleteSectionDivider(rowNr)
         }
     }
+}
+
+@Composable
+fun TrackingTabGridContent(
+    tabViewId: Long,
+    screenMode: ScreenMode,
+    isTabActive: Boolean = true,
+    onRingBikeBell: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val activity = context as? ComponentActivity
+        ?: throw IllegalStateException("Context must be a ComponentActivity")
+
+    // We use a unique key for each tab so that each tab gets its own ViewModel instance
+    // but the ViewModel survives orientation changes.
+    val viewModel: TrackingViewModel = viewModel(
+        factory = TrackingViewModelFactory(activity.application, tabViewId),
+        key = "tab_$tabViewId"
+    )
+
+    // Sync the local ViewModel screen mode with the parent's mode (ATT-245)
+    LaunchedEffect(screenMode) {
+        viewModel.updateScreenMode(screenMode)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, isTabActive) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.setUiActive(isTabActive)
+            try {
+                awaitCancellation()
+            } finally {
+                viewModel.setUiActive(false)
+            }
+        }
+    }
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val editingFieldId by viewModel.editingFieldId.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val pendingAddition by viewModel.pendingAddition.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val selectedFieldForMove by viewModel.selectedFieldForMove.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    val gridActions = rememberTrackingGridActions(viewModel)
 
     val tabToggleActions = remember(viewModel, onRingBikeBell) {
         object : TabToggleActions {

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:04:51.473Z" hostname="rainer-HP-EliteBook-850-G5" time="0.92">
+  <properties/>
+  <testcase name="testRepositoryContract_multiWheelTelemetryLoopAndCaching" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" time="0.281"/>
+  <testcase name="testPersistConvergedCircumferences_savesLockedEstimatorData" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" time="0.415"/>
+  <testcase name="testMultiWheelTelemetryRouting_independentEstimators" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" time="0.223"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

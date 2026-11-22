@@ -19,6 +19,7 @@ import contextlib
 import fcntl
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -26,6 +27,9 @@ import time
 DEFAULT_LOCK_FILE = "/tmp/att_build_merge.lock"
 DEFAULT_TIMEOUT_SEC = 600.0
 POLL_INTERVAL_SEC = 0.25
+DEFAULT_WARM_VERIFY_WORKTREE = os.path.expanduser("~/.cache/att_wt_verify_warm")
+WARM_WORKTREE_ENV_VAR = "ATT_WARM_VERIFY_WORKTREE"
+WARM_CONFIG_SYMLINKS = ("local.properties", "secrets.properties", ".env.jira")
 
 
 @contextlib.contextmanager
@@ -51,6 +55,7 @@ def sprint_lock(
     start_time = time.time()
     acquired = False
     printed_wait = False
+    prev_env = os.environ.get("ATT_SPRINT_LOCK_HELD")
 
     try:
         while True:
@@ -77,6 +82,11 @@ def sprint_lock(
 
         yield fd
     finally:
+        if acquired and lock_path == DEFAULT_LOCK_FILE:
+            if prev_env is None:
+                os.environ.pop("ATT_SPRINT_LOCK_HELD", None)
+            else:
+                os.environ["ATT_SPRINT_LOCK_HELD"] = prev_env
         if acquired:
             try:
                 fcntl.flock(fd, fcntl.LOCK_UN)
@@ -554,6 +564,159 @@ def run_merge_ticket(
         )
 
 
+def _git_common_dir(wt_path):
+    """Returns the resolved git common dir for a worktree path."""
+    raw = git_cmd(["rev-parse", "--git-common-dir"], cwd=wt_path).stdout.strip()
+    if not os.path.isabs(raw):
+        raw = os.path.join(wt_path, raw)
+    return os.path.realpath(raw)
+
+
+def _ensure_warm_submodules(warm_wt, main_wt):
+    """Initializes ANT-Android-SDKs as a clean git submodule without symlinks."""
+    gitmodules_path = os.path.join(warm_wt, ".gitmodules")
+    if not os.path.isfile(gitmodules_path):
+        return
+    with open(gitmodules_path, "r", encoding="utf-8", errors="replace") as f:
+        if "ANT-Android-SDKs" not in f.read():
+            return
+
+    guard_submodules(warm_wt)
+    sdk_dir = os.path.join(warm_wt, "ANT-Android-SDKs")
+    sdk_git = os.path.join(sdk_dir, ".git")
+    sdk_readme = os.path.join(sdk_dir, "README.md")
+
+    # Clean stale non-submodule symlink container before git submodule update
+    if os.path.isdir(sdk_dir) and not os.path.exists(sdk_git) and not os.path.isfile(sdk_readme):
+        shutil.rmtree(sdk_dir, ignore_errors=True)
+
+    ref_sdk = os.path.join(main_wt, "ANT-Android-SDKs")
+    needs_init = not os.path.isfile(sdk_readme)
+    if not needs_init:
+        status_res = git_cmd(["status", "--porcelain", "--", "ANT-Android-SDKs"], cwd=warm_wt, check=False)
+        needs_init = status_res.returncode == 0 and bool(status_res.stdout.strip())
+
+    if needs_init:
+        sub_cmd = ["submodule", "update", "--init"]
+        if os.path.isdir(ref_sdk) and os.path.exists(os.path.join(ref_sdk, ".git")):
+            sub_cmd.extend(["--reference", ref_sdk])
+        sub_cmd.append("ANT-Android-SDKs")
+        git_cmd(sub_cmd, cwd=warm_wt)
+
+
+def _ensure_warm_config_links(warm_wt, search_roots):
+    """Links ignored local Gradle/Jira config files into warm_wt when present in main/caller worktree."""
+    for cfg_name in WARM_CONFIG_SYMLINKS:
+        dst = os.path.join(warm_wt, cfg_name)
+        if os.path.lexists(dst):
+            if os.path.islink(dst) and not os.path.exists(dst):
+                os.unlink(dst)
+            else:
+                continue
+        for root in search_roots:
+            cand = os.path.join(root, cfg_name)
+            if os.path.exists(cand):
+                os.symlink(os.path.realpath(cand), dst)
+                break
+
+
+def prepare_warm_verify_worktree(ref="HEAD", warm_dir=None, cwd=None):
+    """
+    Prepares or reuses a persistent detached-HEAD warm verify worktree (default
+    ~/.cache/att_wt_verify_warm) checked out to `ref`, preserving ignored build
+    outputs (app/build/, .gradle/, .kotlin/) without touching feature/* or sprint/* branches.
+    Must be called under sprint_lock.
+    """
+    caller_cwd = os.path.abspath(cwd or os.getcwd())
+    current_wt = os.path.abspath(git_cmd(["rev-parse", "--show-toplevel"], cwd=caller_cwd).stdout.strip())
+    worktrees = get_worktrees(cwd=current_wt)
+    if not worktrees:
+        raise RuntimeError("No git worktrees found.")
+    main_wt = worktrees[0]["path"]
+
+    target_ref = (ref or "HEAD").strip()
+    target_sha = git_cmd(["rev-parse", "--verify", f"{target_ref}^{{commit}}"], cwd=current_wt).stdout.strip()
+
+    raw_warm = warm_dir or os.environ.get(WARM_WORKTREE_ENV_VAR) or DEFAULT_WARM_VERIFY_WORKTREE
+    warm_wt = os.path.abspath(os.path.expanduser(raw_warm))
+
+    real_warm = os.path.realpath(warm_wt)
+    if real_warm in (os.path.realpath(main_wt), os.path.realpath(current_wt)):
+        raise RuntimeError(
+            f"Warm verify worktree path '{warm_wt}' must be separate from main/caller worktrees."
+        )
+    for wt in worktrees:
+        if os.path.realpath(wt["path"]) == real_warm and wt.get("branch"):
+            raise RuntimeError(
+                f"Refusing to reuse '{warm_wt}' as warm verify worktree because branch "
+                f"'{wt['branch']}' is checked out there."
+            )
+
+    if os.path.exists(warm_wt):
+        common_cur = _git_common_dir(current_wt)
+        res_warm = git_cmd(["rev-parse", "--git-common-dir"], cwd=warm_wt, check=False)
+        if res_warm.returncode != 0:
+            raise RuntimeError(f"Warm verify path '{warm_wt}' exists but is not a git worktree.")
+        if _git_common_dir(warm_wt) != common_cur:
+            raise RuntimeError(
+                f"Warm verify worktree '{warm_wt}' belongs to a different git repository."
+            )
+        subprocess.run(["git", "-C", warm_wt, "rebase", "--abort"], capture_output=True)
+        subprocess.run(["git", "-C", warm_wt, "merge", "--abort"], capture_output=True)
+        guard_submodules(warm_wt)
+        git_cmd(["checkout", "--detach", "--force", target_sha], cwd=warm_wt)
+        # Clean untracked non-ignored files only (never -x, preserving app/build/, .gradle/, .kotlin/)
+        git_cmd(["clean", "-fd"], cwd=warm_wt)
+    else:
+        git_cmd(["worktree", "prune"], cwd=current_wt, check=False)
+        parent_dir = os.path.dirname(warm_wt)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
+        git_cmd(["worktree", "add", "--detach", warm_wt, target_sha], cwd=current_wt)
+
+    _ensure_warm_submodules(warm_wt, main_wt)
+    _ensure_warm_config_links(warm_wt, (main_wt, current_wt))
+
+    actual_sha = git_cmd(["rev-parse", "HEAD"], cwd=warm_wt).stdout.strip()
+    actual_abbrev = git_cmd(["rev-parse", "--abbrev-ref", "HEAD"], cwd=warm_wt).stdout.strip()
+    if actual_sha != target_sha or actual_abbrev != "HEAD":
+        raise RuntimeError(
+            f"Warm verify worktree '{warm_wt}' failed detached checkout check "
+            f"(HEAD={actual_sha}, abbrev={actual_abbrev}, expected={target_sha})."
+        )
+
+    return {"warm_dir": warm_wt, "commit_sha": target_sha, "ref": target_ref}
+
+
+def run_in_warm_worktree(
+    cmd=None,
+    ref="HEAD",
+    warm_dir=None,
+    cwd=None,
+    lock_path=DEFAULT_LOCK_FILE,
+    timeout_sec=DEFAULT_TIMEOUT_SEC,
+):
+    """
+    Prepares the persistent warm verify worktree at `ref` (detached HEAD) under flock
+    and optionally executes `cmd` inside it, propagating its exit code.
+    """
+    with sprint_lock(lock_path=lock_path, timeout_sec=timeout_sec):
+        info = prepare_warm_verify_worktree(ref=ref, warm_dir=warm_dir, cwd=cwd)
+        print(
+            f"[verify-warm] Prepared detached {info['ref']} ({info['commit_sha'][:8]}) at {info['warm_dir']}",
+            file=sys.stderr,
+            flush=True,
+        )
+        if not cmd:
+            print(info["warm_dir"])
+            return 0
+        if isinstance(cmd, str):
+            res = subprocess.run(cmd, shell=True, cwd=info["warm_dir"])
+        else:
+            res = subprocess.run(list(cmd), cwd=info["warm_dir"])
+        return res.returncode
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="POSIX flock serialization wrapper for parallel sprint execution (REQ-PRO-041.2).",
@@ -609,6 +772,21 @@ def main():
         help="Bypass mandatory Stage 6 PASS Jira verdict verification (only for isolated tests / PO deviation).",
     )
     parser.add_argument(
+        "--verify-warm",
+        action="store_true",
+        help="Prepare/reuse persistent warm verify worktree (~/.cache/att_wt_verify_warm) detached at --ref under flock and run command inside it.",
+    )
+    parser.add_argument(
+        "--ref",
+        default="HEAD",
+        help="Git ref/branch/SHA to check out detached in warm verify worktree (default: HEAD).",
+    )
+    parser.add_argument(
+        "--warm-dir",
+        default=None,
+        help=f"Warm verify worktree path override (default: {DEFAULT_WARM_VERIFY_WORKTREE} or ${WARM_WORKTREE_ENV_VAR}).",
+    )
+    parser.add_argument(
         "cmd",
         nargs=argparse.REMAINDER,
         help="Command to run under lock.",
@@ -649,6 +827,23 @@ def main():
     cmd = args.cmd
     if cmd and cmd[0] == "--":
         cmd = cmd[1:]
+
+    if args.verify_warm:
+        try:
+            ret = run_in_warm_worktree(
+                cmd=cmd,
+                ref=args.ref,
+                warm_dir=args.warm_dir,
+                lock_path=args.lock_file,
+                timeout_sec=args.timeout,
+            )
+            sys.exit(ret)
+        except TimeoutError as te:
+            print(f"ERROR: {te}", file=sys.stderr)
+            sys.exit(124)
+        except Exception as exc:
+            print(f"ERROR: Failed warm verify execution: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     if not cmd:
         parser.print_help(sys.stderr)

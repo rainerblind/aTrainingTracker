@@ -440,7 +440,11 @@ private fun ChronologicalSegmentRow(
     }
 }
 
-private fun carriageModeIcon(mode: PhoneCarriageMode): ImageVector = when (mode) {
+/**
+ * Canonical Material icon representing a [PhoneCarriageMode] across [ActivityCarriageTimelineCard]
+ * and [com.atrainingtracker.trainingtracker.ui.map.ActivityCarriageSyncBar] (`REQ-PER-045`, `REQ-UI-2796`).
+ */
+fun carriageModeIcon(mode: PhoneCarriageMode): ImageVector = when (mode) {
     PhoneCarriageMode.BIKE_HANDLEBAR,
     PhoneCarriageMode.BIKE_JERSEY_BACK,
     PhoneCarriageMode.BIKE_FRONT_POCKET -> Icons.AutoMirrored.Filled.DirectionsBike

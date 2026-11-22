@@ -4588,10 +4588,10 @@
     <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$// Post-resume: add 20 HR samples at 160 bpm -&gt; combined avg over 120 samples = (140*100 + 160*20)/120 = 143.3333</ID>
     <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$// Post-resume: advance 20 steps to emit a new StreamIncrement at p4, 532.0m (+7m above 525.0m), 1150.0m (+150m above 1000.0m)</ID>
     <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$// Verify that concatenating the pre-resume encoded stream + post-resume increment decodes to the exact 4 values (no jump from 0)</ID>
-    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val combinedAlt = com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.decodeDoubles(preEncodedAlt + increment!!.altitudeIncrement)</ID>
-    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val combinedDist = com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.decodeDoubles(preEncodedDist + increment.distanceIncrement)</ID>
-    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val preEncodedAlt = com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(listOf(500.0, 510.0, 525.0))</ID>
-    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val preEncodedDist = com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(listOf(0.0, 400.0, 1000.0))</ID>
+    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val combinedAlt = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.decodeDoubles(preEncodedAlt + increment!!.altitudeIncrement)</ID>
+    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val combinedDist = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.decodeDoubles(preEncodedDist + increment.distanceIncrement)</ID>
+    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val preEncodedAlt = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.encodeDoubles(listOf(500.0, 510.0, 525.0))</ID>
+    <ID>MaxLineLength:LiveWorkoutSessionTest.kt$LiveWorkoutSessionTest$val preEncodedDist = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.encodeDoubles(listOf(0.0, 400.0, 1000.0))</ID>
     <ID>MaxLineLength:LocalizationPercentIntegrityTest.kt$LocalizationPercentIntegrityTest$private</ID>
     <ID>MaxLineLength:LocalizationPercentIntegrityTest.kt$LocalizationPercentIntegrityTest$violations.add("[$dirName/$xmlName] Key '$key' contains '%%' but has no format specifiers: \"$text\"")</ID>
     <ID>MaxLineLength:LocalizationTestCache.kt$LocalizationTestCache$*</ID>
@@ -4707,7 +4707,7 @@
     <ID>MaxLineLength:MapDetailLayout.kt$viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)</ID>
     <ID>MaxLineLength:MapDetailLayout.kt$viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)</ID>
     <ID>MaxLineLength:MapDetailLayout.kt$viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)</ID>
-    <ID>MaxLineLength:MapDetailLayoutCollapsingHeaderContractTest.kt$MapDetailLayoutCollapsingHeaderContractTest$File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/utils/CollapsingAppBarNestedScrollConnection.kt")</ID>
+    <ID>MaxLineLength:MapDetailLayoutCollapsingHeaderContractTest.kt$MapDetailLayoutCollapsingHeaderContractTest$File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/util/CollapsingAppBarNestedScrollConnection.kt")</ID>
     <ID>MaxLineLength:MapDetailLayoutDynamicViewportContractTest.kt$MapDetailLayoutDynamicViewportContractTest$content.contains(".weight(1f)\n .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)")</ID>
     <ID>MaxLineLength:MapDetailLayoutDynamicViewportContractTest.kt$MapDetailLayoutDynamicViewportContractTest$content.contains(".weight(1f)\r\n .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)")</ID>
     <ID>MaxLineLength:MapDetailLayoutMetadataSlotContractTest.kt$MapDetailLayoutMetadataSlotContractTest$Regex("""metadataContent:\s*\(@Composable\s+ColumnScope\.\(\)\s*-&gt;\s*Unit\)\?\s*=\s*null""").containsMatchIn(content)</ID>
@@ -7606,8 +7606,8 @@
     <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val chunkClusterIds = snapshots.mapNotNull { if (it.clusterId != -1L) it.clusterId else null }.toSet()</ID>
     <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)</ID>
     <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)</ID>
-    <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val encodedAltitudes = if (sampledAltitudes.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null</ID>
-    <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val encodedDistances = if (sampledDistances.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledDistances) else null</ID>
+    <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val encodedAltitudes = if (sampledAltitudes.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null</ID>
+    <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val encodedDistances = if (sampledDistances.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.encodeDoubles(sampledDistances) else null</ID>
     <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val engine = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)</ID>
     <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val freshName = summariesManager.getString(current.id, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)</ID>
     <ID>MaxLineLength:WorkoutRepository.kt$WorkoutRepository$val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)</ID>
@@ -8069,7 +8069,7 @@
     <ID>NestedBlockDepth:YearlyContributionGridTest.kt$YearlyContributionGridTest$@Test fun testCalendarMatrixMapping_standardAndLeapYears()</ID>
     <ID>NestedBlockDepth:ZoneCalculatorDialog.kt$ZoneCalculatorStateHolder$private fun recalculate()</ID>
     <ID>NewLineAtEndOfFile:BikeTypeSelector.kt$com.atrainingtracker.trainingtracker.ui.equipment.BikeTypeSelector.kt</ID>
-    <ID>NewLineAtEndOfFile:CollapsingAppBarNestedScrollConnection.kt$com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection.kt</ID>
+    <ID>NewLineAtEndOfFile:CollapsingAppBarNestedScrollConnection.kt$com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection.kt</ID>
     <ID>NewLineAtEndOfFile:ControlTrackingButton.kt$com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingButton.kt</ID>
     <ID>NewLineAtEndOfFile:DeletionProgress.kt$com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress.kt</ID>
     <ID>NewLineAtEndOfFile:DescripitonData.kt$com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescripitonData.kt</ID>
@@ -8082,7 +8082,7 @@
     <ID>NewLineAtEndOfFile:EditRouteScreen.kt$com.atrainingtracker.trainingtracker.ui.routes.EditRouteScreen.kt</ID>
     <ID>NewLineAtEndOfFile:EditSensorFieldDialog.kt$com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog.kt</ID>
     <ID>NewLineAtEndOfFile:EditSportTypeDialog.kt$com.atrainingtracker.banalservice.ui.sporttype.EditSportTypeDialog.kt</ID>
-    <ID>NewLineAtEndOfFile:EncodingUtils.kt$com.atrainingtracker.trainingtracker.ui.utils.EncodingUtils.kt</ID>
+    <ID>NewLineAtEndOfFile:EncodingUtils.kt$com.atrainingtracker.trainingtracker.ui.util.EncodingUtils.kt</ID>
     <ID>NewLineAtEndOfFile:EquipmentData.kt$com.atrainingtracker.trainingtracker.ui.aftermath.EquipmentData.kt</ID>
     <ID>NewLineAtEndOfFile:EquipmentDataProvider.kt$com.atrainingtracker.trainingtracker.ui.aftermath.EquipmentDataProvider.kt</ID>
     <ID>NewLineAtEndOfFile:EquipmentFragment.kt$com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment.kt</ID>

@@ -137,6 +137,7 @@ open class FilterManager(
 
         // now, that we have valid sensor, we are ready to create the filter
         val myFilter: MyFilter<*> = instantiateFilter(filterData)
+        syncFilterDeviceIdentity(filterData, myFilter, mySensor)
 
         val existing = myFilterMap.putIfAbsent(hashKey, myFilter)
         if (existing == null) {
@@ -179,11 +180,30 @@ open class FilterManager(
 
     open fun resolveSensor(filterData: FilterData?): MySensor<*>? {
         if (filterData == null) return null
+        if (filterData.deviceId > 0L) {
+            val byId = mDeviceManager?.getMyDeviceById(filterData.deviceId)
+            if (byId != null) {
+                return byId.getSensor(filterData.sensorType)
+            }
+            if (filterData.deviceName != null) {
+                return mDeviceManager?.getMyDeviceByName(filterData.deviceName)?.getSensor(filterData.sensorType)
+            }
+            return null
+        }
         return if (filterData.deviceName == null) {
             mMySensorManager?.getSensor(filterData.sensorType)
         } else {
             mDeviceManager?.getMyDeviceByName(filterData.deviceName)?.getSensor(filterData.sensorType)
         }
+    }
+
+    private fun syncFilterDeviceIdentity(filterData: FilterData, filter: MyFilter<*>, sensor: MySensor<*>?) {
+        val resolvedName = if (filterData.deviceId > 0L) {
+            sensor?.device?.name ?: filterData.deviceName
+        } else {
+            filterData.deviceName
+        }
+        filter.updateDeviceIdentity(filterData.deviceId, resolvedName)
     }
 
     @Synchronized
@@ -199,13 +219,9 @@ open class FilterManager(
         }
         if (newSensor != null) {
             mMapFilter2Sensor[myFilter] = newSensor
+            // addSensorListener delivers the current value once when activated (REQ-UI-2800.3)
             @Suppress("UNCHECKED_CAST")
             (newSensor as MySensor<Any?>).addSensorListener(myFilter as MySensor.SensorListener<Any?>)
-            val currentValue = newSensor.value
-            if (currentValue != null) {
-                @Suppress("UNCHECKED_CAST")
-                (myFilter as MyFilter<Any?>).newValue(currentValue)
-            }
         } else {
             mMapFilter2Sensor.remove(myFilter)
         }
@@ -244,6 +260,7 @@ open class FilterManager(
 
     private fun syncFilterBinding(filterData: FilterData, filter: MyFilter<*>) {
         val currentSensor = resolveSensor(filterData)
+        syncFilterDeviceIdentity(filterData, filter, currentSensor)
         val boundSensor = mMapFilter2Sensor[filter]
         if (currentSensor is ProxySensor<*>) {
             if (boundSensor != currentSensor) {

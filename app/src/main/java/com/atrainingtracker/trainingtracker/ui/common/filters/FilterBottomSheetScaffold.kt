@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -44,6 +45,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,7 +62,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
  * 3. Scrollable content body with standardized horizontal padding and vertical spacing.
  * 4. Bottom horizontal divider.
  * 5. Dedicated bottom action bar with full-width split "Reset all" and "OK" buttons,
- *    anchored flush to the bottom edge with [navigationBarsPadding].
+ *    anchored flush to the bottom edge with [navigationBarsPadding] and [imePadding] (`REQ-UI-2799.3`).
  *
  * @param title Localized headline for the filter sheet.
  * @param onDismissRequest Callback invoked when the sheet is dismissed via gesture or close button.
@@ -90,79 +92,104 @@ fun FilterBottomSheetScaffold(
         dragHandle = { MinimumDragHandle() },
         modifier = modifier
     ) {
+        FilterBottomSheetBody(
+            title = title,
+            onDismissRequest = onDismissRequest,
+            onClearAll = onClearAll,
+            onApply = onApply,
+            content = content
+        )
+    }
+}
+
+/**
+ * Inner body of [FilterBottomSheetScaffold] applying single [navigationBarsPadding] and [imePadding]
+ * matching `AppBottomSheetBody` so filter text inputs stay visible above the software keyboard
+ * (`REQ-UI-2799.3`, `ATT-8125`).
+ */
+@Composable
+internal fun FilterBottomSheetBody(
+    title: String,
+    onDismissRequest: () -> Unit,
+    onClearAll: () -> Unit,
+    onApply: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .testTag("filter_bottom_sheet_body")
+    ) {
+        // Header Bar: Title and Close dismiss button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            IconButton(onClick = onDismissRequest) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.Cancel)
+                )
+            }
+        }
+
+        HorizontalDivider()
+
+        // Scrollable Content
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Bar: Title and Close dismiss button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            content()
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        HorizontalDivider()
+
+        // Dedicated Bottom Action Bar: Reset all & Apply
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = onClearAll,
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = stringResource(R.string.filter_reset),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-
-                IconButton(onClick = onDismissRequest) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.Cancel)
-                    )
-                }
             }
 
-            HorizontalDivider()
-
-            // Scrollable Content
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Button(
+                onClick = onApply,
+                modifier = Modifier.weight(1f)
             ) {
-                content()
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            HorizontalDivider()
-
-            // Dedicated Bottom Action Bar: Reset all & Apply
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = onClearAll,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.filter_reset),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Button(
-                    onClick = onApply,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.OK),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.OK),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

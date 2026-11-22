@@ -95,7 +95,7 @@ fun AdvancedTuningScreen(
     val scope = rememberCoroutineScope()
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = null)
-    val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val preferenceManager = remember { MyPreferenceManager.getInstance(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = null)

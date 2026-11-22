@@ -388,7 +388,7 @@ class AdvancedTuningAccordionTest {
             com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig.DEFAULT_TABS,
             mockContext
         )
-        assertEquals("8/14 List, 5 Tabs (14/14)", defaultSubtitle)
+        assertEquals("8/14 List, 5 Tabs (15/15)", defaultSubtitle)
 
         val editedTabs = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig.DEFAULT_TABS.dropLast(1)
         val editedSubtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(
@@ -396,7 +396,7 @@ class AdvancedTuningAccordionTest {
             editedTabs,
             mockContext
         )
-        assertEquals("8/14 List, 4 Tabs (12/14)", editedSubtitle)
+        assertEquals("8/14 List, 4 Tabs (13/15)", editedSubtitle)
     }
 
     @Test

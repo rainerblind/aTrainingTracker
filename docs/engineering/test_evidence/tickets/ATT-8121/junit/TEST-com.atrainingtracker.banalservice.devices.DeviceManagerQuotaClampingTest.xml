@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:30:15.599Z" hostname="rainer-HP-EliteBook-850-G5" time="22.439">
+  <properties/>
+  <testcase name="testStartSearchForPairedDevices_clampsSearchQueue_whenFreeTier" classname="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" time="20.62"/>
+  <testcase name="testStartSearchForPairedDevices_doesNotClampSearchQueue_whenProTier" classname="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" time="1.806"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

@@ -22,7 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -32,7 +32,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 // DB Helper to store which ANT Devices were active at a certain workout
-public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
+public class ActiveDevicesDbHelper extends TrackingSQLiteOpenHelper {
     public static final String DB_NAME = "ActiveDevices.db";
     public static final int DB_VERSION = 1;
     private static final String TAG = "ActiveDevicesDbHelper";

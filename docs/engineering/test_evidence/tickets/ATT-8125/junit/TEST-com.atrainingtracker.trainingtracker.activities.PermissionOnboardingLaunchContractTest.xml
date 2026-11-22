@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:59:25.451Z" hostname="rainer-HP-EliteBook-850-G5" time="8.347">
+  <properties/>
+  <testcase name="rule47_retainsModalOverlayAlongsideHostScreenInComposeTree" classname="com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest" time="7.096"/>
+  <testcase name="cleanInstall_permissionsUngranted_showsOnboardingSheet" classname="com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest" time="0.947"/>
+  <testcase name="upgradedUser_allPermissionsAlreadyGranted_autoCompletesOnboarding" classname="com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest" time="0.163"/>
+  <testcase name="returningUser_onboardingCompleted_bypassesOnboardingSheet" classname="com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest" time="0.14"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

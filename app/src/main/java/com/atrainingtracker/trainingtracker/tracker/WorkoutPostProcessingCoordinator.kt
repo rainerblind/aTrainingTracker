@@ -49,7 +49,7 @@ object WorkoutPostProcessingCoordinator {
      * Immutable per-workout snapshot captured synchronously in `TrackerService.endWorkout()`
      * before `TRACKING_FINISHED_INTENT` is broadcast (`REQ-TRK-091.1`).
      */
-    data class PostProcessingRequest(
+    data class PostProcessingRequest @JvmOverloads constructor(
         val workoutId: Long,
         val baseFileName: String?,
         val h10Armed: Boolean,
@@ -58,15 +58,17 @@ object WorkoutPostProcessingCoordinator {
         val verityArmed: Boolean,
         val verityStartMs: Long,
         val verityArmedToken: Long,
-        val ertsEnabled: Boolean
+        val ertsEnabled: Boolean,
+        val workoutEndMs: Long = 0L
     )
 
     /**
-     * Injectable execution boundary for deterministic pure-JVM unit testing (`TST-TRK-091`).
+     * Injectable execution boundary for deterministic pure-JVM unit testing (`TST-TRK-091`, `TST-TRK-093`).
      */
     interface PostProcessingSteps {
         suspend fun runPolarH10Backfill(context: Context, request: PostProcessingRequest): Boolean
         suspend fun runPolarVerityBackfill(context: Context, request: PostProcessingRequest): Boolean
+        suspend fun runPhysiologyRecompute(context: Context, request: PostProcessingRequest): Boolean = false
         suspend fun runHrvRecompute(context: Context, workoutId: Long): Boolean
         suspend fun runErtsRecompute(context: Context, workoutId: Long): Boolean
         suspend fun reloadWorkout(context: Context, workoutId: Long)
@@ -94,7 +96,9 @@ object WorkoutPostProcessingCoordinator {
                 baseFileName = baseName,
                 startTimeMs = request.h10StartMs,
                 showOwnNotification = false,
-                expectedArmedToken = request.h10ArmedToken
+                expectedArmedToken = request.h10ArmedToken,
+                endTimeMs = request.workoutEndMs,
+                runPostBackfillRecompute = false
             )
         }
 
@@ -107,6 +111,14 @@ object WorkoutPostProcessingCoordinator {
                 startTimeMs = request.verityStartMs,
                 showOwnNotification = false,
                 expectedArmedToken = request.verityArmedToken
+            )
+        }
+
+        override suspend fun runPhysiologyRecompute(context: Context, request: PostProcessingRequest): Boolean {
+            return PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill(
+                context,
+                request.workoutId,
+                request.baseFileName
             )
         }
 
@@ -150,15 +162,23 @@ object WorkoutPostProcessingCoordinator {
             currentStep: Int,
             totalSteps: Int
         ) {
-            WorkoutPostProcessingNotificationManager(context).showStageProgress(stage, currentStep, totalSteps)
+            try {
+                WorkoutPostProcessingNotificationManager(context).showStageProgress(stage, currentStep, totalSteps)
+            } catch (t: Throwable) {
+                safeLogWarn("Non-fatal notification update error for stage $stage: ${t.message}")
+            }
         }
 
         override fun onBatchCompleted(context: Context, hadWarning: Boolean) {
-            val manager = WorkoutPostProcessingNotificationManager(context)
-            if (hadWarning) {
-                manager.showWarningNotification()
-            } else {
-                manager.cancelNotification()
+            try {
+                val manager = WorkoutPostProcessingNotificationManager(context)
+                if (hadWarning) {
+                    manager.showWarningNotification()
+                } else {
+                    manager.cancelNotification()
+                }
+            } catch (t: Throwable) {
+                safeLogWarn("Non-fatal notification completion error: ${t.message}")
             }
         }
     }
@@ -394,17 +414,23 @@ object WorkoutPostProcessingCoordinator {
                     completedSteps++
                 }
 
+                var verityBackfilled = false
                 if (request.verityArmed) {
                     updateProgress(PostProcessingStage.POLAR_VERITY, completedSteps, totalSteps)
                     host.onStageStarted(appContext, PostProcessingStage.POLAR_VERITY, completedSteps, totalSteps)
                     hadWarning = runStageIsolated("Polar Verity Sense backfill", request.workoutId) {
-                        steps.runPolarVerityBackfill(appContext, request)
+                        verityBackfilled = steps.runPolarVerityBackfill(appContext, request)
                     } || hadWarning
                     completedSteps++
                 }
 
                 updateProgress(PostProcessingStage.RECOMPUTE, completedSteps, totalSteps)
                 host.onStageStarted(appContext, PostProcessingStage.RECOMPUTE, completedSteps, totalSteps)
+                if (request.h10Armed || verityBackfilled) {
+                    hadWarning = runStageIsolated("Post-backfill physiology recompute", request.workoutId) {
+                        steps.runPhysiologyRecompute(appContext, request)
+                    } || hadWarning
+                }
                 hadWarning = runStageIsolated("HRV recompute", request.workoutId) {
                     steps.runHrvRecompute(appContext, request.workoutId)
                 } || hadWarning
@@ -449,6 +475,14 @@ object WorkoutPostProcessingCoordinator {
         return hadWarning
     }
 
+    private fun safeLogWarn(message: String) {
+        try {
+            Log.w(TAG, message)
+        } catch (_: RuntimeException) {
+            // Unmocked android.util.Log in plain JVM unit test teardown
+        }
+    }
+
     private suspend inline fun runStageIsolated(
         stageName: String,
         workoutId: Long,
@@ -460,7 +494,11 @@ object WorkoutPostProcessingCoordinator {
         } catch (ce: CancellationException) {
             throw ce
         } catch (t: Throwable) {
-            Log.e(TAG, "Error during $stageName for workout $workoutId: ${t.message}", t)
+            try {
+                Log.e(TAG, "Error during $stageName for workout $workoutId: ${t.message}", t)
+            } catch (_: RuntimeException) {
+                // Unmocked android.util.Log in plain JVM unit test teardown
+            }
             true
         }
     }

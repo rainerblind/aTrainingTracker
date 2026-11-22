@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilterPerformanceEquivalenceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:15:47.066Z" hostname="rainer-HP-EliteBook-850-G5" time="0.862">
+  <properties/>
+  <testcase name="testFilterLiveCausal_50RunsOf300BeatsWithinLatencyBudget_tstUi2800_2" classname="com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilterPerformanceEquivalenceTest" time="0.569"/>
+  <testcase name="testSharedFilterInstance_concurrentThreadsHaveZeroScratchBufferCorruption_tstUi2800_2" classname="com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilterPerformanceEquivalenceTest" time="0.221"/>
+  <testcase name="testFilterLiveCausalAndBidirectional_bitExactEquivalenceOver300Beats_tstUi2800_2" classname="com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilterPerformanceEquivalenceTest" time="0.058"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

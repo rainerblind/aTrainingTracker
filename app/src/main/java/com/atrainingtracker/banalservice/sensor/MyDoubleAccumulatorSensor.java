@@ -18,24 +18,11 @@
 
 package com.atrainingtracker.banalservice.sensor;
 
-import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.MyDevice;
 
 
 public class MyDoubleAccumulatorSensor extends MyAccumulatorSensor<Double> {
-    private static final String TAG = "MyDoubleAccumulatorSensor";
-
     public MyDoubleAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
-        super(myDevice, sensorType, respectPause, 0.0);
-    }
-
-    @Override
-    // doing the most obvious stuff...
-    protected Double add(Double a, Double b) {
-        return a + b;
-    }
-
-    protected Double sub(Double a, Double b) {
-        return a - b;
+        super(myDevice, sensorType, respectPause, 0.0, Double::sum, (a, b) -> a - b);
     }
 }

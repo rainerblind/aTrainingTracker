@@ -15,13 +15,14 @@ Invariants:
 import argparse
 from contextlib import contextmanager
 import fcntl
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 
 
 DEFAULT_PACKAGE = "com.atrainingtracker.debug"
@@ -33,6 +34,101 @@ DEFAULT_EMULATOR_LOCK = "/tmp/att_emulator.lock"
 DEFAULT_LOCK_TIMEOUT_SEC = 1800.0
 EMULATOR_LOCK_ENV_VAR = "ATT_EMULATOR_LOCK_HELD"
 SPRINT_LOCK_ENV_VAR = "ATT_SPRINT_LOCK_HELD"
+DEFAULT_EMULATOR_TELEMETRY_PATH = os.path.expanduser("~/.cache/att_emulator_lock_telemetry.jsonl")
+EMULATOR_TELEMETRY_ENV_VAR = "ATT_EMULATOR_TELEMETRY_PATH"
+
+RUNTIME_BUILD_FILES = {
+    "app/build.gradle",
+    "app/build.gradle.kts",
+    "build.gradle",
+    "build.gradle.kts",
+    "settings.gradle",
+    "settings.gradle.kts",
+    "gradle.properties",
+    "gradle/libs.versions.toml",
+    "app/proguard-rules.pro",
+}
+RUNTIME_PATH_SEGMENTS = (
+    "/ui/",
+    "/compose/",
+    "/activities/",
+    "/fragments/",
+    "/dialogs/",
+    "/views/",
+    "/widgets/",
+    "/notifications/",
+    "/services/",
+    "/tracker/",
+    "/banalservice/",
+    "/database/",
+    "/receivers/",
+    "/providers/",
+    "/audio/",
+    "/location/",
+    "/cloud/",
+    "/onlinecommunities/",
+    "/smartwatch/",
+    "/batterysaver/",
+    "/monetization/",
+)
+RUNTIME_FILENAME_SUFFIXES = (
+    "Screen.kt",
+    "Screen.java",
+    "Dialog.kt",
+    "Dialog.java",
+    "Sheet.kt",
+    "Sheet.java",
+    "Theme.kt",
+    "Activity.kt",
+    "Activity.java",
+    "Fragment.kt",
+    "Fragment.java",
+    "Service.kt",
+    "Service.java",
+    "Receiver.kt",
+    "Receiver.java",
+    "Provider.kt",
+    "Provider.java",
+    "View.kt",
+    "View.java",
+    "Widget.kt",
+    "Widget.java",
+    "Application.kt",
+    "Application.java",
+    "Adapter.kt",
+    "Adapter.java",
+)
+RUNTIME_CONTENT_RE = re.compile(
+    r"@Composable\b|androidx\.compose\.|:\s*(?:AppCompat)?Activity\b|:\s*Fragment\b|"
+    r":\s*Service\b|:\s*BroadcastReceiver\b|:\s*ContentProvider\b|"
+    r"\bextends\s+(?:AppCompatActivity|ComponentActivity|Fragment|Service|BroadcastReceiver|ContentProvider)\b"
+)
+
+
+def _resolve_telemetry_path(lock_path: str, telemetry_path: Optional[str] = None) -> Optional[str]:
+    """Resolves JSONL lock telemetry path; skips default file for custom test lock paths."""
+    if telemetry_path is not None:
+        return os.path.abspath(os.path.expanduser(telemetry_path)) if telemetry_path else None
+    env_path = os.environ.get(EMULATOR_TELEMETRY_ENV_VAR)
+    if env_path is not None:
+        return os.path.abspath(os.path.expanduser(env_path)) if env_path else None
+    if lock_path == DEFAULT_EMULATOR_LOCK:
+        return os.path.abspath(DEFAULT_EMULATOR_TELEMETRY_PATH)
+    return None
+
+
+def _append_lock_telemetry(telemetry_file: Optional[str], record: Dict[str, object]) -> None:
+    """Appends one lock telemetry JSON line best-effort (never fails the caller)."""
+    if not telemetry_file:
+        return
+    try:
+        parent = os.path.dirname(telemetry_file)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(telemetry_file, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, sort_keys=True) + "\n")
+    except OSError:
+        pass
 
 
 @contextmanager
@@ -40,10 +136,14 @@ def emulator_session_lock(
     lock_path: str = DEFAULT_EMULATOR_LOCK,
     timeout_sec: float = DEFAULT_LOCK_TIMEOUT_SEC,
     poll_interval_sec: float = 0.25,
+    telemetry_path: Optional[str] = None,
 ) -> Iterator[None]:
     """
     Exclusive POSIX flock serializing all emulator-5554 lifecycle and UI sessions
     (installDebug + am start + uiautomator + input tap + screencap + logcat).
+
+    Logs wait duration to stderr and appends wait/hold telemetry JSONL for empirical
+    Option-2 evaluation (whether a 2nd headless emulator slot is warranted).
 
     Deadlock-prevention invariant (canonical lock hierarchy):
       /tmp/att_emulator.lock MUST always be acquired OUTSIDE /tmp/att_build_merge.lock.
@@ -72,19 +172,48 @@ def emulator_session_lock(
     except OSError:
         pass
 
+    resolved_tel = _resolve_telemetry_path(lock_path, telemetry_path)
     start_time = time.monotonic()
+    acquired_at: Optional[float] = None
+    wait_sec = 0.0
+    contended = False
     warned = False
     prev_env = os.environ.get(EMULATOR_LOCK_ENV_VAR)
     try:
         while True:
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired_at = time.monotonic()
+                wait_sec = acquired_at - start_time
+                contended = warned or wait_sec >= 0.05
                 if lock_path == DEFAULT_EMULATOR_LOCK:
                     os.environ[EMULATOR_LOCK_ENV_VAR] = "1"
+                print(
+                    f"[emulator-lock] Acquired {lock_path} (wait={wait_sec:.3f}s, contended={str(contended).lower()})",
+                    file=sys.stderr,
+                    flush=True,
+                )
                 break
             except (BlockingIOError, IOError, OSError):
                 elapsed = time.monotonic() - start_time
                 if elapsed >= timeout_sec:
+                    print(
+                        f"[emulator-lock] Timeout after {elapsed:.3f}s waiting for {lock_path}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    _append_lock_telemetry(
+                        resolved_tel,
+                        {
+                            "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "lock_path": lock_path,
+                            "pid": os.getpid(),
+                            "wait_sec": round(elapsed, 4),
+                            "hold_sec": 0.0,
+                            "contended": True,
+                            "timed_out": True,
+                        },
+                    )
                     raise TimeoutError(
                         f"Timeout ({timeout_sec:.1f}s) exceeded waiting for emulator session lock on {lock_path}"
                     )
@@ -99,6 +228,20 @@ def emulator_session_lock(
                 time.sleep(poll_interval_sec)
         yield
     finally:
+        if acquired_at is not None:
+            hold_sec = time.monotonic() - acquired_at
+            _append_lock_telemetry(
+                resolved_tel,
+                {
+                    "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "lock_path": lock_path,
+                    "pid": os.getpid(),
+                    "wait_sec": round(wait_sec, 4),
+                    "hold_sec": round(hold_sec, 4),
+                    "contended": contended,
+                    "timed_out": False,
+                },
+            )
         if lock_path == DEFAULT_EMULATOR_LOCK:
             if prev_env is None:
                 os.environ.pop(EMULATOR_LOCK_ENV_VAR, None)
@@ -108,6 +251,126 @@ def emulator_session_lock(
             fcntl.flock(fd, fcntl.LOCK_UN)
         finally:
             os.close(fd)
+
+
+def summarize_lock_telemetry(telemetry_path: Optional[str] = None) -> Dict[str, object]:
+    """Aggregates /tmp/att_emulator.lock wait/hold telemetry for Option 2 capacity decisions."""
+    path = telemetry_path or os.environ.get(EMULATOR_TELEMETRY_ENV_VAR) or DEFAULT_EMULATOR_TELEMETRY_PATH
+    path = os.path.abspath(os.path.expanduser(path))
+    waits: List[float] = []
+    holds: List[float] = []
+    contended_count = 0
+    timeout_count = 0
+
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    entry = json.loads(raw)
+                except ValueError:
+                    continue
+                w = float(entry.get("wait_sec", 0.0) or 0.0)
+                h = float(entry.get("hold_sec", 0.0) or 0.0)
+                waits.append(w)
+                holds.append(h)
+                if entry.get("contended"):
+                    contended_count += 1
+                if entry.get("timed_out"):
+                    timeout_count += 1
+
+    total = len(waits)
+    sorted_waits = sorted(waits)
+    p95_wait = sorted_waits[int(0.95 * (total - 1))] if total else 0.0
+    return {
+        "telemetry_path": path,
+        "total_sessions": total,
+        "contended_sessions": contended_count,
+        "timeouts": timeout_count,
+        "total_wait_sec": round(sum(waits), 3),
+        "avg_wait_sec": round(sum(waits) / total, 3) if total else 0.0,
+        "max_wait_sec": round(max(waits), 3) if total else 0.0,
+        "p95_wait_sec": round(p95_wait, 3),
+        "total_hold_sec": round(sum(holds), 3),
+        "avg_hold_sec": round(sum(holds) / total, 3) if total else 0.0,
+    }
+
+
+def get_diff_changed_files(
+    base_ref: str,
+    head_ref: str = "HEAD",
+    repo_root: Optional[str] = None,
+) -> List[str]:
+    """Returns sorted list of changed repo-relative file paths for git diff base_ref...head_ref."""
+    cmd = ["git"]
+    if repo_root:
+        cmd.extend(["-C", repo_root])
+    cmd.extend(["diff", "--name-only", f"{base_ref}...{head_ref}"])
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        err = res.stderr.strip() or res.stdout.strip()
+        raise RuntimeError(f"Failed to compute git diff {base_ref}...{head_ref}: {err}")
+    return sorted({line.strip().replace("\\", "/") for line in res.stdout.splitlines() if line.strip()})
+
+
+def classify_stage6_install_need(
+    changed_files: Sequence[str],
+    repo_root: Optional[str] = None,
+) -> Dict[str, object]:
+    """
+    Determines whether Stage 6 Cold Review requires building & installing the debug APK
+    onto the emulator (`installDebug`), or can skip it cleanly on non-UI / non-runtime diffs.
+
+    Triggers installDebug whenever the diff touches any UI, Compose, Activity, Fragment,
+    Manifest, Android resource/asset, Service/Receiver/Provider, runtime sensor/DB, or
+    Gradle APK build configuration file.
+    """
+    matched: List[Dict[str, str]] = []
+    for raw_path in changed_files:
+        norm = raw_path.strip().replace("\\", "/")
+        if not norm:
+            continue
+        base = os.path.basename(norm)
+        reason: Optional[str] = None
+
+        if norm in RUNTIME_BUILD_FILES:
+            reason = "gradle_build_config"
+        elif base == "AndroidManifest.xml" or norm.endswith("/AndroidManifest.xml"):
+            reason = "android_manifest"
+        elif norm.startswith(("app/src/main/res/", "app/src/main/assets/")):
+            reason = "android_resource_or_asset"
+        elif norm.startswith("app/src/main/"):
+            if any(seg in norm for seg in RUNTIME_PATH_SEGMENTS):
+                reason = "android_ui_or_runtime_package"
+            elif base.endswith(RUNTIME_FILENAME_SUFFIXES) or "Compose" in base:
+                reason = "android_component_filename"
+            elif repo_root and norm.endswith((".kt", ".java")):
+                full_path = os.path.join(repo_root, norm)
+                if os.path.isfile(full_path):
+                    try:
+                        with open(full_path, "r", encoding="utf-8", errors="replace") as fh:
+                            if RUNTIME_CONTENT_RE.search(fh.read()):
+                                reason = "android_runtime_or_compose_symbol"
+                    except OSError:
+                        pass
+
+        if reason:
+            matched.append({"file": norm, "reason": reason})
+
+    install_required = len(matched) > 0
+    if install_required:
+        summary = f"Android UI/runtime files touched ({len(matched)} of {len(changed_files)} changed file(s))"
+    else:
+        summary = f"Non-UI/non-runtime diff ({len(changed_files)} changed file(s)); installDebug can be skipped"
+
+    return {
+        "install_required": install_required,
+        "changed_files_count": len(changed_files),
+        "matched_files": matched,
+        "reason": summary,
+    }
 
 
 def exec_locked_session(
@@ -121,15 +384,39 @@ def exec_locked_session(
     target_serial: str = TARGET_SERIAL,
     package: str = DEFAULT_PACKAGE,
     adb_bin: str = "adb",
+    telemetry_path: Optional[str] = None,
+    skip_if_non_ui: bool = False,
+    base_ref: Optional[str] = None,
+    head_ref: str = "HEAD",
+    repo_root: Optional[str] = None,
 ) -> int:
     """
     Executes a complete emulator verification session (e.g. installDebug + am start +
     uiautomator + taps + screencap + logcat) atomically under /tmp/att_emulator.lock.
+    When `skip_if_non_ui` is True with `base_ref`, inspects `git diff base_ref...head_ref`
+    before acquiring the emulator lock and skips cleanly with exit code 0 on non-UI diffs.
     """
     if not cmd:
         raise ValueError("exec requires a non-empty command after '--'.")
 
-    with emulator_session_lock(lock_path=lock_path, timeout_sec=lock_timeout_sec):
+    if skip_if_non_ui:
+        if not base_ref:
+            raise ValueError("--skip-if-non-ui requires --base-ref (e.g. sprint/<SPRINT_NAME>).")
+        changed = get_diff_changed_files(base_ref=base_ref, head_ref=head_ref, repo_root=repo_root)
+        classification = classify_stage6_install_need(changed, repo_root=repo_root)
+        if not classification["install_required"]:
+            print(
+                f"[emulator] Skipping emulator session ({classification['reason']}).",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 0
+
+    with emulator_session_lock(
+        lock_path=lock_path,
+        timeout_sec=lock_timeout_sec,
+        telemetry_path=telemetry_path,
+    ):
         active_serial = target_serial
         if ensure:
             active_serial = ensure_emulator(
@@ -569,9 +856,32 @@ def build_cli_parser() -> argparse.ArgumentParser:
     p_exec.add_argument("--boot-timeout", type=int, default=120, help="Emulator boot timeout in seconds (default: 120)")
     p_exec.add_argument("--timeout", type=float, default=DEFAULT_LOCK_TIMEOUT_SEC, help="Lock wait timeout in seconds (default: 1800)")
     p_exec.add_argument("--lock-file", default=DEFAULT_EMULATOR_LOCK, help=f"Lock file path (default: {DEFAULT_EMULATOR_LOCK})")
+    p_exec.add_argument("--telemetry-file", default=None, help=f"Lock telemetry JSONL path (default: {DEFAULT_EMULATOR_TELEMETRY_PATH})")
+    p_exec.add_argument("--skip-if-non-ui", action="store_true", help="Skip emulator session cleanly if git diff base-ref...head-ref has zero UI/runtime files")
+    p_exec.add_argument("--base-ref", default=None, help="Base git ref for --skip-if-non-ui (e.g. sprint/<SPRINT_NAME>)")
+    p_exec.add_argument("--head-ref", default="HEAD", help="Head git ref for --skip-if-non-ui (default: HEAD)")
+    p_exec.add_argument("--repo-root", default=None, help="Repository root for git diff / symbol inspection (default: cwd)")
     p_exec.add_argument("--serial", default=TARGET_SERIAL, help="Target emulator serial (default: emulator-5554)")
     p_exec.add_argument("--package", default=DEFAULT_PACKAGE, help=f"Target package (default: {DEFAULT_PACKAGE})")
     p_exec.add_argument("cmd", nargs=argparse.REMAINDER, help="Command to execute under the emulator session lock (prefix with --)")
+
+    # check-install-required
+    p_chk = subparsers.add_parser(
+        "check-install-required",
+        help="Classify whether Stage 6 diff touches UI/runtime files requiring emulator installDebug",
+    )
+    p_chk.add_argument("--base", "--base-ref", dest="base_ref", required=True, help="Base git ref (e.g. sprint/<SPRINT_NAME>)")
+    p_chk.add_argument("--head", "--head-ref", dest="head_ref", default="HEAD", help="Head git ref (default: HEAD or feature/<KEY>)")
+    p_chk.add_argument("--repo-root", default=".", help="Repository root (default: .)")
+    p_chk.add_argument("--json", action="store_true", help="Print JSON classification result")
+
+    # lock-stats
+    p_stats = subparsers.add_parser(
+        "lock-stats",
+        help="Summarize /tmp/att_emulator.lock wait/hold telemetry for Option 2 capacity decisions",
+    )
+    p_stats.add_argument("--telemetry-file", default=None, help=f"Telemetry JSONL path (default: {DEFAULT_EMULATOR_TELEMETRY_PATH})")
+    p_stats.add_argument("--json", action="store_true", help="Print JSON summary")
 
     return parser
 
@@ -634,8 +944,38 @@ def main() -> None:
                 lock_path=args.lock_file,
                 target_serial=args.serial,
                 package=args.package,
+                telemetry_path=args.telemetry_file,
+                skip_if_non_ui=args.skip_if_non_ui,
+                base_ref=args.base_ref,
+                head_ref=args.head_ref,
+                repo_root=args.repo_root,
             )
             sys.exit(rc)
+
+        elif args.command == "check-install-required":
+            repo_root = os.path.abspath(args.repo_root)
+            changed = get_diff_changed_files(args.base_ref, args.head_ref, repo_root=repo_root)
+            classification = classify_stage6_install_need(changed, repo_root=repo_root)
+            if args.json:
+                print(json.dumps(classification, indent=2, sort_keys=True))
+            else:
+                flag = "true" if classification["install_required"] else "false"
+                print(f"INSTALL_REQUIRED={flag} ({classification['reason']})")
+                for item in classification["matched_files"]:
+                    print(f"  - {item['file']} [{item['reason']}]")
+
+        elif args.command == "lock-stats":
+            summary = summarize_lock_telemetry(telemetry_path=args.telemetry_file)
+            if args.json:
+                print(json.dumps(summary, indent=2, sort_keys=True))
+            else:
+                print(
+                    f"sessions={summary['total_sessions']} contended={summary['contended_sessions']} "
+                    f"timeouts={summary['timeouts']} total_wait={summary['total_wait_sec']}s "
+                    f"avg_wait={summary['avg_wait_sec']}s p95_wait={summary['p95_wait_sec']}s "
+                    f"max_wait={summary['max_wait_sec']}s avg_hold={summary['avg_hold_sec']}s "
+                    f"path={summary['telemetry_path']}"
+                )
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

@@ -53,14 +53,29 @@ class ClimbsDatabaseRegistryTest {
     @Test
     fun databaseConnectionManager_includesClimbsDb_inActiveDatabases() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val activeDatabases = DatabaseConnectionManager.getActiveDatabases(context)
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+        ClimbsDatabaseManager.resetForTesting(null)
 
-        val found = activeDatabases.any { db ->
-            val path = db.path
-            path != null && File(path).name == ClimbsDbHelper.DATABASE_NAME
+        try {
+            // Non-eager invariant (REQ-MIG-057.3): unopened Climbs.db is not eagerly opened
+            val beforeOpen = DatabaseConnectionManager.getActiveDatabases(context).any { db ->
+                val path = db.path
+                path != null && File(path).name == ClimbsDbHelper.DATABASE_NAME
+            }
+            assertFalse("Unopened Climbs.db must not be eagerly opened by getActiveDatabases()", beforeOpen)
+
+            // Once opened, Climbs.db must be tracked in getActiveDatabases()
+            ClimbsDatabaseManager.getInstance(context).database
+            val activeDatabases = DatabaseConnectionManager.getActiveDatabases(context)
+            val found = activeDatabases.any { db ->
+                val path = db.path
+                path != null && File(path).name == ClimbsDbHelper.DATABASE_NAME
+            }
+            assertTrue("DatabaseConnectionManager.getActiveDatabases() must include opened Climbs.db", found)
+        } finally {
+            DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
+            ClimbsDatabaseManager.resetForTesting(null)
         }
-
-        assertTrue("DatabaseConnectionManager.getActiveDatabases() must include Climbs.db", found)
     }
 
     @Test

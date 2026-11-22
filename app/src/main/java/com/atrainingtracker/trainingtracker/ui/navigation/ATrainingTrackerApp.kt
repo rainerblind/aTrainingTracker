@@ -31,8 +31,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.trainingtracker.ui.onboarding.permission.PermissionOnboardingSheet
@@ -40,9 +38,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.supporter.GarageUpgradeN
 import com.atrainingtracker.trainingtracker.ui.settings.supporter.SupporterScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -242,11 +238,11 @@ fun ATrainingTrackerApp(
             navController.popBackStack()
         } else if (currentRoute != NavRoutes.START_TRACKING) {
             if (currentRoute == NavRoutes.WORKOUTS) {
-                MyPreferenceManager(activity).clearWorkoutFilterCriteria()
+                MyPreferenceManager.getInstance(activity).clearWorkoutFilterCriteria()
             } else if (currentRoute == NavRoutes.ROUTES) {
-                MyPreferenceManager(activity).clearRouteFilterCriteria()
+                MyPreferenceManager.getInstance(activity).clearRouteFilterCriteria()
             } else if (currentRoute == NavRoutes.LOCATIONS) {
-                MyPreferenceManager(activity).clearClusterFilterCriteria()
+                MyPreferenceManager.getInstance(activity).clearClusterFilterCriteria()
             }
             activity.navigateToDrawerItem(R.id.drawer_start_tracking)
         } else {
@@ -784,12 +780,12 @@ fun ATrainingTrackerApp(
     }
 
     // Native Compose ModalBottomSheet hosting for Settings Dialogs
+    // Child AppBottomSheetContent -> AppBottomSheetBody already applies navigationBarsPadding().imePadding() (REQ-UI-2799.3).
     drawerController.activeBottomSheet?.let { sheetType ->
         ModalBottomSheet(
             onDismissRequest = { drawerController.activeBottomSheet = null },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            dragHandle = null,
-            modifier = Modifier.windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+            dragHandle = null
         ) {
             when (sheetType) {
                 SettingsBottomSheetType.STRAVA -> StravaSettingsDialog(
@@ -887,7 +883,7 @@ fun ATrainingTrackerApp(
 
     // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308, ATT-5658)
     activity.firstJubileeCelebrationState?.let { jubileeData ->
-        val proFeatureManager = remember { ProFeatureManager(context) }
+        val proFeatureManager = remember { ProFeatureManager.getInstance(context) }
         val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
         val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
         val jubileeScope = rememberCoroutineScope()

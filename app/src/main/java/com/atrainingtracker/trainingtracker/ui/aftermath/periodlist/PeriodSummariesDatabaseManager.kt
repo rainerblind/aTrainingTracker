@@ -14,7 +14,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
@@ -487,11 +487,11 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         const val CREATE_TABLE = "CREATE TABLE $TABLE_NAME (${BaseColumns._ID} INTEGER PRIMARY KEY, $COLUMN_IS_FINISHED INTEGER DEFAULT 0)"
     }
 
-    internal class PeriodSummariesDbHelper(
+    internal class PeriodSummariesDbHelper @JvmOverloads constructor(
         context: Context,
         dbName: String = DATABASE_NAME,
         version: Int = DB_VERSION
-    ) : SQLiteOpenHelper(context, dbName, null, version) {
+    ) : TrackingSQLiteOpenHelper(context, dbName, null, version) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(PeriodSummariesContract.CREATE_TABLE)
             db.execSQL(SportStatsContract.CREATE_TABLE)

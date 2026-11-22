@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 1 of 3)
 
 **Document ID**: `DOC-TST-UI-P1`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2385,10 +2385,10 @@
 ### TST-UI-168: **Aftermath Telemetry Metric Graph Ordering & Visual Flow Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-214`, `REQ-UI-206`
 - **Component**: **Aftermath Telemetry Metric Graph Ordering & Visual Flow Verification**
-- **Jira**: ``ATT-1813``
+- **Jira**: `ATT-1813`, `ATT-9355`
 - **Test Description**:
-  1. *MapDetailLayout Graph Ordering Contract Tests (`MapDetailLayoutTest.kt`)*:
-  • Verify that in `MapDetailLayout.kt`, the Speed/Pace graph section (`TelemetryMetricType.SPEED`/`PACE` and heading) precedes the Heart Rate graph section (`TelemetryMetricType.HEART_RATE` and heading).
+  1. *TelemetryChartStack & MapDetailLayout Graph Ordering Tests (`MapDetailLayoutTest.kt`, `TelemetryChartStackVisibilityTest.kt`)*:
+  • Verify that `TelemetryChartKind.entries`, `availableTelemetryChartKinds`, the rendered chart stack, and the `"Visible Charts"` dropdown menu strictly emit `SPEED_PACE -> SLOPE -> CADENCE -> POWER -> HEART_RATE -> W_PRIME_BAL -> HRV_DFA_A1 -> HRV_RMSSD` (`ATT-9355`), preserving `Speed/Pace` before `Heart Rate` and clean absent-sensor omission.
   2. *WorkoutSummary Graph Ordering Contract Tests (`TelemetryMetricGraphTest.kt`)*:
   • Verify that in `WorkoutSummary.kt`, the Speed/Pace graph section precedes the Heart Rate graph section.
   3. *Synchronized Scrubbing & Conditional Rendering Regression Tests (`TelemetryMetricGraphTest.kt`)*:
@@ -3940,3 +3940,4 @@
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Updated and verified (`[Verified]`) `TST-UI-055` for `ATT Fused` replacement of `Network` and bottom-sheet `Layers` wiring. |
 | `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted 47 verified UI Design System TSTs (`TST-UNT-003..014`, `TST-UI-011..108`) to `[Verified]` using Gate 4 `129/129` PASS evidence (SHA `3e20473b`, `Rule 7.5`); preserved `TST-UI-055` (`[Verified]`) and retained 18 Bucket C TSTs at `[Implemented]`; rebalanced `TST-UI-250..254` to `part3` to comply with `<= 4,000` line shard limit (`REQ-PRO-093.3`). |
+| `1.0.3` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Updated `TST-UI-168` (`[Verified]`) for swapped `CADENCE`/`HEART_RATE` canonical order in `TelemetryChartStackVisibilityTest.kt` and `MapDetailLayoutTest.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`). |

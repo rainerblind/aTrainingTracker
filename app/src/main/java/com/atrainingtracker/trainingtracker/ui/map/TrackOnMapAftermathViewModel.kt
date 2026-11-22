@@ -31,7 +31,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageTimelin
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
@@ -92,7 +92,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     private val segmentsRepository = SegmentsRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
     private val clusterRepository by lazy { WorkoutClusterRepository.getInstance(application) }
-    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager.getInstance(application)
 
     private val _clusterCandidates = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
     /** Candidate route clusters for the active cluster-change dialog (`REQ-UI-2786.3`). */

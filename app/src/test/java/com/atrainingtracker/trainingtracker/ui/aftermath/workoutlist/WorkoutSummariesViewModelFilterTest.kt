@@ -136,11 +136,12 @@ class WorkoutSummariesViewModelFilterTest {
             override fun isMainThread(): Boolean = true
         })
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().workoutFilterCriteriaFlow } returns flowOf(WorkoutFilterCriteria())
-        coEvery { anyConstructed<MyPreferenceManager>().setWorkoutFilterCriteria(any()) } just Runs
-        every { anyConstructed<MyPreferenceManager>().clearWorkoutFilterCriteria() } just Runs
-        every { anyConstructed<MyPreferenceManager>().isCompactViewFlow } returns flowOf(false)
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.workoutFilterCriteriaFlow } returns flowOf(WorkoutFilterCriteria())
+        coEvery { mockPrefManager.setWorkoutFilterCriteria(any()) } just Runs
+        every { mockPrefManager.clearWorkoutFilterCriteria() } just Runs
+        every { mockPrefManager.isCompactViewFlow } returns flowOf(false)
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
         every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
@@ -160,6 +161,7 @@ class WorkoutSummariesViewModelFilterTest {
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         TuningPreferencesDataStore.setInstanceForTesting(null)
+        MyPreferenceManager.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         KnownLocationsRepository.resetForTesting(null)
         WorkoutClusterRepository.resetForTesting(null)

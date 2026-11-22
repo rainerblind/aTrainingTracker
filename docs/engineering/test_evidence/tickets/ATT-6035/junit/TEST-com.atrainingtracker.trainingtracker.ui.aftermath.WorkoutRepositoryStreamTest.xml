@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryStreamTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:08:53.022Z" hostname="rainer-HP-EliteBook-850-G5" time="10.144">
+  <properties/>
+  <testcase name="rawCursorSnapshot_readCursorSnapshot_extractsAllPrimitiveColumnsAccurately" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryStreamTest" time="2.784"/>
+  <testcase name="loadAllWorkouts_faultyRowException_shieldsExceptionAndContinuesStreaming" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryStreamTest" time="2.97"/>
+  <testcase name="loadAllWorkouts_singlePassTraversal_streamsWorkoutsWithoutBackwardSeeking" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryStreamTest" time="4.39"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

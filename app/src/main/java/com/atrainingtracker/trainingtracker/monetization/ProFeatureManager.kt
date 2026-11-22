@@ -39,13 +39,14 @@ import kotlinx.coroutines.launch
  * Manages Pro feature access, Supporter tiers, Pioneer early adopter eligibility,
  * and diagnostic debug overrides (REQ-SET-085, REQ-SET-086, REQ-SET-087).
  */
-class ProFeatureManager @JvmOverloads constructor(
-    private val context: Context,
-    private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(context),
-    private val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context),
+class ProFeatureManager private constructor(
+    context: Context,
+    private val settingsDataStore: SettingsDataStore,
+    private val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager,
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val isDebugBuild: Boolean = BuildConfig.DEBUG
 ) {
+    private val context: Context = context.applicationContext ?: context
 
     init {
         checkAndPersistPioneerEligibility()
@@ -129,17 +130,42 @@ class ProFeatureManager @JvmOverloads constructor(
     }
 
     companion object {
+        @Volatile
         private var instance: ProFeatureManager? = null
 
         @JvmStatic
         @Synchronized
         fun getInstance(context: Context): ProFeatureManager {
-            return instance ?: ProFeatureManager(context.applicationContext ?: context).also {
+            val appContext = context.applicationContext ?: context
+            return instance ?: ProFeatureManager(
+                context = appContext,
+                settingsDataStore = SettingsDataStore.getInstance(appContext),
+                workoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
+            ).also {
                 instance = it
             }
         }
 
         @VisibleForTesting
+        internal fun createForTesting(
+            context: Context,
+            settingsDataStore: SettingsDataStore? = null,
+            workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager? = null,
+            coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            isDebugBuild: Boolean = BuildConfig.DEBUG
+        ): ProFeatureManager {
+            val appContext = context.applicationContext ?: context
+            return ProFeatureManager(
+                context = appContext,
+                settingsDataStore = settingsDataStore ?: SettingsDataStore.getInstance(appContext),
+                workoutSummariesDatabaseManager = workoutSummariesDatabaseManager ?: WorkoutSummariesDatabaseManager.getInstance(appContext),
+                coroutineScope = coroutineScope,
+                isDebugBuild = isDebugBuild
+            )
+        }
+
+        @VisibleForTesting
+        @Synchronized
         fun setInstanceForTesting(manager: ProFeatureManager?) {
             instance = manager
         }

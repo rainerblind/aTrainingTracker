@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:23:43.655Z" hostname="rainer-HP-EliteBook-850-G5" time="0.986">
+  <properties/>
+  <testcase name="testDatabaseSchemaRegistryRecordsV31" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test" time="0.196"/>
+  <testcase name="testCreateTableContainsNewColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test" time="0.192"/>
+  <testcase name="testColumnConstantsExist" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test" time="0.191"/>
+  <testcase name="testOnUpgrade_from30to31_addsMissingColumnsIdempotently" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test" time="0.21"/>
+  <testcase name="testDbVersionIs31" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test" time="0.196"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

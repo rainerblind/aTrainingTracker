@@ -132,8 +132,9 @@ class TrackOnMapClusterActionViewModelTest {
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
         every { mockRoutesRepo.allRoutes } returns MutableStateFlow(emptyList())
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledTrackTypesFlow } returns MutableStateFlow(emptySet())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledTrackTypesFlow } returns MutableStateFlow(emptySet())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
         mockkObject(WorkoutClusterDatabaseManager.Companion)
         mockClusterDb = mockk(relaxed = true)
@@ -152,6 +153,7 @@ class TrackOnMapClusterActionViewModelTest {
     @After
     fun tearDown() {
         WorkoutClusterRepository.resetForTesting(null)
+        MyPreferenceManager.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:34.498Z" hostname="rainer-HP-EliteBook-850-G5" time="0.261">
+  <properties/>
+  <testcase name="testDisplaySettings_forcePortraitEnforcement_TST_TRK_040_4" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest" time="0.031"/>
+  <testcase name="testDualPaneSplitLayoutComposition_TST_TRK_040_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest" time="0.228"/>
+  <testcase name="testConfigurationMode_landscapeOperabilityAndGestureContracts_TST_TRK_040_5" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest" time="0.001"/>
+  <testcase name="testRightPaneBottomSheetDockingInvariant_TST_TRK_040_3" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest" time="0.0"/>
+  <testcase name="testWidescreenColumnTransformation_TST_TRK_040_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

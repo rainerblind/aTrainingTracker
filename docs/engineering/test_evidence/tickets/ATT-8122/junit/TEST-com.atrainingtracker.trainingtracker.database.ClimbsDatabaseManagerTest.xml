@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:21.549Z" hostname="rainer-HP-EliteBook-850-G5" time="5.128">
+  <properties/>
+  <testcase name="deduplicateExistingClimbs_lazilyHydratesBothPolylinesOnCurvedCorridorOverlap" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.677"/>
+  <testcase name="insertClimbsWithDeduplicationBatch_executesInTransaction" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.513"/>
+  <testcase name="deduplicateExistingClimbs_deletesDuplicatesAndPreservesRouteId" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.509"/>
+  <testcase name="pathPointsSerialization_roundtripsCorrectly" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.466"/>
+  <testcase name="insertClimbsWithDeduplicationBatch_skipsPolylineQueriesForDistantAndEndpointMatches" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.499"/>
+  <testcase name="insertClimbsWithDeduplicationBatch_deduplicatesWithinExpanded100mThreshold" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.505"/>
+  <testcase name="insertClimb_insertsRecordAndReturnsId" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.493"/>
+  <testcase name="deleteClimb_executesDeleteStatement" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.472"/>
+  <testcase name="spatialDeduplication_skipsDuplicateWithin50Meters" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.515"/>
+  <testcase name="deserializePathPoints_handlesEdgeCasesAndLargeTrackParity" classname="com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" time="0.477"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

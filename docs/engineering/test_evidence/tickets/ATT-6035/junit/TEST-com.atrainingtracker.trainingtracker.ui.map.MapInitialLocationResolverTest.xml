@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:17.211Z" hostname="rainer-HP-EliteBook-850-G5" time="2.935">
+  <properties/>
+  <testcase name="testResolveInitialLocation_priority5_returnsRecentWorkoutStart" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.784"/>
+  <testcase name="testResolveInitialLocation_priority6_defaultsToMunichFallback" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.237"/>
+  <testcase name="testResolveInitialLocation_priority3_returnsHomeLocationWhenNoSystemLocation" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.233"/>
+  <testcase name="testResolveInitialLocation_rejectsNullIslandLiveFix_andFallsThrough" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.229"/>
+  <testcase name="testResolveInitialLocation_resilientToDatabaseExceptions" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.237"/>
+  <testcase name="testResolveInitialLocation_priority4_returnsMostVisitedKnownLocation" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.248"/>
+  <testcase name="testResolveInitialLocation_priority1_returnsValidLiveFix" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.226"/>
+  <testcase name="testIsValidCoordinate_boundaryValidation" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.237"/>
+  <testcase name="testResolveInitialLocation_priority2_returnsSystemLastKnownLocationWhenPermissionGranted" classname="com.atrainingtracker.trainingtracker.ui.map.MapInitialLocationResolverTest" time="0.504"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

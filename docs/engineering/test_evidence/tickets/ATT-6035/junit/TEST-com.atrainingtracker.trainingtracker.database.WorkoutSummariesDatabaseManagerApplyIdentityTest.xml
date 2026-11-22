@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerApplyIdentityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:00:56.928Z" hostname="rainer-HP-EliteBook-850-G5" time="0.542">
+  <properties/>
+  <testcase name="applyInferredIdentity_preservesExplicitOptInOne_REQ_MIG_054_TST_MIG_052" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerApplyIdentityTest" time="0.117"/>
+  <testcase name="applyInferredIdentity_populatesUploadToStrava_whenSchemaDefaultMinusOne_REQ_MIG_054_TST_MIG_052" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerApplyIdentityTest" time="0.105"/>
+  <testcase name="applyInferredIdentity_populatesUploadToStrava_whenSqlNull_REQ_MIG_054_TST_MIG_052" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerApplyIdentityTest" time="0.104"/>
+  <testcase name="applyInferredIdentity_preservesExplicitOptOutZero_REQ_MIG_054_TST_MIG_052" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerApplyIdentityTest" time="0.112"/>
+  <testcase name="applyInferredIdentity_nonExistentWorkoutId_isSafeNoOp_REQ_MIG_054_TST_MIG_052" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerApplyIdentityTest" time="0.104"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

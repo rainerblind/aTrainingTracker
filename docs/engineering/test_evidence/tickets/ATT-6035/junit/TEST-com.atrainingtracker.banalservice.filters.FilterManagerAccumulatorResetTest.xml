@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:29.473Z" hostname="rainer-HP-EliteBook-850-G5" time="0.737">
+  <properties/>
+  <testcase name="resetAllFilters_proxySensorWrappedLapSensor_reseedsInitLapNr" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.407"/>
+  <testcase name="resetAllFilters_accumulatorSensor_reseedsZeroBaselineAndFormattedString" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.072"/>
+  <testcase name="resetAllFilters_proxySensorWrappedStatelessSensor_resetsToNullAndDash" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.092"/>
+  <testcase name="resetAllFilters_proxySensorWrappedAccumulator_reseedsZeroBaselineAndFormattedString" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.085"/>
+  <testcase name="resetAllFilters_nonAccumulatorSensor_resetsToNullAndDash" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.081"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.34  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 71
+**Total Requirements**: 72
 
 ---
 
@@ -1838,9 +1838,9 @@
      - `TelemetryMetricType` SHALL add `SLOPE` (`%` formatting, `TelemetryGraphColorPreferences` key `telemetry_graph_color_SENSOR_SLOPE` matching `SensorType.SLOPE` with `THEME_DEFAULT` default).
      - `ElevationProfile.kt` (with extracted `ElevationProfileOverlayComponents.kt`, `<= 1,500` LoC) SHALL accept `overlaySeries: List<TelemetrySourceSeries>` and, strictly when `>= 2` `ALTITUDE` sources exist, expose a compact `Layers` selector, render distinct secondary curves within shared bounds, display a compact `Ø` mean comparison legend, and update readouts during synchronized `DISTANCE`/`TIME` scrubbing.
      - `TelemetryMetricGraph.kt` (with extracted `TelemetryOverlayComponents.kt`, `<= 1,965` LoC) SHALL render multi-source overlays for `SPEED` (`MyHelper.mps2userUnit`), `PACE` (user pace min/km or min/mi with inverted Y-axis clamping), and `SLOPE` (`%`) with synchronized scrubbing and `Rule 64` plot bounds.
-  4. *Persisted Per-Chart Visibility Selection in Workout Details (`REQ-PER-044.4`)*:
-     - `MyPreferenceManager` SHALL persist per-chart visibility (`hidden_telemetry_charts` DataStore `stringSetPreferencesKey`, default empty = all charts visible on upgrade) across `SPEED_PACE`, `SLOPE`, `HEART_RATE`, `POWER`, `CADENCE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD`.
-     - Shared `TelemetryChartStack.kt` (reused by `MapDetailLayout.kt <= 1,500` LoC and `TrackOnMapScreen.kt`) SHALL expose a Material 3 `DropdownMenu` chart-visibility selector (`design_guidelines.md §1`) that stays accessible even when charts are hidden, preserves `Rule 64` horizontal plot alignment and `Rule 48` axis labels, and gates `hasTelemetrySeries` / `hasTelemetryGraphs` across `SLOPE` and `CADENCE` as well.
+  4. *Persisted Per-Chart Visibility Selection & Canonical Order in Workout Details (`REQ-PER-044.4`, refined by `ATT-9355`)*:
+     - `MyPreferenceManager` SHALL persist per-chart visibility (`hidden_telemetry_charts` DataStore `stringSetPreferencesKey` keyed by enum `.name`, default empty = all charts visible on upgrade) across `TelemetryChartKind` in canonical order: `SPEED_PACE`, `SLOPE`, `CADENCE`, `POWER`, `HEART_RATE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD` (`ATT-9355`).
+     - Shared `TelemetryChartStack.kt` (reused by `MapDetailLayout.kt <= 1,500` LoC and `TrackOnMapScreen.kt`) SHALL render both stacked graphs and the Material 3 `DropdownMenu` chart-visibility selector (`design_guidelines.md §1`) in that exact canonical order, stay accessible even when charts are hidden, preserve `Rule 64` horizontal plot alignment and `Rule 48` axis labels, and gate `hasTelemetrySeries` / `hasTelemetryGraphs` across `SLOPE` and `CADENCE` as well.
   5. *9-Locale Parity & Rule 8.5 Visual Compose Verification (`REQ-PER-044.5`)*:
      - All new strings (`track_type_att_fused`, `graph_heading_slope`, chart-visibility filter labels, source display labels, and `Ø` mean strings with indexed positional specifiers `%1$s`/`%1$d`) SHALL achieve 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero inline emojis (`ATT-5400`), and `track_type_network` SHALL be removed cleanly. Stage 4 SHALL render and inspect `docs/engineering/walkthroughs/img/ATT-8080_multisource_charts_visibility.png` (Light & Dark) via `read_file` (`Rule 8.5`).
 
@@ -2174,6 +2174,24 @@
 
 ---
 
+### REQ-PER-047: Live-Updating Active Workout Card via O(1) In-Memory StateFlow [Verified]
+- **Tests**: `TST-PER-055`
+- **Tickets**: `ATT-9069`
+- **Target Release**: `V5.0.0`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, Review
+- **Implementation**: `LiveWorkoutCardStateStore.kt`, `LiveWorkoutBroadcastTracker.kt`, `WorkoutRepository.kt`, `WorkoutSummary.kt`, `WorkoutSummaryCompact.kt`
+- **Localization Parity**: `N/A - no new UI strings`
+- **Description**: While a workout is actively recording, the unfinished workout card in Workout Summaries (`WorkoutSummary` and `WorkoutSummaryCompact`) SHALL update live at ~1 Hz via the dedicated O(1) in-memory `StateFlow<LiveWorkoutCardSnapshot?>` (`LiveWorkoutCardStateStore`) collected strictly inside the matching unfinished card via `collectAsStateWithLifecycle`, preserving zero SQLite reloads, zero 1-Hz broadcasts, zero `_allWorkouts` churn, and zero finished-card subscriptions (`REQ-STB-020`).
+- **Rationale**: While a workout is actively recording, the unfinished workout card in **Workout Summaries** SHALL update live at ~1 Hz via a dedicated O(1) in-memory `StateFlow<LiveWorkoutCardSnapshot?>` (`LiveWorkoutCardStateStore`) while strictly preserving the `ATT-8999` / `REQ-STB-020` zero-OOM invariant (`0` SQLite reloads, `0` 1-Hz `WORKOUT_UPDATED_INTENT` broadcasts, `0` `_allWorkouts` emissions/clones, and `0` downstream `PeriodsRepository` / `AthleteProfileViewModel` / `KnownLocationsViewModel` recalculations).
+  1. *O(1) Dedicated StateFlow & Lifecycle Gating (`REQ-PER-047.1`)*: `LiveWorkoutCardStateStore` SHALL expose `StateFlow<LiveWorkoutCardSnapshot?>` (`workoutId`, `activeTimeSec`, `totalTimeSec`, `distanceM`, `avgSpeedMps`, `ascentM`, `descentM`, `avgHeartRateBpm`, `avgPowerWatts`, `avgCadenceRpm`, `laps`, `isPaused`) updated in O(1) memory on active ticks (`recordLiveSample`), paused ticks (`updateWorkoutTotalTime`), and live lap saves (`saveLap`), armed on `onSessionInitialized`, and cleared to `null` on `reset()` / `markWorkoutFinished*` so post-stop executor drain cannot resurrect a cleared snapshot.
+  2. *Card-Scoped Lifecycle-Aware Compose Collection (`REQ-PER-047.2`)*: Both `WorkoutSummary` and `WorkoutSummaryCompact` SHALL subscribe to `liveSnapshotFlow` strictly when `!workoutData.finished`, filtering to `snapshot.workoutId == workoutData.id` with `distinctUntilChanged()` via `collectAsStateWithLifecycle`. Finished cards SHALL never subscribe or recompose, non-matching unfinished cards SHALL never recompose on active ticks, and off-screen screens SHALL stop collecting automatically.
+  3. *Canonical Live Overlay & Safety Invariants (`REQ-PER-047.3`)*: `applyLiveSnapshot` SHALL overlay non-null live scalar metrics, deduplicated laps, and live HR/Speed/Pace(RUN)/Power/Cadence `ExtremaDataRow` averages formatted via canonical `MetricFormatterContext` / `SensorType.*.myFormatter` formatters (preserving unrelated rows such as `VERTICAL_OSCILLATION`), keeping unfinished `0.5f` alpha styling and active-session delete/mark-finished protection intact.
+- **Invariants**: `0` edits to `TrackerService.java`; `0` SQLite reloads per 1-Hz tick; `0` steady-state 1-Hz `WORKOUT_UPDATED_INTENT` broadcasts; `0` `_allWorkouts` emissions/clones during live tracking; `0` finished-card `liveSnapshotFlow` subscriptions (`subscriptionCount == 0`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2213,3 +2231,6 @@
 | `1.0.32` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Refined `REQ-WKO-039` (`[Planned]`, `.1`–`.3`, with 4-field Chesterton's Fence Audit) to gate PMC ACWR on `MIN_CTL_FOR_ACWR = 15.0` and normalize Tier-4 RPE fallback onto the TSS scale via `calculateRpeTss()` (`RPE 1..10 -> 20..140` TSS/h, 1h @ RPE 8 = `100.0` TSS) while keeping `REQ-WKO-038` `calculateSessionRpe()` untouched. |
 | `1.0.33` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Implemented]` (`PowerPhysiologyCalculator.kt`: `MIN_CTL_FOR_ACWR = 15.0`, `calculateRpeTss()`, Tier-4 delegation, `calculateSessionRpe()` untouched). |
 | `1.0.34` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 Tier-1 suites, `0` `app/` drift, `0` new warnings, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |
+| `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Refined `REQ-PER-044.4` (`[Verified]`) to swap `CADENCE` and `HEART_RATE` in `TelemetryChartStack.kt` & `MapModels.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`) while preserving DataStore enum-name persistence and `WorkoutSummary.kt` invariants. |
+| `1.0.36` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Added and verified (`[Verified]`) `REQ-PER-047` (`.1`–`.3`) for live-updating active workout card via O(1) `LiveWorkoutCardStateStore` `StateFlow<LiveWorkoutCardSnapshot?>`, strictly card-scoped `collectAsStateWithLifecycle` in `WorkoutSummary`/`WorkoutSummaryCompact`, and zero `_allWorkouts` / downstream OOM churn (`43/43` PASS across 8 suites, `0` `TrackerService.java` edits, Light/Dark AMOLED `Rule 8.5` PNG verified). |
+| `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Stage 6 Bounce 1 heal: tightened `extractSensorSample` to exact canonical/quoted-device/4-location-provider allowlist (preventing sibling derived columns like `POWER_PEAK_5S`/`POWER_TO_WEIGHT` during dropouts), keyed `LiveExtremaLabels` on `TrainingApplication.getUnit()`, and synced sprint branch (`44/44` PASS across 8 suites). |

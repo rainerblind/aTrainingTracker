@@ -21,6 +21,7 @@ package com.atrainingtracker.banalservice.devices.hrv
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization
+import java.util.Arrays
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -104,9 +105,11 @@ class RrArtifactFilter(
             return FilterResult(emptyList(), 0, 0, 0.0)
         }
 
-        val rawRrs = beats.map { it.rrMs }
+        val rawRrs = DoubleArray(n) { beats[it].rrMs }
         val dRrs = computeDifferences(rawRrs)
-        val mRrs = computeMedianDeviationsCentered(rawRrs)
+        val localMedians = computeLocalMediansCentered(rawRrs)
+        val mRrs = DoubleArray(n) { rawRrs[it] - localMedians[it] }
+        val qdScratch = DoubleArray(QD_WINDOW_SIZE + 1)
 
         val classifications = IntArray(n)
         val th2List = DoubleArray(n)
@@ -121,18 +124,16 @@ class RrArtifactFilter(
             // 91-beat centered QD window
             val qdStart = max(0, i - QD_WINDOW_SIZE / 2)
             val qdEnd = min(n, i + QD_WINDOW_SIZE / 2 + 1)
-            val subD = dRrs.subList(qdStart, qdEnd)
-            val subM = mRrs.subList(qdStart, qdEnd)
 
-            val th1 = max(c1 * computeQuartileDeviation(subD), minThresholdMs)
-            val th2 = max(c2 * computeQuartileDeviation(subM), minThresholdMs)
+            val th1 = max(c1 * computeQuartileDeviationWindow(dRrs, qdStart, qdEnd, qdScratch), minThresholdMs)
+            val th2 = max(c2 * computeQuartileDeviationWindow(mRrs, qdStart, qdEnd, qdScratch), minThresholdMs)
             th2List[i] = th2
 
             val dRR = dRrs[i]
             val mRR = mRrs[i]
             val nextDRR = if (i + 1 < n) dRrs[i + 1] else 0.0
             val prevDRR = if (i > 0) dRrs[i - 1] else 0.0
-            val med = computeLocalMedianCentered(rawRrs, i)
+            val med = localMedians[i]
 
             val nextRR = if (i + 1 < n) rawRrs[i + 1] else null
             val prevRR = if (i > 0) rawRrs[i - 1] else null
@@ -140,7 +141,7 @@ class RrArtifactFilter(
             classifications[i] = classifyBeat(event.rrMs, dRR, mRR, nextDRR, prevDRR, th1, th2, med, nextRR, prevRR)
         }
 
-        return processBeats(beats, rawRrs, n, classifications, th2List)
+        return processBeats(beats, localMedians, n, classifications, th2List)
     }
 
     /**
@@ -153,9 +154,11 @@ class RrArtifactFilter(
             return FilterResult(emptyList(), 0, 0, 0.0)
         }
 
-        val rawRrs = buffer.map { it.rrMs }
+        val rawRrs = DoubleArray(n) { buffer[it].rrMs }
         val dRrs = computeDifferences(rawRrs)
-        val allMRrs = computeMedianDeviationsCentered(rawRrs)
+        val localMedians = computeLocalMediansCentered(rawRrs)
+        val allMRrs = DoubleArray(n) { rawRrs[it] - localMedians[it] }
+        val qdScratch = DoubleArray(QD_WINDOW_SIZE + 1) // Capacity 92 covers [i - 86, i + 6) (REQ-UI-2800.2)
         val evaluateUntil = n - LOOKAHEAD_BEATS
 
         val classifications = IntArray(evaluateUntil)
@@ -168,21 +171,19 @@ class RrArtifactFilter(
                 continue
             }
 
-            // Trailing quartile window: up to 90 beats back + 5 beats lookahead
+            // Trailing quartile window: up to 86 beats back + current + 5 beats lookahead (up to 92 beats)
             val qdStart = max(0, i - (QD_WINDOW_SIZE - LOOKAHEAD_BEATS))
             val qdEnd = min(n, i + LOOKAHEAD_BEATS + 1)
-            val subD = dRrs.subList(qdStart, qdEnd)
-            val subM = allMRrs.subList(qdStart, qdEnd)
 
-            val th1 = max(c1 * computeQuartileDeviation(subD), minThresholdMs)
-            val th2 = max(c2 * computeQuartileDeviation(subM), minThresholdMs)
+            val th1 = max(c1 * computeQuartileDeviationWindow(dRrs, qdStart, qdEnd, qdScratch), minThresholdMs)
+            val th2 = max(c2 * computeQuartileDeviationWindow(allMRrs, qdStart, qdEnd, qdScratch), minThresholdMs)
             th2List[i] = th2
 
             val dRR = dRrs[i]
             val mRR = allMRrs[i]
             val nextDRR = if (i + 1 < n) dRrs[i + 1] else 0.0
             val prevDRR = if (i > 0) dRrs[i - 1] else 0.0
-            val med = rawRrs[i] - mRR
+            val med = localMedians[i]
 
             val nextRR = if (i + 1 < n) rawRrs[i + 1] else null
             val prevRR = if (i > 0) rawRrs[i - 1] else null
@@ -190,12 +191,12 @@ class RrArtifactFilter(
             classifications[i] = classifyBeat(event.rrMs, dRR, mRR, nextDRR, prevDRR, th1, th2, med, nextRR, prevRR)
         }
 
-        return processBeats(buffer, rawRrs, evaluateUntil, classifications, th2List)
+        return processBeats(buffer, localMedians, evaluateUntil, classifications, th2List)
     }
 
     private fun processBeats(
         beats: List<RrBeatEvent>,
-        rawRrs: List<Double>,
+        localMedians: DoubleArray,
         limit: Int,
         classifications: IntArray,
         th2List: DoubleArray
@@ -209,7 +210,7 @@ class RrArtifactFilter(
         while (i < limit) {
             val event = beats[i]
             if (classifications[i] == RrBeatEvent.ARTIFACT_GAP || isGapOrOutOfPhysiologicalRange(event)) {
-                val rawMed = computeLocalMedianCentered(rawRrs, i)
+                val rawMed = localMedians[i]
                 val safeMed = if (rawMed.isFinite() &&
                     rawMed in RrBeatNormalization.MIN_RR_MS..RrBeatNormalization.MAX_RR_MS
                 ) {
@@ -235,7 +236,7 @@ class RrArtifactFilter(
             }
 
             val classification = classifications[i]
-            val med = computeLocalMedianCentered(rawRrs, i)
+            val med = localMedians[i]
 
             if (classification == RrBeatEvent.ARTIFACT_SHORT) {
                 val nextIndex = i + 1
@@ -355,51 +356,64 @@ class RrArtifactFilter(
         return RrBeatEvent.ARTIFACT_NORMAL
     }
 
-    private fun computeDifferences(series: List<Double>): List<Double> {
-        val diffs = ArrayList<Double>(series.size)
-        for (i in series.indices) {
-            if (i == 0) {
-                diffs.add(0.0)
-            } else {
-                diffs.add(series[i] - series[i - 1])
-            }
+    private fun computeDifferences(series: DoubleArray): DoubleArray {
+        val diffs = DoubleArray(series.size)
+        for (i in 1 until series.size) {
+            diffs[i] = series[i] - series[i - 1]
         }
         return diffs
     }
 
-    private fun computeMedianDeviationsCentered(series: List<Double>): List<Double> {
-        return series.indices.map { i ->
-            series[i] - computeLocalMedianCentered(series, i)
+    private fun computeLocalMediansCentered(series: DoubleArray): DoubleArray {
+        val n = series.size
+        val medians = DoubleArray(n)
+        val scratch = DoubleArray(2 * MEDIAN_HALF_WINDOW + 1)
+        for (i in 0 until n) {
+            val start = max(0, i - MEDIAN_HALF_WINDOW)
+            val end = min(n, i + MEDIAN_HALF_WINDOW + 1)
+            val len = end - start
+            System.arraycopy(series, start, scratch, 0, len)
+            Arrays.sort(scratch, 0, len)
+            medians[i] = if (len % 2 == 1) {
+                scratch[len / 2]
+            } else {
+                (scratch[len / 2 - 1] + scratch[len / 2]) / 2.0
+            }
         }
+        return medians
     }
 
-    private fun computeLocalMedianCentered(series: List<Double>, index: Int): Double {
-        val start = max(0, index - MEDIAN_HALF_WINDOW)
-        val end = min(series.size, index + MEDIAN_HALF_WINDOW + 1)
-        val window = series.subList(start, end).sorted()
-        val size = window.size
-        return if (size % 2 == 1) {
-            window[size / 2]
-        } else {
-            (window[size / 2 - 1] + window[size / 2]) / 2.0
+    private fun computeQuartileDeviationWindow(
+        values: DoubleArray,
+        start: Int,
+        end: Int,
+        scratch: DoubleArray
+    ): Double {
+        val len = end - start
+        if (len < 4) {
+            return minThresholdMs / c1
         }
+        val buf = if (len <= scratch.size) scratch else DoubleArray(len)
+        System.arraycopy(values, start, buf, 0, len)
+        Arrays.sort(buf, 0, len)
+        val q1 = percentileArray(buf, len, 0.25)
+        val q3 = percentileArray(buf, len, 0.75)
+        return (q3 - q1) / 2.0
     }
 
     internal fun computeQuartileDeviation(values: List<Double>): Double {
         if (values.size < 4) {
             return minThresholdMs / c1
         }
-        val sorted = values.sorted()
-        val q1 = percentile(sorted, 0.25)
-        val q3 = percentile(sorted, 0.75)
-        return (q3 - q1) / 2.0
+        val arr = DoubleArray(values.size) { values[it] }
+        return computeQuartileDeviationWindow(arr, 0, arr.size, arr)
     }
 
-    private fun percentile(sorted: List<Double>, p: Double): Double {
-        val pos = p * (sorted.size - 1)
+    private fun percentileArray(sorted: DoubleArray, len: Int, p: Double): Double {
+        val pos = p * (len - 1)
         val idx = pos.toInt()
         val frac = pos - idx
-        return if (idx + 1 < sorted.size) {
+        return if (idx + 1 < len) {
             sorted[idx] + frac * (sorted[idx + 1] - sorted[idx])
         } else {
             sorted[idx]

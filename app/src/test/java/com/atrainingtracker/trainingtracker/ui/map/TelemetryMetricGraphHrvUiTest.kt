@@ -272,6 +272,7 @@ class TelemetryMetricGraphHrvUiTest {
                         metricType = TelemetryMetricType.HEART_RATE,
                         currentDistance = null,
                         onDistanceSelected = {},
+                        hrZoneThresholds = com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds(0, 0, 0, 0),
                         enableGestures = false,
                         modifier = Modifier.testTag("hr_solid_invariance")
                     )

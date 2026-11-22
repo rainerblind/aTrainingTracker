@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.40  
+**Version**: 1.0.42  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 115
+**Total Tests**: 116
 
 ---
 
@@ -1721,6 +1721,24 @@
 
 ---
 
+### TST-SET-130: **Preference/DataStore Singleton Encapsulation, Scope Reuse & Fallback Isolation Verification Suite** (`ATT-8121`) [Verified]
+- **Requirement(s)**: `REQ-SET-128` (`REQ-SET-128.1`–`REQ-SET-128.4`)
+- **Component**: `SettingsDataStore.kt`, `MyPreferenceManager.kt`, `ProFeatureManager.kt`, `ATrainingTrackerMap.kt`, `PreferenceSingletonsLifecycleTest.kt`
+- **Jira**: `ATT-8121` | **Priority**: High | **Type**: Non-Functional | **Verification Method**: Unit
+- **Test Description**:
+  1. *Constructor Privatization & `applicationContext` Normalization (`TST-SET-130.1`, `PreferenceSingletonsLifecycleTest#testSettingsDataStore_constructorIsPrivateAndNormalizesActivityContext`, `PreferenceSingletonsLifecycleTest#testMyPreferenceManager_constructorIsPrivateSharesProcessScopeAndReusesSingleton`, `PreferenceSingletonsLifecycleTest#testProFeatureManager_constructorIsPrivateNormalizesActivityContextAndPreservesJvmStatic`)*:
+     • Reflectively assert zero non-synthetic public constructors on `SettingsDataStore`, `MyPreferenceManager`, and `ProFeatureManager`, and preserve `@JvmStatic` on `ProFeatureManager.getInstance`.
+     • Invoke `getInstance(mockActivity)` and `getInstance(mockApplication)` and assert identical singleton identity (`assertSame`) and `applicationContext` normalization (never retaining `Activity`).
+  2. *`MyPreferenceManager` Shared Scope Reuse & Test-Scope Cancellation (`TST-SET-130.2`, `PreferenceSingletonsLifecycleTest#testMyPreferenceManager_constructorIsPrivateSharesProcessScopeAndReusesSingleton`, `PreferenceSingletonsLifecycleTest#testSettingsDataStore_createForTestingNormalizesContextAndSupportsTestScopeCancellation`, `WorkoutClustersSelectableMarkersTest`, `TelemetryChartStackVisibilityTest`)*:
+     • Assert repeated `MyPreferenceManager.getInstance`/`createForTesting` invocations share one process-wide default `CoroutineScope`/`SupervisorJob` without allocating orphaned scopes, and verify injected test `CoroutineScope` cancellation via `createForTesting`.
+  3. *`InMemoryPreferencesDataStore` Fallback Upgrade & `setInstanceForTesting` Pinning (`TST-SET-130.3`, `PreferenceSingletonsLifecycleTest#testHasRealFilesDir_rejectsNullEmptyAndThrowingAndAcceptsRealDirectory`, `PreferenceSingletonsLifecycleTest#testSettingsDataStore_fallbackSingletonUpgradesOnRealFilesDirCancelsDiscardedScopeAndRespectsOverride`, `PreferenceSingletonsLifecycleTest#testMyPreferenceManager_fallbackSingletonUpgradesOnRealFilesDirWithoutCancellingSharedScope`)*:
+     • Assert `hasRealFilesDir` rejects `null`, `File("")`, and throwing mocks; assert an auto-created unmocked-JVM `InMemoryPreferencesDataStore` singleton upgrades cleanly when a real `filesDir` context calls `getInstance` (cancelling discarded `SettingsDataStore` fallback scope while preserving `MyPreferenceManager.sharedAppScope`), and explicit `setInstanceForTesting(custom)` overrides remain pinned until reset to `null`.
+  4. *Dead Collector Audit & Migrated Suite Regression (`TST-SET-130.4`, `TuningPreferencesDataStoreLifecycleTest`, `DataStoreHotPathContractTest#testSettingsDataStore_readsDoNotContainRunBlocking`, `ArchitectureConformanceContractTest`)*:
+     • Verify `ATrainingTrackerMap.kt` contains zero dead `TuningPreferencesDataStore` collector references and run targeted Gradle tests across all 34 suites plus live `emulator-5554` smoke verification.
+- **Verification Evidence**: Tier-1 targeted run `231/231 PASS` (`0` fail, `0` err, `0` skip) across 34 suites (`PreferenceSingletonsLifecycleTest` `7/7`, `TuningPreferencesDataStoreLifecycleTest` `2/2`, `DataStoreHotPathContractTest#testSettingsDataStore_readsDoNotContainRunBlocking` `1/1`, `ArchitectureConformanceContractTest` `11/11`, `ProFeatureManagerTest` `7/7`, `GarageLeagueDetectorTest` `16/16`, `SettingsDataStoreZoneAtomicTest` `11/11`, `SettingsDataStoreJavaHelperNonBlockingTest` `7/7`, `SettingsDataStorePowerZonesTest` `6/6`, `SettingsDataStoreWeightTest` `6/6`, `SettingsDataStoreZoneGaugeTest` `2/2`, `SettingsDataStoreBaselinesTest` `8/8`, `SettingsDataStoreConfiguredTest` `8/8`, `BatterySaverModelPureTest` `5/5`, `AthleteMetricsRepositorySyncTest` `3/3`, `TrackingViewModelMapStateTest` `6/6`, `TrackingViewModelGridTest` `7/7`, `TrackingViewModelHrvTest` `4/4`, `TrackingTabConfigZoneDisplayTest` `3/3`, `RoutesViewModelTest` `6/6`, `RoutesViewModelFilterTest` `6/6`, `PeriodsViewModelTest` `16/16`, `PeriodPrimaryRegionSelectionTest` `4/4`, `WorkoutSummariesViewModelFilterTest` `11/11`, `EditWorkoutViewModelTest` `16/16`, `SegmentListViewModelTest` `4/4`, `WorkoutClustersViewModelTest` `19/19`, `WorkoutClustersSelectableMarkersTest` `1/1`, `TrackOnMapClusterActionViewModelTest` `4/4`, `TrackOnMapViewModelTelemetryTest` `2/2`, `TrackOnMapAftermathViewModelTest` `10/10`, `TrackOnMapAftermathViewModelFallbackTest` `2/2`, `TelemetryChartStackVisibilityTest` `7/7`, `ViewModelRepositoryIntegrationTest` `3/3`; `0` new Kotlin warnings); live `emulator-5554` `:app:installDebug` + `MainActivityWithNavigation` launch (`CRASH_LOGCAT_CLEAN`, screenshot `docs/engineering/test_evidence/tickets/ATT-8121/screenshots/att8121_emulator_smoke.png` verified via `read_file`); evidence bundle `docs/engineering/test_evidence/tickets/ATT-8121/` and `docs/engineering/walkthroughs/ATT-8121_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1764,3 +1782,5 @@
 | `1.0.37` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Stage 6 Bounce 1/3 heal: added `+7` regression tests (`24/24` verbatim new methods, `130/130 PASS` across 11 Tier-1 suites) covering `BTLEHeartRateDevice` `0x10` RR gate on lost contact/zero HR, `PolarOnlineStreamingBridge` Verity PPI TOCTOU + `processPpiData` workout drop + `forceStopFirmwarePpi` on workout connect & recovery + `resumeAfterOfflineSync`/`evaluateHrStaleness` re-arming, `OneShotTimer` superseding guard, and drift-free `nextCheckDelayMs` + optical reset tier re-sync; set `[Implemented]` pending Gate 4 / Stage 5 Bounce 1 re-verification. |
 | `1.0.38` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `TST-SET-128` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9575` @ `1099f4a9`, `Rule 7.5`, `0` `app/` drift): `130/130 PASS` across 11 Tier-1 suites (`24/24` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
 | `1.0.39` | 2026-11-22 | Lane 3 Author (`ATT-9174`, `--as agent1`) | `ATT-9174` | Added and verified `TST-SET-129` (`EditWorkoutPolarRetrySyncUiTest` `6/6` + `EditWorkoutViewModelTest` `+2` new methods; `65/65 PASS` across 10 Tier-1 suites, Light/Dark Compose PNG + live `emulator-5554` before/after Dismiss verified via `read_file`). |
+| `1.0.40` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Added `TST-SET-130` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-128`) covering constructor privatization, `applicationContext` normalization, `MyPreferenceManager` shared `SupervisorJob` scope reuse, `InMemoryPreferencesDataStore` -> real-`filesDir` singleton upgrade guard, `ATrainingTrackerMap` dead-collector removal, and migrated test suites. |
+| `1.0.41` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Promoted `TST-SET-130` to `[Verified]` with verbatim `PreferenceSingletonsLifecycleTest` `7/7` method citations, `231/231 PASS` across 34 targeted suites, live `emulator-5554` smoke screenshot (`read_file` verified, `CRASH_LOGCAT_CLEAN`), and evidence bundle `docs/engineering/test_evidence/tickets/ATT-8121/`. |

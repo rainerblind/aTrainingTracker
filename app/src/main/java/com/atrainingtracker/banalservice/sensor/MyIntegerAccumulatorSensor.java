@@ -18,30 +18,14 @@
 
 package com.atrainingtracker.banalservice.sensor;
 
-import android.util.Log;
-
-import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.MyDevice;
 
 public class MyIntegerAccumulatorSensor extends MyAccumulatorSensor<Integer> {
-    private static final String TAG = "MyLongAccumulatorSensor";
-    private static final boolean DEBUG = BANALService.getDebug(false);
-
     public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, Integer zeroValue) {
-        super(myDevice, sensorType, respectPause, zeroValue);
+        super(myDevice, sensorType, respectPause, zeroValue, Integer::sum, (a, b) -> a - b);
     }
 
     public MyIntegerAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause) {
-        super(myDevice, sensorType, respectPause, 0);  // when the zeroValue is not explicitly given in the constructor, it will be set to 0.
-    }
-
-    @Override
-    // doing the most obvious stuff...
-    protected Integer add(Integer a, Integer b) {
-        return a + b;
-    }
-
-    protected Integer sub(Integer a, Integer b) {
-        return a - b;
+        this(myDevice, sensorType, respectPause, 0);  // when the zeroValue is not explicitly given in the constructor, it will be set to 0.
     }
 }

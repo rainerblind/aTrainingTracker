@@ -27,22 +27,39 @@ package com.atrainingtracker.trainingtracker.migration
 object DatabaseSchemaRegistry {
 
     private val SUPPORTED_DB_VERSIONS: Map<String, Int> = mapOf(
-        "WorkoutSummaries.db" to com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION,
-        "WorkoutSamples.db" to 1,
-        "Laps.db" to 2,
-        "Routes.db" to 10,
-        "KnownLocations.db" to 6,
-        "TrackingViews.db" to com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
-        "FlexibleGenericView.db" to com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
-        "Devices.db" to com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper.DB_VERSION,
-        "SportType.db" to com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportTypeDbHelper.DB_VERSION,
-        "Segments.db" to 9,
-        "StravaUpload.db" to 6,
-        "Equipment.db" to com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_VERSION,
-        "Pebble.db" to 3,
-        "AthleteMetrics.db" to com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
-        "ActiveDevices.db" to 1,
-        "ExportStatus.db" to 1,
+        com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.LapsDatabaseManager.LapsDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.LapsDatabaseManager.LapsDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager.RoutesDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager.RoutesDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.KnownLocationsDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.KnownLocationsDbHelper.DB_VERSION,
+        // Legacy backup filename alias retained alongside FlexibleGenericView.db for backward compatibility (REQ-MIG-057.1)
+        "TrackingViews.db" to
+                com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
+        com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper.DB_NAME to
+                com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper.DB_VERSION,
+        com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportTypeDbHelper.DB_NAME to
+                com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SportTypeDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.SegmentsDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager.SegmentsDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager.PebbleDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager.PebbleDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager.ExportStatusDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager.ExportStatusDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_NAME to
                 com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to
@@ -52,7 +69,11 @@ object DatabaseSchemaRegistry {
         com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_NAME to
                 com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.ClimbsDbHelper.DATABASE_NAME to
-                com.atrainingtracker.trainingtracker.database.ClimbsDbHelper.DATABASE_VERSION
+                com.atrainingtracker.trainingtracker.database.ClimbsDbHelper.DATABASE_VERSION,
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager.DB_VERSION
     )
 
     @JvmStatic

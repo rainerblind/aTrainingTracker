@@ -71,7 +71,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
+import com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @Composable
@@ -102,7 +102,7 @@ fun DevicesTabbedScreen(
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
-    var editingDeviceId by remember { mutableStateOf<Long?>(null) }
+    var editingDeviceId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showProtocolSheet by remember { mutableStateOf(false) }
     var showFilterSheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }

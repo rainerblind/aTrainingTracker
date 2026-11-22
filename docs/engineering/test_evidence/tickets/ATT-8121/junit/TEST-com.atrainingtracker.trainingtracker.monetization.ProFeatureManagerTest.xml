@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:31:27.432Z" hostname="rainer-HP-EliteBook-850-G5" time="0.056">
+  <properties/>
+  <testcase name="testDebugOverrideTakesPrecedenceInDebugMode" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.001"/>
+  <testcase name="testDebugOverrideIgnoredInReleaseBuilds" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.0"/>
+  <testcase name="testPioneerWithHigherSubscriptionUpgradesToHigherTier" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.0"/>
+  <testcase name="testCheckAndPersistPioneerEligibility_cachesEarliestYearWhenNull" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.054"/>
+  <testcase name="testPioneerGrandfatheringGivesPioneerTier" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.001"/>
+  <testcase name="testDevicePairingAllowedQuotaRules" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.0"/>
+  <testcase name="testFreeTierDefaultResolution" classname="com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

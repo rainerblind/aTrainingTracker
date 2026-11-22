@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:54.127Z" hostname="rainer-HP-EliteBook-850-G5" time="0.482">
+  <properties/>
+  <testcase name="testNavigationDrawerControllerActionDelegationAndFallback" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.009"/>
+  <testcase name="testRapidDoubleBackPressCancellationSafety" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.056"/>
+  <testcase name="testDrawerGesturesEnabledMapping" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testMainActivitySingleActivityPublicApiCompliance" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testSettingsBottomSheetTypeMapping" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.005"/>
+  <testcase name="testNavRoutesConstantsIntegrity" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testOnBackPressedDispatcherDynamicLIFOPrecedence" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.005"/>
+  <testcase name="testNavigationDrawerControllerSingleActivityState" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testEdgeSwipeThresholdBounds" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testIsDrawerVisibleComprehensivePredicate" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testDeadlockSafetyTimeoutAndStarvationFallback" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.405"/>
+  <testcase name="testScopedBackHandlerVisibilityPredicatesAnd4StateMatrix" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testNavRoutesPushedContracts" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testDrawerItemIdToRouteMapping" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testRouteToDrawerItemIdMapping" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <testcase name="testNavRoutesMorningHrvForceFullOverride_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

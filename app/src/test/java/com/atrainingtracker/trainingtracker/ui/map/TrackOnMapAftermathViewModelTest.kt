@@ -85,12 +85,14 @@ class TrackOnMapAftermathViewModelTest {
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
         every { mockRoutesRepo.allRoutes } returns MutableStateFlow(emptyList())
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledTrackTypesFlow } returns MutableStateFlow(emptySet())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledTrackTypesFlow } returns MutableStateFlow(emptySet())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     @After
     fun tearDown() {
+        MyPreferenceManager.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()
@@ -424,8 +426,9 @@ class TrackOnMapAftermathViewModelTest {
     fun toggleTrackTypeEnabled_persistsSelectionAcrossViewModelRecreation_TST_UI_056() = runTest(testDispatcher) {
         // TST-UI-056
         val persistedTrackTypes = MutableStateFlow(setOf(TrackType.BEST.name))
-        every { anyConstructed<MyPreferenceManager>().enabledTrackTypesFlow } returns persistedTrackTypes
-        coEvery { anyConstructed<MyPreferenceManager>().setTrackTypeEnabled(any(), any()) } answers {
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledTrackTypesFlow } returns persistedTrackTypes
+        coEvery { mockPrefManager.setTrackTypeEnabled(any(), any()) } answers {
             val typeName = firstArg<String>()
             val enabled = secondArg<Boolean>()
             persistedTrackTypes.value = if (enabled) {
@@ -434,6 +437,7 @@ class TrackOnMapAftermathViewModelTest {
                 persistedTrackTypes.value - typeName
             }
         }
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
         val vm1 = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
         val collectJob1 = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {

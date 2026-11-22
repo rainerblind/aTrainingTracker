@@ -275,24 +275,18 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
     protected void triggerGattConnect(final BluetoothDevice dev, final boolean autoConnect) {
-        if (mIsShutDown) {
-            return;
-        }
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mIsShutDown || dev == null) {
-                    return;
-                }
-                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-                synchronized (mGattLock) {
-                    if (mBluetoothGatt == null && (mState == State.SEARCHING || (mIsBackgroundReconnecting && mState == State.DISCONNECTED))) {
-                        if (DEBUG) Log.i(TAG, "Connecting GATT (autoConnect=" + autoConnect + ")");
-                        mBluetoothGatt = dev.connectGatt(mContext, autoConnect, mGattCallback, BluetoothDevice.TRANSPORT_LE);
-                        mCurrentGattAutoConnect = (mBluetoothGatt != null) && autoConnect;
-                    }
+        if (mIsShutDown || mIsGattPaused) return;
+        mHandler.post(() -> {
+            if (mIsShutDown || mIsGattPaused || dev == null
+                    || ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            synchronized (mGattLock) {
+                if (!mIsShutDown && !mIsGattPaused && mBluetoothGatt == null
+                        && (mState == State.SEARCHING || (mIsBackgroundReconnecting && mState == State.DISCONNECTED))) {
+                    if (DEBUG) Log.i(TAG, "Connecting GATT (autoConnect=" + autoConnect + ")");
+                    mBluetoothGatt = dev.connectGatt(mContext, autoConnect, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                    mCurrentGattAutoConnect = (mBluetoothGatt != null) && autoConnect;
                 }
             }
         });
@@ -354,7 +348,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mScanCallback = new ScanCallback() {
                 @Override
                 public void onScanResult(int callbackType, ScanResult result) {
-                    if (result == null || result.getDevice() == null || mIsShutDown) {
+                    if (result == null || result.getDevice() == null || mIsShutDown || mIsGattPaused) {
                         return;
                     }
                     BluetoothDevice dev = result.getDevice();
@@ -363,7 +357,8 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         stopScanAssistance();
                         final BluetoothGatt gattToClose;
                         synchronized (mGattLock) {
-                            if (mState == State.SEARCHING || (mIsBackgroundReconnecting && mState == State.DISCONNECTED)) {
+                            if (!mIsShutDown && !mIsGattPaused
+                                    && (mState == State.SEARCHING || (mIsBackgroundReconnecting && mState == State.DISCONNECTED))) {
                                 gattToClose = mBluetoothGatt;
                                 mBluetoothGatt = null;
                                 mCurrentGattAutoConnect = false;
@@ -377,19 +372,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                             }
                         }
                         if (gattToClose != null) {
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                                            gattToClose.disconnect();
-                                            gattToClose.close();
-                                        }
-                                    } catch (Exception e) {
-                                        Log.w(TAG, "Error closing superseded GATT", e);
-                                    }
-                                }
-                            });
+                            mHandler.post(() -> closeGattSafely(gattToClose, "superseded scan-assist GATT"));
                         }
                     }
                 }
@@ -398,6 +381,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 public void onScanFailed(int errorCode) {
                     Log.w(TAG, "Scan assist failed with code: " + errorCode + "; falling back to direct connect");
                     mIsScanning = false;
+                    if (mIsShutDown || mIsGattPaused) {
+                        return;
+                    }
                     BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
                     BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
                     BluetoothDevice dev = getBluetoothDevice(btAdapter);
@@ -480,7 +466,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             if (DEBUG) Log.i(TAG, "search time out");
             stopScanAssistance();
             synchronized (mGattLock) {
-                if (mIsShutDown || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
+                if (mIsShutDown || mIsGattPaused || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
                     return;
                 }
             }
@@ -489,7 +475,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 Log.i(TAG, "Search timed out for session-connected device: persisting reconnect");
                 long delay;
                 synchronized (mGattLock) {
-                    if (mIsShutDown || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
+                    if (mIsShutDown || mIsGattPaused || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
                         return;
                     }
                     if (mState == State.SEARCHING) {
@@ -505,7 +491,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
                 // Ensure autoConnect remains active in controller if no GATT exists
                 synchronized (mGattLock) {
-                    if (mBluetoothGatt == null && !mIsShutDown && mState == State.DISCONNECTED) {
+                    if (mBluetoothGatt == null && !mIsShutDown && !mIsGattPaused && mState == State.DISCONNECTED) {
                         BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
                         BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
                         BluetoothDevice dev = getBluetoothDevice(btAdapter);
@@ -520,7 +506,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 boolean needOpenPassiveGatt = false;
                 boolean needReplaceNonAutoConnectGatt = false;
                 synchronized (mGattLock) {
-                    if (mIsShutDown || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
+                    if (mIsShutDown || mIsGattPaused || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
                         return;
                     }
                     if (mState == State.SEARCHING) {
@@ -578,11 +564,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 }
             } else {
                 synchronized (mGattLock) {
-                    if (mIsShutDown || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
+                    if (mIsShutDown || mIsGattPaused || mState == State.CONNECTED_TO_GATT || mState == State.CONNECTED_WITH_SERVICE) {
                         return;
                     }
                 }
-                disconnectFromGatt();
+                disconnectFromGattInternal(null, false, true);
                 if (isSearching()) {
                     notifyStopSearching(false);  // we did not find the device
                 }
@@ -625,70 +611,97 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 Log.i(TAG, "onConnectionStateChange: status=" + status + ", newState=" + newState);
 
             if (mIsShutDown) {
-                if (gatt != null && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                    try {
-                        gatt.disconnect();
-                        gatt.close();
-                    } catch (Exception e) {
-                        Log.w(TAG, "Error closing late GATT callback after shutdown", e);
-                    }
-                }
+                closeGattSafely(gatt, "late callback after shutdown");
                 return;
             }
 
+            final boolean isPaused;
+            final BluetoothGatt currentGatt;
             synchronized (mGattLock) {
-                if (mBluetoothGatt != null && gatt != mBluetoothGatt) {
-                    if (DEBUG) Log.d(TAG, "Ignoring onConnectionStateChange from stale or superseded BluetoothGatt instance");
-                    return;
+                isPaused = mIsGattPaused;
+                currentGatt = mBluetoothGatt;
+            }
+            if (isPaused) {
+                if (gatt != currentGatt) {
+                    closeGattSafely(gatt, "stale callback while paused");
                 }
+                return;
+            }
+            if (currentGatt != null && gatt != currentGatt) {
+                if (DEBUG) Log.d(TAG, "Ignoring onConnectionStateChange from stale or superseded BluetoothGatt instance");
+                return;
             }
 
             if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
                 if (DEBUG) Log.i(TAG, "Connected to GATT server");
                 stopScanAssistance();
 
+                final boolean accepted;
+                final boolean closeStale;
                 synchronized (mGattLock) {
-                    mState = State.CONNECTED_TO_GATT;
-                    mIsBackgroundReconnecting = false;
-                    mHasConnectedInSession = true;
-                    mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
-                    mHandler.removeCallbacks(mReconnectRunnable);
-                    mHandler.removeCallbacks(mSearchTimeoutRunnable);
+                    if (mIsShutDown || mIsGattPaused || (mBluetoothGatt != null && gatt != mBluetoothGatt)) {
+                        accepted = false;
+                        closeStale = (gatt != null && gatt != mBluetoothGatt);
+                    } else {
+                        accepted = true;
+                        closeStale = false;
+                        mState = State.CONNECTED_TO_GATT;
+                        mIsBackgroundReconnecting = false;
+                        mHasConnectedInSession = true;
+                        mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+                        mHandler.removeCallbacks(mReconnectRunnable);
+                        mHandler.removeCallbacks(mSearchTimeoutRunnable);
+                    }
                 }
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                            return;
-                        }
-                        final BluetoothGatt gatt = mBluetoothGatt;
-                        if (gatt != null) {
-                            gatt.discoverServices();
-                            notifyStopSearching(true);  // we found the device
-                        }
+                if (!accepted) {
+                    if (closeStale) {
+                        closeGattSafely(gatt, "stale STATE_CONNECTED TOCTOU");
+                    }
+                    return;
+                }
+                mHandler.post(() -> {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                    final BluetoothGatt activeGatt;
+                    synchronized (mGattLock) {
+                        if (mIsShutDown || mIsGattPaused || (mBluetoothGatt != null && mBluetoothGatt != gatt)) return;
+                        activeGatt = mBluetoothGatt;
+                    }
+                    if (activeGatt != null) {
+                        activeGatt.discoverServices();
+                        notifyStopSearching(true);  // we found the device
                     }
                 });
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED || (newState == BluetoothProfile.STATE_CONNECTED && status != BluetoothGatt.GATT_SUCCESS)) {
                 Log.i(TAG, "Disconnected from GATT server (status=" + status + ").");
+                final boolean abortDisconnect;
                 synchronized (mGattLock) {
-                    mState = State.DISCONNECTED;
+                    if (mIsGattPaused || (mBluetoothGatt != null && gatt != mBluetoothGatt)) {
+                        abortDisconnect = true;
+                    } else {
+                        abortDisconnect = false;
+                        mState = State.DISCONNECTED;
+                    }
+                }
+                if (abortDisconnect) {
+                    return;
                 }
                 unregisterSensors();
 
-                disconnectFromGatt();
+                disconnectFromGattInternal(null, false, true);
 
-                if (!mIsShutDown) {
-                    long delay;
-                    synchronized (mGattLock) {
-                        delay = SensorReconnectBackoffPolicy.effectiveDelayMs(mCurrentReconnectDelayMs, mContext);
+                synchronized (mGattLock) {
+                    if (!mIsShutDown && !mIsGattPaused) {
+                        long delay = SensorReconnectBackoffPolicy.effectiveDelayMs(mCurrentReconnectDelayMs, mContext);
                         if (!mHasConnectedInSession && isMidSessionOrWorkoutActive()) {
                             delay = Math.max(delay, NEVER_CONNECTED_WORKOUT_RECONNECT_FLOOR_MS);
                         }
                         mCurrentReconnectDelayMs = SensorReconnectBackoffPolicy.nextDelayMs(delay, mContext);
+                        Log.i(TAG, "Scheduling reconnect in " + delay + " ms (next backoff: " + mCurrentReconnectDelayMs + " ms)");
+                        mHandler.removeCallbacks(mReconnectRunnable);
+                        mHandler.postDelayed(mReconnectRunnable, delay);
                     }
-                    Log.i(TAG, "Scheduling reconnect in " + delay + " ms (next backoff: " + mCurrentReconnectDelayMs + " ms)");
-                    mHandler.removeCallbacks(mReconnectRunnable);
-                    mHandler.postDelayed(mReconnectRunnable, delay);
                 }
             } else {
                 Log.d(TAG, "unhandled state: " + newState);
@@ -704,6 +717,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 @Override
                 @android.annotation.SuppressLint("MissingPermission")
                 public void run() {
+                    synchronized (mGattLock) {
+                        if (mIsShutDown || mIsGattPaused || mBluetoothGatt == null || gatt != mBluetoothGatt) {
+                            return;
+                        }
+                    }
                     BluetoothGattService btGattService;
                     BluetoothGattCharacteristic btGattChar;
 
@@ -719,7 +737,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                             Log.d(TAG, "WTF: btGattChar == null for battery characteristic");
                         }
                     }
-                    readNextCharacteristic();
+                    readNextCharacteristic(gatt);
                 }
             });
         }
@@ -833,13 +851,42 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
 
     public void pauseGattOperations() {
+        final BluetoothGatt gattToClose;
+        final boolean shouldUnregisterSensors;
         synchronized (mGattLock) {
             mIsGattPaused = true;
-            stopScanAssistance();
-            if (mHandler != null) {
-                mHandler.removeCallbacks(mSearchTimeoutRunnable);
-                mHandler.removeCallbacks(mReconnectRunnable);
-            }
+            mGattQueue.clear();
+            mGattOperationPending = false;
+            shouldUnregisterSensors = (mBluetoothGatt != null || mState != State.DISCONNECTED || sensorsRegistered());
+            mState = State.DISCONNECTED;
+            gattToClose = mBluetoothGatt;
+            mBluetoothGatt = null;
+            mCurrentGattAutoConnect = false;
+        }
+        stopScanAssistance();
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mSearchTimeoutRunnable);
+            mHandler.removeCallbacks(mReconnectRunnable);
+            mHandler.removeCallbacks(mBatteryReadRunnable);
+            mHandler.removeCallbacks(mGattTimeoutRunnable);
+        }
+        mReadCharacteristicQueue.clear();
+        if (shouldUnregisterSensors) {
+            unregisterSensors();
+        }
+        closeGattSafely(gattToClose, "pauseGattOperations");
+    }
+
+    private void closeGattSafely(@Nullable BluetoothGatt gatt, String reason) {
+        if (gatt == null
+                || ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        try {
+            gatt.disconnect();
+            gatt.close();
+        } catch (Exception e) {
+            Log.w(TAG, "Error closing GATT (" + reason + ")", e);
         }
     }
 
@@ -956,14 +1003,25 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
      * {@code mHandler}, and invokes {@code onGattClosed} strictly after close completes ({@code REQ-CON-050.1}).
      */
     protected void disconnectFromGatt(@Nullable final Runnable onGattClosed) {
-        disconnectFromGattInternal(onGattClosed, false);
+        disconnectFromGattInternal(onGattClosed, false, false);
     }
 
     private void disconnectFromGattInternal(@Nullable final Runnable onGattClosed, final boolean onlyIfNotAutoConnectDisconnected) {
+        disconnectFromGattInternal(onGattClosed, onlyIfNotAutoConnectDisconnected, false);
+    }
+
+    private void disconnectFromGattInternal(
+            @Nullable final Runnable onGattClosed,
+            final boolean onlyIfNotAutoConnectDisconnected,
+            final boolean skipIfPaused
+    ) {
         if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
 
         final BluetoothGatt gattToClose;
         synchronized (mGattLock) {
+            if (skipIfPaused && mIsGattPaused) {
+                return;
+            }
             if (onlyIfNotAutoConnectDisconnected) {
                 if (mIsShutDown
                         || mState != State.DISCONNECTED
@@ -992,21 +1050,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         mReadCharacteristicQueue.clear();
 
         if (gattToClose != null) {
-            final Runnable closeRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                            gattToClose.disconnect();
-                            gattToClose.close();
-                        }
-                    } catch (Exception e) {
-                        Log.w(TAG, "Error closing GATT", e);
-                    } finally {
-                        if (onGattClosed != null) {
-                            onGattClosed.run();
-                        }
-                    }
+            final Runnable closeRunnable = () -> {
+                try {
+                    closeGattSafely(gattToClose, "disconnectFromGatt");
+                } finally {
+                    if (onGattClosed != null) onGattClosed.run();
                 }
             };
             if (onGattClosed == null && isOnHandlerLooper()) {
@@ -1352,7 +1400,16 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
     protected void readNextCharacteristic() {
+        readNextCharacteristic(null);
+    }
+
+    protected void readNextCharacteristic(@Nullable final BluetoothGatt expectedGatt) {
         if (DEBUG) Log.i(TAG, "readNextCharacteristic");
+        synchronized (mGattLock) {
+            if (mIsShutDown || mIsGattPaused || (expectedGatt != null && (mBluetoothGatt == null || expectedGatt != mBluetoothGatt))) {
+                return;
+            }
+        }
 
         BluetoothGattCharacteristic gattChar = mReadCharacteristicQueue.poll();
         if (gattChar != null) {
@@ -1363,6 +1420,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         } else {
             if (!sensorsRegistered()) {  // but sensors are not yet registered
                 synchronized (mGattLock) {
+                    if (mIsShutDown || mIsGattPaused || (expectedGatt != null && (mBluetoothGatt == null || expectedGatt != mBluetoothGatt))) {
+                        return;
+                    }
                     mState = State.CONNECTED_WITH_SERVICE;
                     mHasConnectedInSession = true;
                     mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
@@ -1370,18 +1430,17 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 setLastActive();
                 registerSensors();
 
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                            return;
-                        }
-                        final BluetoothGatt gatt = mBluetoothGatt;
-                        if (gatt == null) {
-                            return;
-                        }
-                        configureServices(gatt);
+                mHandler.post(() -> {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
                     }
+                    final BluetoothGatt gatt;
+                    synchronized (mGattLock) {
+                        if (mIsShutDown || mIsGattPaused) return;
+                        gatt = mBluetoothGatt;
+                        if (gatt == null || (expectedGatt != null && gatt != expectedGatt)) return;
+                    }
+                    configureServices(gatt);
                 });
             }
         }

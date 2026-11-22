@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:53:05.219Z" hostname="rainer-HP-EliteBook-850-G5" time="0.032">
+  <properties/>
+  <testcase name="testMapDetailLayout_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.001"/>
+  <testcase name="testLiveSegmentSheet_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.004"/>
+  <testcase name="testSegmentLiveDetails_stateAwareVisibilityBranches" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.001"/>
+  <testcase name="testLiveSegmentSheet_unifiedSurfaceBackgroundContract" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.002"/>
+  <testcase name="testLiveSegmentSheet_evaluatesFinishedDistanceUsingDistanceRawWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.01"/>
+  <testcase name="testLiveSegmentSheet_suppressesZoomControls" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.0"/>
+  <testcase name="testLiveSegmentSheet_designTokensConformToRefinedSpecs" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

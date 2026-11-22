@@ -69,7 +69,9 @@ import java.util.Locale
 
 /**
  * Computes all [TelemetryChartKind]s that have recorded data in [path], preserving canonical
- * vertical ordering inside Workout Details `CHARTS` (`REQ-PER-044.3`, `REQ-PER-044.4`).
+ * vertical ordering inside Workout Details `CHARTS` (`REQ-UI-214`, `REQ-PER-044.3`, `REQ-PER-044.4`, `ATT-9355`):
+ * mechanical/kinematic (`SPEED_PACE`, `SLOPE`, `CADENCE`, `POWER`) followed by
+ * cardiovascular/physiological (`HEART_RATE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD`).
  */
 fun availableTelemetryChartKinds(
     path: List<PathPoint>?,
@@ -79,9 +81,9 @@ fun availableTelemetryChartKinds(
     return buildList {
         if (TelemetryMetricUtils.hasSpeedData(path)) add(TelemetryChartKind.SPEED_PACE)
         if (TelemetryMetricUtils.hasSlopeData(path)) add(TelemetryChartKind.SLOPE)
-        if (TelemetryMetricUtils.hasHeartRateData(path)) add(TelemetryChartKind.HEART_RATE)
-        if (TelemetryMetricUtils.hasPowerData(path)) add(TelemetryChartKind.POWER)
         if (TelemetryMetricUtils.hasCadenceData(path)) add(TelemetryChartKind.CADENCE)
+        if (TelemetryMetricUtils.hasPowerData(path)) add(TelemetryChartKind.POWER)
+        if (TelemetryMetricUtils.hasHeartRateData(path)) add(TelemetryChartKind.HEART_RATE)
         if (enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(path)) add(TelemetryChartKind.W_PRIME_BAL)
         if (TelemetryMetricUtils.hasHrvDfaA1Data(path)) add(TelemetryChartKind.HRV_DFA_A1)
         if (TelemetryMetricUtils.hasHrvRmssdData(path)) add(TelemetryChartKind.HRV_RMSSD)
@@ -98,8 +100,8 @@ fun hasAnyTelemetryChartSeries(
 ): Boolean = availableTelemetryChartKinds(path, enableCriticalPowerModel).isNotEmpty()
 
 /**
- * Shared vertical stack of telemetry charts (`Speed/Pace`, `Slope`, `HR`, `Power`, `Cadence`,
- * `W'bal`, `DFA a1`, `rMSSD`) with a persisted Material 3 per-chart visibility menu (`REQ-PER-044.4`)
+ * Shared vertical stack of telemetry charts (`Speed/Pace`, `Slope`, `Cadence`, `Power`, `HR`,
+ * `W'bal`, `DFA a1`, `rMSSD`) with a persisted Material 3 per-chart visibility menu (`REQ-PER-044.4`, `ATT-9355`)
  * and `Rule 64` plot-alignment preservation. Used by both [MapDetailLayout] and [TrackOnMapScreen].
  */
 @Composable
@@ -238,11 +240,11 @@ fun TelemetryChartStack(
                             showHeader = showChartHeader
                         )
                     }
-                    TelemetryChartKind.HEART_RATE -> {
+                    TelemetryChartKind.CADENCE -> {
                         OverlayTelemetryChartSection(
                             path = path,
-                            metricType = TelemetryMetricType.HEART_RATE,
-                            headingRes = R.string.graph_heading_heart_rate,
+                            metricType = TelemetryMetricType.CADENCE,
+                            headingRes = R.string.graph_heading_cadence,
                             selectedDistance = selectedDistance,
                             onDistanceSelected = onDistanceSelected,
                             activeTelemetryDomain = activeTelemetryDomain,
@@ -252,13 +254,8 @@ fun TelemetryChartStack(
                             startDist = startDist,
                             isPanMode = isPanMode,
                             onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.HEART_RATE].orEmpty(),
+                            overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
                             chartModifier = chartModifier,
-                            hrZoneThresholds = hrThresholds,
-                            zoneDistribution = hrZoneDistribution,
-                            zoneDisplayMode = hrZoneDisplayMode,
-                            cardioPowerDynamics = cardioPowerDynamics,
-                            enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
                             enableGestures = enableGestures,
                             unit = unit,
                             showHeader = showChartHeader
@@ -288,11 +285,11 @@ fun TelemetryChartStack(
                             showHeader = showChartHeader
                         )
                     }
-                    TelemetryChartKind.CADENCE -> {
+                    TelemetryChartKind.HEART_RATE -> {
                         OverlayTelemetryChartSection(
                             path = path,
-                            metricType = TelemetryMetricType.CADENCE,
-                            headingRes = R.string.graph_heading_cadence,
+                            metricType = TelemetryMetricType.HEART_RATE,
+                            headingRes = R.string.graph_heading_heart_rate,
                             selectedDistance = selectedDistance,
                             onDistanceSelected = onDistanceSelected,
                             activeTelemetryDomain = activeTelemetryDomain,
@@ -302,8 +299,13 @@ fun TelemetryChartStack(
                             startDist = startDist,
                             isPanMode = isPanMode,
                             onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
+                            overlaySeries = multiSensorOverlays[TelemetryMetricType.HEART_RATE].orEmpty(),
                             chartModifier = chartModifier,
+                            hrZoneThresholds = hrThresholds,
+                            zoneDistribution = hrZoneDistribution,
+                            zoneDisplayMode = hrZoneDisplayMode,
+                            cardioPowerDynamics = cardioPowerDynamics,
+                            enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
                             enableGestures = enableGestures,
                             unit = unit,
                             showHeader = showChartHeader
@@ -453,9 +455,9 @@ private fun ChartVisibilityHeaderBar(
 private fun chartKindLabel(kind: TelemetryChartKind, isRunning: Boolean): String = when (kind) {
     TelemetryChartKind.SPEED_PACE -> stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed)
     TelemetryChartKind.SLOPE -> stringResource(R.string.graph_heading_slope)
-    TelemetryChartKind.HEART_RATE -> stringResource(R.string.graph_heading_heart_rate)
-    TelemetryChartKind.POWER -> stringResource(R.string.graph_heading_power)
     TelemetryChartKind.CADENCE -> stringResource(R.string.graph_heading_cadence)
+    TelemetryChartKind.POWER -> stringResource(R.string.graph_heading_power)
+    TelemetryChartKind.HEART_RATE -> stringResource(R.string.graph_heading_heart_rate)
     TelemetryChartKind.W_PRIME_BAL -> stringResource(R.string.w_prime_bal)
     TelemetryChartKind.HRV_DFA_A1 -> stringResource(R.string.hrv_dfa_a1)
     TelemetryChartKind.HRV_RMSSD -> stringResource(R.string.hrv_rmssd)

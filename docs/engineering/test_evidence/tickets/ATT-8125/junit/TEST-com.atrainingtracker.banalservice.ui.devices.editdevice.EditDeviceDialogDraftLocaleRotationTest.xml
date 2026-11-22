@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:58:54.604Z" hostname="rainer-HP-EliteBook-850-G5" time="28.045">
+  <properties/>
+  <testcase name="testCaptureLightAndDarkVisualEvidencePng_Rule8_5_tstUi2799_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest" time="21.804"/>
+  <testcase name="testViewModel_rotationPreservesDirtyDraftsAndCancelPersistsZeroWrites_tstUi2799_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest" time="2.856"/>
+  <testcase name="testRunCalibrationFactor_germanLocaleAcceptsCommaAndDotAndSurvivesRestoration_tstUi2799_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest" time="3.102"/>
+  <testcase name="testParseLocaleDecimal_acceptsCommaAndDotAndRejectsInvalid_tstUi2799_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest" time="0.282"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

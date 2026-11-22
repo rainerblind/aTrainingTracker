@@ -269,7 +269,7 @@ class EquipmentDbLinkContractTest {
         } returns mockCursor
 
         val devicesManager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val sensors = devicesManager.getAllRemoteSensors()

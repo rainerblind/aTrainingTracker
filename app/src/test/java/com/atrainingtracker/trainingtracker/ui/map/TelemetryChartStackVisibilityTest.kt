@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -111,7 +112,7 @@ class TelemetryChartStackVisibilityTest {
     fun testMyPreferenceManager_persistsHiddenChartsAndIgnoresUnknownTokens() = runBlocking {
         // TST-PER-052.4
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val prefManager = MyPreferenceManager(context)
+        val prefManager = MyPreferenceManager.createForTesting(context)
         prefManager.dataStore.edit { it.remove(MyPreferenceManager.HIDDEN_TELEMETRY_CHARTS) }
 
         assertEquals(emptySet<TelemetryChartKind>(), prefManager.hiddenTelemetryChartsFlow.first())
@@ -194,6 +195,154 @@ class TelemetryChartStackVisibilityTest {
         }
         composeTestRule.onNodeWithTag("charts_visibility_empty_hint").assertIsDisplayed()
         composeTestRule.onNodeWithTag("charts_visibility_button").assertIsDisplayed()
+    }
+
+    @Test
+    fun testTelemetryChartStack_ordersCadenceBeforePowerAndHeartRateAfterPower_att9355() {
+        // TST-UI-168, TST-PER-052.4 (ATT-9355)
+        val expectedOrder = listOf(
+            TelemetryChartKind.SPEED_PACE,
+            TelemetryChartKind.SLOPE,
+            TelemetryChartKind.CADENCE,
+            TelemetryChartKind.POWER,
+            TelemetryChartKind.HEART_RATE,
+            TelemetryChartKind.W_PRIME_BAL,
+            TelemetryChartKind.HRV_DFA_A1,
+            TelemetryChartKind.HRV_RMSSD
+        )
+        assertEquals(expectedOrder, TelemetryChartKind.entries)
+
+        val fullPath = buildSamplePath().mapIndexed { idx, pt ->
+            pt.copy(
+                wPrimeBalKj = 16.0 - idx * 0.1,
+                hrvDfaA1 = 0.85 - idx * 0.002,
+                hrvRmssd = 48.0 - idx * 0.2
+            )
+        }
+        assertEquals(
+            expectedOrder,
+            availableTelemetryChartKinds(fullPath, enableCriticalPowerModel = true)
+        )
+
+        // Absent metrics are cleanly omitted without altering relative ordering
+        // (W'bal is power-derived and is also omitted when power is absent)
+        val noCadenceNoPower = fullPath.map { it.copy(cadence = null, power = null) }
+        assertEquals(
+            listOf(
+                TelemetryChartKind.SPEED_PACE,
+                TelemetryChartKind.SLOPE,
+                TelemetryChartKind.HEART_RATE,
+                TelemetryChartKind.HRV_DFA_A1,
+                TelemetryChartKind.HRV_RMSSD
+            ),
+            availableTelemetryChartKinds(noCadenceNoPower, enableCriticalPowerModel = true)
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                Surface {
+                    TelemetryChartStack(
+                        path = fullPath,
+                        bSportType = BSportType.BIKE,
+                        tuningConfig = TuningConfig(enableCriticalPowerModel = true),
+                        selectedDistance = 500.0,
+                        onDistanceSelected = {},
+                        activeTelemetryDomain = ProfileXAxisDomain.DISTANCE,
+                        isTrackless = false,
+                        zoomScale = 1.0f,
+                        startDist = 0.0,
+                        isPanMode = false,
+                        onZoomChanged = { _, _ -> },
+                        chartModifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify rendered vertical order in chart stack
+        val sectionTops = expectedOrder.map { kind ->
+            kind to composeTestRule
+                .onNodeWithTag("telemetry_chart_section_${kind.name}")
+                .getUnclippedBoundsInRoot().top
+        }
+        for (i in 0 until sectionTops.lastIndex) {
+            val (upperKind, upperTop) = sectionTops[i]
+            val (lowerKind, lowerTop) = sectionTops[i + 1]
+            assertTrue(
+                "Expected $upperKind ($upperTop) strictly above $lowerKind ($lowerTop)",
+                upperTop < lowerTop
+            )
+        }
+
+        // Verify identical order inside the "Visible Charts" dropdown menu
+        composeTestRule.onNodeWithTag("charts_visibility_button").performClick()
+        composeTestRule.waitForIdle()
+        val menuTops = expectedOrder.map { kind ->
+            kind to composeTestRule
+                .onNodeWithTag("charts_visibility_menu_item_${kind.name}")
+                .getUnclippedBoundsInRoot().top
+        }
+        for (i in 0 until menuTops.lastIndex) {
+            val (upperKind, upperTop) = menuTops[i]
+            val (lowerKind, lowerTop) = menuTops[i + 1]
+            assertTrue(
+                "Expected menu item $upperKind ($upperTop) strictly above $lowerKind ($lowerTop)",
+                upperTop < lowerTop
+            )
+        }
+    }
+
+    @Test
+    fun testCaptureCadenceHeartRateOrderLightAndDarkScreenshot_att9355() {
+        // Rule 8.5 Light & Dark/AMOLED visual verification for ATT-9355 (Cadence before Power, HR after Power)
+        val path = buildSamplePath()
+        composeTestRule.setContent {
+            Row(
+                modifier = Modifier
+                    .width(860.dp)
+                    .background(Color(0xFF777777))
+                    .padding(8.dp)
+                    .testTag("att9355_cadence_hr_order_light_dark"),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(false, true).forEach { isDark ->
+                    ATrainingTrackerTheme(darkTheme = isDark) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            TelemetryChartStack(
+                                path = path,
+                                bSportType = BSportType.BIKE,
+                                tuningConfig = TuningConfig(),
+                                selectedDistance = 500.0,
+                                onDistanceSelected = {},
+                                activeTelemetryDomain = ProfileXAxisDomain.DISTANCE,
+                                isTrackless = false,
+                                zoomScale = 1.0f,
+                                startDist = 0.0,
+                                isPanMode = false,
+                                onZoomChanged = { _, _ -> },
+                                chartModifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val outFile = File("/tmp/att9355_cadence_hr_order_light_dark.png")
+        outFile.parentFile?.mkdirs()
+        val bmp = composeTestRule
+            .onNodeWithTag("att9355_cadence_hr_order_light_dark")
+            .captureToImage()
+            .asAndroidBitmap()
+        FileOutputStream(outFile).use { fos ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, fos)
+        }
+        assertTrue("ATT-9355 Light/Dark screenshot must be non-empty", outFile.length() > 10_000L)
     }
 
     @Test

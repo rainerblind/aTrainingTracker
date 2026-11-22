@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -102,9 +103,14 @@ fun EditDeviceDialog(
         WheelSensorGuidanceDialog(onDismiss = { showWheelGuidanceDialog = false })
     }
 
+    val handleDismiss: () -> Unit = {
+        viewModel.discardDraft()
+        onDismiss()
+    }
+
     snapshot?.let { data ->
         AppModalBottomSheet(
-            onDismissRequest = onDismiss,
+            onDismissRequest = handleDismiss,
             title = data.deviceName,
             iconPainter = painterResource(id = data.deviceTypeIconRes),
             iconTint = if (data.protocol == Protocol.SMARTPHONE)
@@ -117,7 +123,7 @@ fun EditDeviceDialog(
                         viewModel.saveChanges()
                         onDismiss()
                     },
-                    onCancel = onDismiss,
+                    onCancel = handleDismiss,
                     saveText = stringResource(R.string.save)
                 )
             }
@@ -194,21 +200,22 @@ fun EditDeviceDialog(
                     AltitudeExplanationSection(data.deviceType)
                 }
 
-                // 6. ATT Odometry Fusion Configuration & Guards (ATT-7751, REQ-SEN-028)
+                // 6. ATT Odometry Fusion Configuration & Guards (ATT-7751, REQ-SEN-028, REQ-UI-2799.2)
                 if (data.deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED) {
-                    AttFusedConfigSection()
+                    AttFusedConfigSection(viewModel = viewModel)
                 }
 
-                // 7. ATT Altitude & Slope Fusion Configuration & Guards (ATT-6279, REQ-FIL-016)
+                // 7. ATT Altitude & Slope Fusion Configuration & Guards (ATT-6279, REQ-FIL-016, REQ-UI-2799.2)
                 if (data.deviceType == DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED) {
-                    AttFusedAltitudeConfigSection()
+                    AttFusedAltitudeConfigSection(viewModel = viewModel)
                 }
 
-                // 8. Radar Tail Light Mode Control (ATT-7540, ATT-8450, REQ-CON-031.5, REQ-CON-048)
+                // 8. Radar Tail Light Mode Control (ATT-7540, ATT-8450, ATT-8125, REQ-CON-031.5, REQ-CON-048, REQ-UI-2799.2)
                 if (data.deviceType == DeviceType.BIKE_RADAR) {
                     RadarLightControlSection(
                         isConnected = isConnected,
-                        deviceName = currentDevice.deviceName
+                        deviceName = currentDevice.deviceName,
+                        viewModel = viewModel
                     )
                 }
 
@@ -593,6 +600,25 @@ private fun RunCalibrationFactorSelector(data: DeviceUiData, viewModel: EditDevi
     )
 }
 
+/**
+ * Parses a decimal string accepting both dot (`.`) and comma (`,`) decimal separators
+ * regardless of active device locale (`REQ-UI-2799.2`, `ATT-8125`).
+ */
+internal fun parseLocaleDecimal(input: String): Double? {
+    val normalized = input.trim().replace(',', '.')
+    if (normalized.isEmpty()) return null
+    val parsed = normalized.toDoubleOrNull() ?: return null
+    return parsed.takeIf { it.isFinite() }
+}
+
+/**
+ * Formats a calibration factor with 4 decimal places for the active [locale] (`REQ-UI-2799.2`).
+ */
+internal fun formatCalibrationFactor(
+    value: Double?,
+    locale: java.util.Locale = java.util.Locale.getDefault()
+): String = String.format(locale, "%.4f", value ?: 1.0)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RunCalibrationFactorContent(
@@ -600,6 +626,17 @@ internal fun RunCalibrationFactorContent(
     onCalibrationFactorChanged: (Double) -> Unit
 ) {
     var showCorrectDialog by remember { mutableStateOf(false) }
+    var textBuffer by rememberSaveable {
+        mutableStateOf(formatCalibrationFactor(calibrationFactor))
+    }
+
+    LaunchedEffect(calibrationFactor) {
+        val target = calibrationFactor ?: 1.0
+        val parsedCurrent = parseLocaleDecimal(textBuffer)
+        if (parsedCurrent == null || kotlin.math.abs(parsedCurrent - target) > 1e-9) {
+            textBuffer = formatCalibrationFactor(target)
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -608,21 +645,24 @@ internal fun RunCalibrationFactorContent(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val formattedValue = remember(calibrationFactor) {
-                String.format(java.util.Locale.getDefault(), "%.4f", calibrationFactor ?: 1.0)
-            }
             OutlinedTextField(
-                value = formattedValue,
-                onValueChange = { 
-                    it.toDoubleOrNull()?.let { valDbl -> onCalibrationFactorChanged(valDbl) }
+                value = textBuffer,
+                onValueChange = { input ->
+                    textBuffer = input
+                    parseLocaleDecimal(input)?.takeIf { it > 0.0 }?.let { valDbl ->
+                        onCalibrationFactorChanged(valDbl)
+                    }
                 },
-                modifier = Modifier.weight(1f)
+                singleLine = true,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("run_calibration_factor_input")
             )
-            
+
             Spacer(modifier = Modifier.width(8.dp))
-            
+
             IconButton(onClick = { showCorrectDialog = true }) {
                 Icon(
                     imageVector = Icons.Default.Calculate,
@@ -657,13 +697,13 @@ private fun CorrectCalibrationDialog(
     onFactorCalculated: (Double) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var measuredDist by remember { mutableStateOf("10.0") }
-    var correctDist by remember { mutableStateOf("10.0") }
-    
+    var measuredDist by remember { mutableStateOf(String.format(java.util.Locale.getDefault(), "%.1f", 10.0)) }
+    var correctDist by remember { mutableStateOf(String.format(java.util.Locale.getDefault(), "%.1f", 10.0)) }
+
     val newFactor = remember(measuredDist, correctDist) {
-        val m = measuredDist.toDoubleOrNull() ?: 1.0
-        val c = correctDist.toDoubleOrNull() ?: 1.0
-        if (m > 0) originalFactor * (c / m) else originalFactor
+        val m = parseLocaleDecimal(measuredDist) ?: 1.0
+        val c = parseLocaleDecimal(correctDist) ?: 1.0
+        if (m > 0.0) originalFactor * (c / m) else originalFactor
     }
 
     AppModalBottomSheet(
@@ -710,7 +750,7 @@ private fun CorrectCalibrationDialog(
             
             ReadOnlyField(
                 label = "New $fieldName",
-                value = if (roundToInt) newFactor.toInt().toString() else String.format("%.4f", newFactor)
+                value = if (roundToInt) newFactor.toInt().toString() else formatCalibrationFactor(newFactor)
             )
 
             Spacer(Modifier.height(8.dp))
@@ -865,16 +905,22 @@ private fun AltitudeExplanationSection(deviceType: DeviceType) {
 
 /**
  * Educational information card and guarded input toggles for ATT Odometry Fusion
- * (REQ-SEN-028.3, REQ-SEN-028.4, ATT-7751).
+ * (REQ-SEN-028.3, REQ-SEN-028.4, REQ-UI-2799.2, ATT-7751, ATT-8125).
+ * Toggle changes are staged in [EditDeviceViewModel] draft state and persisted strictly on Save.
  */
 @Composable
 @Suppress("FunctionNaming", "LongMethod")
-private fun AttFusedConfigSection() {
+private fun AttFusedConfigSection(viewModel: EditDeviceViewModel) {
     val context = LocalContext.current
-    var gnssChecked by remember { mutableStateOf(AttFusedPreferences.isGnssEnabled(context)) }
-    var wheelChecked by remember { mutableStateOf(AttFusedPreferences.isWheelEnabled(context)) }
-    var gyroChecked by remember { mutableStateOf(AttFusedPreferences.isGyroEnabled(context)) }
-    var autoCalibChecked by remember { mutableStateOf(AttFusedPreferences.isAutoCalibEnabled(context)) }
+    val draftState by viewModel.attFusedDraft.collectAsStateWithLifecycle()
+    val effectiveDraft = draftState ?: remember {
+        AttFusedDraftConfig(
+            gnssEnabled = AttFusedPreferences.isGnssEnabled(context),
+            wheelEnabled = AttFusedPreferences.isWheelEnabled(context),
+            gyroEnabled = AttFusedPreferences.isGyroEnabled(context),
+            autoCalibEnabled = AttFusedPreferences.isAutoCalibEnabled(context)
+        )
+    }
 
     val gnssAvailable = remember { AttFusedPreferences.isGnssAvailable(context) }
     val wheelAvailable = remember { AttFusedPreferences.isWheelAvailable(context) }
@@ -948,7 +994,7 @@ private fun AttFusedConfigSection() {
             }
         }
 
-        // Guarded Toggles Section
+        // Guarded Toggles Section (draft-staged until Save)
         OutlinedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -963,12 +1009,11 @@ private fun AttFusedConfigSection() {
             ) {
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_toggle_gnss),
-                    checked = gnssChecked,
+                    checked = effectiveDraft.gnssEnabled,
                     enabled = gnssAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_toggle_gnss_hint_disabled),
-                    onCheckedChange = {
-                        gnssChecked = it
-                        AttFusedPreferences.setGnssEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedConfigChanged { it.copy(gnssEnabled = enabled) }
                     }
                 )
 
@@ -979,12 +1024,11 @@ private fun AttFusedConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_toggle_wheel),
-                    checked = wheelChecked,
+                    checked = effectiveDraft.wheelEnabled,
                     enabled = wheelAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_toggle_wheel_hint_disabled),
-                    onCheckedChange = {
-                        wheelChecked = it
-                        AttFusedPreferences.setWheelEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedConfigChanged { it.copy(wheelEnabled = enabled) }
                     }
                 )
 
@@ -995,12 +1039,11 @@ private fun AttFusedConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_toggle_gyro),
-                    checked = gyroChecked,
+                    checked = effectiveDraft.gyroEnabled,
                     enabled = gyroAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_toggle_gyro_hint_disabled),
-                    onCheckedChange = {
-                        gyroChecked = it
-                        AttFusedPreferences.setGyroEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedConfigChanged { it.copy(gyroEnabled = enabled) }
                     }
                 )
 
@@ -1011,12 +1054,11 @@ private fun AttFusedConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_toggle_autocalib),
-                    checked = autoCalibChecked,
+                    checked = effectiveDraft.autoCalibEnabled,
                     enabled = autoCalibAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_toggle_autocalib_hint_disabled),
-                    onCheckedChange = {
-                        autoCalibChecked = it
-                        AttFusedPreferences.setAutoCalibEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedConfigChanged { it.copy(autoCalibEnabled = enabled) }
                     }
                 )
             }
@@ -1026,16 +1068,22 @@ private fun AttFusedConfigSection() {
 
 /**
  * Educational information card and guarded input toggles for ATT Altitude & Slope Fusion
- * (REQ-FIL-016.5, ATT-6279).
+ * (REQ-FIL-016.5, REQ-UI-2799.2, ATT-6279, ATT-8125).
+ * Toggle changes are staged in [EditDeviceViewModel] draft state and persisted strictly on Save.
  */
 @Composable
 @Suppress("FunctionNaming", "LongMethod")
-private fun AttFusedAltitudeConfigSection() {
+private fun AttFusedAltitudeConfigSection(viewModel: EditDeviceViewModel) {
     val context = LocalContext.current
-    var baroChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isBarometerEnabled(context)) }
-    var demChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isDemEnabled(context)) }
-    var gpsChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isGpsEnabled(context)) }
-    var speedChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isSpeedEnabled(context)) }
+    val draftState by viewModel.attFusedAltitudeDraft.collectAsStateWithLifecycle()
+    val effectiveDraft = draftState ?: remember {
+        AttFusedAltitudeDraftConfig(
+            barometerEnabled = AttFusedAltitudePreferences.isBarometerEnabled(context),
+            demEnabled = AttFusedAltitudePreferences.isDemEnabled(context),
+            gpsEnabled = AttFusedAltitudePreferences.isGpsEnabled(context),
+            speedEnabled = AttFusedAltitudePreferences.isSpeedEnabled(context)
+        )
+    }
 
     val baroAvailable = remember { AttFusedAltitudePreferences.isBarometerAvailable(context) }
     val demAvailable = remember { AttFusedAltitudePreferences.isDemAvailable(context) }
@@ -1109,7 +1157,7 @@ private fun AttFusedAltitudeConfigSection() {
             }
         }
 
-        // Guarded Toggles Section
+        // Guarded Toggles Section (draft-staged until Save)
         OutlinedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -1131,12 +1179,11 @@ private fun AttFusedAltitudeConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_alt_toggle_baro),
-                    checked = baroChecked,
+                    checked = effectiveDraft.barometerEnabled,
                     enabled = baroAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_alt_toggle_baro_hint_disabled),
-                    onCheckedChange = {
-                        baroChecked = it
-                        AttFusedAltitudePreferences.setBarometerEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedAltitudeConfigChanged { it.copy(barometerEnabled = enabled) }
                     }
                 )
 
@@ -1147,12 +1194,11 @@ private fun AttFusedAltitudeConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_alt_toggle_dem),
-                    checked = demChecked,
+                    checked = effectiveDraft.demEnabled,
                     enabled = demAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_alt_toggle_dem_hint_disabled),
-                    onCheckedChange = {
-                        demChecked = it
-                        AttFusedAltitudePreferences.setDemEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedAltitudeConfigChanged { it.copy(demEnabled = enabled) }
                     }
                 )
 
@@ -1163,12 +1209,11 @@ private fun AttFusedAltitudeConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_alt_toggle_gps),
-                    checked = gpsChecked,
+                    checked = effectiveDraft.gpsEnabled,
                     enabled = gpsAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_alt_toggle_gps_hint_disabled),
-                    onCheckedChange = {
-                        gpsChecked = it
-                        AttFusedAltitudePreferences.setGpsEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedAltitudeConfigChanged { it.copy(gpsEnabled = enabled) }
                     }
                 )
 
@@ -1179,12 +1224,11 @@ private fun AttFusedAltitudeConfigSection() {
 
                 AttFusedToggleRow(
                     title = stringResource(R.string.device_att_fused_alt_toggle_speed),
-                    checked = speedChecked,
+                    checked = effectiveDraft.speedEnabled,
                     enabled = speedAvailable,
                     disabledHint = stringResource(R.string.device_att_fused_alt_toggle_speed_hint_disabled),
-                    onCheckedChange = {
-                        speedChecked = it
-                        AttFusedAltitudePreferences.setSpeedEnabled(context, it)
+                    onCheckedChange = { enabled ->
+                        viewModel.onAttFusedAltitudeConfigChanged { it.copy(speedEnabled = enabled) }
                     }
                 )
             }
@@ -1261,16 +1305,18 @@ internal fun shouldShowRadarLightControlSection(
 }
 
 /**
- * Tail light mode selector for radar devices (`REQ-CON-031.5`, `REQ-CON-048`, `ATT-7540`, `ATT-8450`).
+ * Tail light mode selector for radar devices (`REQ-CON-031.5`, `REQ-CON-048`, `REQ-UI-2799.2`,
+ * `ATT-7540`, `ATT-8450`, `ATT-8125`).
  *
  * Remains visible and interactive offline (unless known radar-only such as RVR315 or connected without
- * light support), hydrating persisted mode preferences on cold start and applying selections on next
- * connection without modifying [EditDeviceViewModel] draft state.
+ * light support), hydrating persisted mode preferences on cold start and staging edits inside
+ * [EditDeviceViewModel] until Save (discarded on Cancel with zero DataStore/controller mutation).
  */
 @Composable
 private fun RadarLightControlSection(
     isConnected: Boolean,
     deviceName: String?,
+    viewModel: EditDeviceViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1288,16 +1334,19 @@ private fun RadarLightControlSection(
     val currentMode by RadarLightController.currentMode.collectAsStateWithLifecycle()
     val preferredMode by RadarLightController.preferredMode.collectAsStateWithLifecycle()
     val isStvzo by RadarLightController.isStvzo.collectAsStateWithLifecycle()
+    val radarDraft by viewModel.radarLightDraft.collectAsStateWithLifecycle()
     val isOffline = !isConnected && !isSimulating
-    val effectiveMode = if (isOffline) preferredMode else currentMode
+    val baseEffectiveMode = if (isOffline) preferredMode else currentMode
+    val displayedIsAutoMode = radarDraft?.isAutoMode ?: isAutoMode
+    val displayedEffectiveMode = radarDraft?.mode ?: baseEffectiveMode
 
     RadarLightControlSectionContent(
         isOffline = isOffline,
-        isAutoMode = isAutoMode,
-        effectiveMode = effectiveMode,
+        isAutoMode = displayedIsAutoMode,
+        effectiveMode = displayedEffectiveMode,
         isStvzo = isStvzo,
-        onSelectAuto = { RadarLightController.setAutoMode() },
-        onSelectMode = { mode -> RadarLightController.setManualLightMode(mode) },
+        onSelectAuto = { viewModel.onRadarLightSelectionChanged(isAutoMode = true, mode = displayedEffectiveMode) },
+        onSelectMode = { mode -> viewModel.onRadarLightSelectionChanged(isAutoMode = false, mode = mode) },
         modifier = modifier
     )
 }

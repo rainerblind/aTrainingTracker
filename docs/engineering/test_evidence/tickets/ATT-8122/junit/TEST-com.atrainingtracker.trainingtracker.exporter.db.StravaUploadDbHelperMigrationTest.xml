@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperMigrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:43.919Z" hostname="rainer-HP-EliteBook-850-G5" time="2.608">
+  <properties/>
+  <testcase name="testCheckpointWal_executesPragma" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperMigrationTest" time="0.673"/>
+  <testcase name="testOnUpgradeFromVersion5To6_handlesCorruptRecordsSafely" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperMigrationTest" time="0.467"/>
+  <testcase name="testDbVersionIsSix" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperMigrationTest" time="0.491"/>
+  <testcase name="testOnUpgradeFromVersion5To6_migratesLegacyRecords" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperMigrationTest" time="0.51"/>
+  <testcase name="testOnDowngrade_doesNotThrow" classname="com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelperMigrationTest" time="0.465"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

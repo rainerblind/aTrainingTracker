@@ -21,12 +21,7 @@ package com.atrainingtracker.trainingtracker.migration
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.trainingtracker.database.*
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
-import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.database.OpenDatabaseTracker
 
 /**
  * Manages tracking, checkpointing, and safe quiescence of SQLite database connections
@@ -105,27 +100,13 @@ object DatabaseConnectionManager {
         }
     }
 
+    /**
+     * Returns strictly currently open [SQLiteDatabase] handles across all tracked database
+     * managers and helpers (`REQ-MIG-057.3`, `ATT-8122`), without eagerly instantiating
+     * singletons or opening closed `.db` files on disk.
+     */
     @JvmStatic
-    fun getActiveDatabases(context: Context): List<SQLiteDatabase> {
-        return listOfNotNull(
-            try { WorkoutSummariesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { WorkoutSamplesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { LapsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { RoutesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { WorkoutClusterDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { KnownLocationsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { SportTypeEquipmentLinkManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { TrackingViewsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { DevicesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { SportTypeDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { StravaUploadDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
-            try { ExportStatusDatabaseManager.getInstance(context)?.getDatabase() } catch (_: Throwable) { null },
-            try { SegmentsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { EquipmentDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
-            try { ActiveDevicesDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
-            try { com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseManager.getInstance(context).database } catch (_: Throwable) { null },
-            try { com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context).database } catch (_: Throwable) { null },
-            try { com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager.getInstance(context).database } catch (_: Throwable) { null }
-        )
+    fun getActiveDatabases(@Suppress("UNUSED_PARAMETER") context: Context): List<SQLiteDatabase> {
+        return OpenDatabaseTracker.getOpenDatabases()
     }
 }

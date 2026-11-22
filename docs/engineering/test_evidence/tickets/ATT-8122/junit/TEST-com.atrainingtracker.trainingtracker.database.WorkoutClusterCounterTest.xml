@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:00.224Z" hostname="rainer-HP-EliteBook-850-G5" time="20.76">
+  <properties/>
+  <testcase name="formatClusterWorkoutName_whenCounterDisabled_hitCount2_returnsBaseNameWithoutCounter" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.927"/>
+  <testcase name="assignClusterToWorkout_whenCounterDisabled_assignsCleanNameWithoutSuffixOnSubsequentHits" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.893"/>
+  <testcase name="formatClusterWorkoutName_whenCounterEnabled_hitCount2_returnsNumberedName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.82"/>
+  <testcase name="workoutClusterModel_hasCounterDefaultsToTrue" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.783"/>
+  <testcase name="formatClusterWorkoutName_whenCounterEnabled_hitCount1_returnsBaseName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.802"/>
+  <testcase name="assignClusterToWorkout_whenCounterEnabled_assignsNumberedNameOnSubsequentHits" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.853"/>
+  <testcase name="formatClusterWorkoutName_defaultParameter_preservesBackwardCompatibilityWithCounterEnabled" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.8"/>
+  <testcase name="formatClusterWorkoutName_whenCounterDisabled_hitCount1_returnsBaseName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="2.044"/>
+  <testcase name="formatClusterWorkoutName_whenCounterDisabled_hitCount15_returnsBaseNameWithoutCounter" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.933"/>
+  <testcase name="workoutClusterModel_hasCounterCanBeExplicitlyFalse" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.942"/>
+  <testcase name="formatClusterWorkoutName_whenCounterEnabled_hitCount10_returnsNumberedName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.962"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

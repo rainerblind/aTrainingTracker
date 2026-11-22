@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:52:58.157Z" hostname="rainer-HP-EliteBook-850-G5" time="6.428">
+  <properties/>
+  <testcase name="testAftermathAnalysisSubtitle_reflectsIndependentDomains" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="6.178"/>
+  <testcase name="testClusterTuningSubtitle_formatting" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.053"/>
+  <testcase name="testCockpitTypographySubtitle_reflectsFontWeightAndVariant" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.019"/>
+  <testcase name="testSwimmingSubtitleFormatter_andPoolPresetResolution" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.044"/>
+  <testcase name="testMorningCheckSubtitleFormatter" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.008"/>
+  <testcase name="testSensorSearchSubtitle_reflectsRoundsAndActiveStatus" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.011"/>
+  <testcase name="testWorkoutMasksAndCardsSubtitle_reflectsActiveCounts" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.009"/>
+  <testcase name="testTuningSectionEnum_canonicalLifecycleSequence" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.002"/>
+  <testcase name="testAftermathAnalysisSubtitle_reflectsDomain" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.007"/>
+  <testcase name="testSensorsGpsFilterSubtitle_reflectsGpsAltSpeed" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.01"/>
+  <testcase name="testAmoledBatterySaverSubtitle_reflectsDimFactorsAndSlopes" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.011"/>
+  <testcase name="testAutoPauseSubtitle_formatsSpeedAndDebounceDelays" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.009"/>
+  <testcase name="testWorkoutMatrixSubtitle_reflectsListAndDetailCounts" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.006"/>
+  <testcase name="testNavigationSubtitle_reflectsTransparencyDismissDurationAndRadius" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.025"/>
+  <testcase name="testPhysiologyModelsSubtitle_reflectsEnabledSchools" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.011"/>
+  <testcase name="testCockpitTypographySubtitle_reflectsFontAndWeight" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.015"/>
+  <testcase name="TST-UI-2787_4 testWorkoutMatrixSubtitle_withDetailTabsUsesTabAndSectionCounts" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

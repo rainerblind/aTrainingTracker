@@ -207,6 +207,49 @@ object TTColor {
     val Zone6 = Color(0xFF8B5A2B) // Warm Earthy Brown
     val Zone7 = Color(0xFF000000) // Pure Black
 
+    // High-contrast theme-adaptive zone stroke tokens (>= 3.4:1 WCAG 2.1 AA on Light, Dark & AMOLED; REQ-UI-2798.1 / ATT-9164)
+    val Zone1StrokeLight = Color(0xFF4D9900) // Deep Chartreuse-Lime (3.49:1 on Light)
+    val Zone2StrokeLight = Zone2             // Forest Green (5.01:1 on Light)
+    val Zone3StrokeLight = Color(0xFFC97100) // Rich Amber-Orange (3.50:1 on Light)
+    val Zone4StrokeLight = Color(0xFFE51919) // Crisp Red (4.57:1 on Light)
+    val Zone5StrokeLight = Zone5             // Dark Violet (6.40:1 on Light)
+    val Zone6StrokeLight = Zone6             // Warm Earthy Brown (5.70:1 on Light)
+    val Zone7StrokeLight = Color(0xFF111111) // Near-Black Charcoal (18.42:1 on Light)
+
+    val Zone1StrokeDark = Zone1              // Vibrant Chartreuse (14.46:1 Dark / 16.21:1 AMOLED)
+    val Zone2StrokeDark = Color(0xFF2EBD59)  // Vivid Emerald-Green (7.62:1 Dark / 8.54:1 AMOLED)
+    val Zone3StrokeDark = Zone3              // Bright Orange (9.49:1 Dark / 10.63:1 AMOLED)
+    val Zone4StrokeDark = Color(0xFFFF3B30)  // Vivid Red (5.28:1 Dark / 5.92:1 AMOLED)
+    val Zone5StrokeDark = Color(0xFFC65CFF)  // Bright Violet (5.69:1 Dark / 6.38:1 AMOLED)
+    val Zone6StrokeDark = Color(0xFFC88A52)  // Warm Golden-Brown (6.43:1 Dark / 7.21:1 AMOLED)
+    val Zone7StrokeDark = Color(0xFFE2E8F0)  // High-Contrast Silver-White (15.20:1 Dark / 17.03:1 AMOLED)
+
+    /**
+     * Resolves a WCAG 2.1 AA high-contrast telemetry curve stroke color for 1-based [zoneIndex] (`1..7`)
+     * adapted to Light vs. Dark/AMOLED surfaces (`REQ-UI-2798.1` / `ATT-9164`).
+     */
+    fun zoneStrokeColor(zoneIndex: Int, isDarkTheme: Boolean): Color = if (isDarkTheme) {
+        when (zoneIndex) {
+            1 -> Zone1StrokeDark
+            2 -> Zone2StrokeDark
+            3 -> Zone3StrokeDark
+            4 -> Zone4StrokeDark
+            5 -> Zone5StrokeDark
+            6 -> Zone6StrokeDark
+            else -> Zone7StrokeDark
+        }
+    } else {
+        when (zoneIndex) {
+            1 -> Zone1StrokeLight
+            2 -> Zone2StrokeLight
+            3 -> Zone3StrokeLight
+            4 -> Zone4StrokeLight
+            5 -> Zone5StrokeLight
+            6 -> Zone6StrokeLight
+            else -> Zone7StrokeLight
+        }
+    }
+
     /**
      * Color mapping for Borg CR10 RPE scale (1–10) across all 7 physiological zones (REQ-WKO-038 / REQ-UI-529).
      * Maps 1–2 -> Zone1, 3–4 -> Zone2, 5–6 -> Zone3, 7 -> Zone4, 8 -> Zone5, 9 -> Zone6, 10 -> Zone7.

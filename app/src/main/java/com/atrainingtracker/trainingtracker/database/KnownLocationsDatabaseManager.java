@@ -23,6 +23,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.location.Location;
 import android.provider.BaseColumns;
@@ -53,7 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Architectural Role: Spatial knowledge base for sensor calibration.
  * Threading: Methods should generally be called from background contexts to avoid UI block.
  */
-public class KnownLocationsDatabaseManager {
+public class KnownLocationsDatabaseManager extends BaseDatabaseManager<KnownLocationsDatabaseManager.KnownLocationsDbHelper> {
     public static final int DEFAULT_RADIUS = 200;
     private static final String TAG = KnownLocationsDatabaseManager.class.getName();
     private static final boolean DEBUG = BANALService.getDebug(false);
@@ -67,13 +68,11 @@ public class KnownLocationsDatabaseManager {
     }
 
     private final Context mContext;
-    private final KnownLocationsDbHelper cDbHelper;
-    private SQLiteDatabase mDatabase = null;
 
     // Private constructor
     private KnownLocationsDatabaseManager(@NonNull Context context) {
+        super(new KnownLocationsDbHelper(context.getApplicationContext()));
         mContext = context.getApplicationContext();
-        cDbHelper = new KnownLocationsDbHelper(mContext);
     }
 
     @NonNull
@@ -86,27 +85,6 @@ public class KnownLocationsDatabaseManager {
             }
         }
         return cInstance;
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cDbHelper.close();
-            }
-            mDatabase = cDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
     }
     // --- End of Singleton Pattern ---
 

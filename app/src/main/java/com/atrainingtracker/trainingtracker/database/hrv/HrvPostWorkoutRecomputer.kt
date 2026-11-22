@@ -30,6 +30,7 @@ import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
@@ -176,8 +177,7 @@ object HrvPostWorkoutRecomputer {
             val rmssdValues = mutableListOf<Double>()
             val dfaValues = mutableListOf<Double>()
 
-            samplesDb.beginTransaction()
-            try {
+            samplesDb.inTransaction {
                 val updateSql = """
                     UPDATE $tableName SET 
                         ${SensorType.HRV_DFA_A1.name} = ?, 
@@ -284,17 +284,11 @@ object HrvPostWorkoutRecomputer {
                     stmt.bindLong(4, row.rowId)
                     stmt.executeUpdateDelete()
                 }
-
-                samplesDb.setTransactionSuccessful()
-            } finally {
-                samplesDb.endTransaction()
             }
 
             // 3. Update session extrema in WorkoutSummaries.db
             val sessionSdnn = computeSessionSdnn(sortedBeats, effectiveGateThreshold)
-            val summariesDb = summariesDbManager.database
-            summariesDb.beginTransaction()
-            try {
+            summariesDbManager.database.inTransaction { summariesDb ->
                 if (rmssdValues.isNotEmpty()) {
                     val minRmssd = rmssdValues.minOrNull() ?: 0.0
                     val maxRmssd = rmssdValues.maxOrNull() ?: 0.0
@@ -314,9 +308,6 @@ object HrvPostWorkoutRecomputer {
                 if (sessionSdnn != null) {
                     summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_SDNN, ExtremaType.AVG, sessionSdnn, null)
                 }
-                summariesDb.setTransactionSuccessful()
-            } finally {
-                summariesDb.endTransaction()
             }
 
             // 3b. Upsert HRV AccumulatedSensors types conditionally based on actually computed outputs (REQ-TRK-084.4)

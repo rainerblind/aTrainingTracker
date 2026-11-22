@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.TrackingRobustnessTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:49:09.434Z" hostname="rainer-HP-EliteBook-850-G5" time="29.472">
+  <properties/>
+  <testcase name="testBanalServiceGetSportTypeId_withEmptyList_fallsBackToDefaultSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="9.989"/>
+  <testcase name="testBatterySaverControllerRelease_cancelsCoroutineScope" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.607"/>
+  <testcase name="testClockDeviceMonotonicTimeAdvancement" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.662"/>
+  <testcase name="testDeviceManagerCreatePairedRemoteDevices_closesCursorDeterministically" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.622"/>
+  <testcase name="testBanalServiceNewLap_withPositiveLapTime_computesAccurateLapSpeed" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.725"/>
+  <testcase name="testBanalServiceGetSportTypeId_withNonEmptyList_returnsFirstMatchingSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.632"/>
+  <testcase name="testClockDeviceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.618"/>
+  <testcase name="testAltitudeFromPressureDeviceShutDown_doesNotRegisterReceiver" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.852"/>
+  <testcase name="testTrackerServiceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.717"/>
+  <testcase name="testMyDevice_inMemoryDeviceNameCachingAndInvalidation" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.664"/>
+  <testcase name="testBanalServiceGetSportTypeId_withNullList_fallsBackToDefaultSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.636"/>
+  <testcase name="testBanalServiceNewLap_withZeroLapTime_computesZeroSpeedWithoutNaNOrInfinity" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.737"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

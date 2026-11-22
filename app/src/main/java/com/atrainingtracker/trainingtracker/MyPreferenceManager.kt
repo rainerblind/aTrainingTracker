@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -39,6 +40,8 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMo
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryChartKind
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
+import com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.hasRealFilesDir
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,15 +54,14 @@ private val Context.backingUserPreferencesDataStore by preferencesDataStore(name
 
 private fun resolveUserPreferencesDataStore(context: Context): DataStore<Preferences> {
     return try {
-        val targetContext = context.applicationContext ?: context
-        val filesDir = targetContext.filesDir
-        if (filesDir != null && java.io.File(filesDir, "probe").path.isNotEmpty()) {
+        if (hasRealFilesDir(context)) {
+            val targetContext = context.applicationContext ?: context
             targetContext.backingUserPreferencesDataStore
         } else {
-            com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            InMemoryPreferencesDataStore()
         }
     } catch (_: Throwable) {
-        com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+        InMemoryPreferencesDataStore()
     }
 }
 
@@ -146,11 +148,59 @@ data class EditWorkoutFieldPreferences(
     val showMethod: Boolean = true
 )
 
-class MyPreferenceManager(context: Context) {
-    internal val dataStore = resolveUserPreferencesDataStore(context)
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+class MyPreferenceManager private constructor(
+    context: Context,
+    internal val dataStore: DataStore<Preferences> = resolveUserPreferencesDataStore(context),
+    private val appScope: CoroutineScope = sharedAppScope
+) {
+    private val isInMemoryFallback: Boolean = dataStore is InMemoryPreferencesDataStore
 
     companion object {
+        private val sharedAppScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        @Volatile
+        private var INSTANCE: MyPreferenceManager? = null
+
+        @Volatile
+        private var isTestOverride: Boolean = false
+
+        @JvmStatic
+        fun getInstance(context: Context): MyPreferenceManager {
+            val existing = INSTANCE
+            if (existing != null && (isTestOverride || !existing.isInMemoryFallback)) {
+                return existing
+            }
+            return synchronized(this) {
+                val current = INSTANCE
+                if (current != null && (isTestOverride || !current.isInMemoryFallback || !hasRealFilesDir(context))) {
+                    current
+                } else {
+                    val appContext = context.applicationContext ?: context
+                    MyPreferenceManager(appContext).also {
+                        isTestOverride = false
+                        INSTANCE = it
+                    }
+                }
+            }
+        }
+
+        @VisibleForTesting
+        internal fun createForTesting(
+            context: Context,
+            dataStore: DataStore<Preferences> = resolveUserPreferencesDataStore(context),
+            appScope: CoroutineScope = sharedAppScope
+        ): MyPreferenceManager {
+            val appContext = context.applicationContext ?: context
+            return MyPreferenceManager(appContext, dataStore, appScope)
+        }
+
+        @VisibleForTesting
+        fun setInstanceForTesting(instance: MyPreferenceManager?) {
+            synchronized(this) {
+                INSTANCE = instance
+                isTestOverride = instance != null
+            }
+        }
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")
         val ENABLED_PERIOD_MARKER_TYPES = stringSetPreferencesKey("enabled_period_marker_types")
         val ENABLED_CLUSTER_MARKER_TYPES = stringSetPreferencesKey("enabled_cluster_marker_types")

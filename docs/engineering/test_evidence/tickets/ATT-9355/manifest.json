@@ -1,0 +1,14 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "186777ed3afcfe2b4ac412cf2375e1ccea6bb70a",
+  "files": {
+    "evidence_summary.json": "1914254fca40c30cce9d7dd0f428619f257024cef7990d4d0917cd00ce668c29",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest.xml": "b2b04a0e431b35c9ff90b6724f87fb7cd33566572c915266392d757593f9cf2c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapModelsTest.xml": "b105a4ae3087b1e98641043c06a435427b04a8a09b2c2b28521ac307a60209bc",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest.xml": "91bf7a1a0825f4d15db9e6fe80aae3c75f441c20c05fe40218ea748eef784a60",
+    "screenshots/att9355_cadence_hr_order_light_dark.png": "688b5191d77f395cb314388e53fdbaae39f0406ebbca29f28c1f9b77c6270d77"
+  },
+  "run_started_utc": "2026-11-22T07:19:30.158066+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9355"
+}

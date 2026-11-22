@@ -290,6 +290,20 @@ class TestGovernanceParity(unittest.TestCase):
             self.assertIn("ATT-235", content)
             self.assertIn("run-as com.atrainingtracker.debug rm", content)
 
+    def test_stage6_warm_worktree_non_ui_skip_and_telemetry_documented(self):
+        """ATT-9581: Governance rules and Stage 6 skill document warm verify, non-UI skip, and lock telemetry."""
+        for rel_path in (
+            os.path.join(".agents", "rules", "aspice_governance.md"),
+            os.path.join(".agents", "skills", "stage6-final-review", "SKILL.md"),
+        ):
+            full_path = os.path.join(REPO_ROOT, rel_path)
+            with open(full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("--verify-warm", content)
+            self.assertIn("att_wt_verify_warm", content)
+            self.assertIn("check-install-required", content)
+            self.assertIn("att_emulator_lock_telemetry.jsonl", content)
+
 
 class TestStdlibCompliance(unittest.TestCase):
     """TST-TST-004.6: Python Standard Library Compliance."""
@@ -434,6 +448,225 @@ class TestEmulatorSessionLock(unittest.TestCase):
         # Lock must be free immediately after child failure
         with agent_emulator.emulator_session_lock(lock_path=self.lock_file, timeout_sec=0.5):
             pass
+
+
+class TestStage6InstallClassifier(unittest.TestCase):
+    """ATT-9581: Non-UI diff classification & redundant installDebug skip."""
+
+    def test_non_ui_diffs_do_not_require_install_debug(self):
+        non_ui_cases = [
+            ["tools/agent_emulator.py", "tools/test_agent_emulator.py", ".agents/skills/stage6-final-review/SKILL.md"],
+            ["app/src/test/java/com/atrainingtracker/trainingtracker/domain/ZoneCalculatorTest.kt"],
+            [
+                "app/src/main/java/com/atrainingtracker/trainingtracker/domain/ZoneCalculator.kt",
+                "app/src/main/java/com/atrainingtracker/trainingtracker/physiology/HrZoneMath.kt",
+            ],
+            ["docs/architecture.md", "README.md"],
+        ]
+        for files in non_ui_cases:
+            res = agent_emulator.classify_stage6_install_need(files)
+            self.assertFalse(res["install_required"], f"Expected skip for {files}, got {res}")
+            self.assertEqual(res["matched_files"], [])
+
+    def test_ui_and_runtime_diffs_require_install_debug(self):
+        ui_cases = [
+            ["app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/RadarSettingsScreen.kt"],
+            ["app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt"],
+            ["app/src/main/java/com/atrainingtracker/trainingtracker/fragments/TrackingFragment.java"],
+            ["app/src/main/AndroidManifest.xml"],
+            ["app/src/main/res/values/strings.xml"],
+            ["app/src/main/java/com/atrainingtracker/banalservice/BANALService.java"],
+            ["app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java"],
+            ["app/build.gradle"],
+        ]
+        for files in ui_cases:
+            res = agent_emulator.classify_stage6_install_need(files)
+            self.assertTrue(res["install_required"], f"Expected install_required=True for {files}, got {res}")
+            self.assertGreaterEqual(len(res["matched_files"]), 1)
+
+    def test_composable_symbol_in_util_package_triggers_install_required(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            util_dir = os.path.join(tmp, "app", "src", "main", "java", "com", "atrainingtracker", "util")
+            os.makedirs(util_dir, exist_ok=True)
+            rel = "app/src/main/java/com/atrainingtracker/util/PillHelper.kt"
+            with open(os.path.join(tmp, rel), "w", encoding="utf-8") as f:
+                f.write("@Composable\nfun PillHelper() {}\n")
+            res = agent_emulator.classify_stage6_install_need([rel], repo_root=tmp)
+            self.assertTrue(res["install_required"])
+            self.assertEqual(res["matched_files"][0]["reason"], "android_runtime_or_compose_symbol")
+
+    def test_cli_check_install_required_and_exec_skip_if_non_ui(self):
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(["git", "init", "-b", "sprint/test", tmp], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmp, check=True)
+            subprocess.run(["git", "config", "user.email", "tester@example.com"], cwd=tmp, check=True)
+            os.makedirs(os.path.join(tmp, "tools"), exist_ok=True)
+            with open(os.path.join(tmp, "tools", "helper.py"), "w") as f:
+                f.write("x = 1\n")
+            subprocess.run(["git", "add", "."], cwd=tmp, check=True)
+            subprocess.run(["git", "commit", "-m", "base"], cwd=tmp, check=True, capture_output=True)
+
+            # Non-UI branch
+            subprocess.run(["git", "checkout", "-b", "feature/non-ui"], cwd=tmp, check=True, capture_output=True)
+            with open(os.path.join(tmp, "tools", "helper.py"), "w") as f:
+                f.write("x = 2\n")
+            subprocess.run(["git", "add", "."], cwd=tmp, check=True)
+            subprocess.run(["git", "commit", "-m", "non-ui"], cwd=tmp, check=True, capture_output=True)
+
+            script = os.path.join(TOOLS_DIR, "agent_emulator.py")
+            chk = subprocess.run(
+                [
+                    sys.executable,
+                    script,
+                    "check-install-required",
+                    "--base",
+                    "sprint/test",
+                    "--head",
+                    "feature/non-ui",
+                    "--repo-root",
+                    tmp,
+                    "--json",
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            payload = json.loads(chk.stdout)
+            self.assertFalse(payload["install_required"])
+
+            # exec --skip-if-non-ui skips running command and never touches lock file
+            sentinel = os.path.join(tmp, "ran.txt")
+            lock_file = os.path.join(tmp, "emu.lock")
+            rc = agent_emulator.exec_locked_session(
+                cmd=[sys.executable, "-c", f"open({sentinel!r}, 'w').write('ran')"],
+                ensure=False,
+                lock_path=lock_file,
+                skip_if_non_ui=True,
+                base_ref="sprint/test",
+                head_ref="feature/non-ui",
+                repo_root=tmp,
+            )
+            self.assertEqual(rc, 0)
+            self.assertFalse(os.path.exists(sentinel))
+            self.assertFalse(os.path.exists(lock_file))
+
+            # UI branch executes normally
+            subprocess.run(["git", "checkout", "-b", "feature/ui", "sprint/test"], cwd=tmp, check=True, capture_output=True)
+            ui_dir = os.path.join(tmp, "app", "src", "main", "res", "values")
+            os.makedirs(ui_dir, exist_ok=True)
+            with open(os.path.join(ui_dir, "strings.xml"), "w") as f:
+                f.write("<resources/>\n")
+            subprocess.run(["git", "add", "."], cwd=tmp, check=True)
+            subprocess.run(["git", "commit", "-m", "ui"], cwd=tmp, check=True, capture_output=True)
+
+            rc_ui = agent_emulator.exec_locked_session(
+                cmd=[sys.executable, "-c", f"open({sentinel!r}, 'w').write('ran')"],
+                ensure=False,
+                lock_path=lock_file,
+                skip_if_non_ui=True,
+                base_ref="sprint/test",
+                head_ref="feature/ui",
+                repo_root=tmp,
+            )
+            self.assertEqual(rc_ui, 0)
+            self.assertTrue(os.path.isfile(sentinel))
+
+
+class TestEmulatorLockTelemetry(unittest.TestCase):
+    """ATT-9581: Lock wait duration stderr logging and JSONL telemetry for Option 2 Gate."""
+
+    def test_contended_lock_logs_wait_to_stderr_and_records_jsonl_telemetry(self):
+        import fcntl
+        import json
+        import time
+
+        with tempfile.TemporaryDirectory() as tmp:
+            lock_file = os.path.join(tmp, "emu.lock")
+            tel_file = os.path.join(tmp, "telemetry.jsonl")
+            script = os.path.join(TOOLS_DIR, "agent_emulator.py")
+
+            # Hold lock briefly in child, then launch second child that must wait
+            holder = subprocess.Popen(
+                [
+                    sys.executable,
+                    script,
+                    "exec",
+                    "--lock-file",
+                    lock_file,
+                    "--telemetry-file",
+                    tel_file,
+                    "--timeout",
+                    "10",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "import time; time.sleep(0.35)",
+                ],
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            time.sleep(0.08)
+            waiter = subprocess.Popen(
+                [
+                    sys.executable,
+                    script,
+                    "exec",
+                    "--lock-file",
+                    lock_file,
+                    "--telemetry-file",
+                    tel_file,
+                    "--timeout",
+                    "10",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    "pass",
+                ],
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            _, holder_err = holder.communicate(timeout=15)
+            _, waiter_err = waiter.communicate(timeout=15)
+            self.assertEqual(holder.returncode, 0)
+            self.assertEqual(waiter.returncode, 0)
+
+            self.assertIn("[emulator-lock] Acquired", waiter_err)
+            self.assertIn("contended=true", waiter_err)
+
+            with open(tel_file, "r", encoding="utf-8") as f:
+                entries = [json.loads(line) for line in f if line.strip()]
+            self.assertEqual(len(entries), 2)
+            self.assertTrue(any(e["contended"] and e["wait_sec"] >= 0.1 and not e["timed_out"] for e in entries))
+
+            # Verify timeout also appends timed_out=True telemetry
+            fd = os.open(lock_file, os.O_CREAT | os.O_RDWR, 0o666)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with self.assertRaises(TimeoutError):
+                    with agent_emulator.emulator_session_lock(
+                        lock_path=lock_file,
+                        timeout_sec=0.12,
+                        poll_interval_sec=0.04,
+                        telemetry_path=tel_file,
+                    ):
+                        pass
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+                os.close(fd)
+
+            stats = subprocess.run(
+                [sys.executable, script, "lock-stats", "--telemetry-file", tel_file, "--json"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            summary = json.loads(stats.stdout)
+            self.assertEqual(summary["total_sessions"], 3)
+            self.assertGreaterEqual(summary["contended_sessions"], 2)
+            self.assertEqual(summary["timeouts"], 1)
+            self.assertGreater(summary["max_wait_sec"], 0.1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.radar.RadarLightModeGridTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T10:00:05.945Z" hostname="rainer-HP-EliteBook-850-G5" time="22.784">
+  <properties/>
+  <testcase name="testSharedGrid_showActiveModeSubtitleGate_andStvzoBanner" classname="com.atrainingtracker.trainingtracker.ui.components.radar.RadarLightModeGridTest" time="19.923"/>
+  <testcase name="testCaptureUnifiedRadarLightGridLightDarkStvzoPreview_Rule8_5" classname="com.atrainingtracker.trainingtracker.ui.components.radar.RadarLightModeGridTest" time="2.167"/>
+  <testcase name="testSharedGrid_nonStvzoRowMajorOrderAndCallbacks" classname="com.atrainingtracker.trainingtracker.ui.components.radar.RadarLightModeGridTest" time="0.694"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

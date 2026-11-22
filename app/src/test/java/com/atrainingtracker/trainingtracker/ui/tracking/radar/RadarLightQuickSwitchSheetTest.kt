@@ -91,7 +91,9 @@ class RadarLightQuickSwitchSheetTest {
                     isLightControlSupported = true,
                     onModeSelected = { selectedMode = it },
                     onAutoSelected = { autoSelected = true },
-                    onSnoozeSelected = { selectedSnooze = it }
+                    onSnoozeSelected = { selectedSnooze = it },
+                    onResumeAudio = {},
+                    onDismiss = {}
                 )
             }
         }
@@ -119,7 +121,10 @@ class RadarLightQuickSwitchSheetTest {
                     isAutoMode = true,
                     isLightControlSupported = true,
                     onModeSelected = { selectedMode = it },
-                    onAutoSelected = { autoSelected = true }
+                    onAutoSelected = { autoSelected = true },
+                    onSnoozeSelected = {},
+                    onResumeAudio = {},
+                    onDismiss = {}
                 )
             }
         }
@@ -149,6 +154,7 @@ class RadarLightQuickSwitchSheetTest {
                     onModeSelected = {},
                     onAutoSelected = { autoSelected = true },
                     onSnoozeSelected = { selectedSnooze = it },
+                    onResumeAudio = {},
                     onDismiss = { dismissCount++ }
                 )
             }
@@ -195,6 +201,8 @@ class RadarLightQuickSwitchSheetTest {
                         mode = RadarAudioSnoozeMode.SNOOZE_15M
                     ),
                     onModeSelected = {},
+                    onAutoSelected = {},
+                    onSnoozeSelected = {},
                     onResumeAudio = { resumeInvoked = true },
                     onDismiss = { dismissed = true }
                 )
@@ -219,7 +227,11 @@ class RadarLightQuickSwitchSheetTest {
                     isStvzo = true,
                     isAutoMode = false,
                     isLightControlSupported = true,
-                    onModeSelected = {}
+                    onModeSelected = {},
+                    onAutoSelected = {},
+                    onSnoozeSelected = {},
+                    onResumeAudio = {},
+                    onDismiss = {}
                 )
             }
         }
@@ -250,7 +262,11 @@ class RadarLightQuickSwitchSheetTest {
                     isStvzo = false,
                     isAutoMode = false,
                     isLightControlSupported = false,
-                    onModeSelected = {}
+                    onModeSelected = {},
+                    onAutoSelected = {},
+                    onSnoozeSelected = {},
+                    onResumeAudio = {},
+                    onDismiss = {}
                 )
             }
         }
@@ -299,7 +315,11 @@ class RadarLightQuickSwitchSheetTest {
                             isSnoozed = true,
                             mode = RadarAudioSnoozeMode.SNOOZE_15M
                         ),
-                        onModeSelected = {}
+                        onModeSelected = {},
+                        onAutoSelected = {},
+                        onSnoozeSelected = {},
+                        onResumeAudio = {},
+                        onDismiss = {}
                     )
                 }
             }
@@ -375,7 +395,11 @@ class RadarLightQuickSwitchSheetTest {
                                 isAutoMode = true,
                                 isLightControlSupported = true,
                                 snoozeState = RadarAudioSnoozeState(isSnoozed = false),
-                                onModeSelected = {}
+                                onModeSelected = {},
+                                onAutoSelected = {},
+                                onSnoozeSelected = {},
+                                onResumeAudio = {},
+                                onDismiss = {}
                             )
                         }
                     }
@@ -396,7 +420,11 @@ class RadarLightQuickSwitchSheetTest {
                                     isSnoozed = true,
                                     mode = RadarAudioSnoozeMode.SNOOZE_15M
                                 ),
-                                onModeSelected = {}
+                                onModeSelected = {},
+                                onAutoSelected = {},
+                                onSnoozeSelected = {},
+                                onResumeAudio = {},
+                                onDismiss = {}
                             )
                         }
                     }
@@ -414,5 +442,94 @@ class RadarLightQuickSwitchSheetTest {
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
         assertTrue("Preview PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0)
+    }
+
+    /**
+     * TST-CON-055.1 / REQ-CON-055.1 (ATT-8123):
+     * Renders the real [RadarLightQuickSwitchSheet] modal wrapper and verifies all 4 audio-snooze
+     * presets invoke [onSnoozeSelected] with the exact preset strictly before [onDismiss].
+     */
+    @Test
+    fun testModalWrapper_clickingAllSnoozePresets_triggersOnSnoozeSelectedBeforeDismiss_TST_CON_055_1() {
+        val events = mutableListOf<String>()
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                RadarLightQuickSwitchSheet(
+                    currentMode = RadarLightMode.SOLID,
+                    availableModes = RadarLightMode.getAvailableModes(isStvzo = true),
+                    isStvzo = true,
+                    isAutoMode = false,
+                    isLightControlSupported = true,
+                    snoozeState = RadarAudioSnoozeState.INACTIVE,
+                    onModeSelected = { events.add("mode:${it.name}") },
+                    onAutoSelected = { events.add("auto") },
+                    onSnoozeSelected = { events.add("snooze:${it.name}") },
+                    onResumeAudio = { events.add("resume") },
+                    onDismiss = { events.add("dismiss") }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val presets = listOf(
+            RadarAudioSnoozeMode.SNOOZE_15M,
+            RadarAudioSnoozeMode.SNOOZE_30M,
+            RadarAudioSnoozeMode.FAST_ONLY,
+            RadarAudioSnoozeMode.REST_OF_RIDE
+        )
+        for (preset in presets) {
+            events.clear()
+            composeTestRule.onNodeWithTag("RadarSnooze_${preset.name}")
+                .assertIsDisplayed()
+                .performClick()
+            assertEquals(
+                "Modal wrapper must forward onSnoozeSelected(${preset.name}) strictly before onDismiss",
+                listOf("snooze:${preset.name}", "dismiss"),
+                events
+            )
+        }
+    }
+
+    /**
+     * TST-CON-055.1 / REQ-CON-055.1 (ATT-8123):
+     * Renders [RadarLightQuickSwitchSheet] with active snooze and verifies tapping Resume Alerts
+     * invokes [onResumeAudio] strictly before [onDismiss].
+     */
+    @Test
+    fun testModalWrapper_activeSnooze_clickingResume_triggersOnResumeAudioBeforeDismiss_TST_CON_055_1() {
+        val events = mutableListOf<String>()
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                RadarLightQuickSwitchSheet(
+                    currentMode = RadarLightMode.OFF,
+                    availableModes = emptyList(),
+                    isStvzo = false,
+                    isAutoMode = false,
+                    isLightControlSupported = false,
+                    snoozeState = RadarAudioSnoozeState(
+                        isSnoozed = true,
+                        mode = RadarAudioSnoozeMode.SNOOZE_30M
+                    ),
+                    onModeSelected = { events.add("mode:${it.name}") },
+                    onAutoSelected = { events.add("auto") },
+                    onSnoozeSelected = { events.add("snooze:${it.name}") },
+                    onResumeAudio = { events.add("resume") },
+                    onDismiss = { events.add("dismiss") }
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("RadarSnooze_Resume")
+            .assertIsDisplayed()
+            .performClick()
+
+        assertEquals(
+            "Modal wrapper must forward onResumeAudio strictly before onDismiss",
+            listOf("resume", "dismiss"),
+            events
+        )
     }
 }

@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" tests="17" skipped="0" failures="17" errors="0" timestamp="2026-11-22T07:11:10.507Z" hostname="rainer-HP-EliteBook-850-G5" time="1.308">
+  <properties/>
+  <testcase name="testWarmupCompletionAndCooldownLapSplits_TST_TRK_072_10a" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.083">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testFinishTestBroadcastsStopTracking_TST_TRK_072_10b" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.073">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testLifecycleStateMachine_WarmupToTestingToCooldown_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.066">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testEarlyCompletionToCooldownRestartsTimerAndBroadcastsStopTracking_TST_TRK_072_10c" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.069">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testProtocolConfiguration_CyclingAndRunningPresets_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.071">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testLiveSpeedTelemetryIngestion_TST_TRK_072_4" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.072">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testCancelProtocol_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.067">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testContinuousRampPacingProgression_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.067">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testEarlySubExhaustionAutoCompletionDetection_TST_TRK_072_3" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.069">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testRampTestIgnoresPinnedPerDeviceHrvTelemetry_TST_HRV_050_4" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.075">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testDynamicCutoffWithCustomizedT2_TST_TRK_072_3" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.081">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testFinishTest_tagsWorkoutAndSetsCompleted_TST_TRK_072_6" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.079">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testStartProtocolAndTagging_TST_TRK_072_6" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.106">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testStepProgressionPacingIncrements_TST_TRK_072_4" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.08">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testCooldownTimerExpirationBroadcastsStopTracking_TST_TRK_072_10b" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.085">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testOfflineOrNotTrackingDoesNotBroadcast_TST_TRK_072_10b" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.082">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <testcase name="testPreFlightSensorQualityTiers_TST_TRK_072_2" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.081">
+    <failure message="java.lang.VirtualMachineError: Out of space in CodeCache for adapters" type="java.lang.VirtualMachineError">java.lang.VirtualMachineError: Out of space in CodeCache for adapters
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt:218)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.&lt;init&gt;(BANALServiceRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository$Companion.getInstance(BANALServiceRepository.kt:1344)
+	at com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest.setUp(HrvRampTestViewModelTest.kt:69)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.RunBefores.invokeMethod(RunBefores.java:33)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:24)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+	Suppressed: org.robolectric.android.internal.AndroidTestEnvironment$UnExecutedRunnablesException: Main looper has queued unexecuted runnables. This might be the cause of the test failure. You might need a shadowOf(Looper.getMainLooper()).idle() call.
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

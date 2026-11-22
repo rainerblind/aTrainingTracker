@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:32.153Z" hostname="rainer-HP-EliteBook-850-G5" time="0.012">
+  <properties/>
+  <testcase name="testNullAndNonFiniteTelemetry_returnsNullNeedlePosition" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.003"/>
+  <testcase name="testActiveZoneIndexCalculation" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.0"/>
+  <testcase name="testCalculateZoneGaugeState" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.003"/>
+  <testcase name="testCogganPower7Zones_proportionalSegmentWeights_match10_20_15_15_15_30_10" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.0"/>
+  <testcase name="testHeartRate5Zones_strictlyLinearNeedleAndExactCutoffAlignment" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.003"/>
+  <testcase name="testPower7Zones_10PercentBoundaryClippingAtXMinAndXMax" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.0"/>
+  <testcase name="testPower7Zones_strictlyLinearNeedleAndExactCutoffAlignment" classname="com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

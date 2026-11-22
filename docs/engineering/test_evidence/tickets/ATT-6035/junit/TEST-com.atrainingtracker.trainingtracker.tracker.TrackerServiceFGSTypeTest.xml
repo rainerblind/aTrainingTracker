@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFGSTypeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:06:50.577Z" hostname="rainer-HP-EliteBook-850-G5" time="1.079">
+  <properties/>
+  <testcase name="testDetermineForegroundServiceType_NeverIncludesConnectedDevice" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFGSTypeTest" time="0.724"/>
+  <testcase name="testDetermineForegroundServiceType_PreApi34_ReturnsLocationOnlyRegardlessOfHealth" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFGSTypeTest" time="0.114"/>
+  <testcase name="testDetermineForegroundServiceType_WithoutHealth_ReturnsLocationOnly" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFGSTypeTest" time="0.12"/>
+  <testcase name="testDetermineForegroundServiceType_WithHealth_ReturnsLocationAndHealth" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFGSTypeTest" time="0.12"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

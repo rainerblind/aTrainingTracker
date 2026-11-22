@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:31:27.402Z" hostname="rainer-HP-EliteBook-850-G5" time="0.025">
+  <properties/>
+  <testcase name="CropWorkoutScreen has eliminated hardcoded German literals and uses formatters and string resources" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.004"/>
+  <testcase name="LapEditBottomSheet and PeriodSummaryCard use string resources" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.002"/>
+  <testcase name="Accessibility content descriptions and navigation icon buttons are localized" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.009"/>
+  <testcase name="MainActivityWithNavigation and ZoneCalculatorDialog use extracted string resources" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.003"/>
+  <testcase name="ImportBackupTabsScreen uses string resources for title mapping and select route contentDescription" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.002"/>
+  <testcase name="imperial conversion constants match BANAL standards" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.001"/>
+  <testcase name="WorkoutFilterBottomSheet supports imperial distance and elevation presets and parsing" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.001"/>
+  <testcase name="Map screens use localized marker titles" classname="com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -52,7 +52,7 @@ class WorkoutClusterStatsTest {
     private class TestWorkoutSummariesDatabaseManager(
         private val db: SQLiteDatabase
     ) : WorkoutSummariesDatabaseManager(null) {
-        override fun getDatabase(): SQLiteDatabase = db
+        override val database: SQLiteDatabase get() = db
     }
 
     @Before

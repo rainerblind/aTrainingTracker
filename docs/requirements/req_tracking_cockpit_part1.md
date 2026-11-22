@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 1 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P1`  
-**Version**: 1.0.23  
+**Version**: 1.0.26  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part1`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 109
+**Total Requirements**: 110
 
 ---
 
@@ -1849,13 +1849,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: "My Stuff" drawer group remains collapsed by default; manual unpairing via `DeviceItem.kt` intact; 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-TRK-034: Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation [Verified]
-- **Tests**: `TST-TRK-026`, `TST-TRK-027`
+- **Tests**: `TST-TRK-026`, `TST-TRK-027`, `TST-TRK-092`
 - **System Requirement(s)**: `SYSREQ-TRK-004`
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `TrainingApplication.java`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceResilienceTest.kt`
-- **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`) SHALL guarantee that asynchronous workout finalization on `mDbExecutor` is protected within the Android Foreground Service lifecycle, keeping process priority elevated and `BANALService` bound until `endWorkout()` completes (ATT-4098, extending `REQ-TRK-015`, `REQ-TRK-030`, and `REQ-TRK-033`):
+- **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`) SHALL guarantee that asynchronous workout finalization on `mDbExecutor` is protected within the Android Foreground Service lifecycle, keeping process priority elevated and `BANALService` bound until `endWorkout()` completes without ever blocking the Main Thread in `onDestroy()` (ATT-4098, amended by ATT-6178, extending `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-033`, and `REQ-TRK-076`):
 1. *Graceful Stop Command Dispatch via `ACTION_STOP` (`REQ-TRK-034.1`)*:
 • `TrackerService` SHALL define `public static final String ACTION_STOP = "com.atrainingtracker.trainingtracker.tracker.TrackerService.ACTION_STOP";` and expose `public static boolean isRunning()` (returning `sInstance != null`).
 • In `TrainingApplication.stopTracking()`, instead of issuing `stopService(new Intent(this, TrackerService.class))`, `TrainingApplication` SHALL issue `if (TrackerService.isRunning()) { Intent stopIntent = new Intent(this, TrackerService.class); stopIntent.setAction(TrackerService.ACTION_STOP); startService(stopIntent); }`.
@@ -1863,22 +1863,22 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 2. *Foreground Priority Protection During Asynchronous Finalization (`REQ-TRK-034.2`)*:
 • In `TrackerService.onStartCommand(@Nullable Intent intent, int flags, int startId)`: when `intent != null && ACTION_STOP.equals(intent.getAction())`:
 • If `TrackerService` is already stopping (`mIsStopping == true`) or not actively tracking (`mWorkoutID <= 0` and `mBaseFileName == null`), it SHALL immediately return `START_NOT_STICKY` (calling `performStopSelf()` if idle).
-• Otherwise, `TrackerService` SHALL set `volatile boolean mIsStopping = true;`, immediately cancel `mTrackerHandle` and invoke `mScheduler.shutdownNow()` so no further 1 Hz ticks are sampled or submitted to `mDbExecutor`.
+• Otherwise, `TrackerService` SHALL set `volatile boolean mIsStopping = true;`, immediately cancel `mTrackerHandle` (deferring complete executor shutdown strictly to `onDestroy()` per `REQ-TRK-076.1`) so no further 1 Hz ticks are sampled or submitted to `mDbExecutor`.
 • `TrackerService` SHALL unregister transient receivers (`mAltitudeCorrectionReceiver`, `mSearchingFinishedReceiver`, `mUserSelectedSportTypeChangedReceiver`, `mLapSummaryReceiver`) and release `mAutoPauseManager`.
 • `TrackerService` SHALL **retain** its Foreground Service status (`stopForeground` is NOT called yet) and maintain its active foreground notification, guaranteeing `PROCESS_STATE_FOREGROUND_SERVICE` priority throughout database finalization.
 • `TrackerService` SHALL enqueue the terminal `finalizationTask` onto `mDbExecutor`.
 3. *Deferred Service Teardown and BANAL Unbinding on Completion (`REQ-TRK-034.3`)*:
-• Inside `finalizationTask` on `mDbExecutor`: `try { if (!mTrackingInterrupted) { endWorkout(); } } catch (Throwable t) { Log.e(TAG, ...); } finally { ... }`. Throughout `endWorkout()`, `mBanalConnection` SHALL remain actively bound and `mBanalService` available to query active devices, lap numbers, and sensor accumulations.
-• Inside the `finally` block of `finalizationTask`: `mBanalService = null; releaseWakeLock(); mFinalizationFuture.complete(null);` and dispatch to the Android main thread via `runOnMainThread(...)`: `unbindService(mBanalConnection); performStopForeground(); performStopSelf();`.
-4. *Safety Net in `onDestroy()` and Async-Init Abort Consolidation (`REQ-TRK-034.4`)*:
-• If `TrackerService.onDestroy()` is invoked unexpectedly before `ACTION_STOP` finalization runs: if `mFinalizationFuture != null`, `onDestroy()` SHALL wait for `mFinalizationFuture` up to a bounded timeout (5 seconds); if `mFinalizationFuture == null`, `onDestroy()` SHALL execute the fallback finalization as specified in `REQ-TRK-033`.
-• In `TrackerService.java:624-638` (the `mDbExecutor.submit` `catch` block on `START_NORMAL` initialization failure): the duplicate call to `TrainingApplication.resetTrackingStateOnAbort()` SHALL be removed, relying strictly on `runOnMainThread(this::handleTrackingAborted)` which resets `TrainingApplication` tracking state and broadcasts `TRACKING_ABORTED_INTENT` on the main thread.
+• Inside `finalizationTask` on `mDbExecutor`: `try { if (!mTrackingInterrupted) { endWorkout(...); } } catch (Throwable t) { Log.e(TAG, ...); } finally { ... }`. Throughout `endWorkout()`, `mBanalConnection` SHALL remain actively bound and `mBanalService` available to query active devices, lap numbers, and sensor accumulations.
+• Inside the `finally` block of `finalizationTask`, `TrackerService` SHALL dispatch idempotent, individually fault-isolated Main-Thread teardown (`safeUnbindBanalService()`, `mBanalService = null`, `releaseWakeLock()`, `performStopForeground()`, `performStopSelf()`, gated by `mSessionGeneration` per `REQ-TRK-076.3`) via `runOnMainThread(...)`, completing `finalizationFuture.complete(null)` in `finally` without uncaught exceptions even if `onDestroy()` already ran.
+4. *Non-Blocking `onDestroy()` Safety Net While Stopping & Async-Init Abort Consolidation (`REQ-TRK-034.4`, amended `ATT-6178`)*:
+• If `TrackerService.onDestroy()` is invoked externally while `mIsStopping == true`: `onDestroy()` SHALL immediately call `mScheduler.shutdownNow()`, `mRrFlushExecutor.shutdown()`, and `mDbExecutor.shutdown()` (`REQ-TRK-076.1`) and MUST NOT block the Main Thread on `mFinalizationFuture.get(...)` and MUST NOT prematurely call `safeUnbindBanalService()`, `performStopForeground()`, or `releaseWakeLock()` while `mFinalizationFuture != null && !mFinalizationFuture.isDone()` (leaving teardown strictly to the posted post-`endWorkout` Main-Thread Runnable per `REQ-TRK-033.2` / `REQ-TRK-034.3`; if `mFinalizationFuture == null || mFinalizationFuture.isDone()`, `onDestroy()` defensively executes idempotent `safeUnbindBanalService()`, `mBanalService = null`, and `releaseWakeLock()`). If `mIsStopping == false`, `onDestroy()` SHALL execute fallback async finalization as specified in `REQ-TRK-033`.
+• In `TrackerService.java` (the `mDbExecutor.submit` `catch` block on `START_NORMAL` initialization failure): the duplicate call to `TrainingApplication.resetTrackingStateOnAbort()` SHALL remain removed, relying strictly on `runOnMainThread(this::handleTrackingAborted)`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-034`, extending `REQ-TRK-015` (`ATT-2641`), `REQ-TRK-030` (`ATT-3986`), and `REQ-TRK-033` (`ATT-4006`). Targets `TrackerService.java`, `TrainingApplication.java`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceResilienceTest.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-4006` (`814919cd`) moved `endWorkout()` to `mDbExecutor` from `onDestroy()`. Review Finding 2 identified that calling `stopForeground()` before `mDbExecutor` finishes demotes the process, risking LMK kill.
-3. *Root Reason for Existing Formulation*: `stopForeground()` was previously placed in `onDestroy()` because `stopService()` was the sole stop trigger.
-4. *Preservation of Core Invariants*: Retains non-blocking UI, strict FIFO ordering on `mDbExecutor`, dedicated `FINISHED = 1` transaction, and `TRACKING_FINISHED_INTENT` broadcast.
+1. *Original Requirement ID & Target*: `REQ-TRK-034` (`REQ-TRK-034.4`), extending `REQ-TRK-015` (`ATT-2641`), `REQ-TRK-030` (`ATT-3986`), `REQ-TRK-033` (`ATT-4006`), and `REQ-TRK-076` (`ATT-7746`). Targets `TrackerService.java`, `TrainingApplication.java`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceResilienceTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4098` (`63618b5d`) introduced `ACTION_STOP` and a bounded `mFinalizationFuture.get(...)` wait in `onDestroy()`; later `ATT-4099`/`ATT-7746` moved `finalizationFuture.complete(null)` inside `runOnMainThread(...)`.
+3. *Root Reason for Existing Formulation*: `onDestroy()` waited on `mFinalizationFuture` assuming background-thread completion; once completion moved to the Main Looper, blocking `onDestroy()` on the Main Thread self-deadlocked for the full 2.0 s timeout and then prematurely unbound `BANALService` while `endWorkout()` could still be running (`REQ-TRK-033.2` violation).
+4. *Preservation of Core Invariants*: Removing the blocking wait and premature unbind preserves `< 100 ms` non-blocking `onDestroy()`, strict FIFO `endWorkout()` completion on `mDbExecutor`, bound `BANALService`/WakeLock throughout `endWorkout()`, graceful executor shutdown in `onDestroy()` (`REQ-TRK-076.1`), and `mSessionGeneration` restart safety (`REQ-TRK-076.3`).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an active workout tracking session in `TrackerService`,
@@ -1887,6 +1887,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* an active workout with bound `mBanalConnection`,
 • *When* workout finalization runs via `ACTION_STOP`,
 • *Then* `mBanalService` remains non-null and bound throughout `endWorkout()` execution, and `unbindService(mBanalConnection)` is invoked only after `endWorkout()` finishes.
+• *Given* `TrackerService` is finalizing via `ACTION_STOP` (`mIsStopping == true`, `!mFinalizationFuture.isDone()`),
+• *When* an external `onDestroy()` is invoked on the Main Thread,
+• *Then* `onDestroy()` returns in `< 100 ms` without blocking or prematurely unbinding `BANALService`, and the posted Main-Thread cleanup Runnable runs idempotently and without uncaught exceptions strictly after `endWorkout()` completes (`TST-TRK-092`).
 • *Given* a `TrackerService` currently executing `ACTION_STOP` finalization,
 • *When* a duplicate `ACTION_STOP` is delivered,
 • *Then* the duplicate intent is safely ignored without re-triggering finalization or crashing.
@@ -3916,11 +3919,38 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ---
 
+### REQ-CON-055: Radar Quick-Switch Required Action Callbacks & StVZO-Safe Deferred BLE GATT Registration (`ATT-8123`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-055`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `RadarLightQuickSwitchSheet.kt`, `BTLERadarDevice.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Silent `= {}` no-op action-callback defaults on `RadarLightQuickSwitchSheet` / `RadarLightQuickSwitchSheetContent` allow swallowed audio-snooze callbacks to compile without warning, while synchronous `RadarLightController.registerRadarDevice()` and initial light-mode dispatch in `BTLERadarDevice.configureServices()` execute before the queued asynchronous `UUID_CHARACTERISTIC_MODEL_NUMBER` GATT read completes, misclassifying StVZO radars (`RTL516`, `010-03180-10`, `RVR316`) as non-StVZO flashing lights (`ATT-8123`, refining `REQ-CON-031`, `REQ-CON-047`, `REQ-TRK-064.1`).
+- **Description**:
+  1. *Required Quick-Switch Action Callbacks & Wrapper Forwarding (`REQ-CON-055.1`)*: `RadarLightQuickSwitchSheet` and `RadarLightQuickSwitchSheetContent` SHALL require `onModeSelected`, `onAutoSelected`, `onSnoozeSelected`, `onResumeAudio`, and `onDismiss` without silent `= {}` defaults, forwarding all 5 callbacks so tapping any snooze preset or Resume fires the callback strictly before `onDismiss()`.
+  2. *Deferred StVZO-Aware GATT Registration & Clamped Initial Mode (`REQ-CON-055.2`)*: When light control and `UUID_CHARACTERISTIC_MODEL_NUMBER` are both present, `BTLERadarDevice.configureServices()` SHALL defer `RadarLightController.registerRadarDevice()` and initial active light-mode dispatch until the model-number read resolves, registering once with exact `(isStvzo, hasHardwareBrake)` and clamping non-StVZO active modes to `SOLID`.
+  3. *Bounded Fallbacks (`REQ-CON-055.3`)*: Absence of DIS/Model-Number registers immediately; read error (`null`/empty) or `MODEL_NUMBER_READ_TIMEOUT_MS` (`3000L`) timeout falls back idempotently once to `(false, false)`.
+  4. *Disconnect/Shutdown Isolation & LoC Invariant (`REQ-CON-055.4`)*: `disconnectFromGatt()` and `shutDown()` SHALL cancel fallback timers, clear model/StVZO state, and drop late callbacks for stale/disconnected GATT sessions; `BTLERadarDevice.java` SHALL stay `<= 1,500` LoC.
+- **Acceptance Criteria (Given-When-Then)**:
+  - *Given* an open `RadarLightQuickSwitchSheet`, *When* the user taps any snooze preset or Resume Alerts, *Then* `onSnoozeSelected(exactMode)` / `onResumeAudio()` executes strictly before `onDismiss()`.
+  - *Given* a BLE StVZO radar (`RTL516` or `010-03180-10`) with active `DAY_FLASH`, *When* `configureServices` runs followed by `UUID_CHARACTERISTIC_MODEL_NUMBER` completion, *Then* `RadarLightController.registerRadarDevice` is called only after model evaluation with `isStvzo = true` and any initial light write is clamped to `SOLID`.
+- **Invariants**: `BTLERadarDevice.java <= 1,500` LoC; `isReceivingData()` untouched (`ATT-8109`); `WATCHDOG_TIMEOUT_MS == 3500L`; absent-DIS FIFO queue order preserved; `0` string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.25` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Bounce 1 concurrency hardening & sprint sync (`ATT-6178`): marked `mLightControlCharacteristic`/`mRadarControlWriteChar`/`mRadarControlNotifyChar` `volatile` with local snapshot in `setLightMode()`, guarded fallback timer posting under `mLightRegistrationLock`, and gated clamped legacy `updateHardwareLightMode()` on `writeQueued && clamped && isLegacyLightOnly` + post-write disconnect re-check (`141/141` PASS). |
+| `1.0.24` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Promoted `REQ-CON-055` to `[Verified]` after Stage 4–5 implementation (`RadarLightQuickSwitchSheet.kt` required callbacks, `BTLERadarDevice.java` `1,455` LoC atomic `mLightRegistrationLock` deferred StVZO GATT registration + bounded fallbacks + late-StVZO self-heal), `140/140` targeted tests PASS across 8 suites (`0` fail, `0` err, `0` skip), Compose preview + live `emulator-5554` boot smoke (`0` crashes). |
+| `1.0.23` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Added `[Planned]` `REQ-CON-055` (`SYSREQ-TRK-002`, `SYSREQ-TRK-007`) for required `RadarLightQuickSwitchSheet` action callbacks and StVZO-safe deferred BLE GATT registration with bounded fallbacks and disconnect isolation (`N/A - 0 string changes`). |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-TRK-061.4` with `REQ-TRK-046.4` and `REQ-TRK-087` (`ZonesSettingsActivity` HRV tab parity). |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |
 | `1.0.22` | 2026-11-19 | Lane A Flash (`ATT-8329`, `--as agent1`) | `ATT-8329` | Promoted `REQ-FIL-004`, `REQ-FIL-006`, and `REQ-CON-016` from `[Implemented]` to `[Verified]` following Stage 4/Gate 4 unit & Robolectric verification (`33/33` PASS across `BatteryDeviceTest`, `LiveWorkoutSessionAltitudeDriftTest`, `WorkoutSamplesDatabaseManagerTest`, `WorkoutSummariesAltitudeShiftTest`, `SourceTextReadingAuditContractTest`; `ATT-8329_walkthrough.md`). |
+| `1.0.23` | 2026-11-22 | Lane 1 Author (`ATT-6178`, `--as agent1`) | `ATT-6178` | Amended `REQ-TRK-034` (`[Planned]`, `REQ-TRK-034.4` + Chesterton's Fence) to remove the Main-Thread blocking `mFinalizationFuture.get(...)` wait and premature unbind in `TrackerService.onDestroy()` while `mIsStopping == true`, delegating idempotent fault-isolated teardown to the post-`endWorkout` Main-Thread Runnable (`TST-TRK-092`, `N/A - no UI strings`). |
+| `1.0.24` | 2026-11-22 | Lane 1 Author (`ATT-6178`, `--as agent1`) | `ATT-6178` | Promoted `REQ-TRK-034` to `[Verified]` following Stage 4/5 verification (`TrackerService.java` `3,550/3,559` LoC, `tracker_service.md` `v1.0.8`, pre-fix RED `2,001 ms` -> post-fix `< 100 ms` GREEN, `163/163` PASS across 24 unit/contract suites, clean `emulator-5554` smoke `0` crashes, `ATT-6178_walkthrough.md`). |

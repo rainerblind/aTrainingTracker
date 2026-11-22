@@ -34,7 +34,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -192,15 +192,16 @@ data class PathPoint @JvmOverloads constructor(
 
 /**
  * Individual telemetry charts eligible for persisted per-chart visibility toggles inside the
- * Workout Details `CHARTS` section (`REQ-PER-044.4`). Stored in DataStore as a negative-set
- * (`hidden_telemetry_charts`), keeping all charts visible by default on upgrade.
+ * Workout Details `CHARTS` section (`REQ-PER-044.4`, `ATT-9355`). Stored in DataStore as a
+ * negative-set (`hidden_telemetry_charts`) keyed by enum `.name`, keeping all charts visible by
+ * default on upgrade and preserving backwards-compatibility across ordering refinements.
  */
 enum class TelemetryChartKind {
     SPEED_PACE,
     SLOPE,
-    HEART_RATE,
-    POWER,
     CADENCE,
+    POWER,
+    HEART_RATE,
     W_PRIME_BAL,
     HRV_DFA_A1,
     HRV_RMSSD

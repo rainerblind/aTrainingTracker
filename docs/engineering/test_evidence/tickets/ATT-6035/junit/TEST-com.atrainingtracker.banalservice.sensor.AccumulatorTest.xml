@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.AccumulatorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:35.908Z" hostname="rainer-HP-EliteBook-850-G5" time="3.246">
+  <properties/>
+  <testcase name="testRespectPauseFalse" classname="com.atrainingtracker.banalservice.sensor.AccumulatorTest" time="0.642"/>
+  <testcase name="testPauseDiscardLogic" classname="com.atrainingtracker.banalservice.sensor.AccumulatorTest" time="0.623"/>
+  <testcase name="testNotTrackingDiscardLogic" classname="com.atrainingtracker.banalservice.sensor.AccumulatorTest" time="0.635"/>
+  <testcase name="testIncrementDirectly" classname="com.atrainingtracker.banalservice.sensor.AccumulatorTest" time="0.689"/>
+  <testcase name="testResetNotifiesListenersWithZero" classname="com.atrainingtracker.banalservice.sensor.AccumulatorTest" time="0.656"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.resources.NotificationIconContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:14:31.788Z" hostname="rainer-HP-EliteBook-850-G5" time="0.02">
+  <properties/>
+  <testcase name="testVectorNotificationAssetAndSilhouette" classname="com.atrainingtracker.trainingtracker.resources.NotificationIconContractTest" time="0.013"/>
+  <testcase name="testNotificationBuilderSmallIconCallSites" classname="com.atrainingtracker.trainingtracker.resources.NotificationIconContractTest" time="0.006"/>
+  <testcase name="testAppBundleDensitySplitConfiguration" classname="com.atrainingtracker.trainingtracker.resources.NotificationIconContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@5d3b45c1], context=[android.app.ContextImpl@7740a7fc], intentFilter=[android.content.IntentFilter@7fc4a7fb]], Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@65a677b7], context=[android.app.ContextImpl@7740a7fc], intentFilter=[android.content.IntentFilter@44f7333d]]]
+]]></system-err>
+</testsuite>

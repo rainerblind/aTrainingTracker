@@ -1,0 +1,61 @@
+{
+  "android_test_summary": {
+    "errors": 0,
+    "failing_tests": [],
+    "failures": 0,
+    "skipped": 0,
+    "total": 44
+  },
+  "checks": [
+    {
+      "details": "Android: Skipped (--skip-tests). | Python: Skipped (--skip-tests).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true,
+      "skipped": false,
+      "summary": "44/44 tests PASSED across 8 targeted suites (0 fail, 0 err, 0 skip; Bounce 1 heal)"
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (9864 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "6ff54788ed72c939fba0eebc8fb240db7722c7e9",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.LiveWorkoutBroadcastTrackerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutMarkFinishedTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryClickContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryCompactMenuTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryLiveUpdateUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummarySectionsTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-22T12:40:42.267447+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att9069_live_active_workout_card_light_dark.png"
+  ],
+  "ticket_key": "ATT-9069",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

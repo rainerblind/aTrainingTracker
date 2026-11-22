@@ -13,7 +13,7 @@ import kotlin.math.sin
  */
 object GeoUtils {
 
-    private const val EARTH_RADIUS_METERS = 6371000.0
+    const val EARTH_RADIUS_METERS = 6371000.0
 
     /**
      * Calculates the great-circle geodesic distance in meters between two geographic coordinates
@@ -23,16 +23,24 @@ object GeoUtils {
      * @param lon1 Longitude of first point in degrees
      * @param lat2 Latitude of second point in degrees
      * @param lon2 Longitude of second point in degrees
+     * @param earthRadiusMeters Mean Earth radius in meters (defaults to 6,371,000.0 m)
      * @return Distance in meters
      */
-    fun haversineDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    @JvmOverloads
+    fun haversineDistanceMeters(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double,
+        earthRadiusMeters: Double = EARTH_RADIUS_METERS
+    ): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
         val a = sin(dLat / 2) * sin(dLat / 2) +
                 cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
                 sin(dLon / 2) * sin(dLon / 2)
         val c = 2 * atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        return EARTH_RADIUS_METERS * c
+        return earthRadiusMeters * c
     }
 
     /**

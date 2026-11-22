@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:15:48.702Z" hostname="rainer-HP-EliteBook-850-G5" time="16.753">
+  <properties/>
+  <testcase name="resetAllFilters_proxySensorWrappedLapSensor_reseedsInitLapNr" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="16.153"/>
+  <testcase name="resetAllFilters_accumulatorSensor_reseedsZeroBaselineAndFormattedString" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.157"/>
+  <testcase name="resetAllFilters_proxySensorWrappedStatelessSensor_resetsToNullAndDash" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.173"/>
+  <testcase name="resetAllFilters_proxySensorWrappedAccumulator_reseedsZeroBaselineAndFormattedString" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.141"/>
+  <testcase name="resetAllFilters_nonAccumulatorSensor_resetsToNullAndDash" classname="com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest" time="0.126"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

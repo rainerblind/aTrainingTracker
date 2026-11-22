@@ -66,7 +66,6 @@ class ArchitectureConformanceContractTest {
          */
         val BASELINE_ALLOWED_DATABASE_UPWARD_UI_IMPORTS: Set<String> = setOf(
             "com/atrainingtracker/trainingtracker/database/ClimbsDatabaseManager.kt",
-            "com/atrainingtracker/trainingtracker/database/ErtsPostWorkoutRecomputer.kt",
             "com/atrainingtracker/trainingtracker/database/RoutesDatabaseManager.kt",
             "com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java",
             "com/atrainingtracker/trainingtracker/database/WorkoutClusterCorridorDetector.kt",
@@ -128,8 +127,7 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt" to 1898,
             "com/atrainingtracker/banalservice/devices/DeviceManager.java" to 1708,
             "com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" to 1671,
-            "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" to 1635,
-            "com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java" to 1533
+            "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" to 1635
         )
 
         fun stripComments(content: String): String {

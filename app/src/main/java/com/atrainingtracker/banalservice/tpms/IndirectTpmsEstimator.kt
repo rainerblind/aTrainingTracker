@@ -18,10 +18,8 @@
 
 package com.atrainingtracker.banalservice.tpms
 
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -51,8 +49,6 @@ class IndirectTpmsEstimator(
         const val CUSUM_SLACK = 0.003 // 0.3% slack allowance
         const val CUSUM_THRESHOLD = 0.007 // 0.7% cumulative drift trigger
         const val MIN_WINDOW_SAMPLES_DISTANCE_METERS = 500.0 // Minimum distance to evaluate sliding window
-
-        private const val EARTH_RADIUS_METERS = 6371000.0
     }
 
     sealed interface TpmsAlertResult {
@@ -272,12 +268,6 @@ class IndirectTpmsEstimator(
     }
 
     private fun computeDistanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-                sin(dLon / 2) * sin(dLon / 2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return EARTH_RADIUS_METERS * c
+        return GeoUtils.haversineDistanceMeters(lat1, lon1, lat2, lon2)
     }
 }

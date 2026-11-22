@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersSelectableMarkersTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:33:13.493Z" hostname="rainer-HP-EliteBook-850-G5" time="0.128">
+  <properties/>
+  <testcase name="setClusterMarkerTypeEnabled_persistsAcrossInstancesAndIsolatesPeriodPrefs_TST_SET_045" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersSelectableMarkersTest" time="0.128"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

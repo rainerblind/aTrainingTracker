@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:13:50.207Z" hostname="rainer-HP-EliteBook-850-G5" time="3.237">
+  <properties/>
+  <testcase name="testLapNrAccumulator_withNonZeroZeroValue_restoresExactLapWithoutDoubleCount_TST_STB_025_1" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.534"/>
+  <testcase name="testConstructor_defaultsToZeroValue_whenNoRegisteredInitialValue" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.443"/>
+  <testcase name="testSetInitialValue_notifiesRegisteredListeners" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.444"/>
+  <testcase name="testConstructor_inheritsRegisteredInitialValueFromSensorManager_double" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.474"/>
+  <testcase name="testReset_clearsToZeroValueAndNotifiesListeners" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.449"/>
+  <testcase name="testConstructor_inheritsRegisteredInitialValueFromSensorManager_integer" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.443"/>
+  <testcase name="testBinaryOperatorDelegation_directLongAndDoubleIntegerParity_TST_PRO_137_3" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorTest" time="0.45"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

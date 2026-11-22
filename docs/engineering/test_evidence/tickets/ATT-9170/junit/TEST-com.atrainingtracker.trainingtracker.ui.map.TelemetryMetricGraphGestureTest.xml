@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphGestureTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:58:05.564Z" hostname="rainer-HP-EliteBook-850-G5" time="0.236">
+  <properties/>
+  <testcase name="testTelemetryMetricGraph_supportsPanModeGesturesAndZoomMath" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphGestureTest" time="0.194"/>
+  <testcase name="testTelemetryMetricGraph_eliminatesUnconditionalDragAndTapDetectors" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphGestureTest" time="0.04"/>
+  <testcase name="testTelemetryMetricGraph_integratesChartGestureDisambiguator" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphGestureTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

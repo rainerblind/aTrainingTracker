@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:23:46.680Z" hostname="rainer-HP-EliteBook-850-G5" time="3.77">
+  <properties/>
+  <testcase name="testWorkoutSummary_telemetryGraphOrdering_speedPrecedesHeartRate" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.057"/>
+  <testcase name="testHasPowerData_validation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.015"/>
+  <testcase name="testBoundaryLabels_rendersStartAndEnd" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testUniversalMarginalHistogram_REQ_UI_446_contract" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testFormatPaceMinutes_standardAndEdgeCases" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.001"/>
+  <testcase name="testHasHeartRateData_validation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testExtractMetricValue_paceStoppedThreshold" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.002"/>
+  <testcase name="testHasSpeedData_validation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testExtractMetricValue_speedAndPace" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.02"/>
+  <testcase name="testExtractMetricValue_heartRateAndPower" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testTelemetryMetricGraph_paceYAxisLabelsAreMmSs" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testLayoutInvariants_matchesElevationProfilePadding" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testComputeLinearMarginalHistogram_functionalValidation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.069"/>
+  <testcase name="testMapDetailLayout_integrationContracts" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testTelemetryMetricGraph_zoomedCoordinateMappingAndScrubbing" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.004"/>
+  <testcase name="testXAxisMilestoneDecimation_preventsLabelCollisions" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testMilestoneLabelFormatting_omitsRedundantUnit" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testFormatValue_paceFormattingMetricAndImperial" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="3.6"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

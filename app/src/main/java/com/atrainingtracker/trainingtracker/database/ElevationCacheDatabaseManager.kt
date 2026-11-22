@@ -22,7 +22,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.inTransaction
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
@@ -84,7 +85,7 @@ data class ElevationCacheItem(
  * - Architecture Rule 64: Schema parity between onCreate and future onUpgrade.
  */
 class ElevationCacheDbHelper(context: Context) :
-    SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+    TrackingSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
     companion object {
         const val DB_NAME = "ElevationCache.db"
@@ -321,11 +322,8 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun putBatchElevations(items: List<ElevationCacheItem>): Int {
         if (items.isEmpty()) return 0
-        val db = database
         var insertedCount = 0
-
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             for (item in items) {
                 val cv = ElevationCacheItem.toContentValues(item)
                 val rowId = db.insertWithOnConflict(
@@ -338,9 +336,6 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                     insertedCount++
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return insertedCount
     }
@@ -427,11 +422,9 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
         }
 
         if (items.isEmpty()) return 0
-        val db = database
         var processedCount = 0
 
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             val updateCv = ContentValues()
             for (item in items) {
                 // Try updating existing SEGMENT_SEED to ROUTE_SEED
@@ -463,9 +456,6 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                     processedCount++
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return processedCount
     }
@@ -515,11 +505,9 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
         }
 
         if (items.isEmpty()) return 0
-        val db = database
         var insertedCount = 0
 
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             for (item in items) {
                 val cv = ElevationCacheItem.toContentValues(item)
                 val rowId = db.insertWithOnConflict(
@@ -532,9 +520,6 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                     insertedCount++
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return insertedCount
     }

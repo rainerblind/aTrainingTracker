@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.database.BaseDatabaseManagerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:20:39.964Z" hostname="rainer-HP-EliteBook-850-G5" time="0.158">
+  <properties/>
+  <testcase name="getDatabase_opensLazilyAndCachesOpenHandle" classname="com.atrainingtracker.database.BaseDatabaseManagerTest" time="0.092"/>
+  <testcase name="getDatabase_isThreadSafeUnderConcurrentDcl" classname="com.atrainingtracker.database.BaseDatabaseManagerTest" time="0.031"/>
+  <testcase name="getDatabase_reopensCleanlyAfterExternalClose_ATT289" classname="com.atrainingtracker.database.BaseDatabaseManagerTest" time="0.02"/>
+  <testcase name="nullHelper_allowsInjectedTestDatabaseAndThrowsIfUninjected" classname="com.atrainingtracker.database.BaseDatabaseManagerTest" time="0.005"/>
+  <testcase name="closeDatabaseAndSetDatabaseForTesting_manageStateCleanly" classname="com.atrainingtracker.database.BaseDatabaseManagerTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

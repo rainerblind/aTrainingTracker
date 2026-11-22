@@ -551,4 +551,53 @@ class KnownLocationsViewModelTest {
         assertEquals(1, defaultDispatches)
         assertEquals(2, countedVm.uiState.value.startsByLocationId[1L])
     }
+
+    @Test
+    fun testBaseMappableListViewModelAndDeclarativeCombine_withoutStaleCrossFlowReads_TST_PRO_137_2() = runTest {
+        assertTrue(
+            com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel::class.java
+                .isAssignableFrom(KnownLocationsViewModel::class.java)
+        )
+        assertTrue(
+            com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder::class.java
+                .isAssignableFrom(KnownLocationSortOrder::class.java)
+        )
+
+        val locFar = KnownLocationItem(1L, "Alps", 1000.0, 200, LatLng(47.49, 11.09), 5, true, ElevationSource.MANUAL_USER)
+        val locNear = KnownLocationItem(2L, "Munich", 520.0, 200, LatLng(48.137, 11.576), 5, true, ElevationSource.MANUAL_USER)
+        val workoutAtMunich = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 501L
+            every { finished } returns true
+            every { startLatLng } returns LatLng(48.1371, 11.5761)
+            every { bSportType } returns BSportType.BIKE
+        }
+
+        // Emit workouts BEFORE locations to verify declarative combine has no stale .value cross-read
+        fakeWorkoutsFlow.value = listOf(workoutAtMunich)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        fakeLocationsFlow.value = listOf(locFar, locNear)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.startsByLocationId[2L])
+
+        // Verify inherited BaseMappableListViewModel sortOrder + DISTANCE_TO_USER sorting via calculateDistance
+        val locFlow = MutableStateFlow<LatLng?>(LatLng(48.137, 11.576))
+        val mockBanal = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        every { mockBanal.currentLocation } returns locFlow
+        val locVm = KnownLocationsViewModel(
+            application = mockApplication,
+            repository = mockRepository,
+            initialIsMetric = true,
+            banalServiceRepository = mockBanal,
+            clusterRepository = mockClusterRepository,
+            workoutRepository = mockWorkoutRepository,
+            defaultDispatcher = testDispatcher
+        )
+        locVm.setSortOrder(KnownLocationSortOrder.DISTANCE_TO_USER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(KnownLocationSortOrder.DISTANCE_TO_USER, locVm.sortOrder.value)
+        assertTrue(locVm.uiState.value.isLocationAvailable)
+        assertEquals(2L, locVm.uiState.value.locations.first().id)
+    }
 }

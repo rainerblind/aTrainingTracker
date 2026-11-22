@@ -22,9 +22,11 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.location.Location
 import android.provider.BaseColumns
+import com.atrainingtracker.database.inTransaction
+import com.atrainingtracker.database.mapRows
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.climbs.ClimbDeduplicator
@@ -38,7 +40,7 @@ import kotlinx.coroutines.withContext
 /**
  * SQLite helper for the persistent climbs database (REQ-MAP-027).
  */
-class ClimbsDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class ClimbsDbHelper(context: Context) : TrackingSQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_NAME = "Climbs.db"
@@ -153,8 +155,7 @@ class ClimbsDatabaseManager(
         val pathCache = HashMap<Long, List<PathPoint>>()
         val resultIds = mutableListOf<Long>()
 
-        db.beginTransaction()
-        try {
+        db.inTransaction {
             for (climb in climbs) {
                 val matched = findDuplicateMatch(
                     db = db,
@@ -182,9 +183,6 @@ class ClimbsDatabaseManager(
                     existingMeta.add(inserted.toMetadata())
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         resultIds
     }
@@ -247,14 +245,10 @@ class ClimbsDatabaseManager(
 
         if (idsToDelete.isEmpty()) return@withContext 0
 
-        db.beginTransaction()
-        try {
+        db.inTransaction {
             for (id in idsToDelete) {
                 db.delete(ClimbsDbHelper.TABLE_CLIMBS, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf(id.toString()))
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
 
         idsToDelete.size
@@ -272,8 +266,7 @@ class ClimbsDatabaseManager(
      */
     suspend fun getClimbsForRoute(routeId: Long): List<Climb> = withContext(dbDispatcher) {
         val db = dbHelper.readableDatabase
-        val list = mutableListOf<Climb>()
-        val cursor = db.query(
+        db.query(
             ClimbsDbHelper.TABLE_CLIMBS,
             null,
             "${ClimbsDbHelper.COLUMN_ROUTE_ID} = ?",
@@ -281,13 +274,7 @@ class ClimbsDatabaseManager(
             null,
             null,
             "${ClimbsDbHelper.COLUMN_ID} ASC"
-        )
-        cursor.use {
-            while (it.moveToNext()) {
-                list.add(cursorToClimb(it))
-            }
-        }
-        list
+        ).mapRows { cursorToClimb(it) }
     }
 
     /**

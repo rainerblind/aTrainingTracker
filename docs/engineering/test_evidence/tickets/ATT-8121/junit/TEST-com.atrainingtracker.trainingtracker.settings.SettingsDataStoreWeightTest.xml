@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:31:33.968Z" hostname="rainer-HP-EliteBook-850-G5" time="0.352">
+  <properties/>
+  <testcase name="testDefaultAthleteWeight_isZero" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" time="0.207"/>
+  <testcase name="testSetAthleteWeight_clampsAboveMaximum" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" time="0.116"/>
+  <testcase name="testSetAthleteWeight_zeroOrNegative_resetsToDefaultZero" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" time="0.016"/>
+  <testcase name="testSetAthleteWeight_clampsBelowMinimum" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" time="0.006"/>
+  <testcase name="testSetValidAthleteWeight_persistsAndEmits" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" time="0.006"/>
+  <testcase name="testImperialWeightConversion_roundTrip" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

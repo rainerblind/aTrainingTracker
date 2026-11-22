@@ -128,4 +128,40 @@ class GeoUtilsTest {
         org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(1.0, 0.0))
         org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(0.0, 1.0))
     }
+
+    @Test
+    fun haversineDistanceMeters_goldenValues_withinSubMicrometerTolerance_TST_PRO_137_1() {
+        // Equator 1 degree arc at R = 6,371,000.0 m: 2 * pi * R / 360
+        val expectedEquatorDeg = 2.0 * Math.PI * 6371000.0 / 360.0
+        assertEquals(
+            expectedEquatorDeg,
+            GeoUtils.haversineDistanceMeters(0.0, 0.0, 0.0, 1.0),
+            1e-6
+        )
+
+        // Pole to equator quarter-meridian: pi/2 * R
+        val expectedQuarterMeridian = Math.PI / 2.0 * 6371000.0
+        assertEquals(
+            expectedQuarterMeridian,
+            GeoUtils.haversineDistanceMeters(90.0, 0.0, 0.0, 0.0),
+            1e-6
+        )
+
+        // Paris (48.8566, 2.3522) -> London (51.5074, -0.1278) analytical spherical value (R = 6,371,000.0 m)
+        val parisLondonGolden = 343556.06034101645
+        assertEquals(
+            parisLondonGolden,
+            GeoUtils.haversineDistanceMeters(48.8566, 2.3522, 51.5074, -0.1278),
+            1e-6
+        )
+
+        // Custom radius R = 6,371,009.0 m (used by KnownLocationsGeometryMath)
+        val munichToGarmisch = GeoUtils.haversineDistanceMeters(
+            48.137154, 11.576124,
+            47.491694, 11.095498,
+            earthRadiusMeters = 6371009.0
+        )
+        val expectedMunichGarmisch6371009 = 80244.42048614829
+        assertEquals(expectedMunichGarmisch6371009, munichToGarmisch, 1e-6)
+    }
 }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:01:03.969Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="recalculateExtrema_sanitizesNonFiniteAndDerivesAccurateExtrema" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.005"/>
+  <testcase name="recalculateLineDistance_indoorSessionWithNullCoords_returnsAllZerosSafely" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <testcase name="calculateRequiredStorageBytes_respects50MbFloorAndMultiplier" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <testcase name="isCropValid_validatesBoundariesAndDuration" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <testcase name="calculateAverageSpeed_guardsAgainstZeroActiveTimeAndNonFinite" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <testcase name="zeroAnchorAndShiftCumulativeLong_anchorsAndPreventsNegative" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <testcase name="zeroAnchorAndShiftCumulative_anchorsStartRowToZeroAndClampsEpsilon" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.001"/>
+  <testcase name="recalculateExtrema_emptyOrDisconnectedStream_returnsZerosWithHasDataFalse" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <testcase name="recalculateLineDistance_computesHaversineFromNewStart" classname="com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

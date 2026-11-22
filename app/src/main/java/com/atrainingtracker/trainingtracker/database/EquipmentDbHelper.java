@@ -22,7 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -43,7 +43,7 @@ import java.util.Set;
 
 // import com.google.common.collect.Sets;
 
-public class EquipmentDbHelper extends SQLiteOpenHelper {
+public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
     // 1 -> mtb, 2 -> cross, 3 -> road, 4 -> time trial
     public static final int MTB = 1;
     public static final int CROSS = 2;
@@ -69,7 +69,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public static final String C_HISTORY_WHEEL_POSITION = "wheel_position";
     public static final String C_HISTORY_CIRCUMFERENCE_MM = "circumference_mm";
     public static final String C_HISTORY_SOURCE = "source";
-    static final String DB_NAME = "Equipment.db";
+    public static final String DB_NAME = "Equipment.db";
     public static final int DB_VERSION = 5;
     private static final String TAG = "EquipmentDbHelper";
     private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;

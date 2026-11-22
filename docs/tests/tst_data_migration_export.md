@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.25  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 129
+**Total Tests**: 131
 
 ---
 
@@ -2432,10 +2432,67 @@
 
 ---
 
+### TST-DAT-043: **Consolidated Database Lifecycle, Schema Introspection, Functional Combinators & Parameterized Stream Summary Parity Verification (`ATT-6036`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-047` (`REQ-DAT-047.1`..`REQ-DAT-047.4`)
+- **Component**: `BaseDatabaseManager.kt`, `SqliteSchemaUtils.kt`, `DatabaseExtensions.kt`, `StreamSummaryCalculator.kt`, `TrackingViewsRepository.kt`, 10 Java `*DatabaseManager.java` classes, 10 `PRAGMA table_info` callers, stream/bounds callers
+- **Jira**: `ATT-6036`
+- **Test Type**: Unit / Integration
+- **Verification Method**: Unit / Integration
+- **Verification Evidence**: Verified (`ATT-6036` Bounce 1, Stage 4 Bounce 1 `173/173` PASS across 30 suites, Gate 4 Bounce 1 `ATT-9592` `107/107` PASS across 16 suites, Stage 5 Bounce 1 Kotlin-first `BaseDatabaseManager.kt` verification `416/416` targeted Tier-1 PASS across 40+ suites incl. `JavaCoreMigrationStrategyContractTest` `5/5` PASS + `SqliteSchemaUtilsTest` `6/6` PASS; `3/3` safety linters PASS; `auto_gate.py` `PASS` SHA-256 bundle at `docs/engineering/test_evidence/tickets/ATT-6036/` & `att6036_emulator_smoke.png` live `emulator-5554` boot smoke `0` crashes):
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/database/BaseDatabaseManagerTest.kt` (`5/5` PASS), `SqliteSchemaUtilsTest.kt` (`6/6` PASS incl. strict fail-fast & lenient `addColumnIfNotExists`), `DatabaseExtensionsTest.kt` (`4/4` PASS) (`TST-DAT-043.1`, `TST-DAT-043.2`, `TST-DAT-043.3`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/util/StreamSummaryCalculatorTest.kt` (`5/5` Golden-Value PASS) (`TST-DAT-043.4`)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/TrackingViewsRepositoryTest.kt` (`mutateViewConfig_incrementsTriggerAndPreservesReturnValuesForMoveAndCopy`), 12 migrated `mDatabase` reflection test suites, `TryWithResourcesCursorAuditTest.kt`, `ArchitectureConformanceContractTest.kt` (`ErtsPostWorkoutRecomputer.kt` `10 -> 9`, `WorkoutSamplesDatabaseManager.java` `15 -> 14`) (`TST-DAT-043.1`, `TST-DAT-043.3`, `TST-DAT-043.5`)
+- **Test Description**:
+  1. *`BaseDatabaseManager<H>` Thread-Safety, `ATT-289` Reopen & Backup Quiescence (`TST-DAT-043.1` — `BaseDatabaseManagerTest.kt`, `DatabaseConnectionManagerTest.kt`, 12 migrated reflection tests)*:
+     - Verify `BaseDatabaseManager.getDatabase()` opens lazily, returns the cached open `SQLiteDatabase` across concurrent threads (`volatile` DCL), closes the helper and reopens cleanly when `mDatabase.isOpen == false` (`ATT-289`), `closeDatabase()` / `isDatabaseOpen()` manage lifecycle state, and `setDatabaseForTesting()` injects test databases without reflection failure.
+     - Verify `DatabaseConnectionManager.getActiveDatabases()` resolves all managers (`REQ-MIG-041.3`) and all 12 previously `mDatabase`-reflecting unit/NFR test suites pass cleanly.
+  2. *`SqliteSchemaUtils` Quoted-Table Safety & Idempotent Column Migrations (`TST-DAT-043.2` — `SqliteSchemaUtilsTest.kt`, `TrackerService*Test`, DB migration suites)*:
+     - Verify `getTableColumnNames()` returns case-insensitive `Set<String>` for plain and quoted/special-character table names (`ATT-4968` / `REQ-TRK-051.1`), handles missing tables without crashing, `hasColumn()` matches case-insensitively, `addColumnIfNotExists()` is idempotent with and without `DEFAULT` and throws fail-fast (`SQLiteException`) on `ALTER TABLE` failure for missing tables, `addColumnIfNotExistsLenient()` returns `false` on `ALTER TABLE` failure while remaining idempotent on valid tables, and `getTableColumnInfos()` parses `name`, `type`, `notNull`, `defaultValue`, and `isPrimaryKey` accurately for `ImportEngine`.
+     - Verify `TrackerService.getTableColumnNames()` facade parity and all existing SQLite migration tests (`DevicesDatabaseManagerMigration*Test`, `SportTypeDatabaseUpgradeTest`, `TrackingViewsRealSqliteMigrationTest`, `WorkoutSummariesDatabase*Migration*Test`).
+  3. *Functional Combinators (`DatabaseExtensions` & `TrackingViewsRepository.mutateViewConfig`) (`TST-DAT-043.3` — `DatabaseExtensionsTest.kt`, `TrackingViewsRepositoryTest.kt`)*:
+     - Verify `Cursor.mapRows` maps all rows, returns empty list on empty cursor, and always closes the cursor (including on mapper exception); verify `SQLiteDatabase.inTransaction` commits and returns the block result on success and rolls back (`endTransaction()` without `setTransactionSuccessful()`) on exception.
+     - Verify `TrackingViewsRepository` mutations execute DB writes on `Dispatchers.IO`, increment `configUpdateTrigger` on `Dispatchers.Main`, and preserve return values on `moveTabView()` and `copyTabView()`.
+  4. *Parameterized `StreamSummaryCalculator` Pre-Refactor Golden-Value Parity (`TST-DAT-043.4` — `StreamSummaryCalculatorTest.kt`, `WorkoutSummariesAltitudeShiftTest.kt`, `WorkoutRepositoryCropTest.kt`, `LegacyImportEngine*Test`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     - Establish Golden-Value fixtures per caller variant before refactoring: (a) `GeoBounds` from `LatLng` list & encoded polyline (`updateMapAndStreams`, `migrateSpatialBoundsStatic`, `cropWorkout`, `LegacyImportEngine`, `RoutesDatabaseManager`, `SegmentsDatabaseManager`), (b) `RAW_DELTA` non-null ascent/descent (`shiftAltitudeData` Case A & B) and nullable-gap-preserving `RAW_DELTA` (`cropWorkout`), (c) `MOVING_AVERAGE` 300-sample `ATT-301` ascent/descent (`LegacyImportEngine`), (d) downsampling variants (`stepSize = 20` with last-index retention, 5-sample legacy stride, distance-weighted missing-altitude interpolation) + `NumericalEncodingUtils` round-trip, and (e) `PolyUtil.simplify(10.0)` + `encode` (`TrackerService`, `LegacyImportEngine`, `ErtsPostWorkoutRecomputer`) vs un-simplified `encode` (`cropWorkout`). Assert exact bit-for-bit equality against pre-refactor reference outputs.
+  5. *Architectural Governance, Cursor Leak & Layering Ratchet Contracts (`TST-DAT-043.5` — `TryWithResourcesCursorAuditTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     - Run `TryWithResourcesCursorAuditTest` (`REQ-DAT-043`), `ArchitectureConformanceContractTest` (`0` net-new `database -> ui.*` imports, downward ratchets locked in, monolith LoC ceilings respected), and `python3 tools/verify_requirement_governance.py`; confirm `0` `strings*.xml` changes (`Localization Parity: N/A`).
+
+---
+
+### TST-MIG-057: **Authoritative `DatabaseSchemaRegistry` Classpath Parity, Non-Eager Quiescence & Full `.attbackup` Restore Verification (`ATT-8122`)** [Verified]
+- **Requirement(s)**: `REQ-MIG-057` (`REQ-MIG-057.1`–`REQ-MIG-057.4`)
+- **Component**: `DatabaseSchemaRegistry.kt`, `DatabaseConnectionManager.kt`, `MigrationEngine.kt`, `BaseDatabaseManager.kt`, `TrackingSQLiteOpenHelper.kt`, `DatabaseSchemaRegistryParityContractTest.kt`, `BackupMigrationCycleTest.kt`, `DatabaseConnectionManagerTest.kt`, `ClimbsDatabaseRegistryTest.kt`, `DatabaseSchemaRegistryHrvTest.kt`
+- **Jira**: `ATT-8122` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/DatabaseSchemaRegistryParityContractTest.kt`: `testAllProductionSqliteOpenHelpers_registeredWithExactVersionInDatabaseSchemaRegistry_TST_MIG_057_1`, `testDatabaseConnectionManager_tracksOnlyOpenedDatabasesWithoutEagerOpening_TST_MIG_057_2` (`2/2` PASS)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/BackupMigrationCycleTest.kt`: `testFullBackupWipeAndRestoreCycle_bundlesAndRestoresState_TST_MIG_001` (`3/3` PASS; unmodified `.attbackup` restore + `ATT-289` reopen)
+  - `DatabaseConnectionManagerTest` (`5/5`), `ClimbsDatabaseRegistryTest` (`3/3`), `DatabaseSchemaRegistryHrvTest` (`3/3`), `BaseDatabaseManagerTest` (`5/5`), `BackupManagerRealSqliteTest` (`2/2`), `MigrationEngineClimbsRestoreTest` (`2/2`), `FullRestoreValidationSecurityTest` (`8/8`), `MigrationEngineCredentialSanitizationTest` (`2/2`), `BackupImportSecurityTest` (`14/14`), `PeriodSummariesDbTest` (`7/7`), `TrackingViewsDbMigrationV19Test` (`1/1`), `TrackingViewsDbMigrationV22Test` (`3/3`), `AthleteMetricsRealSqliteMigrationTest` (`3/3`), `ElevationCacheDatabaseManagerTest` (`14/14`), `WorkoutClusterDatabaseConnectionTest` (`1/1`), `ArchitectureConformanceContractTest` (`11/11`), `JavaCoreMigrationStrategyContractTest` (`5/5`)
+- **Test Description**:
+  1. *Classpath `SQLiteOpenHelper` $\leftrightarrow$ `DatabaseSchemaRegistry` Parity (`TST-MIG-057.1`, `DatabaseSchemaRegistryParityContractTest`)*:
+     • Discover all concrete production `SQLiteOpenHelper` subclasses from compiled debug classes (`>= 22`), verify every helper's live `databaseName` and `DB_VERSION` equal `DatabaseSchemaRegistry.getMaxSupportedVersion(dbName)` exactly, verify `isVersionSupported(dbName, version)` is `true` and `version + 1` is `false`, verify typos `"KnownLocations.db"` and `"Pebble.db"` are removed, and verify legacy alias `"TrackingViews.db"` equals `TrackingViewsDbHelper.DB_VERSION`.
+  2. *Non-Eager `DatabaseConnectionManager` Coverage & Reopen Recovery (`TST-MIG-057.2`, `DatabaseSchemaRegistryParityContractTest`, `DatabaseConnectionManagerTest`, `ClimbsDatabaseRegistryTest`, `DatabaseSchemaRegistryHrvTest`)*:
+     • Assert `getActiveDatabases(context)` returns empty on a clean context without creating `.db` files on disk; open a subset including `PeriodSummaries.db`, `ElevationCache.db`, `AthleteMetrics.db`, `PebbleView.db`, `ExportStatus.db`, and `WorkoutSummaries.db` and assert strictly those opened DBs are returned, checkpointed, closed by `quiesceAllDatabases(context, closeConnections = true)`, and cleanly reopened afterward while unopened DB files remain absent on disk.
+  3. *Unmodified `.attbackup` Full Backup-Wipe-Restore Cycle (`TST-MIG-057.3`, `BackupMigrationCycleTest`)*:
+     • Seed `WorkoutSummaries.db`, `Laps.db` (v3), `Routes.db` (v11), `ExportStatus.db` (v2), `StartLocation2Altitude.db`, `RouteClusters.db`, and `SportTypeLinks.db`; create backup via `BackupManager.createBackup(context)` and pass the unmodified archive directly to `MigrationEngine.performFullRestore(context, backupFile)` without excluding any DB, asserting restore success and data survival.
+  4. *Architecture & `ADR-001` Governance Contracts (`TST-MIG-057.4`)*:
+     • Run `BaseDatabaseManagerTest`, `BackupManagerRealSqliteTest`, `MigrationEngineClimbsRestoreTest`, `PeriodSummariesDbTest`, `TrackingViewsDbMigrationV19Test`, `TrackingViewsDbMigrationV22Test`, `AthleteMetricsRealSqliteMigrationTest`, `ArchitectureConformanceContractTest`, and `JavaCoreMigrationStrategyContractTest`.
+- **Verification Evidence**: Verified (`ATT-8122`, Gate 3 `ATT-9598` PASSED; `94/94` targeted unit/contract tests PASS across 19 suites via `./gradlew :app:testDebugUnitTest --rerun`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; `WorkoutSamplesDatabaseManager.java` `1,498/1,500` LoC untouched; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `docs/engineering/test_evidence/tickets/ATT-8122/screenshots/att8122_emulator_smoke.png`; `auto_gate.py` SHA-256 evidence bundle at `docs/engineering/test_evidence/tickets/ATT-8122/manifest.json`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.31` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Promoted `TST-MIG-057` to `[Verified]` (`94/94` targeted unit/contract tests PASS across 19 suites incl. `DatabaseSchemaRegistryParityContractTest` `2/2`, `BackupMigrationCycleTest` `3/3`, `ArchitectureConformanceContractTest` `11/11`, `JavaCoreMigrationStrategyContractTest` `5/5`; live `emulator-5554` boot smoke `0` crashes). |
+| `1.0.30` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Added `[Planned]` `TST-MIG-057` (`TST-MIG-057.1`–`TST-MIG-057.4`, strictly symmetric `REQ-MIG-057`) covering classpath-discovered 22-DB `DatabaseSchemaRegistry` parity, non-eager `DatabaseConnectionManager` quiescence, unmodified `.attbackup` restore cycle, and `ADR-001`/monolith contracts. |
+| `1.0.29` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `TST-DAT-043` to `[Verified]` in Stage 5 Bounce 1 after Gate 4 Bounce 1 (`ATT-9592`, `107/107` PASS) + Kotlin-first `BaseDatabaseManager.kt` conversion (`JavaCoreMigrationStrategyContractTest` `5/5` PASS, `416/416` targeted Tier-1 PASS across 40+ suites, `SqliteSchemaUtilsTest` `6/6` PASS, `auto_gate.py` `PASS` bundle `docs/engineering/test_evidence/tickets/ATT-6036/`, live `emulator-5554` boot smoke `0` crashes). |
+| `1.0.28` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Stage 6 Bounce 1 heal (`[Implemented]`): extended `SqliteSchemaUtilsTest` (`6/6` tests) with fail-fast strict `addColumnIfNotExists` (`SQLiteException` on missing table) and explicit `addColumnIfNotExistsLenient` tests. |
+| `1.0.27` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `TST-DAT-043` to `[Verified]` in Rule 7.5 Stage 5 reusing Gate 4 (`ATT-9588`) independently verified `262/262` PASS across 36 suites (`0` fail, `0` skip), `auto_gate.py` `PASS` bundle (`docs/engineering/test_evidence/tickets/ATT-6036/`), live `emulator-5554` boot smoke (`0` crashes), and `docs/engineering/walkthroughs/ATT-6036_walkthrough.md`. |
+| `1.0.26` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `TST-DAT-043` to `[Implemented]` with unit tests (`BaseDatabaseManagerTest`, `SqliteSchemaUtilsTest`, `DatabaseExtensionsTest`, `StreamSummaryCalculatorTest`, extended `TrackingViewsRepositoryTest`, 12 migrated reflection tests, and `ArchitectureConformanceContractTest` ratchets). |
+| `1.0.25` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Added `[Planned]` `TST-DAT-043` (`TST-DAT-043.1`..`TST-DAT-043.5`) for `REQ-DAT-047` verifying `BaseDatabaseManager<H>`, `SqliteSchemaUtils`, `DatabaseExtensions` + `mutateViewConfig`, per-caller Golden-Value `StreamSummaryCalculator` parity, and `TryWithResourcesCursorAuditTest` / `ArchitectureConformanceContractTest` contracts. |
 | `1.0.24` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `TST-MIG-056` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9555`) independently verified `30/30` PASS across 4 suites (`0` fail, `0` skip) @ `993be8d5` and `docs/engineering/walkthroughs/ATT-6174_walkthrough.md`. |
 | `1.0.23` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Promoted `TST-MIG-056` to `[Implemented]` with unit tests (`LegacyImportEngineCloudRecoveryTest.testBulkRecoverFromDropbox_rejectsTraversalAndUnsafeNamesWhileRecoveringValidSibling_TST_MIG_056`, `BackupImportSecurityTest.testSanitizeDriveFileName_rejectsTraversalAndSeparators`). |
 | `1.0.22` | 2026-11-21 | Lane 2 Author (`ATT-6174`, `--as agent1`) | `ATT-6174` | Added `[Planned]` `TST-MIG-056` (`TST-MIG-056.1`..`TST-MIG-056.3`) for `REQ-MIG-056` verifying mocked `DbxClientV2` Dropbox traversal rejection, `SecureZipExtractor.sanitizeDriveFileName` `\u0000`/`"."` hardening, and cleanliness/architecture contract parity. |

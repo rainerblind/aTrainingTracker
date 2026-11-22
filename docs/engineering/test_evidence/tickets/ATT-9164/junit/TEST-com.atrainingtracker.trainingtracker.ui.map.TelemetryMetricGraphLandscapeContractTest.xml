@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:23:26.873Z" hostname="rainer-HP-EliteBook-850-G5" time="0.255">
+  <properties/>
+  <testcase name="testSynchronousDisplayModeSwitching_TST_UI_396_4" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.073"/>
+  <testcase name="testVerticalYAxisCoordinateAlignmentMath_TST_UI_396_2" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.001"/>
+  <testcase name="testGranularMetricsLegibilityAndFormatting_TST_UI_396_3" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.01"/>
+  <testcase name="testLandscapeMarginalHistogram_usesLinearBinsAndGuardsEmptyTracks_TST_UI_443_3" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.133"/>
+  <testcase name="testLandscapeProportionalDualPaneLayoutComposition_TST_UI_396_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.035"/>
+  <testcase name="testPortraitInvariantPreservation_TST_UI_396_5" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.0"/>
+  <testcase name="testLandscapeMarginalHistogram_filtersOutOfDomainBinsAndPreventsTopBarStacking_ATT_5311" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

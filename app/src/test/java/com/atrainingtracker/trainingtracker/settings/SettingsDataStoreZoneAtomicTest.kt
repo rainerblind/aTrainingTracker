@@ -71,7 +71,7 @@ class SettingsDataStoreZoneAtomicTest {
         )
         val context = mockk<Context>(relaxed = true)
         app = mockk<Application>(relaxed = true)
-        dataStore = SettingsDataStore(context, rawDataStore)
+        dataStore = SettingsDataStore.createForTesting(context, rawDataStore)
     }
 
     @After

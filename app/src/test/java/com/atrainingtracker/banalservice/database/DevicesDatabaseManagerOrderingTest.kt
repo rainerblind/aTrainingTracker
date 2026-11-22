@@ -101,7 +101,7 @@ class DevicesDatabaseManagerOrderingTest {
         } returns cursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val result = manager.getSensorsForSportType(BSportType.BIKE)
@@ -145,7 +145,7 @@ class DevicesDatabaseManagerOrderingTest {
         } returns cursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val result = manager.getSensorsForSportType(BSportType.RUN)

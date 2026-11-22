@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtilsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:13:16.822Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testEmptyList" classname="com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtilsTest" time="0.001"/>
+  <testcase name="testEncodeDecodeDoubles" classname="com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtilsTest" time="0.0"/>
+  <testcase name="testSingleValue" classname="com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtilsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositorySaveClusteringTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:09:47.854Z" hostname="rainer-HP-EliteBook-850-G5" time="9.457">
+  <properties/>
+  <testcase name="testSaveWorkout_whenClustered_updatesCentroidsWithoutReassigningCluster" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositorySaveClusteringTest" time="2.099"/>
+  <testcase name="testReloadWorkouts_reloadsDistinctWorkoutIds_TST_PER_048_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositorySaveClusteringTest" time="1.738"/>
+  <testcase name="testSaveWorkout_whenUnclustered_preservesUnclusteredStatusWithoutCreatingCluster" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositorySaveClusteringTest" time="1.947"/>
+  <testcase name="testClusterMutations_onRenamedMergedDeleted_updatesInMemoryWorkoutsPreservingWorkoutName_TST_PER_048_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositorySaveClusteringTest" time="1.742"/>
+  <testcase name="testSaveWorkout_afterUnassignCluster_preservesUnclusteredStatusOnCustomNameEdit" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositorySaveClusteringTest" time="1.931"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

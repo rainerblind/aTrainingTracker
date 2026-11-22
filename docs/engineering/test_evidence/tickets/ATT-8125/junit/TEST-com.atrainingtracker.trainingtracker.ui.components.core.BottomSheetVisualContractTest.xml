@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:59:36.548Z" hostname="rainer-HP-EliteBook-850-G5" time="0.314">
+  <properties/>
+  <testcase name="testDynamicHeaderMeasurement_wiringAndForwarding" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.005"/>
+  <testcase name="testConfirmationDialogs_consumeSurfaceAndZeroTonalElevation" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.011"/>
+  <testcase name="testAppModalBottomSheet_consumesBottomSheetDesignTokensAndBorder" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.001"/>
+  <testcase name="testWorkoutClusterHeatmapScreen_dragHandleBehavior" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.273"/>
+  <testcase name="testPersistentMapScaffolds_consumeBottomSheetDesignTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.007"/>
+  <testcase name="testSensorGridScreen_consumesBottomSheetDesignTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.003"/>
+  <testcase name="testScreens_consumeStandardizedPeekHeightTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.007"/>
+  <testcase name="testMapDetailLayout_appliesSheetShapeAndSurfaceBackground" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.005"/>
+  <testcase name="testFilterBottomSheetScaffold_consumesBottomSheetDesignTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

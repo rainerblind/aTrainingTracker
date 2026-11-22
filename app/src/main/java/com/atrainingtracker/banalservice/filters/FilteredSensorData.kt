@@ -20,14 +20,16 @@ package com.atrainingtracker.banalservice.filters
 
 import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import java.util.Objects
 
-open class FilteredSensorData<T>(
+open class FilteredSensorData<T> @JvmOverloads constructor(
     sensorType: SensorType,
     value: T?,
     stringValue: String?,
     deviceName: String?,
     @JvmField protected var mFilterType: FilterType,
-    @JvmField protected var mFilterConstant: Double
+    @JvmField protected var mFilterConstant: Double,
+    @JvmField val deviceId: Long = -1L
 ) : SensorData<T>(sensorType, value, stringValue, deviceName) {
 
     open val filterType: FilterType
@@ -37,5 +39,33 @@ open class FilteredSensorData<T>(
         get() = mFilterConstant
 
     open val filterData: FilterData
-        get() = FilterData(deviceName, sensorType, filterType, filterConstant)
+        get() = FilterData(deviceName, sensorType, filterType, filterConstant, deviceId)
+
+    /**
+     * Structural equality excluding volatile [SensorData.mTimestamp] so `StateFlow` conflates
+     * unchanged 1-Hz snapshots cleanly, including `Double.NaN` parity (REQ-UI-2800.1).
+     */
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is FilteredSensorData<*>) return false
+        return sensorType == other.sensorType &&
+            Objects.equals(value, other.value) &&
+            stringValue == other.stringValue &&
+            deviceName == other.deviceName &&
+            deviceId == other.deviceId &&
+            mFilterType == other.mFilterType &&
+            mFilterConstant.toBits() == other.mFilterConstant.toBits()
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(
+            sensorType,
+            value,
+            stringValue,
+            deviceName,
+            deviceId,
+            mFilterType,
+            mFilterConstant.toBits()
+        )
+    }
 }

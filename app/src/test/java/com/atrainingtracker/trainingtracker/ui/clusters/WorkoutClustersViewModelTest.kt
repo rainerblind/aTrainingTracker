@@ -192,9 +192,10 @@ class WorkoutClustersViewModelTest {
         every { KnownLocationsRepository.getInstance(any()) } returns mockKnownLocationsRepo
         every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledClusterMarkerTypesFlow } returns MutableStateFlow(emptySet())
-        every { anyConstructed<MyPreferenceManager>().clusterFilterCriteriaFlow } returns MutableStateFlow(ClusterFilterCriteria())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledClusterMarkerTypesFlow } returns MutableStateFlow(emptySet())
+        every { mockPrefManager.clusterFilterCriteriaFlow } returns MutableStateFlow(ClusterFilterCriteria())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
         every { mockClusterRepo.allClusters } returns allClustersFlow
         every { mockClusterRepo.clusterMutationEvents } returns clusterMutationEventsFlow
@@ -214,6 +215,7 @@ class WorkoutClustersViewModelTest {
     fun tearDown() {
         activeViewModel?.viewModelScope?.cancel()
         activeViewModel = null
+        MyPreferenceManager.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkAll()
@@ -812,6 +814,31 @@ class WorkoutClustersViewModelTest {
 
         assertEquals(expectedRoute, viewModel.linkedRoute.value)
         assertEquals(77L, viewModel.linkedRoute.value?.summary?.id)
+    }
+
+    @Test
+    fun inheritsBaseMappableListViewModel_managesSortOrderScrollAndLocation_TST_PRO_137_2() = runTest(testDispatcher) {
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        assertTrue(
+            com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel::class.java
+                .isAssignableFrom(WorkoutClustersViewModel::class.java)
+        )
+
+        assertEquals(ClusterSortOrder.RECORDINGS, viewModel.sortOrder.value)
+        assertTrue(viewModel.shouldScrollToTop(ClusterSortOrder.RECORDINGS))
+        assertFalse(viewModel.shouldScrollToTop(ClusterSortOrder.RECORDINGS))
+
+        viewModel.setSortOrder(ClusterSortOrder.DISTANCE_TO_USER)
+        assertEquals(ClusterSortOrder.DISTANCE_TO_USER, viewModel.sortOrder.value)
+        assertTrue(viewModel.shouldScrollToTop(ClusterSortOrder.DISTANCE_TO_USER))
+
+        val locJob = launch { viewModel.isLocationAvailable.collect() }
+        currentLocationFlow.value = LatLng(48.137, 11.576)
+        advanceUntilIdle()
+        assertTrue(viewModel.isLocationAvailable.value)
+        assertTrue(viewModel.shouldScrollToTop(ClusterSortOrder.DISTANCE_TO_USER))
+        locJob.cancel()
     }
 }
 

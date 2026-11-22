@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:02.685Z" hostname="rainer-HP-EliteBook-850-G5" time="0.275">
+  <properties/>
+  <testcase name="TST-SET-115_1 testSensorsGpsFilterSection_hostsHrvArtifactGateAndMorningCheckSectionHostsMorningControls" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.001"/>
+  <testcase name="TST-UI-388_3 testTuningConfig_persistenceAndModularity" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.179"/>
+  <testcase name="TST-WKO-036_1 testPhysiologyModelsSection_rpeFeelSwitchContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.002"/>
+  <testcase name="TST-UI-388_4 testLiveCockpitAndBackgroundPersistenceInvariants" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.022"/>
+  <testcase name="TST-UI-366_3 EditSensorFieldViewModel filters Coggan and CP sensors when disabled" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.0"/>
+  <testcase name="TST-UI-366_7 and TST-UI-367_2 all 9 locales define physiology models and Section 5_10 string keys" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.003"/>
+  <testcase name="TST-UI-366_3_5_6 WorkoutDetails and MapDetailLayout source contract gates physiology metrics" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.014"/>
+  <testcase name="TST-UI-366_1 default TuningConfig enables only Coggan power metrics" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.023"/>
+  <testcase name="TST-UI-366_4 and 366_6 AthleteProfile plot and history filters respect enableCriticalPowerModel" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.02"/>
+  <testcase name="TST-TRK-061_4b testPhysiologyModelsSection_hrvThresholdSlidersRemovedAndLinkAdded" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

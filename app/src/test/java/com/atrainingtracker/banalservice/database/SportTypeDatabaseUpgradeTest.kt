@@ -320,7 +320,7 @@ class SportTypeDatabaseUpgradeTest {
     @Test
     fun testActivePickerFiltersPlaceholdersAndAllowsClaiming() {
         val manager = object : SportTypeDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         // Mock cursor returning only non-placeholders (1, 2, 3, 4, 5, 7) - placeholder 6 excluded
@@ -486,7 +486,7 @@ class SportTypeDatabaseUpgradeTest {
     @Test
     fun testIsPlaceholderHelper() {
         val manager = object : SportTypeDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         // Mock ID 6 is placeholder (1)

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:24:09.105Z" hostname="rainer-HP-EliteBook-850-G5" time="14.655">
+  <properties/>
+  <testcase name="importFitFiles_processesMultipleUris_andEmitsSuccessSummary" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" time="4.032"/>
+  <testcase name="importFitFiles_withFailure_emitsSummaryWithErrors" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" time="1.999"/>
+  <testcase name="importFitFiles_skipsExistingFilesWithoutCopyingToCacheDir" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" time="2.028"/>
+  <testcase name="importFitFiles_sortsUrisAscendingByResolvedDisplayName" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" time="2.095"/>
+  <testcase name="importWorkoutFilesInternal distinguishes single-file immediacy from multi-file batch context" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" time="2.98"/>
+  <testcase name="importStravaArchive reconciles all repositories and LiveClimbsRepository once post-batch" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest" time="1.521"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

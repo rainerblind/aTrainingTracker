@@ -79,12 +79,14 @@ class TrackOnMapAftermathViewModelFallbackTest {
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
         every { mockRoutesRepo.allRoutes } returns MutableStateFlow(emptyList())
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledTrackTypesFlow } returns MutableStateFlow(emptySet())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledTrackTypesFlow } returns MutableStateFlow(emptySet())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     @After
     fun tearDown() {
+        MyPreferenceManager.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()

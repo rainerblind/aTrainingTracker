@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.database.inTransaction
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -109,15 +110,7 @@ class SummariesManagerClusterWorkoutDataPort(
     }
 
     override fun <T> runInTransaction(block: () -> T): T {
-        val db = summariesManager.database
-        db.beginTransaction()
-        return try {
-            val result = block()
-            db.setTransactionSuccessful()
-            result
-        } finally {
-            db.endTransaction()
-        }
+        return summariesManager.database.inTransaction { block() }
     }
 
     override fun getWorkoutBounds(workoutId: Long): Map<String, Double> {

@@ -65,12 +65,13 @@ class TrackOnMapViewModelTelemetryTest {
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
         every { mockRoutesRepo.allRoutes } returns MutableStateFlow(emptyList())
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledTrackTypesFlow } returns MutableStateFlow(setOf("BEST"))
+        every { mockPrefManager.enabledTrackTypesFlow } returns MutableStateFlow(setOf("BEST"))
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     @After
     fun tearDown() {
+        MyPreferenceManager.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

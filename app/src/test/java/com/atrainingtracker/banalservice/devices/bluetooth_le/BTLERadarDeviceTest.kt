@@ -1488,4 +1488,361 @@ class BTLERadarDeviceTest {
         radarDevice.processTargetsForTesting(targets)
         assertTrue(RadarStateRepository.getState().isAutoMode)
     }
+
+    /**
+     * TST-CON-055.2 / REQ-CON-055.2 (ATT-8123):
+     * Legacy StVZO radar (RTL516) with DIS Model Number characteristic defers registration and
+     * initial light mode write until model resolution, then registers with isStvzo=true and clamps
+     * active DAY_FLASH to SOLID (never sending DAY_FLASH to StVZO hardware).
+     */
+    @Test
+    fun testConfigureServices_legacyStvzoModel_defersRegistrationAndClampsActiveDayFlashToSolid_TST_CON_055_2() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "Garmin Varia RTL516"
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        RadarLightController.updateHardwareLightMode(RadarLightMode.DAY_FLASH)
+
+        radarDevice.configureServices(mockGatt)
+
+        // Must NOT be registered or enqueue any light write before Model Number read completes
+        assertFalse("Registration must be deferred until Model Number resolves", RadarLightController.isLightControlAvailable.value)
+        assertFalse(RadarLightController.isStvzo.value)
+        val writesBeforeModelRead = radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>()
+        assertTrue("No light-mode GATT write may be queued before StVZO detection", writesBeforeModelRead.isEmpty())
+
+        // Model Number read completes with RTL516 (StVZO)
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertTrue("Device must register after Model Number read", RadarLightController.isLightControlAvailable.value)
+        assertTrue("RTL516 must register with isStvzo=true", RadarLightController.isStvzo.value)
+        assertFalse("RTL516 does not have hardware brake sensor", RadarLightController.hasHardwareBrakeSensor.value)
+        assertEquals("Active DAY_FLASH must be clamped to SOLID on StVZO", RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        val writesAfterModelRead = radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>()
+        assertEquals("Exactly one clamped light write must be enqueued", 1, writesAfterModelRead.size)
+        assertTrue(
+            "Queued byte must be SOLID command byte, never DAY_FLASH",
+            writesAfterModelRead.first().value.contentEquals(byteArrayOf(RadarLightMode.SOLID.commandByte))
+        )
+    }
+
+    /**
+     * TST-CON-055.2 / REQ-CON-055.2 (ATT-8123):
+     * RearVue 820 StVZO (010-03180-10) defers registration until model read completes, registers
+     * with isStvzo=true AND hasHardwareBrakeSensor=true, and clamps active NIGHT_FLASH to SOLID (0x11).
+     */
+    @Test
+    fun testConfigureServices_rearVueStvzoModel_defersRegistrationSetsHardwareBrakeAndClampsToSolid_TST_CON_055_2() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockControlService = mockk<BluetoothGattService>(relaxed = true)
+        val mockWriteChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "010-03180-10"
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns mockControlService
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE) } returns mockWriteChar
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY) } returns mockNotifyChar
+        every { mockWriteChar.properties } returns (BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_INDICATE)
+        every { mockNotifyChar.properties } returns BluetoothGattCharacteristic.PROPERTY_NOTIFY
+
+        RadarLightController.updateHardwareLightMode(RadarLightMode.NIGHT_FLASH)
+
+        radarDevice.configureServices(mockGatt)
+
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+        assertTrue(radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>().isEmpty())
+
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertTrue(RadarLightController.isLightControlAvailable.value)
+        assertTrue(RadarLightController.isStvzo.value)
+        assertTrue("RearVue 820 must register with hasHardwareBrakeSensor=true", RadarLightController.hasHardwareBrakeSensor.value)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        val writes = radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>()
+        assertEquals(1, writes.size)
+        assertTrue(writes.first().value.contentEquals(byteArrayOf(0x06, 0x09, 0x01, 0x11)))
+    }
+
+    /**
+     * TST-CON-055.2 / REQ-CON-055.2 (ATT-8123):
+     * Non-StVZO model (RTL515) registers with isStvzo=false and preserves active DAY_FLASH command.
+     */
+    @Test
+    fun testConfigureServices_nonStvzoModel_registersWithStvzoFalseAndPreservesDayFlash_TST_CON_055_2() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "Garmin Varia RTL515"
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        RadarLightController.updateHardwareLightMode(RadarLightMode.DAY_FLASH)
+
+        radarDevice.configureServices(mockGatt)
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertTrue(RadarLightController.isLightControlAvailable.value)
+        assertFalse(RadarLightController.isStvzo.value)
+        val writes = radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>()
+        assertEquals(1, writes.size)
+        assertTrue(writes.first().value.contentEquals(byteArrayOf(RadarLightMode.DAY_FLASH.commandByte)))
+    }
+
+    /**
+     * TST-CON-055.3 / REQ-CON-055.3 (ATT-8123):
+     * Model Number GATT read failure (null/empty string) immediately falls back once to
+     * (isStvzo=false, hasHardwareBrake=false) and dispatches the active light mode.
+     */
+    @Test
+    fun testConfigureServices_modelNumberReadFailureNull_fallsBackImmediatelyOnce_TST_CON_055_3() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        RadarLightController.updateHardwareLightMode(RadarLightMode.DAY_FLASH)
+
+        radarDevice.configureServices(mockGatt)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+
+        // Failed read delivers null model string
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+        assertTrue(RadarLightController.isLightControlAvailable.value)
+        assertFalse(RadarLightController.isStvzo.value)
+        assertEquals(1, radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>().size)
+
+        // Subsequent stale fallback timer or second null read must be idempotent (no duplicate write)
+        radarDevice.modelNumberFallbackRunnableForTesting.run()
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+        assertEquals(1, radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>().size)
+    }
+
+    /**
+     * TST-CON-055.3 / REQ-CON-055.3 (ATT-8123):
+     * Timeout fallback registers once with default profile, and a late-arriving StVZO model string
+     * self-heals by clamping active DAY_FLASH to SOLID; conversely, a late timeout firing after a
+     * resolved StVZO read must NOT overwrite isStvzo=true.
+     */
+    @Test
+    fun testConfigureServices_timeoutFallbackAndLateStvzoSelfHeal_plusIdempotentLateTimeout_TST_CON_055_3() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "RTL516"
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        RadarLightController.updateHardwareLightMode(RadarLightMode.DAY_FLASH)
+
+        // Scenario A: timeout fires first -> fallback registers (isStvzo=false, DAY_FLASH written),
+        // then late RTL516 arrives -> self-heals to isStvzo=true and clamps to SOLID
+        radarDevice.configureServices(mockGatt)
+        radarDevice.modelNumberFallbackRunnableForTesting.run()
+        assertTrue(RadarLightController.isLightControlAvailable.value)
+        assertFalse(RadarLightController.isStvzo.value)
+        assertEquals(1, radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>().size)
+
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+        assertTrue("Late StVZO read must upgrade isStvzo to true", RadarLightController.isStvzo.value)
+        assertEquals("Late StVZO read must self-heal DAY_FLASH to SOLID", RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        val writesAfterSelfHeal = radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>()
+        assertEquals(2, writesAfterSelfHeal.size)
+        assertTrue(writesAfterSelfHeal.last().value.contentEquals(byteArrayOf(RadarLightMode.SOLID.commandByte)))
+
+        // Scenario B: already-dequeued timeout runnable running AFTER resolved StVZO read must be a no-op
+        radarDevice.modelNumberFallbackRunnableForTesting.run()
+        assertTrue("Stale timeout must NEVER overwrite resolved isStvzo=true", RadarLightController.isStvzo.value)
+        assertEquals(2, radarDevice.gattQueueForTesting.filterIsInstance<MyBTLEDevice.WriteCharacteristicOp>().size)
+    }
+
+    /**
+     * TST-CON-055.4 / REQ-CON-055.4 (ATT-8123):
+     * disconnectFromGatt() and shutDown() clear StVZO/model state and drop late model-number
+     * callbacks, stale-GATT callbacks, and pending fallback timers without re-registering.
+     */
+    @Test
+    fun testDisconnectAndShutdown_clearsStvzoStateAndDropsLateModelReadOrTimeout_TST_CON_055_4() {
+        val mockGatt1 = mockk<BluetoothGatt>(relaxed = true)
+        val mockGatt2 = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        for (g in listOf(mockGatt1, mockGatt2)) {
+            every { g.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+            every { g.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+            every { g.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+            every { g.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        }
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "RTL516"
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        // 1. Connect on gatt1, resolve StVZO, then disconnect -> state cleared and late callbacks dropped
+        radarDevice.configureServices(mockGatt1)
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt1, mockModelChar)
+        assertTrue(radarDevice.isStvzo)
+        assertEquals("RTL516", radarDevice.modelNumber)
+
+        radarDevice.disconnectFromGatt()
+        assertFalse("disconnectFromGatt must clear mIsStvzo", radarDevice.isStvzo)
+        assertNull("disconnectFromGatt must clear mModelNumber", radarDevice.modelNumber)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+
+        // Late model-number callback or timeout after disconnect must NOT re-register
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt1, mockModelChar)
+        radarDevice.modelNumberFallbackRunnableForTesting.run()
+        assertFalse("Late callback after disconnect must not re-register", RadarLightController.isLightControlAvailable.value)
+        assertFalse(radarDevice.isStvzo)
+
+        // 2. Reconnect on gatt2 -> stale callback from gatt1 must be rejected
+        radarDevice.configureServices(mockGatt2)
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt1, mockModelChar)
+        assertFalse("Stale gatt1 callback must be ignored during gatt2 session", RadarLightController.isLightControlAvailable.value)
+
+        // 3. shutDown() drops pending timeout and late model-number callback
+        radarDevice.shutDown()
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt2, mockModelChar)
+        radarDevice.modelNumberFallbackRunnableForTesting.run()
+        assertFalse("Late callback after shutDown must not register", RadarLightController.isLightControlAvailable.value)
+    }
+
+    /**
+     * TST-CON-055.4 / REQ-CON-055.4 (ATT-8123 Bounce 1):
+     * When a concurrent disconnect races between completeLightControlRegistration releasing
+     * mLightRegistrationLock and setLightMode() running (either failing with false or returning true
+     * after disconnectFromGatt() already unregistered the device), clamped SOLID must NOT resurrect
+     * in RadarLightController or RadarStateRepository.
+     */
+    @Test
+    fun testCompleteLightControlRegistration_concurrentDisconnectDuringClampedSetLightMode_doesNotResurrectSolid_TST_CON_055_4() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDisService = mockk<BluetoothGattService>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDisService
+        every { mockDisService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns mockModelChar
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "RTL516"
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        // Case A: concurrent disconnect happens right before setLightMode -> super.setLightMode returns false
+        val racingDeviceFalse = object : BTLERadarDevice(mockContext, mockSensorManager, 102L, "DC:2C:26:01:02:04") {
+            override fun setLightMode(mode: RadarLightMode): Boolean {
+                disconnectFromGatt()
+                return super.setLightMode(mode)
+            }
+        }
+        RadarLightController.updateHardwareLightMode(RadarLightMode.DAY_FLASH)
+        racingDeviceFalse.configureServices(mockGatt)
+        racingDeviceFalse.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertFalse("Disconnected device must not remain registered", RadarLightController.isLightControlAvailable.value)
+        assertEquals(
+            "Failed post-disconnect clamped setLightMode must not resurrect SOLID in controller",
+            RadarLightMode.OFF,
+            RadarLightController.currentMode.value
+        )
+        assertEquals(
+            "Failed post-disconnect clamped setLightMode must not resurrect SOLID in repository",
+            RadarLightMode.OFF,
+            RadarStateRepository.getState().lightMode
+        )
+
+        // Case B: setLightMode queues write (returns true) while disconnectFromGatt races right before return
+        RadarLightController.reset()
+        RadarStateRepository.reset()
+        val racingDeviceTrue = object : BTLERadarDevice(mockContext, mockSensorManager, 103L, "DC:2C:26:01:02:05") {
+            override fun setLightMode(mode: RadarLightMode): Boolean {
+                val queued = super.setLightMode(mode)
+                disconnectFromGatt()
+                return queued
+            }
+        }
+        RadarLightController.updateHardwareLightMode(RadarLightMode.DAY_FLASH)
+        racingDeviceTrue.configureServices(mockGatt)
+        racingDeviceTrue.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+        assertEquals(
+            "Post-disconnect re-check under mLightRegistrationLock must block SOLID resurrection",
+            RadarLightMode.OFF,
+            RadarLightController.currentMode.value
+        )
+        assertEquals(RadarLightMode.OFF, RadarStateRepository.getState().lightMode)
+    }
 }

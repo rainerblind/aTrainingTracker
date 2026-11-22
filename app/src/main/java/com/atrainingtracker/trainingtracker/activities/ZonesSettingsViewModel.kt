@@ -49,7 +49,7 @@ import java.util.concurrent.ConcurrentHashMap
 class ZonesSettingsViewModel @JvmOverloads constructor(
     application: Application,
     val savedStateHandle: SavedStateHandle = SavedStateHandle(),
-    val dataStore: SettingsDataStore = SettingsDataStore(application),
+    val dataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     val athleteMetricsRepository: AthleteMetricsRepository = AthleteMetricsRepository.getInstance(application)
 ) : AndroidViewModel(application) {
@@ -235,7 +235,7 @@ class ZonesSettingsViewModel @JvmOverloads constructor(
     class Factory(
         private val application: Application,
         private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
-        private val dataStore: SettingsDataStore = SettingsDataStore(application)
+        private val dataStore: SettingsDataStore = SettingsDataStore.getInstance(application)
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

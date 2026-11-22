@@ -151,7 +151,7 @@ class AthleteMetricsRepositorySyncTest {
             scope = dataStoreScope,
             produceFile = { tmpFolder.newFile("seed_test.preferences_pb") }
         )
-        val settingsDataStore = SettingsDataStore(mockk<Context>(relaxed = true), testDataStore)
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore)
         val fakeDb = FakeAthleteMetricsDataSource()
         val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
 
@@ -191,7 +191,7 @@ class AthleteMetricsRepositorySyncTest {
             scope = dataStoreScope,
             produceFile = { tmpFolder.newFile("sync_state_machine.preferences_pb") }
         )
-        val settingsDataStore = SettingsDataStore(mockk<Context>(relaxed = true), testDataStore)
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore)
         val fakeDb = FakeAthleteMetricsDataSource()
         val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
 
@@ -258,7 +258,7 @@ class AthleteMetricsRepositorySyncTest {
             scope = dataStoreScope,
             produceFile = { tmpFolder.newFile("zone_sync_state_machine.preferences_pb") }
         )
-        val settingsDataStore = SettingsDataStore(mockk<Context>(relaxed = true), testDataStore)
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore)
         val fakeDb = FakeAthleteMetricsDataSource()
         val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
 

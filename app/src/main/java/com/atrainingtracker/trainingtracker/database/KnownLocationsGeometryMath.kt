@@ -19,12 +19,12 @@
 package com.atrainingtracker.trainingtracker.database
 
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.google.android.gms.maps.model.LatLng
 import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -61,18 +61,17 @@ object KnownLocationsGeometryMath {
     private const val EARTH_RADIUS_METERS = 6371009.0
 
     /**
-     * Computes the geodetic distance in meters between two coordinates using the Haversine formula.
+     * Computes the geodetic distance in meters between two coordinates using the Haversine formula
+     * with [EARTH_RADIUS_METERS] (`6,371,009.0 m`).
      */
     fun calculateDistanceMeters(p1: LatLng, p2: LatLng): Double {
-        val lat1 = Math.toRadians(p1.latitude)
-        val lon1 = Math.toRadians(p1.longitude)
-        val lat2 = Math.toRadians(p2.latitude)
-        val lon2 = Math.toRadians(p2.longitude)
-        val dLat = lat2 - lat1
-        val dLon = lon2 - lon1
-        val a = sin(dLat / 2.0).pow(2) + cos(lat1) * cos(lat2) * sin(dLon / 2.0).pow(2)
-        val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
-        return EARTH_RADIUS_METERS * c
+        return GeoUtils.haversineDistanceMeters(
+            p1.latitude,
+            p1.longitude,
+            p2.latitude,
+            p2.longitude,
+            earthRadiusMeters = EARTH_RADIUS_METERS
+        )
     }
 
     /**

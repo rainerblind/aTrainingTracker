@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:58:10.506Z" hostname="rainer-HP-EliteBook-850-G5" time="0.025">
+  <properties/>
+  <testcase name="testScrubbingReadout_includesZoneTag_forPower" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.004"/>
+  <testcase name="testElevationProfile_scrubbingBadge_includesZoneSupport" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.003"/>
+  <testcase name="testHeartRateAndPower_enableZoneBands_contract" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.004"/>
+  <testcase name="testSpeedAndPaceGraphs_noZoneTags" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.005"/>
+  <testcase name="testScrubbingReadout_includesZoneTag_forHeartRate" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.002"/>
+  <testcase name="testPaddingInvariants_matchElevationProfile" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.002"/>
+  <testcase name="testSpeedAndPace_doNotEnableZoneBands_contract" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

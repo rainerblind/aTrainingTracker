@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryRetiredTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:21:34.468Z" hostname="rainer-HP-EliteBook-850-G5" time="0.04">
+  <properties/>
+  <testcase name="testGetEquipmentNamesForSport_excludesRetiredEquipment" classname="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryRetiredTest" time="0.015"/>
+  <testcase name="testResolveIdentity_whenCandidateIsRetired_doesNotInclineRetiredEquipment" classname="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryRetiredTest" time="0.015"/>
+  <testcase name="testGetLinkedEquipmentIds_excludesRetiredEquipment" classname="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryRetiredTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

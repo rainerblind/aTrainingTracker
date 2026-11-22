@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterImperialAndLocaleUiTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:33:55.442Z" hostname="rainer-HP-EliteBook-850-G5" time="22.639">
+  <properties/>
+  <testcase name="manualClusterScreen_acceptsGermanCommaDecimalDistanceInput_TST_SET_030" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterImperialAndLocaleUiTest" time="21.675"/>
+  <testcase name="clusterTuningContent_andSubtitleFormatter_renderImperialMiles_TST_SET_015" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterImperialAndLocaleUiTest" time="0.963"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

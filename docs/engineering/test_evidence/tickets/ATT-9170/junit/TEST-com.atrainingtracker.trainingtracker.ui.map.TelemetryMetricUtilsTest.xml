@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:59:37.779Z" hostname="rainer-HP-EliteBook-850-G5" time="0.161">
+  <properties/>
+  <testcase name="testFormatPaceMinutes" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.001"/>
+  <testcase name="testDataAvailabilityChecks" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testHasWPrimeBalData_requiresPowerData" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testFormatValue_respectsExplicitLocaleForSlopes" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.001"/>
+  <testcase name="testSlopeDetectionExtractionFormatting_supportsNegativeZeroAndPositiveGrades" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testFindNearestPoint_distanceDomain_100PercentNumericalParityWithMinByOrNull" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.084"/>
+  <testcase name="testFindNearestPoint_singleElementList_returnsElement" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testConvertSpeedMpsToPaceMinutes_handlesMetricImperialAndStandstill" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testFindNearestPoint_tieBreaking_matchesMinByOrNull" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testFindNearestSourceValue_distanceAndTimeDomains" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testFindNearestPoint_timeDomain_100PercentNumericalParityWithMinByOrNull" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.073"/>
+  <testcase name="testCadenceDataDetectionExtractionAndFormatting" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.001"/>
+  <testcase name="testFindNearestPoint_boundaryTargets_returnsFirstOrLast" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <testcase name="testFindNearestPoint_emptyList_returnsNull" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtilsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

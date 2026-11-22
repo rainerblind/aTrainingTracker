@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:15:42.994Z" hostname="rainer-HP-EliteBook-850-G5" time="6.738">
+  <properties/>
+  <testcase name="testPeriodsRepository_unfinishedLiveWorkout3600Ticks_triggersZeroRebuilds_TST_STB_020_2_and_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="3.15"/>
+  <testcase name="testPeriodSummariesDatabaseManager_setSyncFinishedUpdatesDatabase" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.501"/>
+  <testcase name="testWorkoutsInRangeCursor_includesFinishedCondition" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.38"/>
+  <testcase name="testTrackingFinishedIntent_contractConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.366"/>
+  <testcase name="testPeriodsViewModel_loadPeriods_triggersCheckIntegrityAndSync" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="1.125"/>
+  <testcase name="testPeriodsRepository_sharedMapperReused" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.439"/>
+  <testcase name="testPeriodProjectionKey_filtersNonPeriodChanges_andDetectsPeriodRelevantChanges" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.384"/>
+  <testcase name="testSingleOwnerFinalization_andIdempotentDeduplication" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.391"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

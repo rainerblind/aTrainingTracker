@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperDurabilityTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:06:55.513Z" hostname="rainer-HP-EliteBook-850-G5" time="0.258">
+  <properties/>
+  <testcase name="ExtremaType contains durability enum constants (REQ-PER-038_5)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperDurabilityTest" time="0.006"/>
+  <testcase name="WorkoutDataMapper maps durability extrema into WorkoutData via fromSnapshot (TST-PER-046_5)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperDurabilityTest" time="0.245"/>
+  <testcase name="WorkoutData exposes durability properties with null defaults (REQ-PER-038_5)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperDurabilityTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
