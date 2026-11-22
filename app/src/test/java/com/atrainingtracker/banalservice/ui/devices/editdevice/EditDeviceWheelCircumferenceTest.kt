@@ -319,9 +319,16 @@ class EditDeviceWheelCircumferenceTest {
         viewModel.loadInitialDeviceData(55L)
         assertEquals(initialRecords, viewModel.wheelCircumferenceHistory.value)
 
-        // 2. Edit draft circumference before saving, then tap Reset Baseline -> both DBs receive 2136 and history refreshes
+        // 2. Edit draft circumference and tap Reset Baseline -> staged in draft only (0 DB writes until Save; REQ-UI-2799.2)
         viewModel.onWheelCircumferenceChanged(2136)
         viewModel.resetTirePressureBaseline()
+
+        assertEquals(2.136, viewModel.deviceSnapshot.value?.baselineCircumference ?: 0.0, 1e-6)
+        coVerify(exactly = 0) { devicesRepo.resetTirePressureBaseline(any(), any()) }
+        verify(exactly = 0) { equipRepo.recordManualBaselineResetForDevice(any(), any(), any()) }
+
+        // 2b. Save commits both draft circumference and baseline reset -> both DBs receive 2136 and history refreshes
+        viewModel.saveChanges()
 
         coVerify(exactly = 1) { devicesRepo.resetTirePressureBaseline(55L, 2136) }
         verify(exactly = 1) { equipRepo.recordManualBaselineResetForDevice(55L, 2136, any()) }

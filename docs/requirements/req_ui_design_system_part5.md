@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.32  
+**Version**: 1.0.33  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 55
+**Total Requirements**: 56
 
 ---
 
@@ -2140,6 +2140,35 @@
   2. *Historical Origin & Commit Trace*: `ATT-1839` added background zone bands and `6.dp/6.dp` threshold dashes; `ATT-8710`/`ATT-8953` added 3-zone vertical gradients for `DFA α1`; `ATT-9170` introduced priority-based `resolveTelemetryYAxisLabels`; `ATT-9164` extends zone-colored curves and zone-boundary/nice-tick Y-axis labels to `HEART_RATE` and `POWER`.
   3. *Root Reason for Existing Formulation*: `HEART_RATE` and `POWER` previously rendered flat solid curves with only raw extrema Y-axis labels.
   4. *Preservation of Core Invariants*: Preserves `DFA α1` inverted 3-zone rendering (`REQ-HRV-044`/`REQ-HRV-046`), preserves `ATT-9170` `Ø` top priority and dotted grey reference line (`REQ-UI-2797`), preserves `TelemetryGraphColorPreferences` on all non-zoned metrics and unzoned HR/Power fallback (`REQ-UI-530`), preserves `ThemeColorCentralizationAuditTest` (all tokens inside `Color.kt`), preserves `ElevationProfile.kt` untouched, and keeps `TelemetryMetricGraph.kt <= 1,965` LoC (`1,910` LoC).
+### REQ-UI-2799: Pure Compose Day Navigation in `PeriodsScreen`, Locale/Rotation/Cancel-Safe `EditDeviceDialog` & Single Window-Insets in BottomSheets (`ATT-8125`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2799`
+- **System Requirement(s)**: Derived (SW-only — Compose navigation, dialog state integrity, and bottom-sheet WindowInsets bugfix under Epic `ATT-8119`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PeriodsScreen.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `DevicesTabbedScreen.kt`, `ATrainingTrackerApp.kt`, `FilterBottomSheetScaffold.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Fixes three concrete UI/UX defects surfaced by incomplete Fragment-to-Compose transitions and uncoordinated dialog/inset state: (1) `PeriodsScreen.handleDayClick` added a legacy `WorkoutSummariesListFragment` directly onto `android.R.id.content` over the Compose `NavHost`; (2) `EditDeviceDialog` lost unsaved edits on screen rotation, discarded German comma decimal keystrokes in `RunCalibrationFactorContent` / `CorrectCalibrationDialog`, and persisted Sensor-Fusion, TPMS baseline reset, and Radar light edits immediately ignoring `Cancel`; and (3) `ATrainingTrackerApp` doubled `navigationBars`/`ime` insets around `AppBottomSheetContent` settings sheets while `FilterBottomSheetScaffold` omitted `imePadding()` (`ATT-8125`).
+- **Description**:
+  1. *Pure Compose Day-Click Routing in `PeriodsScreen` (`REQ-UI-2799.1`)*:
+     - `PeriodsScreen` (`PeriodsScreen.kt`) SHALL route day-cell clicks via `buildDayPeriodSummary(...)` (`PeriodType.DAY`, exact day epoch bounds `[dayStartS, dayEndS]`, sport stats) through the `onStartWorkoutList` Compose navigation callback (`ATrainingTrackerApp` -> `MainActivityWithNavigation.startWorkoutSummaryListFromPeriod` -> `NavRoutes.workouts(pushed = true)`), enabling clean backstack pop to `Periods` without `FragmentActivity`, `WorkoutSummariesListFragment`, or `FragmentTransaction` on `android.R.id.content`.
+  2. *Rotation-Safe Drafts, Locale-Agnostic Decimal Input & Cancel Zero-Write Persistence in `EditDeviceDialog` (`REQ-UI-2799.2`)*:
+     - `DevicesTabbedScreen` SHALL preserve `editingDeviceId` via `rememberSaveable`, and `EditDeviceViewModel.loadInitialDeviceData(deviceId)` SHALL return early without overwriting `_deviceSnapshot` or staged drafts when `_editingId.value == deviceId && _deviceSnapshot.value != null && hasUnsavedChanges`, while still fetching fresh DB snapshots when clean or reopened (`TST-UI-216.3`) and resetting all drafts on `discardDraft()` (`Cancel` / dismiss).
+     - `RunCalibrationFactorContent` and `CorrectCalibrationDialog` SHALL parse both `.` and `,` decimal separators (`parseLocaleDecimal`) backed by a `rememberSaveable` local text buffer in `RunCalibrationFactorContent` so `de_DE` comma edits work seamlessly and survive rotation.
+     - ATT Odometry Fusion (`AttFusedDraftConfig`), ATT Altitude & Slope Fusion (`AttFusedAltitudeDraftConfig`), TPMS `resetTirePressureBaseline()`, and `EditDeviceDialog` Radar tail light selections (`RadarLightDraftSelection`) SHALL be staged strictly in `EditDeviceViewModel` memory and persisted to SQLite/`SharedPreferences`/`RadarLightController` ONLY upon `saveChanges()`, with zero persistence writes upon `Cancel` (`discardDraft()`).
+  3. *Single Non-Doubled Bottom-Sheet Insets & Filter IME Padding (`REQ-UI-2799.3`)*:
+     - `ATrainingTrackerApp` SHALL host its Settings `ModalBottomSheet` without an outer `.windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))` modifier so child `AppBottomSheetContent` -> `AppBottomSheetBody` applies `.navigationBarsPadding().imePadding()` strictly once.
+     - `FilterBottomSheetScaffold` (`FilterBottomSheetBody`) SHALL apply `.navigationBarsPadding().imePadding()` matching `AppBottomSheetBody` so text fields inside filter bottom sheets shift cleanly above the software keyboard.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `PeriodsScreen` displaying a week with daily activities inside a Compose `NavHost`, *When* the user taps an active day cell and presses Back, *Then* navigation routes strictly through Compose `NavHost` with day-scoped `WorkoutFilterCriteria` (zero `android.R.id.content` `FragmentTransaction`) and Back returns cleanly to `PeriodsScreen`.
+  • *Given* `EditDeviceDialog` under `de_DE` locale, *When* the user edits name, comma/dot calibration factor, Fused/Altitude toggles, TPMS baseline reset, or Radar mode, rotates the device, and taps `Cancel`, *Then* unsaved values survive rotation, comma and dot decimals are accepted, and zero writes are persisted to SQLite, `SharedPreferences`, or `RadarLightController` / DataStore (while tapping `Save` commits all staged changes).
+  • *Given* `ATrainingTrackerApp` Settings bottom sheets and `FilterBottomSheetScaffold` with open IME, *When* rendered, *Then* bottom `navigationBars`/`ime` insets are applied strictly once (1x) and filter text fields lift cleanly above the soft keyboard.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-CON-031.5` (`ATT-7540`, `EditDeviceDialog` radar light staging) and `REQ-SEN-033.2` (`ATT-8422`, TPMS baseline reset staging), while preserving `REQ-UI-216` (`TST-UI-216.3`), `REQ-UI-149`, and `REQ-UI-189` across `PeriodsScreen.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `DevicesTabbedScreen.kt`, `ATrainingTrackerApp.kt`, and `FilterBottomSheetScaffold.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-7540` wired `RadarLightControlSection` directly to `RadarLightController`; `ATT-8422` persisted `resetTirePressureBaseline` eagerly; `ATT-7751`/`ATT-6279` persisted Fused toggles immediately; `ATT-5195` added `handleDayClick` with a legacy `FragmentTransaction`.
+  3. *Root Reason for Existing Formulation*: Earlier incremental additions bypassed `EditDeviceViewModel`'s draft-save lifecycle and Compose `NavHost` routing before holistic complexity cleanup (`ATT-8119`).
+  4. *Preservation of Core Invariants*: Preserves `TST-UI-216.3` fresh reload on clean/reopened dialogs, `RadarLightQuickSwitchSheet` immediate live cockpit dispatch, `PeriodsFragment.kt` legacy test (`TST-PER-009`), `EditDeviceDialog.kt <= 2,004` LoC (`1,831` LoC), `EditDeviceViewModel(Application)` reflection constructor (`AndroidViewModelReflectionContractTest`), `BottomSheetDesign` tokens (`BottomSheetVisualContractTest`), and `0` string resource modifications.
 
 ---
 
@@ -2178,3 +2207,4 @@
 | `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `REQ-UI-2796` (`[Verified]`, `.1`–`.3`) introducing synchronized `ActivityCarriageSyncBar` (`ActivityCarriageBarMath`, `Rule 64` `50.dp` alignment, bidirectional scrubbing + active-mode readout chip, 1:1 zoom/pan & `DISTANCE`/`TIME` support, configurable `WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR` + `v4|` migration, graceful omission when absent, and 9-locale `strings_workout_details.xml` parity). |
 | `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `REQ-UI-2797` (`[Verified]`, `.1`–`.3`) adding dotted grey entire-workout average reference lines (`drawAverageReferenceLine`) and top-priority auto-fitted `Ø` Y-axis gutter labels (`computeWorkoutAverage`, `formatAverageYAxisLabel`, `resolveTelemetryYAxisLabels`) across all `TelemetryMetricGraph` charts in Workout Summary & Workout Details while keeping `ElevationProfile` untouched. |
 | `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Added and verified `REQ-UI-2798` (`[Verified]`, `.1`–`.3`) rendering `HEART_RATE` and `POWER` graphs in WCAG 2.1 AA theme-adaptive zone colors (`TTColor.zoneStrokeColor`, `buildZoneBandsVerticalGradientStops`), zone-orthogonal multi-source overlay contrast (`overlayStrokeColor`), non-overlapping zone boundary Y-axis labels integrated with `ATT-9170` `Ø` priority, and accent-color + nice round-tick fallback (`calculateNiceIntermediateTicks`) when unzoned. |
+| `1.0.31` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Added and verified `REQ-UI-2799` (`[Verified]`, `.1`–`.3`) replacing legacy `PeriodsScreen` `android.R.id.content` `FragmentTransaction` with pure Compose `onStartWorkoutList` day routing, hardening `EditDeviceDialog`/`EditDeviceViewModel` with rotation-safe dirty draft retention, `de_DE` comma/dot calibration input buffer, and Save-only / Cancel-zero-write persistence for Fused/TPMS/Radar options, removing duplicate outer `ATrainingTrackerApp` bottom-sheet insets, and adding `imePadding()` to `FilterBottomSheetScaffold` (`98/98` targeted tests PASS, Light/Dark & live `emulator-5554` PNGs verified). |

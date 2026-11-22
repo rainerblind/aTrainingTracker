@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:00:08.083Z" hostname="rainer-HP-EliteBook-850-G5" time="0.844">
+  <properties/>
+  <testcase name="testDisplaySettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.045"/>
+  <testcase name="testWorkoutClusterDialogs_existAndExposeComposableContracts" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.174"/>
+  <testcase name="testAppBottomSheetDialogFragment_isAbstractAndExtendsBottomSheetDialogFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.0"/>
+  <testcase name="testDeviceTypeSelectionDialog_existsAndExposesComposableContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.004"/>
+  <testcase name="testClusterNamingDialog_existsAndExposesComposableContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.135"/>
+  <testcase name="testAppBottomSheetContent_existsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.018"/>
+  <testcase name="testActivityTypeSelectionDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.007"/>
+  <testcase name="testExportDetailsDialog_existsAndExposesComposableContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.014"/>
+  <testcase name="testUnitsSettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.009"/>
+  <testcase name="testStravaSettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.025"/>
+  <testcase name="testTrackingGridDialogs_existAndExposeComposableContracts" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.124"/>
+  <testcase name="testSensorSourceDialog_existsAndExposesComposableContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.026"/>
+  <testcase name="testGoogleDriveSettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.013"/>
+  <testcase name="testSportAndEquipmentDialogs_existAndExposeComposableContracts" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.135"/>
+  <testcase name="testExportSettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.011"/>
+  <testcase name="testDropboxSettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.011"/>
+  <testcase name="testEditWorkoutDialog_existsAndExposesComposableContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.053"/>
+  <testcase name="testSearchSettingsDialog_existsAndExposesComposableAndFragment" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.023"/>
+  <testcase name="testCenteredDialogInvariants_retainedAsExpected" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.014"/>
+  <testcase name="testAppModalBottomSheet_supportsPainterAndVectorIcons" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

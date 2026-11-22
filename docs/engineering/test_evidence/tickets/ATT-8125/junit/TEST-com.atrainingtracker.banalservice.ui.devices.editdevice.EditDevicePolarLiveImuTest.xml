@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:59:39.478Z" hostname="rainer-HP-EliteBook-850-G5" time="3.708">
+  <properties/>
+  <testcase name="testPolarLiveImuCard_uiToggleStatesAndApi33DisabledHint" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.178"/>
+  <testcase name="testUpdateDevice_polarLiveImuToggleEmitsBroadcast_whileNonImuEditDoesNot" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.379"/>
+  <testcase name="testEditDevicePolarSection_nonPolarRenameExistingH10RenameAndEmptyNameVerity_TST_CON_049_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="1.105"/>
+  <testcase name="testLegacyOfflineRecOnlyVeritySenseRenamedToPolarH10_staysVerityNeverBleedsH10_TST_CON_049_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.192"/>
+  <testcase name="testPolarLiveImuRepositoryEligibility_forRenamedPolarSensorsWithDisMetadata" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.154"/>
+  <testcase name="testCapturePolarLiveImuToggleScreenshot" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.372"/>
+  <testcase name="testCaptureAtt8949EditDevicePolarDetectionScreenshot_TST_CON_049_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.624"/>
+  <testcase name="testPolarLiveImuRepositoryPersistence_andEligibilityFilter" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.139"/>
+  <testcase name="testUpdateDevice_preRenameLegacyH10BackfillAndNonPolarSuppression_TST_CON_049_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.153"/>
+  <testcase name="testLoadAllDevices_throwingBackfillDoesNotAbortDeviceListLoad_TST_CON_049_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest" time="0.412"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.POLAR_LIVE_IMU_CHANGED pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.POLAR_LIVE_IMU_CHANGED pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+]]></system-err>
+</testsuite>

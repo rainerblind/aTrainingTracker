@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:59:28.653Z" hostname="rainer-HP-EliteBook-850-G5" time="5.66">
+  <properties/>
+  <testcase name="testCaptureOfflineLightAndDarkPreviewScreenshot_Rule8_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest" time="4.41"/>
+  <testcase name="testVisibilityPredicate_offlineRearVueShown_rvr315AndConnectedUnsupportedHidden" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest" time="0.204"/>
+  <testcase name="testOfflineVsOnlineAutoMode_controlsActiveModeSubtitleAndOfflineHint" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest" time="0.294"/>
+  <testcase name="testOfflineMultiMode_displaysAscendingModesAndHint_withoutStvzoNotice" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest" time="0.459"/>
+  <testcase name="testOfflineStvzo_displaysNoticeAndOfflineHint_prunesFlashingModes" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest" time="0.292"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

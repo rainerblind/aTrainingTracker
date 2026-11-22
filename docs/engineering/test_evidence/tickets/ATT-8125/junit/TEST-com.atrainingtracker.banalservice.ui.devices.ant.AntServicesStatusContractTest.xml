@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T11:58:53.595Z" hostname="rainer-HP-EliteBook-850-G5" time="0.281">
+  <properties/>
+  <testcase name="testDevicesTabbedScreenIntegratesAntStatusSheetAndMenu" classname="com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusContractTest" time="0.141"/>
+  <testcase name="testPairingProtocolBottomSheetChecksAntServices" classname="com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusContractTest" time="0.032"/>
+  <testcase name="testDeviceListScreenIntegratesAntStatusCard" classname="com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusContractTest" time="0.013"/>
+  <testcase name="testAntServicesStatusSheetDeclaration" classname="com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusContractTest" time="0.09"/>
+  <testcase name="testAntServicesStatusCardDeclaration" classname="com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusContractTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

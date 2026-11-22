@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.33  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 55
+**Total Tests**: 56
 
 ---
 
@@ -1066,6 +1066,26 @@
      - Verify `calculateNiceIntermediateTicks` dynamically picks clean `10`/`20` bpm and `50`/`100`/`200` W intermediate steps for unzoned HR and Power (`calculateNiceIntermediateTicks_selectsDynamicRoundStepsForUnzonedHrAndPower`).
      - Render and inspect Light & Dark/AMOLED 4-panel PNG (`renderZoneColoredGraphsGallery_lightAndDarkAmoled_verifiesPixelsAndSavesPng`, `docs/engineering/test_evidence/tickets/ATT-9164/screenshots/att9164_zone_colored_graphs_light_dark.png`) asserting `Z1..Z5` HR stroke pixels, `Z1..Z7` Power stroke pixels (including `Zone7StrokeDark` on AMOLED), multi-source HR primary zone + contrasting blue overlay pixels, unzoned `CRIMSON` accent fallback + round ticks, and `Ø > zone > extrema` collision suppression (`66/66` PASS across 8 targeted suites, `0` new warnings).
 - **Verified Evidence (`ATT-9164`, `docs/engineering/test_evidence/tickets/ATT-9164/`)**: `TelemetryMetricGraphZoneColorUiTest#zoneStrokeColor_meetsWcagContrastAcrossLightDarkAndAmoledForAll7Zones`, `TelemetryMetricGraphZoneColorUiTest#buildZoneBandsVerticalGradientStops_producesMonotonicHardSteppedStopsForHrAndPower`, `TelemetryMetricGraphZoneColorUiTest#resolveMetricZoneStrokeColor_resolvesZoneColorsAndNullFallbackWhenUnzoned`, `TelemetryMetricGraphZoneColorUiTest#calculateNiceIntermediateTicks_selectsDynamicRoundStepsForUnzonedHrAndPower`, `TelemetryMetricGraphZoneColorUiTest#overlayStrokeColor_avoidsZoneColorsWhenPrimaryCurveIsZoneColored`, `TelemetryMetricGraphZoneColorUiTest#renderZoneColoredGraphsGallery_lightAndDarkAmoled_verifiesPixelsAndSavesPng`.
+### TST-UI-2799: **PeriodsScreen Compose Navigation, EditDeviceDialog Draft/Locale/Rotation & BottomSheet Insets Verification Suite (`ATT-8125`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2799` (`REQ-UI-2799.1`–`REQ-UI-2799.3`)
+- **Component**: `PeriodsScreen.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `DevicesTabbedScreen.kt`, `ATrainingTrackerApp.kt`, `FilterBottomSheetScaffold.kt`, `PeriodsScreenComposeNavigationTest.kt`, `EditDeviceDialogDraftLocaleRotationTest.kt`, `BottomSheetInsetsComposeTest.kt`, `EditDeviceViewModelTest.kt`, `EditDeviceWheelCircumferenceTest.kt`
+- **Jira**: `ATT-8125` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Pure Compose Day-Click Navigation in `PeriodsScreen` (`TST-UI-2799.1`, `PeriodsScreenComposeNavigationTest`)*:
+     - Verify `buildDayPeriodSummary` produces exact `PeriodType.DAY` `[dayStartS, dayEndS]` bounds and sport stats (`testBuildDayPeriodSummary_producesExactDayBoundsAndStats_tstUi2799_1`).
+     - Render `PeriodsScreen` inside a real Compose `NavHost` via Robolectric `v2.createComposeRule()`, tap an active day cell & selected-day banner, verify pure Compose routing to `NavRoutes.workouts(pushed = true)` with exact day `WorkoutFilterCriteria` + `scrollToWorkoutId`, verify clean back pop to `PeriodsScreen`, and assert zero `Fragment` references in `PeriodsScreenKt` (`testPeriodsScreen_dayClickRoutesStrictlyViaComposeNavHostAndBackReturnsCleanly_tstUi2799_1`).
+  2. *`de_DE` Comma/Dot Decimal Input, Rotation Survival & Cancel Zero-Write Persistence (`TST-UI-2799.2`, `EditDeviceDialogDraftLocaleRotationTest`, `EditDeviceViewModelTest`, `EditDeviceWheelCircumferenceTest`, `DeviceDataRepositoryEquipmentSyncTest`)*:
+     - Verify `parseLocaleDecimal` accepts comma and dot decimals while rejecting invalid/non-finite strings (`testParseLocaleDecimal_acceptsCommaAndDotAndRejectsInvalid_tstUi2799_2`).
+     - Render `RunCalibrationFactorContent` under `Locale.GERMANY`, assert `"1,0000"` initial formatting, `"1,085"` comma entry, `StateRestorationTester` survival across rotation, `"1.125"` dot entry, and comma calculation inside `CorrectCalibrationDialog` (`testRunCalibrationFactor_germanLocaleAcceptsCommaAndDotAndSurvivesRestoration_tstUi2799_2`).
+     - Verify `EditDeviceViewModel` preserves unsaved name, calibration, ATT Odometry Fusion, ATT Altitude Fusion, TPMS baseline reset, and Radar light mode edits across simulated `loadInitialDeviceData` rotation calls, persists zero writes on `discardDraft()` (`Cancel`), and commits all staged edits cleanly on `saveChanges()` (`testViewModel_rotationPreservesDirtyDraftsAndCancelPersistsZeroWrites_tstUi2799_2`, `testEditDeviceViewModel_stagesRadarTailLightInDraftAndDiscardsOnCancel`, `testEditDeviceViewModel_asyncHistoryLoadStaleClearAndDraftBaselineSync_tstSen033_2`, `testEditDeviceViewModel_loadInitialDeviceData_alwaysFetchesFreshSnapshot`).
+  3. *Single Non-Doubled Bottom-Sheet Insets & Filter IME Padding (`TST-UI-2799.3`, `BottomSheetInsetsComposeTest`, `BottomSheetVisualContractTest`, `ModalBottomSheetDialogsIntegrityTest`)*:
+     - Dispatch synthetic `WindowInsetsCompat` (`navigationBars` + `ime = 300px`) to `FilterBottomSheetBody` and verify filter text inputs lift upward by `~100dp` (1x IME) above the keyboard (`testFilterBottomSheetBody_shiftsInputUpwardBySingleImeInset_tstUi2799_3`).
+     - Dispatch synthetic `WindowInsetsCompat` to `AppBottomSheetContent` and verify bottom inset delta is strictly 1x (`~100dp`, zero doubling) (`testAppBottomSheetContent_appliesBottomNavigationAndImeInsetsStrictlyOnce_tstUi2799_3`).
+  4. *`Rule 8.5` Light/Dark PNG, Live `emulator-5554` Verification & Contract Suites (`TST-UI-2799.4`)*:
+     - Capture and visually inspect Light/Dark PNG (`testCaptureLightAndDarkVisualEvidencePng_Rule8_5_tstUi2799_4`) and live `emulator-5554` `Units` Settings `ModalBottomSheet` screenshot (`docs/engineering/test_evidence/tickets/ATT-8125/screenshots/`) via `read_file` confirming clean single bottom inset and `0` crashes in `logcat -b crash -d`.
+     - Verify `ArchitectureConformanceContractTest`, `AndroidViewModelReflectionContractTest`, `UiReflectionOnlyTestAuditContractTest`, `BottomSheetVisualContractTest`, `ModalBottomSheetDialogsIntegrityTest`, and `ATrainingTrackerAppNavigationTest` PASS (`98/98` tests across 17 suites; `Localization Parity: N/A - 0 new or modified UI strings`).
+- **Verified Evidence (`ATT-8125`, `docs/engineering/test_evidence/tickets/ATT-8125/`)**: `PeriodsScreenComposeNavigationTest#testBuildDayPeriodSummary_producesExactDayBoundsAndStats_tstUi2799_1`, `PeriodsScreenComposeNavigationTest#testPeriodsScreen_dayClickRoutesStrictlyViaComposeNavHostAndBackReturnsCleanly_tstUi2799_1`, `EditDeviceDialogDraftLocaleRotationTest#testParseLocaleDecimal_acceptsCommaAndDotAndRejectsInvalid_tstUi2799_2`, `EditDeviceDialogDraftLocaleRotationTest#testRunCalibrationFactor_germanLocaleAcceptsCommaAndDotAndSurvivesRestoration_tstUi2799_2`, `EditDeviceDialogDraftLocaleRotationTest#testViewModel_rotationPreservesDirtyDraftsAndCancelPersistsZeroWrites_tstUi2799_2`, `EditDeviceDialogDraftLocaleRotationTest#testCaptureLightAndDarkVisualEvidencePng_Rule8_5_tstUi2799_4`, `BottomSheetInsetsComposeTest#testFilterBottomSheetBody_shiftsInputUpwardBySingleImeInset_tstUi2799_3`, `BottomSheetInsetsComposeTest#testAppBottomSheetContent_appliesBottomNavigationAndImeInsetsStrictlyOnce_tstUi2799_3`, `EditDeviceViewModelTest#testEditDeviceViewModel_stagesRadarTailLightInDraftAndDiscardsOnCancel`, `EditDeviceWheelCircumferenceTest#testEditDeviceViewModel_asyncHistoryLoadStaleClearAndDraftBaselineSync_tstSen033_2`.
 
 ---
 
@@ -1105,3 +1125,4 @@
 | `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `TST-UI-2796` (`[Verified]`, `.1`–`.5`) covering `ActivityCarriageBarMath` `DISTANCE`/`TIME` projection, `v3|` -> `v4|` migration & removal persistence, `Rule 64` plot alignment, bidirectional scrubbing & zoom coupling, absence omission & `ELEVATION` coexistence, 9-locale `TranslationParityTest`, and Light/Dark `Rule 8.5` PNG (`78/78` targeted tests PASS across 8 suites). |
 | `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `TST-UI-2797` (`[Verified]`, `.1`–`.3`) covering speed-derived `PACE` & multi-metric averaging, off-scale hiding, `Ø` gutter auto-fit & priority collision suppression, narrow-canvas guard, dotted pixel rhythm, and Light/Dark AMOLED `Rule 8.5` PNG (`70/70` targeted tests PASS across 7 suites, `0` new warnings). |
 | `1.0.33` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Added and verified `TST-UI-2798` (`[Verified]`, `.1`–`.3`) covering WCAG `Z1..Z7` stroke contrast, hard-stepped vertical gradient stops, single-point/scrub zone colors, zone-orthogonal multi-source overlay palette, dynamic unzoned round ticks, and Light/Dark AMOLED `Rule 8.5` PNG (`66/66` targeted tests PASS across 8 suites, `0` new warnings). |
+| `1.0.32` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Added and verified `TST-UI-2799` (`[Verified]`, `.1`–`.4`) covering pure Compose `PeriodsScreen` day-click NavHost routing, `de_DE` comma/dot calibration input + `StateRestorationTester` + Save-only/Cancel-zero-write draft tests for Fused/TPMS/Radar, single 1x `WindowInsetsCompat` bottom-sheet tests for `FilterBottomSheetBody` & `AppBottomSheetContent`, and Light/Dark + live `emulator-5554` PNG verification (`98/98` PASS across 17 suites). |
