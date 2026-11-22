@@ -6,8 +6,8 @@
 **Parent Epic**: [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE 4.0 Audit Remediation 2026-11*)  
 **Requirement Reference**: `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`), `REQ-PRO-112`  
 **Test Reference**: `TST-PRO-068` (`TST-PRO-068.1`–`TST-PRO-068.4`), `TST-PRO-112`  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 ---
 

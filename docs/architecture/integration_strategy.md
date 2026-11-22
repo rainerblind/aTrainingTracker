@@ -2,8 +2,8 @@
 
 **Document ID**: `DOC-ARC-INT`  
 **Version**: 1.0.0  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 This document establishes the authoritative **Software Integration and Verification Strategy** for **aTrainingTracker** in accordance with **Automotive SPICE (ASPICE v3.1 / v4.0) SWE.5 Base Practice 1 (Develop software integration strategy and software verification strategy)**.
 

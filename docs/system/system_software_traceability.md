@@ -6,8 +6,8 @@
 **Requirement Reference**: `REQ-PRO-076` (`REQ-PRO-076.1`–`REQ-PRO-076.4`)  
 **Test Reference**: `TST-PRO-076` (`TST-PRO-076.1`–`TST-PRO-076.4`)  
 **Author**: Antigravity Autonomous Engineering Pair  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 ---
 

@@ -2,8 +2,8 @@
 
 - **Document ID**: `DOC-ARC-ADR007`
 - **Version**: 1.0.0
-- **Status**: Retrospective (Pending PO Sign-Off)
-- **Approver**: Product Owner (Pending Sign-Off)
+- **Status**: Approved
+- **Approver**: Rainer Blind (PO)
 - **Deciders**: Architecture Board, Product Owner (Pending Sign-Off)
 - **Date**: 2026-11-17
 - **Target Release**: `5.1.0` (Active Sprint: `2026-11-17_01_Früh`)

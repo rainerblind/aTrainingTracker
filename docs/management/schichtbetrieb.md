@@ -4,7 +4,7 @@
 **Document Identifier**: `SCHICHT-OPS-ATT`  
 **Standard**: ASPICE 4.0 `MAN.3` / `SUP.1` / `SUP.8` (Continuous Multi-Agent Shift Operations)  
 **Target Release**: `V5.0.0` | **Version**: 1.0.3  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-19  
+**Status**: Approved | **Approver**: Rainer Blind (PO) | **Date**: 2026-11-19  
 **Governing Rules**: [`.agents/rules/aspice_governance.md`](../.agents/rules/aspice_governance.md) (`Rule 2`, `Rule 7`, `Rule 9`) & [`.agents/skills/sprint-planner/SKILL.md`](../.agents/skills/sprint-planner/SKILL.md)  
 
 ---

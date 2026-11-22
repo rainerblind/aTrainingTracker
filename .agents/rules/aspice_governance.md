@@ -2,8 +2,8 @@
 
 **Document ID**: `DOC-GOV-RULES`  
 **Version**: 1.0.21  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 These **9 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires, Infinite Context, and Constructive Resistance) and are strictly binding on all AI agents during in-sprint execution.
 * **Domain Standards**: See [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md) (UI/Compose/Charts) and [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md) (Architecture/DRY/Android Lifecycles).

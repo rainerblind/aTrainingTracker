@@ -2,8 +2,8 @@
 
 **Document ID**: `DOC-GOV-PROJECT`  
 **Version**: 1.0.1  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 This document establishes the project governance standards for requirement engineering, lifecycle management, and evidence-based status determination across **aTrainingTracker** in compliance with ASPICE 4.0 (SWE.1, SWE.6 BP3, GP 2.2, REQ-PRO-073).
 

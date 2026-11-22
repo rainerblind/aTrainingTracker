@@ -2,8 +2,8 @@
 
 **Document ID**: `DOC-ARC-IF`  
 **Version**: 1.0.1  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 This document formalizes the software interface specifications of **aTrainingTracker** in accordance with **Automotive SPICE (ASPICE v4.0) SWE.2 Base Practice 1 (Specify static aspects of the software architecture — interfaces of software elements)**.
 

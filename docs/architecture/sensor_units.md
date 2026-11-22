@@ -2,8 +2,8 @@
 
 **Document ID**: `DOC-ARC-UNITS`  
 **Version**: 1.0.2  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 This document defines the canonical unit contract for all **68** enum constants in [`SensorType.java`](../../app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java).
 It separates **internal SQLite / sensor-bus storage units** (`SensorType.getInternalUnit()`, SQLite columns named `sensorType.name()` via `WorkoutSamplesDatabaseManager.makeColumns`) from **UI display formatting** (`MyFormatter`, `SensorType.getUnitId()`, `MyHelper.getUnitsId()`) and **file export conversions** (`FitFileWriter.kt`, `TCXFileWriter.kt`, `GPXFileWriter.java`, `CSVFileWriter.java`, `GCFileWriter.java`).

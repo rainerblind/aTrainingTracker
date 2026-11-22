@@ -6,8 +6,8 @@
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) / [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE CL2 – System Level & Remediation*)  
 **Requirement Reference**: `REQ-PRO-056` (`REQ-PRO-056.1`, `REQ-PRO-056.2`)  
 **Test Reference**: `TST-PRO-056` (`TST-PRO-056.1`–`TST-PRO-056.4`)  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 ---
 

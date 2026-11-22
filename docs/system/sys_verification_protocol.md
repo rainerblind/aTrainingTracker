@@ -6,8 +6,8 @@
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) (*ASPICE CL2 – System Level, Architecture Conformance, Integration & Quality Gates*)  
 **Requirement Reference**: `REQ-PRO-069` (`REQ-PRO-069.1`–`REQ-PRO-069.4`)  
 **Test Reference**: `TST-PRO-069` (`TST-PRO-069.1`–`TST-PRO-069.4`)  
-**Status**: Reviewed  
-**Approver**: Pending PO Sign-Off  
+**Status**: Approved  
+**Approver**: Rainer Blind (PO)  
 
 ---
 

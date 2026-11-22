@@ -4,7 +4,7 @@
 **Document Identifier**: `CM-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.8` (Configuration Management)  
 **Target Release**: `V5.0.0` | **Version**: 1.2.2  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Date**: 2026-11-20  
+**Status**: Approved | **Approver**: Rainer Blind (PO) | **Date**: 2026-11-20  
 **Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733), [ATT-8163](https://rainerblind.atlassian.net/browse/ATT-8163), [ATT-8164](https://rainerblind.atlassian.net/browse/ATT-8164) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`, `REQ-PRO-119`, `REQ-PRO-120`  
 
 ---

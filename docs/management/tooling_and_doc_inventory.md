@@ -4,7 +4,7 @@
 **Document Identifier**: `INV-TOOL-DOC-ATT`  
 **Standard**: ASPICE 4.0 `MAN.3` / `SUP.8` (Process Infrastructure & Documentation Hygiene)  
 **Target Release**: `V5.0.0` | **Version**: 1.0.0  
-**Status**: Reviewed | **Approver**: Pending PO Sign-Off | **Last Review Date**: 2026-11-21  
+**Status**: Approved | **Approver**: Rainer Blind (PO) | **Last Review Date**: 2026-11-21  
 **Governing Ticket**: [ATT-9547](https://rainerblind.atlassian.net/browse/ATT-9547) (Parent Epic [ATT-9537](https://rainerblind.atlassian.net/browse/ATT-9537))  
 
 ---

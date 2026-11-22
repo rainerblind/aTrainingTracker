@@ -2,8 +2,8 @@
 
 - **Document ID**: `DOC-ARC-ADR001`
 - **Version**: 1.2.0
-- **Status**: Reviewed
-- **Approver**: Pending PO Sign-Off
+- **Status**: Approved
+- **Approver**: Rainer Blind (PO)
 - **Deciders**: Architecture Board, Dual-Agent Pair (Implementer / Reviewer)
 - **Date**: 2026-11-18
 - **Target Release**: `V5.0.0` (Active Sprint: `2026-11-18_01_Früh`)
