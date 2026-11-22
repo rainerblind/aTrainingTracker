@@ -411,6 +411,34 @@ class TestBleRadarSimulator(unittest.TestCase):
         engine.spawn_preset('0')
         self.assertEqual(len(engine.targets), 0)
 
+    def test_repeated_preset_spawns_keep_concurrent_targets(self):
+        """
+        Spawning the same preset multiple times in succession must allocate unique target_ids
+        so earlier cars continue approaching instead of being overwritten at 140m.
+        """
+        engine = RadarKinematicsEngine(tick_rate_hz=5.0)
+
+        engine.spawn_preset('c')
+        for _ in range(10):
+            engine.tick()  # Car 1 advances 24m (140m -> 116m)
+
+        engine.spawn_preset('c')
+        engine.spawn_preset('c')
+        self.assertEqual(len(engine.targets), 3)
+
+        ids = [t.target_id for t in engine.targets]
+        self.assertEqual(len(set(ids)), 3)
+        self.assertAlmostEqual(engine.targets[0].range_m, 116.0, places=3)
+        self.assertAlmostEqual(engine.targets[1].range_m, 140.0, places=3)
+        self.assertAlmostEqual(engine.targets[2].range_m, 140.0, places=3)
+
+        for key in ('f', 't', 'p', 'f', 't', 'p'):
+            engine.spawn_preset(key)
+        all_ids = [t.target_id for t in engine.targets]
+        self.assertEqual(len(all_ids), 9)
+        self.assertEqual(len(set(all_ids)), 9)
+        self.assertTrue(all(1 <= tid <= 124 for tid in all_ids))
+
     # -------------------------------------------------------------------------
     # TST-SIM-002.5: Watchdog Starvation & 31-Byte PDU Budget Audit Test
     # -------------------------------------------------------------------------

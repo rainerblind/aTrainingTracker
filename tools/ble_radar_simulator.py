@@ -362,6 +362,24 @@ class RadarKinematicsEngine:
         self.starve_ticks_remaining = 0
         self.country_loop_active = False
         self._country_loop_cooldown_ticks = 0
+        self._next_target_id = 20
+
+    def _allocate_target_id(self, preferred_id=None):
+        """Returns a unique active target ID in 1..124 (excluding V1 invalid sentinel 0x7D/125)."""
+        active_ids = {t.target_id for t in self.targets}
+        if preferred_id is not None and preferred_id not in active_ids:
+            return preferred_id
+
+        for _ in range(124):
+            candidate = self._next_target_id
+            self._next_target_id = 20 if self._next_target_id >= 124 else self._next_target_id + 1
+            if candidate not in active_ids:
+                return candidate
+
+        for candidate in range(1, 125):
+            if candidate not in active_ids:
+                return candidate
+        return None
 
     def is_starving(self):
         with self._lock:
@@ -388,57 +406,38 @@ class RadarKinematicsEngine:
 
     def spawn_preset(self, key):
         key = key.lower()
+        single_presets = {
+            'c': (1, 140.0, 12.0, -1.8, ThreatLevel.APPROACHING, VehicleSizeCategory.CAR, LaneState.PASSING_LANE, "Single Car"),
+            'f': (2, 160.0, 22.0, -2.0, ThreatLevel.FAST_APPROACHING, VehicleSizeCategory.CAR, LaneState.PASSING_LANE, "Fast Car"),
+            't': (3, 150.0, 15.0, -2.2, ThreatLevel.APPROACHING, VehicleSizeCategory.TRUCK_OR_BUS, LaneState.PASSING_LANE, "Truck/Bus"),
+            'p': (4, 120.0, 14.0, -1.1, ThreatLevel.APPROACHING, VehicleSizeCategory.CAR, LaneState.CHANGING_LANE, "Close Pass (<1.5m)"),
+        }
         with self._lock:
-            if key == 'c':
-                # Single car
+            if key in single_presets:
+                pref_id, range_m, speed_mps, lateral_m, threat, size_cat, lane, label = single_presets[key]
+                tid = self._allocate_target_id(preferred_id=pref_id)
+                if tid is None:
+                    print(f"[TRAFFIC] Cannot spawn {label}: all 124 V1/V2 target IDs are active")
+                    return
                 self._upsert_target(RadarTargetState(
-                    target_id=1, range_m=140.0, speed_mps=12.0, lateral_m=-1.8,
-                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                    lane_state=LaneState.PASSING_LANE
+                    target_id=tid, range_m=range_m, speed_mps=speed_mps, lateral_m=lateral_m,
+                    threat_level=threat, size_category=size_cat, lane_state=lane
                 ))
-                print("[TRAFFIC] Spawned Single Car (ID=1, Range=140m, Speed=12m/s, Lateral=-1.8m)")
-            elif key == 'f':
-                # Fast car
-                self._upsert_target(RadarTargetState(
-                    target_id=2, range_m=160.0, speed_mps=22.0, lateral_m=-2.0,
-                    threat_level=ThreatLevel.FAST_APPROACHING, size_category=VehicleSizeCategory.CAR,
-                    lane_state=LaneState.PASSING_LANE
-                ))
-                print("[TRAFFIC] Spawned Fast Car (ID=2, Range=160m, Speed=22m/s, FAST_APPROACHING)")
-            elif key == 't':
-                # Heavy truck/bus
-                self._upsert_target(RadarTargetState(
-                    target_id=3, range_m=150.0, speed_mps=15.0, lateral_m=-2.2,
-                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.TRUCK_OR_BUS,
-                    lane_state=LaneState.PASSING_LANE
-                ))
-                print("[TRAFFIC] Spawned Truck/Bus (ID=3, Range=150m, Speed=15m/s, TRUCK_OR_BUS)")
-            elif key == 'p':
-                # Close pass (< 1.5m passing distance)
-                self._upsert_target(RadarTargetState(
-                    target_id=4, range_m=120.0, speed_mps=14.0, lateral_m=-1.1,
-                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                    lane_state=LaneState.CHANGING_LANE
-                ))
-                print("[TRAFFIC] Spawned Close Pass (<1.5m) (ID=4, Range=120m, Speed=14m/s, Lateral=-1.1m)")
+                print(f"[TRAFFIC] Spawned {label} (ID={tid}, Range={range_m:.0f}m, Speed={speed_mps:.0f}m/s, Lateral={lateral_m:.1f}m)")
             elif key == 'm':
                 # 3-car convoy
-                self._upsert_target(RadarTargetState(
-                    target_id=11, range_m=100.0, speed_mps=14.0, lateral_m=-1.8,
-                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                    lane_state=LaneState.PASSING_LANE
-                ))
-                self._upsert_target(RadarTargetState(
-                    target_id=12, range_m=130.0, speed_mps=14.0, lateral_m=-1.8,
-                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                    lane_state=LaneState.PASSING_LANE
-                ))
-                self._upsert_target(RadarTargetState(
-                    target_id=13, range_m=160.0, speed_mps=14.0, lateral_m=-1.8,
-                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                    lane_state=LaneState.PASSING_LANE
-                ))
-                print("[TRAFFIC] Spawned 3-Car Convoy (IDs=11,12,13 at 100m, 130m, 160m)")
+                convoy_ids = []
+                for pref_id, range_m in ((11, 100.0), (12, 130.0), (13, 160.0)):
+                    tid = self._allocate_target_id(preferred_id=pref_id)
+                    if tid is None:
+                        break
+                    convoy_ids.append(tid)
+                    self._upsert_target(RadarTargetState(
+                        target_id=tid, range_m=range_m, speed_mps=14.0, lateral_m=-1.8,
+                        threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
+                        lane_state=LaneState.PASSING_LANE
+                    ))
+                print(f"[TRAFFIC] Spawned 3-Car Convoy (IDs={','.join(str(i) for i in convoy_ids)} at 100m, 130m, 160m)")
             elif key == 'l':
                 self.country_loop_active = not self.country_loop_active
                 status = "AKTIV" if self.country_loop_active else "DEAKTIVIERT"
@@ -482,12 +481,13 @@ class RadarKinematicsEngine:
                     size = VehicleSizeCategory.TRUCK_OR_BUS if is_truck else VehicleSizeCategory.CAR
                     speed = random.uniform(12.0, 20.0)
                     threat = ThreatLevel.FAST_APPROACHING if speed > 18.0 else ThreatLevel.APPROACHING
-                    tid = random.randint(20, 99)
-                    self._upsert_target(RadarTargetState(
-                        target_id=tid, range_m=random.uniform(130.0, 160.0), speed_mps=speed,
-                        lateral_m=random.uniform(-2.2, -1.6), threat_level=threat,
-                        size_category=size, lane_state=LaneState.PASSING_LANE
-                    ))
+                    tid = self._allocate_target_id()
+                    if tid is not None:
+                        self._upsert_target(RadarTargetState(
+                            target_id=tid, range_m=random.uniform(130.0, 160.0), speed_mps=speed,
+                            lateral_m=random.uniform(-2.2, -1.6), threat_level=threat,
+                            size_category=size, lane_state=LaneState.PASSING_LANE
+                        ))
                     self._country_loop_cooldown_ticks = int(random.uniform(6.0, 12.0) * self.tick_rate_hz)
 
             # Update target positions
