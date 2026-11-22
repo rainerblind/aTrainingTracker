@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:24:12.675Z" hostname="rainer-HP-EliteBook-850-G5" time="10.007">
+  <properties/>
+  <testcase name="testOnStartCommand_returnsImmediatelyWithoutBlockingMainThread" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" time="7.726"/>
+  <testcase name="testAsyncWorkoutCreation_dispatchesToDbExecutorAndCompletesFuture" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" time="0.453"/>
+  <testcase name="testSampleWrites_queuedBeforeTableCreation_bufferedAndPersistedWithoutLoss" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" time="0.454"/>
+  <testcase name="testTableCreationFailure_triggersDefensiveTeardownAndNotifiesUser" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" time="0.45"/>
+  <testcase name="testLiveWorkoutSession_acceptsPlaceholderIdAndUpdatesAtomically" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" time="0.426"/>
+  <testcase name="testStartNormalAsyncFailure_ResetsTrainingApplicationTrackingModeAndBroadcastsAbort" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest" time="0.488"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+Exception in thread "pool-2-thread-1" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1556)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-5-thread-1" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Unknown Source)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at io.mockk.proxy.jvm.advice.MethodCall.call(MethodCall.kt:17)
+	at io.mockk.proxy.jvm.advice.SelfCallEliminatorCallable.call(SelfCallEliminatorCallable.kt:13)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.handleOriginalCall(JvmMockFactoryHelper.kt:122)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.access$handleOriginalCall(JvmMockFactoryHelper.kt:28)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1$invocation$1$1.invoke(JvmMockFactoryHelper.kt:45)
+	at io.mockk.impl.stub.MockKStub$handleInvocation$originalPlusToString$1.invoke(MockKStub.kt:258)
+	at io.mockk.impl.stub.SpyKStub.defaultAnswer(SpyKStub.kt:13)
+	at io.mockk.impl.stub.MockKStub.answer(MockKStub.kt:59)
+	at io.mockk.impl.recording.states.AnsweringState.call(AnsweringState.kt:18)
+	at io.mockk.impl.recording.CommonCallRecorder.call(CommonCallRecorder.kt:65)
+	at io.mockk.impl.stub.MockKStub.handleInvocation(MockKStub.kt:297)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1.invocation(JvmMockFactoryHelper.kt:41)
+	at io.mockk.proxy.jvm.advice.Interceptor.call(Interceptor.kt:27)
+	at android.util.Log.e(Unknown Source)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1556)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-8-thread-1" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Log.java)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at io.mockk.proxy.jvm.advice.MethodCall.call(MethodCall.kt:17)
+	at io.mockk.proxy.jvm.advice.SelfCallEliminatorCallable.call(SelfCallEliminatorCallable.kt:13)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.handleOriginalCall(JvmMockFactoryHelper.kt:122)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.access$handleOriginalCall(JvmMockFactoryHelper.kt:28)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1$invocation$1$1.invoke(JvmMockFactoryHelper.kt:45)
+	at io.mockk.impl.stub.MockKStub$handleInvocation$originalPlusToString$1.invoke(MockKStub.kt:258)
+	at io.mockk.impl.stub.SpyKStub.defaultAnswer(SpyKStub.kt:13)
+	at io.mockk.impl.stub.MockKStub.answer(MockKStub.kt:59)
+	at io.mockk.impl.recording.states.AnsweringState.call(AnsweringState.kt:18)
+	at io.mockk.impl.recording.CommonCallRecorder.call(CommonCallRecorder.kt:65)
+	at io.mockk.impl.stub.MockKStub.handleInvocation(MockKStub.kt:297)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1.invocation(JvmMockFactoryHelper.kt:41)
+	at io.mockk.proxy.jvm.advice.Interceptor.call(Interceptor.kt:27)
+	at android.util.Log.e(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1556)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-17-thread-1" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Log.java)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at io.mockk.proxy.jvm.advice.MethodCall.call(MethodCall.kt:17)
+	at io.mockk.proxy.jvm.advice.SelfCallEliminatorCallable.call(SelfCallEliminatorCallable.kt:13)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.handleOriginalCall(JvmMockFactoryHelper.kt:122)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.access$handleOriginalCall(JvmMockFactoryHelper.kt:28)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1$invocation$1$1.invoke(JvmMockFactoryHelper.kt:45)
+	at io.mockk.impl.stub.MockKStub$handleInvocation$originalPlusToString$1.invoke(MockKStub.kt:258)
+	at io.mockk.impl.stub.SpyKStub.defaultAnswer(SpyKStub.kt:13)
+	at io.mockk.impl.stub.MockKStub.answer(MockKStub.kt:59)
+	at io.mockk.impl.recording.states.AnsweringState.call(AnsweringState.kt:18)
+	at io.mockk.impl.recording.CommonCallRecorder.call(CommonCallRecorder.kt:65)
+	at io.mockk.impl.stub.MockKStub.handleInvocation(MockKStub.kt:297)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1.invocation(JvmMockFactoryHelper.kt:41)
+	at io.mockk.proxy.jvm.advice.Interceptor.call(Interceptor.kt:27)
+	at android.util.Log.e(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1556)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+]]></system-err>
+</testsuite>

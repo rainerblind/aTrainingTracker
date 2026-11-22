@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:58:15.819Z" hostname="rainer-HP-EliteBook-850-G5" time="20.387">
+  <properties/>
+  <testcase name="testInsideGeofenceDispatchesAltimeterCalibrationAndReflectsCalibratedState" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.894"/>
+  <testcase name="testInsideGeofenceEmitsLocationCalibrationStatus" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.087"/>
+  <testcase name="testCalibrateAltitude_withMatchedLocation_updatesExistingRecordAndCalibrates" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.11"/>
+  <testcase name="testMovingFromInsideToOutsideGeofenceUpdatesStatus" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.273"/>
+  <testcase name="testNullCurrentLocationEmitsNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.141"/>
+  <testcase name="testOutsideGeofenceEmitsNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.203"/>
+  <testcase name="testCalibrateAltitude_withoutMatchedLocation_calibratesDirectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.137"/>
+  <testcase name="testCalibrationGating_dispatchesOnlyOnGeofenceTransition" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.228"/>
+  <testcase name="testMultipleOverlappingLocationsSelectsClosest" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.314"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call SQLiteConnection.close. 
+System.logW: A resource failed to call SQLiteConnectionPool.close. 
+System.logW: A resource failed to call SQLiteConnectionPool.close. 
+System.logW: A resource failed to call SQLiteConnection.close. 
+]]></system-err>
+</testsuite>

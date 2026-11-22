@@ -1,0 +1,82 @@
+{
+  "android_test_summary": {
+    "details": "Failed Android test(s): com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.testKeepVsMigrateConsistencyAndJavaCountReconciliation_TST_PRO_129_1, com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.testWorkProductHeadersAndGovernanceReconciliation_contract, com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports",
+    "failing_tests": [
+      "com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.testKeepVsMigrateConsistencyAndJavaCountReconciliation_TST_PRO_129_1",
+      "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.testWorkProductHeadersAndGovernanceReconciliation_contract",
+      "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports"
+    ],
+    "passed": false,
+    "ran": 190
+  },
+  "checks": [
+    {
+      "details": "Android: Failed Android test(s): com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.testKeepVsMigrateConsistencyAndJavaCountReconciliation_TST_PRO_129_1, com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.testWorkProductHeadersAndGovernanceReconciliation_contract, com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports | Python: No Python tests selected.",
+      "failing_tests": [
+        "com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.testKeepVsMigrateConsistencyAndJavaCountReconciliation_TST_PRO_129_1",
+        "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.testWorkProductHeadersAndGovernanceReconciliation_contract",
+        "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports"
+      ],
+      "name": "dependent_unit_tests",
+      "passed": false
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (9934 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "6c728c8f8a9e11492e6ac73368c4e05704dc4563",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ExceptionHandlingHygieneTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectRecordMapperTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterHrvTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterRadarTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitHrvTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.parsers.WorkoutTimestampParserTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceErtsFinalizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceExportGatingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceStateMachineCharacterisationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-22T16:46:36.163747+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att8127_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-8127",
+  "ui_touching": false,
+  "verdict": "FAIL"
+}

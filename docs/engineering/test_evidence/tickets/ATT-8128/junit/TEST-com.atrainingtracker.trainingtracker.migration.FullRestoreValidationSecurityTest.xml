@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:49:22.959Z" hostname="rainer-HP-EliteBook-850-G5" time="3.937">
+  <properties/>
+  <testcase name="testPerformFullRestore_rejectsCorruptDatabaseIntegrityCheckFailed" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.9"/>
+  <testcase name="testPerformFullRestore_recoversFromInterruptedRestoreViaEmergencyRollback" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.475"/>
+  <testcase name="testPerformFullRestore_rejectsArchiveMissingDatabasesDirectory" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.398"/>
+  <testcase name="testPerformFullRestore_rejectsForwardSchemaVersionDowngrade" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.427"/>
+  <testcase name="testExecuteEmergencyRollback_abortsIfRollbackSnapshotMissingOrEmpty" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.4"/>
+  <testcase name="testRestoreJournalManager_recoversInterruptedRestoreOnStartup" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.41"/>
+  <testcase name="testPerformFullRestore_succeedsWithValidBackup" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.512"/>
+  <testcase name="testValidateBackupArchive_returnsLocalizedErrorStringResourceIds" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.415"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

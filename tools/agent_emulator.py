@@ -616,6 +616,8 @@ def tune_emulator_settings(serial: str, adb_bin: str = "adb") -> None:
         ["shell", "settings", "put", "global", "window_animation_scale", "0.0"],
         ["shell", "settings", "put", "global", "transition_animation_scale", "0.0"],
         ["shell", "settings", "put", "global", "animator_duration_scale", "0.0"],
+        ["shell", "settings", "put", "global", "verifier_verify_adb_installs", "0"],
+        ["shell", "settings", "put", "global", "package_verifier_enable", "0"],
     ]
     for cmd in cmds:
         try:
@@ -714,6 +716,12 @@ def configure_app(
     )
     subprocess.run(
         [adb_bin, "-s", serial, "shell", "appops", "set", "2000", "android:mock_location", "allow"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    subprocess.run(
+        [adb_bin, "-s", serial, "shell", "dumpsys", "deviceidle", "whitelist", f"+{package}"],
         capture_output=True,
         text=True,
         timeout=10,

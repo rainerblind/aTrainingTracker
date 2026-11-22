@@ -24,11 +24,15 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter
 import com.atrainingtracker.trainingtracker.migration.FitSportMapper
 import com.atrainingtracker.trainingtracker.migration.ParsedLap
 import com.garmin.fit.Decode
+import com.garmin.fit.DeveloperDataIdMesgListener
+import com.garmin.fit.DeveloperField
 import com.garmin.fit.FileIdMesg
 import com.garmin.fit.FileIdMesgListener
+import com.garmin.fit.Fit
 import com.garmin.fit.HrvMesg
 import com.garmin.fit.HrvMesgListener
 import com.garmin.fit.LapMesg
@@ -41,7 +45,6 @@ import com.garmin.fit.SessionMesg
 import com.garmin.fit.SessionMesgListener
 import com.google.android.gms.maps.model.LatLng
 import java.io.File
-import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -104,11 +107,23 @@ object FitWorkoutParser {
             val rawLaps = mutableListOf<LapMesg>()
             val rawRecords = mutableListOf<RecordMesg>()
             val rawHrvs = mutableListOf<HrvMesg>()
+            val devDataAppIds = HashMap<Short, ByteArray>()
             val extractedRrIntervals = mutableListOf<Double>()
             val extractedRrBeats = mutableListOf<FitRrBeat>()
             var currentAnchorTimestampMs: Long = 0L
 
             val broadcaster = MesgBroadcaster(decode)
+            broadcaster.addListener(DeveloperDataIdMesgListener { devIdMesg ->
+                val devIndex = devIdMesg.developerDataIndex
+                if (devIndex != null && devIndex != Fit.UINT8_INVALID.toShort()) {
+                    val appIdBytes = extractValidAppId(devIdMesg.applicationId)
+                    if (appIdBytes != null) {
+                        devDataAppIds[devIndex] = appIdBytes
+                    } else {
+                        devDataAppIds.remove(devIndex)
+                    }
+                }
+            })
             broadcaster.addListener(FileIdMesgListener {
                 rawFileIds.add(it)
                 val created = it.timeCreated?.date?.time
@@ -174,9 +189,14 @@ object FitWorkoutParser {
             var minAltPos: LatLng? = null
             var maxAltPos: LatLng? = null
 
-            // Build parsed laps
+            // Build parsed laps and precompute numeric epoch boundaries (REQ-MIG-058.1)
+            val lapStartEpochs = LongArray(rawLaps.size) { Long.MIN_VALUE }
             rawLaps.forEachIndexed { index, lapMesg ->
-                val lapStartTime = lapMesg.startTime?.date?.let { timeFormat.format(it) }
+                val lapStartDate = lapMesg.startTime?.date
+                if (lapStartDate != null) {
+                    lapStartEpochs[index] = lapStartDate.time
+                }
+                val lapStartTime = lapStartDate?.let { timeFormat.format(it) }
                 val lapTotalTime = (lapMesg.totalTimerTime ?: lapMesg.totalElapsedTime ?: 0f).toDouble()
                 val lapDist = (lapMesg.totalDistance ?: 0f).toDouble()
                 val lapMaxSpeed = (lapMesg.enhancedMaxSpeed ?: lapMesg.maxSpeed)?.toDouble()
@@ -197,6 +217,7 @@ object FitWorkoutParser {
                     )
                 )
             }
+            val canBinarySearchLaps = lapStartEpochs.size > 1 && isNonNullSorted(lapStartEpochs)
 
             // Build samples from raw records
             rawRecords.forEach { record ->
@@ -322,8 +343,13 @@ object FitWorkoutParser {
                     }
                 }
 
-                // Decode Garmin FIT V2.0 Developer Fields for Bike Radar (REQ-MIG-053.4 / ATT-7747)
+                // Decode Garmin FIT V2.0 Developer Fields for Bike Radar strictly scoped by APP_ID (REQ-MIG-053.4, REQ-MIG-058.1)
                 record.developerFields?.forEach { devField ->
+                    if (!matchesAppId(devField, devDataAppIds, FitFileWriter.RADAR_DEVELOPER_DATA_APP_ID) &&
+                        !matchesAppId(devField, devDataAppIds, FitFileWriter.LEGACY_RADAR_DEVELOPER_DATA_APP_ID)
+                    ) {
+                        return@forEach
+                    }
                     val fieldName = devField.name
                     val num = devField.num
                     if (fieldName == "radar_current" || num == 0) {
@@ -359,20 +385,8 @@ object FitWorkoutParser {
                     }
                 }
 
-                // Determine lapNr
-                var sampleLapNr = 0L
-                if (parsedLaps.size > 1) {
-                    val recordEpoch = date.time
-                    for (i in parsedLaps.indices.reversed()) {
-                        val lapStart = parsedLaps[i].startTime?.let {
-                            try { timeFormat.parse(it)?.time } catch (_: Exception) { null }
-                        }
-                        if (lapStart != null && recordEpoch >= lapStart) {
-                            sampleLapNr = i.toLong()
-                            break
-                        }
-                    }
-                }
+                // Determine lapNr via precomputed numeric epoch boundaries (REQ-MIG-058.1)
+                val sampleLapNr = resolveLapIndex(date.time, lapStartEpochs, canBinarySearchLaps)
                 values.put(SensorType.LAP_NR.name, sampleLapNr)
 
                 bufferedSamples.add(values)
@@ -433,6 +447,9 @@ object FitWorkoutParser {
             var metaIsRace = false
 
             primarySession?.developerFields?.forEach { devField ->
+                if (!matchesAppId(devField, devDataAppIds, FitFileWriter.APP_METADATA_DEVELOPER_DATA_ID)) {
+                    return@forEach
+                }
                 val fieldName = devField.name
                 val num = devField.num
                 if (fieldName == "workout_name" || num == 0) {
@@ -509,5 +526,64 @@ object FitWorkoutParser {
             Log.e(TAG, "Exception parsing FIT data", e)
             Result.failure(e)
         }
+    }
+
+    internal fun isNonNullSorted(lapStartEpochs: LongArray): Boolean {
+        for (i in lapStartEpochs.indices) {
+            if (lapStartEpochs[i] == Long.MIN_VALUE) return false
+            if (i > 0 && lapStartEpochs[i] < lapStartEpochs[i - 1]) return false
+        }
+        return true
+    }
+
+    internal fun resolveLapIndex(
+        recordEpochMs: Long,
+        lapStartEpochs: LongArray,
+        canBinarySearch: Boolean
+    ): Long {
+        if (lapStartEpochs.size <= 1) return 0L
+        if (canBinarySearch) {
+            var low = 0
+            var high = lapStartEpochs.lastIndex
+            var matched = -1
+            while (low <= high) {
+                val mid = (low + high) ushr 1
+                if (lapStartEpochs[mid] <= recordEpochMs) {
+                    matched = mid
+                    low = mid + 1
+                } else {
+                    high = mid - 1
+                }
+            }
+            return if (matched >= 0) matched.toLong() else 0L
+        }
+        for (i in lapStartEpochs.indices.reversed()) {
+            val lapStart = lapStartEpochs[i]
+            if (lapStart != Long.MIN_VALUE && recordEpochMs >= lapStart) {
+                return i.toLong()
+            }
+        }
+        return 0L
+    }
+
+    private fun extractValidAppId(rawAppId: Array<Byte?>?): ByteArray? {
+        if (rawAppId == null || rawAppId.size != 16) return null
+        val bytes = ByteArray(16)
+        for (i in 0 until 16) {
+            val b = rawAppId[i] ?: return null
+            bytes[i] = b
+        }
+        return bytes
+    }
+
+    private fun matchesAppId(
+        devField: DeveloperField,
+        devDataAppIds: Map<Short, ByteArray>,
+        expectedAppId: ByteArray
+    ): Boolean {
+        val devIndex = devField.developerDataIndex
+        if (devIndex == Fit.UINT8_INVALID.toShort()) return false
+        val resolvedAppId = extractValidAppId(devField.appId) ?: devDataAppIds[devIndex] ?: return false
+        return resolvedAppId.contentEquals(expectedAppId)
     }
 }

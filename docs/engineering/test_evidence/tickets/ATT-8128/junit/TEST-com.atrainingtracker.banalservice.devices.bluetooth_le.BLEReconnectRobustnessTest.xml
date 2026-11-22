@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:40:53.049Z" hostname="rainer-HP-EliteBook-850-G5" time="25.889">
+  <properties/>
+  <testcase name="testOnScanFailed_fallsBackToGattConnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.958"/>
+  <testcase name="testSearchTimeout_whenAlreadyConnectedToGatt_abortsWithoutReconnectOrStopSearching" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.53"/>
+  <testcase name="testMidWorkoutDisconnect_persistsReconnectionAfterSearchTimeout_reconnectsSuccessfully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.519"/>
+  <testcase name="testInitialStartupSearch_offlineSensor_terminatesCleanlyWithoutInfiniteRetry" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.518"/>
+  <testcase name="testBackgroundReconnect_afterDisconnect_reArmsWithoutSettingSearchingOrStateSearching" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.632"/>
+  <testcase name="testSearchTimeout_readyToTrackingEdge_replacesNonAutoConnectGattAndGuardsConcurrentRaces_TST_SET_125_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.761"/>
+  <testcase name="testNeverConnectedWorkoutDisconnect_floorsDelay60sAndSkipsScanAssistAndTimeout_TST_SET_125_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.671"/>
+  <testcase name="testNotifyStopSearchingSuccessCancelsTimeoutAndResetsBackoff" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.505"/>
+  <testcase name="testShutDownSetsFlagRemovesCallbacksAndSuppressesDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.514"/>
+  <testcase name="testReconnectBackoff_whenPeriodicResearchDisabled_capsAt16sAndPreservesConstant" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.599"/>
+  <testcase name="testSearchTimeout_duringTrackingAndPaused_clearsSearchingAndReleasesQueueWhilePersistingReconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.673"/>
+  <testcase name="testStartSearchingCancelsPriorTimeoutAndSchedulesNew" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.516"/>
+  <testcase name="testScanQuotaExceeded_throttlesScanAndFallsBackToDirectConnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.53"/>
+  <testcase name="testExponentialReconnectBackoffOnDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.622"/>
+  <testcase name="testNeverConnectedThreeAbsentSensors_duringWorkout_convergePassiveAndUpgradeOnWakeUp_TST_SET_125_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.697"/>
+  <testcase name="testLiveSettingsChange_clampsStaleBackoffImmediatelyOnNextRetry" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.643"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

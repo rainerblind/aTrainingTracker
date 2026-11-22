@@ -121,10 +121,12 @@ class FitFileWriterTest {
         mockSportTypeDb = mockk(relaxed = true)
         mockkStatic(SportTypeDatabaseManager::class)
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
+        com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
     }
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
         unmockkAll()
         tempDir.deleteRecursively()
     }

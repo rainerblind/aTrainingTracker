@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:59:23.886Z" hostname="rainer-HP-EliteBook-850-G5" time="1.75">
+  <properties/>
+  <testcase name="testWarmupCompletionAndCooldownLapSplits_TST_TRK_072_10a" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.178"/>
+  <testcase name="testFinishTestBroadcastsStopTracking_TST_TRK_072_10b" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.099"/>
+  <testcase name="testLifecycleStateMachine_WarmupToTestingToCooldown_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.114"/>
+  <testcase name="testEarlyCompletionToCooldownRestartsTimerAndBroadcastsStopTracking_TST_TRK_072_10c" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.102"/>
+  <testcase name="testProtocolConfiguration_CyclingAndRunningPresets_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.112"/>
+  <testcase name="testLiveSpeedTelemetryIngestion_TST_TRK_072_4" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.107"/>
+  <testcase name="testCancelProtocol_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.098"/>
+  <testcase name="testContinuousRampPacingProgression_TST_TRK_072_1" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.111"/>
+  <testcase name="testEarlySubExhaustionAutoCompletionDetection_TST_TRK_072_3" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.09"/>
+  <testcase name="testRampTestIgnoresPinnedPerDeviceHrvTelemetry_TST_HRV_050_4" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.093"/>
+  <testcase name="testDynamicCutoffWithCustomizedT2_TST_TRK_072_3" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.092"/>
+  <testcase name="testFinishTest_tagsWorkoutAndSetsCompleted_TST_TRK_072_6" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.144"/>
+  <testcase name="testStartProtocolAndTagging_TST_TRK_072_6" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.085"/>
+  <testcase name="testStepProgressionPacingIncrements_TST_TRK_072_4" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.077"/>
+  <testcase name="testCooldownTimerExpirationBroadcastsStopTracking_TST_TRK_072_10b" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.093"/>
+  <testcase name="testOfflineOrNotTrackingDoesNotBroadcast_TST_TRK_072_10b" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.078"/>
+  <testcase name="testPreFlightSensorQualityTiers_TST_TRK_072_2" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModelTest" time="0.074"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_NEW_LAP pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_NEW_LAP pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$4@63cc2a1c], context=[android.app.ContextImpl@83d3284], intentFilter=[android.content.IntentFilter@259f5474]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$4@5c3980ab], context=[android.app.ContextImpl@2ed76a59], intentFilter=[android.content.IntentFilter@5e3e3435]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@4ef4f0fa], context=[android.app.ContextImpl@554c10bf], intentFilter=[android.content.IntentFilter@21096076]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_NEW_LAP pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$4@180e84d1], context=[android.app.ContextImpl@7bbb55e6], intentFilter=[android.content.IntentFilter@7e62d065]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@618b5017], context=[android.app.ContextImpl@32ff7547], intentFilter=[android.content.IntentFilter@65e606bb]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@7e07898f], context=[android.app.ContextImpl@901c135], intentFilter=[android.content.IntentFilter@47ac89f3]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@a05d714], context=[android.app.ContextImpl@2295db95], intentFilter=[android.content.IntentFilter@2e0cf1f1]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@24839967], context=[android.app.ContextImpl@214511df], intentFilter=[android.content.IntentFilter@42d25e61]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@1dc67884], context=[android.app.ContextImpl@527a165f], intentFilter=[android.content.IntentFilter@5b3c4000]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_NEW_LAP pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$4@16b9e74a], context=[android.app.ContextImpl@78a84ccd], intentFilter=[android.content.IntentFilter@587a32a9]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@3ec13ee6], context=[android.app.ContextImpl@5bd7daf3], intentFilter=[android.content.IntentFilter@77e9a3a]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

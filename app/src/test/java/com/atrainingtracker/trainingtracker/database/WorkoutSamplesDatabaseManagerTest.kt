@@ -366,4 +366,117 @@ class WorkoutSamplesDatabaseManagerTest {
         assertEquals(100.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.START, SensorType.ALTITUDE)!!, 0.001)
         assertEquals(200.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.END, SensorType.ALTITUDE)!!, 0.001)
     }
+
+    @Test
+    fun testCalcExtremaValue_startEndUseSingleColumnLimit1AndPaceAvgZeroGuards_TST_DAT_044_2() {
+        val baseFileName = "extrema_limit1_2026_11_22"
+        val quotedTable = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $quotedTable (" +
+                "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "time DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                "ALTITUDE REAL, " +
+                "SPEED_mps REAL)"
+        )
+        db.execSQL("INSERT INTO $quotedTable (time, ALTITUDE, SPEED_mps) VALUES ('2026-11-22 10:00:00', NULL, 0.0)")
+        db.execSQL("INSERT INTO $quotedTable (time, ALTITUDE, SPEED_mps) VALUES ('2026-11-22 10:00:01', 412.5, 0.0)")
+        db.execSQL("INSERT INTO $quotedTable (time, ALTITUDE, SPEED_mps) VALUES ('2026-11-22 10:00:02', 525.0, 0.0)")
+        db.execSQL("INSERT INTO $quotedTable (time, ALTITUDE, SPEED_mps) VALUES ('2026-11-22 10:00:03', NULL, 0.0)")
+
+        val mockSummariesDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        io.mockk.every { mockSummariesDb.getDouble(baseFileName, WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m) } returns 1000.0
+        io.mockk.every { mockSummariesDb.getInt(baseFileName, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s) } returns 0
+
+        assertEquals(412.5, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.START, SensorType.ALTITUDE)!!, 0.001)
+        assertEquals(525.0, dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.END, SensorType.ALTITUDE)!!, 0.001)
+        assertNull("AVG SPEED_mps with timeActive == 0 must return null, not Infinity", dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.AVG, SensorType.SPEED_mps))
+        assertNull("PACE_spm when speed == 0.0 must return null, not Infinity", dbManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.MIN, SensorType.PACE_spm))
+
+        // Verify SQL projection, IS NOT NULL selection, ORDER BY, and LIMIT 1 via mocked SQLiteDatabase
+        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
+        val mockPragmaCursor = com.atrainingtracker.testutil.MockCursorFactory.create(
+            columns = listOf("name"),
+            rows = listOf(listOf("ALTITUDE"))
+        )
+        val mockStartCursor = com.atrainingtracker.testutil.MockCursorFactory.create(
+            columns = listOf("ALTITUDE"),
+            rows = listOf(listOf(412.5))
+        )
+        val mockEndCursor = com.atrainingtracker.testutil.MockCursorFactory.create(
+            columns = listOf("ALTITUDE"),
+            rows = listOf(listOf(525.0))
+        )
+        val columnsSlot = mutableListOf<Array<String>>()
+        val selectionSlot = mutableListOf<String>()
+        val orderBySlot = mutableListOf<String>()
+        val limitSlot = mutableListOf<String>()
+
+        io.mockk.every { mockDb.isOpen } returns true
+        io.mockk.every { mockDb.rawQuery(match { it.startsWith("PRAGMA table_info") }, isNull()) } returns mockPragmaCursor
+        io.mockk.every {
+            mockDb.query(
+                quotedTable,
+                capture(columnsSlot),
+                capture(selectionSlot),
+                isNull(),
+                isNull(),
+                isNull(),
+                capture(orderBySlot),
+                capture(limitSlot)
+            )
+        } returnsMany listOf(mockStartCursor, mockEndCursor)
+
+        val mockedManager = WorkoutSamplesDatabaseManager.getInstance(context)
+        mockedManager.setDatabaseForTesting(mockDb)
+        try {
+            assertEquals(412.5, mockedManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.START, SensorType.ALTITUDE)!!, 0.001)
+            // Re-provide fresh pragma cursor for second call
+            io.mockk.every { mockDb.rawQuery(match { it.startsWith("PRAGMA table_info") }, isNull()) } returns
+                com.atrainingtracker.testutil.MockCursorFactory.create(columns = listOf("name"), rows = listOf(listOf("ALTITUDE")))
+            assertEquals(525.0, mockedManager.calcExtremaValue(mockSummariesDb, baseFileName, ExtremaType.END, SensorType.ALTITUDE)!!, 0.001)
+
+            assertEquals(listOf("ALTITUDE"), columnsSlot[0].toList())
+            assertEquals("ALTITUDE IS NOT NULL", selectionSlot[0])
+            assertEquals("_id ASC", orderBySlot[0])
+            assertEquals("1", limitSlot[0])
+
+            assertEquals(listOf("ALTITUDE"), columnsSlot[1].toList())
+            assertEquals("ALTITUDE IS NOT NULL", selectionSlot[1])
+            assertEquals("_id DESC", orderBySlot[1])
+            assertEquals("1", limitSlot[1])
+        } finally {
+            mockedManager.setDatabaseForTesting(db)
+        }
+    }
+
+    @Test
+    fun testPruneAndShiftSamples_readsTableSchemaViaSinglePragmaCall_TST_DAT_044_2() {
+        val baseFileName = "prune_single_pragma_2026_11_22"
+        val quotedTable = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $quotedTable (" +
+                "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "time DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                "DISTANCE_m REAL, TIME_TOTAL INTEGER, TIME_ACTIVE INTEGER, " +
+                "ASCENT REAL, DESCENT REAL, CALORIES INTEGER, LINE_DISTANCE_m REAL, LAP_NR INTEGER)"
+        )
+        db.execSQL("INSERT INTO $quotedTable (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LINE_DISTANCE_m, LAP_NR) VALUES (0.0, 0, 0, 0.0, 0.0, 0, 0.0, 1)")
+        db.execSQL("INSERT INTO $quotedTable (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LINE_DISTANCE_m, LAP_NR) VALUES (100.0, 10, 10, 5.0, 2.0, 10, 100.0, 1)")
+        db.execSQL("INSERT INTO $quotedTable (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LINE_DISTANCE_m, LAP_NR) VALUES (250.0, 25, 20, 12.0, 4.0, 25, 250.0, 2)")
+        db.execSQL("INSERT INTO $quotedTable (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LINE_DISTANCE_m, LAP_NR) VALUES (400.0, 40, 35, 20.0, 6.0, 40, 400.0, 2)")
+
+        io.mockk.mockkStatic(com.atrainingtracker.database.SqliteSchemaUtils::class)
+        try {
+            val deleted = dbManager.pruneAndShiftSamples(baseFileName, 2L, 3L, 2, 0, null)
+            assertEquals(2, deleted)
+            io.mockk.verify(exactly = 1) {
+                com.atrainingtracker.database.SqliteSchemaUtils.getTableColumnNames(db, quotedTable)
+            }
+            io.mockk.verify(exactly = 0) {
+                com.atrainingtracker.database.SqliteSchemaUtils.hasColumn(any(), any(), any())
+            }
+        } finally {
+            io.mockk.unmockkStatic(com.atrainingtracker.database.SqliteSchemaUtils::class)
+        }
+    }
 }

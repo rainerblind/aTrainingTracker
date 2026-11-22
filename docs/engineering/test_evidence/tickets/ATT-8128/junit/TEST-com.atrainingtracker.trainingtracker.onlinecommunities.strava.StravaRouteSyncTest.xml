@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRouteSyncTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:50:56.698Z" hostname="rainer-HP-EliteBook-850-G5" time="1.318">
+  <properties/>
+  <testcase name="testStravaRouteJsonDecoding" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRouteSyncTest" time="0.292"/>
+  <testcase name="testConstants_PreferenceAndStorageKeys" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRouteSyncTest" time="0.175"/>
+  <testcase name="testStravaStreamJsonDecoding" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRouteSyncTest" time="0.208"/>
+  <testcase name="testNullAccessToken_ReturnsFalse" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRouteSyncTest" time="0.643"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:37:49.218Z" hostname="rainer-HP-EliteBook-850-G5" time="14.407">
+  <properties/>
+  <testcase name="testThreeAbsentKeepAliveDevices_withTries3_searchedOnceAndDeviceTriesCleared_TST_SET_125_3" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="2.439"/>
+  <testcase name="testMatchingDeviceEventAdvancesQueueToNextDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.871"/>
+  <testcase name="testMultiSensorQueue_radarTimeoutDuringWorkout_advancesToSecondHrAndPreservesRadarOnTriesExhausted" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.904"/>
+  <testcase name="testTriesExhausted_whenDisabledWhileRetryPending_givesUpAndRemovesZombieDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="2.228"/>
+  <testcase name="testTriesExhausted_whenPeriodicResearchEnabled_retainsDeviceAndSchedulesBackoffReenqueue" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.994"/>
+  <testcase name="testTriesExhausted_whenKeepAliveFalseAndPeriodicDisabled_shutsDownAndRemovesOfflineDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="2.042"/>
+  <testcase name="testAlienDeviceEventIgnoredAndQueueNotPreempted" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.929"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

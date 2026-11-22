@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.3  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 40
+**Total Requirements**: 42
 
 ---
 
@@ -1440,6 +1440,51 @@
 
 **Invariants**: `TrackerService.java <= 3,559` LoC; `MyBTLEDevice.java <= 1,500` LoC; `ATT-6178` non-blocking `onDestroy()` intact; `ATT-9154` `< 1 s` stop & deferred-export lock intact; `TST-CON-051.3` passive reconnect intact; zero SQLite schema changes; `Localization Parity: N/A - no UI strings`.
 
+### REQ-TRK-094: Deduplicated TrackerService Shutdown & Type-Safe Lap Extraction, PostWorkoutFinalizer Extraction, Order-Preserving TrainingApplication Teardown & Parameterized Strava Sync [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-094`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-005`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `PostWorkoutFinalizer.kt`, `LapTelemetryExtractor.kt`, `BANALService.java`, `TrainingApplication.java`, `StravaSyncScheduler.kt`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`
+- **Rationale**: Eliminates duplicated shutdown/finalization boilerplate, unsafe raw lap casts (`ClassCastException` hazard), mixed post-workout finalization responsibilities in `TrackerService.java`, duplicated teardown resets in `TrainingApplication.java`, and copy-pasted Strava sync preferences/worker scheduling while ratcheting monolith LoC downward (`ATT-6034`).
+- **Description**:
+  1. *Parameterized Shutdown & `Number`-Safe Lap Extraction (`REQ-TRK-094.1`)*: `TrackerService.handleActionStop()` and `onDestroy()` SHALL share parameterized controller-stop and async `mDbExecutor` finalization helpers while preserving `ATT-6178` non-blocking `onDestroy()` (`REQ-TRK-034.4`), `mTableInitializationFuture` cancellation, `sInstance` reset, `mRadarAlertManager` release, executor shutdown deferral (`REQ-TRK-076.1`), and `mSessionGeneration`-gated teardown (`REQ-TRK-076.3`). `LapTelemetryExtractor.extract(...)` SHALL replace all 3 lap extraction sites (`BanalFinalizationSnapshot.capture`, `TrackerService.createNewLap`, `BANALService.newLap`) using `instanceof Number` + finiteness checks and safe default display strings (`"??:??:??"`, `"0"`).
+  2. *Extracted `PostWorkoutFinalizer` (`REQ-TRK-094.2`)*: `PostWorkoutFinalizer` (`com.atrainingtracker.trainingtracker.tracker`) SHALL encapsulate the 7 fault-isolated `finalizeLiveSession` stages and `guessCommuteAndTrainer(repository, workoutId)` using strictly repository abstractions (zero `*DatabaseManager`/`Cursor` access); `TrackerService` SHALL preserve all existing protected `finalizeLiveSession` (0-/1-/4-arg) and `guessCommuteAndTrainer` (0-/1-arg) signatures as delegates.
+  3. *Order-Preserving `TrainingApplication` Teardown Helpers (`REQ-TRK-094.3`)*: `TrainingApplication` SHALL extract `private static` `resetPauseLocks(@Nullable Context)` and `resetActiveTrackingState(@Nullable Context, boolean)` used across `stopTracking()`, `resetTrackingStateOnAbort()`, and `onTrackingAborted()`, preserving `stopTracking()`'s pre/post-dispatch reset ordering and leaving `trackingStopped()` semantically untouched.
+  4. *Parameterized Strava Sync Preferences & Worker Scheduling (`REQ-TRK-094.4`)*: `TrainingApplication` SHALL back all 18 public static Strava `Equipment`/`Routes`/`Segments` preference methods via a parameterized `StravaSyncPref` enum (retaining per-entity `"never"` string resources and null `cSharedPreferences`/`cAppContext` guards), `StravaSyncScheduler.schedulePeriodicSync(...)` SHALL deduplicate `schedule(context)` across all 3 `Strava*SyncWorker` classes preserving exact `TAG`/`WORK_NAME`/constraints, and `ArchitectureConformanceContractTest` SHALL ratchet down `TrackerService.java` and `TrainingApplication.java` LoC ceilings.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `Number` subtypes, `NaN`, non-numeric values, or `null` in lap `SensorData`, *When* `LapTelemetryExtractor.extract(...)` runs, *Then* zero `ClassCastException` occurs and `handleActionStop()`/`onDestroy()` preserve all `ATT-6178`/`REQ-TRK-033`/`034`/`076` invariants.
+• *Given* a `LiveWorkoutSession` with telemetry/streams and `deferHrPhysiologyToPostProcessing` `true`/`false`, *When* `PostWorkoutFinalizer.finalizeLiveSession(...)` runs, *Then* all 7 stages persist identical metrics with per-stage fault isolation and return `MilestoneCelebrationData`.
+• *Given* `TrainingApplication` teardown and Strava sync scheduling, *When* stopping/aborting tracking or scheduling Strava workers, *Then* `stopTracking()` preserves pre/post-dispatch ordering, `trackingStopped()` stays untouched, all 18 Strava pref APIs preserve keys/`"never"` defaults, and all 3 workers preserve exact `TAG`/`WORK_NAME`/constraints.
+
+**Invariants**: `TrackerService.java <= 3,220` LoC; `TrainingApplication.java <= 2,050` LoC; `ATT-6178`/`ATT-9154`/`ATT-8124` contracts intact; zero SQLite schema or UI/localization changes (`N/A - no UI strings`).
+
+---
+
+### REQ-TRK-095: Race-Free Foreground Service Startup/Teardown Handshake for `TrackerService` and `WorkoutPostProcessingService` (`ATT-9498`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-095`
+- **System Requirement(s)**: `SYSREQ-TRK-005`, `SYSREQ-TRK-013`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TrackerService.java`, `TrainingApplication.java`, `WorkoutPostProcessingService.kt`, `WorkoutPostProcessingCoordinator.kt`, `MultiLocaleUiSweepAndroidTest.kt`, `docs/architecture/detailed_design/tracker_service.md`
+- **Rationale**: KW47 weekly emulator sweep (`docs/engineering/emulator_sweeps/2026-11-21_sweep.md`, Finding M11) crashed in `7/12` runs on Android 12/15 with `ForegroundServiceDidNotStartInTimeException` because rapid stop calls invoked `stopService()` on `TrackerService` or `WorkoutPostProcessingService` while an asynchronous `ContextCompat.startForegroundService()` request had not yet executed `Service.startForeground()`, and rapid `ACTION_STOP` before async `createNewWorkout()` completed left orphan `FINISHED = 0` workouts (`ATT-9498`).
+- **Description**:
+  1. *`TrackerService` Pending-FGS Handshake, Early Promotion & FIFO `mWorkoutID` Resolution (`REQ-TRK-095.1`)*: `TrainingApplication.startTracking()` SHALL call `TrackerService.markForegroundStartRequested()` upon successful `ContextCompat.startForegroundService(this, intent)`, and `TrainingApplication.stopTracking()` when `!TrackerService.isRunning()` SHALL invoke `TrackerService.requestStopIfForegroundStartPending()` and suppress `stopService(TrackerService)` while `true` (retaining `stopService()` strictly when idle). `TrackerService.onStartCommand()` SHALL invoke `performStartForeground(...)` prior to `mDbExecutor.submit(...)` / `mScheduler` (preserving the `intent == null && !hasBackgroundLocationPermission()` early abort without `startForeground()`), tear down cleanly without creating an orphan DB row when a pre-start stop was queued, satisfy any pending unpromoted FGS start in `handleActionStop()` before early `performStopSelf()`, reset `mWorkoutID = -1` synchronously in `START_NORMAL`, and resolve FIFO-created `mWorkoutID` for matching `stoppingBaseFileName` inside `enqueueAsyncFinalization()`.
+  2. *`WorkoutPostProcessingService` Generation-Guarded FGS Lifecycle (`REQ-TRK-095.2`)*: `WorkoutPostProcessingService` SHALL synchronize `pendingFgsGeneration`, `promotedFgsGeneration`, `stopRequestedForGeneration`, and `activeInstance` under `lifecycleLock`. `startForPostProcessing()` SHALL coalesce redundant starts while already promoted or pending (clearing any pending stop request), `stopIfRunning()` MUST NOT invoke `appContext.stopService(...)` while `pendingFgsGeneration > 0L` (recording `stopRequestedForGeneration` so `onStartCommand()` promotes via `ServiceCompat.startForeground(...)` first and immediately calls `demoteForeground()` + `performStopSelf()`), and `ACTION_STOP` with `pendingFgsGeneration > 0L` MUST promote before stopping.
+  3. *Multi-OS Android 12/15/16 & 9-Locale Sweep Verification (`REQ-TRK-095.3`)*: `MultiLocaleUiSweepAndroidTest` SHALL preserve rapid Start$\rightarrow$Pause$\rightarrow$Stop stress timing while reliably capturing `syntheticWorkoutId` before stop and awaiting post-processing drain; `tools/run_multi_os_emulator_sweep.py` (with `ATT-9510` `/data/local/tmp/att_sweep_dump.xml`) MUST pass `12/12` across Android 12 (`Pixel_5_Android_12`), Android 15 (`Pixel_8_Android_15`), Android 16 (`Pixel_7_Android_36`), and all 9 locales.
+  4. *Monolith & SWE.3 Parity Invariants (`REQ-TRK-095.4`)*: `TrackerService.java` MUST remain `<= 3,220` LoC, `TrainingApplication.java` MUST remain `<= 2,050` LoC, `docs/architecture/detailed_design/tracker_service.md` SHALL document the FGS handshake (`REQ-PRO-114`), and `0` UI strings SHALL change (`Localization Parity: N/A`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `startTracking()` succeeded and `stopTracking()` fires before `TrackerService.onCreate()`, *When* `onStartCommand(START_NORMAL)` runs, *Then* premature `stopService()` is suppressed, `performStartForeground()` executes before `performStopForeground()`/`performStopSelf()`, `0` orphan workout row is created, and rapid `START_NORMAL` $\rightarrow$ `ACTION_STOP` commits `FINISHED = 1` for the FIFO-created `workoutId`.
+• *Given* `WorkoutPostProcessingService.startForPostProcessing()` succeeded and `drainQueue()` finishes before `onStartCommand()`, *When* `stopIfRunning()` and `onStartCommand()` execute, *Then* `stopService()` is suppressed while pending, `onStartCommand()` promotes then self-stops cleanly, and a concurrent re-enqueue clears the pending stop.
+• *Given* the fixed APK on Android 12, 15, 16 and all 9 locales, *When* `run_multi_os_emulator_sweep.py` runs, *Then* all `12/12` runs `PASS` with `0` `ForegroundServiceDidNotStartInTimeException` crashes.
+
+**Invariants**: `ATT-6178` non-blocking `onDestroy` (`< 100 ms`); `ATT-9154` `shortService` `onTimeout` isolation; `REQ-TRK-015`/`022` FGS permission gating (`0` `connectedDevice`); `TrackerService.java <= 3,220` LoC; `TrainingApplication.java <= 2,050` LoC; `Localization Parity: N/A - no UI strings`.
 
 ---
 
@@ -1556,3 +1601,7 @@
 | `1.0.0` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Created Part 3 shard (`req_tracking_cockpit_part3.md`, keeping `part1` `3,931/4,000` and `part2` `3,973/4,000` within 4,000-line cap) and added `REQ-TRK-093` `[Planned]` (`REQ-TRK-093.1`–`.4`, linked to `SYSREQ-TRK-004`/`005`, `N/A - no UI strings`). |
 | `1.0.1` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Gate 3 (`ATT-9608`) revision: added synchronous GATT close + `unregisterSensors()` + lock-outside callback close (`REQ-TRK-093.4`), post-`startRecording` anchor lifecycle & 3-case clock-inversion trimming (`REQ-TRK-093.1`/`.2`), and null/finite HR filtering, `getWorkoutSummaryUpdateData` `BSportType` resolution & single `h10Armed` snapshot (`REQ-TRK-093.3`). |
 | `1.0.2` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Promoted `REQ-TRK-093` to `[Verified]` (`192/192` PASS across 18 unit/contract suites including `TST-TRK-093.1`–`.4` and `TST-CON-054.3`, `TrackerService.java` `3,555/3,559` LoC, `MyBTLEDevice.java` `1,464/1,500` LoC, clean `emulator-5554` smoke). |
+| `1.0.3` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Added `REQ-TRK-094` `[Planned]` (`REQ-TRK-094.1`–`.4`, linked to `SYSREQ-TRK-004`/`005`, `N/A - no UI strings`) covering `TrackerService` shutdown dedup, `Number`-safe `LapTelemetryExtractor`, `PostWorkoutFinalizer`, `TrainingApplication` static teardown helpers, and parameterized Strava sync preferences & scheduling. |
+| `1.0.4` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Promoted `REQ-TRK-094` to `[Verified]` (`224/224` PASS across 34 targeted unit/contract suites including `TST-TRK-094.1`–`.4` & Stage 6 Bounce 1 lazy `activeSessionDeviceIdsProvider` + `ConcurrentHashMap.newKeySet()`, `TrackerService.java` `3,180/3,220` LoC, `TrainingApplication.java` `2,038/2,050` LoC, clean `emulator-5554` smoke). |
+| `1.0.6` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `REQ-TRK-095` `[Planned]` (`REQ-TRK-095.1`–`.4`, linked to `SYSREQ-TRK-005`/`013`, `N/A - no UI strings`) for race-free `TrackerService` & `WorkoutPostProcessingService` FGS startup/teardown handshakes, FIFO `mWorkoutID` finalization, and 3-OS/9-locale sweep verification. |
+| `1.0.7` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `REQ-TRK-095` (`REQ-TRK-095.1`–`.4`) to `[Verified]` (`24` JVM suites / `174/174` PASS incl. `TST-TRK-095`, `47/47` Python tooling tests PASS, `12/12` live Multi-OS & 9-language emulator sweep `PASS` in `docs/engineering/emulator_sweeps/2026-11-22_sweep.md`, `TrackerService.java` `3,207/3,220` LoC, `TrainingApplication.java` `2,040/2,050` LoC, `0` new warnings). |

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:37:21.297Z" hostname="rainer-HP-EliteBook-850-G5" time="14.808">
+  <properties/>
+  <testcase name="testLiveHrDrift_gating_missingPowerSensorEmitsNull" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.627"/>
+  <testcase name="testLiveHrDrift_lifecycleParity_resetSessionClearsState" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.573"/>
+  <testcase name="testLiveHrDrift_gating_missingHrSensorEmitsNull" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.576"/>
+  <testcase name="testCardioBaselineProvider_30DayRollingAverageResolution" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="1.854"/>
+  <testcase name="testLiveHrDrift_gating_disabledSettingEmitsNull" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.537"/>
+  <testcase name="testLiveHrDrift_stepResponse_appliesLagCompensation" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.635"/>
+  <testcase name="testLiveHrDrift_steadyStateExactMatch_emitsZeroDrift" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.574"/>
+  <testcase name="testInRideMinute8To25Calibration_updatesBaselineWhenR2Qualifies" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="2.567"/>
+  <testcase name="testDefaultInRideCalibrator_fitsSyntheticStepSignal" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="2.978"/>
+  <testcase name="testZeroQueryLoop_baselineAndEnablementCachedAtSessionReset" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.637"/>
+  <testcase name="testLiveHrDrift_pauseHandling_flushesWindowAfterLongPause" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.513"/>
+  <testcase name="testLiveHrDrift_growingWarmUpWindow_emitsFromFirstSampleWithoutBlankDelay" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.544"/>
+  <testcase name="testInRideMinute8To25Calibration_retainsBaselineWhenR2BelowThreshold" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="2.191"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

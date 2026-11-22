@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServicePragmaSchemaTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T15:48:16.916Z" hostname="rainer-HP-EliteBook-850-G5" time="0.353">
+  <properties/>
+  <testcase name="testGetTableColumnNames_discoversInitialColumnsAccurately" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServicePragmaSchemaTest" time="0.098"/>
+  <testcase name="testGetTableColumnNames_discoversDynamicallyAddedColumnsImmediately" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServicePragmaSchemaTest" time="0.086"/>
+  <testcase name="testGetTableColumnNames_safelyHandlesNonExistentTable" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServicePragmaSchemaTest" time="0.085"/>
+  <testcase name="testGetTableColumnNames_isCaseInsensitive" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServicePragmaSchemaTest" time="0.083"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

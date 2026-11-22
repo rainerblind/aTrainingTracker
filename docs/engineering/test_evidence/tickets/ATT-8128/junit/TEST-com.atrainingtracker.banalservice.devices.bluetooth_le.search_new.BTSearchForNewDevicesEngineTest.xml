@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:44:22.114Z" hostname="rainer-HP-EliteBook-850-G5" time="30.188">
+  <properties/>
+  <testcase name="testStopAsyncSearch_stopScanThrowsIllegalStateException_catchesGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.698"/>
+  <testcase name="testStartAsyncSearch_probesConnectedGattHrmSkipsPairedAndRejectsNonMatching_TST_CON_054_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.768"/>
+  <testcase name="testStartAsyncSearch_grantedBluetoothScanPermission_configuresAggressiveSettings" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.621"/>
+  <testcase name="testOnServicesDiscovered_hrm_persistsDisModelSerialAndPolarServiceUuids" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.538"/>
+  <testcase name="testScanResult_onApi23Plus_connectsGattWithTransportLe" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.644"/>
+  <testcase name="testOnServicesDiscovered_bikeRadar_missingRadarService_doesNotFindDevice" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.562"/>
+  <testcase name="testStartAsyncSearch_startScanThrowsSecurityException_catchesAndResetsScanning" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.305"/>
+  <testcase name="testStopAsyncSearch_stopScanThrowsSecurityException_catchesGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.35"/>
+  <testcase name="testReadNextCharacteristic_handlesNullAndReadFailureGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.339"/>
+  <testcase name="testStartAsyncSearch_onApiBelow31_missingBluetoothAdminPermission_abortsGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.335"/>
+  <testcase name="testOnServicesDiscovered_bikeRadar_enqueuesMetadataAndFindsDeviceWhenRadarPresent" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.335"/>
+  <testcase name="testStartAsyncSearch_missingBluetoothConnectPermission_skipsConnectedProbeGracefully_TST_CON_054_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.307"/>
+  <testcase name="testBuildScanFilters_radarAndStandardDevices" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.351"/>
+  <testcase name="testStartAsyncSearch_missingBluetoothScanPermission_abortsGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.292"/>
+  <testcase name="testOnServicesDiscovered_nonPolarHrm_doesNotPopulatePolarStore" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.547"/>
+  <testcase name="testStartAsyncSearch_onApiBelow31_missingFineLocationPermission_abortsGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.36"/>
+  <testcase name="testBikePowerDiscovery_completesWhenQueueEmpty" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.321"/>
+  <testcase name="testResetTrackingState_clearsAllMapsAndEnablesRediscovery" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.347"/>
+  <testcase name="testStartAsyncSearch_startScanThrowsIllegalStateException_catchesAndResetsScanning" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.36"/>
+  <testcase name="testEnqueue_omitsNullCharacteristics" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.417"/>
+  <testcase name="testManifest_declaresBluetoothAdminPermissionWithMaxSdkVersion30" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest" time="1.391"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

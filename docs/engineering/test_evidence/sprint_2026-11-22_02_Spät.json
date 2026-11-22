@@ -1,0 +1,3000 @@
+{
+  "target": "sprint_2026-11-22_02_Sp\u00e4t",
+  "type": "sprint",
+  "commit": "5dce575f954cf99ed45893e438734fb7861aa531",
+  "timestamp": "2026-11-22T21:22:56.560650+00:00",
+  "unit_tests": {
+    "total": 2017,
+    "passed": 2013,
+    "failures": 4,
+    "errors": 0,
+    "skipped": 0,
+    "time": 1577.7579999999969
+  },
+  "coverage": {
+    "measured": false,
+    "reason": "Kover skipped for regular Schicht (executed in weekly Code Review / ASPICE Audit and releases)",
+    "global": {
+      "line_percent": null,
+      "branch_percent": null
+    },
+    "critical_packages": {}
+  },
+  "tst_results": {
+    "TST-DAT-044": {
+      "status": "PASS",
+      "passing_cases_count": 34,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-095": {
+      "status": "PASS",
+      "passing_cases_count": 75,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-017": {
+      "status": "FAIL",
+      "passing_cases_count": 15,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-STR-012": {
+      "status": "FAIL",
+      "passing_cases_count": 15,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-UI-108": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-058": {
+      "status": "PASS",
+      "passing_cases_count": 56,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UNT-003": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-025": {
+      "status": "PASS",
+      "passing_cases_count": 36,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-032": {
+      "status": "PASS",
+      "passing_cases_count": 46,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-003": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-049": {
+      "status": "PASS",
+      "passing_cases_count": 27,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-027": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-034": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-026": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-001": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-033": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-007": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-025": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-005": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-035": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-047": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-022": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PERF-010": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-048": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-282": {
+      "status": "PASS",
+      "passing_cases_count": 1,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PERF-003": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-052": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-HRV-048": {
+      "status": "PASS",
+      "passing_cases_count": 28,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-HRV-049": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-038": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-024": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-055": {
+      "status": "PASS",
+      "passing_cases_count": 24,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-045": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-041": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-004": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-040": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-017": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-075": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-028": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-050": {
+      "status": "PASS",
+      "passing_cases_count": 19,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-001": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-002": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-013": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-057": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-006": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-003": {
+      "status": "PASS",
+      "passing_cases_count": 20,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-016": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-004": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-005": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-008": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-011": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-010": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-056": {
+      "status": "PASS",
+      "passing_cases_count": 19,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-018": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-014": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-019": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-045": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-474": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-025": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-001": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-002": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-137": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-020": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-055": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-029": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-093": {
+      "status": "PASS",
+      "passing_cases_count": 53,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-072": {
+      "status": "PASS",
+      "passing_cases_count": 38,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-HRV-051": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-010": {
+      "status": "PASS",
+      "passing_cases_count": 41,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-030": {
+      "status": "PASS",
+      "passing_cases_count": 34,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-020": {
+      "status": "PASS",
+      "passing_cases_count": 36,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-043": {
+      "status": "PASS",
+      "passing_cases_count": 32,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-044": {
+      "status": "PASS",
+      "passing_cases_count": 53,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-046": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-030": {
+      "status": "PASS",
+      "passing_cases_count": 42,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-009": {
+      "status": "PASS",
+      "passing_cases_count": 30,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-021": {
+      "status": "PASS",
+      "passing_cases_count": 30,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SEN-028": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-016": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-106": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-114": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SEN-027": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-243": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-016": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-218": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-525": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-094": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-026": {
+      "status": "PASS",
+      "passing_cases_count": 59,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-014": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-039": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-116": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-ARC-004": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-001": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-130": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-115": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-052": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-129": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-050": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-044": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-110": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-015": {
+      "status": "FAIL",
+      "passing_cases_count": 17,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-011": {
+      "status": "FAIL",
+      "passing_cases_count": 17,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-045": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-093": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-012": {
+      "status": "FAIL",
+      "passing_cases_count": 19,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-078": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-043": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-120": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-014": {
+      "status": "FAIL",
+      "passing_cases_count": 17,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-009": {
+      "status": "FAIL",
+      "passing_cases_count": 18,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-111": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-117": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-013": {
+      "status": "FAIL",
+      "passing_cases_count": 17,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-010": {
+      "status": "FAIL",
+      "passing_cases_count": 17,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-034": {
+      "status": "FAIL",
+      "passing_cases_count": 14,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-INT-016": {
+      "status": "FAIL",
+      "passing_cases_count": 17,
+      "failing_cases_count": 1,
+      "failing_cases": [
+        {
+          "name": "testWorkProductHeadersAndGovernanceReconciliation_contract",
+          "classname": "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-ARC-003": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-114": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-ARC-002": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-038": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-035": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-037": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-036": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-384": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-BLD-003": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NFR-001": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-009": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-007": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-113": {
+      "status": "FAIL",
+      "passing_cases_count": 12,
+      "failing_cases_count": 3,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "testGroupA_measurableNfrsHaveRealBenchmarkImplementationsInMeasuredNfrBenchmarkTest",
+          "classname": "com.atrainingtracker.trainingtracker.build.NonFunctionalRequirementsContractTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-002": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-003": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-008": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-010": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-005": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-011": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-013": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-NFR-014": {
+      "status": "FAIL",
+      "passing_cases_count": 10,
+      "failing_cases_count": 2,
+      "failing_cases": [
+        {
+          "name": "testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        },
+        {
+          "name": "classMethod",
+          "classname": "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest",
+          "failure_message": null
+        }
+      ]
+    },
+    "TST-PRO-033": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-001": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-004": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-002": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-084": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-003": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-006": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-005": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-008": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-100": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-046": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-BLD-002": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-011": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-119": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-051": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-048": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-010": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-057": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-067": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-123": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-047": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-007": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-124": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-089": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-042": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-133": {
+      "status": "PASS",
+      "passing_cases_count": 39,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-090": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STP-009": {
+      "status": "PASS",
+      "passing_cases_count": 33,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-072": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-112": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-049": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-056": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-131": {
+      "status": "PASS",
+      "passing_cases_count": 29,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-053": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-055": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-068": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-054": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-069": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-132": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-100": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-039": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-101": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-102": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-020": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-103": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-010": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-052": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UNT-015": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-082": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-029": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-068": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-043": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-029": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UNT-014": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-026": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-018": {
+      "status": "PASS",
+      "passing_cases_count": 20,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-104": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-028": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-043": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-050": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-008": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SEN-025": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SEN-029": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-098": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-005": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-111": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-016": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-006": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-511": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-215": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-042": {
+      "status": "PASS",
+      "passing_cases_count": 23,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-021": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-019": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-033": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-032": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-017": {
+      "status": "PASS",
+      "passing_cases_count": 23,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-027": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-028": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-025": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-036": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-036": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-010": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-009": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-011": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-131": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-001": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-008": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-095": {
+      "status": "PASS",
+      "passing_cases_count": 26,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-047": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-094": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-090": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-001": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-002": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-004": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-020": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-007": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-028": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-051": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-026": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-154": {
+      "status": "PASS",
+      "passing_cases_count": 35,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-374": {
+      "status": "PASS",
+      "passing_cases_count": 31,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-440": {
+      "status": "PASS",
+      "passing_cases_count": 31,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-439": {
+      "status": "PASS",
+      "passing_cases_count": 31,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-376": {
+      "status": "PASS",
+      "passing_cases_count": 31,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-304": {
+      "status": "PASS",
+      "passing_cases_count": 31,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-059": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-058": {
+      "status": "PASS",
+      "passing_cases_count": 1,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-043": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-081": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UNT-011": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-437": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-046": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SEN-030": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-004": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-003": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-035": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-049": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-053": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-097": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-082": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-054": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-139": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-077": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-022": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-040": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-089": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-048": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PERF-007": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PERF-009": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-096": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-055": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-004": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-034": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-083": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-448": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-039": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-018": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-057": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-002": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-003": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-084": {
+      "status": "PASS",
+      "passing_cases_count": 76,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-012": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-108": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-CON-008": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-085": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-305": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-195": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-012": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-085": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-042": {
+      "status": "PASS",
+      "passing_cases_count": 34,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-019": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-031": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-017": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-044": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-015": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-010": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-018": {
+      "status": "PASS",
+      "passing_cases_count": 42,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TST-001": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-019": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-005": {
+      "status": "PASS",
+      "passing_cases_count": 32,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-RAD-007": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-008": {
+      "status": "PASS",
+      "passing_cases_count": 23,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-042": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-013": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-118": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-023": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-ARC-010": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-043": {
+      "status": "PASS",
+      "passing_cases_count": 22,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-022": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-006": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-007": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-004": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-075": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-394": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-381": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-153": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-340": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRI-006": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-239": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-386": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SEN-020": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-LOC-001": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-041": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-019": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-018": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-013": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-014": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STR-016": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-379": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-124": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-036": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-037": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-044": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-027": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-033": {
+      "status": "PASS",
+      "passing_cases_count": 29,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-017": {
+      "status": "PASS",
+      "passing_cases_count": 1,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PRO-004": {
+      "status": "PASS",
+      "passing_cases_count": 1,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-014": {
+      "status": "PASS",
+      "passing_cases_count": 16,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-023": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-253": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-031": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-029": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-007": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-032": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-020": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-048": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-051": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-038": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-024": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-2790": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-325": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-460": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-458": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-254": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-015": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-012": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-047": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-028": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-030": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-027": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-009": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-326": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-046": {
+      "status": "PASS",
+      "passing_cases_count": 21,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-021": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-005": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-024": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-040": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-035": {
+      "status": "PASS",
+      "passing_cases_count": 17,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-070": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-084": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-006": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-003": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-016": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-088": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-012": {
+      "status": "PASS",
+      "passing_cases_count": 27,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXT-004": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-040": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-043": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-037": {
+      "status": "PASS",
+      "passing_cases_count": 13,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-027": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-038": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-041": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-249": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-026": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-057": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-234": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-NAV-045": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-262": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-277": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-009": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-030": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-045": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-323": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-352": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-324": {
+      "status": "PASS",
+      "passing_cases_count": 12,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-035": {
+      "status": "PASS",
+      "passing_cases_count": 9,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MIG-034": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-067": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-GEO-001": {
+      "status": "PASS",
+      "passing_cases_count": 14,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-007": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-011": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-EXP-008": {
+      "status": "PASS",
+      "passing_cases_count": 11,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-022": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-021": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-023": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-MAP-022": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-014": {
+      "status": "PASS",
+      "passing_cases_count": 10,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-091": {
+      "status": "PASS",
+      "passing_cases_count": 62,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-FIL-031": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-025": {
+      "status": "PASS",
+      "passing_cases_count": 43,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-009": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-078": {
+      "status": "PASS",
+      "passing_cases_count": 25,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-ARC-008": {
+      "status": "PASS",
+      "passing_cases_count": 15,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-051": {
+      "status": "PASS",
+      "passing_cases_count": 6,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-021": {
+      "status": "PASS",
+      "passing_cases_count": 3,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-SET-107": {
+      "status": "PASS",
+      "passing_cases_count": 1,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-007": {
+      "status": "PASS",
+      "passing_cases_count": 4,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-022": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-076": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-008": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-092": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-027": {
+      "status": "PASS",
+      "passing_cases_count": 37,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-002": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-041": {
+      "status": "PASS",
+      "passing_cases_count": 1,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-019": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-002": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-021": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-018": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-029": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-002": {
+      "status": "PASS",
+      "passing_cases_count": 18,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-PER-013": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REG-007": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-TRK-053": {
+      "status": "PASS",
+      "passing_cases_count": 8,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-STB-003": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-018": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-030": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-DAT-003": {
+      "status": "PASS",
+      "passing_cases_count": 7,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-REV-011": {
+      "status": "PASS",
+      "passing_cases_count": 2,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    },
+    "TST-UI-137": {
+      "status": "PASS",
+      "passing_cases_count": 5,
+      "failing_cases_count": 0,
+      "failing_cases": []
+    }
+  },
+  "nfr_verification": {
+    "measured": false,
+    "reason": "NFR measurement report not found at /tmp/wt_schicht_2026-11-22_02_Sp\u00e4t/app/build/reports/nfr/nfr_measurements.json",
+    "measured_count": 0,
+    "passed_count": 0,
+    "failed_count": 0,
+    "measurements": [],
+    "manual_protocol_present": true,
+    "manual_protocols": [
+      {
+        "req_id": "REQ-NFR-004",
+        "tst_id": "TST-NFR-004",
+        "name": "CPU Consumption Ceiling",
+        "budget": "< 5.0% single-core",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-006",
+        "tst_id": "TST-NFR-006",
+        "name": "Tracking Battery Drain Ceiling",
+        "budget": "<= 5.0%/h bg / <= 12.0%/h fg",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-012",
+        "tst_id": "TST-NFR-012",
+        "name": "Cockpit Frame Render Budget",
+        "budget": "< 16.6 ms p95 (60 FPS)",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-015",
+        "tst_id": "TST-NFR-015",
+        "name": "Cold Start Startup Latency Budget",
+        "budget": "TTID <= 1200 ms / TTFD <= 1500 ms",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-016",
+        "tst_id": "TST-NFR-016",
+        "name": "GNSS Horizontal Trajectory Accuracy",
+        "budget": "p95 <= 5.0 m / RMSE <= 3.0 m",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-017",
+        "tst_id": "TST-NFR-017",
+        "name": "Production Crash-Free Session Stability",
+        "budget": ">= 99.5% prod / >= 99.0% staging",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      },
+      {
+        "req_id": "REQ-NFR-018",
+        "tst_id": "TST-NFR-018",
+        "name": "Application Not Responding (ANR) Rate Ceiling",
+        "budget": "<= 0.05% ANR / < 100 ms main thread",
+        "verification_method": "On-Device Manual",
+        "device_build": "<TBD>",
+        "date": "<TBD>",
+        "operator": "<TBD>",
+        "measured_value": "<NOT MEASURED>",
+        "status": "PENDING MANUAL",
+        "note": "MANUAL PROTOCOL \u2014 NOT EXECUTED IN JVM"
+      }
+    ]
+  }
+}

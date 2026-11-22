@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV14Test" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:36:41.293Z" hostname="rainer-HP-EliteBook-850-G5" time="9.4">
+  <properties/>
+  <testcase name="testDbVersion14_andSchemaRegistryParity" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV14Test" time="8.631"/>
+  <testcase name="testOnCreateAndOnUpgrade13To14_haveIdenticalColumnsAndDefaultZero" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV14Test" time="0.573"/>
+  <testcase name="testIsAndSetPolarLiveImuEnabled_persistsOptInSafely" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV14Test" time="0.196"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

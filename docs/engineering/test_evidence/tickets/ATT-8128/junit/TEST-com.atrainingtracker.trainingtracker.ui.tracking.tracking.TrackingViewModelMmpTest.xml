@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:58:11.793Z" hostname="rainer-HP-EliteBook-850-G5" time="3.93">
+  <properties/>
+  <testcase name="onUpdateShowMmpCurve_delegatesToRepository" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest" time="3.51"/>
+  <testcase name="extractMmpCurveData_correctlyExtractsRollingMeansAndPeaks" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest" time="0.183"/>
+  <testcase name="trackingScreenState_defaultsPreserveInvariants" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest" time="0.237"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

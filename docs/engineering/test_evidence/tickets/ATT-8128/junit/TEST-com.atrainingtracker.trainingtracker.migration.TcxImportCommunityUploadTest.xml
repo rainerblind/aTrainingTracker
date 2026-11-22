@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.TcxImportCommunityUploadTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:50:30.408Z" hostname="rainer-HP-EliteBook-850-G5" time="3.834">
+  <properties/>
+  <testcase name="testImportRobustnessAgainstSchedulingExceptions" classname="com.atrainingtracker.trainingtracker.migration.TcxImportCommunityUploadTest" time="0.602"/>
+  <testcase name="testImportSkipsStravaUploadWhenExplicitlyOptedOut" classname="com.atrainingtracker.trainingtracker.migration.TcxImportCommunityUploadTest" time="1.012"/>
+  <testcase name="testImportUploadsToStravaWhenExplicitlyOptedIn" classname="com.atrainingtracker.trainingtracker.migration.TcxImportCommunityUploadTest" time="1.073"/>
+  <testcase name="testImportSkipsUploadWhenCommunityDisabled" classname="com.atrainingtracker.trainingtracker.migration.TcxImportCommunityUploadTest" time="0.554"/>
+  <testcase name="testImportSchedulesStravaUploadWhenEnabled" classname="com.atrainingtracker.trainingtracker.migration.TcxImportCommunityUploadTest" time="0.592"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

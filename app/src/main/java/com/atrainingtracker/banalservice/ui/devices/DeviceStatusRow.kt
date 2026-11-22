@@ -85,17 +85,16 @@ private fun getRelativeLastSeen(lastSeen: String?): String {
     if (lastSeen == null) return ""
 
     return try {
-        // Attempt to parse using the default date/time instance
-        val date = java.text.DateFormat.getDateTimeInstance().parse(lastSeen)
-        if (date != null) {
+        val epochMillis = com.atrainingtracker.banalservice.database.LastActiveDateFormatter.parseToEpochMillis(lastSeen)
+        if (epochMillis != null) {
             android.text.format.DateUtils.getRelativeTimeSpanString(
-                date.time,
+                epochMillis,
                 System.currentTimeMillis(),
                 android.text.format.DateUtils.DAY_IN_MILLIS,
                 android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
             ).toString()
         } else {
-            ""
+            if (lastSeen.length < 10) lastSeen else lastSeen.split(" ").firstOrNull() ?: ""
         }
     } catch (e: Exception) {
         // Fallback for short special strings or parse errors

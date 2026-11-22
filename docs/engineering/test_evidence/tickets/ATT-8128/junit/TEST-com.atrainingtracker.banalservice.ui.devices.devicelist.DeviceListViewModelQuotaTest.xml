@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:44:01.719Z" hostname="rainer-HP-EliteBook-850-G5" time="6.891">
+  <properties/>
+  <testcase name="testQuotaInterception_emitsSwapOrUpgradeDialogEvent_whenFreeQuotaReached" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.766"/>
+  <testcase name="testExecuteSwapAndPair_invokesRepositorySwap_andClearsDialogEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.618"/>
+  <testcase name="testDowngradeDetection_doesNotTrigger_whenActiveTracking" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.617"/>
+  <testcase name="testMultiSensorSwap_hardensExcessSensorsToStrictlyTwo" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.639"/>
+  <testcase name="testDetermineRecommendedUnpairDeviceId_delegatesCorrectly" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.6"/>
+  <testcase name="testDismissSwapOrUpgradeDialog_clearsEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.597"/>
+  <testcase name="testDetermineDefaultKeepDeviceIds_preselectsFusedAndActiveRemote" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.617"/>
+  <testcase name="testProUser_bypassesQuotaInterception" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.603"/>
+  <testcase name="testDismissKeepTwoSensors_appliesDefaults_andClearsEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.609"/>
+  <testcase name="testDowngradeDetection_triggersReconciliationWithDefaults" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.604"/>
+  <testcase name="testConfirmKeepTwoSensors_invokesRepositoryReconcile_andClearsEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.619"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

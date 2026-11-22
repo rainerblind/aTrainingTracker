@@ -21,9 +21,6 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 import androidx.annotation.StringRes
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 /**
  * Defines the user-selectable sorting dimensions available for sensors in the "My Sensors" list.
@@ -43,30 +40,8 @@ enum class DeviceSortOrder(@StringRes val labelResId: Int) {
          * Returns 0L if the string is null, blank, or cannot be parsed.
          */
         fun parseLastSeenTimestamp(lastSeen: String?): Long {
-            if (lastSeen.isNullOrBlank()) return 0L
-            // Try standard DateFormat (used by DevicesDatabaseManager)
-            try {
-                val date = DateFormat.getDateTimeInstance().parse(lastSeen)
-                if (date != null) return date.time
-            } catch (_: Exception) {
-            }
-
-            // Try ISO / standard DB formats
-            val patterns = arrayOf(
-                "yyyy-MM-dd HH:mm:ss",
-                "yyyy-MM-dd'T'HH:mm:ss",
-                "yyyy-MM-dd"
-            )
-            for (pattern in patterns) {
-                try {
-                    val sdf = SimpleDateFormat(pattern, Locale.US)
-                    val date = sdf.parse(lastSeen)
-                    if (date != null) return date.time
-                } catch (_: Exception) {
-                }
-            }
-
-            return 0L
+            return com.atrainingtracker.banalservice.database.LastActiveDateFormatter
+                .parseToEpochMillis(lastSeen) ?: 0L
         }
 
         /**

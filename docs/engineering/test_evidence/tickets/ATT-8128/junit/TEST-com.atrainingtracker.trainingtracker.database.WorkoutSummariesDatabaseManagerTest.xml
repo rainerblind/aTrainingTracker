@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:48:38.173Z" hostname="rainer-HP-EliteBook-850-G5" time="3.759">
+  <properties/>
+  <testcase name="testHasUnfinishedWorkout_returnsFalseWhenNoMatchingRows" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.46"/>
+  <testcase name="testHasUnfinishedWorkout_appliesNullAndZeroFinishedFilter" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.466"/>
+  <testcase name="testNullableGetters_returnNullOnSqlNullAndPreserveNonNullValues_TST_DAT_044_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.467"/>
+  <testcase name="testGetFinishedWorkoutCountForSportType_queriesFinishedAndBSport" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.463"/>
+  <testcase name="testGetEarliestWorkoutYear_returnsNullWhenEmptyOrInvalid" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.477"/>
+  <testcase name="testGetFinishedWorkoutCountForSport_queriesFinishedAndSportId" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.458"/>
+  <testcase name="testDiscardOrFinishUnfinishedWorkout_appliesNullAndZeroWhereClause" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.486"/>
+  <testcase name="testGetEarliestWorkoutYear_returnsYearWhenRecordExists" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.482"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

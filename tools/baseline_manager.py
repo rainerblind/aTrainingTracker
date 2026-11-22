@@ -18,6 +18,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 PROTECTED_BRANCHES = frozenset({"master", "develop", "HEAD"})
+_SWEEP_REPORT_FILENAME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_sweep\.md$")
+_SWEEP_VERDICT_RE = re.compile(r"\*\*Verdict\*\*:\s*`?([A-Za-z0-9_-]+)`?")
+_SWEEP_ROW_VERDICT_RE = re.compile(r"\|\s*`(PASS|FAIL)`\s*\|")
 
 
 def _run_git(args: List[str], repo_root: str, check: bool = True) -> subprocess.CompletedProcess:
@@ -165,8 +168,49 @@ def _collect_test_evidence(repo_root: str, baseline: str, test_evidence_path: Op
     return {"found": True, "rel_path": rel_path, "summary": summary}
 
 
+def _collect_latest_emulator_sweep_deviation(repo_root: str) -> Optional[str]:
+    """
+    REQ-PRO-138.1 / REQ-PRO-138.2: Inspects the lexicographically latest YYYY-MM-DD_sweep.md
+    under docs/engineering/emulator_sweeps/. Returns an Open Release Deviation string if the
+    verdict is FAIL or missing/unparseable (fail-closed); returns None on PASS or no reports.
+    """
+    sweep_dir = os.path.join(repo_root, "docs", "engineering", "emulator_sweeps")
+    if not os.path.isdir(sweep_dir):
+        return None
+    sweep_files = sorted(
+        name
+        for name in os.listdir(sweep_dir)
+        if _SWEEP_REPORT_FILENAME_RE.match(name) and os.path.isfile(os.path.join(sweep_dir, name))
+    )
+    if not sweep_files:
+        return None
+
+    latest_name = sweep_files[-1]
+    latest_path = os.path.join(sweep_dir, latest_name)
+    rel_path = f"docs/engineering/emulator_sweeps/{latest_name}"
+    try:
+        with open(latest_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except OSError as exc:
+        return f"**DEVIATION**: Latest emulator sweep `{rel_path}` could not be read ({exc}) (REQ-PRO-135 / SUP.9)"
+
+    m_verdict = _SWEEP_VERDICT_RE.search(content)
+    verdict = m_verdict.group(1).strip().upper() if m_verdict else "UNKNOWN"
+    if verdict == "PASS":
+        return None
+
+    row_verdicts = _SWEEP_ROW_VERDICT_RE.findall(content)
+    total_runs = len(row_verdicts)
+    failed_runs = sum(1 for v in row_verdicts if v == "FAIL")
+    run_detail = f" ({failed_runs}/{total_runs} runs failed)" if total_runs > 0 else ""
+    return (
+        f"**DEVIATION**: Latest emulator sweep `{rel_path}` verdict is `{verdict}`{run_detail} "
+        f"— see sweep report for diagnostics (REQ-PRO-135 / SUP.9)"
+    )
+
+
 def _collect_open_risks_and_deviations(repo_root: str, norm_dir: str) -> Dict[str, List[str]]:
-    """Collects High/Medium risks from docs/management/risk_register.md and open deviations from verification_summary.md."""
+    """Collects High/Medium risks from docs/management/risk_register.md and open deviations from verification_summary.md and emulator sweeps."""
     high_medium_risks: List[str] = []
     risk_path = os.path.join(repo_root, "docs", "management", "risk_register.md")
     if os.path.isfile(risk_path):
@@ -183,6 +227,10 @@ def _collect_open_risks_and_deviations(repo_root: str, norm_dir: str) -> Dict[st
             for line in f:
                 if line.strip().startswith("- [ ] **DEVIATION**:"):
                     open_deviations.append(line.strip()[len("- [ ] "):])
+
+    sweep_deviation = _collect_latest_emulator_sweep_deviation(repo_root)
+    if sweep_deviation:
+        open_deviations.append(sweep_deviation)
 
     return {"risks": high_medium_risks, "deviations": open_deviations}
 

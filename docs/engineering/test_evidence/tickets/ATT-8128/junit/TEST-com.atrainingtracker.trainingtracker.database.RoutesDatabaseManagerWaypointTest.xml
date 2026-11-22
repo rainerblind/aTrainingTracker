@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:45:47.711Z" hostname="rainer-HP-EliteBook-850-G5" time="2.496">
+  <properties/>
+  <testcase name="testDeleteRoute_removesRouteAndWaypoints" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" time="0.813"/>
+  <testcase name="testInsertRoute_withWaypoints_persistsWaypointsToDatabase" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" time="0.799"/>
+  <testcase name="testOnUpgrade_fromV9ToV10_createsRouteWaypointsTableAndIndex" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" time="0.884"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

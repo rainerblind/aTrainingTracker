@@ -667,6 +667,67 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             self.assertTrue(any("7412" in d for d in log_defects))
             self.assertFalse(any("5807" in d for d in log_defects))
 
+    def test_att_9498_uiautomator_dump_retries_transient_error_and_api31_merged_bounds(self):
+        """ATT-9498: Retries transient rc=0 UiTestAutomationBridge ERROR and ignores API 31 merged zero-bounds child."""
+        pkg = sweep.DEFAULT_PACKAGE
+        dump_attempts = {"n": 0}
+        cat_attempts = {"n": 0}
+        valid_xml = (
+            '<hierarchy rotation="0">'
+            f'<node package="{pkg}" text="" clickable="true" bounds="[44,1992][1036,2160]">'
+            f'  <node package="{pkg}" text="Select Route" clickable="false" bounds="[220,2026][480,2072]" />'
+            f'  <node package="{pkg}" text="No routes nearby" clickable="false" bounds="[0,0][0,0]" />'
+            '</node>'
+            '</hierarchy>'
+        )
+        transient_android_xml = '<hierarchy rotation="0"><node package="android" text="" bounds="[0,0][1080,2400]" /></hierarchy>'
+
+        def retry_runner(cmd, **_kwargs):
+            res = MagicMock()
+            res.returncode = 0
+            res.stdout = ""
+            res.stderr = ""
+            if "am" in cmd and "instrument" in cmd:
+                res.stdout = "OK (1 test)\n"
+            elif "uiautomator" in cmd and "dump" in cmd:
+                dump_attempts["n"] += 1
+                if dump_attempts["n"] == 1:
+                    res.stderr = "ERROR: null root node returned by UiTestAutomationBridge.\n"
+                else:
+                    res.stdout = f"UI hierchary dumped to: {sweep.UI_DUMP_DEVICE_PATH}\n"
+            elif "cat" in cmd and sweep.UI_DUMP_DEVICE_PATH in cmd:
+                cat_attempts["n"] += 1
+                res.stdout = transient_android_xml if cat_attempts["n"] == 1 else valid_xml
+            elif "screencap" in cmd:
+                res.stdout = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+            return res
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_defects, bounds_defects, shot = sweep.run_ui_probe(
+                "emulator-5554",
+                pkg,
+                "Pixel_7_Android_36",
+                "fr",
+                tmpdir,
+                runner=retry_runner,
+                sleep_fn=lambda _x: None,
+            )
+            self.assertEqual(dump_attempts["n"], 3)
+            self.assertEqual(cat_attempts["n"], 2)
+            self.assertEqual(log_defects, [])
+            self.assertEqual(bounds_defects, [])
+            self.assertTrue(os.path.isfile(shot))
+
+        # Non-clickable parent [0,0][0,0] text MUST still be flagged as ZERO_OR_INVERTED_BOUNDS
+        bad_non_clickable_xml = (
+            '<hierarchy rotation="0">'
+            f'<node package="{pkg}" text="" clickable="false" bounds="[0,0][1080,2400]">'
+            f'  <node package="{pkg}" text="BrokenZero" clickable="false" bounds="[0,0][0,0]" />'
+            '</node>'
+            '</hierarchy>'
+        )
+        self.assertEqual(len(sweep.analyze_uiautomator_bounds(bad_non_clickable_xml)), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

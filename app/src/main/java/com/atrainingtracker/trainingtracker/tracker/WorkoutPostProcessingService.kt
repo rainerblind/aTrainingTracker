@@ -65,6 +65,11 @@ open class WorkoutPostProcessingService : Service() {
     }
 
     @VisibleForTesting
+    internal open fun performStopSelf(startId: Int) {
+        stopSelf(startId)
+    }
+
+    @VisibleForTesting
     internal fun determineForegroundServiceType(): Int {
         return if (getBuildVersionSdkInt() >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
@@ -77,11 +82,55 @@ open class WorkoutPostProcessingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            val pendingGen = synchronized(lifecycleLock) { pendingFgsGeneration }
+            if (pendingGen > 0L && !tryPromoteForeground(startId, pendingGen)) {
+                return START_NOT_STICKY
+            }
+            synchronized(lifecycleLock) {
+                if (pendingGen > 0L && pendingFgsGeneration == pendingGen) {
+                    pendingFgsGeneration = 0L
+                }
+                if (activeInstance === this || activeInstance == null) {
+                    promotedFgsGeneration = 0L
+                }
+                stopRequestedForGeneration = 0L
+            }
             demoteForeground()
-            performStopSelf()
+            performStopSelf(startId)
             return START_NOT_STICKY
         }
 
+        val gen = synchronized(lifecycleLock) { pendingFgsGeneration }
+        if (!tryPromoteForeground(startId, gen)) {
+            return START_NOT_STICKY
+        }
+
+        val shouldStopNow = synchronized(lifecycleLock) {
+            val effectiveGen = if (gen > 0L) gen else ++nextGeneration
+            if (gen > 0L && pendingFgsGeneration == gen) {
+                pendingFgsGeneration = 0L
+            }
+            activeInstance = this
+            val stopRequested = (gen > 0L && stopRequestedForGeneration >= gen) ||
+                !WorkoutPostProcessingCoordinator.hasActiveWork()
+            if (stopRequested) {
+                promotedFgsGeneration = 0L
+                if (gen > 0L && stopRequestedForGeneration >= gen) {
+                    stopRequestedForGeneration = 0L
+                }
+            } else {
+                promotedFgsGeneration = effectiveGen
+            }
+            stopRequested
+        }
+        if (shouldStopNow) {
+            demoteForeground()
+            performStopSelf(startId)
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun tryPromoteForeground(startId: Int, gen: Long): Boolean {
         val notifManager = createNotificationManager()
         val progress = WorkoutPostProcessingCoordinator.getCurrentProgress()
         val initialStage = progress?.stage
@@ -94,23 +143,36 @@ open class WorkoutPostProcessingService : Service() {
             initialCurrentStep,
             initialTotalSteps
         )
-        try {
+        return try {
             promoteForeground(
                 WorkoutPostProcessingNotificationManager.NOTIFICATION_ID_POST_PROCESSING,
                 initialNotification,
                 determineForegroundServiceType()
             )
+            true
         } catch (t: Throwable) {
             Log.w(TAG, "Unable to promote WorkoutPostProcessingService to foreground: ${t.message}")
-            performStopSelf()
-            return START_NOT_STICKY
+            synchronized(lifecycleLock) {
+                if (gen > 0L && pendingFgsGeneration == gen) {
+                    pendingFgsGeneration = 0L
+                }
+                if (activeInstance === this) {
+                    promotedFgsGeneration = 0L
+                }
+            }
+            performStopSelf(startId)
+            false
         }
+    }
 
-        if (!WorkoutPostProcessingCoordinator.hasActiveWork()) {
-            demoteForeground()
-            performStopSelf()
+    override fun onDestroy() {
+        synchronized(lifecycleLock) {
+            if (activeInstance === this) {
+                activeInstance = null
+                promotedFgsGeneration = 0L
+            }
         }
-        return START_NOT_STICKY
+        super.onDestroy()
     }
 
     /**
@@ -133,6 +195,11 @@ open class WorkoutPostProcessingService : Service() {
 
     private fun handleTimeout(startId: Int, fgsType: Int?) {
         Log.w(TAG, "shortService timeout reached (startId=$startId, fgsType=${fgsType ?: "shortService"}); demoting foreground cleanly")
+        synchronized(lifecycleLock) {
+            if (activeInstance === this || activeInstance == null) {
+                promotedFgsGeneration = 0L
+            }
+        }
         try {
             demoteForeground()
         } catch (t: Throwable) {
@@ -146,10 +213,18 @@ open class WorkoutPostProcessingService : Service() {
         const val ACTION_START = "com.atrainingtracker.trainingtracker.tracker.ACTION_START_POST_PROCESSING"
         const val ACTION_STOP = "com.atrainingtracker.trainingtracker.tracker.ACTION_STOP_POST_PROCESSING"
 
+        private val lifecycleLock = Any()
+        private var nextGeneration: Long = 0L
+        private var pendingFgsGeneration: Long = 0L
+        private var promotedFgsGeneration: Long = 0L
+        private var stopRequestedForGeneration: Long = 0L
+        private var activeInstance: WorkoutPostProcessingService? = null
+
         /**
          * Attempts to start [WorkoutPostProcessingService] as a foreground service, gracefully
          * returning `false` on `ForegroundServiceStartNotAllowedException` / `IllegalStateException`
          * so [WorkoutPostProcessingCoordinator] falls back to in-process execution (`REQ-TRK-091.3`).
+         * Coalesces redundant starts when already promoted or pending (`REQ-TRK-095.2`).
          */
         @JvmStatic
         fun startForPostProcessing(
@@ -164,33 +239,78 @@ open class WorkoutPostProcessingService : Service() {
             }
         ): Boolean {
             val appContext = context.applicationContext ?: context
-            return try {
-                val intent = intentFactory(appContext)
-                starter(appContext, intent)
-                true
-            } catch (e: Throwable) {
-                val isFgsStartNotAllowed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                    e is ForegroundServiceStartNotAllowedException
-                if (isFgsStartNotAllowed || e is IllegalStateException || e is SecurityException) {
-                    Log.w(TAG, "Foreground service start disallowed; falling back to in-process post-processing: ${e.message}")
-                    false
-                } else {
-                    Log.w(TAG, "Unexpected error starting WorkoutPostProcessingService; falling back in-process: ${e.message}")
-                    false
+            synchronized(lifecycleLock) {
+                if ((promotedFgsGeneration > 0L && activeInstance != null) || pendingFgsGeneration > 0L) {
+                    stopRequestedForGeneration = 0L
+                    return true
+                }
+                return try {
+                    val intent = intentFactory(appContext)
+                    starter(appContext, intent)
+                    pendingFgsGeneration = ++nextGeneration
+                    stopRequestedForGeneration = 0L
+                    true
+                } catch (e: Throwable) {
+                    val isFgsStartNotAllowed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        e is ForegroundServiceStartNotAllowedException
+                    if (isFgsStartNotAllowed || e is IllegalStateException || e is SecurityException) {
+                        Log.w(TAG, "Foreground service start disallowed; falling back to in-process post-processing: ${e.message}")
+                        false
+                    } else {
+                        Log.w(TAG, "Unexpected error starting WorkoutPostProcessingService; falling back in-process: ${e.message}")
+                        false
+                    }
                 }
             }
         }
 
         /**
          * Stops [WorkoutPostProcessingService] once the post-processing queue has drained.
+         * Defers shutdown while `startForegroundService()` has not yet executed `startForeground()`
+         * so `stopService()` never triggers `ForegroundServiceDidNotStartInTimeException` (`REQ-TRK-095.2`).
          */
         @JvmStatic
-        fun stopIfRunning(context: Context) {
+        @JvmOverloads
+        fun stopIfRunning(
+            context: Context,
+            intentFactory: (Context) -> Intent = { ctx ->
+                Intent(ctx, WorkoutPostProcessingService::class.java)
+            },
+            stopper: (Context, Intent) -> Unit = { ctx, intent ->
+                ctx.stopService(intent)
+            }
+        ) {
             val appContext = context.applicationContext ?: context
+            val shouldStopService = synchronized(lifecycleLock) {
+                if (pendingFgsGeneration > 0L) {
+                    stopRequestedForGeneration = pendingFgsGeneration
+                    false
+                } else if (promotedFgsGeneration > 0L) {
+                    promotedFgsGeneration = 0L
+                    stopRequestedForGeneration = 0L
+                    true
+                } else {
+                    false
+                }
+            }
+            if (!shouldStopService) {
+                return
+            }
             try {
-                appContext.stopService(Intent(appContext, WorkoutPostProcessingService::class.java))
+                stopper(appContext, intentFactory(appContext))
             } catch (t: Throwable) {
                 Log.w(TAG, "Non-fatal error stopping WorkoutPostProcessingService: ${t.message}")
+            }
+        }
+
+        @VisibleForTesting
+        internal fun resetLifecycleStateForTesting() {
+            synchronized(lifecycleLock) {
+                nextGeneration = 0L
+                pendingFgsGeneration = 0L
+                promotedFgsGeneration = 0L
+                stopRequestedForGeneration = 0L
+                activeInstance = null
             }
         }
     }

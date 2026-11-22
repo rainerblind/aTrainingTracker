@@ -183,6 +183,92 @@ class TestBaselineManager(unittest.TestCase):
             self.assertNotIn("feature/ATT-merged", branches_after)
             self.assertIn("feature/ATT-unmerged", branches_after)
 
+    def test_tst_pro_138_1_latest_fail_sweep_surfaces_open_release_deviation(self):
+        """TST-PRO-138.1: Latest FAIL emulator sweep surfaces as an Open Release Deviation with failed/total counts."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _init_temp_git_repo(tmpdir)
+            ok_tag, msg_tag = create_annotated_tag("sprint/2026-99.2", repo_root=tmpdir)
+            self.assertTrue(ok_tag, msg_tag)
+
+            sweep_dir = os.path.join(tmpdir, "docs", "engineering", "emulator_sweeps")
+            os.makedirs(os.path.join(sweep_dir, "img"), exist_ok=True)
+            with open(os.path.join(sweep_dir, "README.md"), "w", encoding="utf-8") as f:
+                f.write("# Emulator Sweeps\n**Verdict**: `PASS`\n")
+            with open(os.path.join(sweep_dir, "2026-11-21_sweep.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Multi-OS & 9-Language Emulator UI Verification Sweep (2026-11-21)\n\n"
+                    "**Ticket / Requirement**: `ATT-8222` / `REQ-PRO-135` | **Verdict**: `FAIL` | **Base SHA**: `HEAD`\n\n"
+                    "| `Pixel_5_Android_12` | `Android_12` | `en` | `emulator-5554` | `FAIL` | 0 | 0 | `N/A` |\n"
+                    "| `Pixel_8_Android_15` | `Android_15` | `de` | `emulator-5554` | `PASS` | 0 | 0 | `a.png` |\n"
+                    "| `Pixel_7_Android_36` | `Android_36` | `fr` | `emulator-5554` | `FAIL` | 0 | 0 | `N/A` |\n"
+                )
+
+            ok_m, out_file, msg_m = generate_baseline_manifest(
+                "sprint/2026-99.2",
+                target_ref="sprint/2026-99.2",
+                governance_status="PASS (exit 0)",
+                repo_root=tmpdir,
+            )
+            self.assertTrue(ok_m, msg_m)
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("- **Open Release Deviations**: 1", content)
+            self.assertIn("docs/engineering/emulator_sweeps/2026-11-21_sweep.md", content)
+            self.assertIn("verdict is `FAIL` (2/3 runs failed)", content)
+
+    def test_tst_pro_138_1_newer_pass_sweep_supersedes_older_fail_and_ignores_non_sweep_files(self):
+        """TST-PRO-138.1: Newer PASS sweep supersedes older FAIL sweep yielding 0 deviations; non-sweep files ignored."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _init_temp_git_repo(tmpdir)
+            create_annotated_tag("sprint/2026-99.3", repo_root=tmpdir)
+
+            sweep_dir = os.path.join(tmpdir, "docs", "engineering", "emulator_sweeps")
+            os.makedirs(sweep_dir, exist_ok=True)
+            with open(os.path.join(sweep_dir, "2026-11-21_sweep.md"), "w", encoding="utf-8") as f:
+                f.write("**Verdict**: `FAIL`\n| `a` | `FAIL` |\n")
+            with open(os.path.join(sweep_dir, "2026-11-22_sweep.md"), "w", encoding="utf-8") as f:
+                f.write("**Verdict**: `PASS`\n| `a` | `PASS` |\n")
+            # Non-matching filename with FAIL verdict must be ignored (Guardrail #6)
+            with open(os.path.join(sweep_dir, "9999-99-99_notes.md"), "w", encoding="utf-8") as f:
+                f.write("**Verdict**: `FAIL`\n")
+
+            ok_m, out_file, msg_m = generate_baseline_manifest(
+                "sprint/2026-99.3",
+                target_ref="sprint/2026-99.3",
+                governance_status="PASS (exit 0)",
+                repo_root=tmpdir,
+            )
+            self.assertTrue(ok_m, msg_m)
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("- **Open Release Deviations**: 0", content)
+
+    def test_tst_pro_138_1_malformed_missing_verdict_sweep_fails_closed(self):
+        """TST-PRO-138.1: Latest sweep report missing Verdict fails closed as an Open Release Deviation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            _init_temp_git_repo(tmpdir)
+            create_annotated_tag("sprint/2026-99.4", repo_root=tmpdir)
+
+            sweep_dir = os.path.join(tmpdir, "docs", "engineering", "emulator_sweeps")
+            os.makedirs(sweep_dir, exist_ok=True)
+            with open(os.path.join(sweep_dir, "2026-11-22_sweep.md"), "w", encoding="utf-8") as f:
+                f.write("# Corrupted sweep report without verdict line\n")
+
+            ok_m, out_file, msg_m = generate_baseline_manifest(
+                "sprint/2026-99.4",
+                target_ref="sprint/2026-99.4",
+                governance_status="PASS (exit 0)",
+                repo_root=tmpdir,
+            )
+            self.assertTrue(ok_m, msg_m)
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("- **Open Release Deviations**: 1", content)
+            self.assertIn("verdict is `UNKNOWN`", content)
+
 
 if __name__ == "__main__":
     unittest.main()

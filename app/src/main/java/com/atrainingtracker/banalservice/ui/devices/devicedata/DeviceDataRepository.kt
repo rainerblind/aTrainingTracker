@@ -863,7 +863,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                     DevicesDatabaseManager.DevicesDbHelper.ANT_DEVICE_NUMBER,
                     DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS
                 ),
-                "${DevicesDatabaseManager.DevicesDbHelper.PROTOCOL}=?",
+                "${DevicesDatabaseManager.DevicesDbHelper.PROTOCOL}=? AND ${DevicesDatabaseManager.DevicesDbHelper.PAIRED}=1",
                 arrayOf(protocol.name),
                 null, null, null
             ).use { cursor ->

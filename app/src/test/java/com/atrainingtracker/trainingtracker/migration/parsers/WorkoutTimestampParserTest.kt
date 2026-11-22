@@ -88,4 +88,31 @@ class WorkoutTimestampParserTest {
             pool.shutdownNow()
         }
     }
+
+    @Test
+    fun parseIsoToEpochMillis_preservesSubSecondPrecisionOffsetsAndDstGaps_TST_MIG_058_3() {
+        val originalTz = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            val t0 = WorkoutTimestampParser.parseIsoToEpochMillis("2026-10-15T14:00:00.000Z")!!
+            val t500 = WorkoutTimestampParser.parseIsoToEpochMillis("2026-10-15T14:00:00.500Z")!!
+            val t1000 = WorkoutTimestampParser.parseIsoToEpochMillis("2026-10-15T16:00:01.000+02:00")!!
+            assertEquals(500L, t500 - t0)
+            assertEquals(1000L, t1000 - t0)
+
+            val localFrac = WorkoutTimestampParser.parseIsoToEpochMillis("2026-10-15T14:00:00.250")!!
+            assertEquals(250L, localFrac - t0)
+
+            val dbSec = WorkoutTimestampParser.parseIsoToEpochMillis("2026-10-15 14:00:00")!!
+            assertEquals(t0, dbSec)
+
+            val dstExpected = java.time.Instant.parse("2026-03-29T02:30:00Z").toEpochMilli()
+            assertEquals(dstExpected, WorkoutTimestampParser.parseIsoToEpochMillis("2026-03-29T02:30:00Z"))
+
+            assertNull(WorkoutTimestampParser.parseIsoToEpochMillis(""))
+            assertNull(WorkoutTimestampParser.parseIsoToEpochMillis("not-a-timestamp"))
+        } finally {
+            TimeZone.setDefault(originalTz)
+        }
+    }
 }

@@ -833,7 +833,7 @@ class WorkoutDataMapper(
         val isMinRelevant = when (sensorType) {
             SensorType.SPEED_mps, SensorType.PACE_spm, SensorType.CADENCE, SensorType.POWER,
             SensorType.VERTICAL_OSCILLATION, SensorType.GROUND_CONTACT_TIME -> {
-                min != null && min != "0" && min != "0.0"&& min != "0,0" && min != "0:00" && min != "~~"
+                rawMinVal != null && rawMinVal.isFinite() && rawMinVal > 0.0 && min != null && min != "~~"
             }
             else -> true
         }
@@ -850,7 +850,8 @@ class WorkoutDataMapper(
             isMinRelevant = isMinRelevant,
             boldMin = sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE,
             boldAvg = sensorType == SensorType.HR || sensorType == SensorType.SPEED_mps || sensorType == SensorType.PACE_spm || sensorType == SensorType.CADENCE || sensorType == SensorType.POWER || sensorType == SensorType.VERTICAL_OSCILLATION || sensorType == SensorType.GROUND_CONTACT_TIME,
-            boldMax = sensorType == SensorType.HR || sensorType == SensorType.POWER || sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE
+            boldMax = sensorType == SensorType.HR || sensorType == SensorType.POWER || sensorType == SensorType.ALTITUDE || sensorType == SensorType.TEMPERATURE,
+            sensorType = sensorType
         )
 
         return if (data.hasAnyData()) data else null
@@ -871,7 +872,7 @@ class WorkoutDataMapper(
         val paceAtAvgSpeed = if (speedAvg != null && speedAvg > 0.001) paceType.myFormatter.format(1.0 / speedAvg) else null
         val paceAtMinSpeed = if (speedMin != null && speedMin > 0.001) paceType.myFormatter.format(1.0 / speedMin) else null
 
-        val isMinRelevant = paceAtMaxSpeed != null && paceAtMaxSpeed != "0:00" && paceAtMaxSpeed != "~~"
+        val isMinRelevant = speedMax != null && speedMax.isFinite() && speedMax > 0.001 && paceAtMaxSpeed != null && paceAtMaxSpeed != "~~"
 
         val data = ExtremaDataRow(
             sensorLabel = context.getString(paceType.shortNameId),
@@ -885,7 +886,8 @@ class WorkoutDataMapper(
             isMinRelevant = isMinRelevant,
             boldMin = false,
             boldAvg = true,
-            boldMax = false
+            boldMax = false,
+            sensorType = paceType
         )
 
         return if (data.hasAnyData()) data else null

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:57:20.968Z" hostname="rainer-HP-EliteBook-850-G5" time="45.033">
+  <properties/>
+  <testcase name="testExtractTelemetryPoints_populatesHeartRateAndPower_withZeroDistance" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.292"/>
+  <testcase name="testDiscoverMultiSourceOverlayColumns_handlesAltitudeSpeedSlopeUnderscoreAndNestedParens" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.281"/>
+  <testcase name="testExtractTelemetryPoints_whenNoTableOrBaseName_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.301"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_carriageTimelineGuardsMissingColumnAllUnknownAndCarriageOnlyIndoor" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.387"/>
+  <testcase name="testLoadTracklessWorkoutTelemetry_extractsSlopeAndNegativeSlopeOverlays" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.335"/>
+  <testcase name="testLoadTracklessWorkoutTelemetry_extractsCadencePreDecimationMeansAndDottedColumns" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="3.019"/>
+  <testcase name="testDiscoverMultiSourceOverlayColumns_enforcesStrictTwoNamedSourcesAndDottedNames" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.387"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_gpsExtractsCadenceAndMultiSensorOverlays" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.331"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_mapsNullAltitudeToNullRatherThanZero" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.42"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_singlePassConsolidation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.293"/>
+  <testcase name="testExtractTelemetryPoints_ingestsPointsWithOnlyAltitude_whenHrPowerSpeedAbsent" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.265"/>
+  <testcase name="testExtractTelemetryPoints_whenNoGpsCoordinates_returnsValidTimeDomainPoints" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.258"/>
+  <testcase name="testExtractTelemetryPoints_populatesAltitude_whenPresentInSamplesDb" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.302"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_retainsNegativeSlopeAndCoastalAltitudeInOverlaysAndTrackless" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.479"/>
+  <testcase name="testGetWorkoutTrackPoints_usesExplicitColumnProjection" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.22"/>
+  <testcase name="testExtractTelemetryPoints_decimatesWhenOver800Points" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.473"/>
+  <testcase name="testLoadWorkoutDetailTelemetry_coalescesPreDecimationCarriageTimelineWithZeroLocationRows" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.581"/>
+  <testcase name="testResolveTrackColumns_supportsAttFusedLocalizedAliasesAndIgnoresNetwork" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.206"/>
+  <testcase name="testExtractTelemetryPoints_retainsSeaLevelZeroAltitude_withoutHrPowerSpeed" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTelemetryTest" time="2.203"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

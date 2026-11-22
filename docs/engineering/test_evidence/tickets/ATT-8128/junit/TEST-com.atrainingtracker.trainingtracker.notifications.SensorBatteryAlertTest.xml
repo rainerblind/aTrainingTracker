@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:50:56.656Z" hostname="rainer-HP-EliteBook-850-G5" time="0.026">
+  <properties/>
+  <testcase name="singleCriticalSensor_formatsMessageCorrectly" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.015"/>
+  <testcase name="workoutStart_filtersOnlyPairedCriticalSensors" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.0"/>
+  <testcase name="inAppSnackbarAlert_criticalAlertPreemptsExistingSnackbar" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.005"/>
+  <testcase name="inRideBatteryMonitoring_criticalEscalationAndDeduplication" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.001"/>
+  <testcase name="evaluateCriticalSensors_filtersOnlyActiveSensorsWithCriticalBattery" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.0"/>
+  <testcase name="evaluateCriticalSensors_whenAllActiveSensorsHaveNormalBattery_returnsEmpty" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.0"/>
+  <testcase name="multipleCriticalSensors_formatsMessageCorrectly" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.004"/>
+  <testcase name="evaluateCriticalSensors_thresholdBoundaryCheck" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.0"/>
+  <testcase name="inRideBatteryDrop_recordsSessionDeduplicationAndSuppressesDuplicates" classname="com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

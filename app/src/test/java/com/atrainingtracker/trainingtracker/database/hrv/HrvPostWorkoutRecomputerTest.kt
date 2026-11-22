@@ -764,4 +764,34 @@ class HrvPostWorkoutRecomputerTest {
             kotlin.math.abs(liveDfaAt180!! - centeredDfaAt120!!) <= 0.05
         )
     }
+
+    /**
+     * TST-MIG-058.2: Verifies static java.time UTC parsing across all supported formats,
+     * trimming, fractional seconds, ISO offsets, invalid inputs, and DST spring-forward immunity.
+     */
+    @Test
+    fun parseTimestampMs_supportsAllUtcFormatsTrimFractionalAndDstWithoutShift_TST_MIG_058_2() {
+        val originalTz = java.util.TimeZone.getDefault()
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            val expectedBase = java.time.Instant.parse("2026-11-10T12:00:00Z").toEpochMilli()
+            assertEquals(expectedBase, HrvPostWorkoutRecomputer.parseTimestampMs("2026-11-10 12:00:00"))
+            assertEquals(expectedBase + 250L, HrvPostWorkoutRecomputer.parseTimestampMs("  2026-11-10 12:00:00.250  "))
+            assertEquals(expectedBase, HrvPostWorkoutRecomputer.parseTimestampMs("2026-11-10T12:00:00"))
+            assertEquals(expectedBase, HrvPostWorkoutRecomputer.parseTimestampMs("2026-11-10T12:00:00Z"))
+            assertEquals(expectedBase + 500L, HrvPostWorkoutRecomputer.parseTimestampMs("2026-11-10T14:00:00.500+02:00"))
+            assertEquals(expectedBase, HrvPostWorkoutRecomputer.parseTimestampMs("2026-11-10_120000"))
+
+            // DST spring-forward wall time in Europe/Berlin must remain exact UTC with zero +1h shift
+            val dstExpected = java.time.Instant.parse("2026-03-29T02:30:00Z").toEpochMilli()
+            assertEquals(dstExpected, HrvPostWorkoutRecomputer.parseTimestampMs("2026-03-29 02:30:00"))
+
+            assertNull(HrvPostWorkoutRecomputer.parseTimestampMs(null))
+            assertNull(HrvPostWorkoutRecomputer.parseTimestampMs(""))
+            assertNull(HrvPostWorkoutRecomputer.parseTimestampMs("   "))
+            assertNull(HrvPostWorkoutRecomputer.parseTimestampMs("not-a-timestamp"))
+        } finally {
+            java.util.TimeZone.setDefault(originalTz)
+        }
+    }
 }

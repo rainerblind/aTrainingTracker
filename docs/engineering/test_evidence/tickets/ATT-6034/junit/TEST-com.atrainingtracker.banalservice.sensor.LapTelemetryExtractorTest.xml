@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.LapTelemetryExtractorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:49:00.710Z" hostname="rainer-HP-EliteBook-850-G5" time="0.073">
+  <properties/>
+  <testcase name="extract_standardIntegerAndDoubleValues_returnsExpectedSnapshotAndSpeed" classname="com.atrainingtracker.banalservice.sensor.LapTelemetryExtractorTest" time="0.06"/>
+  <testcase name="extract_mixedNumberSubtypes_longFloatDouble_convertsWithoutClassCastException" classname="com.atrainingtracker.banalservice.sensor.LapTelemetryExtractorTest" time="0.0"/>
+  <testcase name="extract_nullSensorsAndNullValues_preservesBanalDisplayFallbacks" classname="com.atrainingtracker.banalservice.sensor.LapTelemetryExtractorTest" time="0.001"/>
+  <testcase name="extract_zeroOrNegativeLapTime_yieldsZeroSpeed" classname="com.atrainingtracker.banalservice.sensor.LapTelemetryExtractorTest" time="0.0"/>
+  <testcase name="extract_nonFiniteAndNonNumericValues_guardsAgainstInfinityAndClassCast" classname="com.atrainingtracker.banalservice.sensor.LapTelemetryExtractorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

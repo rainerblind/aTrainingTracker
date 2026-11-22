@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutHealthConnectSyncTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:58:08.125Z" hostname="rainer-HP-EliteBook-850-G5" time="2.562">
+  <properties/>
+  <testcase name="testWorkoutRepository_preservesSyncToHealthConnectOnSave" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutHealthConnectSyncTest" time="1.903"/>
+  <testcase name="testExportManager_honorsPerWorkoutSyncOptOutAndForceSync" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutHealthConnectSyncTest" time="0.659"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

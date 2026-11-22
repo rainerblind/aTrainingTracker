@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:40:28.840Z" hostname="rainer-HP-EliteBook-850-G5" time="24.334">
+  <properties/>
+  <testcase name="testUnregisterSensors_cleansUpRrIntervalSensor_andReconnectCreatesNewInstance" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.849"/>
+  <testcase name="testParseHeartRateMeasurement_lostContactOrZeroWithRrFlagClearsRrAndDoesNotDispatchRrBeats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.88"/>
+  <testcase name="testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.804"/>
+  <testcase name="testUint16HrAndEnergyExpendedOffset" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.813"/>
+  <testcase name="testSilentHrWatchdog_cccdRetryPauseDeferralDisconnectAndPolarShutDown_TST_CON_054_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="2.731"/>
+  <testcase name="testMultiSecondAndSubMinimumRrIntervals_atLowDriftFlaggedAsArtifactGap" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.86"/>
+  <testcase name="testConfigureServices_enqueuesDisBeforeHrCccdAndIgnoresNonPolarCardioSense" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.836"/>
+  <testcase name="testOpticalHrCompatibilityAndTruncatedPackets" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.811"/>
+  <testcase name="testContinuousDoublePrecisionDriftBounding_3600Beats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="8.297"/>
+  <testcase name="testOnDescriptorWriteCompleted_ignoresStaleGattWithoutBurningRetryFlag_TST_CON_054_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.814"/>
+  <testcase name="testDriftReAnchor_clampsBackwardBundleTimestampsMonotonically" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.794"/>
+  <testcase name="testParseHeartRateMeasurement_zeroAndLostContactPreserveWatchdogClearAfterTenSecondsAndReevaluatePrimaryHr" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.831"/>
+  <testcase name="testMultiRrPacketDecoding_bundledBeats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.844"/>
+  <testcase name="testCumulativeTimestampsAndDriftGuard" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.819"/>
+  <testcase name="testConfigureServicesAndDisUpdate_hydratesPolarMetadataWithoutNonPolarRegression" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.846"/>
+  <testcase name="testInitialBundledBeatsBackwardAnchoring" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.78"/>
+  <testcase name="testPerDeviceHrv_parallelBtleDevicesComputeDistinctValuesAndClearOnDisconnectAndReset_TST_HRV_050_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.932"/>
+  <testcase name="testReconnectReRegistersRrIntervalSensor" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.789"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -649,31 +649,18 @@ public class BANALService
                     .setPackage(getPackageName()));
         }
 
-        SensorData sensorData;
+        com.atrainingtracker.banalservice.sensor.LapTelemetrySnapshot lapSnapshot =
+                com.atrainingtracker.banalservice.sensor.LapTelemetryExtractor.extract(
+                        getSensorData(SensorType.LAP_NR),
+                        getSensorData(SensorType.TIME_LAP),
+                        getSensorData(SensorType.DISTANCE_m_LAP));
 
-        int prevLapNr = 0;
-        sensorData = getSensorData(SensorType.LAP_NR);
-        if (sensorData != null && sensorData.getValue() != null) {
-            prevLapNr = (Integer) sensorData.getValue();
-        }
-
-        int lapTime_s = 0;
-        String lapTime = "??:??:??";
-        sensorData = getSensorData(SensorType.TIME_LAP);
-        if (sensorData != null && sensorData.getValue() != null) {
-            lapTime_s = (Integer) sensorData.getValue();
-            lapTime = sensorData.getStringValue();
-        }
-
-        double lapDistance = 0.0;
-        String lapDistance_String = "0";
-        sensorData = getSensorData(SensorType.DISTANCE_m_LAP);
-        if (sensorData != null && sensorData.getValue() != null) {
-            lapDistance = (Double) sensorData.getValue();
-            lapDistance_String = sensorData.getStringValue();
-        }
-
-        double lapSpeed = lapTime_s > 0 ? (lapDistance / lapTime_s) : 0.0;
+        int prevLapNr = lapSnapshot.lapNr;
+        int lapTime_s = lapSnapshot.lapTimeSeconds;
+        String lapTime = lapSnapshot.lapTimeDisplay;
+        double lapDistance = lapSnapshot.lapDistanceMeters;
+        String lapDistance_String = lapSnapshot.lapDistanceDisplay;
+        double lapSpeed = lapSnapshot.lapSpeedMps;
         String lapSpeedString = SensorType.SPEED_mps.getMyFormatter().format(lapSpeed);
 
         DeviceManager deviceManager = cDeviceManager;

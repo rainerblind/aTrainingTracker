@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.55  
+**Version**: 1.0.57  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 103
+**Total Tests**: 104
 
 **Total Tests**: 100
 
@@ -1752,6 +1752,22 @@
 
 ---
 
+### TST-PRO-138: **Baseline Manifest Emulator Sweep Deviation Surfacing Verification Suite (`ATT-9498`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-PRO-138`
+- **Component**: `tools/baseline_manager.py`, `tools/test_baseline_manager.py`
+- **Jira**: `ATT-9498`
+- **Test Description**:
+  1. *Latest Sweep `FAIL` / Fail-Closed / `PASS`-Supersede Manifest Unit Tests (`TST-PRO-138.1`, `tools/test_baseline_manager.py`)*:
+     • Verified via `TestBaselineManager#test_tst_pro_138_1_latest_fail_sweep_surfaces_open_release_deviation`: latest `2026-11-21_sweep.md` (`**Verdict**: \`FAIL\``, `8/12` failed rows) yields `- **Open Release Deviations**: 1` citing the sweep path, `FAIL`, and `8/12`.
+     • Verified via `TestBaselineManager#test_tst_pro_138_1_malformed_missing_verdict_sweep_fails_closed`: malformed latest sweep lacking `**Verdict**:` fails closed as an `Open Release Deviation`.
+     • Verified via `TestBaselineManager#test_tst_pro_138_1_newer_pass_sweep_supersedes_older_fail_and_ignores_non_sweep_files`: newer `2026-11-22_sweep.md` (`PASS`) supersedes older `FAIL` yielding `0` deviations while non-matching `README.md` / `img/` entries are ignored.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1812,3 +1828,5 @@
 | `1.0.51` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `TST-STB-026` to `[Implemented]` in Stage 4 (`ANTBikePowerDeviceTest`: `testANTBikePower_nullCalculatedWheelSpeed_returnsWithoutCreatingSensorsOrMutatingDb`, `testANTBikePower_initialZeroWheelSpeed_setsZeroSpeedAndNullPace`, `testANTBikePower_positiveWheelSpeed_computesMetersPerSecondAndFinitePace`, `testANTBikePower_zeroWheelSpeedAfterMotion_decaysPaceToNullAtThreshold`). |
 | `1.0.52` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `TST-STB-026` to `[Verified]` in Stage 5 (`Rule 7.5` doc-only fast path reusing Gate 4 `ATT-9566` @ `8d76a1f4`: `21/21` targeted Gradle tests PASS [`ANTBikePowerDeviceTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`], `4/4` linters PASS; `ATT-6176_walkthrough.md`). |
 | `1.0.53` | 2026-11-22 | Lane 2 Author (`ATT-9567`, `--as agent1`) | `ATT-9567` | Added `[Verified]` `TST-PRO-136` (`TST-PRO-136.1`–`.3`: Weekly Full Test Suite 4th pillar, overdue-first Jira deduplication, and unified `days_threshold=6` unit tests) and aligned `TST-PRO-095`, `TST-PRO-096`, and `TST-PRO-135.4` to the 6-day cadence. |
+| `1.0.56` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `[Planned]` `TST-PRO-138` (`TST-PRO-138.1`, strictly symmetric `REQ-PRO-138`, `N/A - Python tooling only`) verifying `tools/baseline_manager.py` surfaces latest `FAIL`/unknown emulator sweeps as `Open Release Deviations` and clears them on newer `PASS` sweeps. |
+| `1.0.57` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `TST-PRO-138` (`TST-PRO-138.1`) to `[Verified]` with verbatim `tools/test_baseline_manager.py` citations (`7/7` PASS, `47/47` total Python tooling tests PASS, governance `exit 0`). |

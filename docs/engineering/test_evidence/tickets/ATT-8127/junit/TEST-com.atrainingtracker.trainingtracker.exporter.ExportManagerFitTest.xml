@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T16:49:48.886Z" hostname="rainer-HP-EliteBook-850-G5" time="0.3">
+  <properties/>
+  <testcase name="testFileFormat_healthConnectRegisteredInOnlineCommunities" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.033"/>
+  <testcase name="testExportManager_getExporterHealthConnectFallback" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.137"/>
+  <testcase name="testExportType_communityIncludesHealthConnect" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.022"/>
+  <testcase name="testExportType_dropboxIncludesFit" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.018"/>
+  <testcase name="testExportManager_getExporterReturnsFitFileWriter" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.03"/>
+  <testcase name="testTrainingApplication_uploadToCommunityRoutesHealthConnect" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.025"/>
+  <testcase name="testFileFormat_fitRegisteredInStandardFormats" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.013"/>
+  <testcase name="testTrainingApplication_exportToFitPreference" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" time="0.021"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

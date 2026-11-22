@@ -304,4 +304,122 @@ class GpxWorkoutParserTest {
             pool.shutdownNow()
         }
     }
+
+    /**
+     * TST-MIG-058.3: Verifies GpxWorkoutParser tracks true peak maxSpeed from explicit <speed>
+     * tags while rejecting implausible outliers (> 100 m/s or negative).
+     */
+    @Test
+    fun testParseGpx_maxSpeedUsesPeakExplicitSpeedAndIgnoresOutliers_TST_MIG_058_3() {
+        val gpx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk>
+                <name>Speed Peak Ride</name>
+                <type>Cycling</type>
+                <trkseg>
+                  <trkpt lat="48.100" lon="11.500"><time>2026-10-15T14:00:00Z</time><speed>3.0</speed></trkpt>
+                  <trkpt lat="48.101" lon="11.501"><time>2026-10-15T14:01:00Z</time><speed>12.5</speed></trkpt>
+                  <trkpt lat="48.102" lon="11.502"><time>2026-10-15T14:02:00Z</time><speed>4.5</speed></trkpt>
+                  <trkpt lat="48.103" lon="11.503"><time>2026-10-15T14:03:00Z</time><speed>150.0</speed></trkpt>
+                  <trkpt lat="48.104" lon="11.504"><time>2026-10-15T14:04:00Z</time><speed>-2.0</speed></trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+        """.trimIndent()
+
+        val workout = GpxWorkoutParser.parse(gpx.byteInputStream(), mockContext).getOrThrow()
+        assertEquals(1, workout.parsedLaps.size)
+        val lap = workout.parsedLaps[0]
+        // Average speed would be ~2000m / 240s = 8.33 m/s; peak valid <speed> is 12.5 m/s
+        assertEquals(12.5, lap.maxSpeed!!, 0.001)
+    }
+
+    /**
+     * TST-MIG-058.3: Verifies GpxWorkoutParser falls back to peak intra-lap GPS segment speed
+     * when <speed> is absent, guarding against dt == 0, negative dt, > 100 m/s spikes, and cross-lap gaps.
+     */
+    @Test
+    fun testParseGpx_maxSpeedFallsBackToPeakIntraLapSegmentSpeedAndGuardsDt_TST_MIG_058_3() {
+        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
+            val startLat = firstArg<Double>()
+            val endLat = thirdArg<Double>()
+            val results = args[4] as FloatArray
+            results[0] = when {
+                startLat == 48.100 && endLat == 48.101 -> 100f  // seg 1: 100m / 20s = 5.0 m/s
+                startLat == 48.101 && endLat == 48.102 -> 200f  // seg 2: 200m / 20s = 10.0 m/s (true peak!)
+                startLat == 48.102 && endLat == 48.103 -> 50f   // duplicate timestamp dt == 0s -> ignored
+                startLat == 48.103 && endLat == 48.104 -> 50f   // backward timestamp dt < 0s -> ignored
+                startLat == 48.104 && endLat == 48.105 -> 5000f // cumulative distance step from skipped backward pt
+                startLat == 48.103 && endLat == 48.105 -> 5000f // GPS teleport spike from prevLap (48.103): 5000m / 10s = 500 m/s > 100 -> ignored
+                startLat == 48.105 && endLat == 48.200 -> 900f  // cross-lap jump into lap 2 -> must NOT enter lap 2 maxSpeed
+                startLat == 48.200 && endLat == 48.201 -> 60f   // lap 2 intra-lap seg: 60m / 10s = 6.0 m/s
+                else -> 0f
+            }
+        }
+
+        val gpx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk>
+                <name>GPS Segment Peak</name>
+                <type>Cycling</type>
+                <trkseg>
+                  <trkpt lat="48.100" lon="11.500"><time>2026-10-15T14:00:00Z</time></trkpt>
+                  <trkpt lat="48.101" lon="11.501"><time>2026-10-15T14:00:20Z</time></trkpt>
+                  <trkpt lat="48.102" lon="11.502"><time>2026-10-15T14:00:40Z</time></trkpt>
+                  <trkpt lat="48.103" lon="11.503"><time>2026-10-15T14:00:40Z</time></trkpt>
+                  <trkpt lat="48.104" lon="11.504"><time>2026-10-15T14:00:35Z</time></trkpt>
+                  <trkpt lat="48.105" lon="11.505"><time>2026-10-15T14:00:50Z</time></trkpt>
+                </trkseg>
+                <trkseg>
+                  <trkpt lat="48.200" lon="11.600"><time>2026-10-15T14:01:00Z</time></trkpt>
+                  <trkpt lat="48.201" lon="11.601"><time>2026-10-15T14:01:10Z</time></trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+        """.trimIndent()
+
+        val workout = GpxWorkoutParser.parse(gpx.byteInputStream(), mockContext).getOrThrow()
+        assertEquals(2, workout.parsedLaps.size)
+        assertEquals(10.0, workout.parsedLaps[0].maxSpeed!!, 0.001)
+        assertEquals(6.0, workout.parsedLaps[1].maxSpeed!!, 0.001)
+    }
+
+    /**
+     * TST-MIG-058.3: Verifies >1 Hz sub-second GPX trackpoints (2 Hz .000Z / .500Z / 1.000Z)
+     * preserve millisecond dtMs and compute exact peak maxSpeed without 1-second truncation.
+     */
+    @Test
+    fun testParseGpx_subSecondHighFrequencyTrackpointsComputeExactMaxSpeed_TST_MIG_058_3() {
+        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
+            val startLat = firstArg<Double>()
+            val endLat = thirdArg<Double>()
+            val results = args[4] as FloatArray
+            results[0] = when {
+                startLat == 48.100 && endLat == 48.101 -> 5.0f  // 5m in 0.5s = 10.0 m/s
+                startLat == 48.101 && endLat == 48.102 -> 2.5f  // 2.5m in 0.5s = 5.0 m/s
+                else -> 0f
+            }
+        }
+
+        val gpx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1" creator="Test" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk>
+                <name>2Hz Sub-Second Ride</name>
+                <type>Cycling</type>
+                <trkseg>
+                  <trkpt lat="48.100" lon="11.500"><time>2026-10-15T14:00:00.000Z</time></trkpt>
+                  <trkpt lat="48.101" lon="11.501"><time>2026-10-15T14:00:00.500Z</time></trkpt>
+                  <trkpt lat="48.102" lon="11.502"><time>2026-10-15T14:00:01.000Z</time></trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+        """.trimIndent()
+
+        val workout = GpxWorkoutParser.parse(gpx.byteInputStream(), mockContext).getOrThrow()
+        assertEquals(1, workout.parsedLaps.size)
+        assertEquals(10.0, workout.parsedLaps[0].maxSpeed!!, 0.001)
+    }
 }

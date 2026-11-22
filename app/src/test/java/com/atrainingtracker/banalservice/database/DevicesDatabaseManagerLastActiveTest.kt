@@ -22,6 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -32,11 +33,13 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -45,9 +48,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Unit tests verifying [LastActiveDateFormatter] ThreadLocal caching, locale/timezone invalidation,
- * concurrent formatting safety, downstream `DateFormat.getDateTimeInstance().parse(...)` parity,
- * and [DevicesDatabaseManager.setLastActive] persistence (REQ-STB-021.4, TST-STB-021.4).
+ * Unit tests verifying [LastActiveDateFormatter] ThreadLocal UTC ISO-8601 formatting,
+ * cross-locale parse immunity, legacy `DateFormat.getDateTimeInstance()` backward compatibility,
+ * locale/timezone cache invalidation, concurrency safety, and [DevicesDatabaseManager.setLastActive]
+ * persistence (REQ-DAT-048.3 / TST-DAT-044.3, refining REQ-STB-021.4 / TST-STB-021.4).
  */
 class DevicesDatabaseManagerLastActiveTest {
 
@@ -77,6 +81,10 @@ class DevicesDatabaseManagerLastActiveTest {
         Locale.setDefault(Locale.US)
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
 
+        val utcFirst = LastActiveDateFormatter.currentUtcFormat()
+        val utcSecond = LastActiveDateFormatter.currentUtcFormat()
+        assertSame("Same thread must reuse cached UTC ISO SimpleDateFormat", utcFirst, utcSecond)
+
         val first = LastActiveDateFormatter.currentFormat()
         val second = LastActiveDateFormatter.currentFormat()
         assertSame("Same thread/locale/timezone must reuse cached DateFormat instance", first, second)
@@ -101,21 +109,43 @@ class DevicesDatabaseManagerLastActiveTest {
     }
 
     @Test
-    fun formatEpochMillis_matchesDateFormatGetDateTimeInstanceParsingParity() {
-        val sampleMillis = 1_763_528_400_000L // whole second timestamp
+    fun formatEpochMillis_persistsUtcIso8601ParseableAcrossLocalesAndSupportsLegacyFormats_TST_DAT_044_3() {
+        val sampleMillis = 1_763_528_400_000L // whole second timestamp (2025-11-19T05:00:00Z)
+        val expectedUtc = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date(sampleMillis))
+
+        // Write under German locale / Berlin TZ
+        Locale.setDefault(Locale.GERMANY)
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        val formattedDe = LastActiveDateFormatter.formatEpochMillis(sampleMillis)
+        assertEquals("UTC ISO-8601 output must be locale-independent", expectedUtc, formattedDe)
+
+        // Switch to US locale / New York TZ — canonical UTC string must still parse identically
+        Locale.setDefault(Locale.US)
+        TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
+        assertEquals(sampleMillis, LastActiveDateFormatter.parseToEpochMillis(formattedDe))
+        assertEquals(sampleMillis, DeviceSortOrder.parseLastSeenTimestamp(formattedDe))
+
+        // Legacy locale DateFormat rows remain backward-compatible under current locale
         for (locale in listOf(Locale.US, Locale.GERMANY, Locale.FRANCE)) {
             Locale.setDefault(locale)
             TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
-
-            val formatted = LastActiveDateFormatter.formatEpochMillis(sampleMillis)
-            val expected = DateFormat.getDateTimeInstance().format(Date(sampleMillis))
-            assertEquals("Formatted timestamp must match DateFormat.getDateTimeInstance() for $locale", expected, formatted)
-
-            // Exact parser used by DeviceStatusRow & DeviceSortOrder
-            val parsed = DateFormat.getDateTimeInstance().parse(formatted)
-            assertNotNull("Downstream parser must accept formatted string for $locale", parsed)
-            assertEquals(sampleMillis, parsed!!.time)
+            val legacyFormatted = DateFormat.getDateTimeInstance().format(Date(sampleMillis))
+            assertEquals(
+                "Legacy DateFormat string must remain parseable for $locale",
+                sampleMillis,
+                LastActiveDateFormatter.parseToEpochMillis(legacyFormatted)
+            )
         }
+
+        // Legacy DB ISO formats remain supported and garbage returns null
+        assertNotNull(LastActiveDateFormatter.parseToEpochMillis("2026-11-14 10:30:00"))
+        assertNotNull(LastActiveDateFormatter.parseToEpochMillis("2026-11-14T10:30:00"))
+        assertNotNull(LastActiveDateFormatter.parseToEpochMillis("2026-11-14"))
+        assertNull(LastActiveDateFormatter.parseToEpochMillis(null))
+        assertNull(LastActiveDateFormatter.parseToEpochMillis("   "))
+        assertNull(LastActiveDateFormatter.parseToEpochMillis("not-a-date"))
     }
 
     @Test
@@ -128,22 +158,22 @@ class DevicesDatabaseManagerLastActiveTest {
         val latch = CountDownLatch(threadCount)
         val failures = ConcurrentLinkedQueue<Throwable>()
         val seenFormats = java.util.Collections.synchronizedSet(
-            java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DateFormat, Boolean>())
+            java.util.Collections.newSetFromMap(java.util.IdentityHashMap<SimpleDateFormat, Boolean>())
         )
 
         val threads = (0 until threadCount).map { threadIdx ->
             Thread {
                 try {
-                    val threadFormat = LastActiveDateFormatter.currentFormat()
+                    val threadFormat = LastActiveDateFormatter.currentUtcFormat()
                     seenFormats.add(threadFormat)
                     for (i in 0 until iterationsPerThread) {
                         val epochSec = (1_700_000_000L + threadIdx * 1000L + i) * 1000L
                         val formatted = LastActiveDateFormatter.formatEpochMillis(epochSec)
-                        val parsed = LastActiveDateFormatter.currentFormat().parse(formatted)
+                        val parsed = LastActiveDateFormatter.parseToEpochMillis(formatted)
                         assertNotNull(parsed)
-                        assertEquals(epochSec, parsed!!.time)
+                        assertEquals(epochSec, parsed)
                     }
-                    assertSame(threadFormat, LastActiveDateFormatter.currentFormat())
+                    assertSame(threadFormat, LastActiveDateFormatter.currentUtcFormat())
                 } catch (t: Throwable) {
                     failures.add(t)
                 } finally {
@@ -155,13 +185,13 @@ class DevicesDatabaseManagerLastActiveTest {
         assertTrue("All worker threads must finish within timeout", latch.await(15, TimeUnit.SECONDS))
         threads.forEach { it.join() }
         assertTrue("Concurrent ThreadLocal formatting produced errors: $failures", failures.isEmpty())
-        assertEquals("Each worker thread must receive an isolated DateFormat instance", threadCount, seenFormats.size)
+        assertEquals("Each worker thread must receive an isolated UTC DateFormat instance", threadCount, seenFormats.size)
     }
 
     @Test
-    fun devicesDatabaseManager_setLastActivePersistsParseableTimestamp() {
-        Locale.setDefault(Locale.US)
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+    fun devicesDatabaseManager_setLastActivePersistsUtcIsoTimestamp_TST_DAT_044_3() {
+        Locale.setDefault(Locale.GERMANY)
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
 
         val mockContext = mockk<Context>(relaxed = true)
         val mockDb = mockk<SQLiteDatabase>(relaxed = true)
@@ -190,10 +220,14 @@ class DevicesDatabaseManagerLastActiveTest {
         }
         val persisted = stored[DevicesDatabaseManager.DevicesDbHelper.LAST_ACTIVE]
         assertNotNull("setLastActive must persist LAST_ACTIVE value", persisted)
-        assertTrue(persisted!!.isNotBlank())
-        assertNotNull(
-            "Persisted LAST_ACTIVE must be parseable by DateFormat.getDateTimeInstance()",
-            DateFormat.getDateTimeInstance().parse(persisted)
+        assertTrue(
+            "Persisted LAST_ACTIVE must be canonical UTC ISO-8601, was '$persisted'",
+            Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$""").matches(persisted!!)
         )
+
+        // Must parse cleanly even after switching locale to en_US
+        Locale.setDefault(Locale.US)
+        assertNotNull(LastActiveDateFormatter.parseToEpochMillis(persisted))
+        assertTrue(DeviceSortOrder.parseLastSeenTimestamp(persisted) > 0L)
     }
 }

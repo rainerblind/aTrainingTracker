@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:52:31.071Z" hostname="rainer-HP-EliteBook-850-G5" time="18.177">
+  <properties/>
+  <testcase name="rePairingSensorOnResume_clearsHintReEnablesSyncNowAndLaunchesSync" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="14.813"/>
+  <testcase name="syncNow_completionEmitsWorkoutIdForTelemetryRefresh" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.166"/>
+  <testcase name="initialAsyncPairingCheck_avoidsFrame0FalseUnpairedFlicker_thenDisablesWhenUnpaired" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.302"/>
+  <testcase name="unpairedVeritySensor_disablesSyncNowKeepsDismissEnabledAndShowsHintOverStaleError" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.297"/>
+  <testcase name="syncNow_survivesBannerLeavingAndReenteringCompositionWithoutForgottenScopeException" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.544"/>
+  <testcase name="syncNow_failureDisplaysLocalizedErrorMessage" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.23"/>
+  <testcase name="captureLightDarkUnpairedAndPairedBannerPng_rule85" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="1.171"/>
+  <testcase name="unpairedH10Sensor_disablesSyncNowAndShowsH10UnpairedHint" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.194"/>
+  <testcase name="rePairingViaDeviceDataRepositoryAllDevices_reactivelyReEnablesSyncNow" classname="com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest" time="0.459"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.60  
+**Version**: 1.0.64  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 103
+**Total Requirements**: 104
 
 **Total Requirements**: 102
 
@@ -3378,6 +3378,26 @@
 
 ---
 
+### REQ-PRO-138: Baseline Manifest Surfacing of Open Emulator Sweep Failures (`ATT-9498`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PRO-138`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `tools/baseline_manager.py`
+- **Localization Parity**: `N/A - Python tooling only`
+- **Rationale**: Following KW47 weekly emulator sweep `docs/engineering/emulator_sweeps/2026-11-21_sweep.md` failing `8/12` runs (`ATT-9386`, Finding M11), Sprint `467–471` SUP.8 baseline manifests still reported `Open Release Deviations: 0` because `tools/baseline_manager.py` only inspected `docs/releases/<baseline>/verification_summary.md` (`ATT-9498`, complementing `REQ-PRO-119.2` and `REQ-PRO-135.3`).
+- **Description**:
+  1. *Latest Emulator Sweep Discovery & Verdict Parsing (`REQ-PRO-138.1`)*: `tools/baseline_manager.py` SHALL inspect the lexicographically latest `YYYY-MM-DD_sweep.md` report under `docs/engineering/emulator_sweeps/` (when present) and parse its `**Verdict**:` status (`PASS`, `FAIL`, or missing/unparseable fail-closed `UNKNOWN`) alongside failed/total table run counts.
+  2. *Open Release Deviation Surfacing (`REQ-PRO-138.2`)*: Whenever the latest emulator sweep report verdict is `FAIL` (or missing/unparseable), `_collect_open_risks_and_deviations()` SHALL append a structured `**DEVIATION**:` entry citing the sweep report path, verdict, and failed/total run count so `manifest.md` reports `Open Release Deviations >= 1`; when the latest sweep report verdict is `PASS` (superseding any older `FAIL` report) or when no `YYYY-MM-DD_sweep.md` report exists, zero emulator-sweep deviations SHALL be added.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/engineering/emulator_sweeps/2026-11-21_sweep.md` with `**Verdict**: \`FAIL\`` (`8/12` failed rows), *When* `generate_baseline_manifest()` runs, *Then* `manifest.md` reports `Open Release Deviations: 1` (plus any `verification_summary.md` deviations) citing `2026-11-21_sweep.md`, `FAIL`, and `8/12`.
+  • *Given* a malformed latest sweep report missing `**Verdict**:`, *When* `generate_baseline_manifest()` runs, *Then* it fails closed and surfaces an `Open Release Deviation`.
+  • *Given* a newer `2026-11-22_sweep.md` with `**Verdict**: \`PASS\`` alongside an older `2026-11-21_sweep.md` (`FAIL`), or an absent `emulator_sweeps/` directory, *When* `generate_baseline_manifest()` runs, *Then* zero emulator-sweep deviations are added.
+- **Invariants**: Python 3 stdlib-only (`TST-PRO-005.6`); existing `REQ-PRO-119` manifest schema and offline tests preserved; `Localization Parity: N/A - Python tooling only`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3445,3 +3465,5 @@
 | `1.0.58` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `REQ-STB-026` (`REQ-STB-026.1`–`.2`) to `[Implemented]` in Stage 4 (`ANTBikePowerDevice.java`, `ANTBikePowerDeviceTest.kt`). |
 | `1.0.59` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `REQ-STB-026` (`REQ-STB-026.1`–`.2`) to `[Verified]` in Stage 5 (`Rule 7.5` doc-only fast path reusing Gate 4 `ATT-9566` @ `8d76a1f4`: `ANTBikePowerDeviceTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`, `4/4` linters PASS; `ATT-6176_walkthrough.md`). |
 | `1.0.60` | 2026-11-22 | Lane 2 Author (`ATT-9567`, `--as agent1`) | `ATT-9567` | Added `[Verified]` `REQ-PRO-136` (`REQ-PRO-136.1`–`.3`: Weekly Full Test Suite as 4th pillar in `ensure-weekly-reviews`, overdue-first Jira deduplication, and unified `days_threshold=6` across all 4 weekly pillars) and aligned `REQ-PRO-095.3/.4`, `REQ-PRO-096.3/.4`, and `REQ-PRO-135.4` to the 6-day cadence. |
+| `1.0.63` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `[Planned]` `REQ-PRO-138` (`REQ-PRO-138.1`–`.2`, `N/A - Python tooling only`) to surface a latest `FAIL`/unknown emulator sweep in `docs/engineering/emulator_sweeps/` as an explicit `Open Release Deviation` in `tools/baseline_manager.py` manifests. |
+| `1.0.64` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `REQ-PRO-138` (`REQ-PRO-138.1`–`.2`) to `[Verified]` (`tools/baseline_manager.py` strict `^\d{4}-\d{2}-\d{2}_sweep\.md$` filter & `_collect_latest_emulator_sweep_deviation()`; `tools/test_baseline_manager.py` `7/7` PASS, total `47/47` Python tests PASS). |

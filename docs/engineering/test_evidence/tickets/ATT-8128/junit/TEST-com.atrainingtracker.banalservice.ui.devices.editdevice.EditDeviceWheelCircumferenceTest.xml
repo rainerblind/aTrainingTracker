@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:44:18.392Z" hostname="rainer-HP-EliteBook-850-G5" time="2.98">
+  <properties/>
+  <testcase name="testRunCalibrationFactorContent_preservesKnownDistanceCalculator_tstSen033_1" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.577"/>
+  <testcase name="testLightDarkWheelCircumferenceSection_renderAndCapturePng_rule85_tstSen033_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.899"/>
+  <testcase name="testWheelCircumferenceHistoryChart_unspecifiedLegendAndSensorEmptyState_tstSen033_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.162"/>
+  <testcase name="testWheelCircumferenceSection_removesBikeCalculatorPreservesPresetsAndAutoHint_tstSen033_1" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.628"/>
+  <testcase name="testNarrow280dpThreeLegendFlowRow_wrapsWithoutClippingOrZeroWidth_tstSen033_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.187"/>
+  <testcase name="testBaselineCircumferenceRounding_avoidsIeee754TruncationAt2010mm_tstSen033_1" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.185"/>
+  <testcase name="testEquipmentRepository_getCircumferenceHistoryForDeviceAndManualReset_tstSen033_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.168"/>
+  <testcase name="testEditDeviceViewModel_asyncHistoryLoadStaleClearAndDraftBaselineSync_tstSen033_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.173"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

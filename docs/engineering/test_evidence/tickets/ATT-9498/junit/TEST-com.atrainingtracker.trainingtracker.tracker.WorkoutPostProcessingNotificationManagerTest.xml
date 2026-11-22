@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingNotificationManagerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T15:49:01.023Z" hostname="rainer-HP-EliteBook-850-G5" time="0.47">
+  <properties/>
+  <testcase name="testShowWarningAndCancelNotification_usesDedicatedWarningId8048AndCancels8047_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingNotificationManagerTest" time="0.199"/>
+  <testcase name="testShowStageProgress_api33PermissionDenied_suppressesNotifyAndWarning_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingNotificationManagerTest" time="0.135"/>
+  <testcase name="testShowStageProgress_api33PermissionGranted_postsProgressNotification_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingNotificationManagerTest" time="0.135"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

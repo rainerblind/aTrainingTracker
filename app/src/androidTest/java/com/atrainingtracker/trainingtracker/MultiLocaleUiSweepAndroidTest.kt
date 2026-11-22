@@ -30,6 +30,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinator
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -119,14 +120,20 @@ class MultiLocaleUiSweepAndroidTest {
                     Intent(TrainingApplication.REQUEST_PAUSE_TRACKING).setPackage(appContext.packageName)
                 )
                 SystemClock.sleep(200L)
+                if (syntheticWorkoutId <= 0L) {
+                    syntheticWorkoutId = TrainingApplication.getActiveWorkoutID()
+                }
 
                 appContext.sendBroadcast(
                     Intent(TrainingApplication.REQUEST_STOP_TRACKING).setPackage(appContext.packageName)
                 )
                 val stopDeadline = SystemClock.uptimeMillis() + 3000L
                 while (SystemClock.uptimeMillis() < stopDeadline &&
-                    (TrainingApplication.isTracking() || TrackerService.isRunning())
+                    (TrainingApplication.isTracking() || TrackerService.isRunning() || WorkoutPostProcessingCoordinator.hasActiveWork())
                 ) {
+                    if (syntheticWorkoutId <= 0L) {
+                        syntheticWorkoutId = TrainingApplication.getActiveWorkoutID()
+                    }
                     SystemClock.sleep(100L)
                 }
                 assertFalse("Tracking must stop cleanly", TrainingApplication.isTracking())

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:56:51.233Z" hostname="rainer-HP-EliteBook-850-G5" time="29.015">
+  <properties/>
+  <testcase name="testDecoupledCascade_allGrantedDispatchesStart" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.323"/>
+  <testcase name="testBatteryOptimization_launchesDirectActionRequestIgnoreBatteryOptimizations" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.477"/>
+  <testcase name="testFailSafeBatteryOptimizationLaunch_doesNotCrashOnActivityNotFoundException" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.178"/>
+  <testcase name="testPreciseLocationRequirement_fineLocationGrantedSatisfiesLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.183"/>
+  <testcase name="testPreciseLocationRequirement_coarseOnlyDoesNotSatisfyLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.201"/>
+  <testcase name="testDecoupledCascade_notificationDismissedWithPairedSensorsMissingBtTransitionsToBtRationale" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.235"/>
+  <testcase name="testDecoupledCascade_notificationDismissedNoPairedSensorsBypassesBtRationaleToBgLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.209"/>
+  <testcase name="testDecoupledCascade_missingLocationTransitionsToForeground" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.163"/>
+  <testcase name="testDecoupledCascade_bgLocationGrantedMissingBatteryTransitionsToBatteryRationale" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.297"/>
+  <testcase name="testDecoupledCascade_bluetoothDismissedAdvancesToBgLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.14"/>
+  <testcase name="testDecoupledCascade_locationGrantedMissingNotificationTransitionsToNotificationRationale" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.177"/>
+  <testcase name="testWarningBadgePredicate_logicMatchesPermissionState" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.161"/>
+  <testcase name="testOnStartTracking_dispatchesStartTrackingBroadcast" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.27"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

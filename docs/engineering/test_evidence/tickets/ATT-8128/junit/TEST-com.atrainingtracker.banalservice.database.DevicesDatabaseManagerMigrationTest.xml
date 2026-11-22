@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:36:49.679Z" hostname="rainer-HP-EliteBook-850-G5" time="2.239">
+  <properties/>
+  <testcase name="testDbVersionIs12" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest" time="0.414"/>
+  <testcase name="testMigrateAddSpeedAndLocationAttFused_whenNotExists_insertsRowWithPairedFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest" time="0.364"/>
+  <testcase name="testAddLocationDevicesToDb_insertsAttFusedDeviceWithPairedFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest" time="1.12"/>
+  <testcase name="testMigrateAddSpeedAndLocationAttFused_whenAlreadyExists_isIdempotent" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest" time="0.34"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

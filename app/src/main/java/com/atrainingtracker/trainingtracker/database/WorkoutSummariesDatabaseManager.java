@@ -738,7 +738,10 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 null, null, null)) {
 
             if (cursor.moveToFirst()) {
-                value = cursor.getDouble(cursor.getColumnIndexOrThrow(key));
+                int index = cursor.getColumnIndexOrThrow(key);
+                if (!cursor.isNull(index)) {
+                    value = cursor.getDouble(index);
+                }
             }
         }
 
@@ -780,7 +783,10 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 null, null, null)) {
 
             if (cursor.moveToFirst()) {
-                value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
+                int index = cursor.getColumnIndexOrThrow(key);
+                if (!cursor.isNull(index)) {
+                    value = cursor.getInt(index);
+                }
             }
         }
 
@@ -788,8 +794,12 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
     }
 
     @Nullable
-    public Integer getInt(String baseFileName, String key) {
+    public Integer getInt(@Nullable String baseFileName, String key) {
         if (DEBUG) Log.i(TAG, "getInt for baseFileName: " + baseFileName + ", " + key);
+
+        if (baseFileName == null) {
+            return null;
+        }
 
         Integer value = null;
 
@@ -800,7 +810,10 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 null, null, null)) {
 
             if (cursor.moveToFirst()) {
-                value = cursor.getInt(cursor.getColumnIndexOrThrow(key));
+                int index = cursor.getColumnIndexOrThrow(key);
+                if (!cursor.isNull(index)) {
+                    value = cursor.getInt(index);
+                }
             }
         }
 
@@ -820,7 +833,10 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 null, null, null)) {
 
             if (cursor.moveToFirst()) {
-                value = cursor.getLong(cursor.getColumnIndexOrThrow(key));
+                int index = cursor.getColumnIndexOrThrow(key);
+                if (!cursor.isNull(index)) {
+                    value = cursor.getLong(index);
+                }
             }
         }
 
@@ -867,10 +883,6 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
     }
 
     /**
-     * Retrieves the peak value using an explicit database connection.
-     */
-    @Nullable
-    /**
      * Retrieves the athlete's historical peak power PR benchmarks (5s, 1m, 5m, 20m) across all past workouts (REQ-TRK-058.6).
      *
      * @return Map of duration in seconds (5, 60, 300, 1200) to historical peak power in Watts.
@@ -908,6 +920,10 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
         return benchmarks;
     }
 
+    /**
+     * Retrieves the peak value using an explicit database connection.
+     */
+    @Nullable
     public Double getExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
 
@@ -918,7 +934,10 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 null, null, null)) {
 
             if (cursor.moveToFirst()) {
-                extremaValue = cursor.getDouble(cursor.getColumnIndex(WorkoutSummaries.VALUE));
+                int index = cursor.getColumnIndexOrThrow(WorkoutSummaries.VALUE);
+                if (!cursor.isNull(index)) {
+                    extremaValue = cursor.getDouble(index);
+                }
                 if (DEBUG)
                     Log.i(TAG, "got " + extremaValue + " for " + extremaType.name() + " " + sensorType.name() + " of workout " + workoutId);
             } else {

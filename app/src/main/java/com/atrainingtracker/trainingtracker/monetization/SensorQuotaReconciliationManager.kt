@@ -22,6 +22,7 @@ import android.app.Application
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.LastActiveDateFormatter
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
@@ -34,9 +35,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Centralized manager responsible for sensor pairing quota reconciliation when an athlete
@@ -117,37 +118,41 @@ class SensorQuotaReconciliationManager @JvmOverloads constructor(
      * (strictly conforming to coding standards Sec. 1.3 numeric primitive invariant).
      */
     fun parseLastSeenTimestamp(lastSeen: String?): Long {
-        if (lastSeen.isNullOrBlank()) return 0L
+        val trimmed = lastSeen?.trim()
+        if (trimmed.isNullOrEmpty()) return 0L
 
-        // 1. Localized standard DateFormat.getDateTimeInstance()
+        // 1. Canonical UTC ISO-8601, legacy DB ISO, and localized DateFormat.getDateTimeInstance()
+        LastActiveDateFormatter.parseToEpochMillis(trimmed)?.let { return it }
+
+        // 2. Extra legacy UTC ISO fractional format (explicit UTC timezone)
         try {
-            val date = DateFormat.getDateTimeInstance().parse(lastSeen)
+            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+                isLenient = false
+            }
+            val date = sdf.parse(trimmed)
             if (date != null) return date.time
         } catch (_: Exception) {}
 
-        // 2. Common fallback formats
-        val fallbackPatterns = arrayOf(
-            "yyyy-MM-dd HH:mm:ss",
-            "yyyy-MM-dd'T'HH:mm:ss",
+        // 3. Extra legacy local formats
+        val localFallbackPatterns = arrayOf(
             "yyyy-MM-dd'T'HH:mm:ss.SSS",
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "yyyy-MM-dd",
             "dd.MM.yyyy HH:mm:ss",
             "dd/MM/yyyy HH:mm:ss",
             "MM/dd/yyyy HH:mm:ss"
         )
-        for (pattern in fallbackPatterns) {
+        for (pattern in localFallbackPatterns) {
             try {
-                val sdf = SimpleDateFormat(pattern, Locale.US)
-                val date = sdf.parse(lastSeen)
+                val sdf = SimpleDateFormat(pattern, Locale.US).apply {
+                    isLenient = false
+                }
+                val date = sdf.parse(trimmed)
                 if (date != null) return date.time
             } catch (_: Exception) {}
         }
 
-        // 3. Raw epoch milliseconds representation
-        try {
-            return lastSeen.toLong()
-        } catch (_: Exception) {}
+        // 4. Raw epoch milliseconds representation
+        trimmed.toLongOrNull()?.let { return it }
 
         return 0L
     }

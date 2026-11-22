@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:53:21.413Z" hostname="rainer-HP-EliteBook-850-G5" time="2.152">
+  <properties/>
+  <testcase name="testPollingLoop_conflatesSteadySnapshotsWhileAdvancingSparklinesAndWPrimeHeartbeat_tstUi2800_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" time="0.502"/>
+  <testcase name="testFilteredSensorData_structuralEqualsIgnoresTimestampAndHandlesNaN_tstUi2800_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" time="0.125"/>
+  <testcase name="testApplyRetroactiveAltitudeCorrection_updatesPathPointsSafely_tstUi2800_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" time="0.128"/>
+  <testcase name="testUnbindBeforeConnectAndBindFailure_closesServiceConnectionLeak_tstUi2800_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" time="0.207"/>
+  <testcase name="testTrackingViewModel_steadySparklineProgressesAndWPrimeNeverFalseStale_tstUi2800_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" time="1.057"/>
+  <testcase name="testRepositoryScopes_doNotUseDispatchersMain_tstUi2800_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest" time="0.131"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -56,6 +56,36 @@ internal object WorkoutTimestampParser {
     }
 
     /**
+     * Parses an ISO-8601 timestamp (`Z`, numeric offset `+HH:MM`/`-HH:MM`, optional fractional
+     * seconds `.SSS`, bare local ISO, or `"yyyy-MM-dd HH:mm:ss"` DB format) directly into UTC
+     * epoch milliseconds without truncating sub-second precision (`REQ-MIG-058.3`).
+     * Returns `null` if the string cannot be parsed.
+     */
+    fun parseIsoToEpochMillis(rawTime: String): Long? {
+        val trimmed = rawTime.trim()
+        if (trimmed.isEmpty()) return null
+        return try {
+            OffsetDateTime.parse(trimmed, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .toInstant()
+                .toEpochMilli()
+        } catch (_: Exception) {
+            try {
+                LocalDateTime.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    .toInstant(ZoneOffset.UTC)
+                    .toEpochMilli()
+            } catch (_: Exception) {
+                try {
+                    LocalDateTime.parse(trimmed, DB_TIME_FORMATTER)
+                        .toInstant(ZoneOffset.UTC)
+                        .toEpochMilli()
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        }
+    }
+
+    /**
      * Computes non-negative elapsed seconds between two `"yyyy-MM-dd HH:mm:ss"` UTC timestamps,
      * returning `null` if either string cannot be parsed.
      */

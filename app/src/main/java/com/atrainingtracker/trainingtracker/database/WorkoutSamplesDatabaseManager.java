@@ -97,7 +97,7 @@ public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSa
         // we return the inverse of the corresponding extrema value of the speed.
         if (sensorType == SensorType.PACE_spm) {
             Double speed = calcExtremaValue(workoutSummariesDatabaseManager, baseFileName, extremaType, SensorType.SPEED_mps);
-            if (speed != null) {
+            if (speed != null && speed > 0.0) {
                 return 1 / speed;
             } else {
                 return null;
@@ -106,13 +106,13 @@ public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSa
 
         // next special case: average speed.
         // here, we simply use the time and distance to calc the average speed
-        if ((extremaType == ExtremaType.AVG) & (sensorType == SensorType.SPEED_mps)) {
+        if (extremaType == ExtremaType.AVG && sensorType == SensorType.SPEED_mps) {
             if (DEBUG) Log.i(TAG, "calculating average speed based on distance and active time");
 
             Double distance = workoutSummariesDatabaseManager.getDouble(baseFileName, WorkoutSummaries.DISTANCE_TOTAL_m);
             Integer time = workoutSummariesDatabaseManager.getInt(baseFileName, WorkoutSummaries.TIME_ACTIVE_s);
 
-            if (distance != null & time != null) {
+            if (distance != null && time != null && time > 0) {
                 if (DEBUG)
                     Log.i(TAG, "calculating average speed: distance=" + distance + ", time=" + time + " => avg speed= " + distance / time + " m/s = " + distance / time * 3.6 + " km/h");
                 // Toast.makeText(mContext, "calculating average speed: distance=" + distance + ", time=" + time + " => avg speed= " + distance/time, Toast.LENGTH_LONG).show();
@@ -149,44 +149,17 @@ public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSa
                     break;
 
                 case START:
-                    try (Cursor cursor = db.query(getTableName(baseFileName),
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null)) {
-
-                        if (cursor != null) {
-                            int colIdx = cursor.getColumnIndex(sensorType.name());
-                            while (cursor.moveToNext() && extremaValue == null) {
-                                if (dataValid(cursor, sensorType.name()) && colIdx != -1) {
-                                    if (DEBUG) Log.i(TAG, "got start value");
-                                    extremaValue = cursor.getDouble(colIdx);
-                                }
-                            }
-                        }
-                    }
-                    break;
-
                 case END:
+                    String col = sensorType.name();
+                    String orderBy = (extremaType == ExtremaType.START) ? "_id ASC" : "_id DESC";
                     try (Cursor cursor = db.query(getTableName(baseFileName),
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null)) {
-
-                        if (cursor != null && cursor.moveToLast()) {
-                            int colIdx = cursor.getColumnIndex(sensorType.name());
-                            do {
-                                if (dataValid(cursor, sensorType.name()) && colIdx != -1) {
-                                    if (DEBUG) Log.i(TAG, "got end location");
-                                    extremaValue = cursor.getDouble(colIdx);
-                                    break;
-                                }
-                            } while (cursor.moveToPrevious());
+                            new String[]{col},
+                            col + " IS NOT NULL",
+                            null, null, null,
+                            orderBy,
+                            "1")) {
+                        if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                            extremaValue = cursor.getDouble(0);
                         }
                     }
                     break;
@@ -468,16 +441,17 @@ public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSa
             double baseDescent = 0.0;
             long baseCalories = 0L;
 
-            boolean hasDist = existsColumnInTable(db, table, SensorType.DISTANCE_m.name());
-            boolean hasTimeTotal = existsColumnInTable(db, table, SensorType.TIME_TOTAL.name());
-            boolean hasTimeActive = existsColumnInTable(db, table, SensorType.TIME_ACTIVE.name());
-            boolean hasAscent = existsColumnInTable(db, table, SensorType.ASCENT.name());
-            boolean hasDescent = existsColumnInTable(db, table, SensorType.DESCENT.name());
-            boolean hasCalories = existsColumnInTable(db, table, SensorType.CALORIES.name());
-            boolean hasLineDist = existsColumnInTable(db, table, SensorType.LINE_DISTANCE_m.name());
-            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
-            boolean hasLat = existsColumnInTable(db, table, SensorType.LATITUDE.name());
-            boolean hasLon = existsColumnInTable(db, table, SensorType.LONGITUDE.name());
+            Set<String> cols = SqliteSchemaUtils.getTableColumnNames(db, table);
+            boolean hasDist = cols.contains(SensorType.DISTANCE_m.name());
+            boolean hasTimeTotal = cols.contains(SensorType.TIME_TOTAL.name());
+            boolean hasTimeActive = cols.contains(SensorType.TIME_ACTIVE.name());
+            boolean hasAscent = cols.contains(SensorType.ASCENT.name());
+            boolean hasDescent = cols.contains(SensorType.DESCENT.name());
+            boolean hasCalories = cols.contains(SensorType.CALORIES.name());
+            boolean hasLineDist = cols.contains(SensorType.LINE_DISTANCE_m.name());
+            boolean hasLapNr = cols.contains(SensorType.LAP_NR.name());
+            boolean hasLat = cols.contains(SensorType.LATITUDE.name());
+            boolean hasLon = cols.contains(SensorType.LONGITUDE.name());
 
             try (Cursor baselineCursor = db.query(table, null, "_id = ?", new String[]{String.valueOf(startRowId)}, null, null, null)) {
                 if (baselineCursor != null && baselineCursor.moveToFirst()) {

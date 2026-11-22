@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:43:14.749Z" hostname="rainer-HP-EliteBook-850-G5" time="5.441">
+  <properties/>
+  <testcase name="hrPriority_prefersHealthyEcgOverOpticalRegardlessOfRegistrationAndSwitchesDynamicallyOutsideLock" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="1.02"/>
+  <testcase name="registerGoogleFusedSensors_retainsSpeedAndDistanceProxySensorsAndUpdatesGcData" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.62"/>
+  <testcase name="getPriorityRank_returnsCanonicalIndicesAcrossAllSensorTypes" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.651"/>
+  <testcase name="lineDistancePriority_prioritizesGoogleFusedOverGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.72"/>
+  <testcase name="attFusedPriority_highestPrecedenceAndCleanFallback" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.636"/>
+  <testcase name="altitudePriority_upgradesAndFallsBackAcrossPressurePositionAndGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.622"/>
+  <testcase name="speedPriority_prioritizesGoogleFusedOverGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.575"/>
+  <testcase name="speedAndDistancePriority_upgradesToGoogleFusedAndBikeSpeedAndFallsBackToGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.597"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

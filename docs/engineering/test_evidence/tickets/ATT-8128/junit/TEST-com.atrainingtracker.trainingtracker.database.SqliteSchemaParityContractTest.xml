@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:45:50.227Z" hostname="rainer-HP-EliteBook-850-G5" time="0.42">
+  <properties/>
+  <testcase name="testSportTypeDbHelper_onCreateAndOnUpgradeParity_TST_DAT_032" classname="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" time="0.073"/>
+  <testcase name="testWorkoutSummariesDbHelper_onCreateAndOnUpgradeV30ToLatestParity_TST_DAT_032" classname="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" time="0.059"/>
+  <testcase name="testRoutesDbHelper_onCreateAndOnUpgradeParity_TST_DAT_032" classname="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" time="0.055"/>
+  <testcase name="testEquipmentDbHelper_onCreateAndOnUpgradeParity_TST_DAT_032" classname="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" time="0.064"/>
+  <testcase name="testTrackingViewsDbHelper_onCreateAndOnUpgradeParity_TST_DAT_032" classname="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" time="0.118"/>
+  <testcase name="testLapsDbHelper_onCreateAndOnUpgradeParity_TST_DAT_032" classname="com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest" time="0.051"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:37:06.341Z" hostname="rainer-HP-EliteBook-850-G5" time="49.308">
+  <properties/>
+  <testcase name="testShutDown_resetsEkfAndCleansUp" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.276"/>
+  <testcase name="testFinding5_workoutPause_clampsDtSecAndPreventsSpike" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.975"/>
+  <testcase name="testSyntheticZumBaecker57Replay_preventsAscentInflation_tstFil026_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="3.611"/>
+  <testcase name="testHandleReferenceAltitude_updatesEkfState" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.043"/>
+  <testcase name="testTerrainClimbAccumulation_withHysteresis_tstFil020_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.118"/>
+  <testcase name="testFinding2_concurrencyBetweenMetricsAndPressureMeasurement" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.492"/>
+  <testcase name="testSyntheticPixel10KurzeRunde53LoopReplay_gatesDemGridJumpsAndPreservesMslClosure_tstFil037_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="5.057"/>
+  <testcase name="testDeviceCreation_registersAllFiveSensors" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.076"/>
+  <testcase name="testFiveHzJeansPocketPedalingOscillations_rateMatchedAndSlopeBounded_tstFil026_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.17"/>
+  <testcase name="testFinding3_demTimestampGating_preventsCovarianceCollapse" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.774"/>
+  <testcase name="testFinding1_cachesPreferenceAndPairingStates_inMemory" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.645"/>
+  <testcase name="testBarometricMicroRippleHysteresisRejection_tstFil020_2" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.976"/>
+  <testcase name="testStandstillSlopeClearing_publishesZeroInsteadOfFrozenNegativeSlope_tstFil023_2" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.877"/>
+  <testcase name="testShutDown_clearsSubSecondBaroBucket_acrossRestart_tstFil026_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.73"/>
+  <testcase name="testClimbingCycle_accumulatesAscentAndUpdatesSlope" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.901"/>
+  <testcase name="testReanchorOnResume_bothThreeStateAndTwoState_preventsStepAndAscentJump_TST_STB_025_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.791"/>
+  <testcase name="testAdaptiveBaroWindowAndRBaro_respondsSmoothlyToCarriageModeAndFallsBackUnknown_tstFil028_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.862"/>
+  <testcase name="testDemReferencePrecedence_overridesGpsAltitude_tstFil020_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.746"/>
+  <testcase name="testHandlePressureMeasurement_initializesAndPublishesAltitude" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.743"/>
+  <testcase name="testLowSpeedRollAway_suppressesSlopeSpikeAndAscentInflation_tstFil023_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.17"/>
+  <testcase name="testTechnicalDeviceName_localeInvariant_tstFil020_4" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.666"/>
+  <testcase name="testCalibrationJumpAscentDescentGuard_zeroBogusDescentAndRealClimbAfterward_tstFil022_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.859"/>
+  <testcase name="testFinding4_gpsElevationIngestion_whenGpsActive" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.748"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:958)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:905)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$create(SQLiteDatabase.java:1111)
+	at android.database.sqlite.SQLiteDatabase.create(SQLiteDatabase.java)
+	at com.atrainingtracker.banalservice.database.DevicesDatabaseManagerOrderingTest.testAddLocationDevicesToDb_whenPlayServicesAvailable_pairsGoogleFusedAndUnpairsGps(DevicesDatabaseManagerOrderingTest.kt:178)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:958)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:905)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$create(SQLiteDatabase.java:1111)
+	at android.database.sqlite.SQLiteDatabase.create(SQLiteDatabase.java)
+	at com.atrainingtracker.banalservice.database.DevicesDatabaseManagerOrderingTest.testAddLocationDevicesToDb_whenPlayServicesUnavailable_pairsGpsAndUnpairsGoogleFused(DevicesDatabaseManagerOrderingTest.kt:245)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

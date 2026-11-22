@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:40:11.128Z" hostname="rainer-HP-EliteBook-850-G5" time="6.13">
+  <properties/>
+  <testcase name="testANTBikePower_noFieldShadowingForDevicesDatabaseManager" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="1.024"/>
+  <testcase name="testANTBikePower_negativeValue_publishesNull" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.556"/>
+  <testcase name="testANTBikePower_rightPedalIndicatorFalse_invertedToRightPercentage" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.554"/>
+  <testcase name="testANTBikePower_rightPedalIndicatorTrue_emittedDirectly" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.575"/>
+  <testcase name="testANTBikePower_nullCalculatedWheelSpeed_returnsWithoutCreatingSensorsOrMutatingDb" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.575"/>
+  <testcase name="testANTBikePower_zeroWheelSpeedAfterMotion_decaysPaceToNullAtThreshold" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.572"/>
+  <testcase name="testANTBikePower_boundaryValues" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.555"/>
+  <testcase name="testANTBikePower_positiveWheelSpeed_computesMetersPerSecondAndFinitePace" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.579"/>
+  <testcase name="testANTBikePower_initialZeroWheelSpeed_setsZeroSpeedAndNullPace" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.553"/>
+  <testcase name="testANTBikePower_combinedPedalSmoothness_routesToCombinedSensor" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikePowerDeviceTest" time="0.587"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

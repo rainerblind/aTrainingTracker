@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:40:17.268Z" hostname="rainer-HP-EliteBook-850-G5" time="1.766">
+  <properties/>
+  <testcase name="testReleaseAccess_whenSecondaryHandleNull_unconditionallyReleasesPrimaryHandle" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.635"/>
+  <testcase name="testReleaseAccess_whenSecondaryHandleThrows_primaryHandleStillCleanedUp" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.557"/>
+  <testcase name="testReleaseAccess_whenBothHandlesActive_releasesBothSafely" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.574"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

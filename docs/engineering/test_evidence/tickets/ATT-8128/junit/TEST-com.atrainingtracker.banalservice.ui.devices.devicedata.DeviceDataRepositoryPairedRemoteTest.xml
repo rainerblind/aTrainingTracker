@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPairedRemoteTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:45:02.834Z" hostname="rainer-HP-EliteBook-850-G5" time="1.017">
+  <properties/>
+  <testcase name="getPairedRemoteDevices_filtersByProtocolAndPairedInSql_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPairedRemoteTest" time="1.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

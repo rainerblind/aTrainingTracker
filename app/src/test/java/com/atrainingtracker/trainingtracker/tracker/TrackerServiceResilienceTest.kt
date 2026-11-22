@@ -141,11 +141,13 @@ class TrackerServiceResilienceTest {
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
 
+        TrackerService.resetFgsStartStateForTesting()
         service = TestableTrackerService()
     }
 
     @After
     fun tearDown() {
+        TrackerService.resetFgsStartStateForTesting()
         service.setTrackingInterruptedForTesting(true)
         service.onDestroy()
         unmockkAll()

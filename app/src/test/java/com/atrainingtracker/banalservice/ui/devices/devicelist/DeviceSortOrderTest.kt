@@ -90,9 +90,11 @@ class DeviceSortOrderTest {
         // DateTimeInstance has seconds resolution
         assertTrue("Parsed time should be close to now", Math.abs(now - parsed) < 2000L)
 
-        // ISO pattern
+        // ISO pattern (local and UTC)
         val isoTimestamp = DeviceSortOrder.parseLastSeenTimestamp("2026-11-14 10:30:00")
         assertTrue(isoTimestamp > 0L)
+        val utcIsoTimestamp = DeviceSortOrder.parseLastSeenTimestamp("2026-11-22T17:30:00Z")
+        assertTrue(utcIsoTimestamp > isoTimestamp)
 
         // Unparseable string
         assertEquals(0L, DeviceSortOrder.parseLastSeenTimestamp("not-a-date"))

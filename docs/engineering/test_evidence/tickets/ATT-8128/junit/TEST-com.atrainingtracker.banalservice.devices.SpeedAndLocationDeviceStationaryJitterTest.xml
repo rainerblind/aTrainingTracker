@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:39:32.986Z" hostname="rainer-HP-EliteBook-850-G5" time="24.045">
+  <properties/>
+  <testcase name="testStationaryEntryHysteresis_requiresThreeConsecutiveTicks" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.813"/>
+  <testcase name="testStandstillJitterWithinEscapeRadius_pinsImmediatelyAndLocksBearing" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.881"/>
+  <testcase name="testStoppingAtRedLight_immediatelyClampsSpeedToZeroAndPins" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.643"/>
+  <testcase name="testDuplicateLocationCallback_ignoredWithoutSpeedZeroing" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.662"/>
+  <testcase name="testProviderWithoutDoppler_computesGeometricSpeedOnlyBeyondDeadband" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.62"/>
+  <testcase name="testBuggyProvider_stuckZeroSpeed_unpinsWhenDisplacementExceedsEscapeRadius" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.611"/>
+  <testcase name="testLowSpeedClimb_singleDopplerZeroDoesNotPin" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.612"/>
+  <testcase name="testStationaryGpsJitter_preservesDopplerZeroSpeedAndSuppressesDistance" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.58"/>
+  <testcase name="testTeleportationSpikeDuringMovement_clampedToZeroDistance" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.556"/>
+  <testcase name="testLifecycleResets_clearStationaryAnchor" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.453"/>
+  <testcase name="testStationaryHysteresisStreak_resetsOnMovement" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.483"/>
+  <testcase name="testInitialFix_pinsImmediatelyWithoutHysteresis" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.538"/>
+  <testcase name="testGoogleFusedZeroSpeedDuringMovement_preventsTogglingAndCalculatesVelocity" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.492"/>
+  <testcase name="testStationaryAnchor_unpinsOnTrueMotion" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.629"/>
+  <testcase name="testGoogleFusedDampedSpeedDuringMovement_fallsBackToGeometricSpeed" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" time="1.469"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

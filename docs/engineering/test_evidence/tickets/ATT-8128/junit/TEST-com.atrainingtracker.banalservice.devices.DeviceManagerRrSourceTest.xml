@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:38:36.419Z" hostname="rainer-HP-EliteBook-850-G5" time="8.261">
+  <properties/>
+  <testcase name="testSteadyStatePrimaryBeats_neverInvokeGetManufacturerNamePerBeat" classname="com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest" time="2.105"/>
+  <testcase name="testStaleAndDisconnectFallback_switchesToAntOrPpgAndEnforcesMonotonicFloor" classname="com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest" time="2.5"/>
+  <testcase name="testDualHrmSources_arbitratesSinglePrimaryEcgOverVeritySensePpg" classname="com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest" time="1.879"/>
+  <testcase name="testBtleVeritySenseFallback_isDemotedBelowEcgAndAntPlus" classname="com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest" time="1.777"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -237,4 +237,60 @@ class WorkoutSummariesDatabaseManagerTest {
         every { mockCursor.moveToFirst() } returns false
         assertNull(manager.earliestWorkoutYear)
     }
+
+    @Test
+    fun testNullableGetters_returnNullOnSqlNullAndPreserveNonNullValues_TST_DAT_044_1() {
+        val nullCursor = mockk<Cursor>(relaxed = true)
+        every { nullCursor.moveToFirst() } returns true
+        every { nullCursor.getColumnIndexOrThrow(any()) } returns 0
+        every { nullCursor.isNull(0) } returns true
+        every { nullCursor.getDouble(0) } returns 0.0
+        every { nullCursor.getInt(0) } returns 0
+        every { nullCursor.getLong(0) } returns 0L
+
+        every {
+            mockDb.query(any(), any(), any(), any(), any(), any(), any())
+        } returns nullCursor
+
+        assertNull(manager.getDouble("base_file", WorkoutSummaries.DISTANCE_TOTAL_m))
+        assertNull(manager.getInt(42L, WorkoutSummaries.TIME_ACTIVE_s))
+        assertNull(manager.getInt("base_file", WorkoutSummaries.TIME_ACTIVE_s))
+        assertNull(manager.getInt(null as String?, WorkoutSummaries.TIME_ACTIVE_s))
+        assertNull(manager.getLong(42L, WorkoutSummaries.CLUSTER_ID))
+        assertNull(
+            manager.getExtremaValue(
+                mockDb,
+                42L,
+                com.atrainingtracker.banalservice.sensor.SensorType.HR,
+                ExtremaType.MAX
+            )
+        )
+
+        val valueCursor = mockk<Cursor>(relaxed = true)
+        every { valueCursor.moveToFirst() } returns true
+        every { valueCursor.getColumnIndexOrThrow(any()) } returns 0
+        every { valueCursor.isNull(0) } returns false
+        every { valueCursor.getDouble(0) } returns 0.0
+        every { valueCursor.getInt(0) } returns 0
+        every { valueCursor.getLong(0) } returns 0L
+
+        every {
+            mockDb.query(any(), any(), any(), any(), any(), any(), any())
+        } returns valueCursor
+
+        assertEquals(0.0, manager.getDouble("base_file", WorkoutSummaries.DISTANCE_TOTAL_m)!!, 0.0)
+        assertEquals(0, manager.getInt(42L, WorkoutSummaries.TIME_ACTIVE_s))
+        assertEquals(0, manager.getInt("base_file", WorkoutSummaries.TIME_ACTIVE_s))
+        assertEquals(0L, manager.getLong(42L, WorkoutSummaries.CLUSTER_ID))
+        assertEquals(
+            0.0,
+            manager.getExtremaValue(
+                mockDb,
+                42L,
+                com.atrainingtracker.banalservice.sensor.SensorType.HR,
+                ExtremaType.MAX
+            )!!,
+            0.0
+        )
+    }
 }

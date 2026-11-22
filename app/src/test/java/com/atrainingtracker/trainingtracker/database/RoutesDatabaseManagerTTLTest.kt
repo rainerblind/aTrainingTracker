@@ -267,5 +267,53 @@ class RoutesDatabaseManagerTTLTest {
             anyConstructed<ContentValues>().put(RouteContract.COLUMN_NAME, "Alpe d'Huez (Local)")
             anyConstructed<ContentValues>().put(RouteContract.COLUMN_SYNCED_AT, any<Long>())
         }
+        // TST-DAT-044.4: duplicateRouteAsLocal must reuse route.path/waypoints loaded by getRouteById without duplicate queries
+        verify(exactly = 1) {
+            mockDb.query(
+                RouteContract.TABLE_ROUTE_POINTS,
+                any(),
+                "${RouteContract.COLUMN_ROUTE_ID_FK} = ?",
+                arrayOf("50"),
+                null, null, any()
+            )
+        }
+        verify(exactly = 1) {
+            mockDb.query(
+                RouteContract.TABLE_ROUTE_WAYPOINTS,
+                any(),
+                "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} = ?",
+                arrayOf("50"),
+                null, null, any()
+            )
+        }
+    }
+
+    @Test
+    fun testOnUpgradeFromVersion4_callsOnCreateAndReturnsWithoutRedundantAlterTable_TST_DAT_044_4() {
+        val executedSql = mutableListOf<String>()
+        every { mockDb.execSQL(capture(executedSql)) } returns Unit
+
+        val helperClass = RoutesDatabaseManager::class.java.declaredClasses
+            .first { it.simpleName == "RoutesDbHelper" }
+        val ctor = helperClass.getDeclaredConstructor(android.content.Context::class.java)
+        ctor.isAccessible = true
+        val helper = ctor.newInstance(mockContext)
+        val onUpgrade = helperClass.getDeclaredMethod(
+            "onUpgrade",
+            SQLiteDatabase::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType
+        )
+        val targetVersion = 11
+        onUpgrade.invoke(helper, mockDb, 4, targetVersion)
+
+        assertTrue(
+            "onUpgrade(4 -> $targetVersion) must recreate tables via onCreate",
+            executedSql.any { it.contains("CREATE TABLE") }
+        )
+        assertTrue(
+            "onUpgrade(< 5) must return immediately after onCreate without falling through to ALTER TABLE statements; saw: $executedSql",
+            executedSql.none { it.trimStart().startsWith("ALTER TABLE", ignoreCase = true) }
+        )
     }
 }
