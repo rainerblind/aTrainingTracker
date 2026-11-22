@@ -21,14 +21,14 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.util.Log
 import androidx.core.database.sqlite.transaction
 
 class SportTypeEquipmentLinkManager private constructor(context: Context) {
 
     // Internal Helper to manage the database file
-    private class LinkDbHelper(context: Context) : SQLiteOpenHelper(context, "SportTypeLinks.db", null, 1) {
+    private class LinkDbHelper(context: Context) : TrackingSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(CREATE_TABLE_SQL)
         }
@@ -53,6 +53,8 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
     companion object {
         private val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         private const val TAG = "SportTypeEquipmentLinkManager"
+        const val DB_NAME = "SportTypeLinks.db"
+        const val DB_VERSION = 1
         private const val TABLE_NAME = "SportTypeEquipmentLink"
         private const val COLUMN_SPORT_ID = "sport_type_id"
         private const val COLUMN_EQUIP_ID = "equipment_id"

@@ -22,7 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -231,7 +231,7 @@ data class ZoneSnapshotEntry(
  * SQLite helper managing `AthleteMetrics.db` (`REQ-UI-391.2`).
  */
 class AthleteMetricsDbHelper(context: Context) :
-    SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+    TrackingSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
     companion object {
         const val DB_NAME = "AthleteMetrics.db"

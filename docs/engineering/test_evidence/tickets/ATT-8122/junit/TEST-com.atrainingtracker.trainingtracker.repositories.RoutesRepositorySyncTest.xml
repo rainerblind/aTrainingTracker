@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:25:48.291Z" hostname="rainer-HP-EliteBook-850-G5" time="8.799">
+  <properties/>
+  <testcase name="testSharedPreferencesNeverMutatedWithTransientNowString" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.181"/>
+  <testcase name="testIsSyncingTransitionsDuringSyncAndResetsOnCompletion" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="0.906"/>
+  <testcase name="testSyncClusterNameChange_updatesRouteWithoutCallingClusterEngine_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.004"/>
+  <testcase name="testIsSyncingInitialStateIsFalse" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="0.922"/>
+  <testcase name="testIsSyncingEmitsTrueWhileSyncingIsActive" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.039"/>
+  <testcase name="testNineLanguageParityForLastUpdateOfRoutesNow" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.459"/>
+  <testcase name="testUpdateRouteSummary_propagatesToClusterRepositoryWithoutRecursion_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.253"/>
+  <testcase name="testIsSyncingResetsToFalseOnExceptionInFinally" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.034"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

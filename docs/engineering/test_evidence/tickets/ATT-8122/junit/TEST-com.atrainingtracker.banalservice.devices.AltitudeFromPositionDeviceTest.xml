@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:19:27.133Z" hostname="rainer-HP-EliteBook-850-G5" time="26.22">
+  <properties/>
+  <testcase name="locationCacheMiss_queriesElevationServiceAndCachesResult" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="10.088"/>
+  <testcase name="triggerBackgroundSeedingAsync_seedsRoutesAndSegments" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="2.307"/>
+  <testcase name="knownLocationsDecoupling_zeroInteractionWithKnownLocationsDb" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.877"/>
+  <testcase name="locationCacheHit_corruptZeroSeedDoesNotEmitZeroAndUpgradesOnDemFetch" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.605"/>
+  <testcase name="locationCacheHit_neighborSeedUpgradesNeighborCellOnDemResolution" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.85"/>
+  <testcase name="inFlightDemQuery_suppressesDuplicateAsyncRequests" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.854"/>
+  <testcase name="locationCacheHit_resolvesElevationFromCacheWithoutNetwork" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.758"/>
+  <testcase name="initialization_registersAltitudeSensorAndMetadata" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.586"/>
+  <testcase name="duplicateCoordinates_suppressesRedundantQueries" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.648"/>
+  <testcase name="locationCacheHit_seededNonDemAltitudeEmitsImmediatelyAndRefinesViaDemQuery" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.644"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

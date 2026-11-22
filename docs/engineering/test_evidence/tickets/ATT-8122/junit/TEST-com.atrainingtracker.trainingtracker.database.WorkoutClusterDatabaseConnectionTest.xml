@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseConnectionTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:23:13.127Z" hostname="rainer-HP-EliteBook-850-G5" time="0.087">
+  <properties/>
+  <testcase name="getDatabase_remainsOpenAcrossSequentialOperationsAndReopensIfClosed_TST_SET_027" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseConnectionTest" time="0.087"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

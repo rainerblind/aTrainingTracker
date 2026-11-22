@@ -20,7 +20,7 @@ package com.atrainingtracker.trainingtracker.database.hrv
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 
 /**
@@ -32,7 +32,7 @@ import android.provider.BaseColumns
  * - Architecture Rule 64: Schema parity between onCreate and future onUpgrade.
  */
 class WorkoutRrDbHelper(context: Context) :
-    SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+    TrackingSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
     companion object {
         const val DB_NAME = "WorkoutRr.db"

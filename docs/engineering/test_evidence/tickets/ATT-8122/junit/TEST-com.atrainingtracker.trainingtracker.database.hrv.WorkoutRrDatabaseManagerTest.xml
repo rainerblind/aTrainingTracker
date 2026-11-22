@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:35.670Z" hostname="rainer-HP-EliteBook-850-G5" time="0.502">
+  <properties/>
+  <testcase name="uniqueConstraint_replacesDuplicateOnConflict" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.083"/>
+  <testcase name="getMaxBeatIndex_returnsExpectedCounter" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.072"/>
+  <testcase name="deleteWorkout_removesOnlyTargetWorkoutIntervals" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.072"/>
+  <testcase name="updateBeatQualityFlags_updatesTargetBeatsTransactionallyAndCountsModifiedRows_TST_HRV_048" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.069"/>
+  <testcase name="batchInsertAndQuery_preservesMonotonicOrderAndFields" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.069"/>
+  <testcase name="emptyListInsert_returnsZeroWithoutError" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.068"/>
+  <testcase name="databaseSchemaRegistry_referencesWorkoutRrDbVersionDirectly_Rule62" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManagerTest" time="0.068"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

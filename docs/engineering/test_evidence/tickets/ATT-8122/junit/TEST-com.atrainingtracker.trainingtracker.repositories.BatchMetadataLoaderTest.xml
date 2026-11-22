@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoaderTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:25:27.032Z" hostname="rainer-HP-EliteBook-850-G5" time="2.258">
+  <properties/>
+  <testcase name="testLoadForSnapshots_populatesAllNineBatchMetadataMapsAndAthleteMetricsParity_TST_DAT_041_3" classname="com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoaderTest" time="2.104"/>
+  <testcase name="testLoadForSingleWorkout_populatesSingleWorkoutBatchMapsAndSetsCardioFlag_TST_DAT_041_3" classname="com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoaderTest" time="0.079"/>
+  <testcase name="testLoadForSnapshots_emptyList_returnsEmptyBatchWithoutQueryingDbs_TST_DAT_041_3" classname="com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoaderTest" time="0.074"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

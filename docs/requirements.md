@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.123  
+**Version**: 1.0.124  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -17,7 +17,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `RAD`, `SPT`, `WKO` | 71 | 57 | 14 | 0 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 76 | 64 | 12 | 0 |
 | [Persistence, Migration & Cloud Export (Part 1)](requirements/req_data_migration_export_part1.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 133 | 118 | 15 | 0 |
-| [Persistence, Migration & Cloud Export (Part 2)](requirements/req_data_migration_export_part2.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP` | 10 | 10 | 0 | 0 |
+| [Persistence, Migration & Cloud Export (Part 2)](requirements/req_data_migration_export_part2.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP` | 11 | 11 | 0 | 0 |
 | [Settings, Profiles & Localization](requirements/req_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `PRI`, `SET` | 127 | 112 | 15 | 0 |
 | [UI Components & Design System (Part 1)](requirements/req_ui_design_system_part1.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 148 | 119 | 29 | 0 |
 | [UI Components & Design System (Part 2)](requirements/req_ui_design_system_part2.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 96 | 94 | 2 | 0 |
@@ -29,7 +29,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1326 across 16 domain shards.
+**Total Living Requirements**: 1327 across 16 domain shards.
 
 ---
 
@@ -95,3 +95,5 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.118` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Synchronized master index for `REQ-UI-2794` (`[Verified]`, `Total=1321`, `Verified=1195`, `Implemented=125`, `Planned=1`). |
 | `1.0.120` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Synchronized master index for `REQ-DAT-047` Bounce 1 (`[Verified]`, `Total=1323`, `Verified=1197`, `Implemented=125`, `Planned=1`). |
 | `1.0.121` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Synchronized master index for `REQ-UI-2795` (`[Verified]`, `Total=1324`, `Verified=1198`, `Implemented=125`, `Planned=1`). |
+| `1.0.123` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Synchronized master index for `[Planned]` `REQ-MIG-057` (`DatabaseSchemaRegistry` authoritative constants & non-eager `DatabaseConnectionManager` quiescence). |
+| `1.0.124` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Synchronized master index for `[Verified]` `REQ-MIG-057` (`94/94` PASS across 19 suites + live `emulator-5554` boot smoke `0` crashes). |

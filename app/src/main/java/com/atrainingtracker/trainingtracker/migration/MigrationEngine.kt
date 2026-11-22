@@ -224,8 +224,9 @@ object MigrationEngine {
             if (sharedPrefsDir.exists()) sharedPrefsDir.copyRecursively(rollbackPrefs, overwrite = true)
             if (datastoreDir.exists()) datastoreDir.copyRecursively(rollbackDatastore, overwrite = true)
 
-            // Verify rollback snapshot validity before touching live data
-            if (databasesDir.exists() && (rollbackDb.listFiles()?.isEmpty() != false)) {
+            // Verify rollback snapshot validity before touching live data (when live databases exist)
+            val hasLiveDatabases = databasesDir.exists() && (databasesDir.listFiles()?.isNotEmpty() == true)
+            if (hasLiveDatabases && (rollbackDb.listFiles()?.isEmpty() != false)) {
                 throw IOException("Failed to create valid rollback snapshot for databases")
             }
 

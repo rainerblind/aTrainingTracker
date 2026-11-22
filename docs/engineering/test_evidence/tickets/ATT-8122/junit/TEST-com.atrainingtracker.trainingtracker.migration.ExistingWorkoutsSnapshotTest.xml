@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ExistingWorkoutsSnapshotTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:24:29.768Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="testSnapshot_registerUpdatesStateDynamically" classname="com.atrainingtracker.trainingtracker.migration.ExistingWorkoutsSnapshotTest" time="0.0"/>
+  <testcase name="testSnapshot_isDuplicate" classname="com.atrainingtracker.trainingtracker.migration.ExistingWorkoutsSnapshotTest" time="0.0"/>
+  <testcase name="testSnapshot_caseInsensitiveBaseNameMatching" classname="com.atrainingtracker.trainingtracker.migration.ExistingWorkoutsSnapshotTest" time="0.001"/>
+  <testcase name="testSnapshot_stravaActivityIdMatching" classname="com.atrainingtracker.trainingtracker.migration.ExistingWorkoutsSnapshotTest" time="0.0"/>
+  <testcase name="testSnapshot_factoryMethodWithMocks" classname="com.atrainingtracker.trainingtracker.migration.ExistingWorkoutsSnapshotTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

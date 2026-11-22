@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.28  
+**Version**: 1.0.30  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 10
+**Total Requirements**: 11
 
 ---
 
@@ -334,10 +334,37 @@
 
 ---
 
+### REQ-MIG-057: Authoritative `DatabaseSchemaRegistry` Constants, Classpath Parity & Non-Eager `DatabaseConnectionManager` Quiescence (`ATT-8122`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-057`
+- **System Requirement(s)**: `SYSREQ-DEX-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `DatabaseSchemaRegistry.kt`, `DatabaseConnectionManager.kt`, `MigrationEngine.kt`, `BaseDatabaseManager.kt`, `TrackingSQLiteOpenHelper.kt`, `ExportStatusDatabaseManager.java`, `StravaUploadDbHelper.java`, `EquipmentDbHelper.java`, `ActiveDevicesDbHelper.java`, `WorkoutClusterDatabaseManager.kt`, `SportTypeEquipmentLinkManager.kt`, `RoutesDatabaseManager.kt`, `AthleteMetricsDatabaseManager.kt`, `ClimbsDatabaseManager.kt`, `ElevationCacheDatabaseManager.kt`, `HrvReadinessDatabaseManager.kt`, `WorkoutRrDbHelper.kt`, `PeriodSummariesDatabaseManager.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Hardcoded schema versions and filenames in `DatabaseSchemaRegistry.kt` drifted behind live `SQLiteOpenHelper` constants (`Laps.db` v2 vs v3, `Routes.db` v10 vs v11, `ExportStatus.db` v1 vs v2; wrong `"KnownLocations.db"`/`"Pebble.db"`; missing `"RouteClusters.db"`/`"SportTypeLinks.db"`), causing `MigrationEngine.validateBackupArchive()` to reject valid backups created by the current app, while `DatabaseConnectionManager.getActiveDatabases()` omitted 4 managers (`PeriodSummaries`, `ElevationCache`, `AthleteMetrics`, `Pebble`) and eagerly opened closed `.db` files on disk (`ATT-8122`, refining `REQ-MIG-041.2` & `REQ-MIG-041.3`).
+- **Description**:
+  1. *Authoritative Constant-Backed `DatabaseSchemaRegistry` (`REQ-MIG-057.1`)*: `DatabaseSchemaRegistry.SUPPORTED_DB_VERSIONS` SHALL reference the authoritative `DB_NAME`/`DATABASE_NAME` and `DB_VERSION`/`DATABASE_VERSION` constants of all 22 production `SQLiteOpenHelper` subclasses directly (zero hardcoded schema version literals), fixing `Laps.db` (v3), `Routes.db` (v11), `ExportStatus.db` (v2), `StartLocation2Altitude.db`, `PebbleView.db`, `RouteClusters.db` (v11), and `SportTypeLinks.db` (v1), while retaining the explicit legacy backup alias `"TrackingViews.db" to TrackingViewsDbHelper.DB_VERSION`.
+  2. *Classpath-Driven Drift Prevention Contract (`REQ-MIG-057.2`)*: An automated contract test SHALL discover all concrete production `SQLiteOpenHelper` subclasses from compiled debug classes and verify exact filename and `DB_VERSION` parity against `DatabaseSchemaRegistry`.
+  3. *Complete Non-Eager WAL Checkpointing & Quiescence (`REQ-MIG-057.3`)*: `DatabaseConnectionManager.getActiveDatabases(context)` and `quiesceAllDatabases(context, closeConnections)` SHALL track all 22 database managers via weak-referenced open-handle tracking (`OpenDatabaseTracker` across `BaseDatabaseManager` and Kotlin-first `TrackingSQLiteOpenHelper`), returning strictly handles where `db.isOpen == true` and NEVER eagerly instantiating singletons or opening/creating closed `.db` files on disk.
+  4. *Unmodified `.attbackup` Restore & Architecture Invariants (`REQ-MIG-057.4`)*: An unmodified `.attbackup` archive created by `BackupManager.createBackup(context)` containing live `Laps.db` (v3), `Routes.db` (v11), `ExportStatus.db` (v2), `StartLocation2Altitude.db`, `RouteClusters.db`, and `SportTypeLinks.db` SHALL pass `MigrationEngine.validateBackupArchive()` and `performFullRestore()` with zero excluded DBs, adding `0` lines to capped Java monoliths (`WorkoutSamplesDatabaseManager.java <= 1,500`) and conforming to `ADR-001`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* all 22 concrete production `SQLiteOpenHelper` subclasses, *When* checked against `DatabaseSchemaRegistry`, *Then* every DB filename and `DB_VERSION` matches exactly and zero current app DBs are rejected.
+• *Given* an app process where only a subset of SQLite DBs have been opened, *When* `DatabaseConnectionManager.getActiveDatabases(context)` or `quiesceAllDatabases(context, closeConnections = true)` executes, *Then* all open DBs (including `PeriodSummaries.db`, `ElevationCache.db`, `AthleteMetrics.db`, `PebbleView.db`, `ExportStatus.db`) are checkpointed/closed while unopened DBs are never initialized or created on disk.
+• *Given* an unmodified backup from `BackupManager.createBackup(context)` including `Laps.db` v3, `Routes.db` v11, and `ExportStatus.db` v2, *When* restored via `MigrationEngine.performFullRestore`, *Then* validation and restore succeed cleanly.
+
+**Invariants**: Zero DB schema version increments; `ATT-289` transparent reopen post-quiescence preserved; `REQ-STB-024.3` non-opening `PebbleDatabaseManager` preserved; `"TrackingViews.db"` legacy alias preserved; `WorkoutSamplesDatabaseManager.java <= 1,500` LoC; `0` UI/string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.30` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Promoted `REQ-MIG-057` to `[Verified]` after Stage 4–5 implementation (`OpenDatabaseTracker` + `TrackingSQLiteOpenHelper`, 22-DB constant-backed `DatabaseSchemaRegistry`, empty-`databasesDir` rollback guard in `MigrationEngine`), `94/94` targeted unit/contract tests PASS across 19 suites (`0` fail, `0` skip, `0` new compiler warnings), and live `emulator-5554` boot smoke (`0` crashes). |
+| `1.0.29` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Added `[Planned]` `REQ-MIG-057` (`SYSREQ-DEX-005`, `.1`–`.4`) for authoritative constant-backed `DatabaseSchemaRegistry` across all 22 `SQLiteOpenHelper` subclasses, classpath drift-prevention contract, and non-eager `OpenDatabaseTracker` / `TrackingSQLiteOpenHelper` WAL quiescence in `DatabaseConnectionManager` (`N/A - 0 string changes`). |
 | `1.0.28` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `REQ-DAT-047` to `[Verified]` in Stage 5 Bounce 1 after Gate 4 Bounce 1 (`ATT-9592`, `107/107` PASS), Kotlin-first `BaseDatabaseManager.kt` conversion (`ADR-001` / `JavaCoreMigrationStrategyContractTest` `5/5` PASS), `416/416` targeted Tier-1 unit/contract tests PASS, `auto_gate.py` `PASS` bundle (`docs/engineering/test_evidence/tickets/ATT-6036/`), and live `emulator-5554` boot smoke (`0` crashes). |
 | `1.0.27` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Stage 6 Bounce 1 heal (`[Implemented]`): made `SqliteSchemaUtils.addColumnIfNotExists` fail-fast by default (rethrows `ALTER TABLE` exceptions for `DevicesDatabaseManager` / `SportTypeDatabaseManager`), added explicit `addColumnIfNotExistsLenient` (catching `Exception`, never `Throwable`) for `ExportStatus`/`WorkoutSummaries`/`WorkoutCluster`, and fixed orphaned KDoc in `TrackingViewsRepository.kt`. |
 | `1.0.26` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `REQ-DAT-047` to `[Verified]` in Rule 7.5 Stage 5 reusing Gate 4 (`ATT-9588`) independently verified `262/262` PASS across 36 suites (`0` fail, `0` skip), `3/3` safety linters PASS, `auto_gate.py` `PASS` bundle (`docs/engineering/test_evidence/tickets/ATT-6036/`), and live `emulator-5554` boot smoke (`0` crashes). |

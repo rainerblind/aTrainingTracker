@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:23:22.277Z" hostname="rainer-HP-EliteBook-850-G5" time="2.203">
+  <properties/>
+  <testcase name="testWorkoutClusterRepository_fromCursorBatchKeys" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.216"/>
+  <testcase name="testEquipmentDataProvider_delegatesToWorkoutEquipmentDto" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.208"/>
+  <testcase name="testClusterWorkoutCandidateDto_fromCursor_extractsAllFields" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.208"/>
+  <testcase name="testClusterWorkoutCandidateDto_fromCursor_handlesNullStrings" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.197"/>
+  <testcase name="testWorkoutEquipmentDto_fromCursor_extractsSportAndEquipmentId" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.21"/>
+  <testcase name="testWorkoutBoundsDto_fromCursor_extractsNonNullCoordinates" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.22"/>
+  <testcase name="testSourceCodeContract_zeroManualCursorExtractionsInTargetClasses" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.218"/>
+  <testcase name="testWorkoutCluster_fromCursor_extractsAllFields" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.252"/>
+  <testcase name="testWorkoutBoundsDto_fromCursor_handlesNullCoordinates" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.248"/>
+  <testcase name="testWorkoutBatchKey_fromCursor_singleRowSymmetry" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.225"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:33.612Z" hostname="rainer-HP-EliteBook-850-G5" time="0.35">
+  <properties/>
+  <testcase name="testDatabaseSchemaRegistry_referencesEquipmentDbVersionDirectly" classname="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" time="0.094"/>
+  <testcase name="testReconcileDuplicates_retiredStravaGearPreservedWhenDuplicateRetired" classname="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" time="0.14"/>
+  <testcase name="testReconcileDuplicates_mergesTriplicateEnduranceBikesAndCascadesLinks" classname="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" time="0.116"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

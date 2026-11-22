@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesRealSqliteMigrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:21:40.038Z" hostname="rainer-HP-EliteBook-850-G5" time="0.077">
+  <properties/>
+  <testcase name="testUpgradeV5ToV10CreatesWaypointsTableAndMigratesBounds" classname="com.atrainingtracker.trainingtracker.database.RoutesRealSqliteMigrationTest" time="0.077"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

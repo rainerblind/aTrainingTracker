@@ -24,7 +24,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import com.atrainingtracker.database.BaseDatabaseManager;
 import com.atrainingtracker.database.SqliteSchemaUtils;
-import android.database.sqlite.SQLiteOpenHelper;
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -661,7 +661,7 @@ public class ExportStatusDatabaseManager extends BaseDatabaseManager<ExportStatu
     }
 
 
-    protected static class ExportStatusDbHelper extends SQLiteOpenHelper {
+    public static class ExportStatusDbHelper extends TrackingSQLiteOpenHelper {
         public static final String DB_NAME = "ExportStatus.db";
         public static final int DB_VERSION = 2;
         static final String TAG = "ExportStatusDbHelper";

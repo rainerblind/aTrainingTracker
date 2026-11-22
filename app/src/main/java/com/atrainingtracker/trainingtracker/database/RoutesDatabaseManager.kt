@@ -25,7 +25,7 @@ import android.database.sqlite.SQLiteDatabase
 import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.database.mapRows
 import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -893,7 +893,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
     """
     }
 
-    class RoutesDbHelper(context: Context) : SQLiteOpenHelper(
+    class RoutesDbHelper(context: Context) : TrackingSQLiteOpenHelper(
         context,
         DB_NAME,
         null,

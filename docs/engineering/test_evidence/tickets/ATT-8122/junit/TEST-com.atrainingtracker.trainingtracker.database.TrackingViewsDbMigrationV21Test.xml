@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV21Test" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:39.363Z" hostname="rainer-HP-EliteBook-850-G5" time="0.293">
+  <properties/>
+  <testcase name="testTrackingViewsDbHelper_v20ToV21Migration_seedsDefaultsAndRegistry" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV21Test" time="0.09"/>
+  <testcase name="testTrackingViewsDbHelper_createViewsTableV21_containsShowRadarLight" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV21Test" time="0.109"/>
+  <testcase name="testTrackingViewsDbHelper_v20ToV21Migration_addsShowRadarLightColumn" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDbMigrationV21Test" time="0.094"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

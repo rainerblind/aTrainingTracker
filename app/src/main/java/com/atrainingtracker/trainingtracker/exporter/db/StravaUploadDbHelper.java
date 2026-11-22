@@ -23,7 +23,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
 
@@ -32,7 +32,7 @@ import androidx.annotation.Nullable;
 
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 
-public class StravaUploadDbHelper extends SQLiteOpenHelper {
+public class StravaUploadDbHelper extends TrackingSQLiteOpenHelper {
     // The different tables
     public static final String TABLE = "StravaUploads";
     // columns
@@ -41,8 +41,8 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     public static final String ACTIVITY_ID = "ActivityId";
     public static final String STATUS = "Status";
     public static final String STRAVA_ACTIVITY_DATA = "StravaActivity";
-    static final String DB_NAME = "StravaUpload.db";
-    static final int DB_VERSION = 6;
+    public static final String DB_NAME = "StravaUpload.db";
+    public static final int DB_VERSION = 6;
     private static final String TAG = "StravaUploadDbHelper";
     private static final boolean DEBUG = false;
     private static final String CREATE_TABLE = "create table " + TABLE + " ("

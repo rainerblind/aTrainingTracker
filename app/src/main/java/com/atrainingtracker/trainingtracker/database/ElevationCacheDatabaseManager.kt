@@ -23,7 +23,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.atrainingtracker.database.inTransaction
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
@@ -85,7 +85,7 @@ data class ElevationCacheItem(
  * - Architecture Rule 64: Schema parity between onCreate and future onUpgrade.
  */
 class ElevationCacheDbHelper(context: Context) :
-    SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+    TrackingSQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
 
     companion object {
         const val DB_NAME = "ElevationCache.db"

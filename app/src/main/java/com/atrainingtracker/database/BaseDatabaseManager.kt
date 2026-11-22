@@ -46,6 +46,10 @@ abstract class BaseDatabaseManager<H : SQLiteOpenHelper> protected constructor(
     @Volatile
     protected var mDatabase: SQLiteDatabase? = null
 
+    init {
+        OpenDatabaseTracker.register(this)
+    }
+
     /**
      * Returns a writable [SQLiteDatabase] handle, opening it lazily via `@Volatile`
      * double-checked locking and transparently reopening if previously closed (`ATT-289`).
@@ -72,6 +76,7 @@ abstract class BaseDatabaseManager<H : SQLiteOpenHelper> protected constructor(
                 }
                 db = helper.writableDatabase
                 mDatabase = db
+                OpenDatabaseTracker.register(this)
                 return db!!
             }
         }
@@ -94,8 +99,16 @@ abstract class BaseDatabaseManager<H : SQLiteOpenHelper> protected constructor(
      */
     @Synchronized
     open fun isDatabaseOpen(): Boolean {
+        return OpenDatabaseTracker.isDatabaseOpenSafely(mDatabase)
+    }
+
+    /**
+     * Returns the currently cached [SQLiteDatabase] handle iff already open, without eagerly
+     * opening a closed or uninitialized database (`REQ-MIG-057.3`, `ATT-8122`).
+     */
+    open fun getOpenDatabaseOrNull(): SQLiteDatabase? {
         val db = mDatabase
-        return db != null && db.isOpen
+        return if (OpenDatabaseTracker.isDatabaseOpenSafely(db)) db else null
     }
 
     /**
@@ -111,5 +124,8 @@ abstract class BaseDatabaseManager<H : SQLiteOpenHelper> protected constructor(
     @Synchronized
     open fun setDatabaseForTesting(database: SQLiteDatabase?) {
         mDatabase = database
+        if (database != null) {
+            OpenDatabaseTracker.register(this)
+        }
     }
 }

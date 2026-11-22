@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:56.205Z" hostname="rainer-HP-EliteBook-850-G5" time="16.884">
+  <properties/>
+  <testcase name="testFormatClusterWorkoutName_subsequentHitCount_appendsSuffix" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="1.988"/>
+  <testcase name="testFormatClusterWorkoutName_initialHitCount_omitsSuffix" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="2.015"/>
+  <testcase name="testSplitCluster_trimsVariantsAndSkipsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="2.97"/>
+  <testcase name="testManuallyCreateAndSyncRoute_trimsAndRejectsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="1.869"/>
+  <testcase name="testAssignClusterToWorkout_initialSession_setsBaseNameWithoutSuffix" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="2.041"/>
+  <testcase name="testFormatClusterWorkoutName_trimsLeadingAndTrailingWhitespace_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="1.837"/>
+  <testcase name="testAssignClusterToWorkout_subsequentSession_appendsSuffix" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="2.017"/>
+  <testcase name="testNormalizationAndHitCountStripping_handlesBaseNameAndNumberedNameIdentically" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest" time="2.147"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

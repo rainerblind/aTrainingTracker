@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:20:58.620Z" hostname="rainer-HP-EliteBook-850-G5" time="2.233">
+  <properties/>
+  <testcase name="testPermissionRelaxation_whenHrvGrantedWithoutRhr_succeeds" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="1.33"/>
+  <testcase name="testHrvPosture_overnightWearableAliasAndResolution" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.076"/>
+  <testcase name="testIsolatedCohortPersistenceAndDeduplication" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.144"/>
+  <testcase name="testInPlaceNocturnalUpdate_userPinnedEntry_neverOverwritten" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.111"/>
+  <testcase name="testPermissionAndOptInGating_whenDisabledOrMissingPermissions_abortsSafely" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.108"/>
+  <testcase name="testNocturnalLogNormalAggregationAndDateAttribution" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.094"/>
+  <testcase name="testInPlaceNocturnalUpdate_whenNewerSamplesOrNonZeroRhrArrive_updatesExistingRow" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.176"/>
+  <testcase name="testPageTokenPaginationLoop_multiplePages_aggregatesAllRecords" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporterTest" time="0.193"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

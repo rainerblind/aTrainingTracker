@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerOptimizationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:36.227Z" hostname="rainer-HP-EliteBook-850-G5" time="0.262">
+  <properties/>
+  <testcase name="testGetAllRouteSummaries_returnsMetadataAccurately" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerOptimizationTest" time="0.1"/>
+  <testcase name="testEmptyDatabase_returnsEmptyLists" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerOptimizationTest" time="0.071"/>
+  <testcase name="testGetAllRoutes_batchedLoadingParityWithIndividualQueries" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerOptimizationTest" time="0.091"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

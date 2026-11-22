@@ -76,10 +76,15 @@ class BackupMigrationCycleTest {
         MigrationEngine.appRestarter = originalRestarter
         DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutSamplesDatabaseManager.resetForTesting(null)
+        LapsDatabaseManager.resetForTesting(null)
         SportTypeDatabaseManager.resetForTesting(null)
         EquipmentDbHelper.resetForTesting(null)
         com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.resetForTesting(null)
         com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager.resetForTesting(null)
+        setStaticField(com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager::class.java, "cInstance", null)
+        setStaticField(com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager::class.java, "instance", null)
         cleanupDatabases()
         setStaticField(TrainingApplication::class.java, "cAppContext", null)
         setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
@@ -120,54 +125,55 @@ class BackupMigrationCycleTest {
 
     @Test
     fun testFullBackupWipeAndRestoreCycle_bundlesAndRestoresState_TST_MIG_001() {
-        // 1. Seed SQLite state + SharedPreferences (Laps.db omitted from full-restore test because DatabaseSchemaRegistry caps Laps.db at 2 while helper is 3)
+        // 1. Seed SQLite state across all previously schema-drifted/missing DBs + SharedPreferences (REQ-MIG-057 / TST-MIG-057.3)
         val summariesMgr = WorkoutSummariesDatabaseManager.getInstance(context)
         val workoutId = insertSampleWorkout(summariesMgr.database, "2026-08-01_10-00-00", "Alpine Ride")
         assertTrue(workoutId > 0L)
         WorkoutSamplesDatabaseManager.getInstance(context).database
+        LapsDatabaseManager.getInstance(context).database
+        com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager.getInstance(context).getDatabase()
+        com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager.getInstance(context).database
+        com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(context).database
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getInstance(context).getDatabase()
+        com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager.getInstance(context).getDatabase()
         context.getSharedPreferences("cycle_prefs", Context.MODE_PRIVATE)
             .edit().putString("athlete_alias", "Rainer").commit()
 
-        // 2. Bundle into portable .attbackup archive
+        // 2. Bundle into portable .attbackup archive (no DB exclusions needed after ATT-8122)
         val backupFile = BackupManager.createBackup(context)
         assertNotNull("BackupManager.createBackup must produce an archive", backupFile)
         assertTrue(backupFile!!.exists())
 
         val entryNames = ZipFile(backupFile).use { zip -> zip.entries().asSequence().map { it.name }.toSet() }
         assertTrue("Archive must bundle WorkoutSummaries.db", entryNames.any { it.endsWith("databases/WorkoutSummaries.db") })
+        assertTrue("Archive must bundle Laps.db (v3)", entryNames.any { it.endsWith("databases/Laps.db") })
+        assertTrue("Archive must bundle Routes.db (v11)", entryNames.any { it.endsWith("databases/Routes.db") })
+        assertTrue("Archive must bundle ExportStatus.db (v2)", entryNames.any { it.endsWith("databases/ExportStatus.db") })
+        assertTrue("Archive must bundle StartLocation2Altitude.db", entryNames.any { it.endsWith("databases/StartLocation2Altitude.db") })
+        assertTrue("Archive must bundle RouteClusters.db", entryNames.any { it.endsWith("databases/RouteClusters.db") })
+        assertTrue("Archive must bundle SportTypeLinks.db", entryNames.any { it.endsWith("databases/SportTypeLinks.db") })
         assertTrue("Archive must bundle shared_prefs", entryNames.any { it.startsWith("shared_prefs/") })
 
-        val copyArchive = File(context.cacheDir, "cycle_restore_copy.attbackup")
-        // Filter out databases whose helper version exceeds DatabaseSchemaRegistry max (Laps.db 3>2, Routes.db 11>10, ExportStatus.db 2>1)
-        val excluded = setOf("databases/Laps.db", "databases/Routes.db", "databases/ExportStatus.db")
-        ZipFile(backupFile).use { zin ->
-            java.util.zip.ZipOutputStream(java.io.FileOutputStream(copyArchive)).use { zout ->
-                for (entry in zin.entries()) {
-                    if (entry.name in excluded) continue
-                    zout.putNextEntry(java.util.zip.ZipEntry(entry.name))
-                    zin.getInputStream(entry).use { it.copyTo(zout) }
-                    zout.closeEntry()
-                }
-            }
-        }
+        // Copy unmodified backup outside filesDir/backups before wiping local state
+        val unmodifiedArchive = File(context.cacheDir, "cycle_restore_unmodified.attbackup")
+        backupFile.copyTo(unmodifiedArchive, overwrite = true)
 
-        // 3. Wipe local DB and prefs
+        // 3. Quiesce and wipe local DBs and prefs (preserving singleton instance to also verify ATT-289 reopen)
         DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         cleanupDatabases()
         File(context.applicationInfo.dataDir, "shared_prefs").deleteRecursively()
 
-        // 4. Full restore with restarter capture
+        // 4. Full restore directly from unmodified backup archive with restarter capture
         var restarted = false
         MigrationEngine.appRestarter = { restarted = true }
-        val restored = MigrationEngine.performFullRestore(context, copyArchive)
-        assertTrue("MigrationEngine.performFullRestore must succeed", restored)
+        val restored = MigrationEngine.performFullRestore(context, unmodifiedArchive)
+        assertTrue("MigrationEngine.performFullRestore must succeed on unmodified current-app backup", restored)
         assertTrue("Full restore must trigger app restart callback", restarted)
 
-        // 5. Verify restored SQLite row and preference survive
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
-        val restoredMgr = WorkoutSummariesDatabaseManager.getInstance(context)
-        restoredMgr.database.query(
+        // 5. Verify restored SQLite row via existing singleton (proves ATT-289 transparent reopen without singleton reset)
+        val reopenedDb = summariesMgr.database
+        assertTrue("Singleton must transparently reopen after quiescence and restore (ATT-289)", reopenedDb.isOpen)
+        reopenedDb.query(
             WorkoutSummaries.TABLE,
             arrayOf(WorkoutSummaries.FILE_BASE_NAME, WorkoutSummaries.WORKOUT_NAME),
             "${WorkoutSummaries.FILE_BASE_NAME} = ?",

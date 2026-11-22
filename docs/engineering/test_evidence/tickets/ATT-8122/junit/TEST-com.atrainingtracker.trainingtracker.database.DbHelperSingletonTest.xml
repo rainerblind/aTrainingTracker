@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.DbHelperSingletonTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:22:27.012Z" hostname="rainer-HP-EliteBook-850-G5" time="0.018">
+  <properties/>
+  <testcase name="testStravaUploadDbHelper_singletonIdentityAndReset" classname="com.atrainingtracker.trainingtracker.database.DbHelperSingletonTest" time="0.007"/>
+  <testcase name="testEquipmentDbHelper_singletonIdentityAndReset" classname="com.atrainingtracker.trainingtracker.database.DbHelperSingletonTest" time="0.003"/>
+  <testcase name="testSingleton_concurrencyThreadSafety" classname="com.atrainingtracker.trainingtracker.database.DbHelperSingletonTest" time="0.005"/>
+  <testcase name="testActiveDevicesDbHelper_singletonIdentityAndReset" classname="com.atrainingtracker.trainingtracker.database.DbHelperSingletonTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

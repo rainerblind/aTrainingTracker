@@ -22,7 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.location.Location
 import android.provider.BaseColumns
 import com.atrainingtracker.database.inTransaction
@@ -40,7 +40,7 @@ import kotlinx.coroutines.withContext
 /**
  * SQLite helper for the persistent climbs database (REQ-MAP-027).
  */
-class ClimbsDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class ClimbsDbHelper(context: Context) : TrackingSQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         const val DATABASE_NAME = "Climbs.db"

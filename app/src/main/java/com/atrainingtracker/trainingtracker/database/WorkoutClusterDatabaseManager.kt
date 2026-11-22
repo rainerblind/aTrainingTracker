@@ -23,7 +23,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.atrainingtracker.database.SqliteSchemaUtils
-import android.database.sqlite.SQLiteOpenHelper
+import com.atrainingtracker.database.TrackingSQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
@@ -283,6 +283,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
 
     companion object {
         private const val TAG = "WorkoutClusterDatabaseManager"
+        const val DB_NAME = "RouteClusters.db"
+        const val DB_VERSION = 11
 
         @Volatile
         private var instance: WorkoutClusterDatabaseManager? = null
@@ -770,8 +772,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         """
     }
 
-    internal class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 11
+    internal class WorkoutClusterDbHelper(private val context: Context) : TrackingSQLiteOpenHelper(
+        context, DB_NAME, null, DB_VERSION
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
