@@ -277,6 +277,10 @@ class BottomSheetVisualContractTest {
             mapScreen.contains("BottomSheetDesign.PeekHeightKnownLocation")
         )
         assertTrue(
+            "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightClimb",
+            mapScreen.contains("BottomSheetDesign.PeekHeightClimb")
+        )
+        assertTrue(
             "MapScreenWithTrack must not contain hardcoded 185.dp peek height",
             !mapScreen.contains("185.dp + navBarHeight")
         )
@@ -359,6 +363,11 @@ class BottomSheetVisualContractTest {
         assertTrue(
             "MapScreenWithTrack must pass onHeaderHeightMeasured to RouteOnMapScreen",
             mapWithTrack.contains("RouteOnMapScreen(") &&
+                mapWithTrack.contains("onHeaderHeightMeasured = { measuredHeaderHeight = it }")
+        )
+        assertTrue(
+            "MapScreenWithTrack must pass onHeaderHeightMeasured to ClimbOnMapScreen",
+            mapWithTrack.contains("ClimbOnMapScreen(") &&
                 mapWithTrack.contains("onHeaderHeightMeasured = { measuredHeaderHeight = it }")
         )
     }

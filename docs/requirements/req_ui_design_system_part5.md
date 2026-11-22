@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.27  
+**Version**: 1.0.28  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 50
+**Total Requirements**: 51
 
 ---
 
@@ -1879,7 +1879,7 @@
   2. *Sealed `MapPeekSelection` with `Saver` & Unified Header Measurement in `MapScreenWithTrack.kt` (`REQ-UI-2790.2`)*:
      - `MapScreenWithTrack` SHALL replace the `5` mutually exclusive `rememberSaveable` selection IDs (`selectedSegmentId`, `selectedRouteId`, `selectedClusterId`, `selectedClimbId`, `selectedLocationId`) and `8` manual multi-null reset blocks with a single `sealed interface MapPeekSelection` (`Segment(id)`, `Route(id)`, `Cluster(id)`, `Location(id)`, `Climb(id)`) stored via `rememberSaveable(stateSaver = MapPeekSelection.Saver)`.
      - `MapPeekSelection.Saver` SHALL losslessly round-trip `null` and all `5` variants across configuration changes/process death while `LaunchedEffect(targetLocationId)` continues selecting `MapPeekSelection.Location(targetLocationId)` when `targetLocationId != null && targetLocationId > 0`.
-     - `MapScreenWithTrack` SHALL distinguish sheet-backed selections (`Segment`, `Route`, `Cluster`, `Location`) from `Climb` so `Climb` keeps `BottomSheetScaffold` hidden (`0.dp` peek) and renders modal `ClimbDetailSheet`, while sheet-backed selections dispatch `sheetPeekHeight` and `sheetContent` from a single exhaustive `when (peekSelection)` without priority mismatch.
+     - `MapScreenWithTrack` SHALL distinguish sheet-backed selections (`Segment`, `Route`, `Cluster`, `Location`) from `Climb` so `Climb` keeps `BottomSheetScaffold` hidden (`0.dp` peek) and renders modal `ClimbDetailSheet` *(superseded for `Climb` by `REQ-UI-2794` / `ATT-9553`, which promotes `Climb` to `isSheetBacked = true` via `ClimbOnMapScreen`)*, while sheet-backed selections dispatch `sheetPeekHeight` and `sheetContent` from a single exhaustive `when (peekSelection)` without priority mismatch.
      - `MapScreenWithTrack` SHALL replace `3` separate `measured*HeaderHeight` states with a single `measuredHeaderHeight` keyed via `remember(peekSelection)` (`REQ-UI-221`) while preserving `editingLocation`/`previewRadius` coexistence with `Location`, location-peek expansion lock (`confirmValueChange` rejecting `SheetValue.Expanded` & `sheetSwipeEnabled = false`, `REQ-UI-238`), and `BackHandler`.
   3. *Preserved Signatures & Invariants (`REQ-UI-2790.3`)*:
      - Public signatures of `ImportBackupTabsScreen`, `PreImportTuningBottomSheet`, and `MapScreenWithTrack` MUST remain unchanged; `showMappingDialog` (`MappingRequired` flow) and `activeInteraction` (`ClusterNamingDialog`) remain intact; `0` `strings*.xml` edits and `0` visual/behavioral regressions.
@@ -1980,6 +1980,39 @@
 
 ---
 
+### REQ-UI-2794: MapScreenWithTrack Compact Sheet-Backed Climb Peek Header (`ATT-9553`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2794`
+- **System Requirement(s)**: Derived (SW-only — Compose bottom-sheet UX refinement of `REQ-UI-221`, `REQ-UI-333`, `REQ-MAP-064.4`, and `REQ-UI-2790.2`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapScreenWithTrack.kt`, `BottomSheetDesign.kt`, `MapPeekSelectionSaverAndUiComposeTest.kt`, `BottomSheetVisualContractTest.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Observed during PO acceptance review of `ATT-6040` on Pixel 10 (`sprint/2026-11-21_01_Früh`): tapping a Climb overlay on `MapScreenWithTrack` immediately opened `ClimbDetailSheet` as a fullscreen modal sheet (`EntityDetailSheetScaffold` with `skipPartiallyExpanded = true`) because `MapPeekSelection.Climb` overrode `isSheetBacked = false`, breaking visual and interaction parity with Routes (`RouteOnMapScreen`) and Segments (`SegmentOnMapScreen`).
+- **Description**:
+  1. *Sheet-Backed `MapPeekSelection.Climb` & Standardized Peek Token (`REQ-UI-2794.1`)*:
+     - `MapPeekSelection.Climb` in `MapScreenWithTrack.kt` SHALL inherit `isSheetBacked = true` identically to `Segment`, `Route`, `Cluster`, and `Location` (`MapPeekSelection.Saver` round-trip and `StateRestorationTester` survival preserved for all 5 variants).
+     - `BottomSheetDesign` (`BottomSheetDesign.kt`) SHALL declare `PeekHeightClimb: Dp = 192.dp` as the calibrated baseline framing `ClimbHeader` and the 3-row `ClimbDetails` until dynamic header measurement completes (`REQ-UI-221`).
+     - `MapScreenWithTrack` SHALL compute `sheetPeekHeight` for `MapPeekSelection.Climb` as `(measuredHeaderHeight ?: BottomSheetDesign.PeekHeightClimb) + navBarHeight` when the selected climb exists in `uiState.climbs` (falling back to `0.dp` if absent/layer-hidden) and SHALL render `key(selection.id) { ClimbOnMapScreen(climb = selectedClimb, bSportType = uiState.bSportType, modifier = Modifier.fillMaxSize(), useStatusBarsPadding = false, onHeaderHeightMeasured = { measuredHeaderHeight = it }) }` inside `BottomSheetScaffold`'s `sheetContent` instead of launching the fullscreen modal `ClimbDetailSheet`.
+  2. *On-Demand Expansion, Swipe-to-Hide & Back Dismissal (`REQ-UI-2794.2`)*:
+     - Tapping a Climb on `MapScreenWithTrack` SHALL open `BottomSheetScaffold` strictly to `SheetValue.PartiallyExpanded` showing only the compact peek header (`MinimumDragHandle`, `ClimbHeader`, `ClimbDetails`) while keeping the map canvas and top navigation/layer controls unobstructed.
+     - Swiping up SHALL expand the sheet to `SheetValue.Expanded`, revealing the full `ClimbOnMapScreen` (focused climb map with start/summit markers, floating Share button, zoom/scrub toolbar, and normalized `ElevationProfile`).
+     - Manually swiping/hiding the bottom sheet to `SheetValue.Hidden`, tapping the background map (`onMapClick`), or pressing the system Back button (`BackHandler`) SHALL clear `peekSelection = null` cleanly so `BackHandler` releases and the same Climb can be re-selected immediately.
+  3. *Preserved Signatures & Modal `ClimbDetailSheet` Reuse (`REQ-UI-2794.3`)*:
+     - Public 5-parameter signature of `MapScreenWithTrack` SHALL remain unchanged (`InterfaceSignatureDriftContractTest`), `MapScreenWithTrack.kt` SHALL stay `<= 1,500` LoC (`ArchitectureConformanceContractTest`), and `ClimbDetailSheet` (`ClimbDetailSheet.kt`) SHALL remain intact for modal climb popups from `RouteOnMapScreen`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `MapScreenWithTrack` with `GeneralMapLayer.CLIMBS` enabled and a Climb selected (`MapPeekSelection.Climb`), *When* the screen renders, *Then* `BottomSheetScaffold` rests at `SheetValue.PartiallyExpanded` (NOT fullscreen), `measuredHeaderHeight` reports the compact header height (`100..280 dp`), the Climb title/category/metrics render in the lower portion of the viewport, and zero modal `EntityDetailSheetScaffold` close button exists.
+  • *Given* a peeked Climb on `MapScreenWithTrack`, *When* the user expands the sheet to `SheetValue.Expanded`, *Then* the header moves to the top of the viewport and full `ClimbOnMapScreen` details (focused climb map, Share action, and `ElevationProfile`) become visible.
+  • *Given* a peeked or expanded Climb on `MapScreenWithTrack`, *When* the user hides/swipes the sheet to `SheetValue.Hidden`, taps the map, or presses Back, *Then* `MapPeekSelection.Climb` is cleared to `null` and the Climb header unmounts cleanly while remaining on `MapScreenWithTrack`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-2790.2` (`ATT-6040`), `REQ-MAP-064.4`, `REQ-UI-221`, and `REQ-UI-333`, targeting `MapScreenWithTrack.kt` and `BottomSheetDesign.kt`.
+  2. *Historical Origin & Commit Trace*: `REQ-MAP-064.4` wired `ClimbDetailSheet` directly on `MapScreenWithTrack`; `ATT-6040` (`REQ-UI-2790.2`) consolidated the 5 map selection IDs into `MapPeekSelection` while intentionally preserving the pre-existing `isSheetBacked = false` modal behavior for `Climb`.
+  3. *Root Reason for Existing Formulation*: `ClimbDetailSheet` existed earlier for `RouteOnMapScreen` and was initially reused on `MapScreenWithTrack` before `ClimbOnMapScreen` already supported `onHeaderHeightMeasured` and `useStatusBarsPadding = false`.
+  4. *Preservation of Core Invariants*: Preserves `ClimbDetailSheet` for `RouteOnMapScreen` (`ClimbDetailSheetContractTest`), `LiveClimbSheet` default `Expanded` cockpit presentation (`docs/design_guidelines.md §5.8`), `MapScreenWithTrack` public signature, `Location` expansion lock (`REQ-UI-238`), `MapScreenWithTrack.kt <= 1,500` LoC, `Rule 66` zero composition-time snapshot writes, and `0` string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2010,3 +2043,4 @@
 | `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-UI-2792` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` incl. `TranslationParityTest` `11/11`, `0` `app/` drift, `Rule 8.5` Light/Dark PNG certified, `--check-verified-evidence` `exit 0`). |
 | `1.0.26` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Refined `REQ-UI-2791.1`: replaced thick top-only `3.dp` bar on Row 1 `PmcStatBadge` cards with clean uniform `1.5.dp` all-around colored borders matching curve colors while preserving Row 2 neutral `1.dp` `outlineVariant` borders and 3-curve `FlowRow` legend. |
 | `1.0.27` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `REQ-UI-2793` (`[Verified]`, `.1`–`.3`) for `ElevationProfile` Canvas Paint/Path/climb-summit hoisting & coalesced color runs, `MapScreenWithTrack` direct `StateFlow` forwarding + `MapContentScopeImpl` `Rule 66` plain `mutableListOf` + `contentRevision` fix, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, and shared base `AppHttpClient` (emulator + Light/Dark PNGs visually verified via `read_file`, automated gate & evidence bundle in `docs/engineering/test_evidence/tickets/ATT-6037/`). |
+| `1.0.28` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `REQ-UI-2794` (`[Verified]`, `.1`–`.3`) promoting `MapPeekSelection.Climb` to `isSheetBacked = true` in `MapScreenWithTrack` via `BottomSheetScaffold` + `BottomSheetDesign.PeekHeightClimb` (`192.dp`) + `ClimbOnMapScreen` dynamic `measuredHeaderHeight` + `SheetValue.Hidden` selection cleanup, superseding `REQ-UI-2790.2` modal Climb carve-out while preserving `ClimbDetailSheet` for `RouteOnMapScreen`. |

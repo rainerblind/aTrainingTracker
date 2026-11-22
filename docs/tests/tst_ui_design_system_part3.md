@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.28  
+**Version**: 1.0.29  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 50
+**Total Tests**: 51
 
 ---
 
@@ -974,6 +974,24 @@
 
 ---
 
+### TST-UI-2794: **MapScreenWithTrack Compact Sheet-Backed Climb Peek Verification Suite (`ATT-9553`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2794` (`REQ-UI-2794.1`–`REQ-UI-2794.3`)
+- **Component**: `MapScreenWithTrack.kt`, `BottomSheetDesign.kt`, `ClimbOnMapScreen.kt`, `ClimbDetailSheet.kt`, `MapPeekSelectionSaverAndUiComposeTest.kt`, `BottomSheetVisualContractTest.kt`, `ClimbDetailSheetContractTest.kt`
+- **Jira**: `ATT-9553` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Sheet-Backed Climb Peek & Dynamic `measuredHeaderHeight` Behavioral Compose Tests (`TST-UI-2794.1`, `MapPeekSelectionSaverAndUiComposeTest`)*:
+     - Verify `MapPeekSelection.Climb.isSheetBacked == true`, `BottomSheetDesign.PeekHeightClimb == 192.dp`, and `MapPeekSelection.Saver` + `StateRestorationTester` survival across all 5 variants (`testMapPeekSelectionSaver_roundTripsNullAndAllFiveVariants_tstUi2790_2`, `testMapPeekSelection_stateRestorationTester_survivesConfigurationChange_tstUi2790_2`).
+     - Render `MapScreenWithTrackContent` with `MapPeekSelection.Climb(505L)` via Robolectric `v2.createComposeRule()` (`testMapScreenWithTrack_selectedClimbPeeksCompactHeaderWithMeasuredHeight_tstUi2794_1`), asserting `SheetValue.PartiallyExpanded` (NOT fullscreen `Expanded`), `measuredHeaderHeight in 100.dp..280.dp`, Climb title sitting in the lower half of the viewport (`top > 500.dp`), category chip visible, and zero modal `EntityDetailSheetScaffold` close button (`R.string.Cancel`).
+  2. *On-Demand Sheet Expansion, Swipe-to-Hide & System Back Dismissal (`TST-UI-2794.2`, `MapPeekSelectionSaverAndUiComposeTest`)*:
+     - Verify expanding the peeked Climb sheet transitions to `SheetValue.Expanded`, moves the header to the top (`top < 120.dp`), reveals `R.string.graph_heading_elevation` and floating `R.string.share`, and hiding the sheet clears `MapPeekSelection.Climb` to `null` and unmounts the Climb header (`testMapScreenWithTrack_selectedClimbExpandsToDetailsAndDismissClearsSelection_tstUi2794_2`).
+     - Verify pressing system Back clears `MapPeekSelection.Climb` to `null` and unmounts the Climb header (`testMapScreenWithTrack_backPressDismissesSelectedClimbPeek_tstUi2794_2`).
+  3. *`Rule 8.5` Light/Dark PNG, Live `emulator-5554` Target Verification & Contract Parity (`TST-UI-2794.3`)*:
+     - Capture and visually inspect Light & Dark/AMOLED PNG (`testCaptureMapClimbPeekLightAndDarkScreenshot_tstUi2794_3`) plus live `emulator-5554` peek & expanded screenshots (`docs/engineering/test_evidence/tickets/ATT-9553/screenshots/`) via `read_file` with clean `logcat -b crash -d`.
+     - Verify `BottomSheetVisualContractTest`, `ClimbDetailSheetContractTest`, `MapScreenWithTrackTest`, `FavoriteLocationSheetContractTest`, `GeneralMapLayersContractTest`, `ElevationProfilePerformanceComposeTest`, `ArchitectureConformanceContractTest`, `UiReflectionOnlyTestAuditContractTest`, and `InterfaceSignatureDriftContractTest` PASS (`Localization Parity: N/A - 0 new or modified UI strings`).
+- **Verified Evidence (`ATT-9553`, `docs/engineering/test_evidence/tickets/ATT-9553/`)**: `MapPeekSelectionSaverAndUiComposeTest#testMapPeekSelectionSaver_roundTripsNullAndAllFiveVariants_tstUi2790_2`, `MapPeekSelectionSaverAndUiComposeTest#testMapPeekSelection_stateRestorationTester_survivesConfigurationChange_tstUi2790_2`, `MapPeekSelectionSaverAndUiComposeTest#testMapScreenWithTrack_selectedClimbPeeksCompactHeaderWithMeasuredHeight_tstUi2794_1`, `MapPeekSelectionSaverAndUiComposeTest#testMapScreenWithTrack_selectedClimbExpandsToDetailsAndDismissClearsSelection_tstUi2794_2`, `MapPeekSelectionSaverAndUiComposeTest#testMapScreenWithTrack_backPressDismissesSelectedClimbPeek_tstUi2794_2`, `MapPeekSelectionSaverAndUiComposeTest#testCaptureMapClimbPeekLightAndDarkScreenshot_tstUi2794_3`, `BottomSheetVisualContractTest#testScreens_consumeStandardizedPeekHeightTokens`, `BottomSheetVisualContractTest#testDynamicHeaderMeasurement_wiringAndForwarding`, `ClimbDetailSheetContractTest#testClimbDetailSheet_structuralTokensAndContracts`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1005,3 +1023,4 @@
 | `1.0.26` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-UI-2792` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` incl. `TranslationParityTest` `11/11`, `0` `app/` drift, `Rule 8.5` PNG certified, `--check-verified-evidence` `exit 0`, `docs/engineering/walkthroughs/ATT-9360_walkthrough.md`). |
 | `1.0.27` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Updated `TST-UI-2791.2`/`.3` for `ATT-9558`: removed top-only `3.dp` bar assertions and added Light & Dark AMOLED uniform colored border pixel-symmetry tests (`testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInLightTheme_att9558`, `testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInDarkAmoledTheme_att9558`). |
 | `1.0.28` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `TST-UI-2793` (`[Verified]`, `.1`–`.3`) covering `ElevationProfile` Canvas hoisting/coalescing + Light/Dark PNG, `MapScreenWithTrack` `StateFlow` forwarding, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, shared `AppHttpClient` pool/timeout/injection tests, and `emulator-5554` visual checks. |
+| `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `TST-UI-2794` (`[Verified]`, `.1`–`.3`) covering Robolectric `v2.createComposeRule()` Climb peek/expand/hide/BackHandler tests, Light/Dark PNG + live `emulator-5554` peek/expand/dismiss checks, and `BottomSheetVisualContractTest`/`ClimbDetailSheetContractTest` parity (`76/76` targeted tests PASS). |
