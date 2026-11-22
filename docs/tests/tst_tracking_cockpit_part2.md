@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.2  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle (continuation shard keeping `tst_tracking_cockpit.md` within the 4,000-line cap, `REQ-PRO-093.3`).  
-**Total Tests**: 2
+**Total Tests**: 3
 
 ---
 
@@ -29,6 +29,23 @@
   3. *`endWorkout` Failure Fallback, Completed-Future Safety & Contract Parity (`TST-TRK-092.3`, `TrackerServiceFinalizationTest.kt#testOnDestroy_duringActionStopWithEndWorkoutFailureOrCompletedFuture_completesCleanupSafely_tstTrk092_3`)*:
   • Verify (a) an exception thrown inside `endWorkout(...)` after external `onDestroy()` still runs fault-isolated cleanup and completes `finalizationFuture`, and (b) `onDestroy()` when `mIsStopping == true` and `mFinalizationFuture.isDone() == true` safely releases any remaining `wakeLock`/`BANAL` binding without blocking.
   • Verify `TrackerService.java <= 3,559` LoC (`ArchitectureConformanceContractTest`) and SWE.3 living design parity (`DetailedDesignParityContractTest`).
+
+### TST-TRK-093: **Polar H10 Recording Anchor, Trailing RR Trimming, Post-Backfill Physiology Recomputation & Legacy GATT Release Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-093`
+- **Component**: `PolarH10OfflineController.kt`, `PostWorkoutPhysiologyRecomputer.kt`, `WorkoutPostProcessingCoordinator.kt`, `TrackerService.java`, `MyBTLEDevice.java`, `MyAccumulatorSensor.java`
+- **Jira**: `ATT-8124`
+- **Test Description**:
+  1. *Exact `startRecording` Time Anchor & Lifecycle (`TST-TRK-093.1`, `PolarH10OfflineControllerTest.kt#testExecuteArming_capturesPostStartRecordingAnchorAndResetsLifecycle_TST_TRK_093_1`)*:
+  • Verify `recordingStartTimeMs` is captured strictly after `api.startRecording(...)` completes (offset `+8 s` from `sessionStartTimeMs`), cleared in `clearArmedStateIfTokenMatches()` / `resetForTesting()` / unarmed `setSessionStartTimeMs()`, and used as default anchor in `stopAndBackfillWorkout()`, `stopAndBackfillWorkoutBlocking()`, and `recordPendingSync()`.
+  2. *3-Case Trailing RR Trimming, Clock-Inversion & Non-Positive RR Guards (`TST-TRK-093.2`, `PolarH10OfflineControllerTest.kt#testBuildAnchoredSamples_handlesThreeEndTimeCasesAndInvalidRr_TST_TRK_093_2`, `#testStopAndBackfillWorkout_trimsTrailingBeats_skipsEmptyDbWrite_andRespectsRunPostBackfillRecompute_TST_TRK_093_2`, `#testSyncPendingWorkout_trimsByExpectedEndMsAndRunsPhysiologyBeforeHrv_TST_TRK_093_2`)*:
+  • Verify `buildAnchoredSamples`, `stopAndBackfillWorkout(..., endTimeMs)`, and `syncPendingWorkout()` (`expectedEndMs`) handle `endTimeMs <= 0L` (no trim), `0 < endTimeMs < anchorMs` (clock inversion logs warning & keeps beats), `endTimeMs >= anchorMs` (trims `beatTs > endTimeMs`), ignore `rr <= 0`, and skip DB patching when trimmed intervals are empty.
+  3. *Single-Pass Post-Backfill Physiology Recomputation & Consistent `h10Armed` Snapshot (`TST-TRK-093.3`, `PostWorkoutPhysiologyRecomputerTest.kt`, `WorkoutPostProcessingCoordinatorTest.kt#testPostBackfillPhysiologyRecompute_runsStrictlyOnceAfterBackfillAndBeforeHrvReloadExport_TST_TRK_093_3`, `TrackerServiceFinalizationTest.kt#testEndWorkout_consistentSingleH10ArmedSnapshot_defersHrPhysiologyAndPassesAnchorAndEndTime_TST_TRK_093_3`)*:
+  • Verify `PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill()` filters nullable/non-finite/non-positive `hrSamples` (persisting HR `MIN`/`MAX`/`AVG` with valid count), resolves `BSportType` via `getWorkoutSummaryUpdateData()`, and persists `EFFICIENCY_FACTOR`, `AEROBIC_DECOUPLING`, and `CardioPowerDynamicsRecord`.
+  • Verify `TrackerService.endWorkout()` captures `h10Armed` once for both `finalizeLiveSession()` deferral and `PostProcessingRequest`, and `WorkoutPostProcessingCoordinator` runs H10 backfill (`runPostBackfillRecompute = false`) $\rightarrow$ `runPhysiologyRecompute` (1x) $\rightarrow$ `runHrvRecompute` (1x) before `reloadWorkout` and export.
+  4. *Sync Legacy GATT Release, Sensor Re-Registration, `TST-CON-054.3` & Part 1/2 Lock (`TST-TRK-093.4`, `MyBTLEDeviceLifecycleTest.kt#testPauseGattOperations_synchronouslyReleasesGattUnregistersSensorsAndReconfiguresOnReconnect_TST_TRK_093_4`, `BTLEHeartRateDeviceTest.kt`, `MyAccumulatorSensorTest.kt`, `TrackerServiceResumeTest.kt`)*:
+  • Verify full `pauseGattOperations() -> sync disconnect/close outside mGattLock -> unregisterSensors() -> paused onConnectionStateChange close outside lock -> resumeGattOperations() (preserving mIsBackgroundReconnecting) -> onServicesDiscovered -> readNextCharacteristic -> configureServices -> CONNECTED_WITH_SERVICE` cycle and reconcile `BTLEHeartRateDeviceTest.kt` (`TST-CON-054.3`).
+  • Verify null-device fresh `MyIntegerAccumulatorSensor(null, SensorType.LAP_NR, false, 1)` (`1 -> 2 -> 1`), `TrackerServiceResumeTest` `RESUME_SERVICE_RECREATION` zero-reset, `TrackerService.java <= 3,559` LoC, `MyBTLEDevice.java <= 1,500` LoC, and `DetailedDesignParityContractTest`.
 
 ---
 
@@ -61,3 +78,6 @@
 | `1.0.0` | 2026-11-22 | Lane 1 Author (`ATT-6178`, `--as agent1`) | `ATT-6178` | Created Part 2 shard (`tst_tracking_cockpit_part2.md`, keeping `tst_tracking_cockpit.md` at `3,995/4,000` lines) and added `TST-TRK-092` `[Planned]` (`TST-TRK-092.1`–`.3`) for non-blocking `TrackerService.onDestroy()` and idempotent post-`endWorkout` cleanup (`N/A - no UI strings`). |
 | `1.0.1` | 2026-11-22 | Lane 1 Author (`ATT-6178`, `--as agent1`) | `ATT-6178` | Promoted `TST-TRK-092` to `[Verified]` (`TrackerServiceFinalizationTest` `33/33` PASS incl. `TST-TRK-092.1`–`.3` after pre-fix `2,001 ms` RED proof, `163/163` PASS across 24 unit/contract suites, clean `emulator-5554` smoke, `docs/engineering/test_evidence/tickets/ATT-6178/`). |
 | `1.0.2` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Added & verified `TST-CON-055` (`ATT-8123` Bounce 1 concurrency hardening: `141/141` PASS across 8 suites incl. `RadarLightQuickSwitchSheetTest` `11/11`, `BTLERadarDeviceTest` `64/64`, `RadarLightControllerTest` `39/39`, `ArchitectureConformanceContractTest` `11/11`; Compose Light/Dark preview + live `emulator-5554` smoke `0` crashes). |
+| `1.0.3` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Added `TST-TRK-093` (`TST-TRK-093.1`–`.4`) & Gate 3 (`ATT-9608`) revision covering Polar H10 `startRecording` anchor, trailing RR trimming, single-pass post-backfill physiology/HRV recomputation, `MyBTLEDevice.pauseGattOperations()` GATT release, `TST-CON-054.3` reconciliation, and Part 1/2 regression lock. |
+| `1.0.4` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Promoted `TST-TRK-093` to `[Verified]` (`549/549` dependent tests PASS, `0` new compiler warnings, clean `emulator-5554` smoke, evidence bundle `docs/engineering/test_evidence/tickets/ATT-8124/`). |
+| `1.0.5` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Stage 6 Bounce 1/5 sync with `sprint/2026-11-22_01_Früh` (`1c3fbfd8`, preserving `TST-TRK-092`, `TST-CON-055`, `TST-TRK-093`) and added `MyBTLEDeviceLifecycleTest` regression tests for all 3 `mIsGattPaused` concurrency races. |

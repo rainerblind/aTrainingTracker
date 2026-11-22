@@ -522,4 +522,271 @@ class MyBTLEDeviceLifecycleTest {
         verify(exactly = 1) { mockGatt.close() }
         assertTrue("onTeardownComplete callback must still execute when Handler.post returns false", callbackRan)
     }
+
+    // REQ-TRK-093.4 / TST-TRK-093.4
+    @Suppress("DEPRECATION")
+    @Test
+    fun testPauseGattOperations_synchronouslyReleasesGattUnregistersSensorsAndReconfiguresOnReconnect_TST_TRK_093_4() {
+        val mockBtManager = mockk<BluetoothManager>(relaxed = true)
+        val mockAdapter = mockk<BluetoothAdapter>(relaxed = true)
+        val mockBtDevice = mockk<BluetoothDevice>(relaxed = true)
+        val newGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
+        every { mockBtManager.adapter } returns mockAdapter
+        every { mockAdapter.getRemoteDevice("AA:BB:CC:DD:EE:93") } returns mockBtDevice
+        every { mockBtDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>(), any<Int>()) } returns newGatt
+        every { mockBtDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>()) } returns newGatt
+
+        var unregisterCount = 0
+        var configureServicesGatt: BluetoothGatt? = null
+        val device = object : MyBTLEDevice(mockContext, mockSensorManager, DeviceType.HRM, 93L, "AA:BB:CC:DD:EE:93") {
+            override fun addSensors() {}
+            override fun measurementCharacteristicUpdate(
+                gatt: BluetoothGatt?,
+                characteristic: BluetoothGattCharacteristic?
+            ) {}
+            override fun unregisterSensors() {
+                unregisterCount++
+                super.unregisterSensors()
+            }
+            override fun configureServices(gatt: BluetoothGatt) {
+                configureServicesGatt = gatt
+            }
+            fun getGattCallbackForTest(): BluetoothGattCallback {
+                val field = MyBTLEDevice::class.java.getDeclaredField("mGattCallback")
+                field.isAccessible = true
+                return field.get(this) as BluetoothGattCallback
+            }
+            fun registerForTest() { registerSensors() }
+            fun setGattForTest(g: BluetoothGatt?) { mBluetoothGatt = g }
+            fun getGattForTest(): BluetoothGatt? = mBluetoothGatt
+            fun getStateForTest(): State = mState
+            fun setStateForTest(s: State) { mState = s }
+            fun isSensorsRegisteredForTest(): Boolean = sensorsRegistered()
+        }
+
+        // Simulate active connected session with registered sensors
+        device.setGattForTest(mockGatt)
+        device.setStateForTest(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        device.registerForTest()
+        assertTrue(device.isSensorsRegisteredForTest())
+        postedRunnables.clear()
+
+        // 1. pauseGattOperations() MUST synchronously disconnect & close GATT, null mBluetoothGatt,
+        //    set DISCONNECTED, and call unregisterSensors() without posting to mHandler
+        device.pauseGattOperations()
+        assertTrue(device.isGattPaused)
+        assertNull("mBluetoothGatt must be cleared immediately on pause", device.getGattForTest())
+        assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getStateForTest())
+        assertFalse("sensorsRegistered() must become false on pause so reconnect re-runs configureServices", device.isSensorsRegisteredForTest())
+        assertEquals(1, unregisterCount)
+        verify(exactly = 1) { mockGatt.disconnect() }
+        verify(exactly = 1) { mockGatt.close() }
+        assertTrue("GATT close during pauseGattOperations must be synchronous, not posted", postedRunnables.isEmpty())
+
+        // 2. Late/stale onConnectionStateChange while paused closes stale GATT outside lock and returns cleanly
+        val staleGatt = mockk<BluetoothGatt>(relaxed = true)
+        device.getGattCallbackForTest().onConnectionStateChange(
+            staleGatt,
+            BluetoothGatt.GATT_SUCCESS,
+            BluetoothProfile.STATE_CONNECTED
+        )
+        verify(exactly = 1) { staleGatt.disconnect() }
+        verify(exactly = 1) { staleGatt.close() }
+        verify(exactly = 0) { staleGatt.discoverServices() }
+        assertEquals(MyBTLEDevice.State.DISCONNECTED, device.getStateForTest())
+
+        // 3. Resume -> reconnect -> onServicesDiscovered -> readNextCharacteristic -> configureServices -> CONNECTED_WITH_SERVICE
+        device.resumeGattOperations()
+        assertFalse(device.isGattPaused)
+        device.setGattForTest(newGatt)
+        device.setStateForTest(MyBTLEDevice.State.CONNECTED_TO_GATT)
+        postedRunnables.clear()
+        every { newGatt.services } returns emptyList()
+        every { newGatt.getService(any()) } returns null
+
+        device.getGattCallbackForTest().onServicesDiscovered(newGatt, BluetoothGatt.GATT_SUCCESS)
+        // Drain posted onServicesDiscovered runnable AND nested configureServices runnable
+        while (postedRunnables.isNotEmpty()) {
+            postedRunnables.removeAt(0).run()
+        }
+
+        assertEquals(MyBTLEDevice.State.CONNECTED_WITH_SERVICE, device.getStateForTest())
+        assertTrue("Sensors must be re-registered on reconnect", device.isSensorsRegisteredForTest())
+        assertEquals("configureServices(newGatt) must be invoked on reconnect", newGatt, configureServicesGatt)
+    }
+
+    // REQ-TRK-093.4 / TST-TRK-093.4 (Stage 6 Bounce 1/5 Concurrency Hardening)
+    @Suppress("DEPRECATION")
+    @Test
+    fun testPauseGattOperations_blocksQueuedConnectScanTimeoutServicesDiscoveredAndCallbackToctou_TST_TRK_093_4() {
+        val mockBtManager = mockk<BluetoothManager>(relaxed = true)
+        val mockAdapter = mockk<BluetoothAdapter>(relaxed = true)
+        val mockScanner = mockk<android.bluetooth.le.BluetoothLeScanner>(relaxed = true)
+        val mockBtDevice = mockk<BluetoothDevice>(relaxed = true)
+        val staleGatt = mockk<BluetoothGatt>(relaxed = true)
+        val newGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { ContextCompat.checkSelfPermission(any(), any()) } returns PackageManager.PERMISSION_GRANTED
+        mockkConstructor(android.bluetooth.le.ScanFilter.Builder::class)
+        every { anyConstructed<android.bluetooth.le.ScanFilter.Builder>().setDeviceAddress(any()) } answers { self as android.bluetooth.le.ScanFilter.Builder }
+        every { anyConstructed<android.bluetooth.le.ScanFilter.Builder>().build() } returns mockk(relaxed = true)
+        mockkConstructor(android.bluetooth.le.ScanSettings.Builder::class)
+        every { anyConstructed<android.bluetooth.le.ScanSettings.Builder>().setScanMode(any()) } answers { self as android.bluetooth.le.ScanSettings.Builder }
+        every { anyConstructed<android.bluetooth.le.ScanSettings.Builder>().build() } returns mockk(relaxed = true)
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
+        every { mockBtManager.adapter } returns mockAdapter
+        every { mockAdapter.isEnabled } returns true
+        every { mockAdapter.bluetoothLeScanner } returns mockScanner
+        every { mockAdapter.getRemoteDevice("AA:BB:CC:DD:EE:94") } returns mockBtDevice
+        every { mockBtDevice.address } returns "AA:BB:CC:DD:EE:94"
+        every { mockBtDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>(), any<Int>()) } returns newGatt
+        every { mockBtDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>()) } returns newGatt
+
+        var pauseInsideStopScan = false
+        var pauseInsideUnregister = false
+        var configureServicesGatt: BluetoothGatt? = null
+
+        val device = object : MyBTLEDevice(mockContext, mockSensorManager, DeviceType.HRM, 94L, "AA:BB:CC:DD:EE:94") {
+            override fun addSensors() {}
+            override fun measurementCharacteristicUpdate(
+                gatt: BluetoothGatt?,
+                characteristic: BluetoothGattCharacteristic?
+            ) {}
+            override fun stopScanAssistance() {
+                super.stopScanAssistance()
+                if (pauseInsideStopScan) {
+                    pauseInsideStopScan = false
+                    pauseGattOperations()
+                }
+            }
+            override fun unregisterSensors() {
+                super.unregisterSensors()
+                if (pauseInsideUnregister) {
+                    pauseInsideUnregister = false
+                    pauseGattOperations()
+                }
+            }
+            override fun configureServices(gatt: BluetoothGatt) {
+                configureServicesGatt = gatt
+            }
+            fun getGattCallbackForTest(): BluetoothGattCallback {
+                val field = MyBTLEDevice::class.java.getDeclaredField("mGattCallback")
+                field.isAccessible = true
+                return field.get(this) as BluetoothGattCallback
+            }
+            fun callTriggerGattConnect(dev: BluetoothDevice, autoConnect: Boolean) = triggerGattConnect(dev, autoConnect)
+            fun callReadNextCharacteristic(gatt: BluetoothGatt?) = readNextCharacteristic(gatt)
+            fun setGattForTest(g: BluetoothGatt?) { mBluetoothGatt = g }
+            fun getGattForTest(): BluetoothGatt? = mBluetoothGatt
+            fun getStateForTest(): State = mState
+            fun setStateForTest(s: State) { mState = s }
+            fun setBackgroundReconnectingForTest(flag: Boolean) {
+                val field = MyBTLEDevice::class.java.getDeclaredField("mIsBackgroundReconnecting")
+                field.isAccessible = true
+                field.setBoolean(this, flag)
+            }
+            fun isBackgroundReconnectingForTest(): Boolean = isBackgroundReconnectingForTesting
+            fun isSensorsRegisteredForTest(): Boolean = sensorsRegistered()
+        }
+
+        // --- Race 1: Queued triggerGattConnect, mSearchTimeoutRunnable, onScanResult, onScanFailed while paused ---
+        device.startSearching()
+        val scanCallback = device.scanCallbackForTesting
+        device.setGattForTest(null)
+        device.setStateForTest(MyBTLEDevice.State.DISCONNECTED)
+        device.setBackgroundReconnectingForTest(true)
+        postedRunnables.clear()
+        delayedRunnables.clear()
+
+        // Queue a connect runnable BEFORE pause, then pause before Looper drains it
+        device.callTriggerGattConnect(mockBtDevice, true)
+        assertEquals(1, postedRunnables.size)
+        device.pauseGattOperations()
+        while (postedRunnables.isNotEmpty()) {
+            postedRunnables.removeAt(0).run()
+        }
+        // Also fire mSearchTimeoutRunnable and scan callbacks while paused
+        device.searchTimeoutRunnable.run()
+        val scanResult = mockk<android.bluetooth.le.ScanResult>(relaxed = true)
+        every { scanResult.device } returns mockBtDevice
+        scanCallback?.onScanResult(1, scanResult)
+        scanCallback?.onScanFailed(1)
+        while (postedRunnables.isNotEmpty()) {
+            postedRunnables.removeAt(0).run()
+        }
+
+        assertNull("No competing BluetoothGatt may be opened while paused", device.getGattForTest())
+        verify(exactly = 0) { mockBtDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>(), any<Int>()) }
+        verify(exactly = 0) { mockBtDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>()) }
+        assertTrue("No reconnect runnable may be scheduled while paused", delayedRunnables.isEmpty())
+
+        // --- Race 2: Queued onServicesDiscovered -> readNextCharacteristic after pauseGattOperations() ---
+        device.resumeGattOperations()
+        postedRunnables.clear()
+        device.setGattForTest(staleGatt)
+        device.setStateForTest(MyBTLEDevice.State.CONNECTED_TO_GATT)
+        every { staleGatt.getService(any()) } returns null
+
+        // Enqueue onServicesDiscovered BEFORE pause, then pause before Looper runs it
+        device.getGattCallbackForTest().onServicesDiscovered(staleGatt, BluetoothGatt.GATT_SUCCESS)
+        assertEquals(1, postedRunnables.size)
+        device.pauseGattOperations()
+        while (postedRunnables.isNotEmpty()) {
+            postedRunnables.removeAt(0).run()
+        }
+        // Direct readNextCharacteristic(staleGatt) and 0-arg while paused must also be ignored
+        device.callReadNextCharacteristic(staleGatt)
+        device.callReadNextCharacteristic(null)
+        assertEquals("Paused queued onServicesDiscovered must NOT wedge state into CONNECTED_WITH_SERVICE", MyBTLEDevice.State.DISCONNECTED, device.getStateForTest())
+        assertFalse("Paused queued onServicesDiscovered must NOT register sensors", device.isSensorsRegisteredForTest())
+        assertNull("Paused queued onServicesDiscovered must NOT invoke configureServices", configureServicesGatt)
+
+        // Resume + fresh GATT discovery must still succeed cleanly after Race 2
+        device.resumeGattOperations()
+        device.setGattForTest(newGatt)
+        device.setStateForTest(MyBTLEDevice.State.CONNECTED_TO_GATT)
+        every { newGatt.getService(any()) } returns null
+        postedRunnables.clear()
+        device.getGattCallbackForTest().onServicesDiscovered(newGatt, BluetoothGatt.GATT_SUCCESS)
+        while (postedRunnables.isNotEmpty()) {
+            postedRunnables.removeAt(0).run()
+        }
+        assertEquals(MyBTLEDevice.State.CONNECTED_WITH_SERVICE, device.getStateForTest())
+        assertTrue(device.isSensorsRegisteredForTest())
+        assertEquals(newGatt, configureServicesGatt)
+
+        // --- Race 3A: STATE_CONNECTED TOCTOU (pause runs inside stopScanAssistance before re-acquiring mGattLock) ---
+        val toctouGatt = mockk<BluetoothGatt>(relaxed = true)
+        device.setGattForTest(toctouGatt)
+        device.setStateForTest(MyBTLEDevice.State.SEARCHING)
+        postedRunnables.clear()
+        pauseInsideStopScan = true
+
+        device.getGattCallbackForTest().onConnectionStateChange(
+            toctouGatt,
+            BluetoothGatt.GATT_SUCCESS,
+            BluetoothProfile.STATE_CONNECTED
+        )
+        assertEquals("STATE_CONNECTED TOCTOU after pause must remain DISCONNECTED", MyBTLEDevice.State.DISCONNECTED, device.getStateForTest())
+        assertTrue("No discoverServices runnable may be posted on paused STATE_CONNECTED TOCTOU", postedRunnables.isEmpty())
+        verify(atLeast = 1) { toctouGatt.disconnect() }
+        verify(atLeast = 1) { toctouGatt.close() }
+
+        // --- Race 3B: STATE_DISCONNECTED TOCTOU (pause runs inside unregisterSensors while mIsBackgroundReconnecting=true) ---
+        device.resumeGattOperations()
+        val discGatt = mockk<BluetoothGatt>(relaxed = true)
+        device.setGattForTest(discGatt)
+        device.setStateForTest(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        device.setBackgroundReconnectingForTest(true)
+        delayedRunnables.clear()
+        pauseInsideUnregister = true
+
+        device.getGattCallbackForTest().onConnectionStateChange(
+            discGatt,
+            BluetoothGatt.GATT_SUCCESS,
+            BluetoothProfile.STATE_DISCONNECTED
+        )
+        assertTrue("Paused STATE_DISCONNECTED TOCTOU must preserve mIsBackgroundReconnecting", device.isBackgroundReconnectingForTest())
+        assertTrue("Paused STATE_DISCONNECTED TOCTOU must NOT schedule mReconnectRunnable", delayedRunnables.isEmpty())
+    }
 }

@@ -233,6 +233,10 @@ class TrackerServiceFinalizationTest {
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
 
+        // Isolate plain-JVM tests from launching real async Dispatchers.IO post-processing coroutines (Rule 66)
+        WorkoutPostProcessingCoordinator.resetForTesting()
+        WorkoutPostProcessingCoordinator.enqueueHookForTesting = { _, _ -> true }
+
         service = TestableTrackerService()
 
         // Mock mDbExecutor to execute tasks inline in synchronous unit tests
@@ -244,6 +248,7 @@ class TrackerServiceFinalizationTest {
 
     @After
     fun tearDown() {
+        WorkoutPostProcessingCoordinator.resetForTesting()
         com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(null)
         com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
         unmockkAll()
@@ -1555,6 +1560,7 @@ class TrackerServiceFinalizationTest {
         mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController::class)
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.isRecordingArmed() } returns true
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getSessionStartTimeMs() } returns 1111L
+        every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getEffectiveAnchorStartTimeMs() } returns 1111L
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getArmedSessionToken() } returns 42L
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.isRecordingArmed() } returns true
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.getSessionStartTimeMs() } returns 2222L
@@ -1903,6 +1909,111 @@ class TrackerServiceFinalizationTest {
         )
         rrService.flushLiveRrQueueSync(61785L)
         verify(exactly = 1) { rrRepoMock.insertIntervalsBlocking(match { it.size == 1 && it[0].rrMs == 820f }) }
+    }
+
+    // REQ-TRK-093.1 / REQ-TRK-093.2 / REQ-TRK-093.3 / TST-TRK-093.3 (ATT-8124)
+    @Test
+    fun testEndWorkout_consistentSingleH10ArmedSnapshot_defersHrPhysiologyAndPassesAnchorAndEndTime_TST_TRK_093_3() {
+        WorkoutPostProcessingCoordinator.resetForTesting()
+        val capturedRequests = mutableListOf<WorkoutPostProcessingCoordinator.PostProcessingRequest>()
+        WorkoutPostProcessingCoordinator.enqueueHookForTesting = { _, req ->
+            capturedRequests.add(req)
+            true
+        }
+
+        mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController::class)
+        mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController::class)
+        mockkStatic(com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator::class)
+        mockkStatic(com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator::class)
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        mockkObject(EquipmentAndSportTypeDiscoveryManager.Companion)
+
+        try {
+            mockkConstructor(Intent::class)
+            every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+            every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
+            every { anyConstructed<Intent>().action } returns TrackerService.TRACKING_FINISHED_INTENT
+
+            every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.isRecordingArmed() } returns false
+            every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(any()) } returns false
+            every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(any(), any()) } returns 250
+            every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(any(), any()) } returns 75.0f
+            every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockk(relaxed = true)
+            every { EquipmentAndSportTypeDiscoveryManager.getInstance(any()) } returns mockk(relaxed = true)
+
+            val repoMock = mockk<WorkoutRepository>(relaxed = true)
+            every { repoMock.getPowerSpeedHrSamples(any()) } returns com.atrainingtracker.trainingtracker.ui.aftermath.PowerSpeedHrSamples(
+                powerSamples = listOf(220.0, 230.0),
+                speedSamples = listOf(8.5, 8.6),
+                hrSamples = listOf(145.0, 148.0)
+            )
+            WorkoutRepository.resetForTesting(repoMock)
+
+            every {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(any(), any(), any(), any())
+            } returns com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult(1.55, 2.0, 1.57, 1.53, true, false)
+            every {
+                com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(any(), any(), any(), any())
+            } returns null
+            every {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computePowerTrainingMetrics(any(), any(), any(), any())
+            } returns com.atrainingtracker.trainingtracker.physiology.PowerTrainingMetricsResult(225.0, 225.0, 230.0, 1.0, 0.9, 10.0, 5.0, 3.0, 3.1, 3.0)
+
+            val mockApp = mockk<Application>(relaxed = true)
+            every { mockApp.applicationContext } returns mockApp
+            every { mockApp.packageName } returns "com.atrainingtracker"
+
+            val liveSession = mockk<LiveWorkoutSession>(relaxed = true)
+
+            // (A) H10 armed: isRecordingArmed() queried ONCE, EF/Decoupling/Dynamics deferred, NP/IF/TSS computed,
+            //     and PostProcessingRequest carries getEffectiveAnchorStartTimeMs() + workoutEndMs > 0
+            every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.isRecordingArmed() } returns true
+            every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getEffectiveAnchorStartTimeMs() } returns 1_700_000_008_000L
+            every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getArmedSessionToken() } returns 93L
+
+            val armedService = object : TestableTrackerService() {
+                override fun getApplicationContext(): Context = mockApp
+                override fun sendBroadcast(intent: Intent?) {}
+            }
+            armedService.delegateToRealEndWorkout = true
+            val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+            repoField.set(armedService, repoMock)
+
+            val beforeMs = System.currentTimeMillis()
+            armedService.endWorkout(null, 81241L, "2026-11-22_armed", liveSession)
+            val afterMs = System.currentTimeMillis()
+
+            verify(exactly = 1) { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.isRecordingArmed() }
+            verify(exactly = 0) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(any(), any(), any(), any())
+            }
+            verify(exactly = 0) {
+                com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(any(), any(), any(), any())
+            }
+            verify(exactly = 1) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computePowerTrainingMetrics(any(), any(), any(), any())
+            }
+            assertEquals(1, capturedRequests.size)
+            val armedReq = capturedRequests[0]
+            assertTrue(armedReq.h10Armed)
+            assertEquals(1_700_000_008_000L, armedReq.h10StartMs)
+            assertEquals(93L, armedReq.h10ArmedToken)
+            assertTrue("workoutEndMs must be captured in [beforeMs, afterMs]", armedReq.workoutEndMs in beforeMs..afterMs)
+
+            // (B) H10 NOT armed: EF/Decoupling/Dynamics MUST run synchronously inside finalizeLiveSession()
+            every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.isRecordingArmed() } returns false
+            armedService.endWorkout(null, 81242L, "2026-11-22_unarmed", liveSession)
+            verify(exactly = 1) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(any(), any(), any(), any())
+            }
+            verify(exactly = 1) {
+                com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(any(), any(), 81242L, 1.0)
+            }
+        } finally {
+            WorkoutPostProcessingCoordinator.resetForTesting()
+            WorkoutRepository.resetForTesting(null)
+        }
     }
 }
 

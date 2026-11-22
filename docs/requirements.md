@@ -1,11 +1,11 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.130  
+**Version**: 1.0.131  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-This master index links to the 16 domain-sharded requirement files under `docs/requirements/`.
+This master index links to the 17 domain-sharded requirement files under `docs/requirements/`.
 Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Status]`) to eliminate single-line table bloat (ATT-4594, `REQ-PRO-028`) and adhere to the `<= 4,000`-line shard cap (`REQ-PRO-093.3`, `REQ-PRO-127.3`).
 
 ## Domain Requirement Shards
@@ -14,6 +14,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit (Part 1)](requirements/req_tracking_cockpit_part1.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK`, `WEA` | 110 | 99 | 11 | 0 |
 | [Tracking & Live Sensor Cockpit (Part 2)](requirements/req_tracking_cockpit_part2.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 88 | 88 | 0 | 0 |
+| [Tracking & Live Sensor Cockpit (Part 3)](requirements/req_tracking_cockpit_part3.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 1 | 1 | 0 | 0 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `RAD`, `SPT`, `WKO` | 71 | 57 | 14 | 0 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 76 | 64 | 12 | 0 |
 | [Persistence, Migration & Cloud Export (Part 1)](requirements/req_data_migration_export_part1.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 133 | 118 | 15 | 0 |
@@ -29,7 +30,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1332 across 16 domain shards.
+**Total Living Requirements**: 1333 across 17 domain shards.
 
 ---
 
@@ -102,3 +103,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.127` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Bounce 1 sync with `sprint/2026-11-22_01_Früh` (`ATT-6178`, `ATT-9172`) and concurrency hardening for `REQ-CON-055`. |
 | `1.0.129` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Synchronized master index for `[Verified]` `REQ-UI-2798` (zone-colored `HEART_RATE` & `POWER` curves, zone-orthogonal multi-source overlays, zone-boundary Y-axis labels & unzoned round-tick fallback; `66/66` PASS across 8 suites + Light/Dark AMOLED `Rule 8.5` PNG). |
 | `1.0.128` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Synchronized master index for `[Verified]` `REQ-UI-2799` (`Total=1330`, `Verified=1204`, `Implemented=125`, `Planned=1`; `PeriodsScreen` pure Compose day routing, `EditDeviceDialog` rotation/locale/Cancel safety, single bottom-sheet insets & `FilterBottomSheetScaffold` `imePadding()`). |
+| `1.0.129` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Added `req_tracking_cockpit_part3.md` (`REQ-TRK-093` `[Verified]`), synced with `sprint/2026-11-22_01_Früh` (`1c3fbfd8`, `ATT-8123`/`ATT-9170`), and hardened `MyBTLEDevice` pause concurrency (Bounce 1). |

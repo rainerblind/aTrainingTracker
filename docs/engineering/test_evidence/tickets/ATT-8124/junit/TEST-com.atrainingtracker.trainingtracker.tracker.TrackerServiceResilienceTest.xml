@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:14:44.431Z" hostname="rainer-HP-EliteBook-850-G5" time="4.179">
+  <properties/>
+  <testcase name="testIllegalStateExceptionDuringStartForegroundCaughtGracefully" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.19"/>
+  <testcase name="testVolatileBanalServiceAndLocalSnapshotPreventsMidTickNullPointerException" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="1.626"/>
+  <testcase name="testOnDestroySkipsEndWorkoutWhenTrackingInterrupted" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.187"/>
+  <testcase name="testOnDestroyCallsEndWorkoutWhenTrackingNotInterrupted" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.193"/>
+  <testcase name="testSamplingLoopContinuesAfterTransientUncheckedException" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="1.598"/>
+  <testcase name="testRecreationWithoutBackgroundLocationStopsSelfAndReturnsSticky" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.187"/>
+  <testcase name="testSecurityExceptionDuringStartForegroundCaughtGracefully" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest" time="0.198"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

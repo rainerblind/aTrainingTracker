@@ -162,6 +162,15 @@ class MyAccumulatorSensorTest {
         // 5. reset() must still return mZeroValue = 1
         lapSensor.reset()
         assertEquals("reset() on LAP_NR must restore mZeroValue=1", 1, lapSensor.value)
+
+        // 6. REQ-TRK-093.4 / TST-TRK-093.4: Null-device fresh construction with zeroValue=1 must yield 1 -> 2 -> 1
+        val standaloneLapSensor = MyIntegerAccumulatorSensor(null, SensorType.LAP_NR, false, 1)
+        standaloneLapSensor.activateSensor()
+        assertEquals("Fresh null-device LAP_NR sensor must start at 1", 1, standaloneLapSensor.value)
+        standaloneLapSensor.increment(1)
+        assertEquals("Fresh null-device LAP_NR sensor must advance 1 -> 2", 2, standaloneLapSensor.value)
+        standaloneLapSensor.reset()
+        assertEquals("Fresh null-device LAP_NR sensor reset() must return 1", 1, standaloneLapSensor.value)
     }
 
     @Test

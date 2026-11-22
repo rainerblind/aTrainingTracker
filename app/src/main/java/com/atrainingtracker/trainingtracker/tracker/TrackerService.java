@@ -206,6 +206,7 @@ public class TrackerService extends Service {
     private final AtomicInteger mSessionGeneration = new AtomicInteger(0);
     private volatile boolean mReceiversRegistered = false;
     @Nullable private volatile MilestoneAutoNamingManager.MilestoneCelebrationData mFirstJubileeCelebrationData = null;
+    private volatile boolean mDeferHrPhysiologyToPostProcessing = false;
     // we assume that we start while the BANAL Service is searching
     protected volatile boolean mSearching = true;
     protected volatile boolean mCreateNewLapWhenConnectedToBanalService = false;
@@ -2506,6 +2507,8 @@ public class TrackerService extends Service {
             Log.e(TAG, "Error accessing WorkoutRepository during endWorkout", t);
         }
 
+        final boolean h10Armed = PolarH10OfflineController.isRecordingArmed();
+        mDeferHrPhysiologyToPostProcessing = h10Armed;
         try {
             // Finalize Live Session (Auto Name, Commute, Trainer)
             if (liveSession != null) {
@@ -2513,6 +2516,8 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error finalizing live session during endWorkout", t);
+        } finally {
+            mDeferHrPhysiologyToPostProcessing = false;
         }
 
         try {
@@ -2530,13 +2535,11 @@ public class TrackerService extends Service {
         }
 
         try {
-            // ATT-9154 (REQ-TRK-091.1): Capture armed-state snapshot synchronously and enqueue
-            // Polar backfill, HRV/ERTS recompute, and export finalization asynchronously so
-            // TRACKING_FINISHED_INTENT -> EditWorkoutScreen navigation completes immediately (< 1 s).
+            // ATT-9154 (REQ-TRK-091.1) & ATT-8124 (REQ-TRK-093): Capture armed-state snapshot once and enqueue
+            // Polar backfill, post-backfill physiology/HRV/ERTS recompute, and export asynchronously (< 1 s).
             final Context appContext = getApplicationContext();
             if (workoutId > 0 || (baseFileName != null && !baseFileName.trim().isEmpty())) {
-                boolean h10Armed = PolarH10OfflineController.isRecordingArmed();
-                long h10StartMs = h10Armed ? PolarH10OfflineController.getSessionStartTimeMs() : 0L;
+                long h10StartMs = h10Armed ? PolarH10OfflineController.getEffectiveAnchorStartTimeMs() : 0L;
                 long h10Token = h10Armed ? PolarH10OfflineController.getArmedSessionToken() : 0L;
                 boolean verityArmed = PolarVeritySenseOfflineController.isRecordingArmed();
                 long verityStartMs = verityArmed ? PolarVeritySenseOfflineController.getSessionStartTimeMs() : 0L;
@@ -2545,7 +2548,7 @@ public class TrackerService extends Service {
                 WorkoutPostProcessingCoordinator.PostProcessingRequest request =
                         new WorkoutPostProcessingCoordinator.PostProcessingRequest(
                                 workoutId, baseFileName, h10Armed, h10StartMs, h10Token,
-                                verityArmed, verityStartMs, verityToken, ertsEnabled);
+                                verityArmed, verityStartMs, verityToken, ertsEnabled, System.currentTimeMillis());
                 WorkoutPostProcessingCoordinator.enqueue(appContext, request);
             }
         } catch (Throwable t) {
@@ -3267,32 +3270,34 @@ public class TrackerService extends Service {
                 java.util.List<Double> speedSamples = samples.getSpeedSamples();
                 java.util.List<Double> hrSamples = samples.getHrSamples();
                 if (!powerSamples.isEmpty() || !speedSamples.isEmpty() || !hrSamples.isEmpty()) {
-                    BSportType liveSport = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
-                            ? snapshot.bSportType
-                            : ((banalService != null && banalService.getBSportType() != null)
-                                    ? banalService.getBSportType()
-                                    : BSportType.UNKNOWN);
-                    com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
-                            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
-                                    powerSamples, speedSamples, hrSamples, liveSport
-                            );
-                    SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
-                    if (aerobicResult.getEfficiencyFactor() != null) {
-                        double ef = aerobicResult.getEfficiencyFactor();
-                        repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
-                    }
-                    if (aerobicResult.getDecouplingPct() != null) {
-                        double dec = aerobicResult.getDecouplingPct();
-                        repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
-                    }
+                    if (!mDeferHrPhysiologyToPostProcessing) {
+                        BSportType liveSport = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
+                                ? snapshot.bSportType
+                                : ((banalService != null && banalService.getBSportType() != null)
+                                        ? banalService.getBSportType()
+                                        : BSportType.UNKNOWN);
+                        com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
+                                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                                        powerSamples, speedSamples, hrSamples, liveSport
+                                );
+                        SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
+                        if (aerobicResult.getEfficiencyFactor() != null) {
+                            double ef = aerobicResult.getEfficiencyFactor();
+                            repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        }
+                        if (aerobicResult.getDecouplingPct() != null) {
+                            double dec = aerobicResult.getDecouplingPct();
+                            repository.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        }
 
-                    // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
-                    com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord dynamics =
-                            com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
-                                    powerSamples, hrSamples, workoutId, 1.0
-                            );
-                    if (dynamics != null) {
-                        repository.saveCardioPowerDynamics(workoutId, dynamics);
+                        // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
+                        com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord dynamics =
+                                com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
+                                        powerSamples, hrSamples, workoutId, 1.0
+                                );
+                        if (dynamics != null) {
+                            repository.saveCardioPowerDynamics(workoutId, dynamics);
+                        }
                     }
 
                     // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)

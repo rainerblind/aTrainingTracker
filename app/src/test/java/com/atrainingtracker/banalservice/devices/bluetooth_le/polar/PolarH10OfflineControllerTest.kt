@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
+import com.atrainingtracker.trainingtracker.tracker.PostWorkoutPhysiologyRecomputer
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarH10OfflineExerciseApi
@@ -115,6 +116,8 @@ class PolarH10OfflineControllerTest {
 
         mockkObject(HrvPostWorkoutRecomputer)
         coEvery { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) } returns true
+        mockkStatic(PostWorkoutPhysiologyRecomputer::class)
+        every { PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill(any(), any(), any()) } returns true
 
         PolarOfflineGattCoordinator.resetForTesting()
         PolarH10OfflineController.resetForTesting()
@@ -129,6 +132,7 @@ class PolarH10OfflineControllerTest {
         WorkoutRrRepository.resetForTesting(null)
         WorkoutSamplesDatabaseManager.resetForTesting(null)
         WorkoutRepository.resetForTesting(null)
+        unmockkStatic(PostWorkoutPhysiologyRecomputer::class)
         unmockkObject(HrvPostWorkoutRecomputer)
         unmockkAll()
     }
@@ -710,5 +714,174 @@ class PolarH10OfflineControllerTest {
         assertFalse(result)
         assertTrue("Stale workout 1 exit must NOT clear workout 2 armed state", PolarH10OfflineController.isRecordingArmed())
         assertEquals(workout2Token, PolarH10OfflineController.getArmedSessionToken())
+    }
+
+    // REQ-TRK-093.1 / TST-TRK-093.1
+    @Test
+    fun testExecuteArming_capturesPostStartRecordingAnchorAndResetsLifecycle_TST_TRK_093_1() = runBlocking {
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+
+        val sessionStart = 1_700_000_000_000L
+        var nowMs = sessionStart + 5_000L
+        PolarH10OfflineController.clockMsProvider = { nowMs }
+        PolarH10OfflineController.setSessionStartTimeMs(sessionStart)
+
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } returns Unit
+        coEvery { mockApi.setLocalTime("1C3B2421", any()) } just Runs
+        coEvery { mockApi.requestRecordingStatus("1C3B2421") } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises("1C3B2421") } returns emptyFlow()
+        coEvery {
+            mockApi.startRecording(
+                "1C3B2421",
+                any(),
+                PolarH10OfflineExerciseApi.RecordingInterval.INTERVAL_1S,
+                PolarH10OfflineExerciseApi.SampleType.RR
+            )
+        } coAnswers {
+            // Simulate 3s BLE GATT/PFTP round-trip inside startRecording
+            nowMs = sessionStart + 8_000L
+        }
+
+        val armed = PolarH10OfflineController.executeArming(context, "AA:BB:CC:DD:EE:FF", "1C3B2421")
+
+        assertTrue(armed)
+        assertEquals(
+            "recordingStartTimeMs must be captured strictly AFTER startRecording returns (+8s, not +5s)",
+            sessionStart + 8_000L,
+            PolarH10OfflineController.getRecordingStartTimeMs()
+        )
+        assertEquals(
+            "getEffectiveAnchorStartTimeMs must prefer recordingStartTimeMs over sessionStartTimeMs",
+            sessionStart + 8_000L,
+            PolarH10OfflineController.getEffectiveAnchorStartTimeMs()
+        )
+
+        // Calling setSessionStartTimeMs while armed must NOT clobber active recordingStartTimeMs
+        PolarH10OfflineController.setSessionStartTimeMs(sessionStart + 100L)
+        assertEquals(sessionStart + 8_000L, PolarH10OfflineController.getRecordingStartTimeMs())
+
+        // Unarmed setSessionStartTimeMs clears stale recordingStartTimeMs
+        PolarH10OfflineController.setArmedForTesting(false)
+        assertEquals(0L, PolarH10OfflineController.getRecordingStartTimeMs())
+        PolarH10OfflineController.setRecordingStartTimeMsForTesting(999_999L)
+        PolarH10OfflineController.setSessionStartTimeMs(sessionStart + 20_000L)
+        assertEquals(0L, PolarH10OfflineController.getRecordingStartTimeMs())
+        assertEquals(sessionStart + 20_000L, PolarH10OfflineController.getEffectiveAnchorStartTimeMs())
+    }
+
+    // REQ-TRK-093.1 / REQ-TRK-093.2 / TST-TRK-093.2
+    @Test
+    fun testBuildAnchoredSamples_handlesThreeEndTimeCasesAndInvalidRr_TST_TRK_093_2() {
+        val anchorMs = 100_000L
+        // Includes invalid rr <= 0 which must be skipped without NaN/crash or timestamp shift
+        val rawRr = listOf(0, -100, 1000, 1000, 1000, 1000, 1000)
+
+        // Case 1: endTimeMs <= 0 -> no upper-bound trim
+        val (untrimmed, untrimmedPairs) = PolarH10OfflineController.buildAnchoredSamples(1L, rawRr, anchorMs, 0L)
+        assertEquals(5, untrimmed.size)
+        assertEquals(5, untrimmedPairs.size)
+        assertEquals(101_000L, untrimmed.first().beatTimestampMs)
+        assertEquals(105_000L, untrimmed.last().beatTimestampMs)
+
+        // Case 2: endTimeMs >= anchorMs -> trims trailing beats strictly past endTimeMs
+        val (trimmed, trimmedPairs) = PolarH10OfflineController.buildAnchoredSamples(1L, rawRr, anchorMs, 103_000L)
+        assertEquals(3, trimmed.size)
+        assertEquals(3, trimmedPairs.size)
+        assertEquals(103_000L, trimmed.last().beatTimestampMs)
+
+        // Case 3: 0 < endTimeMs < anchorMs (clock inversion / short-workout arming race) -> preserves beats instead of dropping all
+        val (inverted, _) = PolarH10OfflineController.buildAnchoredSamples(1L, rawRr, anchorMs, 95_000L)
+        assertEquals("Clock inversion must not discard all beats", 5, inverted.size)
+    }
+
+    // REQ-TRK-093.2 / REQ-TRK-093.3 / TST-TRK-093.2
+    @Test
+    fun testStopAndBackfillWorkout_trimsTrailingBeats_skipsEmptyDbWrite_andRespectsRunPostBackfillRecompute_TST_TRK_093_2() = runBlocking {
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        val anchorMs = 1_700_000_008_000L
+        val endTimeMs = anchorMs + 2_500L
+
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(501L) } returns emptyList()
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-22_080000") } returns true
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } returns Unit
+        coEvery { mockApi.requestRecordingStatus("1C3B2421") } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(true, "ATT_501", true)
+        coEvery { mockApi.stopRecording("1C3B2421") } just Runs
+        every { mockApi.listExercises("1C3B2421") } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns PolarExerciseData(1, listOf(1000, 1000, 1000, 1000))
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+
+        val insertedSlot = slot<List<WorkoutRrInterval>>()
+        coEvery { mockRrRepo.insertIntervals(capture(insertedSlot)) } returns 2
+
+        // Coordinator path: runPostBackfillRecompute = false -> skips inline HRV & Physiology recompute
+        val ok = PolarH10OfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 501L,
+            baseFileName = "2026-11-22_080000",
+            startTimeMs = anchorMs,
+            showOwnNotification = false,
+            endTimeMs = endTimeMs,
+            runPostBackfillRecompute = false
+        )
+
+        assertTrue(ok)
+        assertEquals("Only 2 beats (1000ms, 2000ms) fit within +2500ms window", 2, insertedSlot.captured.size)
+        assertEquals(anchorMs + 1000L, insertedSlot.captured[0].beatTimestampMs)
+        assertEquals(anchorMs + 2000L, insertedSlot.captured[1].beatTimestampMs)
+        verify(exactly = 0) { PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill(any(), any(), any()) }
+        coVerify(exactly = 0) { HrvPostWorkoutRecomputer.recomputeWorkout(any(), any()) }
+
+        // Empty-after-trim case: endTimeMs == anchorMs so beat 1 (+1000ms) exceeds endTimeMs -> skips DB write, still removes slot
+        clearMocks(mockRrRepo, mockSamplesDb, answers = false)
+        every { mockRrRepo.getIntervalsForWorkoutBlocking(502L) } returns emptyList()
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-22_080500") } returns true
+        val okEmpty = PolarH10OfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 502L,
+            baseFileName = "2026-11-22_080500",
+            startTimeMs = anchorMs,
+            showOwnNotification = false,
+            endTimeMs = anchorMs,
+            runPostBackfillRecompute = true
+        )
+        assertTrue(okEmpty)
+        coVerify(exactly = 0) { mockRrRepo.insertIntervals(any()) }
+        verify(exactly = 0) { PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill(any(), any(), any()) }
+        coVerify(exactly = 2) { mockApi.removeExercise("1C3B2421", testEntry) }
+    }
+
+    // REQ-TRK-093.2 / REQ-TRK-093.3 / TST-TRK-093.2
+    @Test
+    fun testSyncPendingWorkout_trimsByExpectedEndMsAndRunsPhysiologyBeforeHrv_TST_TRK_093_2() = runBlocking {
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+        val startMs = 1_700_000_010_000L
+        val endMs = startMs + 2_100L
+
+        every { mockSummariesDb.getPolarPendingSyncData(503L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData("1C3B2421", "ATT_503", startMs, endMs, true)
+        every { mockWorkoutRepo.getBaseFileName(503L) } returns "2026-11-22_081000"
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } returns Unit
+        coEvery { mockApi.requestRecordingStatus("1C3B2421") } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises("1C3B2421") } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns PolarExerciseData(1, listOf(1000, 1000, 1000, 1000))
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+
+        val insertedSlot = slot<List<WorkoutRrInterval>>()
+        coEvery { mockRrRepo.insertIntervals(capture(insertedSlot)) } returns 2
+
+        val synced = PolarH10OfflineController.syncPendingWorkout(context, 503L)
+
+        assertTrue(synced)
+        assertEquals("Deferred sync must trim beats past pendingData.expectedEndMs", 2, insertedSlot.captured.size)
+        coVerifyOrder {
+            PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill(any(), 503L, "2026-11-22_081000")
+            HrvPostWorkoutRecomputer.recomputeWorkout(any(), 503L)
+        }
     }
 }
