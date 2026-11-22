@@ -4516,6 +4516,57 @@ class TestMultiHopParentStageTransitions(unittest.TestCase):
         self.assertEqual(state["transitions_posted"], [])
 
 
+class TestShellSubstitutionAndVerdictIntegrityATT9519(unittest.TestCase):
+    """ATT-9519 / Finding C-05: Stdin/@file support, backtick corruption & flag-only rejection, and Stage 6 verdict check."""
+
+    def test_resolve_text_input_supports_stdin_and_file_and_rejects_missing_file(self):
+        import io
+        with patch("sys.stdin", io.StringIO("Clean stdin verdict body\n")):
+            self.assertEqual(jira_util.resolve_text_input("-"), "Clean stdin verdict body\n")
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as tf:
+            tf.write("Clean @file verdict body")
+            tpath = tf.name
+        try:
+            self.assertEqual(jira_util.resolve_text_input(f"@{tpath}"), "Clean @file verdict body")
+        finally:
+            os.unlink(tpath)
+        with self.assertRaises(ValueError):
+            jira_util.resolve_text_input("@/tmp/definitely_missing_att9519_file.md")
+
+    def test_validate_clean_review_text_rejects_empty_flags_and_shell_substitution(self):
+        for bad_text in (
+            "",
+            "   \n  ",
+            "--bounce-target=implementation",
+            "--bounce-target=implementation --vendor anthropic",
+            "Gate 2 — PASS: Requirement Phrasing & Scope () *: (..) uses normative syntax",
+            "PASS —  (–, ) verified cleanly",
+            "Checked (, ) with 0 new warnings @ )",
+        ):
+            ok, errs = jira_util.validate_clean_review_text(bad_text, context="Stage 6")
+            self.assertFalse(ok, f"Expected rejection for: {bad_text!r}")
+            self.assertTrue(len(errs) > 0)
+
+        good_text = "h3. Cold Final Review (Agent)\n* *Pros*: Clean fix in `tools/jira_util.py:2310` (REQ-PRO-107)."
+        ok, errs = jira_util.validate_clean_review_text(good_text, context="Stage 6")
+        self.assertTrue(ok, f"Unexpected errors for clean text: {errs}")
+
+    def test_verify_stage6_pass_verdict_checks_jira_comments(self):
+        cfg = {"JIRA_URL": "https://mock.atlassian.net"}
+        with patch("jira_util.jira_request", return_value={"fields": {"comment": {"comments": [
+            {"body": "[Automated comment by AI Agent 2 (Auditor)]\n\n[FINAL REVIEW (AGENT) — BOUNCE 1/5]\nDefect found."}
+        ]}}}):
+            has_pass, msg = jira_util.verify_stage6_pass_verdict("ATT-9519", config=cfg)
+            self.assertFalse(has_pass)
+            self.assertIn("FINAL REVIEW (AGENT)", msg)
+
+        with patch("jira_util.jira_request", return_value={"fields": {"comment": {"comments": [
+            {"body": "[Automated comment by AI Agent 2 (Auditor)]\n\n[FINAL REVIEW (AGENT) — PASS]\nAll checks passed."}
+        ]}}}):
+            has_pass, _ = jira_util.verify_stage6_pass_verdict("ATT-9519", config=cfg)
+            self.assertTrue(has_pass)
+
+
 if __name__ == "__main__":
     unittest.main()
 

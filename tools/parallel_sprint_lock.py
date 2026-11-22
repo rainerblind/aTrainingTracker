@@ -18,6 +18,7 @@ import argparse
 import contextlib
 import fcntl
 import os
+import re
 import subprocess
 import sys
 import time
@@ -297,6 +298,35 @@ def _rebase_onto_sprint_with_index_recovery(current_wt, sprint_ref):
     raise RuntimeError(f"Rebase onto {sprint_ref} exceeded max index conflict resolution iterations.")
 
 
+def _verify_stage6_verdict_or_raise(clean_key, main_wt, verify_stage6_verdict=None):
+    """
+    ATT-9519 / Finding C-05:
+    Refuses squash-merge if no [FINAL REVIEW (AGENT) — PASS] verdict comment exists in Jira.
+    Auto-enforced whenever Jira credentials (.env.jira or JIRA_API_TOKEN) are present for ATT-* keys,
+    or unconditionally when verify_stage6_verdict=True.
+    """
+    if verify_stage6_verdict is False:
+        return
+    if verify_stage6_verdict is None:
+        if os.environ.get("ATT_SKIP_MERGE_VERDICT_CHECK") == "1":
+            return
+        if not re.match(r"^ATT-\d+$", clean_key or ""):
+            return
+        has_env = os.path.exists(os.path.join(main_wt, ".env.jira")) or bool(os.environ.get("JIRA_API_TOKEN"))
+        if not has_env:
+            return
+
+    tools_dir = os.path.dirname(os.path.abspath(__file__))
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    import jira_util
+
+    has_pass, msg = jira_util.verify_stage6_pass_verdict(clean_key)
+    if not has_pass:
+        raise RuntimeError(msg)
+    print(f"[merge-ticket] {msg}", file=sys.stderr)
+
+
 def _merge_ticket_impl(
     ticket_key,
     sprint=None,
@@ -305,6 +335,7 @@ def _merge_ticket_impl(
     agent_role=None,
     agent_model=None,
     reviewed_by=None,
+    verify_stage6_verdict=None,
 ):
     """
     Internal execution logic for --merge-ticket.
@@ -352,6 +383,9 @@ def _merge_ticket_impl(
     res_sprint = git_cmd(["show-ref", "--verify", f"refs/heads/{sprint_ref}"], cwd=current_wt, check=False)
     if res_sprint.returncode != 0:
         raise RuntimeError(f"Local sprint branch '{sprint_ref}' does not exist.")
+
+    # ATT-9519 / Finding C-05: Refuse squash-merge unless Stage 6 PASS verdict record exists in Jira
+    _verify_stage6_verdict_or_raise(clean_key, main_wt, verify_stage6_verdict=verify_stage6_verdict)
 
     print(f"[merge-ticket] Merging {clean_key} into {sprint_ref}...", file=sys.stderr)
     print(f"[merge-ticket] Current worktree: {current_wt}", file=sys.stderr)
@@ -502,6 +536,7 @@ def run_merge_ticket(
     agent_role=None,
     agent_model=None,
     reviewed_by=None,
+    verify_stage6_verdict=None,
 ):
     """
     Deterministically squash-merges ticket_key onto sprint branch under exclusive POSIX flock.
@@ -515,6 +550,7 @@ def run_merge_ticket(
             agent_role=agent_role,
             agent_model=agent_model,
             reviewed_by=reviewed_by,
+            verify_stage6_verdict=verify_stage6_verdict,
         )
 
 
@@ -568,6 +604,11 @@ def main():
         help="Reviewer identity for commit trailer (REQ-PRO-108.3).",
     )
     parser.add_argument(
+        "--skip-verdict-check",
+        action="store_true",
+        help="Bypass mandatory Stage 6 PASS Jira verdict verification (only for isolated tests / PO deviation).",
+    )
+    parser.add_argument(
         "cmd",
         nargs=argparse.REMAINDER,
         help="Command to run under lock.",
@@ -595,6 +636,7 @@ def main():
                 agent_role=args.agent_role,
                 agent_model=args.agent_model,
                 reviewed_by=args.reviewed_by,
+                verify_stage6_verdict=(False if args.skip_verdict_check else None),
             )
             sys.exit(ret)
         except TimeoutError as te:

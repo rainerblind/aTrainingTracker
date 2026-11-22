@@ -90,26 +90,31 @@ For each ticket in `Final Review (Agent)`, trace the implementation across all 6
 
 ## Recording the Stage 6 Verdict (`final-review-verdict`)
 
-### Case A — `BOUNCE` (3-Bounce Healing Loop $\rightarrow$ `Implementation` / `Analysis` / `Zu erledigen`)
+> **Shell Safety Mandate (`ATT-9519` / Finding C-05)**: **NEVER** pass review text inside double-quoted bash strings (`"..."`) because bash executes backticked identifiers as commands and silently strips them. Always pass review text via **`@file`** or single-quoted stdin heredoc (**`- <<'EOF'`**).
+
+### Case A — `BOUNCE` (5-Bounce Healing Loop $\rightarrow$ `Implementation` / `Analysis` / `Zu erledigen`)
 Whenever **any** functional bug, lifecycle leak, math/unit flaw, missing counterpart wiring, compiler warning, fake test, or documentation defect is found:
 ```bash
-python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> BOUNCE "h3. Cold Final Review (Agent) — Defect Report
+python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> BOUNCE - --bounce-target=implementation <<'EOF'
+h3. Cold Final Review (Agent) — Defect Report
 * *Finding 1 (<Category>)*: <Exact File:Line & root cause explanation>
 * *Finding 2 (<Category>)*: <Exact File:Line & root cause explanation>
 * *Required Fix*: <Concrete code & test remediation required>
-* *Verification*: <Exact test command that must pass>" --bounce-target=implementation
+* *Verification*: <Exact test command that must pass>
+EOF
 ```
-- **Bounces `1/3`, `2/3`, `3/3`**:
-  1. `jira_util.py` tags the comment `[FINAL REVIEW (AGENT) — BOUNCE X/3]`, transitions `<TICKET_KEY>` back to `Implementation` (or `Analysis` / `Zu erledigen`), reopens target/downstream subtasks where Jira allows, and assigns `<TICKET_KEY>` to `agent1`. Because `feature/<KEY>` was NOT prematurely merged, `sprint/<SPRINT_NAME>` remains completely unpolluted.
+- **Bounces `1/5` through `5/5`**:
+  1. `jira_util.py` tags the comment `[FINAL REVIEW (AGENT) — BOUNCE X/5]`, transitions `<TICKET_KEY>` back to `Implementation` (or `Analysis` / `Zu erledigen`), reopens target/downstream subtasks where Jira allows, and assigns `<TICKET_KEY>` to `agent1`. Because `feature/<KEY>` was NOT prematurely merged, `sprint/<SPRINT_NAME>` remains completely unpolluted.
   2. The implementing agent/pair fixes the defect on `feature/<KEY>`, runs the targeted tests and `verify_requirement_governance.py`, re-submits Stage 4/5 (`submit-stage` / `gate-verdict`, reusing active/reopened subtasks or numbered bounce subtasks when `Erledigt` has `transitions: []`), commits cleanly on `feature/<KEY>`, and advances back to `Final Review (Agent)`.
-  3. The Cold Reviewer re-audits `git diff sprint/<SPRINT_NAME>...feature/<KEY>` and records `final-review-verdict <TICKET_KEY> PASS ...` (or another `BOUNCE`).
-- **Escalation After 3 Bounces (`> 3`)**:
-  - If a 4th bounce is triggered, `jira_util.py` automatically tags `[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]`, transitions `<TICKET_KEY>` to `Final Review (Human)`, and assigns it to `human` so the Product Owner can inspect the disputed `feature/<KEY>` branch during Ceremony 2 without an infinite loop or unapproved sprint-branch pollution.
+  3. The Cold Reviewer re-audits `git diff sprint/<SPRINT_NAME>...feature/<KEY>` and records `final-review-verdict <TICKET_KEY> PASS - <<'EOF'` (or another `BOUNCE`).
+- **Escalation After 5 Bounces (`> 5`)**:
+  - If a 6th bounce is triggered, `jira_util.py` automatically tags `[FINAL REVIEW (AGENT) — ESCALATED AFTER 5 BOUNCES]`, transitions `<TICKET_KEY>` to `Final Review (Human)`, and assigns it to `human` so the Product Owner can inspect the disputed `feature/<KEY>` branch during Ceremony 2 without an infinite loop or unapproved sprint-branch pollution.
 
 ### Case B — `PASS` (`I.O.` $\rightarrow$ Atomic Sprint Merge & `Final Review (Human)`)
-Only when all 6 adversarial audit dimensions are verified clean (or after all bounced defects have been healed and re-verified), record the `PASS` verdict and then execute the single atomic `--merge-ticket` squash onto `sprint/<SPRINT_NAME>`:
+Only when all 6 adversarial audit dimensions are verified clean (or after all bounced defects have been healed and re-verified), record the `PASS` verdict via `@file` or single-quoted stdin heredoc (`- <<'EOF'`) and then execute the single atomic `--merge-ticket` squash onto `sprint/<SPRINT_NAME>` (`parallel_sprint_lock.py` refuses squash-merge if no `[FINAL REVIEW (AGENT) — PASS]` verdict record exists on the ticket):
 ```bash
-python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS "h3. Cold Final Review (Agent) — Executive Summary
+python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS - <<'EOF'
+h3. Cold Final Review (Agent) — Executive Summary
 * *Commit*: <FEATURE_HEAD_SHA>
 * *What Changed*: <1-2 concise bullets summarizing the production change>
 * *Adversarial Audit Checks*: <Specific callers, lifecycle paths, math boundaries, and counterpart classes inspected>
@@ -120,7 +125,8 @@ python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS "h
 * *Würdest du das freigeben? (Freigabe-Empfehlung)*:
   * **JA — Freigabe empfohlen** (bzw. **NEIN — BOUNCE** if any defect found) mit prägnanter Begründung.
 * *Requirements & Tests Verified*: <REQ-XXX / TST-XXX> (<TestClassName> — 100% pass)
-* *Residual Risk / Human Focus*: <Low/Medium — specific area for PO spot-check on Pixel 10 if applicable>"
+* *Residual Risk / Human Focus*: <Low/Medium — specific area for PO spot-check on Pixel 10 if applicable>
+EOF
 ```
 This atomically verifies deliverable/requirement hygiene, validates presence of the mandatory review ceremony questions, posts `[FINAL REVIEW (AGENT) — PASS]`, transitions `<TICKET_KEY>` to `Final Review (Human)`, and assigns it to `human`. Immediately after `PASS` (or by Coordinator on `PASS` receipt), integrate `feature/<KEY>` onto `sprint/<SPRINT_NAME>` as strictly one squashed atomic commit (`REQ-PRO-125`):
 ```bash

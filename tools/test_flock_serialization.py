@@ -499,6 +499,50 @@ class TestFlockSerialization(unittest.TestCase):
             )
         self.assertFalse(os.path.exists(os.path.join(wt_bad, ".git", "rebase-merge")))
 
+    def test_merge_ticket_requires_stage6_pass_verdict_when_enforced(self):
+        """ATT-9519 / Finding C-05: Refuse squash-merge unless [FINAL REVIEW (AGENT) — PASS] exists in Jira."""
+        from unittest.mock import patch
+
+        main_repo = self._init_git_repo()
+        wt_feat = os.path.join(self.temp_dir.name, "wt_stage6_guard")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-9519", wt_feat, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+        with open(os.path.join(wt_feat, "guard.txt"), "w") as f:
+            f.write("verified\n")
+        subprocess.run(["git", "add", "guard.txt"], cwd=wt_feat, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-9519: work"], cwd=wt_feat, check=True, capture_output=True)
+
+        # Missing Stage 6 PASS verdict -> RuntimeError, sprint branch unchanged
+        with patch("jira_util.verify_stage6_pass_verdict", return_value=(False, "No [FINAL REVIEW (AGENT) — PASS] verdict comment found on ATT-9519.")):
+            with self.assertRaises(RuntimeError) as ctx:
+                run_merge_ticket(
+                    ticket_key="ATT-9519",
+                    sprint="sprint/2026-46.3",
+                    summary="ATT-9519: Guarded merge",
+                    cwd=wt_feat,
+                    lock_path=self.lock_file,
+                    verify_stage6_verdict=True,
+                )
+            self.assertIn("FINAL REVIEW (AGENT)", str(ctx.exception))
+        self.assertFalse(os.path.exists(os.path.join(main_repo, "guard.txt")))
+
+        # With Stage 6 PASS verdict -> merge succeeds
+        with patch("jira_util.verify_stage6_pass_verdict", return_value=(True, "Verified Stage 6 PASS verdict record on ATT-9519.")):
+            ret = run_merge_ticket(
+                ticket_key="ATT-9519",
+                sprint="sprint/2026-46.3",
+                summary="ATT-9519: Guarded merge",
+                cwd=wt_feat,
+                lock_path=self.lock_file,
+                verify_stage6_verdict=True,
+            )
+            self.assertEqual(ret, 0)
+        self.assertTrue(os.path.exists(os.path.join(main_repo, "guard.txt")))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1696,11 +1696,17 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
         auto_verify_living_docs_on_stage5(parent_key)
 
     spec = STAGE_SPECS[stage_id]
-    if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
-        with open(text_or_file[1:], "r", encoding="utf-8") as f:
-            description_text = f.read()
-    else:
-        description_text = text_or_file
+    try:
+        description_text = resolve_text_input(text_or_file)
+    except ValueError as err:
+        print(f"Error: {err}", file=sys.stderr)
+        sys.exit(1)
+    is_clean, clean_errors = validate_clean_review_text(description_text, context=f"Stage {stage_id} deliverable")
+    if not is_clean:
+        print(f"Error: Stage {stage_id} submission rejected for {parent_key} (ATT-9519):", file=sys.stderr)
+        for err in clean_errors:
+            print(f"  - {err}", file=sys.stderr)
+        sys.exit(1)
 
     config = get_config()
     parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary,status,subtasks,comment"
@@ -2304,6 +2310,107 @@ def verify_stage2_id_reservations(subtask_key, text_or_file, parent_key=None, le
     return (len(errors) == 0), errors
 
 
+_SHELL_SUBSTITUTION_CORRUPTION_PATTERNS = (
+    (re.compile(r"\(\s*,\s*\)"), "stripped comma-separated tokens '(, )'"),
+    (re.compile(r"\(\s*[–—-]\s*,\s*\)|\(\s*,\s*[–—-]\s*\)"), "stripped range/list tokens '(–, )'"),
+    (re.compile(r"\(\s*\.\.\s*\)"), "stripped range tokens '(..)'"),
+    (re.compile(r"\bPASS\s*[—-]\s{2,}\("), "stripped identifier between 'PASS —' and '('"),
+    (re.compile(r"\bnew\s+warnings\s+@\s*(?:\)|$)", re.IGNORECASE), "stripped path after '@'"),
+    (re.compile(r"\b(?:Scope|Requirement\s+Phrasing\s*&\s*Scope)\s*\(\s*\)", re.IGNORECASE), "stripped identifier inside 'Scope ()'"),
+)
+_CLI_FLAG_TOKEN_RE = re.compile(r"^--?[a-zA-Z][a-zA-Z0-9_-]*(?:=.*)?$")
+
+
+def resolve_text_input(text_or_file):
+    """
+    ATT-9519 / Finding C-05:
+    Resolves review/stage/comment body from stdin ('-'), '@file', or inline string.
+    Raises ValueError if an explicit '@file' path does not exist.
+    """
+    if text_or_file is None:
+        return ""
+    raw = str(text_or_file)
+    if raw == "-":
+        return sys.stdin.read()
+    if raw.startswith("@"):
+        fpath = raw[1:]
+        if not fpath or not os.path.exists(fpath):
+            raise ValueError(
+                f"Input file '{fpath}' specified via '{raw}' does not exist. "
+                "Provide a valid @file path or '-' with single-quoted stdin heredoc (<<'EOF')."
+            )
+        with open(fpath, "r", encoding="utf-8") as f:
+            return f.read()
+    return raw
+
+
+def validate_clean_review_text(text, context="review"):
+    """
+    ATT-9519 / Finding C-05:
+    Rejects empty bodies, CLI-flag-only bodies (e.g. '--bounce-target=implementation'),
+    and text corrupted by bash backtick command substitution.
+    Returns (is_valid: bool, errors: list[str]).
+    """
+    content = str(text or "").strip()
+    if not content:
+        return False, [f"{context} body is empty. Pass complete text via @file or stdin ('- <<\\'EOF\\'')."]
+
+    tokens = content.split()
+    if tokens:
+        idx = 0
+        all_flags = True
+        while idx < len(tokens):
+            tok = tokens[idx]
+            if _CLI_FLAG_TOKEN_RE.match(tok):
+                if "=" not in tok and idx + 1 < len(tokens) and not tokens[idx + 1].startswith("-"):
+                    idx += 2
+                else:
+                    idx += 1
+            else:
+                all_flags = False
+                break
+        if all_flags:
+            return False, [
+                f"{context} body consists solely of CLI flags ({content!r}). "
+                "Place flags separately and pass complete review text via @file or stdin ('- <<\\'EOF\\'')."
+            ]
+
+    errors = []
+    for pat, desc in _SHELL_SUBSTITUTION_CORRUPTION_PATTERNS:
+        if pat.search(content):
+            errors.append(
+                f"Detected likely shell backtick command substitution corruption ({desc}). "
+                "NEVER pass backticked text in double-quoted bash strings; use @file or stdin ('- <<\\'EOF\\'')."
+            )
+    return (len(errors) == 0), errors
+
+
+def verify_stage6_pass_verdict(ticket_key, role="agent2", config=None):
+    """
+    ATT-9519 / Finding C-05:
+    Verifies that a Jira parent ticket has an explicit [FINAL REVIEW (AGENT) — PASS]
+    verdict comment before squash-merge onto sprint/<SPRINT_NAME>.
+    Returns (has_pass: bool, message: str).
+    """
+    if config is None:
+        config = get_config()
+    base = config["JIRA_URL"].rstrip("/")
+    issue_info = jira_request(
+        f"{base}/rest/api/2/issue/{ticket_key}?fields=comment,status",
+        role=role,
+    )
+    comments = (issue_info.get("fields") or {}).get("comment", {}).get("comments", []) or []
+    for c in reversed(comments):
+        body = extract_text_from_comment_body(c.get("body", ""))
+        if FINAL_REVIEW_PASS_RE.search(body):
+            return True, f"Verified Stage 6 PASS verdict record on {ticket_key}."
+    return (
+        False,
+        f"No [FINAL REVIEW (AGENT) — PASS] verdict comment found on {ticket_key} (ATT-9519 / Finding C-05). "
+        "Execute 'jira_util.py --as agent2 final-review-verdict <KEY> PASS @file' (or stdin '-') before --merge-ticket.",
+    )
+
+
 def validate_gate_verdict_content(text):
     """
     Validates that a Gate 1-5 review verdict contains structured checklist items
@@ -2379,15 +2486,21 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2", file_esc
     except BaseException:
         pass
 
+    try:
+        comment_content = resolve_text_input(text_or_file)
+    except ValueError as err:
+        print(f"Error: {err}", file=sys.stderr)
+        sys.exit(1)
+
+    is_clean_text, clean_errors = validate_clean_review_text(comment_content, context="Gate verdict")
+    if not is_clean_text:
+        print(f"Error: Gate verdict rejected for {subtask_key} (ATT-9519):", file=sys.stderr)
+        for err in clean_errors:
+            print(f"  - {err}", file=sys.stderr)
+        sys.exit(1)
+
     if is_pass:
         # REQ-PRO-107.2: Evidence-Backed Gate 1-5 Checklist Validation
-        comment_content = text_or_file
-        if comment_content.startswith("@") and os.path.exists(comment_content[1:]):
-            try:
-                with open(comment_content[1:], "r", encoding="utf-8") as f:
-                    comment_content = f.read()
-            except Exception:
-                pass
         is_valid_evidence, evidence_errors = validate_gate_verdict_content(comment_content)
         if not is_valid_evidence:
             print(
@@ -2450,21 +2563,18 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2", file_esc
             _verify_bug_stage5_fix_evidence(parent_key, comment_content, desc or "", role=auditor_role)
 
         assign_issue(subtask_key, auditor_role, role=auditor_role)
-        add_comment(subtask_key, text_or_file, role=auditor_role)
+        add_comment(subtask_key, comment_content, role=auditor_role)
         transition_issue(subtask_key, "freigabe", role=auditor_role, inject_context=True)
         print(f"GATE_VERDICT: PASS recorded on {subtask_key} by {auditor_role}.")
     else:
         assign_issue(subtask_key, auditor_role, role=auditor_role)
-        add_comment(subtask_key, text_or_file, role=auditor_role)
+        add_comment(subtask_key, comment_content, role=auditor_role)
         transition_issue(subtask_key, "in_progress", role=auditor_role, inject_context=False)
         assign_issue(subtask_key, "agent1", role=auditor_role)
         print(f"GATE_VERDICT: REVISION recorded on {subtask_key} by {auditor_role} (reassigned to agent1).")
         if file_escape_bug:
             summary, _, parent_key = get_subtask_summary_and_desc(subtask_key, role=auditor_role)
-            reason_txt = text_or_file
-            if reason_txt.startswith("@") and os.path.exists(reason_txt[1:]):
-                with open(reason_txt[1:], "r", encoding="utf-8") as f:
-                    reason_txt = f.read()
+            reason_txt = comment_content
             esc_summary = f"Process-Escape: Gate REVISION on {parent_key or subtask_key} ({subtask_key})"
             esc_desc = (
                 f"h2. Process Escape Problem Record (SUP.9)\n"
@@ -2608,11 +2718,18 @@ def final_review_verdict(
         print(f"Error: Invalid final review verdict '{verdict_arg}'. Expected PASS or BOUNCE.", file=sys.stderr)
         sys.exit(1)
 
-    if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
-        with open(text_or_file[1:], "r", encoding="utf-8") as f:
-            report_text = f.read().strip()
-    else:
-        report_text = (text_or_file or "").strip()
+    try:
+        report_text = resolve_text_input(text_or_file).strip()
+    except ValueError as err:
+        print(f"Error: {err}", file=sys.stderr)
+        sys.exit(1)
+
+    is_clean_report, clean_errors = validate_clean_review_text(report_text, context="Stage 6 final-review-verdict")
+    if not is_clean_report:
+        print(f"Error: Stage 6 final-review-verdict rejected for {parent_key} (ATT-9519):", file=sys.stderr)
+        for err in clean_errors:
+            print(f"  - {err}", file=sys.stderr)
+        sys.exit(1)
 
     if config is None:
         config = get_config()
@@ -2772,9 +2889,18 @@ def final_review_verdict(
 
 
 def add_comment(issue_key, text, role="agent1"):
-    if text.startswith("@") and os.path.exists(text[1:]):
-        with open(text[1:], "r", encoding="utf-8") as f:
-            text = f.read()
+    try:
+        text = resolve_text_input(text)
+    except ValueError as err:
+        print(f"Error: {err}", file=sys.stderr)
+        sys.exit(1)
+
+    is_clean, clean_errors = validate_clean_review_text(text, context="Comment")
+    if not is_clean:
+        print(f"Error: Comment rejected for {issue_key} (ATT-9519):", file=sys.stderr)
+        for err in clean_errors:
+            print(f"  - {err}", file=sys.stderr)
+        sys.exit(1)
 
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/comment"
@@ -6760,11 +6886,11 @@ if __name__ == "__main__":
     elif cmd in ("submit-stage", "submit_stage") and len(remaining_argv) >= 4:
         parent_k = remaining_argv[1]
         stage_arg = remaining_argv[2]
-        text_arg = remaining_argv[3]
+        text_arg = None
         summ_override = None
         author_override = None
         bypass_auth = False
-        idx = 4
+        idx = 3
         while idx < len(remaining_argv):
             arg = remaining_argv[idx]
             if arg.startswith("--summary="):
@@ -6779,18 +6905,33 @@ if __name__ == "__main__":
                 idx += 1
             elif arg in ("--bypass-authorship", "--force"):
                 bypass_auth = True
+            elif text_arg is None and (arg == "-" or not arg.startswith("--")):
+                text_arg = arg
             idx += 1
-        submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role, author=author_override, bypass_authorship=bypass_auth)
+        submit_stage(parent_k, stage_arg, text_arg or "", summary_override=summ_override, role=active_role, author=author_override, bypass_authorship=bypass_auth)
     elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) >= 4:
-        file_escape = "--file-escape-bug" in remaining_argv[4:]
+        sub_k = remaining_argv[1]
+        verdict_a = remaining_argv[2]
+        text_a = None
+        file_escape = False
         esc_sev = "major"
-        for a in remaining_argv[4:]:
-            if a.startswith("--severity="):
+        idx = 3
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a == "--file-escape-bug":
+                file_escape = True
+            elif a.startswith("--severity="):
                 esc_sev = a.split("=", 1)[1]
+            elif a == "--severity" and idx + 1 < len(remaining_argv):
+                esc_sev = remaining_argv[idx + 1]
+                idx += 1
+            elif text_a is None and (a == "-" or not a.startswith("--")):
+                text_a = a
+            idx += 1
         gate_verdict(
-            remaining_argv[1],
-            remaining_argv[2],
-            remaining_argv[3],
+            sub_k,
+            verdict_a,
+            text_a or "",
             role="agent2",
             file_escape_bug=file_escape,
             escape_severity=esc_sev,
@@ -6861,14 +7002,14 @@ if __name__ == "__main__":
     elif cmd in ("final-review-verdict", "final_review_verdict") and len(remaining_argv) >= 4:
         parent_k = remaining_argv[1]
         verdict_a = remaining_argv[2]
-        text_a = remaining_argv[3]
+        text_a = None
         b_target = "implementation"
         v_arg = None
         m_arg = None
         av_arg = "google"
         allow_fb = False
         fb_reason = None
-        idx = 4
+        idx = 3
         while idx < len(remaining_argv):
             arg = remaining_argv[idx]
             if arg.startswith("--bounce-target="):
@@ -6898,9 +7039,11 @@ if __name__ == "__main__":
             elif arg == "--fallback-reason" and idx + 1 < len(remaining_argv):
                 fb_reason = remaining_argv[idx + 1]
                 idx += 1
+            elif text_a is None and (arg == "-" or not arg.startswith("--")):
+                text_a = arg
             idx += 1
         final_review_verdict(
-            parent_k, verdict_a, text_a, bounce_target=b_target, role="agent2",
+            parent_k, verdict_a, text_a or "", bounce_target=b_target, role="agent2",
             vendor=v_arg, model=m_arg, author_vendor=av_arg,
             allow_same_vendor_fallback=allow_fb, fallback_reason=fb_reason,
         )
