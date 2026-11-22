@@ -1,0 +1,10 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "98f5bf6686f84f0ebf5bff54ad5d131eeb7f78d8",
+  "files": {
+    "evidence_summary.json": "e99f18b6c26415a29bdd3264f5b5ba431d6592de04c1cafcbd246effa5658d71"
+  },
+  "run_started_utc": "2026-11-22T00:18:28.495866+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9363"
+}
