@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.31  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 30
+**Total Requirements**: 31
 
 ---
 
@@ -1060,10 +1060,40 @@
 
 ---
 
+### REQ-MIG-058: FIT Epoch Lap Lookup & `APP_ID`-Scoped Developer Fields, Allocation-Free HRV Timestamps, GPX Peak `maxSpeed`/XML Escaping & Numeric Health Connect Calories (`ATT-8127`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-058`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `FitWorkoutParser.kt`, `FitFileWriter.kt`, `HrvPostWorkoutRecomputer.kt`, `WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `GPXFileWriter.java`, `HealthConnectRecordMapper.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: In live parsers, exporters, and mappers, unnecessary string round-trips and unscoped field numbers cause severe performance overhead and silent data corruption: `FitWorkoutParser` re-parses lap timestamp strings up to 288k times per file and reads Connect-IQ developer fields on `RecordMesg`/`SessionMesg` without checking `applicationId`, `HrvPostWorkoutRecomputer` allocates up to 57.6k `SimpleDateFormat` objects per 4h workout, `GpxWorkoutParser` stores average lap speed in `maxSpeed`, `GPXFileWriter` emits unescaped XML and runs a dead per-lap SQL query loop, and `HealthConnectRecordMapper` retains a legacy `extremaRows` string-scraping fallback that parses German `"1.250"` as `1.25` kcal (`ATT-8127`, refining `REQ-MIG-038`, `REQ-MIG-053`, `REQ-EXP-022`, `REQ-PER-034.3`, `REQ-SET-101.2`).
+- **Description**:
+  1. *Epoch-Based FIT Lap Matching & `APP_ID`-Scoped Developer Fields (`REQ-MIG-058.1`)*: `FitWorkoutParser.parse()` SHALL store lap start timestamps as `Long` epoch milliseconds (`Long.MIN_VALUE` sentinel for null) and assign per-record `LAP_NR` via upper-bound binary search (rightmost matching index for duplicate timestamps) when all laps are non-null and sorted, or primitive `LongArray` reverse scan (`lapStart != Long.MIN_VALUE && recordEpoch >= lapStart`) otherwise — with zero `SimpleDateFormat.parse` calls inside the record loop. `FitFileWriter` SHALL expose `RADAR_DEVELOPER_DATA_APP_ID` (`6a4e3200-667b-11e3-949a-0800200c9a66`), encode 16-byte `application_id` values unsigned (`0..255`, preventing Garmin FIT SDK `BASE_TYPE_BYTE` clamping of bytes `>= 0x80` to `0xFF`), and expose `LEGACY_RADAR_DEVELOPER_DATA_APP_ID` for pre-`ATT-8127` backward compatibility alongside `APP_METADATA_DEVELOPER_DATA_ID`. `FitWorkoutParser` SHALL register `DeveloperDataIdMesgListener` (removing stale entries when `applicationId` is invalid), reject `Fit.UINT8_INVALID` / non-16-byte / null-element IDs, prefer per-`MESG_DEF`-bound `devField.appId` over the file-wide `devDataAppIds[devIndex]` fallback (preventing chained/redefined-index spoofing), and interpret `RecordMesg` radar fields strictly for `RADAR_DEVELOPER_DATA_APP_ID` / `LEGACY_RADAR_DEVELOPER_DATA_APP_ID` and `SessionMesg` metadata fields strictly for `APP_METADATA_DEVELOPER_DATA_ID`, ignoring foreign Connect-IQ developer fields.
+  2. *Allocation-Free `java.time` Timestamps in `HrvPostWorkoutRecomputer` (`REQ-MIG-058.2`)*: `HrvPostWorkoutRecomputer.parseTimestampMs()` SHALL trim input and use static immutable UTC `java.time.format.DateTimeFormatter` instances (supporting space/fractional, ISO local/UTC/offset, and compact formats) with zero per-sample `SimpleDateFormat` / `TimeZone` allocations.
+  3. *True Peak `maxSpeed` in `GpxWorkoutParser` (`REQ-MIG-058.3`)*: `GpxWorkoutParser.parse()` SHALL parse raw ISO-8601 timestamps directly to UTC epoch milliseconds via `WorkoutTimestampParser.parseIsoToEpochMillis()` (preserving sub-second >1 Hz precision without 1-second truncation) and compute `ParsedLap.maxSpeed` via `maxOf` over valid trackpoint `<speed>` (`isFinite() && in 0.0..100.0`), falling back to peak valid intra-lap GPS segment speed (`dtMs > 0L`, `segDistM / (dtMs / 1000.0) in 0.0..100.0`, reusing `Location.distanceBetween` when adjacent and advancing `prevLap*` only when `curEpochMs >= prevLapEpochMs`), returning `null` if unavailable — never writing lap average speed (`distanceMeters / duration`).
+  4. *XML-Escaped GPX Export & Dead Lap SQL Removal (`REQ-MIG-058.4`)*: `GPXFileWriter.doExport()` SHALL trim `workoutName`/`description` and reuse `TCXFileWriter.escapeXml` to escape `creator`, `<name>` (`workoutName` if non-blank else `startTime`), and optional `<desc>` (valid GPX 1.1 XSD sequence) and SHALL delete the unused `LapsDatabaseManager` query loop and dead `myGet()` helper.
+  5. *Numeric-Only Calories in `HealthConnectRecordMapper` (`REQ-MIG-058.5`)*: `HealthConnectRecordMapper.extractCalories(workoutData)` SHALL read strictly numeric `workoutData.calories` (`> 0 -> toDouble()`, else `0.0`) with zero formatted UI string scraping from `extremaRows`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a multi-lap FIT file with both own `FitFileWriter` fields and foreign Connect-IQ developer fields (`num = 0..7`), *When* `FitWorkoutParser.parse` executes, *Then* `LAP_NR` matches numeric epoch bounds with zero `SimpleDateFormat.parse` calls, foreign fields are ignored, and own radar/metadata fields round-trip losslessly.
+• *Given* 1-Hz HRV sample timestamps across all 4 supported formats under `Europe/Berlin`, *When* `HrvPostWorkoutRecomputer.parseTimestampMs` / `recomputeWorkout` executes, *Then* UTC epoch timestamps resolve deterministically with zero `SimpleDateFormat` allocations.
+• *Given* a GPX file with varying speeds or a workout with `&`, `<`, `>`, `"`, `'` in name/description, *When* imported via `GpxWorkoutParser` or exported via `GPXFileWriter`, *Then* `ParsedLap.maxSpeed` equals true peak speed and GPX output is well-formed XML with `0` `LapsDatabaseManager` queries.
+• *Given* `Locale.GERMANY` (`de_DE`) with `calories = 1250` (or `calories = null` with `"1.250"` extrema string), *When* `HealthConnectRecordMapper.extractRecords` runs, *Then* `1250` produces exact `1250.0` kcal and `null` emits no `TotalCaloriesBurnedRecord` (never `1.25` kcal).
+
+**Invariants**: `FitWorkoutParser` local-time DB string contract (`REQ-MIG-038`) and lossless `FitFileWriter` round-trip (`REQ-MIG-053`, `REQ-EXP-042`) preserved; `GPXFileWriter` cropped-lap `<trkseg>` state machine (`ATT-4013`) preserved and `.java` count unchanged (`JavaCoreMigrationStrategyContractTest`); all files `< 1,500` LoC (`ArchitectureConformanceContractTest`); `0` DB schema or `strings*.xml` edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.34` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Stage 6 Bounce 1/5 heal: prioritized `MESG_DEF`-bound `devField.appId` + stale `devDataAppIds.remove(devIndex)` in `FitWorkoutParser`, switched `GpxWorkoutParser` to sub-second `WorkoutTimestampParser.parseIsoToEpochMillis()`, expanded unit coverage (`106/106` PASS across 14 suites, `0` new warnings), and verified live `emulator-5554` boot smoke (`INSTALL_REQUIRED=true`, `0` crashes, `Rule 8.5` PNG inspected). |
+| `1.0.33` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Promoted `REQ-MIG-058` to `[Verified]` after Stage 4–5 implementation (incl. unsigned FIT `application_id` encoding fixing Garmin SDK `0xFF` high-byte clamping + legacy pre-`ATT-8127` radar compatibility) and `98/98` targeted unit/contract tests PASS across 13 suites (`0` fail, `0` err, `0` skip, `0` new compiler warnings). |
+| `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Added `[Planned]` `REQ-MIG-058` (`SYSREQ-DEX-001`, `SYSREQ-DEX-002`, `.1`–`.5`) for FIT epoch lap matching & `APP_ID`-scoped developer fields (`RecordMesg` Radar + `SessionMesg` Metadata), allocation-free `java.time` timestamps in `HrvPostWorkoutRecomputer`, true peak `maxSpeed` in `GpxWorkoutParser`, XML-escaped GPX export with dead Lap SQL removal in `GPXFileWriter`, and numeric-only calories in `HealthConnectRecordMapper` (`N/A - 0 string changes`). |
 | `1.0.30` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Promoted `REQ-MIG-057` to `[Verified]` after Stage 4–5 implementation (`OpenDatabaseTracker` + `TrackingSQLiteOpenHelper`, 22-DB constant-backed `DatabaseSchemaRegistry`, empty-`databasesDir` rollback guard in `MigrationEngine`), `94/94` targeted unit/contract tests PASS across 19 suites (`0` fail, `0` skip, `0` new compiler warnings), and live `emulator-5554` boot smoke (`0` crashes). |
 | `1.0.29` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Added `[Planned]` `REQ-MIG-057` (`SYSREQ-DEX-005`, `.1`–`.4`) for authoritative constant-backed `DatabaseSchemaRegistry` across all 22 `SQLiteOpenHelper` subclasses, classpath drift-prevention contract, and non-eager `OpenDatabaseTracker` / `TrackingSQLiteOpenHelper` WAL quiescence in `DatabaseConnectionManager` (`N/A - 0 string changes`). |
 | `1.0.28` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `REQ-DAT-047` to `[Verified]` in Stage 5 Bounce 1 after Gate 4 Bounce 1 (`ATT-9592`, `107/107` PASS), Kotlin-first `BaseDatabaseManager.kt` conversion (`ADR-001` / `JavaCoreMigrationStrategyContractTest` `5/5` PASS), `416/416` targeted Tier-1 unit/contract tests PASS, `auto_gate.py` `PASS` bundle (`docs/engineering/test_evidence/tickets/ATT-6036/`), and live `emulator-5554` boot smoke (`0` crashes). |

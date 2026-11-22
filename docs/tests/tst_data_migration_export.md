@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.32  
+**Version**: 1.0.35  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 131
+**Total Tests**: 132
 
 ---
 
@@ -2482,10 +2482,41 @@
 
 ---
 
+### TST-MIG-058: **FIT Epoch/APP_ID Scoping, HRV `java.time` Timestamps, GPX Peak `maxSpeed`/XML Escaping & Numeric Health Connect Calories Verification (`ATT-8127`)** [Verified]
+- **Requirement(s)**: `REQ-MIG-058` (`REQ-MIG-058.1`–`REQ-MIG-058.5`)
+- **Component**: `FitWorkoutParser.kt`, `FitFileWriter.kt`, `HrvPostWorkoutRecomputer.kt`, `WorkoutTimestampParser.kt`, `GpxWorkoutParser.kt`, `GPXFileWriter.java`, `HealthConnectRecordMapper.kt`
+- **Jira**: `ATT-8127` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Implemented Unit Tests**:
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/parsers/FitWorkoutParserTest.kt`: `testResolveLapIndex_handlesSortedDuplicateNullAndUnsortedLaps_TST_MIG_058_1`, `testParseMultiLapFit_assignsExactLapNrFromEpochBounds_TST_MIG_058_1`, `testParseFit_ignoresForeignConnectIqDeveloperFieldsAndAcceptsOwnAppIds_TST_MIG_058_1`, `testParseFit_mixedForeignAndOwnDeveloperFieldsInSameFile_isolatesCleanly_TST_MIG_058_1`, `testParseFit_legacySignedByteRadarAppIdRemainsBackwardCompatible_TST_MIG_058_1`, `testParseFit_redefinedDeveloperDataIndexUsesMesgDefBoundAppId_TST_MIG_058_1` (`7/7` PASS)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriterRadarTest.kt` (`2/2` PASS, asserting exact 16-byte MyBikeTraffic UUID bytes without `0xFF` clamping), `FitLosslessRoundTripTest.kt` (`6/6` PASS), `FitFileWriterTest.kt` (`16/16` PASS), `LegacyImportEngineFitHrvTest.kt` (`3/3` PASS)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/database/hrv/HrvPostWorkoutRecomputerTest.kt`: `parseTimestampMs_supportsAllUtcFormatsTrimFractionalAndDstWithoutShift_TST_MIG_058_2` (`14/14` PASS)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/migration/parsers/GpxWorkoutParserTest.kt`: `testParseGpx_maxSpeedUsesPeakExplicitSpeedAndIgnoresOutliers_TST_MIG_058_3`, `testParseGpx_maxSpeedFallsBackToPeakIntraLapSegmentSpeedAndGuardsDt_TST_MIG_058_3`, `testParseGpx_subSecondHighFrequencyTrackpointsComputeExactMaxSpeed_TST_MIG_058_3` (`6/6` PASS) & `WorkoutTimestampParserTest.kt`: `parseIsoToEpochMillis_preservesSubSecondPrecisionOffsetsAndDstGaps_TST_MIG_058_3` (`4/4` PASS)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/writer/GPXFileWriterTest.kt`: `testGpxExport_escapesXmlSpecialCharsInCreatorNameAndDescAndSkipsLapsDb_TST_MIG_058_4`, `testGpxExport_blankWorkoutNameFallsBackToStartTimeAndOmitsBlankDesc_TST_MIG_058_4` (`5/5` PASS), `FileExportersIntegrationTest.kt` (`3/3` PASS)
+  - `app/src/test/java/com/atrainingtracker/trainingtracker/cloud/healthconnect/HealthConnectRecordMapperTest.kt`: `testCaloriesExtraction_underGermanLocaleUsesNumericPrimitiveAndIgnoresLocalizedStrings_TST_MIG_058_5` (`10/10` PASS)
+  - `PowerPhysiologyCalculatorTest` (`18/18` PASS), `ArchitectureConformanceContractTest` (`11/11` PASS), `JavaCoreMigrationStrategyContractTest.testClassInventoryAndDecisionCoverage_TST_ARC_005_2` (`1/1` PASS)
+- **Test Description**:
+  1. *FIT Epoch Lap Matching & `APP_ID`-Scoped Developer Fields (`TST-MIG-058.1` — `FitWorkoutParserTest.kt`, `FitLosslessRoundTripTest.kt`, `FitFileWriterRadarTest.kt`)*:
+     • Verify multi-lap FIT parsing assigns exact `LAP_NR` via numeric `Long` epoch lookup (including before-first-lap, exact-boundary, mid-lap, duplicate equal timestamps rightmost match, `Long.MIN_VALUE` null-lap sentinel, and unsorted-lap fallback) with zero `SimpleDateFormat.parse` calls.
+     • Verify foreign Connect-IQ `DeveloperDataIdMesg` + `RecordMesg` fields (`num = 0..5`) and `SessionMesg` fields (`num = 0..7`) are ignored both standalone and in mixed foreign+own FIT files, verify legacy signed-byte `LEGACY_RADAR_DEVELOPER_DATA_APP_ID` backward compatibility, and verify redefined `developerDataIndex` chained FIT files use per-`MESG_DEF`-bound `devField.appId` precedence without retroactive spoofing.
+  2. *Allocation-Free `HrvPostWorkoutRecomputer` UTC Timestamps (`TST-MIG-058.2` — `HrvPostWorkoutRecomputerTest.kt`)*:
+     • Verify `HrvPostWorkoutRecomputer.parseTimestampMs()` across `"yyyy-MM-dd HH:mm:ss"`, trimmed space-fractional, `"yyyy-MM-dd'T'HH:mm:ss"`, `"yyyy-MM-dd'T'HH:mm:ss'Z'"`, ISO offsets, `"yyyy-MM-dd_HHmmss"`, blank/malformed inputs (`null`), and DST spring-forward (`2026-03-29 02:30:00`) under `Europe/Berlin`, plus full `recomputeWorkout` parity.
+  3. *True Peak `maxSpeed` & Sub-Second Precision in `GpxWorkoutParser` (`TST-MIG-058.3` — `GpxWorkoutParserTest.kt`, `WorkoutTimestampParserTest.kt`)*:
+     • Verify `ParsedLap.maxSpeed` equals peak explicit `<speed>` (rejecting `< 0` / `> 100 m/s` outliers) when present, equals peak intra-lap GPS segment speed (`segDistM / (dtMs / 1000.0)`, guarding `dt == 0`, `dt < 0`, and `> 100 m/s` spikes) when `<speed>` is absent, preserves exact millisecond `dtMs` on >1 Hz sub-second GPX trackpoints (`.000Z`/`.500Z`/`1.000Z`), and isolates cross-lap pauses.
+  4. *XML-Escaped GPX Export & Zero Lap SQL Queries (`TST-MIG-058.4` — `GPXFileWriterTest.kt`, `FileExportersIntegrationTest.kt`)*:
+     • Export workout with `&`, `<`, `>`, `"`, `'` in `creator`, `workoutName`, and `description` across multiple laps; verify DOM XML well-formedness and exact unescaped `<name>` / `<desc>` values, blank `workoutName` fallback to `startTime` without `<desc>`, and `verify(exactly = 0) { LapsDatabaseManager.getInstance(any()) }`.
+  5. *Locale-Independent Numeric Calories in `HealthConnectRecordMapper` (`TST-MIG-058.5` — `HealthConnectRecordMapperTest.kt`)*:
+     • Under `Locale.GERMANY` (`de_DE`), assert `calories = 1250` produces exact `1250.0` kcal even alongside German `"1.250"` extrema rows, and `calories = null` with `"1.250"` / `"1.250 kcal"` extrema rows emits zero `TotalCaloriesBurnedRecord` (never `1.25` kcal).
+- **Verification Evidence**: Verified (`ATT-8127` Bounce 1/5 healed, Gate 3 `ATT-9644` PASSED; `106/106` targeted Tier-1 unit & contract tests PASS across 14 suites via `./gradlew :app:testDebugUnitTest --rerun`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke `installDebug` + `MainActivityWithNavigation` `CRASH_LOGCAT_CLEAN` + `Rule 8.5` inspected `docs/engineering/test_evidence/tickets/ATT-8127/screenshots/att8127_emulator_smoke.png`; SHA-256 machine evidence bundle at `docs/engineering/test_evidence/tickets/ATT-8127/manifest.json`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Stage 6 Bounce 1/5 heal: added mixed foreign+own, legacy signed-byte radar, and redefined `developerDataIndex` FIT tests (`FitWorkoutParserTest` `7/7`), >1 Hz sub-second GPX & `parseIsoToEpochMillis` tests (`GpxWorkoutParserTest` `6/6`, `WorkoutTimestampParserTest` `4/4`), `106/106` PASS across 14 suites, and `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke (`0` crashes, `Rule 8.5` PNG bundled). |
+| `1.0.34` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Promoted `TST-MIG-058` to `[Verified]` (`98/98` targeted unit & contract tests PASS across 13 suites incl. `FitWorkoutParserTest` `4/4`, `FitLosslessRoundTripTest` `6/6`, `FitFileWriterRadarTest` `2/2`, `HrvPostWorkoutRecomputerTest` `14/14`, `GpxWorkoutParserTest` `5/5`, `GPXFileWriterTest` `5/5`, `HealthConnectRecordMapperTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`; `0` new warnings; SHA-256 evidence bundle). |
+| `1.0.33` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Added `[Planned]` `TST-MIG-058` (`TST-MIG-058.1`–`TST-MIG-058.5`, strictly symmetric `REQ-MIG-058`) covering FIT epoch lap matching & `APP_ID` scoping, `HrvPostWorkoutRecomputer` `java.time` UTC parsing, `GpxWorkoutParser` peak `maxSpeed`, `GPXFileWriter` XML escaping & zero Lap DB queries, and `Locale.GERMANY` numeric calories in `HealthConnectRecordMapper`. |
 | `1.0.31` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Promoted `TST-MIG-057` to `[Verified]` (`94/94` targeted unit/contract tests PASS across 19 suites incl. `DatabaseSchemaRegistryParityContractTest` `2/2`, `BackupMigrationCycleTest` `3/3`, `ArchitectureConformanceContractTest` `11/11`, `JavaCoreMigrationStrategyContractTest` `5/5`; live `emulator-5554` boot smoke `0` crashes). |
 | `1.0.30` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Added `[Planned]` `TST-MIG-057` (`TST-MIG-057.1`–`TST-MIG-057.4`, strictly symmetric `REQ-MIG-057`) covering classpath-discovered 22-DB `DatabaseSchemaRegistry` parity, non-eager `DatabaseConnectionManager` quiescence, unmodified `.attbackup` restore cycle, and `ADR-001`/monolith contracts. |
 | `1.0.29` | 2026-11-22 | Lane 1 Author (`ATT-6036`, `--as agent1`) | `ATT-6036` | Promoted `TST-DAT-043` to `[Verified]` in Stage 5 Bounce 1 after Gate 4 Bounce 1 (`ATT-9592`, `107/107` PASS) + Kotlin-first `BaseDatabaseManager.kt` conversion (`JavaCoreMigrationStrategyContractTest` `5/5` PASS, `416/416` targeted Tier-1 PASS across 40+ suites, `SqliteSchemaUtilsTest` `6/6` PASS, `auto_gate.py` `PASS` bundle `docs/engineering/test_evidence/tickets/ATT-6036/`, live `emulator-5554` boot smoke `0` crashes). |

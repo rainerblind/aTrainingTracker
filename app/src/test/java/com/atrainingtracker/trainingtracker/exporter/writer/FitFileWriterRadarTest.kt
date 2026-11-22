@@ -122,6 +122,7 @@ class FitFileWriterRadarTest {
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
         every { mockSportTypeDb.getBSportType(any()) } returns BSportType.BIKE
         every { mockSportTypeDb.getTcxName(any()) } returns "Biking"
+        com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
 
         mockRepo = mockk(relaxed = true)
         every { mockRepo.getWorkoutExportHeader(any()) } answers {
@@ -150,6 +151,7 @@ class FitFileWriterRadarTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
         WorkoutRepository.resetForTesting(null)
         unmockkAll()
         tempDir.deleteRecursively()
@@ -382,10 +384,16 @@ class FitFileWriterRadarTest {
             assertTrue("Decode must return true", decodeResult)
         }
 
-        // 1. Verify Developer Data ID
+        // 1. Verify Developer Data ID (exact 16-byte MyBikeTraffic UUID without 0xFF high-byte clamping, REQ-MIG-058.1)
         val radarDevIds = devIds.filter { it.developerDataIndex == 0.toShort() }
         assertEquals(1, radarDevIds.size)
         assertEquals(0.toShort(), radarDevIds[0].developerDataIndex)
+        val decodedAppId = radarDevIds[0].applicationId?.map { it.toByte() }?.toByteArray()
+        assertNotNull("Radar DeveloperDataIdMesg must preserve 16-byte applicationId", decodedAppId)
+        assertTrue(
+            "Radar applicationId must match exact MyBikeTraffic UUID bytes",
+            decodedAppId!!.contentEquals(FitFileWriter.RADAR_DEVELOPER_DATA_APP_ID)
+        )
 
         // 2. Verify Field Descriptions (radar_current, radar_total, passing_speed, passing_speed_abs, passing_distance, large_vehicle_count)
         val radarFieldDescs = devFieldDescs.filter { it.developerDataIndex == 0.toShort() }

@@ -382,13 +382,6 @@ object HealthConnectRecordMapper {
     }
 
     private fun extractCalories(workoutData: WorkoutData): Double {
-        workoutData.calories?.takeIf { it > 0 }?.let { return it.toDouble() }
-        for (row in workoutData.extremaRows) {
-            if (row.unitLabel.contains("kcal", ignoreCase = true) || row.sensorLabel.contains("cal", ignoreCase = true)) {
-                val str = row.maxValue ?: row.avgValue
-                str?.toDoubleOrNull()?.let { return it }
-            }
-        }
-        return 0.0
+        return workoutData.calories?.takeIf { it > 0 }?.toDouble() ?: 0.0
     }
 }

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" tests="15" skipped="0" failures="1" errors="0" timestamp="2026-11-22T16:48:13.232Z" hostname="rainer-HP-EliteBook-850-G5" time="81.213">
+  <properties/>
+  <testcase name="testArchitectureDocuments_allAllocatedAndSpecifiedComponentsExistInCodebase" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="5.233"/>
+  <testcase name="testArchitectureDocument_authenticComponentNomenclature" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.007"/>
+  <testcase name="testArchitectureDocument_fulfillsAspiceSwe2" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.004"/>
+  <testcase name="testLivingDocShards_allHeadingsStandardized" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.597"/>
+  <testcase name="testArchitectureDocument_softwareInterfaceGrounding" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="74.828"/>
+  <testcase name="testSoftwareIntegrationVerification_intSwe05to08_testClassesAndStrategyParity" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.002"/>
+  <testcase name="testProtocolIntegrity_positionalFormatHardeningAndParityTest_TST_STR_017" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.005"/>
+  <testcase name="testAutonomousRetroWriteAllowlist_protectedRulesAndSkillsContract" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.003"/>
+  <testcase name="testMasterTableParity_matchesDomainShards" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.482"/>
+  <testcase name="testWorkProductHeadersAndGovernanceReconciliation_contract" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.03">
+    <failure message="java.lang.AssertionError: docs/architecture/adr_001_java_core_services_migration.md cannot claim Approved with pending/AI Approver 'Rainer Blind (PO)' (REQ-PRO-120.2)" type="java.lang.AssertionError">java.lang.AssertionError: docs/architecture/adr_001_java_core_services_migration.md cannot claim Approved with pending/AI Approver 'Rainer Blind (PO)' (REQ-PRO-120.2)
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.testWorkProductHeadersAndGovernanceReconciliation_contract(AspiceSweAuditContractTest.kt:356)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:175)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:84)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:47)
+	at org.gradle.api.internal.tasks.testing.junit.AbstractJUnitTestDefinitionProcessor.processTestDefinition(AbstractJUnitTestDefinitionProcessor.java:65)
+	at org.gradle.api.internal.tasks.testing.SuiteTestDefinitionProcessor.processTestDefinition(SuiteTestDefinitionProcessor.java:53)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.gradle.internal.dispatch.MethodInvocation.invokeOn(MethodInvocation.java:77)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:28)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:19)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:88)
+	at jdk.proxy1/jdk.proxy1.$Proxy4.processTestDefinition(Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$2.run(TestWorker.java:178)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+</failure>
+  </testcase>
+  <testcase name="testGovernanceRulesAndSkills_containSweAndImageContracts" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.002"/>
+  <testcase name="testArchitectureDocument_softwareIntegrationStrategy" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.004"/>
+  <testcase name="testSoftwareIntegrationVerification_intSwe01to04_testClassesAndGovernance" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.002"/>
+  <testcase name="testArchitectureDocument_softwareInterfaceSpecifications" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.002"/>
+  <testcase name="testSubtaskAutomationContract_jiraUtilAndReqLink_TST_STR_012" classname="com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

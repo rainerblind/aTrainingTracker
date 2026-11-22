@@ -427,4 +427,58 @@ class HealthConnectRecordMapperTest {
         assertTrue(pastTime.isBefore(directSession.endTime))
         assertEquals(pastTime.plusSeconds(1), directSession.endTime)
     }
+
+    /**
+     * TST-MIG-058.5: Under Locale.GERMANY (de_DE), verifies HealthConnectRecordMapper reads strictly
+     * numeric WorkoutData.calories (1250 -> 1250.0 kcal) and never scrapes localized extremaRows strings
+     * ("1.250" / "1.250 kcal") into 1.25 kcal.
+     */
+    @Test
+    fun testCaloriesExtraction_underGermanLocaleUsesNumericPrimitiveAndIgnoresLocalizedStrings_TST_MIG_058_5() = runBlocking {
+        val originalLocale = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.GERMANY)
+        try {
+            val mockRepo = mockk<WorkoutSamplesRepository>()
+            coEvery { mockRepo.getSamples(any()) } returns emptyList()
+
+            val germanExtrema = listOf(
+                ExtremaDataRow(
+                    sensorLabel = "Kalorien",
+                    unitLabel = "kcal",
+                    minValue = null,
+                    avgValue = "1.250",
+                    maxValue = "1.250"
+                )
+            )
+
+            // 1. Numeric workoutData.calories = 1250 must yield exact 1250.0 kcal under de_DE
+            val withNumericCalories = createWorkoutData(calories = 1250.0).copy(
+                calories = 1250,
+                extremaRows = germanExtrema
+            )
+            val (_, seriesNumeric) = HealthConnectRecordMapper.extractRecords(
+                context = context,
+                workoutData = withNumericCalories,
+                repository = mockRepo
+            )
+            val calorieRecord = seriesNumeric.filterIsInstance<TotalCaloriesBurnedRecord>().firstOrNull()
+            assertNotNull("TotalCaloriesBurnedRecord must be emitted for calories=1250", calorieRecord)
+            assertEquals(1250.0, calorieRecord!!.energy.inKilocalories, 0.001)
+
+            // 2. When numeric calories is null, localized "1.250" extrema string must NOT be scraped as 1.25 kcal
+            val withNullCaloriesAndGermanString = createWorkoutData(calories = 0.0).copy(
+                calories = null,
+                extremaRows = germanExtrema
+            )
+            val (_, seriesNull) = HealthConnectRecordMapper.extractRecords(
+                context = context,
+                workoutData = withNullCaloriesAndGermanString,
+                repository = mockRepo
+            )
+            val scrapedRecord = seriesNull.filterIsInstance<TotalCaloriesBurnedRecord>().firstOrNull()
+            assertNull("Localized '1.250' extrema string must never be scraped into 1.25 kcal", scrapedRecord)
+        } finally {
+            java.util.Locale.setDefault(originalLocale)
+        }
+    }
 }

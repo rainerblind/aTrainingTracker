@@ -110,6 +110,11 @@ object GpxWorkoutParser {
                 var lapFirstTime: String? = null
                 var lapLastTime: String? = null
                 val lapStartDistance = cumDist
+                var lapMaxExplicitSpeed: Double? = null
+                var lapMaxSegmentSpeed: Double? = null
+                var prevLapLat: Double? = null
+                var prevLapLng: Double? = null
+                var prevLapEpochMs: Long? = null
 
                 val parsedLap = ParsedLap(
                     lapNr = lap.lapNr
@@ -122,13 +127,16 @@ object GpxWorkoutParser {
                         put(SensorType.LAP_NR.name, lapNr)
                     }
 
+                    val geoPrevLat = prevLat
+                    val geoPrevLng = prevLng
+                    var lastGeoStepDistM: Double? = null
                     if (pt.lat != null && pt.lng != null) {
-                        val pLat = prevLat
-                        val pLng = prevLng
-                        if (pLat != null && pLng != null) {
+                        if (geoPrevLat != null && geoPrevLng != null) {
                             val results = FloatArray(1)
-                            Location.distanceBetween(pLat, pLng, pt.lat, pt.lng, results)
-                            cumDist += results[0].toDouble()
+                            Location.distanceBetween(geoPrevLat, geoPrevLng, pt.lat, pt.lng, results)
+                            val stepDistM = results[0].toDouble()
+                            lastGeoStepDistM = stepDistM
+                            cumDist += stepDistM
                         }
                         prevLat = pt.lat
                         prevLng = pt.lng
@@ -161,8 +169,10 @@ object GpxWorkoutParser {
                         }
                     }
 
+                    var ptEpochMs: Long? = null
                     pt.time?.let { rawTime ->
                         val formatted = WorkoutTimestampParser.formatIsoToUtcDbString(rawTime)
+                        ptEpochMs = WorkoutTimestampParser.parseIsoToEpochMillis(rawTime)
 
                         values.put("time", formatted)
                         if (firstTime == null) firstTime = formatted
@@ -173,9 +183,48 @@ object GpxWorkoutParser {
                     }
 
                     pt.speedMps?.let { spd ->
-                        values.put(SensorType.SPEED_mps.name, spd)
-                        foundSensors.add(SensorType.SPEED_mps)
+                        if (spd.isFinite() && spd in 0.0..100.0) {
+                            values.put(SensorType.SPEED_mps.name, spd)
+                            foundSensors.add(SensorType.SPEED_mps)
+                            lapMaxExplicitSpeed = lapMaxExplicitSpeed?.let { maxOf(it, spd) } ?: spd
+                        }
                     }
+
+                    // Track peak intra-lap GPS segment speed as fallback when explicit <speed> is absent (REQ-MIG-058.3)
+                    val curLat = pt.lat
+                    val curLng = pt.lng
+                    val curEpochMs = ptEpochMs
+                    if (curLat != null && curLng != null && curEpochMs != null) {
+                        val pLapLat = prevLapLat
+                        val pLapLng = prevLapLng
+                        val pLapEpochMs = prevLapEpochMs
+                        if (pLapLat != null && pLapLng != null && pLapEpochMs != null) {
+                            val dtMs = curEpochMs - pLapEpochMs
+                            if (dtMs > 0L) {
+                                val segDistM = if (lastGeoStepDistM != null && geoPrevLat == pLapLat && geoPrevLng == pLapLng) {
+                                    lastGeoStepDistM
+                                } else {
+                                    val segResults = FloatArray(1)
+                                    Location.distanceBetween(pLapLat, pLapLng, curLat, curLng, segResults)
+                                    segResults[0].toDouble()
+                                }
+                                val segSpeed = segDistM / (dtMs / 1000.0)
+                                if (segSpeed.isFinite() && segSpeed in 0.0..100.0) {
+                                    lapMaxSegmentSpeed = lapMaxSegmentSpeed?.let { maxOf(it, segSpeed) } ?: segSpeed
+                                }
+                            }
+                            if (curEpochMs >= pLapEpochMs) {
+                                prevLapLat = curLat
+                                prevLapLng = curLng
+                                prevLapEpochMs = curEpochMs
+                            }
+                        } else {
+                            prevLapLat = curLat
+                            prevLapLng = curLng
+                            prevLapEpochMs = curEpochMs
+                        }
+                    }
+
                     pt.hr?.let { hr ->
                         values.put(SensorType.HR.name, hr)
                         foundSensors.add(SensorType.HR)
@@ -200,16 +249,14 @@ object GpxWorkoutParser {
                     }
                 }
 
-                // Finalize lap stats
+                // Finalize lap stats (REQ-MIG-058.3: true peak maxSpeed, never lap average)
                 parsedLap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
                 if (lapFirstTime != null && lapLastTime != null) {
                     WorkoutTimestampParser.computeDurationSeconds(lapFirstTime, lapLastTime)?.let { duration ->
                         parsedLap.totalTimeSeconds = duration
-                        if (duration > 0) {
-                            parsedLap.maxSpeed = parsedLap.distanceMeters / duration
-                        }
                     }
                 }
+                parsedLap.maxSpeed = lapMaxExplicitSpeed ?: lapMaxSegmentSpeed
             }
 
             if (parsedLaps.isEmpty() && points.isNotEmpty()) {

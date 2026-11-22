@@ -120,11 +120,49 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
         private val DATE_TIME_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
 
+        /**
+         * 16-byte MyBikeTraffic / Bike Radar Connect-IQ application ID
+         * (`6a4e3200-667b-11e3-949a-0800200c9a66`) scoping `RecordMesg` radar developer fields
+         * (`REQ-EXP-042`, `REQ-MIG-058.1`).
+         */
+        @JvmField
+        val RADAR_DEVELOPER_DATA_APP_ID: ByteArray = ByteBuffer.allocate(16).apply {
+            val appIdUuid = UUID.fromString("6a4e3200-667b-11e3-949a-0800200c9a66")
+            putLong(appIdUuid.mostSignificantBits)
+            putLong(appIdUuid.leastSignificantBits)
+        }.array()
+
+        /**
+         * Backward-compatibility 16-byte radar application ID produced by historical pre-`ATT-8127`
+         * exports where Garmin FIT SDK's `setApplicationId(int, Byte)` clamped signed bytes `>= 0x80`
+         * (`0xe3`, `0x94`, `0x9a`) to `Fit.BYTE_INVALID` (`0xFF`) (`REQ-MIG-058.1`).
+         */
+        @JvmField
+        val LEGACY_RADAR_DEVELOPER_DATA_APP_ID: ByteArray = ByteArray(16) { i ->
+            val b = RADAR_DEVELOPER_DATA_APP_ID[i]
+            if (b < 0) 0xFF.toByte() else b
+        }
+
         @JvmField
         val APP_METADATA_DEVELOPER_DATA_ID: ByteArray = byteArrayOf(
             0x54, 0x72, 0x61, 0x69, 0x6e, 0x69, 0x6e, 0x67,
             0x54, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x72, 0x01
         )
+
+        /**
+         * Encodes a 16-byte FIT `application_id` as unsigned `0..255` values so Garmin FIT SDK's
+         * `BASE_TYPE_BYTE` range check (`0..255`) preserves bytes `>= 0x80` without clamping to `0xFF`.
+         */
+        internal fun writeApplicationIdUnsigned(mesg: DeveloperDataIdMesg, appId: ByteArray) {
+            for (i in appId.indices) {
+                mesg.setFieldValue(
+                    DeveloperDataIdMesg.ApplicationIdFieldNum,
+                    i,
+                    (appId[i].toInt() and 0xFF).toShort(),
+                    Fit.SUBFIELD_INDEX_MAIN_FIELD
+                )
+            }
+        }
 
         private fun parseUtcTimestamp(timeStr: String?): Date? {
             if (timeStr.isNullOrBlank()) {
@@ -384,14 +422,7 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                     developerDataIndex = 0.toShort()
                     manufacturerId = Manufacturer.DEVELOPMENT
                     applicationVersion = 1L
-                    val appIdUuid = UUID.fromString("6a4e3200-667b-11e3-949a-0800200c9a66")
-                    val bb = ByteBuffer.wrap(ByteArray(16))
-                    bb.putLong(appIdUuid.mostSignificantBits)
-                    bb.putLong(appIdUuid.leastSignificantBits)
-                    val appIdBytes = bb.array()
-                    for (i in 0 until 16) {
-                        setApplicationId(i, appIdBytes[i])
-                    }
+                    writeApplicationIdUnsigned(this, RADAR_DEVELOPER_DATA_APP_ID)
                 }
                 activeEncoder.write(devDataIdMesg)
 
@@ -461,9 +492,7 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                 developerDataIndex = 1.toShort()
                 manufacturerId = Manufacturer.DEVELOPMENT
                 applicationVersion = 1L
-                for (i in 0 until 16) {
-                    setApplicationId(i, APP_METADATA_DEVELOPER_DATA_ID[i])
-                }
+                writeApplicationIdUnsigned(this, APP_METADATA_DEVELOPER_DATA_ID)
             }
             activeEncoder.write(metaDevDataIdMesg)
 

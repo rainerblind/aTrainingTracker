@@ -25,11 +25,9 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
@@ -80,11 +78,11 @@ public class GPXFileWriter extends BaseFileWriter {
         try (BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath())) {
             // write the header data to the file
             bufferedWriter.write("<?xml version=\"1.0\"?>\n");
-            String name = TrainingApplication.getAppName();
+            String creatorName = TrainingApplication.getAppName();
             if (HavePressureSensor.havePressureSensor(mContext)) {
-                name += " with barometer";
+                creatorName += " with barometer";
             } // add "with barometer" when a barometer was/is available, see Strava API Documentations
-            bufferedWriter.write("<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"" + name + "\" version=\"1.1\" "
+            bufferedWriter.write("<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"" + TCXFileWriter.escapeXml(creatorName) + "\" version=\"1.1\" "
                     + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
                     + "xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"> \n");
 
@@ -92,7 +90,13 @@ public class GPXFileWriter extends BaseFileWriter {
             bufferedWriter.write("  <time>" + dbTime2XMLTime(startTime) + "</time>\n");
             bufferedWriter.write(" </metadata>\n");
             bufferedWriter.write(" <trk>\n");
-            bufferedWriter.write("  <name>" + startTime + "</name>\n");
+            String trimmedWorkoutName = workoutName != null ? workoutName.trim() : "";
+            String trackName = !trimmedWorkoutName.isEmpty() ? trimmedWorkoutName : (startTime != null ? startTime : "");
+            bufferedWriter.write("  <name>" + TCXFileWriter.escapeXml(trackName) + "</name>\n");
+            String trimmedDescription = description != null ? description.trim() : "";
+            if (!trimmedDescription.isEmpty()) {
+                bufferedWriter.write("  <desc>" + TCXFileWriter.escapeXml(trimmedDescription) + "</desc>\n");
+            }
 
             WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
             SQLiteDatabase db = databaseManager.getDatabase();
@@ -120,38 +124,11 @@ public class GPXFileWriter extends BaseFileWriter {
 
                     int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
                     if (prevLineLap != lap) { // new lap
-
                         if (isSegmentOpen) { // finish previous lap segment
                             bufferedWriter.write("  </trkseg>\n");
                         }
-
-                        // get the lap data
-                        SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
-
-                        try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
-                                null,
-                                LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
-                                new String[]{workoutID + "", lap + ""},
-                                null,
-                                null,
-                                null)) {
-                            if (DEBUG)
-                                Log.d(TAG, "getting lap data: workoutID: " + workoutID + ", lapNr: " + lap + " found: "
-                                        + (lapCursor != null ? lapCursor.getCount() : 0) + ", " + (lapCursor != null ? lapCursor.getColumnCount() : 0));
-
-                            if (lapCursor != null && lapCursor.moveToFirst()) {
-                                // get the data for the lap
-                                totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
-                                totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
-                            } else {
-                                totalTime = "0";
-                                totalDistance = "0";
-                            }
-                        }
-
                         bufferedWriter.write("  <trkseg>\n");
                         isSegmentOpen = true;
-
                     }
                     prevLineLap = lap;
 
@@ -200,16 +177,6 @@ public class GPXFileWriter extends BaseFileWriter {
         }
 
         return new ExportResult(true, false, "Successfully exported to GPX File");
-    }
-
-    private String myGet(@NonNull Cursor cursor, String name, String defaultValue) {
-        String defVal = defaultValue;
-        try {
-            defVal = cursor.getString(cursor.getColumnIndexOrThrow(name));
-        } catch (android.database.CursorIndexOutOfBoundsException e) {
-            Log.e(TAG, "database mismatch on column " + name, e);
-        }
-        return defVal;
     }
 
 }

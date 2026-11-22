@@ -38,6 +38,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -115,7 +116,12 @@ class GPXFileWriterTest {
         tempDir.deleteRecursively()
     }
 
-    private fun setupSummaryCursor(workoutId: Long = 1001L, startTime: String = "2026-10-19 10:00:00") {
+    private fun setupSummaryCursor(
+        workoutId: Long = 1001L,
+        startTime: String = "2026-10-19 10:00:00",
+        workoutName: String = "Test Name",
+        description: String = "Test Workout"
+    ) {
         val summaryCursor = mockk<Cursor>(relaxed = true)
         every { summaryCursor.moveToFirst() } returns true
         val summaryColumns = mapOf(
@@ -128,8 +134,8 @@ class GPXFileWriterTest {
             WorkoutSummaries.GOAL to "",
             WorkoutSummaries.METHOD to "",
             WorkoutSummaries.DISTANCE_TOTAL_m to "2000",
-            WorkoutSummaries.DESCRIPTION to "Test Workout",
-            WorkoutSummaries.WORKOUT_NAME to "Test Name"
+            WorkoutSummaries.DESCRIPTION to description,
+            WorkoutSummaries.WORKOUT_NAME to workoutName
         )
         val columnIndices = summaryColumns.keys.toList()
         columnIndices.forEachIndexed { index, col ->
@@ -283,5 +289,91 @@ class GPXFileWriterTest {
         val closeCount = xml.split("</trkseg>").size - 1
         assertEquals("Open and close tag counts must match", openCount, closeCount)
         assertEquals("Must equal 3 segments", 3, openCount)
+    }
+
+    /**
+     * TST-MIG-058.4: Verifies GPXFileWriter XML-escapes creator, <name>, and <desc>
+     * (handling &, <, >, ", ') and executes zero LapsDatabaseManager queries across multiple laps.
+     */
+    @Test
+    fun testGpxExport_escapesXmlSpecialCharsInCreatorNameAndDescAndSkipsLapsDb_TST_MIG_058_4() {
+        val workoutId = 1004L
+        val fileBaseName = "test_gpx_xml_escape"
+        every { TrainingApplication.getAppName() } returns "aTrainingTracker & <Pro> \"Dev\""
+        setupSummaryCursor(
+            workoutId = workoutId,
+            startTime = "2026-10-19 10:00:00",
+            workoutName = "  Ride & Climb <Fast> \"A\" 'B'  ",
+            description = "  Notes <1> & 2 > 0  "
+        )
+
+        val sampleCursor = mockk<Cursor>(relaxed = true)
+        every { sampleCursor.count } returns 3
+        var sampleRow = -1
+        every { sampleCursor.moveToNext() } answers {
+            sampleRow++
+            sampleRow < 3
+        }
+        every { sampleCursor.getColumnIndexOrThrow(SensorType.LAP_NR.name) } returns 0
+        every { sampleCursor.getInt(0) } answers { sampleRow }
+        every { sampleCursor.isNull(any()) } returns false
+        every { sampleCursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME) } returns 1
+        every { sampleCursor.getString(1) } answers { "2026-10-19 10:0$sampleRow:00" }
+        every { sampleCursor.getColumnIndexOrThrow(SensorType.LATITUDE.name) } returns 2
+        every { sampleCursor.getDouble(2) } returns 48.137
+        every { sampleCursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name) } returns 3
+        every { sampleCursor.getDouble(3) } answers { 11.575 + (sampleRow * 0.001) }
+        every { sampleCursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name) } returns 4
+        every { sampleCursor.getDouble(4) } returns 520.0
+
+        every { mockSqlDb.query(match { it != WorkoutSummaries.TABLE && it != LapsDatabaseManager.Laps.TABLE }, any(), any(), any(), any(), any(), any()) } returns sampleCursor
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.GPX, ExportType.FILE)
+        val result = GPXFileWriter(mockContext).export(exportInfo)
+        assertTrue("Export must succeed: ${result.answer()}", result.success())
+
+        val xml = File(tempDir, exportInfo.shortPath).readText()
+        val doc: Document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            .parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+
+        assertEquals("aTrainingTracker & <Pro> \"Dev\"", doc.documentElement.getAttribute("creator"))
+        assertEquals("Ride & Climb <Fast> \"A\" 'B'", doc.getElementsByTagName("name").item(0).textContent)
+        assertEquals("Notes <1> & 2 > 0", doc.getElementsByTagName("desc").item(0).textContent)
+        assertEquals(3, doc.getElementsByTagName("trkseg").length)
+
+        // Dead Lap SQL query loop must be completely eliminated
+        verify(exactly = 0) { LapsDatabaseManager.getInstance(any()) }
+    }
+
+    /**
+     * TST-MIG-058.4: Verifies blank workoutName falls back to escaped startTime and blank description omits <desc>.
+     */
+    @Test
+    fun testGpxExport_blankWorkoutNameFallsBackToStartTimeAndOmitsBlankDesc_TST_MIG_058_4() {
+        val workoutId = 1005L
+        val fileBaseName = "test_gpx_blank_meta"
+        setupSummaryCursor(
+            workoutId = workoutId,
+            startTime = "2026-10-19 10:00:00",
+            workoutName = "   ",
+            description = "   "
+        )
+
+        val emptyCursor = mockk<Cursor>(relaxed = true)
+        every { emptyCursor.count } returns 0
+        every { emptyCursor.moveToNext() } returns false
+        every { mockSqlDb.query(match { it != WorkoutSummaries.TABLE && it != LapsDatabaseManager.Laps.TABLE }, any(), any(), any(), any(), any(), any()) } returns emptyCursor
+
+        val exportInfo = ExportInfo(fileBaseName, FileFormat.GPX, ExportType.FILE)
+        val result = GPXFileWriter(mockContext).export(exportInfo)
+        assertTrue(result.success())
+
+        val xml = File(tempDir, exportInfo.shortPath).readText()
+        val doc: Document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            .parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+
+        assertEquals("2026-10-19 10:00:00", doc.getElementsByTagName("name").item(0).textContent)
+        assertEquals(0, doc.getElementsByTagName("desc").length)
+        verify(exactly = 0) { LapsDatabaseManager.getInstance(any()) }
     }
 }

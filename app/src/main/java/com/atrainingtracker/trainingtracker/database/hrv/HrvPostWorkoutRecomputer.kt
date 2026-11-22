@@ -43,9 +43,13 @@ import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
+import java.time.temporal.ChronoField
 import java.util.Locale
-import java.util.TimeZone
 import kotlin.math.sqrt
 
 /**
@@ -449,25 +453,54 @@ object HrvPostWorkoutRecomputer {
         return HrvSignalQualityAnalyzer.analyzeBeats(beats)
     }
 
-    private fun parseTimestampMs(timeStr: String?): Long? {
-        if (timeStr.isNullOrBlank()) return null
-        val formats = listOf(
-            "yyyy-MM-dd HH:mm:ss",
-            "yyyy-MM-dd'T'HH:mm:ss",
-            "yyyy-MM-dd'T'HH:mm:ss'Z'",
-            "yyyy-MM-dd_HHmmss"
-        )
-        for (pattern in formats) {
+    private val FMT_DB_SPACE: DateTimeFormatter = DateTimeFormatterBuilder()
+        .appendPattern("yyyy-MM-dd HH:mm:ss")
+        .optionalStart()
+        .appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true)
+        .optionalEnd()
+        .toFormatter(Locale.US)
+    private val FMT_ISO_LOCAL: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private val FMT_COMPACT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss", Locale.US)
+
+    /**
+     * Parses a persisted sample timestamp into UTC epoch milliseconds using static immutable
+     * `java.time` formatters with zero per-sample `SimpleDateFormat` allocations (`REQ-MIG-058.2`).
+     */
+    internal fun parseTimestampMs(timeStr: String?): Long? {
+        val trimmed = timeStr?.trim()
+        if (trimmed.isNullOrEmpty()) return null
+        return when (trimmed.getOrNull(10)) {
+            ' ' -> parseLocalUtc(trimmed, FMT_DB_SPACE)
+            'T' -> parseIsoTimestampMs(trimmed)
+            '_' -> parseLocalUtc(trimmed, FMT_COMPACT)
+            else -> parseLocalUtc(trimmed, FMT_DB_SPACE)
+                ?: parseIsoTimestampMs(trimmed)
+                ?: parseLocalUtc(trimmed, FMT_COMPACT)
+        }
+    }
+
+    private fun parseIsoTimestampMs(trimmed: String): Long? {
+        val last = trimmed.last()
+        val hasExplicitOffset = last == 'Z' || last == 'z' ||
+            trimmed.indexOf('+', startIndex = 11) >= 0 ||
+            trimmed.indexOf('-', startIndex = 11) >= 0
+        if (hasExplicitOffset) {
             try {
-                val sdf = SimpleDateFormat(pattern, Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                }
-                val date = sdf.parse(timeStr)
-                if (date != null) return date.time
+                return OffsetDateTime.parse(trimmed, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                    .toInstant()
+                    .toEpochMilli()
             } catch (_: Exception) {
             }
         }
-        return null
+        return parseLocalUtc(trimmed, FMT_ISO_LOCAL)
+    }
+
+    private fun parseLocalUtc(trimmed: String, formatter: DateTimeFormatter): Long? {
+        return try {
+            LocalDateTime.parse(trimmed, formatter).toInstant(ZoneOffset.UTC).toEpochMilli()
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private data class SampleTimeRow(
