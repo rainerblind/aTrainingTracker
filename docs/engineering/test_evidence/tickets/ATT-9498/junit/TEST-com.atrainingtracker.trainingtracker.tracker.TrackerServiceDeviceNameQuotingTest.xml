@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T15:47:45.593Z" hostname="rainer-HP-EliteBook-850-G5" time="8.731">
+  <properties/>
+  <testcase name="testSampleAndWriteToDb_withApostropheAndDoubleQuoteDeviceNames_insertsAllSampleRowsInSqlite" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest" time="4.39"/>
+  <testcase name="testQuoteAndUnquoteSqlColumnIdentifier_preservesApostrophesAndEscapesDoubleQuotes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest" time="2.078"/>
+  <testcase name="testSampleInsertFailureCounter_rateLimitsRepeatedSqliteErrors" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest" time="2.263"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

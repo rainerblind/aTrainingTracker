@@ -122,7 +122,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The core background service responsible for live workout tracking and session persistence.
@@ -191,15 +191,12 @@ public class TrackerService extends Service {
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final IntentFilter mAltitudeCorrectionFilter = new IntentFilter(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT);
     protected final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
-    // BANALConnection banalConnection;
     protected final IntentFilter mLapSummaryFilter = new IntentFilter(BANALService.LAP_SUMMARY);
-
-    // protected ContentValues mValues        = new ContentValues();
-    // protected ContentValues mSummaryValues = new ContentValues();
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);
     private final java.util.concurrent.ExecutorService mDbExecutor = Executors.newSingleThreadExecutor();
     private volatile CompletableFuture<Void> mFinalizationFuture = CompletableFuture.completedFuture(null);
     private volatile boolean mIsStopping = false;
+    private volatile boolean mIsForegroundPromoted = false;
     private volatile boolean mBanalBound = false;
     private final AtomicInteger mSessionGeneration = new AtomicInteger(0);
     private volatile boolean mReceiversRegistered = false;
@@ -489,6 +486,19 @@ public class TrackerService extends Service {
         return sInstance != null;
     }
 
+    /** Records an in-flight {@code startForegroundService()} handshake ({@code REQ-TRK-095.1}). */
+    public static void markForegroundStartRequested() { sPendingStopBeforeStart.set(false); sFgsStartPending.set(true); }
+
+    /** Defers rapid pre-start stop until {@code startForeground()} completes ({@code REQ-TRK-095.1}). */
+    public static boolean requestStopIfForegroundStartPending() {
+        if (!sFgsStartPending.get()) return false;
+        sPendingStopBeforeStart.set(true);
+        return true;
+    }
+
+    @VisibleForTesting
+    public static void resetFgsStartStateForTesting() { sFgsStartPending.set(false); sPendingStopBeforeStart.set(false); }
+
     @Nullable
     public static TrackerService getInstance() {
         return sInstance;
@@ -677,6 +687,8 @@ public class TrackerService extends Service {
     }
 
     private static volatile TrackerService sInstance = null;
+    private static final AtomicBoolean sFgsStartPending = new AtomicBoolean(false);
+    private static final AtomicBoolean sPendingStopBeforeStart = new AtomicBoolean(false);
 
     public static void invalidateAutoPauseCache() {
         TrackerService service = sInstance;
@@ -1165,6 +1177,16 @@ public class TrackerService extends Service {
             performStopSelf();
             return Service.START_STICKY;
         }
+        if (!promoteForegroundForStart()) {
+            return Service.START_STICKY;
+        }
+        if (sPendingStopBeforeStart.getAndSet(false)) {
+            if (DEBUG) Log.d(TAG, "onStartCommand: deferred pre-start stop fulfilled after FGS promotion");
+            mIsStopping = true;
+            mTrackingInterrupted = true;
+            performIdempotentMainThreadTeardown(true);
+            return Service.START_NOT_STICKY;
+        }
 
         StartType startType;
         if (intent == null) {
@@ -1251,6 +1273,7 @@ public class TrackerService extends Service {
                 }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
+                mWorkoutID = -1;
                 if (BuildConfig.DEBUG) {
                     getDebugHeapWatchdog().startSession(mBaseFileName);
                 }
@@ -1368,32 +1391,25 @@ public class TrackerService extends Service {
             onSearchingFinished();
         }
 
-        // start tracking
-        mTrackerHandle = mScheduler.scheduleAtFixedRate(tracker, 0, // initial delay
-                1, // sampling time
-                TimeUnit.SECONDS);
-
-        Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
-        if (notification != null) {
-            try {
-                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, determineForegroundServiceType());
-            } catch (SecurityException | IllegalStateException e) {
-                Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
-                mTrackingInterrupted = true;
-                if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
-                    mTableInitializationFuture.cancel(false);
-                }
-                cancelTrackerHandle();
-                showTrackingInterruptedNotification();
-                performStopSelf();
-                return Service.START_STICKY;
-            }
-        }
-
-        // We want this service to continue running until it is explicitly stopped, so return sticky.
-        // When the service is stopped due to a lack of memory, it will be recreated and this method called with a null intent, see:
-        // https://android-developers.googleblog.com/2010/02/service-api-changes-starting-with.html
+        mTrackerHandle = mScheduler.scheduleAtFixedRate(tracker, 0, 1, TimeUnit.SECONDS);
         return Service.START_STICKY;
+    }
+
+    private boolean promoteForegroundForStart() {
+        Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
+        if (notification == null) { sFgsStartPending.set(false); return true; }
+        try {
+            performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, determineForegroundServiceType());
+            mIsForegroundPromoted = true;
+            sFgsStartPending.set(false);
+            return true;
+        } catch (SecurityException | IllegalStateException e) {
+            Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
+            sFgsStartPending.set(false); mIsForegroundPromoted = false; mTrackingInterrupted = true;
+            if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) mTableInitializationFuture.cancel(false);
+            cancelTrackerHandle(); showTrackingInterruptedNotification(); performStopSelf();
+            return false;
+        }
     }
 
     protected void performStopSelf() {
@@ -1439,6 +1455,8 @@ public class TrackerService extends Service {
             performStopForeground();
         } catch (Throwable t) {
             Log.w(TAG, "Error stopping foreground state during teardown", t);
+        } finally {
+            mIsForegroundPromoted = false;
         }
         if (stopSelf) {
             try {
@@ -1470,6 +1488,11 @@ public class TrackerService extends Service {
         }
         if (mWorkoutID <= 0 && mBaseFileName == null) {
             Log.w(TAG, "handleActionStop: ACTION_STOP received while not tracking; stopping self");
+            if (sFgsStartPending.get() && !mIsForegroundPromoted) {
+                if (!promoteForegroundForStart()) return Service.START_NOT_STICKY;
+                performStopForeground();
+                mIsForegroundPromoted = false;
+            }
             performStopSelf();
             return Service.START_NOT_STICKY;
         }
@@ -1550,7 +1573,9 @@ public class TrackerService extends Service {
         Runnable finalizationTask = () -> {
             try {
                 if (!interrupted) {
-                    endWorkout(snapshot, stoppingWorkoutId, stoppingBaseFileName, stoppingLiveSession);
+                    long resolvedId = stoppingWorkoutId > 0 ? stoppingWorkoutId
+                            : (stoppingBaseFileName != null && stoppingBaseFileName.equals(mBaseFileName) ? mWorkoutID : stoppingWorkoutId);
+                    endWorkout(snapshot, resolvedId, stoppingBaseFileName, stoppingLiveSession);
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "Unexpected error during async workout finalization in "
@@ -1567,7 +1592,8 @@ public class TrackerService extends Service {
                             performIdempotentMainThreadTeardown(false);
                         } else if (stoppingGeneration != null
                                 && mSessionGeneration.get() == stoppingGeneration
-                                && mIsStopping) {
+                                && mIsStopping
+                                && !sFgsStartPending.get()) {
                             performIdempotentMainThreadTeardown(true);
                         } else if (DEBUG) {
                             Log.d(TAG, "handleActionStop: New session started (generation="
@@ -1719,6 +1745,7 @@ public class TrackerService extends Service {
     @Override
     public void onDestroy() {
         performSuperOnDestroy();
+        mIsForegroundPromoted = false;
         if (sInstance == this) {
             sInstance = null;
         }

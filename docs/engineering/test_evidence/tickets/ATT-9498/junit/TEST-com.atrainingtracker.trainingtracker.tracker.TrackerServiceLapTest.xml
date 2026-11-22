@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T15:48:15.799Z" hostname="rainer-HP-EliteBook-850-G5" time="1.112">
+  <properties/>
+  <testcase name="testLapSummaryReceiver_validSplit_savesCorrectRecord" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.159"/>
+  <testcase name="testTrackerServiceSaveLap_forwardsUtcStartTimestampFromCoordinator_tstTrk090_2" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.158"/>
+  <testcase name="testLapSummaryReceiver_zeroDurationAndZeroDistance_discardsEmptyBroadcast" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.159"/>
+  <testcase name="testCreateNewLap_zeroTimeWithPositiveDistance_guardsAgainstDivisionByZero" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.161"/>
+  <testcase name="testCreateNewLap_zeroDurationAndZeroDistance_discardsPhantomLap" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.157"/>
+  <testcase name="testLapSummaryReceiver_naNSpeed_recalculatesSafely" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.156"/>
+  <testcase name="testCreateNewLap_validDurationAndDistance_savesLapWithCalculatedSpeed" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest" time="0.162"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

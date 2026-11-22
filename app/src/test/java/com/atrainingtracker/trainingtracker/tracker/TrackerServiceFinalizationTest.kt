@@ -236,6 +236,7 @@ class TrackerServiceFinalizationTest {
         // Isolate plain-JVM tests from launching real async Dispatchers.IO post-processing coroutines (Rule 66)
         WorkoutPostProcessingCoordinator.resetForTesting()
         WorkoutPostProcessingCoordinator.enqueueHookForTesting = { _, _ -> true }
+        TrackerService.resetFgsStartStateForTesting()
 
         service = TestableTrackerService()
 
@@ -248,6 +249,7 @@ class TrackerServiceFinalizationTest {
 
     @After
     fun tearDown() {
+        TrackerService.resetFgsStartStateForTesting()
         WorkoutPostProcessingCoordinator.resetForTesting()
         com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(null)
         com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
@@ -2014,6 +2016,194 @@ class TrackerServiceFinalizationTest {
             WorkoutPostProcessingCoordinator.resetForTesting()
             WorkoutRepository.resetForTesting(null)
         }
+    }
+
+    /**
+     * TST-TRK-095.1 (ATT-9498): Verifies deferred pre-start stop executes performStartForeground()
+     * FIRST, then stops foreground and stopSelf() without creating an orphan DB workout.
+     */
+    @Test
+    fun testOnStartCommand_deferredPreStartStop_promotesForegroundThenStopsWithoutCreatingWorkout_TST_TRK_095_1() {
+        val events = mutableListOf<String>()
+        val mockApp = mockk<com.atrainingtracker.trainingtracker.TrainingApplication>(relaxed = true)
+        val mockNotif = mockk<android.app.Notification>(relaxed = true)
+        every { mockApp.searchingAndTrackingNotification } returns mockNotif
+
+        val trackedService = object : TestableTrackerService() {
+            override fun performStartForeground(id: Int, notification: android.app.Notification?, foregroundServiceType: Int) {
+                events.add("startForeground")
+            }
+            override fun performStopForeground() {
+                events.add("stopForeground")
+                super.performStopForeground()
+            }
+            override fun performStopSelf() {
+                events.add("stopSelf")
+                super.performStopSelf()
+            }
+            override fun createNewWorkout(): Long {
+                events.add("createNewWorkout")
+                return 999L
+            }
+        }
+        val appField = TrackerService::class.java.getDeclaredField("mTrainingApplication").apply { isAccessible = true }
+        appField.set(trackedService, mockApp)
+
+        TrackerService.markForegroundStartRequested()
+        assertTrue(TrackerService.requestStopIfForegroundStartPending())
+
+        val intent = mockk<Intent>(relaxed = true)
+        every { intent.action } returns null
+        every { intent.getStringExtra(TrackerService.START_TYPE) } returns TrackerService.StartType.START_NORMAL.name
+
+        val result = trackedService.onStartCommand(intent, 0, 1)
+
+        assertEquals(android.app.Service.START_NOT_STICKY, result)
+        assertEquals(listOf("startForeground", "stopForeground", "stopSelf"), events)
+        assertTrue(trackedService.isStoppingForTesting)
+        assertTrue(trackedService.isTrackingInterrupted)
+        assertFalse(
+            "sFgsStartPending must be cleared after promotion",
+            TrackerService.requestStopIfForegroundStartPending()
+        )
+        trackedService.onDestroy()
+    }
+
+    /**
+     * TST-TRK-095.1 (ATT-9498): Verifies onStartCommand(START_NORMAL) calls performStartForeground()
+     * BEFORE submitting createNewWorkout() to mDbExecutor, and rapid ACTION_STOP resolves the
+     * FIFO-created mWorkoutID in endWorkout() so FINISHED=1 is committed without orphan workouts.
+     */
+    @Test
+    fun testOnStartCommand_promotesBeforeDbSubmit_andRapidActionStopResolvesFifoWorkoutId_TST_TRK_095_1() {
+        val events = mutableListOf<String>()
+        val queuedDbTasks = mutableListOf<Runnable>()
+        val mockApp = mockk<com.atrainingtracker.trainingtracker.TrainingApplication>(relaxed = true)
+        val mockNotif = mockk<android.app.Notification>(relaxed = true)
+        every { mockApp.searchingAndTrackingNotification } returns mockNotif
+
+        val trackedService = object : TestableTrackerService() {
+            override fun performStartForeground(id: Int, notification: android.app.Notification?, foregroundServiceType: Int) {
+                events.add("startForeground")
+            }
+            override fun createNewWorkout(): Long {
+                events.add("createNewWorkout")
+                return 9498L
+            }
+        }
+        val appField = TrackerService::class.java.getDeclaredField("mTrainingApplication").apply { isAccessible = true }
+        appField.set(trackedService, mockApp)
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(trackedService, repoMock)
+
+        val fifoMock = mockk<ExecutorService>(relaxed = true)
+        every { fifoMock.submit(any<Runnable>()) } answers {
+            events.add("dbSubmit")
+            queuedDbTasks.add(firstArg())
+            java.util.concurrent.CompletableFuture.completedFuture(null)
+        }
+        every { fifoMock.execute(any()) } answers {
+            events.add("dbExecute")
+            queuedDbTasks.add(firstArg())
+        }
+        val execField = TrackerService::class.java.getDeclaredField("mDbExecutor").apply { isAccessible = true }
+        execField.set(trackedService, fifoMock)
+
+        TrackerService.markForegroundStartRequested()
+        val startIntent = mockk<Intent>(relaxed = true)
+        every { startIntent.action } returns null
+        every { startIntent.getStringExtra(TrackerService.START_TYPE) } returns TrackerService.StartType.START_NORMAL.name
+
+        trackedService.onStartCommand(startIntent, 0, 1)
+
+        assertTrue("startForeground must run before dbSubmit", events.indexOf("startForeground") < events.indexOf("dbSubmit"))
+
+        // Rapid ACTION_STOP arrives BEFORE queued createNewWorkout() has executed on mDbExecutor!
+        val stopIntent = mockk<Intent>(relaxed = true)
+        every { stopIntent.action } returns TrackerService.ACTION_STOP
+        trackedService.onStartCommand(stopIntent, 0, 2)
+
+        assertEquals("Both init and finalization tasks must be queued FIFO", 2, queuedDbTasks.size)
+        // Execute FIFO: Task 1 creates workout 9498L, Task 2 runs endWorkout
+        queuedDbTasks[0].run()
+        queuedDbTasks[1].run()
+
+        assertTrue("endWorkout must execute", trackedService.endWorkoutCalled)
+        assertEquals(
+            "FIFO finalization must resolve the newly created mWorkoutID (9498L) instead of stale -1",
+            9498L,
+            trackedService.capturedFinalizationWorkoutId
+        )
+        trackedService.onDestroy()
+    }
+
+    /**
+     * TST-TRK-095.1 (ATT-9498): Verifies handleActionStop() with no active workout still satisfies
+     * a pending unpromoted FGS start before calling performStopSelf(), and stale Workout 1 teardown
+     * is suppressed when Workout 2 has already called markForegroundStartRequested() (Guardrail #3).
+     */
+    @Test
+    fun testActionStopPendingFgsGuard_andStaleTeardownSuppressedWhenNewFgsStartPending_TST_TRK_095_1() {
+        val events = mutableListOf<String>()
+        val mockApp = mockk<com.atrainingtracker.trainingtracker.TrainingApplication>(relaxed = true)
+        val mockNotif = mockk<android.app.Notification>(relaxed = true)
+        every { mockApp.searchingAndTrackingNotification } returns mockNotif
+
+        val trackedService = object : TestableTrackerService() {
+            override fun performStartForeground(id: Int, notification: android.app.Notification?, foregroundServiceType: Int) {
+                events.add("startForeground")
+            }
+            override fun performStopForeground() {
+                events.add("stopForeground")
+                super.performStopForeground()
+            }
+            override fun performStopSelf() {
+                events.add("stopSelf")
+                super.performStopSelf()
+            }
+        }
+        val appField = TrackerService::class.java.getDeclaredField("mTrainingApplication").apply { isAccessible = true }
+        appField.set(trackedService, mockApp)
+
+        // (A) ACTION_STOP received when mWorkoutID<=0 && mBaseFileName==null while FGS start is pending
+        TrackerService.markForegroundStartRequested()
+        trackedService.handleActionStop()
+        assertEquals(listOf("startForeground", "stopForeground", "stopSelf"), events)
+
+        // (B) Stale Workout 1 posted main-thread teardown suppressed when Workout 2 sets sFgsStartPending
+        val postedMainRunnables = mutableListOf<Runnable>()
+        val teardownService = object : TestableTrackerService() {
+            override fun runOnMainThread(action: Runnable) {
+                postedMainRunnables.add(action)
+            }
+        }
+        val idField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        idField.set(teardownService, 55L)
+        val fnField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        fnField.set(teardownService, "2026-11-22_w1")
+        val execField = TrackerService::class.java.getDeclaredField("mDbExecutor").apply { isAccessible = true }
+        val inlineExec = mockk<ExecutorService>(relaxed = true)
+        every { inlineExec.execute(any()) } answers { firstArg<Runnable>().run() }
+        execField.set(teardownService, inlineExec)
+
+        teardownService.handleActionStop()
+        assertEquals(1, postedMainRunnables.size)
+
+        // Workout 2 triggers startForegroundService() BEFORE Workout 1's posted teardown runs!
+        TrackerService.markForegroundStartRequested()
+        postedMainRunnables[0].run()
+
+        assertFalse(
+            "Stale Workout 1 teardown MUST NOT call performStopSelf() while Workout 2 FGS start is pending",
+            teardownService.performStopSelfCalled
+        )
+        assertFalse(
+            "Stale Workout 1 teardown MUST NOT call performStopForeground() while Workout 2 FGS start is pending",
+            teardownService.performStopForegroundCalled
+        )
+        teardownService.onDestroy()
+        trackedService.onDestroy()
     }
 }
 

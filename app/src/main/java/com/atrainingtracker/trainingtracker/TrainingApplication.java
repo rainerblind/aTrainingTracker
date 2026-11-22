@@ -1804,6 +1804,7 @@ public class TrainingApplication extends Application {
         }
         try {
             ContextCompat.startForegroundService(this, intent);
+            TrackerService.markForegroundStartRequested();
             startPebbleWatchapp();
 
             AutoPauseConfig autoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
@@ -1941,7 +1942,9 @@ public class TrainingApplication extends Application {
             LifecycleUtils.safeStartService(this, stopIntent, TAG);
         } else {
             com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutStopped(this);
-            stopService(new Intent(this, TrackerService.class));
+            if (!TrackerService.requestStopIfForegroundStartPending()) {
+                stopService(new Intent(this, TrackerService.class));
+            }
         }
 
         resetActiveTrackingState(this, false);

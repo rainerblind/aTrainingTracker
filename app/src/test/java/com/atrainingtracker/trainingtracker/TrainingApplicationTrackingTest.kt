@@ -142,6 +142,7 @@ class TrainingApplicationTrackingTest {
         every { TrackerService.notifyManualResume() } just Runs
 
         app = TestableTrainingApplication()
+        TrackerService.resetFgsStartStateForTesting()
         TrainingApplication.cTrackingMode = TrackingMode.READY
     }
 
@@ -149,6 +150,7 @@ class TrainingApplicationTrackingTest {
     fun tearDown() {
         unmockkAll()
         TrackerService.setInstanceForTesting(null)
+        TrackerService.resetFgsStartStateForTesting()
         TrainingApplication.cTrackingMode = TrackingMode.READY
         TrainingApplication.setActiveWorkoutIdForTesting(-1L)
         TrainingApplication.setManualPauseLock(false, null)
@@ -622,6 +624,52 @@ class TrainingApplicationTrackingTest {
         TrainingApplication.setLastUpdateTimeOfStravaEquipment("x")
         TrainingApplication.setAutomatedStravaRoutesSyncEnabled(false)
         TrainingApplication.setStravaSegmentsSyncIntervalDays("3")
+    }
+
+    /**
+     * TST-TRK-095.1 (ATT-9498): Verifies rapid stopTracking() after startTracking() while
+     * TrackerService.onCreate() has not yet run suppresses stopService() to prevent
+     * ForegroundServiceDidNotStartInTimeException (REQ-TRK-095.1).
+     */
+    @Test
+    fun testStopTracking_whenFgsStartPendingAndServiceNotYetRunning_suppressesStopService_TST_TRK_095_1() {
+        TrackerService.setInstanceForTesting(null)
+        every { ContextCompat.startForegroundService(any(), any()) } just Runs
+
+        app.startTracking()
+        assertFalse("TrackerService.onCreate has not yet run", TrackerService.isRunning())
+
+        val stopTrackingMethod = TrainingApplication::class.java.getDeclaredMethod("stopTracking")
+        stopTrackingMethod.isAccessible = true
+        stopTrackingMethod.invoke(app)
+
+        assertNull("stopService() MUST be suppressed while FGS start is pending", app.stoppedServiceIntent)
+        assertNull("startService(ACTION_STOP) must not be called before TrackerService exists", app.startedServiceIntent)
+        assertEquals(TrackingMode.READY, TrainingApplication.cTrackingMode)
+    }
+
+    /**
+     * TST-TRK-095.1 (ATT-9498): Verifies a second startTracking() clears any earlier deferred
+     * pre-start stop so the subsequent TrackerService.onStartCommand() runs normally.
+     */
+    @Test
+    fun testStartTracking_afterDeferredPreStartStop_clearsPendingStopForNewStart_TST_TRK_095_1() {
+        TrackerService.setInstanceForTesting(null)
+        every { ContextCompat.startForegroundService(any(), any()) } just Runs
+
+        app.startTracking()
+        val stopTrackingMethod = TrainingApplication::class.java.getDeclaredMethod("stopTracking")
+        stopTrackingMethod.isAccessible = true
+        stopTrackingMethod.invoke(app)
+        assertNull(app.stoppedServiceIntent)
+
+        // Start a second session before AMS delivered the first start
+        app.startTracking()
+        assertEquals(TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
+        assertTrue(
+            "FGS start must still be marked pending so another rapid stop is still guarded",
+            TrackerService.requestStopIfForegroundStartPending()
+        )
     }
 }
 

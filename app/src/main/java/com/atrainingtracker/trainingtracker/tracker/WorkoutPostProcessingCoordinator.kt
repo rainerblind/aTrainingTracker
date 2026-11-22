@@ -519,5 +519,6 @@ object WorkoutPostProcessingCoordinator {
         stepsOverride = null
         hostControllerOverride = null
         enqueueHookForTesting = null
+        WorkoutPostProcessingService.resetLifecycleStateForTesting()
     }
 }

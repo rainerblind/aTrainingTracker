@@ -377,16 +377,28 @@ def analyze_uiautomator_bounds(
 
     root = ET.fromstring(xml_text)
 
-    def _walk(node: ET.Element) -> None:
+    def _walk(
+        node: ET.Element,
+        parent_clickable: bool = False,
+        parent_positive_bounds: bool = False,
+    ) -> None:
         leaf_boxes: List[Tuple[str, Tuple[int, int, int, int]]] = []
         for child in node:
             text = (child.attrib.get("text") or "").strip()
             bounds = parse_bounds(child.attrib.get("bounds", ""))
             has_children = len(list(child)) > 0
+            child_clickable = (child.attrib.get("clickable") or "").lower() == "true"
+            child_positive = bounds is not None and bounds[2] > bounds[0] and bounds[3] > bounds[1]
 
             if text and bounds is not None:
                 x1, y1, x2, y2 = bounds
-                if x2 <= x1 or y2 <= y1:
+                is_api31_merged_zero_child = (
+                    bounds == (0, 0, 0, 0)
+                    and parent_clickable
+                    and parent_positive_bounds
+                    and not child_clickable
+                )
+                if (x2 <= x1 or y2 <= y1) and not is_api31_merged_zero_child:
                     defects.append(
                         BoundsDefect(
                             kind="ZERO_OR_INVERTED_BOUNDS",
@@ -395,7 +407,7 @@ def analyze_uiautomator_bounds(
                             detail=f"Text '{text}' rendered with zero/negative dimensions {bounds}",
                         )
                     )
-                elif x1 < 0 or y1 < 0 or x2 > screen_width or y2 > screen_height:
+                elif (x2 > x1 and y2 > y1) and (x1 < 0 or y1 < 0 or x2 > screen_width or y2 > screen_height):
                     defects.append(
                         BoundsDefect(
                             kind="OUT_OF_SCREEN_CLIP",
@@ -416,7 +428,11 @@ def analyze_uiautomator_bounds(
                 if not has_children and x2 > x1 and y2 > y1:
                     leaf_boxes.append((text, bounds))
 
-            _walk(child)
+            _walk(
+                child,
+                parent_clickable=child_clickable,
+                parent_positive_bounds=child_positive,
+            )
 
         # Pairwise sibling leaf-text overlap check within the same container
         for i in range(len(leaf_boxes)):
@@ -777,28 +793,62 @@ def run_ui_probe(
     start_out = f"{getattr(start_res, 'stdout', '') or ''}\n{getattr(start_res, 'stderr', '') or ''}"
     if "Error:" in start_out:
         raise RuntimeError(f"am start -W failed: {start_out.strip()[:300]}")
-    sleep_fn(1.0)
+    sleep_fn(2.0)
     app_pids.update(get_package_pids(serial, package, adb_bin=adb_bin, runner=runner))
 
-    # Remove any prior dump so stale XML cannot cause a false pass
+    # Remove any prior dump so stale XML cannot cause a false pass.
+    # Retry uiautomator dump up to 6 times on transient rc=0 `ERROR:` (UiTestAutomationBridge
+    # right after am instrument) and up to 3 times when Android's transient starting window
+    # (`packages == {"android"}`) is still dismissing after `am start -W`.
+    # Launcher, empty, malformed XML, or `cat` read failures still fail closed immediately.
     _run_adb(adb_bin, serial, ["shell", "rm", "-f", UI_DUMP_DEVICE_PATH], runner=runner)
+    xml_text = ""
     try:
-        _run_adb(
-            adb_bin,
-            serial,
-            ["shell", "uiautomator", "dump", UI_DUMP_DEVICE_PATH],
-            timeout=30,
-            runner=runner,
-            check=True,
-        )
-        xml_res = _run_adb(
-            adb_bin,
-            serial,
-            ["shell", "cat", UI_DUMP_DEVICE_PATH],
-            runner=runner,
-            check=True,
-        )
-        xml_text = getattr(xml_res, "stdout", "") or ""
+        for ui_attempt in range(3):
+            dump_ok = False
+            last_dump_err: Optional[Exception] = None
+            for attempt in range(6):
+                dump_res = _run_adb(
+                    adb_bin,
+                    serial,
+                    ["shell", "uiautomator", "dump", UI_DUMP_DEVICE_PATH],
+                    timeout=30,
+                    runner=runner,
+                    check=False,
+                )
+                dump_out = f"{getattr(dump_res, 'stdout', '') or ''}\n{getattr(dump_res, 'stderr', '') or ''}"
+                if getattr(dump_res, "returncode", 1) == 0 and "ERROR:" not in dump_out:
+                    dump_ok = True
+                    break
+                last_dump_err = RuntimeError(
+                    f"uiautomator dump failed (rc={getattr(dump_res, 'returncode', 1)}): {dump_out.strip()[:300]}"
+                )
+                if attempt < 5:
+                    sleep_fn(1.5)
+            if not dump_ok and last_dump_err is not None:
+                raise last_dump_err
+            xml_res = _run_adb(
+                adb_bin,
+                serial,
+                ["shell", "cat", UI_DUMP_DEVICE_PATH],
+                runner=runner,
+                check=True,
+            )
+            xml_text = getattr(xml_res, "stdout", "") or ""
+            if ui_attempt < 2 and xml_text.strip():
+                try:
+                    _root = ET.fromstring(xml_text)
+                    _pkgs = {
+                        (e.attrib.get("package") or "").strip()
+                        for e in _root.iter()
+                        if (e.attrib.get("package") or "").strip()
+                    }
+                    if _pkgs == {"android"}:
+                        sleep_fn(2.0)
+                        continue
+                except ET.ParseError:
+                    pass
+            break
     finally:
         try:
             _run_adb(adb_bin, serial, ["shell", "rm", "-f", UI_DUMP_DEVICE_PATH], runner=runner)
@@ -961,6 +1011,7 @@ def run_sweep(
             if test_apk_path:
                 install_apk(serial, test_apk_path, adb_bin=adb_bin, runner=runner)
             configure_fn(serial, package=package, adb_bin=adb_bin)
+            sleep_fn(15.0)
             set_app_locale(
                 serial,
                 package,

@@ -57,18 +57,30 @@ class WorkoutPostProcessingServiceTest {
         var promotedType: Int? = null
         var demoted = false
         var stoppedSelf = false
+        var stoppedSelfStartId: Int? = null
+        var promoteException: Throwable? = null
+        val events = mutableListOf<String>()
 
         override fun getBuildVersionSdkInt(): Int = sdkInt
         override fun createNotificationManager(): WorkoutPostProcessingNotificationManager = notifManager
         override fun promoteForeground(notificationId: Int, notification: Notification, fgsType: Int) {
+            events.add("promote")
+            promoteException?.let { throw it }
             promotedId = notificationId
             promotedType = fgsType
         }
         override fun demoteForeground() {
+            events.add("demote")
             demoted = true
         }
         override fun performStopSelf() {
+            events.add("stopSelf")
             stoppedSelf = true
+        }
+        override fun performStopSelf(startId: Int) {
+            events.add("stopSelf($startId)")
+            stoppedSelf = true
+            stoppedSelfStartId = startId
         }
     }
 
@@ -257,5 +269,143 @@ class WorkoutPostProcessingServiceTest {
 
         recomputeGate.complete(Unit)
         advanceUntilIdle()
+    }
+
+    /**
+     * TST-TRK-095.2 (ATT-9498): Verifies fast drain completing BEFORE onStartCommand() suppresses
+     * appContext.stopService() while pendingFgsGeneration > 0, and subsequent onStartCommand()
+     * calls promoteForeground() FIRST before demoteForeground() and stopSelf(startId).
+     */
+    @Test
+    fun testFastDrainBeforeOnStartCommand_suppressesStopServiceThenPromotesAndStopsWithStartId_TST_TRK_095_2() {
+        val ctx = mockk<Context>(relaxed = true)
+        every { ctx.applicationContext } returns ctx
+        val notifMgr = mockk<WorkoutPostProcessingNotificationManager>(relaxed = true)
+        every { notifMgr.buildProgressNotification(any(), any(), any()) } returns mockk(relaxed = true)
+        val service = TestablePostProcessingService(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, notifMgr)
+
+        var startCalls = 0
+        var stopServiceCalls = 0
+        assertTrue(
+            WorkoutPostProcessingService.startForPostProcessing(
+                context = ctx,
+                intentFactory = { mockk(relaxed = true) }
+            ) { _, _ -> startCalls++ }
+        )
+        assertEquals(1, startCalls)
+
+        // Drain finishes before AMS dispatches onStartCommand() -> stopIfRunning MUST NOT call stopService()
+        WorkoutPostProcessingService.stopIfRunning(
+            context = ctx,
+            intentFactory = { mockk(relaxed = true) }
+        ) { _, _ -> stopServiceCalls++ }
+        assertEquals("stopService() MUST be suppressed while FGS start is pending", 0, stopServiceCalls)
+
+        // AMS now delivers onStartCommand(startId=7) -> MUST promote first, then demote + stopSelf(7)
+        service.onStartCommand(null, 0, 7)
+        assertEquals(listOf("promote", "demote", "stopSelf(7)"), service.events)
+        assertEquals(7, service.stoppedSelfStartId)
+    }
+
+    /**
+     * TST-TRK-095.2 (ATT-9498): Verifies a second startForPostProcessing() before onStartCommand()
+     * coalesces without redundant startForegroundService(), clears the pending stop request, and
+     * allows post-promotion stopIfRunning() to invoke stopService() cleanly.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testReEnqueueBeforeOnStartCommand_clearsPendingStopAndAllowsPostPromotionStop_TST_TRK_095_2() = runTest {
+        val ctx = mockk<Context>(relaxed = true)
+        every { ctx.applicationContext } returns ctx
+        val notifMgr = mockk<WorkoutPostProcessingNotificationManager>(relaxed = true)
+        every { notifMgr.buildProgressNotification(any(), any(), any()) } returns mockk(relaxed = true)
+        val service = TestablePostProcessingService(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, notifMgr)
+
+        var startCalls = 0
+        var stopServiceCalls = 0
+        assertTrue(
+            WorkoutPostProcessingService.startForPostProcessing(ctx, { mockk(relaxed = true) }) { _, _ -> startCalls++ }
+        )
+        WorkoutPostProcessingService.stopIfRunning(ctx, { mockk(relaxed = true) }) { _, _ -> stopServiceCalls++ }
+        assertEquals(0, stopServiceCalls)
+
+        // Re-enqueue new active work before onStartCommand() runs
+        val gate = CompletableDeferred<Unit>()
+        WorkoutPostProcessingCoordinator.dispatcher = StandardTestDispatcher(testScheduler)
+        WorkoutPostProcessingCoordinator.hostControllerOverride = object : WorkoutPostProcessingCoordinator.HostController {
+            override fun startForegroundHost(context: Context): Boolean =
+                WorkoutPostProcessingService.startForPostProcessing(context, { mockk(relaxed = true) }) { _, _ -> startCalls++ }
+            override fun stopForegroundHost(context: Context) =
+                WorkoutPostProcessingService.stopIfRunning(context, { mockk(relaxed = true) }) { _, _ -> stopServiceCalls++ }
+            override fun onStageStarted(context: Context, stage: WorkoutPostProcessingNotificationManager.PostProcessingStage, currentStep: Int, totalSteps: Int) {}
+            override fun onBatchCompleted(context: Context, hadWarning: Boolean) {}
+        }
+        WorkoutPostProcessingCoordinator.stepsOverride = object : WorkoutPostProcessingCoordinator.PostProcessingSteps {
+            override suspend fun runPolarH10Backfill(context: Context, request: WorkoutPostProcessingCoordinator.PostProcessingRequest): Boolean = true
+            override suspend fun runPolarVerityBackfill(context: Context, request: WorkoutPostProcessingCoordinator.PostProcessingRequest): Boolean = true
+            override suspend fun runHrvRecompute(context: Context, workoutId: Long): Boolean { gate.await(); return true }
+            override suspend fun runErtsRecompute(context: Context, workoutId: Long): Boolean = true
+            override suspend fun reloadWorkout(context: Context, workoutId: Long) {}
+            override suspend fun markExportWorkoutFinished(context: Context, baseFileName: String) {}
+            override suspend fun loadFreshWorkoutForExport(context: Context, workoutId: Long) = null
+            override suspend fun triggerDeferredExport(context: Context, workoutData: com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData) {}
+        }
+
+        WorkoutPostProcessingCoordinator.enqueue(
+            ctx,
+            WorkoutPostProcessingCoordinator.PostProcessingRequest(9498L, "2026-11-22_re", false, 0L, 0L, false, 0L, 0L, false)
+        )
+        testScheduler.runCurrent()
+        assertEquals("Coalesced re-enqueue must reuse pending FGS start", 1, startCalls)
+
+        // onStartCommand promotes and STAYS alive because stop was cleared and active work exists
+        service.onStartCommand(null, 0, 2)
+        assertEquals(listOf("promote"), service.events)
+        assertFalse(service.stoppedSelf)
+
+        // Once work finishes after promotion, stopIfRunning() safely calls stopService()
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals("Post-promotion drain must invoke stopService() cleanly", 1, stopServiceCalls)
+    }
+
+    /**
+     * TST-TRK-095.2 (ATT-9498): Verifies ACTION_STOP with pending FGS promotes before demote/stopSelf(startId),
+     * and promoteForeground() failure clears pendingFgsGeneration so subsequent starts succeed (Guardrail #2).
+     */
+    @Test
+    fun testActionStopPendingFgsAndPromoteFailureCleanup_TST_TRK_095_2() {
+        val ctx = mockk<Context>(relaxed = true)
+        every { ctx.applicationContext } returns ctx
+        val notifMgr = mockk<WorkoutPostProcessingNotificationManager>(relaxed = true)
+        every { notifMgr.buildProgressNotification(any(), any(), any()) } returns mockk(relaxed = true)
+
+        // (A) ACTION_STOP with pending FGS must promote first
+        var startCalls = 0
+        assertTrue(
+            WorkoutPostProcessingService.startForPostProcessing(ctx, { mockk(relaxed = true) }) { _, _ -> startCalls++ }
+        )
+        val stopIntent = mockk<Intent>(relaxed = true)
+        every { stopIntent.action } returns WorkoutPostProcessingService.ACTION_STOP
+        val serviceA = TestablePostProcessingService(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, notifMgr)
+        serviceA.onStartCommand(stopIntent, 0, 11)
+        assertEquals(listOf("promote", "demote", "stopSelf(11)"), serviceA.events)
+
+        // (B) promoteForeground() throws -> clears pendingFgsGeneration so a new start is NOT wedged
+        assertTrue(
+            WorkoutPostProcessingService.startForPostProcessing(ctx, { mockk(relaxed = true) }) { _, _ -> startCalls++ }
+        )
+        assertEquals(2, startCalls)
+        val failingService = TestablePostProcessingService(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, notifMgr).apply {
+            promoteException = IllegalStateException("Simulated promotion failure")
+        }
+        failingService.onStartCommand(null, 0, 12)
+        assertEquals(listOf("promote", "stopSelf(12)"), failingService.events)
+
+        // Subsequent start MUST issue a fresh startForegroundService (startCalls 2 -> 3)
+        assertTrue(
+            WorkoutPostProcessingService.startForPostProcessing(ctx, { mockk(relaxed = true) }) { _, _ -> startCalls++ }
+        )
+        assertEquals("Pending FGS state must be cleared on promote failure", 3, startCalls)
     }
 }

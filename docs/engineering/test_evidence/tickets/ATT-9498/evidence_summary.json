@@ -1,0 +1,76 @@
+{
+  "android_test_summary": {
+    "details": "174 Android unit tests passed (24 JUnit XML; targeted Tier-1 suites + 12/12 Multi-OS/9-locale sweep PASS).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 174
+  },
+  "checks": [
+    {
+      "details": "Android: 174 Android unit tests passed (24 JUnit XML; targeted Tier-1 suites + 12/12 Multi-OS/9-locale sweep PASS). | Python: 47 Python tests passed.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (9955 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "0d78fb0fc10321bc1bdee81e455ba996ffd960be",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceAsyncInitTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceDecoupledSummaryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceErtsFinalizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceExportGatingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceFGSTypeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceHeapWatchdogTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceLapTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceMultiSensorSummaryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServicePragmaSchemaTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrOpticalIsolationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceStateMachineCharacterisationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceWorkoutStartTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingNotificationManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "47 Python tests passed.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 47
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-22T17:53:50.707947+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/Pixel_5_Android_12_en.png",
+    "screenshots/Pixel_8_Android_15_de.png",
+    "screenshots/Pixel_7_Android_36_fr.png"
+  ],
+  "ticket_key": "ATT-9498",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

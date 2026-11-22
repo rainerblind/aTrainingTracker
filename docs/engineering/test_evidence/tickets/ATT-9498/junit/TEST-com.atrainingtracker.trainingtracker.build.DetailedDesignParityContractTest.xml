@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T15:47:23.189Z" hostname="rainer-HP-EliteBook-850-G5" time="0.55">
+  <properties/>
+  <testcase name="testDetailedDesignDocs_codeParityAcrossStatesSymbolsAndTests" classname="com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest" time="0.52"/>
+  <testcase name="testSwe2CrossReferenceAndStage3GovernanceRule" classname="com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest" time="0.014"/>
+  <testcase name="testDetailedDesignDocs_structuralAndMermaidCompleteness" classname="com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest" time="0.016"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
