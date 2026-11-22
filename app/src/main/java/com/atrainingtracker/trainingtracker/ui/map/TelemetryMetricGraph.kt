@@ -204,11 +204,13 @@ fun TelemetryMetricGraph(
 
     val context = LocalContext.current
     val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
-        hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
+        val resolved = hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
+        resolved?.takeIf { TelemetryZoneMath.isValidHeartRateThresholds(it) }
     }
 
     val effectivePowerThresholds = remember(powerZoneThresholds, context) {
-        powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
+        val resolved = powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
+        resolved?.takeIf { TelemetryZoneMath.isValidPowerThresholds(it) }
     }
 
     val unit = remember {
@@ -429,31 +431,33 @@ fun TelemetryMetricGraph(
         }
     }
 
-    val hrvStrokeStops = remember(metricType, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
-        if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-            TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(
-                t1 = dfaA1ThresholdT1,
-                t2 = dfaA1ThresholdT2,
-                dataMin = dataMin,
-                dataMax = dataMax,
-                topAlpha = 1f,
-                bottomAlpha = 1f
-            )
-        } else emptyList()
+    val isDarkSurface = remember(colorScheme) {
+        TTColor.relativeLuminance(colorScheme.surface) < 0.5
     }
 
-    val hrvFillStops = remember(metricType, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
-        if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-            TelemetryZoneMath.buildHrvDfaA1VerticalGradientStops(
-                t1 = dfaA1ThresholdT1,
-                t2 = dfaA1ThresholdT2,
-                dataMin = dataMin,
-                dataMax = dataMax,
-                topAlpha = 0.22f,
-                bottomAlpha = 0.04f
-            )
-        } else emptyList()
+    val zoneStrokeStops = remember(
+        metricType, zoneBands, effectiveHrThresholds, effectivePowerThresholds,
+        dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax, isDarkSurface
+    ) {
+        TelemetryZoneMath.buildMetricZoneGradientStops(
+            metricType, zoneBands, effectiveHrThresholds, effectivePowerThresholds,
+            dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax, isDarkSurface,
+            topAlpha = 1f, bottomAlpha = 1f
+        )
     }
+
+    val zoneFillStops = remember(
+        metricType, zoneBands, effectiveHrThresholds, effectivePowerThresholds,
+        dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax, isDarkSurface
+    ) {
+        TelemetryZoneMath.buildMetricZoneGradientStops(
+            metricType, zoneBands, effectiveHrThresholds, effectivePowerThresholds,
+            dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax, isDarkSurface,
+            topAlpha = 0.22f, bottomAlpha = 0.04f
+        )
+    }
+
+    val useZoneColoredCurve = zoneStrokeStops.size >= 2 && zoneFillStops.size >= 2
 
     val thresholdDashes = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
         when (metricType) {
@@ -777,7 +781,20 @@ fun TelemetryMetricGraph(
                 )
             }
 
-            // 2. Draw horizontal threshold / zero-reference boundary guidelines (REQ-UI-230 / ATT-1839)
+            // 2. Draw horizontal threshold / fallback nice tick / zero-reference boundary guidelines (REQ-UI-230, REQ-UI-2798.3)
+            val glyphAscent = maxOf(axisTextPaint.ascent(), -axisTextPaint.textSize * 0.80f)
+            val glyphDescent = minOf(axisTextPaint.descent(), axisTextPaint.textSize * 0.12f)
+            val minLabelGapPx = 2.dp.toPx()
+            val labelSlotPx = (glyphDescent - glyphAscent + minLabelGapPx).coerceAtLeast(1f)
+            val isUnzonedHrOrPower = (metricType == TelemetryMetricType.HEART_RATE && effectiveHrThresholds == null) ||
+                (metricType == TelemetryMetricType.POWER && effectivePowerThresholds == null)
+            val fallbackNiceTicks = if (isUnzonedHrOrPower) {
+                val maxTickCount = ((chartHeightPx / labelSlotPx).toInt() - 1).coerceIn(1, 4)
+                TelemetryZoneMath.calculateNiceIntermediateTicks(metricType, dataMin, dataMax, maxTickCount)
+            } else {
+                emptyList()
+            }
+
             if (thresholdDashes.isNotEmpty()) {
                 val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
                 for (dashVal in thresholdDashes) {
@@ -786,6 +803,18 @@ fun TelemetryMetricGraph(
                         color = colorScheme.outlineVariant.copy(alpha = 0.35f),
                         start = Offset(startPaddingPx, dashY),
                         end = Offset(startPaddingPx + chartWidthPx, dashY),
+                        strokeWidth = 1f,
+                        pathEffect = dashEffect
+                    )
+                }
+            } else if (fallbackNiceTicks.isNotEmpty()) {
+                val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
+                for (tickVal in fallbackNiceTicks) {
+                    val tickY = valueToY(tickVal)
+                    drawLine(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        start = Offset(startPaddingPx, tickY),
+                        end = Offset(startPaddingPx + chartWidthPx, tickY),
                         strokeWidth = 1f,
                         pathEffect = dashEffect
                     )
@@ -801,7 +830,7 @@ fun TelemetryMetricGraph(
                 )
             }
 
-            // Draw Y-axis labels with priority-based collision avoidance (Ø average always wins; REQ-HRV-046.3, REQ-UI-2797.2)
+            // Draw Y-axis labels with priority-based collision avoidance (Ø > zone/threshold/nice ticks > extrema; REQ-HRV-046.3, REQ-UI-2797.2, REQ-UI-2798.3)
             val topAxisValue = if (isInvertedYAxis) dataMin else dataMax
             val bottomAxisValue = if (isInvertedYAxis) dataMax else dataMin
             val maxLabel = TelemetryMetricUtils.formatYAxisValue(topAxisValue, metricType, currentLocale)
@@ -809,6 +838,14 @@ fun TelemetryMetricGraph(
             val topBaselineY = topPaddingPx + 10f
             val bottomBaselineY = topPaddingPx + chartHeightPx
             val minInteriorBaselineY = maxOf(topBaselineY, -axisTextPaint.ascent() + 2f)
+
+            val intermediateAxisValues = when {
+                metricType == TelemetryMetricType.HRV_DFA_A1 ||
+                    metricType == TelemetryMetricType.HEART_RATE ||
+                    metricType == TelemetryMetricType.POWER ->
+                    if (thresholdDashes.isNotEmpty()) thresholdDashes else fallbackNiceTicks
+                else -> emptyList()
+            }
 
             val yAxisCandidates = buildList {
                 if (visibleAverageValue != null) {
@@ -832,25 +869,23 @@ fun TelemetryMetricGraph(
                         )
                     }
                 }
-                if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-                    thresholdDashes.forEachIndexed { idx, thresholdVal ->
-                        val thresholdBaselineY = computeCenteredYAxisBaseline(
-                            anchorY = valueToY(thresholdVal),
-                            ascent = axisTextPaint.ascent(),
-                            descent = axisTextPaint.descent(),
-                            minBaselineY = minInteriorBaselineY,
-                            maxBaselineY = bottomBaselineY
+                intermediateAxisValues.forEachIndexed { idx, axisVal ->
+                    val axisBaselineY = computeCenteredYAxisBaseline(
+                        anchorY = valueToY(axisVal),
+                        ascent = axisTextPaint.ascent(),
+                        descent = axisTextPaint.descent(),
+                        minBaselineY = minInteriorBaselineY,
+                        maxBaselineY = bottomBaselineY
+                    )
+                    add(
+                        TelemetryYAxisLabelCandidate(
+                            id = "threshold_$idx",
+                            text = TelemetryMetricUtils.formatYAxisValue(axisVal, metricType, currentLocale),
+                            baselineY = axisBaselineY,
+                            priority = Y_AXIS_PRIORITY_THRESHOLD,
+                            alignment = TelemetryYAxisLabelAlignment.LEFT_GUTTER
                         )
-                        add(
-                            TelemetryYAxisLabelCandidate(
-                                id = "threshold_$idx",
-                                text = TelemetryMetricUtils.formatYAxisValue(thresholdVal, metricType, currentLocale),
-                                baselineY = thresholdBaselineY,
-                                priority = Y_AXIS_PRIORITY_THRESHOLD,
-                                alignment = TelemetryYAxisLabelAlignment.LEFT_GUTTER
-                            )
-                        )
-                    }
+                    )
                 }
                 add(
                     TelemetryYAxisLabelCandidate(
@@ -873,13 +908,11 @@ fun TelemetryMetricGraph(
             }
 
             // Numeric axis labels have no descenders (g/y/j); use tight glyph extents so well-separated thresholds stay visible
-            val glyphAscent = maxOf(axisTextPaint.ascent(), -axisTextPaint.textSize * 0.80f)
-            val glyphDescent = minOf(axisTextPaint.descent(), axisTextPaint.textSize * 0.12f)
             val placedYAxisLabels = resolveTelemetryYAxisLabels(
                 candidates = yAxisCandidates,
                 ascent = glyphAscent,
                 descent = glyphDescent,
-                minVerticalGapPx = 2.dp.toPx()
+                minVerticalGapPx = minLabelGapPx
             )
             val gutterLeftPx = 2.dp.toPx()
             val gutterRightPx = (startPaddingPx - 4.dp.toPx()).coerceAtLeast(gutterLeftPx)
@@ -1087,23 +1120,20 @@ fun TelemetryMetricGraph(
                     }
                 }
 
-                // 2. Render valid continuous segments (with polyline break across gaps)
-                val useHrvZoneGradient = metricType == TelemetryMetricType.HRV_DFA_A1 &&
-                    hrvFillStops.size >= 2 &&
-                    hrvStrokeStops.size >= 2
+                // 2. Render valid continuous segments (with polyline break across gaps; zone-colored for HR/Power/DFA α1 per REQ-UI-2798.1)
                 for (seg in segments) {
                     if (seg.isEmpty()) continue
                     if (seg.size == 1) {
                         // Single point: draw circle dot
-                        val singleDotColor = if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-                            TelemetryZoneMath.resolveHrvDfaA1ZoneColor(
-                                alpha1 = seg[0].value,
-                                t1 = dfaA1ThresholdT1,
-                                t2 = dfaA1ThresholdT2
-                            )
-                        } else {
-                            accentColor
-                        }
+                        val singleDotColor = TelemetryZoneMath.resolveMetricZoneStrokeColor(
+                            metricType = metricType,
+                            value = seg[0].value,
+                            hrThresholds = effectiveHrThresholds,
+                            powerThresholds = effectivePowerThresholds,
+                            dfaA1ThresholdT1 = dfaA1ThresholdT1,
+                            dfaA1ThresholdT2 = dfaA1ThresholdT2,
+                            isDarkSurface = isDarkSurface
+                        ) ?: accentColor
                         drawCircle(
                             color = singleDotColor,
                             radius = 2.5.dp.toPx(),
@@ -1135,11 +1165,11 @@ fun TelemetryMetricGraph(
                     fillPath.close()
 
                     // Fill subtle gradient area under curve
-                    if (useHrvZoneGradient) {
+                    if (useZoneColoredCurve) {
                         drawPath(
                             path = fillPath,
                             brush = Brush.verticalGradient(
-                                colorStops = hrvFillStops.toTypedArray(),
+                                colorStops = zoneFillStops.toTypedArray(),
                                 startY = topPaddingPx,
                                 endY = baselineY
                             )
@@ -1147,7 +1177,7 @@ fun TelemetryMetricGraph(
                         drawPath(
                             path = strokePath,
                             brush = Brush.verticalGradient(
-                                colorStops = hrvStrokeStops.toTypedArray(),
+                                colorStops = zoneStrokeStops.toTypedArray(),
                                 startY = topPaddingPx,
                                 endY = baselineY
                             ),
@@ -1290,7 +1320,7 @@ fun TelemetryMetricGraph(
                     }
                 }
 
-                // Multi-Sensor Source Overlay Curves (REQ-PER-042.3, REQ-PER-044.3)
+                // Multi-Sensor Source Overlay Curves (REQ-PER-042.3, REQ-PER-044.3, REQ-UI-2798.2)
                 if (activeOverlaySeries.isNotEmpty()) {
                     drawMultiSensorOverlayCurves(
                         overlaySeries = activeOverlaySeries,
@@ -1305,7 +1335,9 @@ fun TelemetryMetricGraph(
                         metricType = metricType,
                         unit = unit,
                         paceCeilingMinKm = paceCeilingMinKm,
-                        valueToY = ::valueToY
+                        valueToY = ::valueToY,
+                        isDarkSurface = isDarkSurface,
+                        avoidZoneColors = useZoneColoredCurve
                     )
                 }
             }
@@ -1360,15 +1392,15 @@ fun TelemetryMetricGraph(
                         val metricVal = TelemetryMetricUtils.extractMetricValue(nearestPoint, metricType, unit, paceCeilingMinKm)
                         if (metricVal != null) {
                             val cursorY = valueToY(metricVal)
-                            val cursorColor = if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-                                TelemetryZoneMath.resolveHrvDfaA1ZoneColor(
-                                    alpha1 = metricVal,
-                                    t1 = dfaA1ThresholdT1,
-                                    t2 = dfaA1ThresholdT2
-                                )
-                            } else {
-                                accentColor
-                            }
+                            val cursorColor = TelemetryZoneMath.resolveMetricZoneStrokeColor(
+                                metricType = metricType,
+                                value = metricVal,
+                                hrThresholds = effectiveHrThresholds,
+                                powerThresholds = effectivePowerThresholds,
+                                dfaA1ThresholdT1 = dfaA1ThresholdT1,
+                                dfaA1ThresholdT2 = dfaA1ThresholdT2,
+                                isDarkSurface = isDarkSurface
+                            ) ?: accentColor
 
                             // Outer halo
                             drawCircle(
@@ -1395,7 +1427,9 @@ fun TelemetryMetricGraph(
                             metricType = metricType,
                             unit = unit,
                             paceCeilingMinKm = paceCeilingMinKm,
-                            valueToY = ::valueToY
+                            valueToY = ::valueToY,
+                            isDarkSurface = isDarkSurface,
+                            avoidZoneColors = useZoneColoredCurve
                         )
                     }
                 }
@@ -1442,7 +1476,9 @@ fun TelemetryMetricGraph(
                 onToggleOverlay = handleToggleOverlay,
                 isLandscape = isLandscape,
                 unit = unit,
-                paceCeilingMinKm = paceCeilingMinKm
+                paceCeilingMinKm = paceCeilingMinKm,
+                isDarkSurface = isDarkSurface,
+                avoidZoneColors = useZoneColoredCurve
             )
         }
     }

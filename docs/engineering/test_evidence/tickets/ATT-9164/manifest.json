@@ -1,0 +1,27 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "bdb246b829618434453545c4805b5bcff9e9b69b",
+  "files": {
+    "evidence_summary.json": "ae188d89581413b305dd5f3ef3e517c7320f2c8c4c7344b4df81b4158bf3aa1f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "b37ee42a21b1f23bb8e6ed6b9bfe29155eee4bb45fdf6f31280c720f5412d8c1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest.xml": "352eb1cd62b667ce17049204ffa7cb8d3cc947afd1e289e05ddb2ca05b1593da",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest.xml": "2e2c0e86fdfbaec186c958bb309750a7c6ea2177ac34f9ce677ee81de532297a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphAverageLineTest.xml": "49d1596aa1acf43fd463069bf8fbdf06cfba068b671255183c65e6930abf8fbb",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest.xml": "6121ccdf9d2dda6520ba01e3696db49d64c876ac87e5a2149e8960586afca1dc",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest.xml": "9c0d874834ba6384a055e302e1251cffe86424633468a7c1e4b8bfa106ddca36",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeAlignmentTest.xml": "23e478c46f0e1e7c6bf7f89651ff00354e6637b3d74388c878eeda52c6b9be42",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeContractTest.xml": "845283c5bd9e06da1d250a5b8376e6091cf226e73b3a5b46d2a2cbb45f0e0563",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMultiSourceUiTest.xml": "16389d054e621350fdce17149c96ba64e2f267a06dd0c6c969f2f7ab4dd4953d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphOverlayTest.xml": "bb2cb212b4a524a16f8d3607f05fd60eb5d6437312329b58ceb61a8cde0837a3",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest.xml": "573bc9987908f23838cd36768d0a7c5c1c4338966588532126483aa5081fede6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest.xml": "88b5150eeec0f8f73c910e09efbcf60c5e4f88e148bf8c7a94487984e8651da4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneTest.xml": "e6fc12575077bdab7ad68675d2eea80ab9e24df1f52dee928c967ec4dacd1b1c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest.xml": "8d031ce5eaec12fbf9053f6574615e8ddfcb55d4fb83d1731677e8fd8be05b90",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.theme.TelemetryGraphColorContrastTest.xml": "50bfb70f2d0e1b8eab9bf3bef711ca716314e9af442e932826142f89a3f8576e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest.xml": "1c92620f659f7408660530b54a303ab1e0971c97065e7ff1e713c651bb8ec3db",
+    "screenshots/att9164_zone_colored_graphs_light_dark.png": "1a8bb8e803f5912e0cccf5fcdfddf0b8670c05eb65128847f897cba703d48631"
+  },
+  "run_started_utc": "2026-11-22T11:24:24.802707+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9164"
+}

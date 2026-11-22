@@ -523,6 +523,182 @@ object TelemetryZoneMath {
     }
 
     /**
+     * Validates that heart rate zone thresholds are strictly ascending and positive (`REQ-UI-2798.1`).
+     */
+    fun isValidHeartRateThresholds(thresholds: HeartRateZoneThresholds): Boolean =
+        thresholds.z1Max > 0 &&
+            thresholds.z2Max > thresholds.z1Max &&
+            thresholds.z3Max > thresholds.z2Max &&
+            thresholds.z4Max > thresholds.z3Max
+
+    /**
+     * Validates that cycling power zone thresholds are strictly ascending and positive (`REQ-UI-2798.1`).
+     */
+    fun isValidPowerThresholds(thresholds: PowerZoneThresholds): Boolean =
+        thresholds.z1Max > 0 &&
+            thresholds.z2Max > thresholds.z1Max &&
+            thresholds.z3Max > thresholds.z2Max &&
+            thresholds.z4Max > thresholds.z3Max &&
+            thresholds.z5Max > thresholds.z4Max &&
+            thresholds.z6Max > thresholds.z5Max
+
+    /**
+     * Builds monotonically non-decreasing `[0f, 1f]` hard-stepped vertical gradient color stops
+     * spanning `[dataMin, dataMax]` for non-inverted zoned metrics (`HEART_RATE`, `POWER`) where
+     * `0f` maps to `dataMax` (top) and `1f` maps to `dataMin` (bottom) (`REQ-UI-2798.1` / `ATT-9164`).
+     *
+     * Uses theme-adaptive WCAG 2.1 AA stroke colors from [TTColor.zoneStrokeColor] so every zone
+     * (`Z1`..`Z7`) remains high-contrast in Light, Dark, and AMOLED themes.
+     */
+    fun buildZoneBandsVerticalGradientStops(
+        zoneBands: List<TelemetryZoneBand>,
+        dataMin: Double,
+        dataMax: Double,
+        isDarkSurface: Boolean,
+        topAlpha: Float = 1f,
+        bottomAlpha: Float = 1f
+    ): List<Pair<Float, Color>> {
+        if (zoneBands.isEmpty() || !dataMin.isFinite() || !dataMax.isFinite() || dataMax <= dataMin) {
+            return emptyList()
+        }
+        val orderedTopToBottom = zoneBands
+            .mapNotNull { band ->
+                val clampedMin = maxOf(dataMin, band.minVal)
+                val clampedMax = minOf(dataMax, band.maxVal)
+                if (clampedMin < clampedMax) band.copy(minVal = clampedMin, maxVal = clampedMax) else null
+            }
+            .sortedByDescending { it.maxVal }
+        if (orderedTopToBottom.isEmpty()) return emptyList()
+
+        val range = dataMax - dataMin
+        val eps = 0.001f
+
+        fun alphaAt(fraction: Float): Float =
+            (topAlpha + (bottomAlpha - topAlpha) * fraction).coerceIn(0f, 1f)
+
+        val stops = mutableListOf<Pair<Float, Color>>()
+        var prevColor = TTColor.zoneStrokeColor(orderedTopToBottom.first().zoneIndex, isDarkSurface)
+        stops.add(0f to prevColor.copy(alpha = alphaAt(0f)))
+        var lastStop = 0f
+
+        for (i in 1 until orderedTopToBottom.size) {
+            val band = orderedTopToBottom[i]
+            val currColor = TTColor.zoneStrokeColor(band.zoneIndex, isDarkSurface)
+            val frac = ((dataMax - band.maxVal) / range).toFloat().coerceIn(0f, 1f)
+            val upperStop = (frac - eps).coerceIn(lastStop, 1f)
+            val lowerStop = (frac + eps).coerceIn(upperStop, 1f)
+            stops.add(upperStop to prevColor.copy(alpha = alphaAt(upperStop)))
+            stops.add(lowerStop to currColor.copy(alpha = alphaAt(lowerStop)))
+            lastStop = lowerStop
+            prevColor = currColor
+        }
+
+        stops.add(1f to prevColor.copy(alpha = alphaAt(1f)))
+        return stops
+    }
+
+    /**
+     * Unified dispatcher producing vertical gradient color stops for zone-colored metrics
+     * (`HRV_DFA_A1`, zoned `HEART_RATE`, zoned `POWER`), or an empty list when unzoned (`REQ-UI-2798.1`).
+     */
+    fun buildMetricZoneGradientStops(
+        metricType: TelemetryMetricType,
+        zoneBands: List<TelemetryZoneBand>,
+        hrThresholds: HeartRateZoneThresholds?,
+        powerThresholds: PowerZoneThresholds?,
+        dfaA1ThresholdT1: Float,
+        dfaA1ThresholdT2: Float,
+        dataMin: Double,
+        dataMax: Double,
+        isDarkSurface: Boolean,
+        topAlpha: Float,
+        bottomAlpha: Float
+    ): List<Pair<Float, Color>> = when (metricType) {
+        TelemetryMetricType.HRV_DFA_A1 -> buildHrvDfaA1VerticalGradientStops(
+            t1 = dfaA1ThresholdT1,
+            t2 = dfaA1ThresholdT2,
+            dataMin = dataMin,
+            dataMax = dataMax,
+            topAlpha = topAlpha,
+            bottomAlpha = bottomAlpha
+        )
+        TelemetryMetricType.HEART_RATE -> if (hrThresholds != null && isValidHeartRateThresholds(hrThresholds) && zoneBands.isNotEmpty()) {
+            buildZoneBandsVerticalGradientStops(zoneBands, dataMin, dataMax, isDarkSurface, topAlpha, bottomAlpha)
+        } else emptyList()
+        TelemetryMetricType.POWER -> if (powerThresholds != null && isValidPowerThresholds(powerThresholds) && zoneBands.isNotEmpty()) {
+            buildZoneBandsVerticalGradientStops(zoneBands, dataMin, dataMax, isDarkSurface, topAlpha, bottomAlpha)
+        } else emptyList()
+        else -> emptyList()
+    }
+
+    /**
+     * Resolves a single-point or scrub-marker zone stroke color for [metricType] when zone coloring
+     * is active, or `null` to fall back to the metric's standard accent color (`REQ-UI-2798.1`).
+     */
+    fun resolveMetricZoneStrokeColor(
+        metricType: TelemetryMetricType,
+        value: Double,
+        hrThresholds: HeartRateZoneThresholds?,
+        powerThresholds: PowerZoneThresholds?,
+        dfaA1ThresholdT1: Float,
+        dfaA1ThresholdT2: Float,
+        isDarkSurface: Boolean
+    ): Color? = when (metricType) {
+        TelemetryMetricType.HRV_DFA_A1 -> resolveHrvDfaA1ZoneColor(
+            alpha1 = value,
+            t1 = dfaA1ThresholdT1,
+            t2 = dfaA1ThresholdT2
+        )
+        TelemetryMetricType.HEART_RATE -> hrThresholds?.takeIf(::isValidHeartRateThresholds)?.let {
+            TTColor.zoneStrokeColor(determineHeartRateZone(value, it), isDarkSurface)
+        }
+        TelemetryMetricType.POWER -> powerThresholds?.takeIf(::isValidPowerThresholds)?.let {
+            TTColor.zoneStrokeColor(determinePowerZone(value, it), isDarkSurface)
+        }
+        else -> null
+    }
+
+    /**
+     * Computes clean intermediate round-number Y-axis tick values strictly inside `(dataMin, dataMax)`
+     * for unzoned `HEART_RATE` (10/20/25/50/100 bpm) and `POWER` (25/50/100/200/250/500 W) graphs,
+     * dynamically choosing the finest step that stays within [maxTickCount] (`REQ-UI-2798.3` / `ATT-9164`).
+     */
+    fun calculateNiceIntermediateTicks(
+        metricType: TelemetryMetricType,
+        dataMin: Double,
+        dataMax: Double,
+        maxTickCount: Int = 4
+    ): List<Double> {
+        if (!dataMin.isFinite() || !dataMax.isFinite() || dataMax <= dataMin || maxTickCount <= 0) {
+            return emptyList()
+        }
+        val candidateSteps = when (metricType) {
+            TelemetryMetricType.HEART_RATE -> listOf(10.0, 20.0, 25.0, 50.0, 100.0)
+            TelemetryMetricType.POWER -> listOf(25.0, 50.0, 100.0, 200.0, 250.0, 500.0)
+            else -> return emptyList()
+        }
+        val boundaryEps = 1e-6
+
+        fun ticksForStep(step: Double): List<Double> {
+            val result = mutableListOf<Double>()
+            var v = ceil((dataMin + boundaryEps) / step) * step
+            while (v < dataMax - boundaryEps) {
+                result.add(v)
+                v += step
+            }
+            return result
+        }
+
+        for (step in candidateSteps) {
+            val ticks = ticksForStep(step)
+            if (ticks.size <= maxTickCount) {
+                return ticks
+            }
+        }
+        return ticksForStep(candidateSteps.last())
+    }
+
+    /**
      * Formats an `HRV_RMSSD` Y-axis boundary label cleanly without silent integer truncation or
      * `-0.0` / non-finite artifacts (`REQ-HRV-047.2` / `ATT-9171`).
      */

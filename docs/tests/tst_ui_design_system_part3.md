@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.32  
+**Version**: 1.0.33  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 54
+**Total Tests**: 55
 
 ---
 
@@ -1051,6 +1051,24 @@
 
 ---
 
+### TST-UI-2798: **Zone-Colored Heart Rate & Power Graphs, Multi-Source Overlay Distinction & Zone-Boundary / Nice-Tick Y-Axis Verification Suite (`ATT-9164`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2798` (`REQ-UI-2798.1`–`REQ-UI-2798.3`)
+- **Component**: `Color.kt`, `TelemetryZoneMath.kt`, `TelemetryOverlayComponents.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricGraphZoneColorUiTest.kt`, `TelemetryMetricGraphZoneTest.kt`, `TelemetryZoneMathTest.kt`, `TelemetryMetricGraphAverageLineTest.kt`, `TelemetryMetricGraphColorTest.kt`, `TelemetryMetricGraphHrvUiTest.kt`, `TelemetryMetricGraphMultiSourceUiTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9164` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *WCAG Contrast, Hard-Stepped Gradient Stops & Point/Scrub Zone Coloring Pure-JVM Tests (`TST-UI-2798.1`, `TelemetryMetricGraphZoneColorUiTest`)*:
+     - Verify `TTColor.zoneStrokeColor(1..7, isDarkTheme)` satisfies WCAG 2.1 AA (`>= 3.0:1`) contrast across `LightColorScheme`, `DarkColorScheme`, and `AmoledDarkColorScheme` (`zoneStrokeColor_meetsWcagContrastAcrossLightDarkAndAmoledForAll7Zones`).
+     - Verify `buildZoneBandsVerticalGradientStops` produces monotonically non-decreasing `[0f, 1f]` top-to-bottom hard-stepped stops across 5 HR zones, 7 Power zones (including Dark AMOLED `Zone7StrokeDark`), single-zone rides, and invalid bounds (`buildZoneBandsVerticalGradientStops_producesMonotonicHardSteppedStopsForHrAndPower`).
+     - Verify `resolveMetricZoneStrokeColor` resolves single-point/scrub colors for HR/Power/DFA α1 and returns `null` when unconfigured or non-zoned (`resolveMetricZoneStrokeColor_resolvesZoneColorsAndNullFallbackWhenUnzoned`).
+  2. *Zone-Orthogonal Multi-Source Overlay Palette Tests (`TST-UI-2798.2`, `TelemetryMetricGraphZoneColorUiTest`)*:
+     - Verify `overlayStrokeColor(..., avoidZoneColors = true)` resolves theme-adapted colors strictly disjoint from `Z1`..`Z7` stroke tokens in Light and Dark (`overlayStrokeColor_avoidsZoneColorsWhenPrimaryCurveIsZoneColored`).
+  3. *Unzoned Nice Round Ticks, Pixel Verification & `Rule 8.5` Light/Dark AMOLED Gallery (`TST-UI-2798.3`, `TelemetryMetricGraphZoneColorUiTest`)*:
+     - Verify `calculateNiceIntermediateTicks` dynamically picks clean `10`/`20` bpm and `50`/`100`/`200` W intermediate steps for unzoned HR and Power (`calculateNiceIntermediateTicks_selectsDynamicRoundStepsForUnzonedHrAndPower`).
+     - Render and inspect Light & Dark/AMOLED 4-panel PNG (`renderZoneColoredGraphsGallery_lightAndDarkAmoled_verifiesPixelsAndSavesPng`, `docs/engineering/test_evidence/tickets/ATT-9164/screenshots/att9164_zone_colored_graphs_light_dark.png`) asserting `Z1..Z5` HR stroke pixels, `Z1..Z7` Power stroke pixels (including `Zone7StrokeDark` on AMOLED), multi-source HR primary zone + contrasting blue overlay pixels, unzoned `CRIMSON` accent fallback + round ticks, and `Ø > zone > extrema` collision suppression (`66/66` PASS across 8 targeted suites, `0` new warnings).
+- **Verified Evidence (`ATT-9164`, `docs/engineering/test_evidence/tickets/ATT-9164/`)**: `TelemetryMetricGraphZoneColorUiTest#zoneStrokeColor_meetsWcagContrastAcrossLightDarkAndAmoledForAll7Zones`, `TelemetryMetricGraphZoneColorUiTest#buildZoneBandsVerticalGradientStops_producesMonotonicHardSteppedStopsForHrAndPower`, `TelemetryMetricGraphZoneColorUiTest#resolveMetricZoneStrokeColor_resolvesZoneColorsAndNullFallbackWhenUnzoned`, `TelemetryMetricGraphZoneColorUiTest#calculateNiceIntermediateTicks_selectsDynamicRoundStepsForUnzonedHrAndPower`, `TelemetryMetricGraphZoneColorUiTest#overlayStrokeColor_avoidsZoneColorsWhenPrimaryCurveIsZoneColored`, `TelemetryMetricGraphZoneColorUiTest#renderZoneColoredGraphsGallery_lightAndDarkAmoled_verifiesPixelsAndSavesPng`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1086,3 +1104,4 @@
 | `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `TST-UI-2795` (`[Verified]`, `.1`–`.4`) covering Robolectric `v2.createComposeRule()` section ordering in `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP`, synchronized scrubbing, chart visibility toggles, `HorizontalPager` gesture isolation & pointer-up unlock, Light/Dark PNG, and live `emulator-5554` verification (`82/82` targeted tests PASS across 14 suites). |
 | `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `TST-UI-2796` (`[Verified]`, `.1`–`.5`) covering `ActivityCarriageBarMath` `DISTANCE`/`TIME` projection, `v3|` -> `v4|` migration & removal persistence, `Rule 64` plot alignment, bidirectional scrubbing & zoom coupling, absence omission & `ELEVATION` coexistence, 9-locale `TranslationParityTest`, and Light/Dark `Rule 8.5` PNG (`78/78` targeted tests PASS across 8 suites). |
 | `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `TST-UI-2797` (`[Verified]`, `.1`–`.3`) covering speed-derived `PACE` & multi-metric averaging, off-scale hiding, `Ø` gutter auto-fit & priority collision suppression, narrow-canvas guard, dotted pixel rhythm, and Light/Dark AMOLED `Rule 8.5` PNG (`70/70` targeted tests PASS across 7 suites, `0` new warnings). |
+| `1.0.33` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Added and verified `TST-UI-2798` (`[Verified]`, `.1`–`.3`) covering WCAG `Z1..Z7` stroke contrast, hard-stepped vertical gradient stops, single-point/scrub zone colors, zone-orthogonal multi-source overlay palette, dynamic unzoned round ticks, and Light/Dark AMOLED `Rule 8.5` PNG (`66/66` targeted tests PASS across 8 suites, `0` new warnings). |

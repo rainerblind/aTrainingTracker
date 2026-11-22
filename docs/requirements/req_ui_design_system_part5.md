@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.31  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 54
+**Total Requirements**: 55
 
 ---
 
@@ -2112,6 +2112,37 @@
 
 ---
 
+### REQ-UI-2798: Zone-Colored Heart Rate & Power Curves, Zone-Orthogonal Multi-Source Overlays & Zone-Boundary / Nice-Tick Y-Axis Labels (`ATT-9164`) [Verified]
+- **Tests**: `TST-UI-2798`
+- **System Requirement(s)**: Derived (SW-only — Compose Canvas visualization inside `TelemetryMetricGraph`, extending `REQ-UI-206`, `REQ-UI-230`, `REQ-UI-530`, `REQ-HRV-044`, and `REQ-UI-2797`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `Color.kt`, `TelemetryZoneMath.kt`, `TelemetryOverlayComponents.kt`, `TelemetryMetricGraph.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Athletes inspecting Heart Rate and Power curves in Aftermath need the primary curve to transition cleanly across training zone colors (matching `DFA α1`) and display exact non-overlapping zone boundary values along the Y-axis so zone transitions and physiological thresholds can be read at a glance, while preserving multi-source comparison distinguishability and falling back cleanly when zones are unconfigured (`ATT-9164`).
+- **Description**:
+  1. *High-Contrast Zone-Colored Curves & Scrub/Point Dots (`REQ-UI-2798.1`)*:
+     - `TTColor.zoneStrokeColor(zoneIndex, isDarkTheme)` (`Color.kt`) SHALL provide theme-adaptive WCAG 2.1 AA (`>= 3.0:1` non-text contrast) stroke colors for all 7 zones (`Z1`..`Z7`) across Light, Dark, and AMOLED surfaces (specifically darkening bright `Z1` chartreuse & `Z3` orange on Light surfaces and lifting `Z5` violet, `Z6` brown, and `Z7` silver-white `#E2E8F0` on Dark/AMOLED surfaces).
+     - When valid Heart Rate (`isValidHeartRateThresholds`) or Power (`isValidPowerThresholds`) zones are configured, `TelemetryZoneMath.buildZoneBandsVerticalGradientStops` and `buildMetricZoneGradientStops` SHALL compute monotonically non-decreasing hard-stepped vertical gradient `zoneStrokeStops` and subtle `zoneFillStops` (`topAlpha = 0.22f`, `bottomAlpha = 0.04f`) so `TelemetryMetricGraph` transitions stroke and fill cleanly right at every zone boundary.
+     - Single-point segments and scrubbing indicator dots/halos SHALL resolve to the sample's zone stroke color via `TelemetryZoneMath.resolveMetricZoneStrokeColor`.
+  2. *Multi-Source Overlay Color Distinction (`REQ-UI-2798.2`)*:
+     - When zone coloring is active on the primary curve (`useZoneColoredCurve == true`), `overlayStrokeColor(index, isDarkSurface, avoidZoneColors = true)` (`TelemetryOverlayComponents.kt`) SHALL render secondary multi-source overlay curves, legend swatches, and scrub dots using a zone-orthogonal theme-adapted contrast palette (`CYAN`, `THEME_DEFAULT`, `MAGENTA`, `TEAL`) so multiple comparison sensors (e.g., Polar H10 + Polar Verity Sense) stay clearly distinguishable across all zones.
+  3. *Zone-Boundary Y-Axis Labels, Collision Priority & Unzoned Nice-Tick Fallback (`REQ-UI-2798.3`)*:
+     - For configured `HEART_RATE` and `POWER` graphs, visible zone boundaries strictly within `(dataMin, dataMax)` (`thresholdDashes`) SHALL be emitted at `Y_AXIS_PRIORITY_THRESHOLD` through `resolveTelemetryYAxisLabels` (`ATT-9170`), ensuring `Ø` average (`Y_AXIS_PRIORITY_AVERAGE`) always takes top priority, zone boundaries suppress colliding raw edge `min`/`max` labels (`Y_AXIS_PRIORITY_EXTREMA`), and zero labels overlap.
+     - When HR or Power zones are not configured (`effectiveHrThresholds == null` or `effectivePowerThresholds == null`), `TelemetryMetricGraph` SHALL fall back cleanly to the metric's configured `accentColor` (`TelemetryGraphColorPreferences`) and render non-overlapping dynamic round-number intermediate ticks computed by `TelemetryZoneMath.calculateNiceIntermediateTicks` (multiples of `10`/`20`/`25`/`50`/`100` bpm or `25`/`50`/`100`/`200`/`250`/`500` W scaled to visible span and chart height).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a workout with Heart Rate or Power telemetry and configured zones, *When* rendered in `TelemetryMetricGraph`, *Then* the primary curve, fill, single-point dots, and scrub indicator transition cleanly across WCAG-compliant zone colors in Light and Dark/AMOLED themes, and visible zone boundaries render as non-overlapping Y-axis labels coordinated with `ATT-9170`'s `Ø` average label.
+  • *Given* multi-source HR or Power comparison overlays are enabled alongside a zone-colored primary curve, *When* rendered, *Then* the primary curve remains zone-colored while secondary overlay curves, legend dots, and scrub dots render in distinct zone-orthogonal contrasting colors.
+  • *Given* a workout where HR or Power zones are unconfigured/invalid, *When* rendered, *Then* the curve falls back to `accentColor` and the Y-axis displays non-overlapping nice round intermediate ticks alongside `Ø`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-UI-206` (`ATT-1740`), `REQ-UI-230` (`ATT-1839`), `REQ-UI-530` (`ATT-7759`), `REQ-HRV-044` (`ATT-8710`), and `REQ-UI-2797` (`ATT-9170`), targeting `Color.kt`, `TelemetryZoneMath.kt`, `TelemetryOverlayComponents.kt`, and `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-1839` added background zone bands and `6.dp/6.dp` threshold dashes; `ATT-8710`/`ATT-8953` added 3-zone vertical gradients for `DFA α1`; `ATT-9170` introduced priority-based `resolveTelemetryYAxisLabels`; `ATT-9164` extends zone-colored curves and zone-boundary/nice-tick Y-axis labels to `HEART_RATE` and `POWER`.
+  3. *Root Reason for Existing Formulation*: `HEART_RATE` and `POWER` previously rendered flat solid curves with only raw extrema Y-axis labels.
+  4. *Preservation of Core Invariants*: Preserves `DFA α1` inverted 3-zone rendering (`REQ-HRV-044`/`REQ-HRV-046`), preserves `ATT-9170` `Ø` top priority and dotted grey reference line (`REQ-UI-2797`), preserves `TelemetryGraphColorPreferences` on all non-zoned metrics and unzoned HR/Power fallback (`REQ-UI-530`), preserves `ThemeColorCentralizationAuditTest` (all tokens inside `Color.kt`), preserves `ElevationProfile.kt` untouched, and keeps `TelemetryMetricGraph.kt <= 1,965` LoC (`1,910` LoC).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2146,3 +2177,4 @@
 | `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `REQ-UI-2795` (`[Verified]`, `.1`–`.3`) introducing `MapDetailLowerContentScope` / `customLowerContent` in `MapDetailLayout.kt` and custom-ordered `ELEVATION` & `CHARTS` rendering across `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP` in `WorkoutDetailTabbedContent.kt` while fixing `PointerEventPass.Initial` pointer-up unlock and preserving `MAP` split-pane pinning, synchronized scrubbing, chart visibility toggles, and `HorizontalPager` gesture isolation (`82/82` targeted tests PASS, Light/Dark PNG & live `emulator-5554` verified). |
 | `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `REQ-UI-2796` (`[Verified]`, `.1`–`.3`) introducing synchronized `ActivityCarriageSyncBar` (`ActivityCarriageBarMath`, `Rule 64` `50.dp` alignment, bidirectional scrubbing + active-mode readout chip, 1:1 zoom/pan & `DISTANCE`/`TIME` support, configurable `WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR` + `v4|` migration, graceful omission when absent, and 9-locale `strings_workout_details.xml` parity). |
 | `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `REQ-UI-2797` (`[Verified]`, `.1`–`.3`) adding dotted grey entire-workout average reference lines (`drawAverageReferenceLine`) and top-priority auto-fitted `Ø` Y-axis gutter labels (`computeWorkoutAverage`, `formatAverageYAxisLabel`, `resolveTelemetryYAxisLabels`) across all `TelemetryMetricGraph` charts in Workout Summary & Workout Details while keeping `ElevationProfile` untouched. |
+| `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Added and verified `REQ-UI-2798` (`[Verified]`, `.1`–`.3`) rendering `HEART_RATE` and `POWER` graphs in WCAG 2.1 AA theme-adaptive zone colors (`TTColor.zoneStrokeColor`, `buildZoneBandsVerticalGradientStops`), zone-orthogonal multi-source overlay contrast (`overlayStrokeColor`), non-overlapping zone boundary Y-axis labels integrated with `ATT-9170` `Ø` priority, and accent-color + nice round-tick fallback (`calculateNiceIntermediateTicks`) when unzoned. |
