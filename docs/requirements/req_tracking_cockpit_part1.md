@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-TRK-P1`  
-**Version**: 1.0.24  
+**Version**: 1.0.25  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part1`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 109
+**Total Requirements**: 110
 
 ---
 
@@ -3919,10 +3919,35 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ---
 
+### REQ-CON-055: Radar Quick-Switch Required Action Callbacks & StVZO-Safe Deferred BLE GATT Registration (`ATT-8123`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-055`
+- **System Requirement(s)**: `SYSREQ-TRK-002`, `SYSREQ-TRK-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `RadarLightQuickSwitchSheet.kt`, `BTLERadarDevice.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Silent `= {}` no-op action-callback defaults on `RadarLightQuickSwitchSheet` / `RadarLightQuickSwitchSheetContent` allow swallowed audio-snooze callbacks to compile without warning, while synchronous `RadarLightController.registerRadarDevice()` and initial light-mode dispatch in `BTLERadarDevice.configureServices()` execute before the queued asynchronous `UUID_CHARACTERISTIC_MODEL_NUMBER` GATT read completes, misclassifying StVZO radars (`RTL516`, `010-03180-10`, `RVR316`) as non-StVZO flashing lights (`ATT-8123`, refining `REQ-CON-031`, `REQ-CON-047`, `REQ-TRK-064.1`).
+- **Description**:
+  1. *Required Quick-Switch Action Callbacks & Wrapper Forwarding (`REQ-CON-055.1`)*: `RadarLightQuickSwitchSheet` and `RadarLightQuickSwitchSheetContent` SHALL require `onModeSelected`, `onAutoSelected`, `onSnoozeSelected`, `onResumeAudio`, and `onDismiss` without silent `= {}` defaults, forwarding all 5 callbacks so tapping any snooze preset or Resume fires the callback strictly before `onDismiss()`.
+  2. *Deferred StVZO-Aware GATT Registration & Clamped Initial Mode (`REQ-CON-055.2`)*: When light control and `UUID_CHARACTERISTIC_MODEL_NUMBER` are both present, `BTLERadarDevice.configureServices()` SHALL defer `RadarLightController.registerRadarDevice()` and initial active light-mode dispatch until the model-number read resolves, registering once with exact `(isStvzo, hasHardwareBrake)` and clamping non-StVZO active modes to `SOLID`.
+  3. *Bounded Fallbacks (`REQ-CON-055.3`)*: Absence of DIS/Model-Number registers immediately; read error (`null`/empty) or `MODEL_NUMBER_READ_TIMEOUT_MS` (`3000L`) timeout falls back idempotently once to `(false, false)`.
+  4. *Disconnect/Shutdown Isolation & LoC Invariant (`REQ-CON-055.4`)*: `disconnectFromGatt()` and `shutDown()` SHALL cancel fallback timers, clear model/StVZO state, and drop late callbacks for stale/disconnected GATT sessions; `BTLERadarDevice.java` SHALL stay `<= 1,500` LoC.
+- **Acceptance Criteria (Given-When-Then)**:
+  - *Given* an open `RadarLightQuickSwitchSheet`, *When* the user taps any snooze preset or Resume Alerts, *Then* `onSnoozeSelected(exactMode)` / `onResumeAudio()` executes strictly before `onDismiss()`.
+  - *Given* a BLE StVZO radar (`RTL516` or `010-03180-10`) with active `DAY_FLASH`, *When* `configureServices` runs followed by `UUID_CHARACTERISTIC_MODEL_NUMBER` completion, *Then* `RadarLightController.registerRadarDevice` is called only after model evaluation with `isStvzo = true` and any initial light write is clamped to `SOLID`.
+- **Invariants**: `BTLERadarDevice.java <= 1,500` LoC; `isReceivingData()` untouched (`ATT-8109`); `WATCHDOG_TIMEOUT_MS == 3500L`; absent-DIS FIFO queue order preserved; `0` string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.25` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Bounce 1 concurrency hardening & sprint sync (`ATT-6178`): marked `mLightControlCharacteristic`/`mRadarControlWriteChar`/`mRadarControlNotifyChar` `volatile` with local snapshot in `setLightMode()`, guarded fallback timer posting under `mLightRegistrationLock`, and gated clamped legacy `updateHardwareLightMode()` on `writeQueued && clamped && isLegacyLightOnly` + post-write disconnect re-check (`141/141` PASS). |
+| `1.0.24` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Promoted `REQ-CON-055` to `[Verified]` after Stage 4–5 implementation (`RadarLightQuickSwitchSheet.kt` required callbacks, `BTLERadarDevice.java` `1,455` LoC atomic `mLightRegistrationLock` deferred StVZO GATT registration + bounded fallbacks + late-StVZO self-heal), `140/140` targeted tests PASS across 8 suites (`0` fail, `0` err, `0` skip), Compose preview + live `emulator-5554` boot smoke (`0` crashes). |
+| `1.0.23` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Added `[Planned]` `REQ-CON-055` (`SYSREQ-TRK-002`, `SYSREQ-TRK-007`) for required `RadarLightQuickSwitchSheet` action callbacks and StVZO-safe deferred BLE GATT registration with bounded fallbacks and disconnect isolation (`N/A - 0 string changes`). |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.20` | 2026-11-18 | AI Agent (`ATT-8712`) | `ATT-8712` | Aligned `REQ-TRK-061.4` with `REQ-TRK-046.4` and `REQ-TRK-087` (`ZonesSettingsActivity` HRV tab parity). |
 | `1.0.21` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Linked refined `REQ-*` entries in-place to net-new `SYSREQ-TRK-007..013` and `SYSREQ-DEX-007..008`. |

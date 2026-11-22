@@ -77,9 +77,9 @@ fun RadarLightQuickSwitchSheet(
     isLightControlSupported: Boolean = true,
     snoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
     onModeSelected: (RadarLightMode) -> Unit,
-    onAutoSelected: () -> Unit = {},
-    onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit = {},
-    onResumeAudio: () -> Unit = {},
+    onAutoSelected: () -> Unit,
+    onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit,
+    onResumeAudio: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -123,10 +123,10 @@ fun RadarLightQuickSwitchSheetContent(
     isLightControlSupported: Boolean = true,
     snoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
     onModeSelected: (RadarLightMode) -> Unit,
-    onAutoSelected: () -> Unit = {},
-    onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit = {},
-    onResumeAudio: () -> Unit = {},
-    onDismiss: () -> Unit = {},
+    onAutoSelected: () -> Unit,
+    onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit,
+    onResumeAudio: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -271,7 +271,10 @@ private fun RadarLightQuickSwitchSheetPreviewLight() {
                 isAutoMode = true,
                 isLightControlSupported = true,
                 onModeSelected = {},
-                onAutoSelected = {}
+                onAutoSelected = {},
+                onSnoozeSelected = {},
+                onResumeAudio = {},
+                onDismiss = {}
             )
         }
     }
@@ -293,7 +296,10 @@ private fun RadarLightQuickSwitchSheetPreviewDark() {
                 isAutoMode = false,
                 isLightControlSupported = true,
                 onModeSelected = {},
-                onAutoSelected = {}
+                onAutoSelected = {},
+                onSnoozeSelected = {},
+                onResumeAudio = {},
+                onDismiss = {}
             )
         }
     }
@@ -311,7 +317,10 @@ private fun RadarLightQuickSwitchSheetPreviewStvzo() {
                 isAutoMode = true,
                 isLightControlSupported = true,
                 onModeSelected = {},
-                onAutoSelected = {}
+                onAutoSelected = {},
+                onSnoozeSelected = {},
+                onResumeAudio = {},
+                onDismiss = {}
             )
         }
     }

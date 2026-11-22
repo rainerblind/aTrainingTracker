@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.125  
+**Version**: 1.0.127  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,7 +12,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Implemented | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit (Part 1)](requirements/req_tracking_cockpit_part1.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK`, `WEA` | 109 | 98 | 11 | 0 |
+| [Tracking & Live Sensor Cockpit (Part 1)](requirements/req_tracking_cockpit_part1.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK`, `WEA` | 110 | 99 | 11 | 0 |
 | [Tracking & Live Sensor Cockpit (Part 2)](requirements/req_tracking_cockpit_part2.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 88 | 88 | 0 | 0 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `RAD`, `SPT`, `WKO` | 71 | 57 | 14 | 0 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 76 | 64 | 12 | 0 |
@@ -29,7 +29,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1328 across 16 domain shards.
+**Total Living Requirements**: 1329 across 16 domain shards.
 
 ---
 
@@ -97,3 +97,6 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.121` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Synchronized master index for `REQ-UI-2795` (`[Verified]`, `Total=1324`, `Verified=1198`, `Implemented=125`, `Planned=1`). |
 | `1.0.123` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Synchronized master index for `[Planned]` `REQ-MIG-057` (`DatabaseSchemaRegistry` authoritative constants & non-eager `DatabaseConnectionManager` quiescence). |
 | `1.0.124` | 2026-11-22 | Lane 3 Author (`ATT-8122`, `--as agent1`) | `ATT-8122` | Synchronized master index for `[Verified]` `REQ-MIG-057` (`94/94` PASS across 19 suites + live `emulator-5554` boot smoke `0` crashes). |
+| `1.0.125` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Synchronized master index for `[Planned]` `REQ-CON-055` (`RadarLightQuickSwitchSheet` required callbacks & StVZO-safe deferred BLE GATT registration). |
+| `1.0.126` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Synchronized master index for `[Verified]` `REQ-CON-055` (`140/140` PASS across 8 suites + Compose & live `emulator-5554` verification). |
+| `1.0.127` | 2026-11-22 | Lane 3 Author (`ATT-8123`, `--as agent1`) | `ATT-8123` | Bounce 1 sync with `sprint/2026-11-22_01_Früh` (`ATT-6178`, `ATT-9172`) and concurrency hardening for `REQ-CON-055`. |

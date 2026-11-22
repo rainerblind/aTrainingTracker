@@ -219,7 +219,11 @@ class RadarLightModeGridTest {
                                 isAutoMode = true,
                                 isLightControlSupported = true,
                                 snoozeState = RadarAudioSnoozeState(isSnoozed = false),
-                                onModeSelected = {}
+                                onModeSelected = {},
+                                onAutoSelected = {},
+                                onSnoozeSelected = {},
+                                onResumeAudio = {},
+                                onDismiss = {}
                             )
                         }
                     }
@@ -276,7 +280,11 @@ class RadarLightModeGridTest {
                                     isSnoozed = true,
                                     mode = RadarAudioSnoozeMode.SNOOZE_15M
                                 ),
-                                onModeSelected = {}
+                                onModeSelected = {},
+                                onAutoSelected = {},
+                                onSnoozeSelected = {},
+                                onResumeAudio = {},
+                                onDismiss = {}
                             )
                         }
                     }
