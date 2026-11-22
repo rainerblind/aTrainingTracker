@@ -37,14 +37,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardSnapshot
+import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStore
+import com.atrainingtracker.trainingtracker.tracker.applyLiveSnapshot
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Pure UI state-driven composable rendering a compact workout summary list card (REQ-UI-506.2).
@@ -202,7 +209,10 @@ fun WorkoutSummaryCompact(
 }
 
 /**
- * Backward-compatible domain model overload of [WorkoutSummaryCompact] (REQ-UI-506.4).
+ * Backward-compatible domain model overload of [WorkoutSummaryCompact] (REQ-UI-506.4, REQ-PER-047.2).
+ *
+ * Strictly card-scoped live updates: subscribes to [liveSnapshotFlow] ONLY when
+ * `!workoutData.finished`, filtering to matching `workoutId` with `distinctUntilChanged()`.
  */
 @Composable
 fun WorkoutSummaryCompact(
@@ -210,13 +220,34 @@ fun WorkoutSummaryCompact(
     onMapClick: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    onMarkFinished: (() -> Unit)? = null
+    onMarkFinished: (() -> Unit)? = null,
+    liveSnapshotFlow: StateFlow<LiveWorkoutCardSnapshot?> = LiveWorkoutCardStateStore.snapshot
 ) {
     val formatters = LocalMetricFormatter.current
-    val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
-    val uiState = remember(workoutData, formatters, isActivelyTracked) {
-        WorkoutCardUiState.from(
+    val activeSnapshot: LiveWorkoutCardSnapshot? = if (!workoutData.finished) {
+        val matchingFlow = remember(workoutData.id, liveSnapshotFlow) {
+            liveSnapshotFlow
+                .map { it?.takeIf { snapshot -> snapshot.workoutId == workoutData.id } }
+                .distinctUntilChanged()
+        }
+        val collected by matchingFlow.collectAsStateWithLifecycle(
+            initialValue = liveSnapshotFlow.value?.takeIf { it.workoutId == workoutData.id }
+        )
+        collected
+    } else {
+        null
+    }
+    val effectiveWorkoutData = remember(workoutData, activeSnapshot, formatters) {
+        applyLiveSnapshot(
             workoutData = workoutData,
+            snapshot = activeSnapshot,
+            formatters = formatters
+        )
+    }
+    val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id) || activeSnapshot != null
+    val uiState = remember(effectiveWorkoutData, formatters, isActivelyTracked) {
+        WorkoutCardUiState.from(
+            workoutData = effectiveWorkoutData,
             formatters = formatters,
             isActivelyTracked = isActivelyTracked
         )

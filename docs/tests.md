@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
 **Document ID**: `DOC-TST-INDEX`  
-**Version**: 1.0.131  
+**Version**: 1.0.132  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -14,7 +14,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK` | 173 | 173 | 0 | 0 |
 | [Tracking & Live Sensor Cockpit (Part 2)](tests/tst_tracking_cockpit_part2.md) | Tracking lifecycle, non-blocking shutdown, and sensor connectivity continuation shard. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | 3 | 3 | 0 | 0 |
-| [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 77 | 72 | 5 | 0 |
+| [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `PERF`, `RAD`, `SPT`, `WKO` | 78 | 73 | 5 | 0 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 71 | 70 | 1 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 131 | 131 | 0 | 0 |
 | [Settings, Profiles & Localization](tests/tst_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `PRI`, `SET` | 116 | 112 | 4 | 0 |
@@ -26,7 +26,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 18 | 18 | 0 | 0 |
 | [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Tests**: 1341 across 13 domain shards.
+**Total Living Tests**: 1342 across 13 domain shards.
 
 ---
 
@@ -97,3 +97,4 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | `1.0.129` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Synchronized master index for `[Verified]` `TST-UI-2798` (`TelemetryMetricGraphZoneColorUiTest` + 7 adjacent suites: `66/66` PASS, `0` new warnings, Light/Dark AMOLED `Rule 8.5` PNG verified). |
 | `1.0.128` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Synchronized master index for `[Verified]` `TST-UI-2799` (`Total=1338`, `Verified=1293`, `Implemented=37`, `Planned=8`; `98/98` targeted unit & Compose UI tests PASS across 17 suites + Light/Dark & live `emulator-5554` PNG verification). |
 | `1.0.129` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Preserved `TST-TRK-092`, `TST-CON-055`, and `TST-TRK-093` (`[Verified]`) in `tst_tracking_cockpit_part2.md`, synced with `sprint/2026-11-22_01_Früh` (`1c3fbfd8`), and added Bounce 1 `MyBTLEDevice` pause-race regression tests. |
+| `1.0.132` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Synchronized master index for `[Verified]` `TST-PER-055` (Bounce 1 heal: strict `extractSensorSample` suffix regression test + `LiveWorkoutBroadcastTrackerTest` cleanup + sprint sync; `44/44` PASS across 8 suites, `0` new warnings, Light/Dark AMOLED `Rule 8.5` PNG verified). |

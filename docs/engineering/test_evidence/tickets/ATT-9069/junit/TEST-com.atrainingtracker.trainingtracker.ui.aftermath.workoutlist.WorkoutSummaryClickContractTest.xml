@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryClickContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:39:56.004Z" hostname="rainer-HP-EliteBook-850-G5" time="0.199">
+  <properties/>
+  <testcase name="testWorkoutSummary_passesEnableGesturesFalseToTelemetryGraphs" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryClickContractTest" time="0.193"/>
+  <testcase name="testWorkoutSummary_appliesMapClickModifierToTelemetryGraphContainers" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryClickContractTest" time="0.001"/>
+  <testcase name="testWorkoutSummary_appliesMapClickModifierToZoneDistributionCards" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryClickContractTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

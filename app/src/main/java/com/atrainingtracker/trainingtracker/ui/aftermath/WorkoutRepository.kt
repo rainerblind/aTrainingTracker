@@ -41,6 +41,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.sensor.SensorValueType
 import java.util.Locale
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStore
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -348,6 +349,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s, timeTotal_s)
         }
         updateWorkoutSummary(workoutId, values)
+        LiveWorkoutCardStateStore.Default.onPausedTick(workoutId, timeTotal_s.toLong())
     }
 
     fun updateWorkoutAuxiliaryMetadata(workoutId: Long, gcData: String?, sportTypeId: Long?, bSportType: com.atrainingtracker.banalservice.BSportType?) {
@@ -438,6 +440,16 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
     fun saveLap(workoutId: Long, lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
         lapsDatabaseManager.saveLap(workoutId, lapNr, lapTime, lapDistance, averageSpeed)
+        LiveWorkoutCardStateStore.Default.onLapSaved(
+            workoutId,
+            LapData(
+                workoutId = workoutId,
+                lapNr = lapNr,
+                timeTotalS = lapTime,
+                distanceTotalM = lapDistance,
+                speedAverageMps = averageSpeed
+            )
+        )
     }
 
     fun updateMapAndStreams(workoutId: Long, polyline: String?, altitudeStream: String?, distanceStream: String?) {
@@ -466,6 +478,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
     fun markWorkoutFinishedBlocking(workoutId: Long) {
         summariesManager.setWorkoutFinished(workoutId)
+        LiveWorkoutCardStateStore.Default.clearIfMatches(workoutId)
     }
 
     fun warmUp() {
@@ -624,6 +637,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     samplesDb.setTransactionSuccessful()
                 }
                 summariesDb.setTransactionSuccessful()
+                LiveWorkoutCardStateStore.Default.onLiveSamplePersisted(
+                    workoutId = workoutId,
+                    summaryValues = summaryValues,
+                    samplingValues = samplingValues,
+                    extremaUpdates = extremaUpdates
+                )
                 return sampleInserted
             } finally {
                 summariesDb.endTransaction()
@@ -1470,6 +1489,19 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         } else {
             lapsDatabaseManager.saveLap(workoutId, lapNr, startTime, duration, distance, avgSpeed)
         }
+        LiveWorkoutCardStateStore.Default.onLapSaved(
+            workoutId,
+            LapData(
+                workoutId = workoutId,
+                lapNr = lapNr,
+                timeStart = startTime,
+                timeTotalS = duration,
+                distanceTotalM = distance,
+                speedAverageMps = avgSpeed,
+                name = name,
+                description = description
+            )
+        )
     }
 
     fun calculateAndSaveExtrema(
@@ -3880,6 +3912,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * and rolls its metrics into historical period summaries (ATT-987 / REQ-UI-146).
      */
     fun markWorkoutFinished(workoutId: Long) {
+        LiveWorkoutCardStateStore.Default.clearIfMatches(workoutId)
         launch {
             withContext(Dispatchers.IO) {
                 summariesManager.setWorkoutFinished(workoutId)

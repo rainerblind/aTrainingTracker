@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.35  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 71
+**Total Requirements**: 72
 
 ---
 
@@ -2174,6 +2174,24 @@
 
 ---
 
+### REQ-PER-047: Live-Updating Active Workout Card via O(1) In-Memory StateFlow [Verified]
+- **Tests**: `TST-PER-055`
+- **Tickets**: `ATT-9069`
+- **Target Release**: `V5.0.0`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, Review
+- **Implementation**: `LiveWorkoutCardStateStore.kt`, `LiveWorkoutBroadcastTracker.kt`, `WorkoutRepository.kt`, `WorkoutSummary.kt`, `WorkoutSummaryCompact.kt`
+- **Localization Parity**: `N/A - no new UI strings`
+- **Description**: While a workout is actively recording, the unfinished workout card in Workout Summaries (`WorkoutSummary` and `WorkoutSummaryCompact`) SHALL update live at ~1 Hz via the dedicated O(1) in-memory `StateFlow<LiveWorkoutCardSnapshot?>` (`LiveWorkoutCardStateStore`) collected strictly inside the matching unfinished card via `collectAsStateWithLifecycle`, preserving zero SQLite reloads, zero 1-Hz broadcasts, zero `_allWorkouts` churn, and zero finished-card subscriptions (`REQ-STB-020`).
+- **Rationale**: While a workout is actively recording, the unfinished workout card in **Workout Summaries** SHALL update live at ~1 Hz via a dedicated O(1) in-memory `StateFlow<LiveWorkoutCardSnapshot?>` (`LiveWorkoutCardStateStore`) while strictly preserving the `ATT-8999` / `REQ-STB-020` zero-OOM invariant (`0` SQLite reloads, `0` 1-Hz `WORKOUT_UPDATED_INTENT` broadcasts, `0` `_allWorkouts` emissions/clones, and `0` downstream `PeriodsRepository` / `AthleteProfileViewModel` / `KnownLocationsViewModel` recalculations).
+  1. *O(1) Dedicated StateFlow & Lifecycle Gating (`REQ-PER-047.1`)*: `LiveWorkoutCardStateStore` SHALL expose `StateFlow<LiveWorkoutCardSnapshot?>` (`workoutId`, `activeTimeSec`, `totalTimeSec`, `distanceM`, `avgSpeedMps`, `ascentM`, `descentM`, `avgHeartRateBpm`, `avgPowerWatts`, `avgCadenceRpm`, `laps`, `isPaused`) updated in O(1) memory on active ticks (`recordLiveSample`), paused ticks (`updateWorkoutTotalTime`), and live lap saves (`saveLap`), armed on `onSessionInitialized`, and cleared to `null` on `reset()` / `markWorkoutFinished*` so post-stop executor drain cannot resurrect a cleared snapshot.
+  2. *Card-Scoped Lifecycle-Aware Compose Collection (`REQ-PER-047.2`)*: Both `WorkoutSummary` and `WorkoutSummaryCompact` SHALL subscribe to `liveSnapshotFlow` strictly when `!workoutData.finished`, filtering to `snapshot.workoutId == workoutData.id` with `distinctUntilChanged()` via `collectAsStateWithLifecycle`. Finished cards SHALL never subscribe or recompose, non-matching unfinished cards SHALL never recompose on active ticks, and off-screen screens SHALL stop collecting automatically.
+  3. *Canonical Live Overlay & Safety Invariants (`REQ-PER-047.3`)*: `applyLiveSnapshot` SHALL overlay non-null live scalar metrics, deduplicated laps, and live HR/Speed/Pace(RUN)/Power/Cadence `ExtremaDataRow` averages formatted via canonical `MetricFormatterContext` / `SensorType.*.myFormatter` formatters (preserving unrelated rows such as `VERTICAL_OSCILLATION`), keeping unfinished `0.5f` alpha styling and active-session delete/mark-finished protection intact.
+- **Invariants**: `0` edits to `TrackerService.java`; `0` SQLite reloads per 1-Hz tick; `0` steady-state 1-Hz `WORKOUT_UPDATED_INTENT` broadcasts; `0` `_allWorkouts` emissions/clones during live tracking; `0` finished-card `liveSnapshotFlow` subscriptions (`subscriptionCount == 0`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2214,3 +2232,5 @@
 | `1.0.33` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Implemented]` (`PowerPhysiologyCalculator.kt`: `MIN_CTL_FOR_ACWR = 15.0`, `calculateRpeTss()`, Tier-4 delegation, `calculateSessionRpe()` untouched). |
 | `1.0.34` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 Tier-1 suites, `0` `app/` drift, `0` new warnings, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |
 | `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Refined `REQ-PER-044.4` (`[Verified]`) to swap `CADENCE` and `HEART_RATE` in `TelemetryChartStack.kt` & `MapModels.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`) while preserving DataStore enum-name persistence and `WorkoutSummary.kt` invariants. |
+| `1.0.36` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Added and verified (`[Verified]`) `REQ-PER-047` (`.1`–`.3`) for live-updating active workout card via O(1) `LiveWorkoutCardStateStore` `StateFlow<LiveWorkoutCardSnapshot?>`, strictly card-scoped `collectAsStateWithLifecycle` in `WorkoutSummary`/`WorkoutSummaryCompact`, and zero `_allWorkouts` / downstream OOM churn (`43/43` PASS across 8 suites, `0` `TrackerService.java` edits, Light/Dark AMOLED `Rule 8.5` PNG verified). |
+| `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Stage 6 Bounce 1 heal: tightened `extractSensorSample` to exact canonical/quoted-device/4-location-provider allowlist (preventing sibling derived columns like `POWER_PEAK_5S`/`POWER_TO_WEIGHT` during dropouts), keyed `LiveExtremaLabels` on `TrainingApplication.getUnit()`, and synced sprint branch (`44/44` PASS across 8 suites). |

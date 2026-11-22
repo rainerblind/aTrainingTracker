@@ -35,8 +35,13 @@ fun interface WorkoutUpdatedDispatcher {
  * persists a live lap split, or updates sport metadata.
  */
 class LiveWorkoutBroadcastTracker(
-    private val dispatcher: WorkoutUpdatedDispatcher
+    private val dispatcher: WorkoutUpdatedDispatcher,
+    private val liveCardStateStore: LiveWorkoutCardStateStore
 ) {
+    constructor(dispatcher: WorkoutUpdatedDispatcher) : this(
+        dispatcher = dispatcher,
+        liveCardStateStore = LiveWorkoutCardStateStore.Default
+    )
     private val lock = Any()
     private var trackedWorkoutId: Long = -1L
     private var lastPausedState: Boolean? = null
@@ -51,6 +56,7 @@ class LiveWorkoutBroadcastTracker(
             trackedWorkoutId = workoutId
             lastPausedState = isPaused
         }
+        liveCardStateStore.onSessionStarted(workoutId, isPaused)
         dispatcher.dispatch(workoutId)
     }
 
@@ -75,6 +81,7 @@ class LiveWorkoutBroadcastTracker(
                 false
             }
         }
+        liveCardStateStore.onPauseStateChanged(workoutId, isPaused)
         if (shouldDispatch) {
             dispatcher.dispatch(workoutId)
         }
@@ -98,5 +105,6 @@ class LiveWorkoutBroadcastTracker(
             trackedWorkoutId = -1L
             lastPausedState = null
         }
+        liveCardStateStore.clear()
     }
 }

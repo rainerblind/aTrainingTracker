@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryLiveUpdateUiTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:39:56.269Z" hostname="rainer-HP-EliteBook-850-G5" time="16.68">
+  <properties/>
+  <testcase name="workoutSummaryCompact_updatesActiveCardOnlyAndNeverSubscribesFinished_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryLiveUpdateUiTest" time="13.548"/>
+  <testcase name="workoutSummaryFullCard_updatesLiveMetricsAndFinishedCardNeverSubscribes_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryLiveUpdateUiTest" time="1.601"/>
+  <testcase name="renderLiveActiveWorkoutCard_lightAndDarkVisualShowcase_TST_PER_055_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryLiveUpdateUiTest" time="1.531"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

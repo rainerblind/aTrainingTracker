@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T12:39:46.837Z" hostname="rainer-HP-EliteBook-850-G5" time="9.16">
+  <properties/>
+  <testcase name="applyLiveSnapshot_guardsFinishedAndMismatchedCardsAndPreservesVerticalOscillation_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="8.405"/>
+  <testcase name="activeTicksPausedTicksLapsAndClear_lifecycleIsDeterministic_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.121"/>
+  <testcase name="onLiveSamplePersisted_extractsCanonicalAndNamedSensorSamples_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.117"/>
+  <testcase name="stressTest_3600TicksWith2200HistoricalWorkouts_zeroAllWorkoutsAndDownstreamChurn_TST_PER_055_2" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.438"/>
+  <testcase name="onLiveSamplePersisted_ignoresSiblingDerivedColumnsOnSensorDropout_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.079"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

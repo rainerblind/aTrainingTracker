@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.39  
+**Version**: 1.0.41  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 77
+**Total Tests**: 78
 
 ---
 
@@ -1410,6 +1410,25 @@
 
 ---
 
+### TST-PER-055: **Live Active Workout Card StateFlow, Card-Scoped Recomposition & 3,600-Tick Zero-OOM Verification** (`ATT-9069`) [Verified]
+- **Requirement(s)**: `REQ-PER-047`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutCardStateStoreTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutBroadcastTrackerTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummaryLiveUpdateUiTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummaryCompactMenuTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummarySectionsTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummaryClickContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutMarkFinishedTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9069`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no new UI strings`
+- **Test Description**:
+  1. *O(1) StateStore Lifecycle, Overlay & Card-Scoped Compose Collection (`TST-PER-055.1`, `LiveWorkoutCardStateStoreTest#activeTicksPausedTicksLapsAndClear_lifecycleIsDeterministic_TST_PER_055_1`, `LiveWorkoutCardStateStoreTest#onLiveSamplePersisted_extractsCanonicalAndNamedSensorSamples_TST_PER_055_1`, `LiveWorkoutCardStateStoreTest#onLiveSamplePersisted_ignoresSiblingDerivedColumnsOnSensorDropout_TST_PER_055_1`, `LiveWorkoutCardStateStoreTest#applyLiveSnapshot_guardsFinishedAndMismatchedCardsAndPreservesVerticalOscillation_TST_PER_055_1`, `WorkoutSummaryLiveUpdateUiTest#workoutSummaryFullCard_updatesLiveMetricsAndFinishedCardNeverSubscribes_TST_PER_055_1`, `WorkoutSummaryLiveUpdateUiTest#workoutSummaryCompact_updatesActiveCardOnlyAndNeverSubscribesFinished_TST_PER_055_1`)*:
+     • Verify 1-Hz active ticks, authoritative extrema average resync, pause ticks updating total time without advancing active time, lap deduplication, post-`clear()` drain suppression, canonical/named/provider-suffixed sensor extraction with sibling derived column (`POWER_PEAK_5S`/`POWER_TO_WEIGHT`/`POWER_5S`) dropout immunity, finished/mismatched card reference identity, and `0` `subscriptionCount` on finished `WorkoutSummary`/`WorkoutSummaryCompact` cards.
+  2. *3,600-Tick Zero-OOM Stress Invariant (`TST-PER-055.2`, `LiveWorkoutCardStateStoreTest#stressTest_3600TicksWith2200HistoricalWorkouts_zeroAllWorkoutsAndDownstreamChurn_TST_PER_055_2`)*:
+     • Simulate 3,600 1-Hz ticks (active + paused + 3 live laps) alongside 2,200 historical workouts in `_allWorkouts` with attached downstream observers (`PeriodsRepository`, `AthleteProfileViewModel`, `KnownLocationsViewModel`), asserting `0` `_allWorkouts` emissions, `0` steady-state 1-Hz broadcasts (only start + pause/resume edges = 3 total), `0` downstream recalculations, exact final snapshot values, and `null` reset on `reset()`.
+  3. *Light & Dark/AMOLED Visual Verification (`TST-PER-055.3`, `WorkoutSummaryLiveUpdateUiTest#renderLiveActiveWorkoutCard_lightAndDarkVisualShowcase_TST_PER_055_3`)*:
+     • Capture and inspect `docs/engineering/test_evidence/tickets/ATT-9069/screenshots/att9069_live_active_workout_card_light_dark.png` showing active live-updating `WorkoutSummary` and `WorkoutSummaryCompact` cards alongside a finished card in Light and Dark/AMOLED themes.
+- **Verification Evidence**: `44/44` PASS (`0` failed, `0` errors, `0` skipped) across all 8 suites (`LiveWorkoutCardStateStoreTest` `5/5`, `LiveWorkoutBroadcastTrackerTest` `3/3`, `WorkoutSummaryLiveUpdateUiTest` `3/3`, `WorkoutSummaryCompactMenuTest` `4/4`, `WorkoutSummarySectionsTest` `8/8`, `WorkoutSummaryClickContractTest` `3/3`, `WorkoutMarkFinishedTest` `7/7`, `ArchitectureConformanceContractTest` `11/11`) with `0` new Kotlin compiler warnings, `0` edits to `TrackerService.java`, and `Rule 8.5` Light/Dark PNG visually verified.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1454,3 +1473,5 @@
 | `1.0.37` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-WKO-039` to `[Implemented]` with exact verbatim `PowerPhysiologyCalculatorTest` and `WorkoutRpeFeelTest` method citations. |
 | `1.0.38` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 suites, `0` `app/` drift, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |
 | `1.0.39` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Updated `TST-PER-052.4` (`[Verified]`) adding behavioral Compose UI bounds & dropdown order tests + Light/Dark PNG (`TelemetryChartStackVisibilityTest.kt`) for swapped `CADENCE`/`HEART_RATE` order (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`). |
+| `1.0.40` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Added and verified (`[Verified]`) `TST-PER-055` (`.1`–`.3`) covering `LiveWorkoutCardStateStoreTest` (including 3,600-tick zero-OOM stress test with 2,200 workouts), `WorkoutSummaryLiveUpdateUiTest` (card-scoped recomposition/subscription isolation + Light/Dark AMOLED `Rule 8.5` PNG), and 6 adjacent suites (`43/43` PASS, `0` new warnings). |
+| `1.0.41` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Stage 6 Bounce 1 heal: added `onLiveSamplePersisted_ignoresSiblingDerivedColumnsOnSensorDropout_TST_PER_055_1` regression test + `LiveWorkoutBroadcastTrackerTest` `@After` cleanup (`44/44` PASS across 8 suites, `0` new warnings). |
