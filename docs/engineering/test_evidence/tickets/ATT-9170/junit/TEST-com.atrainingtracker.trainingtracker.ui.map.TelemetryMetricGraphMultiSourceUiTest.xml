@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMultiSourceUiTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:59:26.295Z" hostname="rainer-HP-EliteBook-850-G5" time="11.465">
+  <properties/>
+  <testcase name="singleSourceWorkout_hidesLayersButtonAndMeanLegend" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMultiSourceUiTest" time="9.27"/>
+  <testcase name="multiSourceWorkout_displaysLayersToggleMenuAndMeanLegendWhenEnabled" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphMultiSourceUiTest" time="2.195"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -279,6 +279,11 @@ fun TelemetryMetricGraph(
     val validValues = remember(rawValues) { rawValues.filterNotNull() }
     if (validValues.isEmpty()) return
 
+    // Entire-workout overall average anchored independently of zoom/pan viewport (REQ-UI-2797.1 / ATT-9170)
+    val workoutAverage = remember(pathPoints, metricType, unit) {
+        TelemetryMetricUtils.computeWorkoutAverage(pathPoints, metricType, unit)
+    }
+
     val (dataMin, dataMax) = remember(
         pathPoints,
         rawValues,
@@ -377,11 +382,24 @@ fun TelemetryMetricGraph(
         }
     }
 
+    val visibleAverageValue = remember(workoutAverage, dataMin, dataMax) {
+        resolveVisibleAverageValue(workoutAverage, dataMin, dataMax)
+    }
+
     val axisTextPaint = remember(colorScheme) {
         Paint().apply {
             color = colorScheme.onSurfaceVariant.toArgb()
             textSize = 28f
             isAntiAlias = true
+        }
+    }
+
+    val averageLabelPaint = remember(colorScheme) {
+        Paint().apply {
+            color = colorScheme.onSurfaceVariant.toArgb()
+            textSize = 28f
+            isAntiAlias = true
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
     }
 
@@ -642,7 +660,8 @@ fun TelemetryMetricGraph(
             val bottomPaddingPx = 24.dp.toPx()
             val topPaddingPx = 10.dp.toPx()
 
-            val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+            val rawChartWidthPx = size.width - startPaddingPx - endPaddingPx
+            val chartWidthPx = rawChartWidthPx.coerceAtLeast(1f)
             val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
 
             val isInvertedYAxis = TelemetryZoneMath.isInvertedTelemetryYAxis(metricType)
@@ -782,30 +801,107 @@ fun TelemetryMetricGraph(
                 )
             }
 
-            // Draw Y-axis labels (top and bottom; inverted for PACE and HRV_DFA_A1 per REQ-HRV-046.3)
-            val maxLabel = when (metricType) {
-                TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMin)
-                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMin)
-                TelemetryMetricType.HRV_RMSSD -> TelemetryZoneMath.formatHrvRmssdAxisLabel(dataMax, currentLocale)
-                TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMax).toInt()}%"
-                else -> "${dataMax.toInt()}"
-            }
-            val minLabel = when (metricType) {
-                TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMax)
-                TelemetryMetricType.HRV_DFA_A1 -> String.format(currentLocale, "%.2f", dataMax)
-                TelemetryMetricType.HRV_RMSSD -> TelemetryZoneMath.formatHrvRmssdAxisLabel(dataMin, currentLocale)
-                TelemetryMetricType.SLOPE -> "${kotlin.math.round(dataMin).toInt()}%"
-                else -> "${dataMin.toInt()}"
+            // Draw Y-axis labels with priority-based collision avoidance (Ø average always wins; REQ-HRV-046.3, REQ-UI-2797.2)
+            val topAxisValue = if (isInvertedYAxis) dataMin else dataMax
+            val bottomAxisValue = if (isInvertedYAxis) dataMax else dataMin
+            val maxLabel = TelemetryMetricUtils.formatYAxisValue(topAxisValue, metricType, currentLocale)
+            val minLabel = TelemetryMetricUtils.formatYAxisValue(bottomAxisValue, metricType, currentLocale)
+            val topBaselineY = topPaddingPx + 10f
+            val bottomBaselineY = topPaddingPx + chartHeightPx
+            val minInteriorBaselineY = maxOf(topBaselineY, -axisTextPaint.ascent() + 2f)
+
+            val yAxisCandidates = buildList {
+                if (visibleAverageValue != null) {
+                    val avgLabel = TelemetryMetricUtils.formatAverageYAxisLabel(visibleAverageValue, metricType, currentLocale)
+                    if (avgLabel.isNotEmpty()) {
+                        val avgBaselineY = computeCenteredYAxisBaseline(
+                            anchorY = valueToY(visibleAverageValue),
+                            ascent = axisTextPaint.ascent(),
+                            descent = axisTextPaint.descent(),
+                            minBaselineY = minInteriorBaselineY,
+                            maxBaselineY = bottomBaselineY
+                        )
+                        add(
+                            TelemetryYAxisLabelCandidate(
+                                id = "avg",
+                                text = avgLabel,
+                                baselineY = avgBaselineY,
+                                priority = Y_AXIS_PRIORITY_AVERAGE,
+                                alignment = TelemetryYAxisLabelAlignment.RIGHT_GUTTER
+                            )
+                        )
+                    }
+                }
+                if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+                    thresholdDashes.forEachIndexed { idx, thresholdVal ->
+                        val thresholdBaselineY = computeCenteredYAxisBaseline(
+                            anchorY = valueToY(thresholdVal),
+                            ascent = axisTextPaint.ascent(),
+                            descent = axisTextPaint.descent(),
+                            minBaselineY = minInteriorBaselineY,
+                            maxBaselineY = bottomBaselineY
+                        )
+                        add(
+                            TelemetryYAxisLabelCandidate(
+                                id = "threshold_$idx",
+                                text = TelemetryMetricUtils.formatYAxisValue(thresholdVal, metricType, currentLocale),
+                                baselineY = thresholdBaselineY,
+                                priority = Y_AXIS_PRIORITY_THRESHOLD,
+                                alignment = TelemetryYAxisLabelAlignment.LEFT_GUTTER
+                            )
+                        )
+                    }
+                }
+                add(
+                    TelemetryYAxisLabelCandidate(
+                        id = "top",
+                        text = maxLabel,
+                        baselineY = topBaselineY,
+                        priority = Y_AXIS_PRIORITY_EXTREMA,
+                        alignment = TelemetryYAxisLabelAlignment.LEFT_GUTTER
+                    )
+                )
+                add(
+                    TelemetryYAxisLabelCandidate(
+                        id = "bottom",
+                        text = minLabel,
+                        baselineY = bottomBaselineY,
+                        priority = Y_AXIS_PRIORITY_EXTREMA,
+                        alignment = TelemetryYAxisLabelAlignment.LEFT_GUTTER
+                    )
+                )
             }
 
-            nativeCanvas.drawText(maxLabel, 6.dp.toPx(), topPaddingPx + 10f, axisTextPaint)
-            nativeCanvas.drawText(minLabel, 6.dp.toPx(), topPaddingPx + chartHeightPx, axisTextPaint)
-
-            // Draw threshold guide indicators for DFA a1 strictly within (dataMin, dataMax)
-            if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-                for (thresholdVal in thresholdDashes) {
-                    val yThreshold = valueToY(thresholdVal)
-                    nativeCanvas.drawText(String.format(currentLocale, "%.2f", thresholdVal), 6.dp.toPx(), yThreshold + 10f, axisTextPaint)
+            // Numeric axis labels have no descenders (g/y/j); use tight glyph extents so well-separated thresholds stay visible
+            val glyphAscent = maxOf(axisTextPaint.ascent(), -axisTextPaint.textSize * 0.80f)
+            val glyphDescent = minOf(axisTextPaint.descent(), axisTextPaint.textSize * 0.12f)
+            val placedYAxisLabels = resolveTelemetryYAxisLabels(
+                candidates = yAxisCandidates,
+                ascent = glyphAscent,
+                descent = glyphDescent,
+                minVerticalGapPx = 2.dp.toPx()
+            )
+            val gutterLeftPx = 2.dp.toPx()
+            val gutterRightPx = (startPaddingPx - 4.dp.toPx()).coerceAtLeast(gutterLeftPx)
+            val maxGutterWidthPx = (gutterRightPx - gutterLeftPx).coerceAtLeast(1f)
+            for (placed in placedYAxisLabels) {
+                if (placed.alignment == TelemetryYAxisLabelAlignment.RIGHT_GUTTER) {
+                    averageLabelPaint.textSize = axisTextPaint.textSize
+                    val rawWidth = averageLabelPaint.measureText(placed.text)
+                    averageLabelPaint.textSize = computeFittedGutterTextSize(
+                        baseTextSizePx = axisTextPaint.textSize,
+                        measuredTextWidthPx = rawWidth,
+                        maxGutterWidthPx = maxGutterWidthPx
+                    )
+                    val fittedWidth = averageLabelPaint.measureText(placed.text)
+                    val labelX = computeRightAlignedGutterX(
+                        textWidthPx = fittedWidth,
+                        gutterLeftPx = gutterLeftPx,
+                        gutterRightPx = gutterRightPx
+                    )
+                    nativeCanvas.drawText(placed.text, labelX, placed.baselineY, averageLabelPaint)
+                } else {
+                    nativeCanvas.drawText(placed.text, 6.dp.toPx(), placed.baselineY, axisTextPaint)
                 }
             }
 
@@ -1212,6 +1308,16 @@ fun TelemetryMetricGraph(
                         valueToY = ::valueToY
                     )
                 }
+            }
+
+            // Dotted grey entire-workout average reference line across plot area (REQ-UI-2797.3 / ATT-9170)
+            if (visibleAverageValue != null && rawChartWidthPx > 0f) {
+                drawAverageReferenceLine(
+                    avgY = valueToY(visibleAverageValue),
+                    plotStartX = startPaddingPx,
+                    plotWidth = rawChartWidthPx,
+                    color = colorScheme.onSurfaceVariant
+                )
             }
 
             // Synchronized Scrubbing Cursor & Marker Dot
@@ -1721,6 +1827,46 @@ private fun TelemetryMetricGraphRmssdDynamicPreview() {
             ),
             metricType = TelemetryMetricType.HRV_RMSSD,
             currentDistance = 200.0,
+            onDistanceSelected = {},
+            enableGestures = false
+        )
+    }
+}
+
+@Preview(name = "Heart Rate Average Reference Line - Light", widthDp = 360, heightDp = 120, showBackground = true)
+@Composable
+private fun TelemetryMetricGraphAverageReferenceLightPreview() {
+    com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme(darkTheme = false, setWindowColors = false) {
+        val origin = com.google.android.gms.maps.model.LatLng(0.0, 0.0)
+        TelemetryMetricGraph(
+            pathPoints = listOf(
+                PathPoint(distance = 0.0, latLng = origin, timeSec = 0L, hr = 132),
+                PathPoint(distance = 500.0, latLng = origin, timeSec = 150L, hr = 154),
+                PathPoint(distance = 1000.0, latLng = origin, timeSec = 300L, hr = 172),
+                PathPoint(distance = 1500.0, latLng = origin, timeSec = 450L, hr = 162)
+            ),
+            metricType = TelemetryMetricType.HEART_RATE,
+            currentDistance = null,
+            onDistanceSelected = {},
+            enableGestures = false
+        )
+    }
+}
+
+@Preview(name = "Pace Average Reference Line - Dark", widthDp = 360, heightDp = 120, showBackground = true)
+@Composable
+private fun TelemetryMetricGraphAverageReferenceDarkPreview() {
+    com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme(darkTheme = true, setWindowColors = false) {
+        val origin = com.google.android.gms.maps.model.LatLng(0.0, 0.0)
+        TelemetryMetricGraph(
+            pathPoints = listOf(
+                PathPoint(distance = 0.0, latLng = origin, timeSec = 0L, speedMps = 3.2),
+                PathPoint(distance = 500.0, latLng = origin, timeSec = 155L, speedMps = 3.5),
+                PathPoint(distance = 1000.0, latLng = origin, timeSec = 305L, speedMps = 2.9),
+                PathPoint(distance = 1500.0, latLng = origin, timeSec = 470L, speedMps = 3.4)
+            ),
+            metricType = TelemetryMetricType.PACE,
+            currentDistance = null,
             onDistanceSelected = {},
             enableGestures = false
         )

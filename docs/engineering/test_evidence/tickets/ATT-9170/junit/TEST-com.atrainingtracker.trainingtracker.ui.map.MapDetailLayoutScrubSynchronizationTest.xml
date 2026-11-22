@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:58:58.302Z" hostname="rainer-HP-EliteBook-850-G5" time="0.395">
+  <properties/>
+  <testcase name="mapDetailLayoutWiresOnPointSelectedAndPassesActiveScrubPoint" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.158"/>
+  <testcase name="scrubMarkerLayerAcceptsActiveScrubPointParameter" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.032"/>
+  <testcase name="scrubberControllerAcceptsActiveScrubPointParameter" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.015"/>
+  <testcase name="overlayScrubTarget_resolvesBothDistanceAndTimeDomains_gpsAndTrackless" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.015"/>
+  <testcase name="telemetryMetricGraphSupportsOnPointSelectedCallback" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.129"/>
+  <testcase name="telemetryHeaderFormatting_appendsActiveOverlayValuesOnlyWhenOverlaysActive" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.015"/>
+  <testcase name="aTrainingTrackerMapForwardsActiveScrubPoint" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest" time="0.029"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

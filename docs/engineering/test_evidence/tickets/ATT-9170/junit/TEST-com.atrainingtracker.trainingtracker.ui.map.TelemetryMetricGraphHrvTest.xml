@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:58:05.808Z" hostname="rainer-HP-EliteBook-850-G5" time="0.09">
+  <properties/>
+  <testcase name="testTelemetryMetricGraph_hrvTracks_rendersBoundsAndThresholds" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvTest" time="0.003"/>
+  <testcase name="testTelemetryMetricGraph_artifactGap_breaksPolylineAndHatches" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvTest" time="0.0"/>
+  <testcase name="testTelemetryMetricGraph_configuredThresholdsAndScrubLookup" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvTest" time="0.087"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

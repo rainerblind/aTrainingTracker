@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.30  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 53
+**Total Requirements**: 54
 
 ---
 
@@ -2079,6 +2079,39 @@
 
 ---
 
+### REQ-UI-2797: TelemetryMetricGraph Dotted Grey Entire-Workout Average Reference Line & Top-Priority `Ø` Y-Axis Label (`ATT-9170`) [Verified]
+- **Tests**: `TST-UI-2797`
+- **System Requirement(s)**: Derived (SW-only — Compose Canvas visualization inside `TelemetryMetricGraph`, extending `REQ-UI-206`, `REQ-UI-219`, `REQ-UI-230`, `REQ-HRV-046`, and `REQ-HRV-047`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TelemetryMetricUtils.kt`, `TelemetryChartCanvasHelpers.kt`, `TelemetryMetricGraph.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings (uses language-neutral Ø mathematical symbol U+00D8 with locale-aware numeric formatting)`
+- **Rationale**: Athletes reviewing workout telemetry curves in both Workout Summary (`WorkoutSummary.kt`) and Workout Details (`TelemetryChartStack.kt` / `MapDetailLayout.kt`) need a constant dotted grey horizontal reference line and `Ø`-prefixed Y-axis label at the entire workout's overall average so every segment can be judged against the session average at a glance (`ATT-9170`).
+- **Description**:
+  1. *Metric-Accurate Entire-Workout Average & Constant Zoom Anchor (`REQ-UI-2797.1`)*:
+     - `TelemetryMetricUtils.computeWorkoutAverage(points, metricType, unit)` SHALL compute the entire workout's overall average for every `TelemetryMetricGraph` instance in Workout Summary and Workout Details (covering `SPEED`, `PACE`, `SLOPE`, `HEART_RATE`, `POWER`, `CADENCE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD`, and `ALTITUDE`).
+     - For `PACE`, the average SHALL be derived from overall mean positive finite speed (`unitMeters / mean(speedMps) / 60.0` in active `METRIC`/`IMPERIAL` unit) rather than arithmetic mean of per-point pace values, preventing slow walking/stop segments from skewing the reference line.
+     - For `HRV_DFA_A1` and `HRV_RMSSD`, high-artifact samples (`hrvArtifactRate > 5.0`) SHALL be excluded when clean samples exist (with fallback to all valid finite samples otherwise).
+     - The average anchor SHALL remain constant across Workout Details zoom/pan interactions and SHALL be cleanly hidden via `resolveVisibleAverageValue` whenever no valid finite average exists or when it falls outside `[dataMin, dataMax]`. `ElevationProfile` SHALL remain completely untouched.
+  2. *`Ø` Y-Axis Label Gutter Placement, Auto-Fit & Strict Collision Priority (`REQ-UI-2797.2`)*:
+     - `TelemetryMetricUtils.formatAverageYAxisLabel` SHALL prefix the metric's standard Y-axis formatter with `Ø` (`U+00D8`, e.g., `Ø155`, `Ø8:15`, `Ø0,83`, `Ø235`, `Ø1%`, `Ø0%` with `-0%` suppression) honoring `currentLocale`.
+     - `TelemetryMetricGraph` SHALL right-align the `Ø` label inside the `50.dp` left gutter (`startPaddingPx - 4.dp`) using `computeFittedGutterTextSize` and `computeRightAlignedGutterX` so neither compact nor wide labels clip into the plot area across any screen density.
+     - `resolveTelemetryYAxisLabels` SHALL resolve vertical gutter labels in strict priority order (`Y_AXIS_PRIORITY_AVERAGE > Y_AXIS_PRIORITY_THRESHOLD > Y_AXIS_PRIORITY_EXTREMA`) using tight numeric glyph extents so the `Ø` label ALWAYS takes visual priority over colliding min/max extrema, `DFA α1` threshold labels, or future `ATT-9164` zone boundaries while preserving well-separated non-colliding labels.
+  3. *Distinct Dotted Grey Horizontal Reference Line & Narrow-Canvas Guard (`REQ-UI-2797.3`)*:
+     - `drawAverageReferenceLine` SHALL render a horizontal dotted grey line across `[startPaddingPx, startPaddingPx + rawChartWidthPx]` at `y = valueToY(visibleAverageValue)` using `colorScheme.onSurfaceVariant.copy(alpha = 0.60f)`, `strokeWidth = 1.5.dp`, `StrokeCap.Round`, and `PathEffect.dashPathEffect(floatArrayOf(0.5.dp, 5.dp), 0f)`, remaining clearly distinct from existing `6.dp / 6.dp` dashed guidelines in Light, Dark, and AMOLED themes, and cleanly no-oping when `plotWidth <= 0f`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* any `TelemetryMetricGraph` (Speed, Pace, Slope, Heart Rate, Power, Cadence, W'bal, DFA α1, rMSSD) in Workout Summary or Workout Details with valid samples, *When* rendered, *Then* a horizontal dotted grey line and right-aligned `Ø` Y-axis label appear at the entire workout's average value, visually distinct from dashed threshold/`0%` lines.
+  • *Given* the user zooms or pans a Workout Details chart OR a `PACE` run contains slow walking stops, *When* rendered, *Then* the average remains anchored to the full workout (hidden cleanly if off-scale) and `PACE` uses speed-derived harmonic averaging rather than arithmetic per-point pace mean.
+  • *Given* the `Ø` label sits near min/max, a `DFA α1` threshold, or a zone boundary, *When* Y-axis labels are placed in the `50.dp` gutter, *Then* `Ø` always remains legible without overlapping any other label or clipping into the plot area in Light and Dark/AMOLED themes, while `ElevationProfile` remains unchanged.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-UI-206` (`ATT-1740`), `REQ-UI-219` (`ATT-1818`), `REQ-UI-230` (`ATT-1839`), `REQ-HRV-046` (`ATT-8953`), and `REQ-HRV-047` (`ATT-9171`), targeting `TelemetryMetricUtils.kt`, `TelemetryChartCanvasHelpers.kt`, and `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-1740` created `TelemetryMetricGraph` with top/bottom extrema labels; `ATT-1839` added `6.dp/6.dp` dashed threshold lines; `ATT-8710`/`ATT-8953` added inverted `DFA α1` threshold labels; `ATT-9170` adds the session-average dotted grey reference line and priority `Ø` gutter label.
+  3. *Root Reason for Existing Formulation*: Earlier Y-axis rendering drew extrema and `DFA α1` thresholds unconditionally without collision detection or session-average reference context.
+  4. *Preservation of Core Invariants*: Preserves `ElevationProfile.kt` untouched, preserves `Rule 64` `50.dp` left & `52.dp`/`0.72f` right plot alignment, preserves `6.dp/6.dp` dashed threshold and `0%` slope lines, preserves inverted `PACE`/`HRV_DFA_A1` Y-axes, preserves `TelemetryMetricGraph.kt <= 1,965` LoC, and introduces `0` new XML strings or compiler warnings.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2112,3 +2145,4 @@
 | `1.0.28` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `REQ-UI-2794` (`[Verified]`, `.1`–`.3`) promoting `MapPeekSelection.Climb` to `isSheetBacked = true` in `MapScreenWithTrack` via `BottomSheetScaffold` + `BottomSheetDesign.PeekHeightClimb` (`192.dp`) + `ClimbOnMapScreen` dynamic `measuredHeaderHeight` + `SheetValue.Hidden` selection cleanup, superseding `REQ-UI-2790.2` modal Climb carve-out while preserving `ClimbDetailSheet` for `RouteOnMapScreen`. |
 | `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `REQ-UI-2795` (`[Verified]`, `.1`–`.3`) introducing `MapDetailLowerContentScope` / `customLowerContent` in `MapDetailLayout.kt` and custom-ordered `ELEVATION` & `CHARTS` rendering across `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP` in `WorkoutDetailTabbedContent.kt` while fixing `PointerEventPass.Initial` pointer-up unlock and preserving `MAP` split-pane pinning, synchronized scrubbing, chart visibility toggles, and `HorizontalPager` gesture isolation (`82/82` targeted tests PASS, Light/Dark PNG & live `emulator-5554` verified). |
 | `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `REQ-UI-2796` (`[Verified]`, `.1`–`.3`) introducing synchronized `ActivityCarriageSyncBar` (`ActivityCarriageBarMath`, `Rule 64` `50.dp` alignment, bidirectional scrubbing + active-mode readout chip, 1:1 zoom/pan & `DISTANCE`/`TIME` support, configurable `WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR` + `v4|` migration, graceful omission when absent, and 9-locale `strings_workout_details.xml` parity). |
+| `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `REQ-UI-2797` (`[Verified]`, `.1`–`.3`) adding dotted grey entire-workout average reference lines (`drawAverageReferenceLine`) and top-priority auto-fitted `Ø` Y-axis gutter labels (`computeWorkoutAverage`, `formatAverageYAxisLabel`, `resolveTelemetryYAxisLabels`) across all `TelemetryMetricGraph` charts in Workout Summary & Workout Details while keeping `ElevationProfile` untouched. |

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T09:59:37.767Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="extractMetricValue_gpsSpike_clampedToCustomPaceCeiling" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" time="0.0"/>
+  <testcase name="extractMetricValue_imperialParity_scalesCeilingCorrectly" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" time="0.0"/>
+  <testcase name="extractMetricValue_speedAndOtherMetrics_unaffectedByPaceCeiling" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" time="0.001"/>
+  <testcase name="extractMetricValue_normalRunningPace_unaffectedByCeiling" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" time="0.0"/>
+  <testcase name="extractMetricValue_stationarySpeed_filteredOut" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" time="0.0"/>
+  <testcase name="extractMetricValue_gpsSpike_clampedToDefaultPaceCeiling" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphPaceCeilingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

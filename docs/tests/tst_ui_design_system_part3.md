@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.31  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 53
+**Total Tests**: 54
 
 ---
 
@@ -1030,6 +1030,27 @@
 
 ---
 
+### TST-UI-2797: **TelemetryMetricGraph Dotted Grey Average Reference Line & `Ø` Y-Axis Label Verification Suite (`ATT-9170`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2797` (`REQ-UI-2797.1`–`REQ-UI-2797.3`)
+- **Component**: `TelemetryMetricUtils.kt`, `TelemetryChartCanvasHelpers.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricGraphAverageLineTest.kt`, `TelemetryChartCanvasHelpersTest.kt`, `TelemetryMetricUtilsTest.kt`, `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphHrvUiTest.kt`, `TelemetryMetricGraphZoneTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9170` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Metric-Accurate Averaging & Off-Scale Guard Pure-JVM Tests (`TST-UI-2797.1`, `TelemetryMetricGraphAverageLineTest`)*:
+     - Verify `computeWorkoutAverage` for `PACE` derives average pace from mean positive finite speed (`unitMeters / mean(speedMps) / 60.0`) in both `METRIC` and `IMPERIAL` units rather than arithmetic mean of per-point pace values, and matches `SPEED` average mathematically (`computeWorkoutAverage_paceUsesMeanSpeedNotArithmeticMeanOfPointPaces`).
+     - Verify all supported metrics (`HEART_RATE`, `POWER`, `CADENCE`, `SPEED`, `SLOPE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD`) including HRV artifact exclusion (`> 5.0%`) with all-artifact fallback and empty/non-finite `null` handling (`computeWorkoutAverage_coversAllMetricsAndFiltersHrvArtifactsAndInvalidSamples`).
+     - Verify `resolveVisibleAverageValue` retains in-range anchors and cleanly hides off-scale/non-finite averages (`resolveVisibleAverageValue_hidesOffScaleAndNonFiniteValuesCleanly`).
+  2. *`Ø` Formatting, Gutter Auto-Fit & Strict Collision Priority Tests (`TST-UI-2797.2`, `TelemetryMetricGraphAverageLineTest`)*:
+     - Verify locale-aware `formatAverageYAxisLabel` across metrics (`Ø155`, `Ø8:15`, `Ø0,83`/`Ø0.83`, `Ø235`, `Ø1%`, `Ø0%`, `Ø-3%`, `Ø42`, `Ø4,2`) (`formatAverageYAxisLabel_matchesMetricStandardFormatsAndLocales`).
+     - Verify `resolveTelemetryYAxisLabels` gives `Ø` strict top priority over colliding min/max extrema, `DFA α1` thresholds, and simulated `ATT-9164` HR zone boundaries (`Ø155` vs `157`) with zero bounding-box overlaps (`resolveTelemetryYAxisLabels_enforcesAverageStrictTopPriorityOverExtremaThresholdsAndZones`).
+     - Verify `computeFittedGutterTextSize` and `computeRightAlignedGutterX` keep both compact and wide labels inside `[gutterLeftPx, gutterRightPx]` without clipping into the plot area (`gutterAutoFitAndRightAlignment_preventOverflowIntoPlotArea`).
+  3. *Narrow-Canvas Guard, Dotted Pixel Rhythm & `Rule 8.5` Light/Dark AMOLED Visual Verification (`TST-UI-2797.3`, `TelemetryMetricGraphAverageLineTest`)*:
+     - Verify `drawAverageReferenceLine` paints zero pixels on `plotWidth <= 0f` and paints distinct alternating round dots & clear gaps across valid plot widths (`drawAverageReferenceLine_guardsNarrowCanvasAndDrawsDistinctDottedPattern`).
+     - Capture and visually inspect Light & Dark/AMOLED multi-chart PNG (`renderTelemetryAverageLineGallery_lightAndDarkAmoled_andSaveVisualEvidencePng`, `docs/engineering/test_evidence/tickets/ATT-9170/screenshots/att9170_telemetry_average_line_light_dark.png`) via `read_file` covering Heart Rate (with zones), Pace (with slow walk dip), Slope (dashed `0%` vs dotted `Ø1%`), `DFA α1` collision (`Ø0.74` suppressing `0.75` while preserving `0.20`, `0.50`, `1.40`), and `2.5x` zoomed Heart Rate constant anchor.
+     - Verify existing `TelemetryChartCanvasHelpersTest`, `TelemetryMetricUtilsTest`, `TelemetryMetricGraphTest`, `TelemetryMetricGraphHrvUiTest`, `TelemetryMetricGraphZoneTest`, and `ArchitectureConformanceContractTest` PASS (`70/70` total, `0` new warnings, `ElevationProfile.kt` untouched).
+- **Verified Evidence (`ATT-9170`, `docs/engineering/test_evidence/tickets/ATT-9170/`)**: `TelemetryMetricGraphAverageLineTest#computeWorkoutAverage_paceUsesMeanSpeedNotArithmeticMeanOfPointPaces`, `TelemetryMetricGraphAverageLineTest#computeWorkoutAverage_coversAllMetricsAndFiltersHrvArtifactsAndInvalidSamples`, `TelemetryMetricGraphAverageLineTest#formatAverageYAxisLabel_matchesMetricStandardFormatsAndLocales`, `TelemetryMetricGraphAverageLineTest#resolveVisibleAverageValue_hidesOffScaleAndNonFiniteValuesCleanly`, `TelemetryMetricGraphAverageLineTest#resolveTelemetryYAxisLabels_enforcesAverageStrictTopPriorityOverExtremaThresholdsAndZones`, `TelemetryMetricGraphAverageLineTest#gutterAutoFitAndRightAlignment_preventOverflowIntoPlotArea`, `TelemetryMetricGraphAverageLineTest#drawAverageReferenceLine_guardsNarrowCanvasAndDrawsDistinctDottedPattern`, `TelemetryMetricGraphAverageLineTest#renderTelemetryAverageLineGallery_lightAndDarkAmoled_andSaveVisualEvidencePng`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1064,3 +1085,4 @@
 | `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `TST-UI-2794` (`[Verified]`, `.1`–`.3`) covering Robolectric `v2.createComposeRule()` Climb peek/expand/hide/BackHandler tests, Light/Dark PNG + live `emulator-5554` peek/expand/dismiss checks, and `BottomSheetVisualContractTest`/`ClimbDetailSheetContractTest` parity (`76/76` targeted tests PASS). |
 | `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `TST-UI-2795` (`[Verified]`, `.1`–`.4`) covering Robolectric `v2.createComposeRule()` section ordering in `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP`, synchronized scrubbing, chart visibility toggles, `HorizontalPager` gesture isolation & pointer-up unlock, Light/Dark PNG, and live `emulator-5554` verification (`82/82` targeted tests PASS across 14 suites). |
 | `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `TST-UI-2796` (`[Verified]`, `.1`–`.5`) covering `ActivityCarriageBarMath` `DISTANCE`/`TIME` projection, `v3|` -> `v4|` migration & removal persistence, `Rule 64` plot alignment, bidirectional scrubbing & zoom coupling, absence omission & `ELEVATION` coexistence, 9-locale `TranslationParityTest`, and Light/Dark `Rule 8.5` PNG (`78/78` targeted tests PASS across 8 suites). |
+| `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `TST-UI-2797` (`[Verified]`, `.1`–`.3`) covering speed-derived `PACE` & multi-metric averaging, off-scale hiding, `Ø` gutter auto-fit & priority collision suppression, narrow-canvas guard, dotted pixel rhythm, and Light/Dark AMOLED `Rule 8.5` PNG (`70/70` targeted tests PASS across 7 suites, `0` new warnings). |
