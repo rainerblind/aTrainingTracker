@@ -92,7 +92,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     private val segmentsRepository = SegmentsRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
     private val clusterRepository by lazy { WorkoutClusterRepository.getInstance(application) }
-    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager.getInstance(application)
 
     private val _clusterCandidates = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
     /** Candidate route clusters for the active cluster-change dialog (`REQ-UI-2786.3`). */

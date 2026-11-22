@@ -44,7 +44,7 @@ class BatterySaverModelPureTest {
 
         val testFile = File(filesDir, "test_settings_${System.nanoTime()}.preferences_pb")
         val testDataStore = PreferenceDataStoreFactory.create(produceFile = { testFile })
-        val settingsDataStore = SettingsDataStore(mockContext, testDataStore)
+        val settingsDataStore = SettingsDataStore.createForTesting(mockContext, testDataStore)
         SettingsDataStore.setInstanceForTesting(settingsDataStore)
     }
 

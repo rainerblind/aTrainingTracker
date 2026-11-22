@@ -68,7 +68,7 @@ class PeriodsViewModel @JvmOverloads constructor(
 
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val periodsRepo = PeriodsRepository.getInstance(application)
-    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager.getInstance(application)
 
     private val _selectedMetric = MutableStateFlow(PeriodBarMetric.DURATION)
     val selectedMetric: StateFlow<PeriodBarMetric> = _selectedMetric.asStateFlow()

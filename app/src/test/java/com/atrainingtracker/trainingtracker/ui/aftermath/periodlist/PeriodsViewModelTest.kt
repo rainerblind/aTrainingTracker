@@ -76,14 +76,16 @@ class PeriodsViewModelTest {
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledPeriodMarkerTypesFlow } returns MutableStateFlow(emptySet())
+        mockPrefManager = mockk(relaxed = true)
+        every { mockPrefManager.enabledPeriodMarkerTypesFlow } returns MutableStateFlow(emptySet())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     @After
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
         PeriodsRepository.setInstanceForTesting(null)
+        MyPreferenceManager.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

@@ -115,7 +115,6 @@ class RoutesViewModelFilterTest {
         mockkObject(RoutesRepository.Companion)
         mockkObject(BANALServiceRepository.Companion)
         mockkObject(SegmentsRepository.Companion)
-        mockkConstructor(MyPreferenceManager::class)
 
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
         every { BANALServiceRepository.getInstance(any()) } returns mockBanalRepo
@@ -125,13 +124,15 @@ class RoutesViewModelFilterTest {
         every { mockBanalRepo.currentLocation } returns currentLocationFlow
         every { mockSegmentsRepo.allSegmentsWithPath } returns allSegmentsFlow
 
-        every { anyConstructed<MyPreferenceManager>().routeFilterCriteriaFlow } returns routeFilterCriteriaFlow
-        coEvery { anyConstructed<MyPreferenceManager>().setRouteFilterCriteria(any()) } answers {
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.routeFilterCriteriaFlow } returns routeFilterCriteriaFlow
+        coEvery { mockPrefManager.setRouteFilterCriteria(any()) } answers {
             routeFilterCriteriaFlow.value = firstArg()
         }
-        coEvery { anyConstructed<MyPreferenceManager>().clearRouteFilterCriteria() } answers {
+        every { mockPrefManager.clearRouteFilterCriteria() } answers {
             routeFilterCriteriaFlow.value = RouteFilterCriteria()
         }
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     private var activeViewModel: RoutesViewModel? = null
@@ -144,6 +145,7 @@ class RoutesViewModelFilterTest {
     fun tearDown() {
         activeViewModel?.viewModelScope?.cancel()
         activeViewModel = null
+        MyPreferenceManager.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkAll()

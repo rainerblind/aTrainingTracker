@@ -167,7 +167,7 @@ fun ZoneSettingsScreen(
         }
     }
 
-    val dataStore = remember { SettingsDataStore(context) }
+    val dataStore = remember { SettingsDataStore.getInstance(context) }
     val scope = rememberCoroutineScope()
 
     val profileNameResIds = listOf(
@@ -957,7 +957,7 @@ fun ZoneProfileTabContent(
     viewModel: ZonesSettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val dataStore = remember { SettingsDataStore(context) }
+    val dataStore = remember { SettingsDataStore.getInstance(context) }
     val scope = rememberCoroutineScope()
 
     val allProfiles by viewModel.allProfiles.collectAsState()

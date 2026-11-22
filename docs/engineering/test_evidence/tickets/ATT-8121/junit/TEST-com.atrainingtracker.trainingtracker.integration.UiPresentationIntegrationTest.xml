@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:31:12.736Z" hostname="rainer-HP-EliteBook-850-G5" time="14.655">
+  <properties/>
+  <testcase name="testTrackingTabsViewModel_coachmarkStateHoisting" classname="com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest" time="7.687"/>
+  <testcase name="testTrackingTabsViewModel_screenModeStateFlow_recomposition" classname="com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest" time="1.884"/>
+  <testcase name="testTrackingViewModel_uiStateAndUpdateScreenMode_composeRecomposition" classname="com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest" time="1.955"/>
+  <testcase name="testControlTrackingButton_realViewModelMviDispatch_andRecomposition" classname="com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest" time="3.128"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@51798f77], context=[android.app.ContextImpl@4731ac0e], intentFilter=[android.content.IntentFilter@5c05bb75]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.RESET_ACCUMULATORS_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.TRACKING_STATE_CHANGED pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$5@221dbaf7], context=[android.app.ContextImpl@4731ac0e], intentFilter=[android.content.IntentFilter@2ed7cf1e]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.TRACKING_STATE_CHANGED pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_RESUME_FROM_PAUSED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$6@6f1d1590], context=[android.app.ContextImpl@4731ac0e], intentFilter=[android.content.IntentFilter@622cd9fb]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.TRACKING_STATE_CHANGED pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$4@5b2d67a1], context=[android.app.ContextImpl@4731ac0e], intentFilter=[android.content.IntentFilter@1a2e662d]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.TRACKING_STATE_CHANGED pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+]]></system-err>
+</testsuite>

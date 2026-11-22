@@ -102,8 +102,9 @@ class TrackingViewModelGridTest {
         mockkStatic(ContextCompat::class)
         every { ContextCompat.getColor(any(), any()) } returns 0xFF00FF
 
-        mockkConstructor(SettingsDataStore::class)
-        every { anyConstructed<SettingsDataStore>().getZoneDisplayOptionsFlow(any()) } returns flowOf(ZoneDisplayOptions())
+        val mockSettingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        every { mockSettingsDataStore.getZoneDisplayOptionsFlow(any()) } returns flowOf(ZoneDisplayOptions())
+        SettingsDataStore.setInstanceForTesting(mockSettingsDataStore)
 
         every { mockApplication.applicationContext } returns mockContext
         every { mockLiveSegmentsRepo.liveSegments } returns liveSegmentsFlow
@@ -122,6 +123,7 @@ class TrackingViewModelGridTest {
 
     @After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

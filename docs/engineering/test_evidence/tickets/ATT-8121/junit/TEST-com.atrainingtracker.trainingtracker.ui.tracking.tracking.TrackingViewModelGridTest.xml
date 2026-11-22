@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:35:09.917Z" hostname="rainer-HP-EliteBook-850-G5" time="5.979">
+  <properties/>
+  <testcase name="testDeleteSectionDivider_dispatchesToRepository" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="1.502"/>
+  <testcase name="testDeleteSensorField_clearsMoveSelectionIfSameFieldDeleted" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="0.776"/>
+  <testcase name="testScreenModeChangeToTracking_cancelsActiveMoveSelection" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="0.785"/>
+  <testcase name="testSetSectionDivider_dispatchesToRepository" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="0.728"/>
+  <testcase name="testSelectFieldForMove_andCancelMove" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="0.712"/>
+  <testcase name="testMoveField_dispatchesToRepositoryAndClearsSelection" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="0.705"/>
+  <testcase name="testSwapFields_dispatchesToRepositoryAndClearsSelection" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest" time="0.77"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

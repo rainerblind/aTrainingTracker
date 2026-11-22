@@ -192,9 +192,10 @@ class WorkoutClustersViewModelTest {
         every { KnownLocationsRepository.getInstance(any()) } returns mockKnownLocationsRepo
         every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledClusterMarkerTypesFlow } returns MutableStateFlow(emptySet())
-        every { anyConstructed<MyPreferenceManager>().clusterFilterCriteriaFlow } returns MutableStateFlow(ClusterFilterCriteria())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledClusterMarkerTypesFlow } returns MutableStateFlow(emptySet())
+        every { mockPrefManager.clusterFilterCriteriaFlow } returns MutableStateFlow(ClusterFilterCriteria())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
         every { mockClusterRepo.allClusters } returns allClustersFlow
         every { mockClusterRepo.clusterMutationEvents } returns clusterMutationEventsFlow
@@ -214,6 +215,7 @@ class WorkoutClustersViewModelTest {
     fun tearDown() {
         activeViewModel?.viewModelScope?.cancel()
         activeViewModel = null
+        MyPreferenceManager.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkAll()

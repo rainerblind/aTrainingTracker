@@ -249,7 +249,7 @@ fun SupporterDebugSection() {
     }
 
     if (showPreviewJubileeDialog) {
-        val proFeatureManager = remember { ProFeatureManager(context) }
+        val proFeatureManager = remember { ProFeatureManager.getInstance(context) }
         val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
 
         FirstJubileeCelebrationDialog(

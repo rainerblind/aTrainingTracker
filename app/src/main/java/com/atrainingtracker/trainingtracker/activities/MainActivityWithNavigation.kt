@@ -820,13 +820,13 @@ class MainActivityWithNavigation :
         val route = NavRoutes.fromDrawerItemId(itemId)
         if (route != null) {
             if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_workouts && itemId != R.id.drawer_workouts)) {
-                MyPreferenceManager(applicationContext).clearWorkoutFilterCriteria()
+                MyPreferenceManager.getInstance(applicationContext).clearWorkoutFilterCriteria()
             }
             if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_routes && itemId != R.id.drawer_routes)) {
-                MyPreferenceManager(applicationContext).clearRouteFilterCriteria()
+                MyPreferenceManager.getInstance(applicationContext).clearRouteFilterCriteria()
             }
             if (itemId == R.id.drawer_start_tracking || (mSelectedFragmentId == R.id.drawer_my_locations && itemId != R.id.drawer_my_locations)) {
-                MyPreferenceManager(applicationContext).clearClusterFilterCriteria()
+                MyPreferenceManager.getInstance(applicationContext).clearClusterFilterCriteria()
             }
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId

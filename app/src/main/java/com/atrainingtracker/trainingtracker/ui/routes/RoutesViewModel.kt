@@ -69,7 +69,7 @@ class RoutesViewModel @JvmOverloads constructor(
     private val segmentsRepository: SegmentsRepository = SegmentsRepository.getInstance(application),
     private val gpxRouteImporter: GpxRouteImporter = GpxRouteImporter(application)
 ) : BaseMappableListViewModel<RouteWithPath, RouteSortOrder>(application, RouteSortOrder.DISTANCE_TO_USER, RouteSortOrder.DISTANCE_TO_USER) {
-    private val preferenceManager = MyPreferenceManager(application)
+    private val preferenceManager = MyPreferenceManager.getInstance(application)
     private val tuningDataStore = TuningPreferencesDataStore.getInstance(application)
 
     val tuningConfig: StateFlow<TuningConfig> = tuningDataStore.tuningConfigFlow

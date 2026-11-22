@@ -65,7 +65,7 @@ class SegmentListViewModel(
     private val banalServiceRepository: BANALServiceRepository
 ) : BaseMappableListViewModel<SegmentWithPath, SegmentSortOrder>(application, SegmentSortOrder.DISTANCE_TO_USER, SegmentSortOrder.DISTANCE_TO_USER) {
 
-    private val preferenceManager = MyPreferenceManager(application)
+    private val preferenceManager = MyPreferenceManager.getInstance(application)
 
     val connectedToStrava = segmentsRepository.connectedToStrava
 

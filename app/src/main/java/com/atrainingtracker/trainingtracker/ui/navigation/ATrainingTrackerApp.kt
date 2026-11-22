@@ -242,11 +242,11 @@ fun ATrainingTrackerApp(
             navController.popBackStack()
         } else if (currentRoute != NavRoutes.START_TRACKING) {
             if (currentRoute == NavRoutes.WORKOUTS) {
-                MyPreferenceManager(activity).clearWorkoutFilterCriteria()
+                MyPreferenceManager.getInstance(activity).clearWorkoutFilterCriteria()
             } else if (currentRoute == NavRoutes.ROUTES) {
-                MyPreferenceManager(activity).clearRouteFilterCriteria()
+                MyPreferenceManager.getInstance(activity).clearRouteFilterCriteria()
             } else if (currentRoute == NavRoutes.LOCATIONS) {
-                MyPreferenceManager(activity).clearClusterFilterCriteria()
+                MyPreferenceManager.getInstance(activity).clearClusterFilterCriteria()
             }
             activity.navigateToDrawerItem(R.id.drawer_start_tracking)
         } else {
@@ -887,7 +887,7 @@ fun ATrainingTrackerApp(
 
     // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308, ATT-5658)
     activity.firstJubileeCelebrationState?.let { jubileeData ->
-        val proFeatureManager = remember { ProFeatureManager(context) }
+        val proFeatureManager = remember { ProFeatureManager.getInstance(context) }
         val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
         val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
         val jubileeScope = rememberCoroutineScope()

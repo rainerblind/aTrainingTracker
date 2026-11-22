@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:32:40.681Z" hostname="rainer-HP-EliteBook-850-G5" time="0.096">
+  <properties/>
+  <testcase name="testPowerZones_migrationFromCorruptedState_fallsBackToCanonicalDefaults" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" time="0.022"/>
+  <testcase name="testPowerZones_lowBoundFtpMigration" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" time="0.017"/>
+  <testcase name="testPowerZones_defaultValuesWhenUnset" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" time="0.014"/>
+  <testcase name="testPowerZones_proportionalMigrationFromStoredZone4Max" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" time="0.019"/>
+  <testcase name="testResetToDefaults" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" time="0.021"/>
+  <testcase name="testPowerZones_monotonicValidation" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

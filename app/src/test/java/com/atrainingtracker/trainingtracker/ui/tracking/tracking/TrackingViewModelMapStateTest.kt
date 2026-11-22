@@ -118,8 +118,9 @@ class TrackingViewModelMapStateTest {
         mockkStatic(ContextCompat::class)
         every { ContextCompat.getColor(any(), any()) } returns 0xFF00FF
 
-        mockkConstructor(SettingsDataStore::class)
-        every { anyConstructed<SettingsDataStore>().getZoneDisplayOptionsFlow(any()) } returns flowOf(ZoneDisplayOptions())
+        val mockSettingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        every { mockSettingsDataStore.getZoneDisplayOptionsFlow(any()) } returns flowOf(ZoneDisplayOptions())
+        SettingsDataStore.setInstanceForTesting(mockSettingsDataStore)
 
         every { mockApplication.applicationContext } returns mockContext
         every { mockApplication.getString(any()) } returns "Start"
@@ -157,6 +158,7 @@ class TrackingViewModelMapStateTest {
             vm.viewModelScope.cancel()
         }
         createdViewModels.clear()
+        SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

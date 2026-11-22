@@ -97,7 +97,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     private val routesRepository = RoutesRepository.getInstance(application)
     private val banalRepository = BANALServiceRepository.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
-    private val preferenceManager = MyPreferenceManager(application)
+    private val preferenceManager = MyPreferenceManager.getInstance(application)
     private val knownLocationsRepo = KnownLocationsRepository.getInstance(application)
 
     val allClusters: StateFlow<List<WorkoutCluster>> = repository.allClusters

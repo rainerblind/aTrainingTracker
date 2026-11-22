@@ -56,7 +56,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val equipmentRepository = EquipmentRepository.getInstance(application)
     private val sportTypesRepository = SportTypesRepository.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
-    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+    private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager.getInstance(application)
 
     @Deprecated("Edit workout dialog fields are rendered unconditionally (REQ-UI-239)")
     val fieldPreferences: StateFlow<com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences> = prefManager.editWorkoutFieldPreferencesFlow

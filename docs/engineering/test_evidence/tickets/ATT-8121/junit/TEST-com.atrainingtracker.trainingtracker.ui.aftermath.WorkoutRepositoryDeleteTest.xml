@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeleteTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:33:08.468Z" hostname="rainer-HP-EliteBook-850-G5" time="0.022">
+  <properties/>
+  <testcase name="testWorkoutSummariesViewModel_executeDeleteOldWorkouts_wrapsCallInNonCancellable" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeleteTest" time="0.015"/>
+  <testcase name="testWorkoutRepository_deleteOldWorkouts_wrapsResyncInNonCancellable" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeleteTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

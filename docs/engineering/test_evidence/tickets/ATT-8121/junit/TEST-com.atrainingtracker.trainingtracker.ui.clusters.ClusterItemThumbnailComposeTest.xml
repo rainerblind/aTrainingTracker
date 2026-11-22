@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:33:06.193Z" hostname="rainer-HP-EliteBook-850-G5" time="3.645">
+  <properties/>
+  <testcase name="clusterItem_renders175x120ThumbnailWith12dpGapAndHandlesClicksOn411dp" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest" time="1.79"/>
+  <testcase name="clusterAndWorkoutItems_preserveMetadataWidthOn360dpWithoutIntrinsicSizeException" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest" time="0.431"/>
+  <testcase name="resolveClusterThumbnailWidthDp_enforces175dpOn411dpAndGuardsNarrowScreens" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest" time="0.234"/>
+  <testcase name="unclusteredWorkoutItem_renders175x120ThumbnailWith12dpGapAndHandlesClickOn411dp" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest" time="0.368"/>
+  <testcase name="captureLightAndDarkPreviewPng_forRule85Inspection" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest" time="0.821"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

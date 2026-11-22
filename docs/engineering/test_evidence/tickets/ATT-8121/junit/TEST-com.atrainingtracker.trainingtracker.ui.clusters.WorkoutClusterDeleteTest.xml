@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDeleteTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:33:09.860Z" hostname="rainer-HP-EliteBook-850-G5" time="3.599">
+  <properties/>
+  <testcase name="deleteCluster_clearsWorkoutAndRouteLinksWhilePreservingWorkouts_TST_SET_024" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDeleteTest" time="0.923"/>
+  <testcase name="summaryHeader_longClickOpensDeleteMenuAndInvokesCallback_TST_SET_024" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDeleteTest" time="2.676"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:34:54.615Z" hostname="rainer-HP-EliteBook-850-G5" time="0.27">
+  <properties/>
+  <testcase name="testRouteEditingStrings_9LanguageParity" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.156"/>
+  <testcase name="testRoutePreview_dynamicSelectionToggle_updatesPolylineStyling" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.015"/>
+  <testcase name="testRoutesScreen_compositionRetention_routeTabbedScreenMountedWhenEditing" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.052"/>
+  <testcase name="testRoutePreview_whenActivelyNavigating_usesProminentSolidStyling" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.0"/>
+  <testcase name="testRoutePreview_whenPassiveSelected_usesSelectedDashedStyling" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.006"/>
+  <testcase name="testRoutesScreen_doesNotHardcodeActiveNavigation" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.03"/>
+  <testcase name="testRoutePreview_whenPassiveUnselected_usesUnselectedDashedStyling" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.0"/>
+  <testcase name="testRoutesScreen_editRouteScreen_overlayContractsAndDismissal" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.0"/>
+  <testcase name="testMultiFileRouteSelection_flowDiscrimination_TST_MAP_056_5" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.01"/>
+  <testcase name="testRoutesViewModel_exposesActiveNavigatedRouteId" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

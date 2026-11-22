@@ -24,10 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.trainingtracker.settings.TuningConfig
-import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -211,9 +208,6 @@ fun ATrainingTrackerMap(
             resolveMapProperties(isDark, darkOptions)
         }
     }
-
-    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
-    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
 
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
         BoxWithConstraints(modifier = modifier) {

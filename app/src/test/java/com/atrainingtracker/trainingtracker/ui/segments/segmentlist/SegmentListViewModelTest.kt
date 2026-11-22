@@ -84,7 +84,6 @@ class SegmentListViewModelTest {
         mockkObject(SegmentsRepository.Companion)
         mockkObject(RoutesRepository.Companion)
         mockkObject(BANALServiceRepository.Companion)
-        mockkConstructor(MyPreferenceManager::class)
 
         every { SegmentsRepository.getInstance(any()) } returns mockSegmentsRepo
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
@@ -95,11 +94,14 @@ class SegmentListViewModelTest {
         every { mockSegmentsRepo.refreshingSports } returns MutableStateFlow(emptySet())
         every { mockRoutesRepo.allRoutes } returns MutableStateFlow(emptyList())
         every { mockBanalRepo.currentLocation } returns MutableStateFlow(null)
-        every { anyConstructed<MyPreferenceManager>().segmentFilterCriteriaFlow } returns MutableStateFlow(SegmentFilterCriteria())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.segmentFilterCriteriaFlow } returns MutableStateFlow(SegmentFilterCriteria())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     @After
     fun tearDown() {
+        MyPreferenceManager.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()

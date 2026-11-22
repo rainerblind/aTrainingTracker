@@ -147,7 +147,7 @@ class ProFeatureManagerTest {
         every { mockDbManager.getEarliestWorkoutYear() } returns 2018
         coEvery { mockSettingsDataStore.setPioneerSinceYear(2018) } returns Unit
 
-        val manager = ProFeatureManager(
+        val manager = ProFeatureManager.createForTesting(
             context = mockContext,
             settingsDataStore = mockSettingsDataStore,
             workoutSummariesDatabaseManager = mockDbManager,

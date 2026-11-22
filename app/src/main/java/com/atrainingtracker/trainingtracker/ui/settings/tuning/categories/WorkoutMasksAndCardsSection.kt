@@ -346,7 +346,7 @@ fun WorkoutMasksAndCardsSection(
         // Workout Detail Tabs Configuration Launcher (REQ-UI-408 / REQ-UI-414.2)
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        val prefMgr = remember(context) { MyPreferenceManager(context) }
+        val prefMgr = remember(context) { MyPreferenceManager.getInstance(context) }
         val resolvedDetailTabs = detailTabs ?: prefMgr.workoutDetailTabsOrderFlow.collectAsState(initial = remember(prefMgr) { prefMgr.getWorkoutDetailTabs() }).value
         var showTabsConfigSheet by remember { mutableStateOf(false) }
 

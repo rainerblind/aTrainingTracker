@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:30:30.483Z" hostname="rainer-HP-EliteBook-850-G5" time="14.934">
+  <properties/>
+  <testcase name="getShortUnitsId_radarApproachSpeed_imperial_matchesSpeedAndResolvesMiPerHour" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="10.246"/>
+  <testcase name="getUnitsId_radarApproachSpeed_metric_matchesSpeedAndResolvesKmh" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.11"/>
+  <testcase name="getUnitsId_radarApproachSpeed_imperial_matchesSpeedAndResolvesMilePerHour" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.106"/>
+  <testcase name="trackingViewModel_radarApproachSpeedTile_resolvesMetricAndImperialShortUnits" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="3.798"/>
+  <testcase name="getMergedDevicesUseCase_radarApproachSpeed_resolvesMetricAndImperialUnits" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.454"/>
+  <testcase name="getShortUnitsId_radarApproachSpeed_metric_matchesSpeedAndResolvesKmh" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.117"/>
+  <testcase name="radarApproachSpeed_preservesInternalUnitDeprecatedUnitIdAndDistanceFallback" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.101"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

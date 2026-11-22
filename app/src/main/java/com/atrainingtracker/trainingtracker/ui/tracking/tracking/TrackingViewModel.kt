@@ -234,7 +234,7 @@ class TrackingViewModel @JvmOverloads constructor(
     var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
-    private val settingsDataStore = SettingsDataStore(application)
+    private val settingsDataStore = SettingsDataStore.getInstance(application)
     private val tuningPreferencesDataStore by lazy { TuningPreferencesDataStore.getInstance(application) }
     private val _tuningConfig = MutableStateFlow(TuningConfig())
     val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()

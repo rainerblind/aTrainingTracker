@@ -95,7 +95,6 @@ class RoutesViewModelTest {
         mockkObject(RoutesRepository.Companion)
         mockkObject(BANALServiceRepository.Companion)
         mockkObject(SegmentsRepository.Companion)
-        mockkConstructor(MyPreferenceManager::class)
 
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepo
         every { BANALServiceRepository.getInstance(any()) } returns mockBanalRepo
@@ -105,7 +104,9 @@ class RoutesViewModelTest {
         every { mockRoutesRepo.activeNavigatedRouteId } returns MutableStateFlow(null)
         every { mockBanalRepo.currentLocation } returns MutableStateFlow(null)
         every { mockSegmentsRepo.allSegmentsWithPath } returns MutableStateFlow(emptyList())
-        every { anyConstructed<MyPreferenceManager>().routeFilterCriteriaFlow } returns MutableStateFlow(RouteFilterCriteria())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.routeFilterCriteriaFlow } returns MutableStateFlow(RouteFilterCriteria())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
     }
 
     private fun createViewModel(): RoutesViewModel {
@@ -122,6 +123,7 @@ class RoutesViewModelTest {
     fun tearDown() {
         activeViewModel?.viewModelScope?.cancel()
         activeViewModel = null
+        MyPreferenceManager.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkStatic(Log::class)

@@ -1,0 +1,598 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "7592ceafdad12f522f6b107a456c0bc1f0036c63",
+  "file_count": 147,
+  "files": {
+    "evidence_summary.json": {
+      "sha256": "91ef370d7f62df1b23cbf106da8a6d630c56504f4fafe25f798a376c8c5a77e1",
+      "size_bytes": 17074
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest.xml": {
+      "sha256": "34cc37e39b64db312bb0722e20fcd0ed505684cc33cbda93f65ac5291573eb93",
+      "size_bytes": 1263
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.ant.AntStartupCheckContractTest.xml": {
+      "sha256": "785c2e891d39f5459be707ff756bab6361fad432a355d59aec797b94d0bb3b2c",
+      "size_bytes": 549
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelFilterTest.xml": {
+      "sha256": "8734ba3bd616257d2187bd90332d9055d6aa2c8835ede84394f5acea24d59f1a",
+      "size_bytes": 570
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest.xml": {
+      "sha256": "c949bb1aa694883ca363eac92163ba4a573f6d55e90e1fa882a0beb32256353a",
+      "size_bytes": 2369
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest.xml": {
+      "sha256": "4b5a4587cce601c9d540fafcb9f6f5f680e050da02d7507f96356e3b6b55edb0",
+      "size_bytes": 1339
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest.xml": {
+      "sha256": "5897ce09eacdf2359cfb9a9b4ff460f8cdf94787d7ddd775d9a19bdf6e8f411b",
+      "size_bytes": 2463
+    },
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest.xml": {
+      "sha256": "1469ff51473234921566a16da9fdc6731e7c483e38068af875fb4c9303f95c36",
+      "size_bytes": 3886
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest.xml": {
+      "sha256": "c450969ff0bf85299d75cf5c252da73b482c43309992903c36cd556ca5159b95",
+      "size_bytes": 1615
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.LocationPermissionSafetyTest.xml": {
+      "sha256": "e0a3679ea08ae956000c1d16eec269f485e0bc9ecad40b7dc7a905810680343d",
+      "size_bytes": 1692
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityGoogleDriveStartupRecoveryTest.xml": {
+      "sha256": "ab68fa4632354747c4643546f4de34825b99055b65ed0e828d9525c226f59c1a",
+      "size_bytes": 988
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityIntentLifecycleTest.xml": {
+      "sha256": "7d74bea9708c59092f0aa432187660322630983254521d9b9bd0b9c5255daca3",
+      "size_bytes": 3013
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest.xml": {
+      "sha256": "5dd2ad3bfd96f3f25b30131fc60204ea04ba530c8fd1f008ac1f9f5cd9ec8598",
+      "size_bytes": 3389
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityStartupPermissionContractTest.xml": {
+      "sha256": "fe032b080258db2830950b95ee81dd7cf5cd5f55d564e9f9abecd50d0b6b67e3",
+      "size_bytes": 940
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.PermissionOnboardingLaunchContractTest.xml": {
+      "sha256": "fac66288514d295d2837678e37b17a46ec2864d273a943854d200fed01887f5e",
+      "size_bytes": 1157
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest.xml": {
+      "sha256": "9eb9a18beca23038248ce48fb4422162ea6f9a7efee57e339a08f0a0325c8e57",
+      "size_bytes": 1206
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AdrCompletenessContractTest.xml": {
+      "sha256": "0539a965332948ca2c2268b29eb338e0e3ef676e647f73604ad7f1b64649d4b5",
+      "size_bytes": 743
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml": {
+      "sha256": "5af0f30d1e4269e86cee16c5ac0212104a7cd224c1dce0d76936b80c06ca1863",
+      "size_bytes": 779
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": {
+      "sha256": "decad27bf9c012e5932fac0e6298d5d4e90922c5902b716add2c9408932988bf",
+      "size_bytes": 2296
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest.xml": {
+      "sha256": "a5f72b9ea63d32c321c59cbbd35970663b97b8162d6ac7eca362837b195d1923",
+      "size_bytes": 3006
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest.xml": {
+      "sha256": "04a7f52a3bd6c04199b192ec5b3e5b922dd4a7d7dde74a16e929f6384fbbfd5a",
+      "size_bytes": 1387
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml": {
+      "sha256": "5d4d1aaa7e2f118d1e715f61da1fedd76fe6b2a1f93182d07749f16c8a420d6c",
+      "size_bytes": 965
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest.xml": {
+      "sha256": "c45ad306dfd8c2412d676ba0d80ac6e2fcb001cbe4d4cc2c472c87c3e9784e36",
+      "size_bytes": 6196
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.AthleteMetricsRealSqliteMigrationTest.xml": {
+      "sha256": "2b587ecc30753c9845a28ec1a29ac4fa5db02c6ff21e7d2310949c9038b2d2cc",
+      "size_bytes": 955
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest.xml": {
+      "sha256": "801c02d33c3d3be86c7989438ed3ce69c055df39f75265fa3785031811e1bd63",
+      "size_bytes": 1469
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest.xml": {
+      "sha256": "43873c512ba25b3f6010dbd1b340c23a8c04ef0e2d7e2724f19e74b8805e7537",
+      "size_bytes": 2161
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest.xml": {
+      "sha256": "6369c4d77ebf4053e015f367581cc6802587f92dc6880824e1e9a947c7a94d57",
+      "size_bytes": 3356
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest.xml": {
+      "sha256": "160cdc77c2faee650d8a17ead1ba89c279106b403d4fe747b1224b217a88de9b",
+      "size_bytes": 938
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest.xml": {
+      "sha256": "94ee0efeafaed425c99e9d11549304d1fe381a9d52d6534ed2c226dd56f25ce0",
+      "size_bytes": 2051
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest.xml": {
+      "sha256": "d03997790ae5d610cff63067f671bc23857acae8be6811aebcdb8eadaf5b30ca",
+      "size_bytes": 3065
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.monetization.ProFeatureManagerTest.xml": {
+      "sha256": "ea4cb8ccbd9955c33e36e354c20f2759f708b01cee2141ec929c790d19807ce3",
+      "size_bytes": 1501
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest.xml": {
+      "sha256": "ef81016d35e69de7b6fc7b02307a3b80b66d7063762173a84347ac0b8871e41a",
+      "size_bytes": 2847
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.notifications.NotificationDeepLinkTest.xml": {
+      "sha256": "2aeae7df26ff9a0eb47a55b5f0b3c423f6ef0a5a98dff3b9c65d34ec601b96c9",
+      "size_bytes": 982
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.notifications.SensorBatteryAlertTest.xml": {
+      "sha256": "4aa4e55166549c21e3d006442ce6fc8e27f7f2fc912804cfecf1500b510334a0",
+      "size_bytes": 1961
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest.xml": {
+      "sha256": "9d45bf25cad5b46b8091373b751a1b3dfcac1a314cb079ed4a1398c400f89cb6",
+      "size_bytes": 855
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest.xml": {
+      "sha256": "a329ac6cd880597dfae00f02322f378bcb23be861a6e73e087d6501a7d917b39",
+      "size_bytes": 1774
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BatchMetadataLoaderTest.xml": {
+      "sha256": "61b54757d30059b4f4bac50a43edda50cddfcd6227b8b6b1057c4f3ed41d7bf7",
+      "size_bytes": 996
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.xml": {
+      "sha256": "0428b5934d669db40aa7e31ce051ebc87667b9dd72a21cdf655aaf686ecc018f",
+      "size_bytes": 5398
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.LapDisplayModePreferencesTest.xml": {
+      "sha256": "0fcf38dd4cdab37abaf4ee916722654aa9b58b26ae6386e3e9d7684c5ee8b30e",
+      "size_bytes": 1070
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest.xml": {
+      "sha256": "d3a28ea5c1af04b34730a0f384c13494abca393b6a56321990377f18b0c0394c",
+      "size_bytes": 1856
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelperNonBlockingTest.xml": {
+      "sha256": "4039b4a16394e7016eeaf36d4f0202872b9b0488792b64250c3f76db4b2d17de",
+      "size_bytes": 1678
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.SettingsDataStorePowerZonesTest.xml": {
+      "sha256": "1c0aa269fcf709234711da30fcc29ce1a5b2085e003fc83faf23c5bd78d28603",
+      "size_bytes": 1379
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.SettingsDataStoreWeightTest.xml": {
+      "sha256": "c08fc24601a88e881d0a38e6de8f308afea73b79e38508a74ae70019e180076b",
+      "size_bytes": 1345
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest.xml": {
+      "sha256": "4bccf15e786e336d0c0c325f7556d3af5d20601778a724c10ed35534501c9c2e",
+      "size_bytes": 2367
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneGaugeTest.xml": {
+      "sha256": "2e4495744af68f841a34d2592f9da4ec222a50eb32ff24946ad5001368ad5431",
+      "size_bytes": 748
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutResumptionTest.xml": {
+      "sha256": "293d331da2d8b24d611628241a3c5ff6c98c7ac67a7c3497e06a5c83ca3b46f2",
+      "size_bytes": 1507
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml": {
+      "sha256": "f6566da13de47a85dee49f0313ec239a7688cea424d784e7d9f56f7ed68c1615",
+      "size_bytes": 1986
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenDetailPreferencesContractTest.xml": {
+      "sha256": "e49181ffb8ee9b53ee3bdebaddc2e7fd6faf852805e740ff58f35a20f1e00cf2",
+      "size_bytes": 593
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenLapRoutingContractTest.xml": {
+      "sha256": "b3253399d60d7d2333eeabf5c5677c6660576236e386bad1e845272f8175a256",
+      "size_bytes": 1242
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenMetadataRoutingContractTest.xml": {
+      "sha256": "e176047adb5eff52996e775809367d9bdf6a100a4823386fd802f7dd03705bde",
+      "size_bytes": 997
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenSectionSlottingContractTest.xml": {
+      "sha256": "b8ad7f21980999fa8409ed60ae3b80b9433cc24e2f876956ea088e22d6d9806a",
+      "size_bytes": 932
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLapsTest.xml": {
+      "sha256": "031a6283096dc82e737b924be63cf2f36fa70b09af58a7b92533cb2f18a6cbd7",
+      "size_bytes": 1094
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest.xml": {
+      "sha256": "8f21e0a6e82cd4bb3f4ff2037012d68b0192490a87c22b175fbc5f40b7b27e72",
+      "size_bytes": 7287
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest.xml": {
+      "sha256": "91d52a4a4f69d9e4ff77bab85db942dea0672ca14c0c773931de843a00e1019e",
+      "size_bytes": 9744
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest.xml": {
+      "sha256": "c3adff46e7d0213fc949971bd4620af1d596a4abff0f449125e2cd09281e7f5f",
+      "size_bytes": 1205
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest.xml": {
+      "sha256": "a423048ab83be79aa5b0e312dceee7f5dc0088f333aa3f9a47f8cb85213af45b",
+      "size_bytes": 2044
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest.xml": {
+      "sha256": "5e0fe406298ed017b808658159bbf4e5980f72eaae3de4b549339d9e8bf158fe",
+      "size_bytes": 4288
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutExtremaBigSixMapperTest.xml": {
+      "sha256": "52b3af5e97d3b550511eb62487447f31d105f12d1eb5544c26cb4c8282111d05",
+      "size_bytes": 593
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBatchLoadTest.xml": {
+      "sha256": "6d82d720d3e9da4b9015898fc97b6c2d685f5a127d9dacb4bdf280d8f504f8c0",
+      "size_bytes": 612
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeleteTest.xml": {
+      "sha256": "87ffeecaf348e6efa57e35f1bbedc6d568ae082d3f737a6ba7c20e9c433a9b6a",
+      "size_bytes": 776
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryHistoricalZoneTest.xml": {
+      "sha256": "9d157cd17c26b112ef107e1e2826e82efc2720b37e5a6fb985ee85d250e22e4e",
+      "size_bytes": 768
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryProjectionTest.xml": {
+      "sha256": "47043144deec43e39ed8a69d182349b39b6c5100530243e28a163263cca452ca",
+      "size_bytes": 4539
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest.xml": {
+      "sha256": "af8bc6ba95708f8fc8e3db6302100c0b10e7ddf424b7b23e6e705fc8247ed627",
+      "size_bytes": 1696
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest.xml": {
+      "sha256": "f1175db01c62af417793c46e0bc56e924cdfbae1088420ee0dbbc661d3c7c49b",
+      "size_bytes": 1784
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutPolarRetrySyncUiTest.xml": {
+      "sha256": "253153c243ce15410789c77f1cdb1f471dfcef99b76beed2bff778f545bf4539",
+      "size_bytes": 77672
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml": {
+      "sha256": "d652d2276ad7a46d7a1113dab9c4920e7dab8b94aecbb59dc176698377692573",
+      "size_bytes": 3632
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodPrimaryRegionSelectionTest.xml": {
+      "sha256": "2450b95b7bd9f6431efd4555b1966c44a53f13673192ed56f9af37cb2f0dc16a",
+      "size_bytes": 1291
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest.xml": {
+      "sha256": "5cbccc62b659a1abc24b45c0a97761543bf1044d88aeb744a9d76ff7815f757c",
+      "size_bytes": 1948
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest.xml": {
+      "sha256": "1161c53fd8a588d96a5863b2879bc28124e8d483e3e0ee53d3535dfaac65bd2f",
+      "size_bytes": 3472
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest.xml": {
+      "sha256": "491aa32c9d170744164e69b0219253e99c1f9c3ca9d8f7a5ccdefe5685f210ca",
+      "size_bytes": 2573
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest.xml": {
+      "sha256": "037017081da0170018d247df10a2a66f8a1286ce125d93f81be96454041897a6",
+      "size_bytes": 1680
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest.xml": {
+      "sha256": "cb52de9c1ade2434733e11434dabd1b3776f379e36e32a2d89e55c353b4a9aed",
+      "size_bytes": 1040
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest.xml": {
+      "sha256": "9c8f315b29f6ae03564dbb878f9efe8178c7c19d2dac507f9ca85a81191d9f8d",
+      "size_bytes": 1900
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest.xml": {
+      "sha256": "c9b7a7ae8e73fbcaae9426a81f84ecd0c7e03cc54559d7badeac039fe5735eaf",
+      "size_bytes": 2558
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest.xml": {
+      "sha256": "36ebc114caea836b74b4513b86f3db594b62ab1b6826a2412aa535bf3ba99131",
+      "size_bytes": 1059
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest.xml": {
+      "sha256": "c79b85cd791b73fb67c1c3b86a005af1961d02f12cd578c070fb992033e81da2",
+      "size_bytes": 2392
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest.xml": {
+      "sha256": "14372e8efb71065e7a4a20fa29adc79adc2b1e174d834a107e702a5f29919fa9",
+      "size_bytes": 9308
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest.xml": {
+      "sha256": "29dd578f1a6dc7914b3212ad63d964eba4dd54592558437236f3d96702c9845c",
+      "size_bytes": 1262
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManagerTest.xml": {
+      "sha256": "793843618cbd56ec621346148ba5106462a18d2cad3d99500134d8801bf5ed93",
+      "size_bytes": 1187
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.branding.SupporterBadgeContractTest.xml": {
+      "sha256": "813d4f54c7ccc68a1eddc8bb509d78c56400043bc35a28b927873353adaa20c7",
+      "size_bytes": 1501
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterImperialAndLocaleUiTest.xml": {
+      "sha256": "62f456a5d2f5c7bec7739cf4e8c525b3f4a98eeaaa6107c01adc64d3dab46714",
+      "size_bytes": 780
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogContractTest.xml": {
+      "sha256": "00a624532ada3fc724550710699e91e7290dc4e7ec4ccd80e44e1d66befd9483",
+      "size_bytes": 1514
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest.xml": {
+      "sha256": "67c8d073db136203bb8b6171a62ad51798ebe5a51c8f05fe1c86aa30685dc61d",
+      "size_bytes": 1659
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemThumbnailComposeTest.xml": {
+      "sha256": "bb36725db5375563e6b4c3766c2d72903d3f9685fbe06ca09509ce2786ba7ee1",
+      "size_bytes": 1371
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterThumbnailPathPreviewDelegationTest.xml": {
+      "sha256": "95b769c413156e6e5b2517c97759983a6bcf7ea6e4c2b4923321d01fe5263c9a",
+      "size_bytes": 1219
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDeleteTest.xml": {
+      "sha256": "decad56c87a4117e037347776e5e07d0ec86bb0ee33c060caf58f21aa61e88ad",
+      "size_bytes": 854
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest.xml": {
+      "sha256": "eea6a19ef3146f93ff5d8259def3fb712fb467d46dfa443586f454c08462347e",
+      "size_bytes": 1150
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersSelectableMarkersTest.xml": {
+      "sha256": "0da8f29f327fa2f7ced21a711ebf2b106c6ae26ae3a76ed4f407b5afe71aba67",
+      "size_bytes": 605
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersTabsUiTest.xml": {
+      "sha256": "823f78ce4336ea62e90c51976ad47f007d604c5e5774436dd2968de8f05bed48",
+      "size_bytes": 1026
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest.xml": {
+      "sha256": "79617a71adcc06729138d0c1439f5055bc219f7d40b5ac6801727c8bb0b53c77",
+      "size_bytes": 4184
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest.xml": {
+      "sha256": "57e8ded27672c37870401183fcff3b74e46ca53ad53ac0e72a84c2f92ab78a8d",
+      "size_bytes": 2337
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.UnifiedCardSpacingUiTest.xml": {
+      "sha256": "8663ddcd9748cafd59abd079b3724b3095a8995295253e72b069a66eacdd0e90",
+      "size_bytes": 578
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialogTest.xml": {
+      "sha256": "61a58042da1ef89ec654f42f5d75e4900ad81374e2cac0277ab3ca27ffc9da01",
+      "size_bytes": 1866
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest.xml": {
+      "sha256": "32abbc7af99d699215c606b0195cdb17bc05a3803f9bffdd88f0d402e2a247cb",
+      "size_bytes": 1404
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubSynchronizationTest.xml": {
+      "sha256": "5408a6b893e695c58d81383ba4bbbe2a3b87fbe384c4c88e0f59b474a0d69b5e",
+      "size_bytes": 1697
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest.xml": {
+      "sha256": "743beb9bbf312500c1a390f48f255f187acf9fa56897ddd80941c0ed0b15c655",
+      "size_bytes": 1136
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest.xml": {
+      "sha256": "b207ea0dd0c47d5d03a693a16ca336366ce25b95ff00c88ca6adec06208d904b",
+      "size_bytes": 2376
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest.xml": {
+      "sha256": "6a40423daf4e2457f8808b848170f50513b6c11edc751984ae617b964e914161",
+      "size_bytes": 1707
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest.xml": {
+      "sha256": "5d9912be1e34d5c63dd8c49dc37536f18d86eab1dbd4d11289002903cb750d5f",
+      "size_bytes": 4035
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelFallbackTest.xml": {
+      "sha256": "374ac4dd8a95a2ddac3f96ec9d39be1ba1b29a5e636f33c85ce96c6162d0748c",
+      "size_bytes": 775
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest.xml": {
+      "sha256": "edbe0b89719ef6aceec8f121250312630345c383de0c37055a526736897c62f3",
+      "size_bytes": 2227
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest.xml": {
+      "sha256": "c1e2a41fa36cf88d7fb614907be048e7fec519ad6f22a130e426fc2ff94da4b7",
+      "size_bytes": 1162
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapScreenMetadataRoutingContractTest.xml": {
+      "sha256": "d869288b6633530a234b05d181e0c551ae658280294d5b9d80e00d8e3425d510",
+      "size_bytes": 799
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapViewModelTelemetryTest.xml": {
+      "sha256": "f4e97a96bc6997a5c2bfb1a00e16a48ef6fce451a752a275b2677cbddb26ea06",
+      "size_bytes": 743
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest.xml": {
+      "sha256": "df145895e6f5a71befd46654bfa87e06dfc358b19bdce98256891c2fbfcfabf2",
+      "size_bytes": 2710
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest.xml": {
+      "sha256": "785f9257d68987a34853e8fd47c0a9f2f60ac45ff01049f447eb4f0a6b26c776",
+      "size_bytes": 1366
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.MainActivityWithNavigationInteropTest.xml": {
+      "sha256": "a1ad0b7f3fec66e9602b16bb54a358863c5b4d0d5918c3b2b083b89647db2a35",
+      "size_bytes": 1601
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest.xml": {
+      "sha256": "9422681e22833cfd98048164355b5423d3fc680c51196787e2ca370af00ba1cf",
+      "size_bytes": 1853
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest.xml": {
+      "sha256": "a42f74dd9d5f28db28836a912d50c2d5defbaa2c908172a79db242c9013a04e4",
+      "size_bytes": 3045
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest.xml": {
+      "sha256": "18b079f6ecdeaa0996713f7eb92103e74053b8c45b6b972819c699f8ada75073",
+      "size_bytes": 1280
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.routes.RoutesScreenContractTest.xml": {
+      "sha256": "55814385ec0394f8ac6ab52ad36d2b906bd0288b01ea6c8668482520ad9744da",
+      "size_bytes": 2138
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest.xml": {
+      "sha256": "459407753161406255e93cf29e17566359aea322eaa18a98cbc8d50f6a9840bc",
+      "size_bytes": 1330
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest.xml": {
+      "sha256": "2b571b85b55100b1e2eee04fa247c8700a4335d4e2c6208c4f0f404be44ef3d4",
+      "size_bytes": 1327
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentListViewModelTest.xml": {
+      "sha256": "fac258195a9b0effa0cc3fa87e608acaffbf595a442b4bc5b41564d381d09f08",
+      "size_bytes": 1054
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAftermathContractTest.xml": {
+      "sha256": "83d82439cf40c4de76ca0a4488b66ee29ba45082a87c31851407883d5720926d",
+      "size_bytes": 816
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningModularityTest.xml": {
+      "sha256": "ee5fec18950e1886fd02df6a542d52ab74935ec3d559403c20584717667a345f",
+      "size_bytes": 719
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningPaceCeilingContractTest.xml": {
+      "sha256": "d0b9d0907183f7be4f7246ef520713a697e52645961322c1a3061e93c62157a0",
+      "size_bytes": 984
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest.xml": {
+      "sha256": "c79a89890cd0c3633321e3b02072bf1280dec8aff977fdf70ab23b4b1cd4e8c0",
+      "size_bytes": 1438
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest.xml": {
+      "sha256": "fc147ed2091f984cd227b3b9545d57b139e255977cf0c3019e61682a650baaaa",
+      "size_bytes": 1923
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.LapDisplayModeSettingsTest.xml": {
+      "sha256": "058a30bfa06663d092de47c1554bc8c634328d85e53946829fd09dcc6ad1586c",
+      "size_bytes": 947
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest.xml": {
+      "sha256": "99109c1296c1aef484920468c9db72c966ac790408cb77aaed9f2ef7850d9b8f",
+      "size_bytes": 1311
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsBehaviorTest.xml": {
+      "sha256": "5939cc491c984b590d9ff06d0c5e0b9eea97ec1bade007036ed423f3197db10d",
+      "size_bytes": 609
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest.xml": {
+      "sha256": "7a3e37e8fe8b58042cb47d198a3ea18f5c98871cca5a513f136515eeef8eafc8",
+      "size_bytes": 2296
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest.xml": {
+      "sha256": "04ed3a22c2b385faa1c47e09a968acb69153c99b02c59c6e35fe5c7682a1df2e",
+      "size_bytes": 1289
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMathTest.xml": {
+      "sha256": "6022638850ec6d174e4157493ff1c3a456153a7955465cada30664df3fa2d822",
+      "size_bytes": 1522
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.StatsAndSensorStatusUiTest.xml": {
+      "sha256": "72abc36e44d6e2c8c059746afed77d0705430aa7ab00295806c2db4081d6d9eb",
+      "size_bytes": 831
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest.xml": {
+      "sha256": "58512c906b1859755bcf9a9dd169636ad38f5554ab00826af8bf654603700abc",
+      "size_bytes": 1711
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridLandscapeLayoutTest.xml": {
+      "sha256": "7b037b836520409bda1855db9c8da8493422b90f99df9e192aabfcd806827036",
+      "size_bytes": 1345
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest.xml": {
+      "sha256": "87db894ecb73830f0e87b39b76eb24cc21d5fe05440266346bd24d985b39dfec",
+      "size_bytes": 980
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest.xml": {
+      "sha256": "7b4effbda858d4cfe6ef8faca200b12ecfd49dd4f5ef5c410a9b06c1ef310944",
+      "size_bytes": 1653
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest.xml": {
+      "sha256": "26fb9e0ee567d27c8b9b7c7f0f214484c3036de22c490fb295a4588eae6211bc",
+      "size_bytes": 1256
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelLiveDriftTest.xml": {
+      "sha256": "329e23c93caa851a9962448378b889b07c9d19e7524844a25853c74003b45d7f",
+      "size_bytes": 769
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest.xml": {
+      "sha256": "fb07896a1146365d28f50f648c09e68899d80dcf33987594a0fd44822dbec4c8",
+      "size_bytes": 1627
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest.xml": {
+      "sha256": "16d3ca14354c6b8c024ca121bfb3c871922b25a4ad280cbeac595a3a2f127a2e",
+      "size_bytes": 919
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest.xml": {
+      "sha256": "970b9f6ff1195a9a542aff29cc854ee637c56dd1c62a5c8b81abec5a3247c607",
+      "size_bytes": 1007
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSparklineTest.xml": {
+      "sha256": "0e7315cafb4dbca8756375b652867ca7e303a7f13f5e79cc959cde78dc6e17f2",
+      "size_bytes": 1227
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest.xml": {
+      "sha256": "ca451118521f0b3ea8f821ef461974a2b1e3d92e59053a862608b99a7b20dd8e",
+      "size_bytes": 2767
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest.xml": {
+      "sha256": "c13c6dca7414ebf16d0c4c180f6eaf910407cd66a426a78aedf0ca6a02441d4e",
+      "size_bytes": 2219
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest.xml": {
+      "sha256": "5135a4cda7b55232c7ca20e2a1b0bf9989c06da176e8f94123268777506b42e1",
+      "size_bytes": 2388
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest.xml": {
+      "sha256": "96f7cbcb0f61519a317090b3000d9bb048e98bc367f67c3ecdeb311fae0d4bfe",
+      "size_bytes": 2281
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest.xml": {
+      "sha256": "03b092194f781633748732c6d00e557393bdac1410d64342c600898701ff2a37",
+      "size_bytes": 1679
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.ZoneCalculatorDialogContractTest.xml": {
+      "sha256": "b7dee966709ba27c1f2ad6b19f516eebd9b0786f03aca1a9eb486c1001c124de",
+      "size_bytes": 1235
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.ZoneOnboardingBannerContractTest.xml": {
+      "sha256": "7215c6064e1a8a93c303f1ba516a5cfab80f0f7beaac16b1b8fb33ddd3e5e5d8",
+      "size_bytes": 1077
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.ZonesSettingsHeaderContractTest.xml": {
+      "sha256": "7cf840eecb9b6ec9f9bc2a76114054a268b237c504924d17c64657953f16afa1",
+      "size_bytes": 876
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.ZonesSettingsPreviewLayoutTest.xml": {
+      "sha256": "9326e010358aa349095ee2677e36c54265837e0e1c0b7467ce653b97839e2c06",
+      "size_bytes": 750
+    },
+    "junit/TEST-com.atrainingtracker.trainingtracker.zones.ZonesSettingsPreviewPillsContractTest.xml": {
+      "sha256": "af070b3417d99a8f06242a0c2efad153006b8b3851c9b560fbfef09ec655a424",
+      "size_bytes": 978
+    },
+    "screenshots/att8121_emulator_smoke.png": {
+      "sha256": "d2184cc8cedbef6701621b125d317c154930d875bd15ee41f38fba3608eac5eb",
+      "size_bytes": 154288
+    }
+  },
+  "run_started_utc": "2026-11-22T06:29:59.353267+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8121"
+}

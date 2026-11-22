@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:35:01.680Z" hostname="rainer-HP-EliteBook-850-G5" time="0.015">
+  <properties/>
+  <testcase name="testReorderDragState_swapLogicAndBoundaryClamping" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest" time="0.014"/>
+  <testcase name="testWorkoutSummaryAndTrackOnMap_exportStatusContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest" time="0.001"/>
+  <testcase name="testReorderingLogic_moveUpAndDown" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest" time="0.0"/>
+  <testcase name="testReorderingBoundaries_disabledEdgeCases" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest" time="0.0"/>
+  <testcase name="testAdvancedTuningDialog_structuralContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutSectionReorderContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

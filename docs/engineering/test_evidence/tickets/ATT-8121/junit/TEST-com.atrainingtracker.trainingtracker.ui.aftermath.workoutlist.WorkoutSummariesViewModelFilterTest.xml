@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:32:55.522Z" hostname="rainer-HP-EliteBook-850-G5" time="1.168">
+  <properties/>
+  <testcase name="testClusterFilterCriteria_reconcilesOnRenameMergeAndDelete_TST_PER_048_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.79"/>
+  <testcase name="testWorkoutsFlow_SortOrderInterplayWithFilter" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.04"/>
+  <testcase name="testGetFilteredWorkouts_enforcesTemporalPeriodBoundsAndBSportType_TST_PER_009" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.043"/>
+  <testcase name="testWorkoutsFlow_FilteredByOriginSourceAndSportConjunction" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.031"/>
+  <testcase name="testWorkoutsFlow_FilteredByOriginSource" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.035"/>
+  <testcase name="testWorkoutsFlow_FilteredBySearchQuery" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.034"/>
+  <testcase name="testWorkoutsFlow_ClearFilterRestoresAllWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.029"/>
+  <testcase name="testGetFilteredWorkouts_filtersByBSportTypeWhenSportIdNull_TST_UNT_013" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.059"/>
+  <testcase name="testGetFilteredWorkouts_filtersBySubSportId_TST_UNT_012" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.037"/>
+  <testcase name="testWorkoutsFlow_UnfilteredCombinesWithSortOrder" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.031"/>
+  <testcase name="testWorkoutsFlow_FilteredByYear" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest" time="0.034"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

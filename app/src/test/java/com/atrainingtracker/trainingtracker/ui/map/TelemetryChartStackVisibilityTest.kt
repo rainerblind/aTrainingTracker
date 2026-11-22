@@ -111,7 +111,7 @@ class TelemetryChartStackVisibilityTest {
     fun testMyPreferenceManager_persistsHiddenChartsAndIgnoresUnknownTokens() = runBlocking {
         // TST-PER-052.4
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val prefManager = MyPreferenceManager(context)
+        val prefManager = MyPreferenceManager.createForTesting(context)
         prefManager.dataStore.edit { it.remove(MyPreferenceManager.HIDDEN_TELEMETRY_CHARTS) }
 
         assertEquals(emptySet<TelemetryChartKind>(), prefManager.hiddenTelemetryChartsFlow.first())

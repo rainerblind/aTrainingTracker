@@ -93,8 +93,9 @@ class PeriodPrimaryRegionSelectionTest {
         WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
 
-        mockkConstructor(MyPreferenceManager::class)
-        every { anyConstructed<MyPreferenceManager>().enabledPeriodMarkerTypesFlow } returns MutableStateFlow(emptySet())
+        val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
+        every { mockPrefManager.enabledPeriodMarkerTypesFlow } returns MutableStateFlow(emptySet())
+        MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
         mockApp = mockk(relaxed = true)
         repo = PeriodsRepository(mockApp)
@@ -109,6 +110,7 @@ class PeriodPrimaryRegionSelectionTest {
         clearPeriodCardMapStateCache()
         PeriodSummariesDatabaseManager.setInstanceForTesting(null)
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        MyPreferenceManager.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         PeriodsRepository.setInstanceForTesting(null)
         Dispatchers.resetMain()

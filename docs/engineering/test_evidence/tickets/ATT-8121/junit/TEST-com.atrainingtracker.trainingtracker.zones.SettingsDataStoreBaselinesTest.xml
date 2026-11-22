@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:46:43.050Z" hostname="rainer-HP-EliteBook-850-G5" time="6.723">
+  <properties/>
+  <testcase name="getDefaultValueAndResetToDefaults_matchCanonicalBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="6.606"/>
+  <testcase name="saveCalculatedHeartRateZones_atomicBatchCommit_updatesAllFields" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.027"/>
+  <testcase name="saveCalculatedPowerZones_atomicBatchCommit_updatesAllFields" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.022"/>
+  <testcase name="saveCalculatedPowerZones_invalidFtpOrCutoffs_abortsWithoutMutation" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.019"/>
+  <testcase name="resetToDefaults_resetsCustomizedFlagToFalse" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.011"/>
+  <testcase name="defaultConstantsAndSnapshot_matchCanonicalBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.006"/>
+  <testcase name="unconfiguredState_returnsNullBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.009"/>
+  <testcase name="manualCutoffEdit_flipsCustomizedFlagToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

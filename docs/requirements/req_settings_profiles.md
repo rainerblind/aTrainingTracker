@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.40  
+**Version**: 1.0.42  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 126
+**Total Requirements**: 127
 
 ---
 
@@ -3030,6 +3030,30 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-128: Preference/DataStore Singleton Constructor Privatization, `applicationContext` Normalization & Leak Elimination (`ATT-8121`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-130`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `SettingsDataStore.kt`, `MyPreferenceManager.kt`, `ProFeatureManager.kt`, `ATrainingTrackerMap.kt`, `ZonesSettingsViewModel.kt`, `ZonesSettingsActivity.kt`, `TrackingViewModel.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SupporterDebugSection.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Although `TuningPreferencesDataStore` was already privatized in `ATT-7874` (`REQ-TRK-079.1`), `SettingsDataStore`, `MyPreferenceManager`, and `ProFeatureManager` still expose public constructors that allocate uncancelled `SupervisorJob` coroutine scopes and/or retain raw `Activity` contexts across 24 production call sites, while `ATrainingTrackerMap.kt` retains an unused `tuningConfigFlow.collectAsState` collector (`ATT-8121`).
+- **Description**:
+  1. *Singleton Encapsulation & `applicationContext` Normalization (`REQ-SET-128.1`)*: `SettingsDataStore`, `MyPreferenceManager`, and `ProFeatureManager` SHALL enforce `private` primary constructors (preventing direct production instantiation at compile time), normalize retained contexts to `context.applicationContext ?: context`, and provide thread-safe `getInstance(context)` alongside `@VisibleForTesting internal fun createForTesting(...)` (with injectable test `CoroutineScope`/`DataStore`) and synchronized `setInstanceForTesting(...)`.
+  2. *Shared Scope Reuse & Production Caller Migration (`REQ-SET-128.2`)*: `MyPreferenceManager` SHALL reuse a single process-wide `CoroutineScope(SupervisorJob() + Dispatchers.IO)` across calls (zero orphaned `SupervisorJob` allocations per invocation). All production callers of `SettingsDataStore(...)` (5 sites in 3 files), `MyPreferenceManager(...)` (17 sites in 13 files), and `ProFeatureManager(...)` (2 sites in 2 files) SHALL migrate to `getInstance(...)`.
+  3. *Dead Map Collector Removal (`REQ-SET-128.3`)*: `ATrainingTrackerMap.kt` SHALL remove the unused `tuningDataStore`/`tuningConfig` (`tuningConfigFlow.collectAsState`) local declarations and their unused imports.
+  4. *JVM/Robolectric Singleton Isolation & Hot-Path Invariants (`REQ-SET-128.4`)*: `SettingsDataStore.getInstance(context)` and `MyPreferenceManager.getInstance(context)` MUST preserve `InMemoryPreferencesDataStore` fallback for unmocked JVM tests while upgrading an auto-created fallback (`!isTestOverride`) when a real `filesDir` context arrives, with zero added `runBlocking` in `SettingsDataStore.kt` (`REQ-SET-079`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SettingsDataStore`, `MyPreferenceManager`, and `ProFeatureManager`, *When* inspected reflectively and called via `getInstance(activity)` and `getInstance(application)`, *Then* zero non-synthetic public constructors exist, `getInstance` returns identical singleton instances, and retained contexts are `applicationContext` (never `Activity`).
+• *Given* repeated calls to `MyPreferenceManager.getInstance` / `createForTesting`, *When* inspected, *Then* all instances share one process-wide `SupervisorJob` scope without allocating orphaned scopes.
+• *Given* `ATrainingTrackerMap.kt`, *When* rendered or inspected, *Then* no unused `TuningPreferencesDataStore` collector exists.
+
+**Invariants**: `TuningPreferencesDataStore.kt` untouched (`<= 2,410` LoC, `REQ-TRK-079.1`); zero `runBlocking` in `SettingsDataStore` reads (`REQ-SET-079`); `AndroidViewModel` `@JvmOverloads` reflective constructors preserved; `0` UI string changes.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3074,3 +3098,5 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.38` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Stage 6 Bounce 1/3 heal: gated `BTLEHeartRateDevice` `0x10` RR parsing on `decision.getAcceptForSensor()`, hardened `PolarOnlineStreamingBridge` (`1,485/1,500` LoC) Verity PPI TOCTOU (`preAcquire` + post-suspend recheck + `processPpiData` workout guard + `forceStopFirmwarePpi` on workout connect & `recoverHrStream`), added active-owner guard to `PolarPmdStreamCoordinator.OneShotTimer` (`599/1,500`), added drift-free `PolarHrStreamHealthMonitor.nextCheckDelayMs()` (`389` LoC) + `resumeAfterOfflineSync`/`evaluateHrStaleness` timer re-arming + `resetRrAndOpticalArtifactState` tier re-sync (`+7` tests, `130/130 PASS`), and set `[Implemented]` pending Gate 4 / Stage 5 Bounce 1 re-verification. |
 | `1.0.39` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `REQ-SET-126` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9575` @ `1099f4a9`, `Rule 7.5`, `0` `app/` drift): `130/130 PASS` across 11 Tier-1 suites (`24/24` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
 | `1.0.40` | 2026-11-22 | Lane 3 Author (`ATT-9174`, `--as agent1`) | `ATT-9174` | Added and verified `REQ-SET-127` (`EditWorkoutScreen` immediate Polar pending retry sync banner, race-free dismiss persistence, post-sync refresh via `PolarRetrySyncCoordinator.completedWorkoutEvents`, `outerPadding` flush alignment; `65/65 PASS` across 10 Tier-1 suites + Light/Dark Compose PNG + live `emulator-5554` verification). |
+| `1.0.41` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Added `REQ-SET-128` (`[Planned]`, `.1`–`.4`) for privatizing `SettingsDataStore`, `MyPreferenceManager`, and `ProFeatureManager` constructors, normalizing `applicationContext`, reusing a shared `SupervisorJob` scope in `MyPreferenceManager`, migrating all 24 production callers to `getInstance`, removing the dead `tuningConfig` collector in `ATrainingTrackerMap.kt`, and preserving JVM/Robolectric `InMemoryPreferencesDataStore` singleton isolation (`N/A - 0 string changes`). |
+| `1.0.42` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Promoted `REQ-SET-128` to `[Verified]` following Stage 4/5 construction & verification (`231/231 PASS` across 34 targeted suites incl. `PreferenceSingletonsLifecycleTest` `7/7`, `ArchitectureConformanceContractTest` `11/11`, `0` new Kotlin warnings, live `emulator-5554` smoke install & `read_file` PNG verified, `CRASH_LOGCAT_CLEAN`). |

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:32:35.451Z" hostname="rainer-HP-EliteBook-850-G5" time="13.537">
+  <properties/>
+  <testcase name="testUpdateIsTrainer_setsTrainerTrueAndClearsCommute" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="1.169"/>
+  <testcase name="testCreateNewCluster_resetsManualFlag_andUpdatesWorkoutName" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.947"/>
+  <testcase name="testTogglingCommuteOff_doesNotAffectTrainer" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.807"/>
+  <testcase name="testCreateNewClusterInitialReload_adoptsClusterIdWhileAllWorkoutsRefreshPreservesIt_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.785"/>
+  <testcase name="testEditWorkoutViewModel_initializesAndUpdatesSyncToHealthConnect" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.782"/>
+  <testcase name="testPolarRetrySyncCompletion_refreshesMatchingWorkoutAndPreservesUserEdits_tstSet129_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.849"/>
+  <testcase name="testUpdateIsCommute_setsCommuteTrueAndClearsTrainer" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.819"/>
+  <testcase name="testReactiveTelemetryRefresh_preservesAllUserEditsAndSkipsSuggestionRewrites_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.788"/>
+  <testcase name="testDismissPolarSyncPending_clearsStatePersistsAndSurvivesStaleRefresh_tstSet129_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.851"/>
+  <testcase name="testUpdateSportName_reactivelyRefreshesClusterSuggestionsAndDropsScore_TST_SET_046" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.858"/>
+  <testcase name="testUnassignCluster_resetsManualFlag_andRevertsToFallbackName" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.934"/>
+  <testcase name="testUpdateIsRace_operatesIndependentlyOfCommuteAndTrainer" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.768"/>
+  <testcase name="testOnWorkoutNameChanged_setsManualFlag_andProtectsAgainstRepoEmissions" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.79"/>
+  <testcase name="testApplyClusterIdentity_updatesWorkoutName_andResetsManualFlag" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.77"/>
+  <testcase name="testOnSportTypeSelected_noUploadStravaMapping_setsUploadToStravaZero_TST_INT_002" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.812"/>
+  <testcase name="testRepositoryEmission_whenManualFlagFalse_preservesNewClusterName" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest" time="0.805"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
