@@ -77,6 +77,7 @@ class BANALServiceRepositoryPauseIsolationTest {
         every { mockContext.applicationContext } returns mockContext
 
         BANALServiceRepository.resetForTesting(null)
+        BANALServiceRepository.setDispatcherForTesting(testDispatcher)
         setTrackingMode(TrackingMode.TRACKING)
     }
 

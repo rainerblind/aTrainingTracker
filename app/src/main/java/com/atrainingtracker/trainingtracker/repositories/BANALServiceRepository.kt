@@ -117,7 +117,11 @@ data class SparklineRegistration(
     val filterConstant: Double,
     val sourceDeviceName: String?,
     val configHash: Int,
-    val buffer: LiveSparklineBuffer
+    val buffer: LiveSparklineBuffer,
+    val sourceDeviceId: Long = -1L,
+    val deviceIdHash: Int = if (sourceDeviceId > 0L) {
+        Objects.hash(sensorType, filterType, filterConstant, sourceDeviceId)
+    } else 0
 )
 
 
@@ -128,13 +132,16 @@ data class SparklineRegistration(
 class BANALServiceRepository private constructor(context: Context) {
 
     private val appContext = context.applicationContext
-    private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    internal val repositoryDispatcher: CoroutineDispatcher = dispatcherOverrideForTesting ?: Dispatchers.Default
+    private val repositoryScope = CoroutineScope(repositoryDispatcher + SupervisorJob())
 
     // --- Live Cockpit Sparkline Buffers (REQ-TRK-059.6, ATT-6710) ---
     private val sparklineBuffers = ConcurrentHashMap<Long, SparklineRegistration>()
 
     private var workoutSamplesRepo: WorkoutSamplesRepository = WorkoutSamplesRepository.getInstance(context)
     private val trackLock = Any()
+    private val itpmsLock = Any()
+    private val connectionLock = Any()
 
     @Volatile
     private var cachedRehydrationSamples: List<WorkoutTelemetrySample>? = null
@@ -166,6 +173,14 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _allFilteredSensorData = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
     val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>> = _allFilteredSensorData.asStateFlow()
     // Note that we get the filtered sensor data from the BANALServiceComm
+
+    // Lightweight decoupled liveness signals so steady-value StateFlow conflation on
+    // _allFilteredSensorData never freezes sparkline progression or falsely triggers W'bal staleness (REQ-UI-2800.1).
+    private val _sparklineTick = MutableStateFlow(0L)
+    val sparklineTick: StateFlow<Long> = _sparklineTick.asStateFlow()
+
+    private val _wPrimeTelemetryHeartbeat = MutableStateFlow(0L)
+    val wPrimeTelemetryHeartbeat: StateFlow<Long> = _wPrimeTelemetryHeartbeat.asStateFlow()
 
     // The name of the device the BANALService is currently searching for (e.g., "Heart Rate Monitor")
     private val _searchingForDevice = MutableStateFlow<String?>(null)
@@ -439,9 +454,26 @@ class BANALServiceRepository private constructor(context: Context) {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as? BANALService.BANALServiceComm
             if (DEBUG) Log.i(TAG, "onServiceConnected - binder=$binder")
-            _serviceBinder.value = binder // This "wakes up" the observation loop
-            isBoundToBanalService = true
-            isBinding = false
+            val shouldUnbindLate = synchronized(connectionLock) {
+                isBinding = false
+                if (bindReferenceCount <= 0) {
+                    isBoundToBanalService = false
+                    _serviceBinder.value = null
+                    true
+                } else {
+                    isBoundToBanalService = true
+                    _serviceBinder.value = binder // This "wakes up" the observation loop
+                    false
+                }
+            }
+            if (shouldUnbindLate) {
+                try {
+                    appContext.unbindService(this)
+                } catch (e: IllegalArgumentException) {
+                    Log.e(TAG, "Late unbindService skipped: ${e.message}")
+                }
+                return
+            }
             if (binder != null) {
                 registeredRrBeatListeners.forEach { binder.addRrBeatListener(it) }
             }
@@ -450,9 +482,11 @@ class BANALServiceRepository private constructor(context: Context) {
 
         override fun onServiceDisconnected(name: ComponentName?) {
             if (DEBUG) Log.i(TAG, "onServiceDisconnected")
-            _serviceBinder.value = null // This suspends the observation loop
-            isBoundToBanalService = false
-            isBinding = false
+            synchronized(connectionLock) {
+                _serviceBinder.value = null // This suspends the observation loop
+                isBoundToBanalService = false
+                isBinding = false
+            }
         }
     }
 
@@ -461,13 +495,31 @@ class BANALServiceRepository private constructor(context: Context) {
      * Uses startService first to ensure the service remains alive even if the Activity unbinds.
      */
     fun bindToBANALService() {
-        bindReferenceCount++
-        if (DEBUG) Log.i(TAG, "bindToBANALService() - count=$bindReferenceCount, isBound=$isBoundToBanalService")
-        if (!isBoundToBanalService && !isBinding) {
-            isBinding = true
+        val shouldBind = synchronized(connectionLock) {
+            bindReferenceCount++
+            if (DEBUG) Log.i(TAG, "bindToBANALService() - count=$bindReferenceCount, isBound=$isBoundToBanalService")
+            if (!isBoundToBanalService && !isBinding) {
+                isBinding = true
+                true
+            } else {
+                false
+            }
+        }
+        if (shouldBind) {
             val intent = Intent(appContext, BANALService::class.java)
-            appContext.safeStartService(intent, TAG)
-            appContext.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
+            var bound = false
+            try {
+                appContext.safeStartService(intent, TAG)
+                bound = appContext.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
+            } finally {
+                if (!bound) {
+                    synchronized(connectionLock) {
+                        if (!isBoundToBanalService) {
+                            isBinding = false
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -475,14 +527,21 @@ class BANALServiceRepository private constructor(context: Context) {
      * Unbinds from the service. The observation loop will automatically stop.
      */
     fun unbindFromBANALService() {
-        if (bindReferenceCount > 0) bindReferenceCount--
-        if (DEBUG) Log.i(TAG, "unbindFromBANALService() - count=$bindReferenceCount")
-        
-        if (bindReferenceCount == 0 && isBoundToBanalService) {
-            try {
+        val shouldUnbind = synchronized(connectionLock) {
+            if (bindReferenceCount > 0) bindReferenceCount--
+            if (DEBUG) Log.i(TAG, "unbindFromBANALService() - count=$bindReferenceCount")
+            if (bindReferenceCount == 0 && (isBoundToBanalService || isBinding)) {
                 _serviceBinder.value = null
-                appContext.unbindService(banalServiceConnection)
                 isBoundToBanalService = false
+                isBinding = false
+                true
+            } else {
+                false
+            }
+        }
+        if (shouldUnbind) {
+            try {
+                appContext.unbindService(banalServiceConnection)
             } catch (e: IllegalArgumentException) {
                 Log.e(TAG, "Service not registered or already unbound: ${e.message}")
             }
@@ -494,13 +553,21 @@ class BANALServiceRepository private constructor(context: Context) {
      * and releasing the service connection when idle (REQ-TRK-049.2).
      */
     fun forceUnbindFromBANALService() {
-        if (DEBUG) Log.i(TAG, "forceUnbindFromBANALService() - resetting count=$bindReferenceCount, isBound=$isBoundToBanalService")
-        bindReferenceCount = 0
-        if (isBoundToBanalService) {
-            try {
+        val shouldUnbind = synchronized(connectionLock) {
+            if (DEBUG) Log.i(TAG, "forceUnbindFromBANALService() - resetting count=$bindReferenceCount, isBound=$isBoundToBanalService, isBinding=$isBinding")
+            bindReferenceCount = 0
+            if (isBoundToBanalService || isBinding) {
                 _serviceBinder.value = null
-                appContext.unbindService(banalServiceConnection)
                 isBoundToBanalService = false
+                isBinding = false
+                true
+            } else {
+                false
+            }
+        }
+        if (shouldUnbind) {
+            try {
+                appContext.unbindService(banalServiceConnection)
             } catch (e: IllegalArgumentException) {
                 Log.e(TAG, "Service not registered or already unbound: ${e.message}")
             }
@@ -530,8 +597,14 @@ class BANALServiceRepository private constructor(context: Context) {
                         // --- FILTERED SENSOR DATA ---
                         val newSensorData = binder.allFilteredSensorData
                         if (newSensorData != null) {
-                            updateSparklineBuffers(newSensorData)
+                            val sparklineUpdated = updateSparklineBuffers(newSensorData)
                             _allFilteredSensorData.value = newSensorData
+                            if (sparklineUpdated) {
+                                _sparklineTick.value += 1L
+                            }
+                            if (newSensorData.any { it.sensorType == SensorType.W_PRIME_BAL && it.value is Number }) {
+                                _wPrimeTelemetryHeartbeat.value += 1L
+                            }
                         }
 
                         // --- DEVICE AND SENSOR STATUS ---
@@ -696,85 +769,93 @@ class BANALServiceRepository private constructor(context: Context) {
     ) {
         if (wheelDevices.isEmpty()) return
 
-        // 1. Multi-Sensor Per-Device GNSS iTPMS (REQ-SEN-030.2, REQ-SEN-034.1, REQ-SEN-034.2)
-        if (location != null &&
-            accuracyMeters != null && accuracyMeters.isFinite() && accuracyMeters >= 0.0 &&
-            bearingDeg != null && bearingDeg.isFinite()
-        ) {
-            for (wheelDevice in wheelDevices) {
-                val devId = wheelDevice.deviceId
-                val wheelDist = (wheelDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
-                val calib = (wheelDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+        val pendingAlerts = mutableListOf<Triple<Int, Int, Pair<WorkoutNavigationEvents.TpmsAlertSeverity, Double>>>()
 
-                if (wheelDist != null) {
-                    val estimator = getOrCreateItpmsEstimator(devId)
-                    val alert = estimator.processTelemetry(
-                        lat = location.latitude,
-                        lon = location.longitude,
-                        bearingDeg = bearingDeg,
-                        accuracyMeters = accuracyMeters,
-                        speedMps = speedMps ?: 0.0,
-                        elevationMeters = altitudeMeters,
-                        wheelDistanceMeters = wheelDist,
-                        calibrationFactorMeters = calib,
-                        timestampMs = timestampMs
-                    )
-                    if (alert != null) {
-                        val (titleRes, msgRes, severity) = when (alert) {
-                            is IndirectTpmsEstimator.TpmsAlertResult.LowPressure -> Triple(
-                                R.string.itpms_low_pressure_reminder_title,
-                                R.string.itpms_low_pressure_reminder_message,
-                                WorkoutNavigationEvents.TpmsAlertSeverity.WARNING
-                            )
-                            is IndirectTpmsEstimator.TpmsAlertResult.SlowPuncture -> Triple(
-                                R.string.itpms_slow_puncture_alert_title,
-                                R.string.itpms_slow_puncture_alert_message,
-                                WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL
-                            )
+        synchronized(itpmsLock) {
+            // 1. Multi-Sensor Per-Device GNSS iTPMS (REQ-SEN-030.2, REQ-SEN-034.1, REQ-SEN-034.2)
+            if (location != null &&
+                accuracyMeters != null && accuracyMeters.isFinite() && accuracyMeters >= 0.0 &&
+                bearingDeg != null && bearingDeg.isFinite()
+            ) {
+                for (wheelDevice in wheelDevices) {
+                    val devId = wheelDevice.deviceId
+                    val wheelDist = (wheelDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                    val calib = (wheelDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+
+                    if (wheelDist != null) {
+                        val estimator = getOrCreateItpmsEstimator(devId)
+                        val alert = estimator.processTelemetry(
+                            lat = location.latitude,
+                            lon = location.longitude,
+                            bearingDeg = bearingDeg,
+                            accuracyMeters = accuracyMeters,
+                            speedMps = speedMps ?: 0.0,
+                            elevationMeters = altitudeMeters,
+                            wheelDistanceMeters = wheelDist,
+                            calibrationFactorMeters = calib,
+                            timestampMs = timestampMs
+                        )
+                        if (alert != null) {
+                            val (titleRes, msgRes, severity) = when (alert) {
+                                is IndirectTpmsEstimator.TpmsAlertResult.LowPressure -> Triple(
+                                    R.string.itpms_low_pressure_reminder_title,
+                                    R.string.itpms_low_pressure_reminder_message,
+                                    WorkoutNavigationEvents.TpmsAlertSeverity.WARNING
+                                )
+                                is IndirectTpmsEstimator.TpmsAlertResult.SlowPuncture -> Triple(
+                                    R.string.itpms_slow_puncture_alert_title,
+                                    R.string.itpms_slow_puncture_alert_message,
+                                    WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL
+                                )
+                            }
+                            pendingAlerts.add(Triple(titleRes, msgRes, severity to alert.dropPercentage))
                         }
-                        emitTpmsAlert(titleRes, msgRes, severity, alert.dropPercentage)
+                    }
+                }
+            }
+
+            // 2. GPS-Free Dual-Wheel Ratio iTPMS (REQ-SEN-030.1, REQ-SEN-034.2)
+            if (wheelDevices.size >= 2) {
+                val currentEqId = activeEquipmentId
+                fun resolvePos(dev: MyDevice): WheelPosition? = if (currentEqId != null && currentEqId > 0) {
+                    cachedScopedWheelPositions[Pair(currentEqId, dev.deviceId)] ?: cachedActiveWheelPositions[dev.deviceId]
+                } else {
+                    cachedActiveWheelPositions[dev.deviceId]
+                }
+                val frontDevice = wheelDevices.firstOrNull { resolvePos(it) == WheelPosition.FRONT }
+                val rearDevice = wheelDevices.firstOrNull { resolvePos(it) == WheelPosition.REAR }
+
+                if (frontDevice != null && rearDevice != null) {
+                    val frontDist = (frontDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                    val rearDist = (rearDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                    val frontCalib = (frontDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+                    val rearCalib = (rearDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+
+                    if (frontDist != null && rearDist != null) {
+                        val dualAlert = dualWheelTpmsEstimator.processTelemetry(
+                            frontDistanceMeters = frontDist,
+                            rearDistanceMeters = rearDist,
+                            speedMps = speedMps ?: 0.0,
+                            yawRateRadPerSec = yawRateRadPerSec,
+                            frontCalibrationMeters = frontCalib,
+                            rearCalibrationMeters = rearCalib
+                        )
+                        if (dualAlert != null) {
+                            val (titleRes, msgRes) = when (dualAlert) {
+                                is DualWheelTpmsEstimator.DualWheelTpmsAlert.RearPuncture ->
+                                    R.string.itpms_dual_puncture_rear_title to R.string.itpms_dual_puncture_rear_message
+                                is DualWheelTpmsEstimator.DualWheelTpmsAlert.FrontPuncture ->
+                                    R.string.itpms_dual_puncture_front_title to R.string.itpms_dual_puncture_front_message
+                            }
+                            pendingAlerts.add(Triple(titleRes, msgRes, WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL to dualAlert.dropPercentage))
+                        }
                     }
                 }
             }
         }
 
-        // 2. GPS-Free Dual-Wheel Ratio iTPMS (REQ-SEN-030.1, REQ-SEN-034.2)
-        if (wheelDevices.size >= 2) {
-            val currentEqId = activeEquipmentId
-            fun resolvePos(dev: MyDevice): WheelPosition? = if (currentEqId != null && currentEqId > 0) {
-                cachedScopedWheelPositions[Pair(currentEqId, dev.deviceId)] ?: cachedActiveWheelPositions[dev.deviceId]
-            } else {
-                cachedActiveWheelPositions[dev.deviceId]
-            }
-            val frontDevice = wheelDevices.firstOrNull { resolvePos(it) == WheelPosition.FRONT }
-            val rearDevice = wheelDevices.firstOrNull { resolvePos(it) == WheelPosition.REAR }
-
-            if (frontDevice != null && rearDevice != null) {
-                val frontDist = (frontDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
-                val rearDist = (rearDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
-                val frontCalib = (frontDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
-                val rearCalib = (rearDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
-
-                if (frontDist != null && rearDist != null) {
-                    val dualAlert = dualWheelTpmsEstimator.processTelemetry(
-                        frontDistanceMeters = frontDist,
-                        rearDistanceMeters = rearDist,
-                        speedMps = speedMps ?: 0.0,
-                        yawRateRadPerSec = yawRateRadPerSec,
-                        frontCalibrationMeters = frontCalib,
-                        rearCalibrationMeters = rearCalib
-                    )
-                    if (dualAlert != null) {
-                        val (titleRes, msgRes) = when (dualAlert) {
-                            is DualWheelTpmsEstimator.DualWheelTpmsAlert.RearPuncture ->
-                                R.string.itpms_dual_puncture_rear_title to R.string.itpms_dual_puncture_rear_message
-                            is DualWheelTpmsEstimator.DualWheelTpmsAlert.FrontPuncture ->
-                                R.string.itpms_dual_puncture_front_title to R.string.itpms_dual_puncture_front_message
-                        }
-                        emitTpmsAlert(titleRes, msgRes, WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL, dualAlert.dropPercentage)
-                    }
-                }
-            }
+        for ((titleRes, msgRes, sevAndDrop) in pendingAlerts) {
+            emitTpmsAlert(titleRes, msgRes, sevAndDrop.first, sevAndDrop.second)
         }
     }
 
@@ -823,8 +904,8 @@ class BANALServiceRepository private constructor(context: Context) {
 
     /**
      * Reloads the persisted `baselineCircumference` for [deviceId] off the main thread and applies
-     * the result back on [repositoryScope] (Main thread) guarded by a monotonic generation token
-     * so stale out-of-order completions cannot overwrite newer baselines (REQ-SEN-034.1).
+     * the result on [repositoryScope] (`Dispatchers.Default`) atomically guarded by `itpmsLock` and
+     * a monotonic generation token so stale out-of-order completions cannot overwrite newer baselines (REQ-SEN-034.1, REQ-UI-2800.1).
      */
     fun refreshItpmsBaselineForDevice(deviceId: Long) {
         if (deviceId <= 0L) return
@@ -837,7 +918,7 @@ class BANALServiceRepository private constructor(context: Context) {
     /**
      * Reloads persisted `baselineCircumference` values off the main thread for all known/active wheel
      * devices and pushes them onto live cached [IndirectTpmsEstimator] instances on [repositoryScope]
-     * guarded by per-device monotonic generation tokens (REQ-SEN-034.1).
+     * (`Dispatchers.Default`) atomically guarded by `itpmsLock` and per-device monotonic generation tokens (REQ-SEN-034.1, REQ-UI-2800.1).
      */
     fun refreshAllItpmsBaselines() {
         val deviceIds = linkedSetOf<Long>()
@@ -868,9 +949,11 @@ class BANALServiceRepository private constructor(context: Context) {
             }
             return
         }
-        // Back on repositoryScope (same thread as processItpmsTelemetryTick): drop stale out-of-order IO results.
-        if (baselineLoadGenerations[deviceId]?.get() != generation) return
-        applyResolvedBaseline(deviceId, raw)
+        // Atomically verify generation and apply baseline under itpmsLock (REQ-UI-2800.1).
+        synchronized(itpmsLock) {
+            if (baselineLoadGenerations[deviceId]?.get() != generation) return
+            applyResolvedBaseline(deviceId, raw)
+        }
     }
 
     private fun applyResolvedBaseline(deviceId: Long, rawBaselineMeters: Double) {
@@ -889,9 +972,11 @@ class BANALServiceRepository private constructor(context: Context) {
             _currentTrack.value = emptyList()
             _currentPathPoints.value = emptyList()
         }
-        itpmsEstimator.resetSession()
-        perDeviceItpmsEstimators.values.forEach { it.resetSession() }
-        dualWheelTpmsEstimator.resetSession()
+        synchronized(itpmsLock) {
+            itpmsEstimator.resetSession()
+            perDeviceItpmsEstimators.values.forEach { it.resetSession() }
+            dualWheelTpmsEstimator.resetSession()
+        }
         refreshAllItpmsBaselines()
         clearSparklineBuffers()
         cachedRehydrationSamples = null
@@ -981,42 +1066,55 @@ class BANALServiceRepository private constructor(context: Context) {
         val eqRepo = EquipmentRepository.getInstance(appContext)
         val insertedIds = mutableListOf<Long>()
 
-        for ((deviceId, estimator) in perDeviceItpmsEstimators) {
-            if (estimator.isStartLocked && estimator.startCircumferenceMeters > 0.0) {
-                val circMm = (estimator.startCircumferenceMeters * 1000.0).toInt()
-                val position = cachedScopedWheelPositions[Pair(targetEqId, deviceId)]
-                    ?: cachedActiveWheelPositions[deviceId]
-                    ?: eqRepo.getWheelPosition(targetEqId, deviceId)
-                    ?: WheelPosition.UNSPECIFIED
-
-                val rowId = eqRepo.addCircumferenceHistory(
-                    equipmentId = targetEqId,
-                    timestampMs = timestampMs,
-                    wheelPosition = position,
-                    circumferenceMm = circMm,
-                    source = WheelCircumferenceRecord.SOURCE_GNSS_AUTO
-                )
-                if (rowId > 0) {
-                    insertedIds.add(rowId)
+        val lockedPerDevice: List<Pair<Long, Int>>
+        val fallbackCircMm: Int?
+        synchronized(itpmsLock) {
+            lockedPerDevice = perDeviceItpmsEstimators.entries.mapNotNull { (deviceId, estimator) ->
+                if (estimator.isStartLocked && estimator.startCircumferenceMeters > 0.0) {
+                    deviceId to (estimator.startCircumferenceMeters * 1000.0).toInt()
+                } else {
+                    null
                 }
-                if (DEBUG) Log.i(TAG, "Persisted circumference history for eq=$targetEqId, dev=$deviceId, pos=$position, circ=$circMm mm (rowId=$rowId)")
+            }
+            fallbackCircMm = if (itpmsEstimator.isStartLocked && itpmsEstimator.startCircumferenceMeters > 0.0) {
+                (itpmsEstimator.startCircumferenceMeters * 1000.0).toInt()
+            } else {
+                null
             }
         }
 
-        // Single-estimator fallback if perDeviceItpmsEstimators is empty
-        if (insertedIds.isEmpty() && itpmsEstimator.isStartLocked && itpmsEstimator.startCircumferenceMeters > 0.0) {
-            val circMm = (itpmsEstimator.startCircumferenceMeters * 1000.0).toInt()
+        for ((deviceId, circMm) in lockedPerDevice) {
+            val position = cachedScopedWheelPositions[Pair(targetEqId, deviceId)]
+                ?: cachedActiveWheelPositions[deviceId]
+                ?: eqRepo.getWheelPosition(targetEqId, deviceId)
+                ?: WheelPosition.UNSPECIFIED
+
             val rowId = eqRepo.addCircumferenceHistory(
                 equipmentId = targetEqId,
                 timestampMs = timestampMs,
-                wheelPosition = WheelPosition.UNSPECIFIED,
+                wheelPosition = position,
                 circumferenceMm = circMm,
                 source = WheelCircumferenceRecord.SOURCE_GNSS_AUTO
             )
             if (rowId > 0) {
                 insertedIds.add(rowId)
             }
-            if (DEBUG) Log.i(TAG, "Persisted circumference history from single estimator for eq=$targetEqId: $circMm mm")
+            if (DEBUG) Log.i(TAG, "Persisted circumference history for eq=$targetEqId, dev=$deviceId, pos=$position, circ=$circMm mm (rowId=$rowId)")
+        }
+
+        // Single-estimator fallback if perDeviceItpmsEstimators had no locked entries
+        if (insertedIds.isEmpty() && fallbackCircMm != null) {
+            val rowId = eqRepo.addCircumferenceHistory(
+                equipmentId = targetEqId,
+                timestampMs = timestampMs,
+                wheelPosition = WheelPosition.UNSPECIFIED,
+                circumferenceMm = fallbackCircMm,
+                source = WheelCircumferenceRecord.SOURCE_GNSS_AUTO
+            )
+            if (rowId > 0) {
+                insertedIds.add(rowId)
+            }
+            if (DEBUG) Log.i(TAG, "Persisted circumference history from single estimator for eq=$targetEqId: $fallbackCircMm mm")
         }
 
         return insertedIds
@@ -1025,22 +1123,30 @@ class BANALServiceRepository private constructor(context: Context) {
     /**
      * Registers or retrieves a singleton-managed LiveSparklineBuffer for a cockpit tile (REQ-TRK-059.6, ATT-6710).
      */
+    @JvmOverloads
     fun registerSparklineBuffer(
         sensorFieldId: Long,
         horizonSeconds: Int,
         sensorType: SensorType,
         filterType: FilterType,
         filterConstant: Double,
-        sourceDeviceName: String?
+        sourceDeviceName: String?,
+        sourceDeviceId: Long = -1L
     ): LiveSparklineBuffer {
         val configHash = Objects.hash(sensorType, filterType, filterConstant, sourceDeviceName)
-        val existing = sparklineBuffers[sensorFieldId]
-        if (existing != null && existing.horizonSeconds == horizonSeconds && existing.configHash == configHash) {
-            return existing.buffer
+        val deviceIdHash = if (sourceDeviceId > 0L) {
+            Objects.hash(sensorType, filterType, filterConstant, sourceDeviceId)
+        } else 0
+        val matchingExisting = sparklineBuffers[sensorFieldId]?.takeIf {
+            (sourceDeviceId > 0L && it.sourceDeviceId == sourceDeviceId && it.deviceIdHash == deviceIdHash) ||
+                (sourceDeviceId <= 0L && it.sourceDeviceId <= 0L && it.configHash == configHash)
+        }
+        if (matchingExisting != null && matchingExisting.horizonSeconds == horizonSeconds) {
+            return matchingExisting.buffer
         }
         val buffer = LiveSparklineBuffer(horizonSeconds)
-        if (existing != null && existing.configHash == configHash) {
-            buffer.transferFrom(existing.buffer)
+        if (matchingExisting != null) {
+            buffer.transferFrom(matchingExisting.buffer)
         } else {
             cachedRehydrationSamples?.let { cached ->
                 val metricValues = cached.mapNotNull { extractSampleValueForSensorType(it, sensorType) }
@@ -1057,7 +1163,9 @@ class BANALServiceRepository private constructor(context: Context) {
             filterConstant = filterConstant,
             sourceDeviceName = sourceDeviceName,
             configHash = configHash,
-            buffer = buffer
+            buffer = buffer,
+            sourceDeviceId = sourceDeviceId,
+            deviceIdHash = deviceIdHash
         )
         return buffer
     }
@@ -1099,19 +1207,32 @@ class BANALServiceRepository private constructor(context: Context) {
     }
 
     /**
-     * Feeds incoming filtered sensor data to active sparkline buffers (REQ-TRK-059.6, ATT-6710).
+     * Feeds incoming filtered sensor data to active sparkline buffers (REQ-TRK-059.6, ATT-6710, REQ-UI-2800.3).
+     *
+     * @return `true` if at least one registered sparkline buffer appended a sample.
      */
-    fun updateSparklineBuffers(sensorDataList: List<FilteredSensorData<*>>) {
-        if (sparklineBuffers.isEmpty() || sensorDataList.isEmpty()) return
+    fun updateSparklineBuffers(sensorDataList: List<FilteredSensorData<*>>): Boolean {
+        if (sparklineBuffers.isEmpty() || sensorDataList.isEmpty()) return false
+        var updated = false
         for (sensorData in sensorDataList) {
             val numericVal = (sensorData.value as? Number)?.toFloat() ?: continue
-            val hash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
+            val nameHash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
+            val idHash = if (sensorData.deviceId > 0L) {
+                Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceId)
+            } else 0
             for (reg in sparklineBuffers.values) {
-                if (reg.configHash == hash) {
+                val matched = if (sensorData.deviceId > 0L && reg.sourceDeviceId > 0L) {
+                    reg.deviceIdHash == idHash
+                } else {
+                    reg.configHash == nameHash
+                }
+                if (matched) {
                     reg.buffer.addSample(numericVal)
+                    updated = true
                 }
             }
         }
+        return updated
     }
 
     /**
@@ -1121,25 +1242,27 @@ class BANALServiceRepository private constructor(context: Context) {
      */
     fun applyRetroactiveAltitudeCorrection(deltaOffset: Double, t0Ms: Long = -1L, t1Ms: Long = -1L) {
         if (Math.abs(deltaOffset) < 0.001) return
-        val currentPoints = _currentPathPoints.value
-        if (currentPoints.isEmpty()) return
+        synchronized(trackLock) {
+            val currentPoints = _currentPathPoints.value
+            if (currentPoints.isEmpty()) return
 
-        val count = currentPoints.size
-        val updatedPoints = if (t0Ms <= 0L || t1Ms <= t0Ms) {
-            // Case A: Uniform shift
-            currentPoints.map { point ->
-                val alt = point.altitude?.let { it + deltaOffset }
-                point.copy(altitude = alt)
+            val count = currentPoints.size
+            val updatedPoints = if (t0Ms <= 0L || t1Ms <= t0Ms) {
+                // Case A: Uniform shift
+                currentPoints.map { point ->
+                    val alt = point.altitude?.let { it + deltaOffset }
+                    point.copy(altitude = alt)
+                }
+            } else {
+                // Case B: Piecewise-linear drift across path points
+                currentPoints.mapIndexed { index, point ->
+                    val fraction = if (count > 1) index.toDouble() / (count - 1) else 1.0
+                    val alt = point.altitude?.let { it + deltaOffset * fraction }
+                    point.copy(altitude = alt)
+                }
             }
-        } else {
-            // Case B: Piecewise-linear drift across path points
-            currentPoints.mapIndexed { index, point ->
-                val fraction = if (count > 1) index.toDouble() / (count - 1) else 1.0
-                val alt = point.altitude?.let { it + deltaOffset * fraction }
-                point.copy(altitude = alt)
-            }
+            _currentPathPoints.value = SnapshotChunkedList.from(updatedPoints)
         }
-        _currentPathPoints.value = SnapshotChunkedList.from(updatedPoints)
     }
 
     private fun <T> appendToTrack(current: List<T>, element: T): SnapshotChunkedList<T> {
@@ -1336,6 +1459,15 @@ class BANALServiceRepository private constructor(context: Context) {
         @Volatile
         private var INSTANCE: BANALServiceRepository? = null
 
+        @VisibleForTesting
+        @Volatile
+        internal var dispatcherOverrideForTesting: CoroutineDispatcher? = null
+
+        @VisibleForTesting
+        fun setDispatcherForTesting(dispatcher: CoroutineDispatcher?) {
+            dispatcherOverrideForTesting = dispatcher
+        }
+
         /**
          * Returns the thread-safe singleton instance of the repository.
          */
@@ -1349,6 +1481,9 @@ class BANALServiceRepository private constructor(context: Context) {
         fun resetForTesting(newInstance: BANALServiceRepository? = null) {
             INSTANCE?.repositoryScope?.cancel()
             INSTANCE = newInstance
+            if (newInstance == null) {
+                dispatcherOverrideForTesting = null
+            }
         }
     }
 }

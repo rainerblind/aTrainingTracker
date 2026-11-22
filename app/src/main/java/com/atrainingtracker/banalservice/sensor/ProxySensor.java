@@ -78,14 +78,44 @@ public class ProxySensor<T> extends MySensor<T> {
         return new SensorData<>(getSensorType(), value, stringValue, getDeviceName(), timestamp);
     }
 
+    private static final int MAX_LISTENER_ATTACH_RETRIES = 4;
     private final Object mSourceLock = new Object();
 
     @Override
     public void addSensorListener(SensorListener sensorListener) {
-        super.addSensorListener(sensorListener);
-        final MySensor<T> source = mSourceSensor;
-        if (source != null) {
-            source.addSensorListener(sensorListener);   // also add this sensor listener to the source device
+        if (sensorListener == null) {
+            return;
+        }
+        for (int attempt = 0; attempt < MAX_LISTENER_ATTACH_RETRIES; attempt++) {
+            final MySensor<T> source;
+            final boolean activated;
+            synchronized (mSourceLock) {
+                mSensorListeners.addIfAbsent(sensorListener);
+                source = mSourceSensor;
+                activated = mActivated;
+            }
+            if (source == null) {
+                if (activated) {
+                    sensorListener.newValue(null);
+                }
+                return;
+            }
+            // Attach strictly outside mSourceLock (REQ-SEN-021.2) and re-check for concurrent source swaps (REQ-UI-2800.3).
+            source.addSensorListener(sensorListener);
+            final boolean stillRegistered;
+            final MySensor<T> latestSource;
+            synchronized (mSourceLock) {
+                stillRegistered = mSensorListeners.contains(sensorListener);
+                latestSource = mSourceSensor;
+            }
+            if (!stillRegistered) {
+                source.removeSensorListener(sensorListener);
+                return;
+            }
+            if (latestSource == source) {
+                return;
+            }
+            source.removeSensorListener(sensorListener);
         }
     }
 

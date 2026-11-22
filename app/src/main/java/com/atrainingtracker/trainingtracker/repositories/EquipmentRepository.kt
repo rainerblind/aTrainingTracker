@@ -45,7 +45,7 @@ open class EquipmentRepository internal constructor(
 ) : CoroutineScope {
 
     private val job = SupervisorJob()
-    override val coroutineContext = Dispatchers.Main + job
+    override val coroutineContext = Dispatchers.IO + job
 
     private val equipmentDbHelper get() = dbHelper ?: EquipmentDbHelper.getInstance(context)
     private val linksHelper get() = linkManager ?: SportTypeEquipmentLinkManager.getInstance(context)

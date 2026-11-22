@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.132  
+**Version**: 1.0.133  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -24,13 +24,13 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [UI Components & Design System (Part 2)](requirements/req_ui_design_system_part2.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 96 | 94 | 2 | 0 |
 | [UI Components & Design System (Part 3)](requirements/req_ui_design_system_part3.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 88 | 88 | 0 | 0 |
 | [UI Components & Design System (Part 4)](requirements/req_ui_design_system_part4.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 91 | 91 | 0 | 0 |
-| [UI Components & Design System (Part 5)](requirements/req_ui_design_system_part5.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 56 | 56 | 0 | 0 |
+| [UI Components & Design System (Part 5)](requirements/req_ui_design_system_part5.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 57 | 57 | 0 | 0 |
 | [Engineering Process, Stability & Architecture (Part 1)](requirements/req_process_stability_part1.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `LIV`, `NFR`, `PRO`, `SEC`, `STB`, `TOOL`, `TST` | 125 | 98 | 27 | 0 |
 | [Engineering Process, Stability & Architecture (Part 2)](requirements/req_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 84 | 83 | 0 | 1 |
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1334 across 17 domain shards.
+**Total Living Requirements**: 1335 across 17 domain shards.
 
 ---
 
@@ -105,3 +105,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.128` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Synchronized master index for `[Verified]` `REQ-UI-2799` (`Total=1330`, `Verified=1204`, `Implemented=125`, `Planned=1`; `PeriodsScreen` pure Compose day routing, `EditDeviceDialog` rotation/locale/Cancel safety, single bottom-sheet insets & `FilterBottomSheetScaffold` `imePadding()`). |
 | `1.0.129` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Added `req_tracking_cockpit_part3.md` (`REQ-TRK-093` `[Verified]`), synced with `sprint/2026-11-22_01_Früh` (`1c3fbfd8`, `ATT-8123`/`ATT-9170`), and hardened `MyBTLEDevice` pause concurrency (Bounce 1). |
 | `1.0.132` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Synchronized master index for `[Verified]` `REQ-PER-047` (Bounce 1 heal: strict `extractSensorSample` suffix allowlist, unit-reactive `LiveExtremaLabels`, `LiveWorkoutBroadcastTrackerTest` cleanup, sprint merge; `44/44` PASS across 8 suites + Light/Dark AMOLED `Rule 8.5` PNG). |
+| `1.0.133` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Promoted `REQ-UI-2800` to `[Verified]` (`req_ui_design_system_part5.md` v1.0.36; Bounce 1 healed: `136/136` PASS across 21 targeted suites, `0` compiler warnings, live `emulator-5554` PNGs & `0` crashes). |

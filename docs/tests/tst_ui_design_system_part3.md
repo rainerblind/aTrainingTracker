@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.34  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 56
+**Total Tests**: 57
 
 ---
 
@@ -1089,6 +1089,29 @@
 
 ---
 
+### TST-UI-2800: **Live Sensor & Cockpit Hotpath Verification Suite (`ATT-8126`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-2800` (`REQ-UI-2800.1`–`REQ-UI-2800.4`)
+- **Component**: `BANALServiceRepository.kt`, `FilteredSensorData.kt`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `WorkoutRepository.kt`, `EquipmentRepository.kt`, `SportTypesRepository.kt`, `RrArtifactFilter.kt`, `ProxySensor.java`, `FilterData.kt`, `FilterManager.kt`, `MyFilter.kt`, `DeviceManager.java`, `TrackingViewsDatabaseManager.java`, `EditSensorFieldViewModel.kt`, `TrackingTabGridContent.kt`, `TrackingTabsScreen.kt`, `BANALServiceRepositoryHotpathTest.kt`, `RrArtifactFilterPerformanceEquivalenceTest.kt`, `ProxySensorAndFilterManagerIdKeyTest.kt`, `CockpitRecompositionBoundsComposeTest.kt`
+- **Jira**: `ATT-8126` | **Priority**: High | **Type**: Non-Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Repository Dispatchers, Conflation + Sparkline/W'bal Liveness & Concurrency (`TST-UI-2800.1`, `BANALServiceRepositoryHotpathTest`, `TrackingViewModelGridTest`)*:
+     - Verify `BANALServiceRepository`, `WorkoutRepository`, `EquipmentRepository`, and `SportTypesRepository` scopes do not dispatch on `Dispatchers.Main`.
+     - Verify NaN-safe structural `FilteredSensorData.equals`/`hashCode` (`Objects.equals`, `mFilterConstant.toBits()`, ignoring `mTimestamp`) conflates identical 1-Hz snapshots in `_allFilteredSensorData`, while decoupled `_sparklineTick` and `_wPrimeTelemetryHeartbeat` keep steady-value `showGraph` sparklines advancing and `W_PRIME_BAL` freshness alive (and still mark STALE when `W_PRIME_BAL` stops emitting).
+     - Verify `bindToBANALService()` false/throw reset and unbind-before-connect + `onServiceConnected`/`onServiceDisconnected` under `connectionLock`, plus `itpmsLock` (`loadAndApplyItpmsBaseline` atomic check+apply, `persistConvergedCircumferences` snapshot) and `trackLock` (`applyRetroactiveAltitudeCorrection`).
+  2. *`RrArtifactFilter` `O(N)` Precomputation, 92-Element Causal Window & Thread-Safety (`TST-UI-2800.2`, `RrArtifactFilterPerformanceEquivalenceTest`, `RrArtifactFilterTest`)*:
+     - Verify 300-beat RR windows (covering `filterLiveCausal`'s 92-element `[i - 86, i + 6)` window) across normal, ectopic, missed, short, and gap beats yield bit-exact `FilterResult` outputs, thread-safe concurrent evaluation on one shared instance (method-local scratch buffers), and bounded latency (`< 250 ms` for 50 runs).
+  3. *`ProxySensor`/`FilterManager` Single Initial Push & End-to-End `deviceId` Rename Survival (`TST-UI-2800.3`, `ProxySensorAndFilterManagerIdKeyTest`, `FilterManagerRebindTest`)*:
+     - Verify `ProxySensor.addSensorListener` delivers a single non-null initial value when bound (never leading `null`) and handles concurrent `setSourceSensor` swap via post-register re-check without holding `mSourceLock`.
+     - Verify `FilterManager.rebindFilter` ingests the bound sensor's current value strictly once into moving-average / smoothing filters.
+     - Verify `FilterData(deviceId > 0L)` keeps stable `hashKey`, resolves directly via `DeviceManager.getMyDeviceById` without name fallback when non-null, syncs `MyFilter.mDeviceName`, and keeps both `TrackingViewModel` tiles and `BANALServiceRepository` sparklines live across device renames while preserving global (`null`) and legacy name-only fallbacks.
+  4. *Cockpit 1-Hz Recomposition Bounds & Contracts (`TST-UI-2800.4`, `CockpitRecompositionBoundsComposeTest`, `SensorGridMapDecouplingComposeTest`, `ArchitectureConformanceContractTest`)*:
+     - Verify `gridActions` referential stability (`===`) across 1-Hz `uiState` updates in `TrackingTabGridContent`.
+     - Verify `TrackingTabsScreen` skips `allFilteredSensorData` collection in `DisplayBrightnessMode.SYSTEM`/`CUSTOM`, invokes `batterySaverController.updateTelemetry` only in `AUTO`, triggers `0` root recompositions on 1-Hz sensor/GPS ticks, and preserves `beyondViewportPageCount == 0`.
+     - Verify monolith LoC ceilings (`DeviceManager.java <= 1,708`, `WorkoutRepository.kt <= 5,117`, `TrackingViewsDatabaseManager.java <= 2,631`), `0` new compiler warnings, and live `emulator-5554` cockpit check with clean `logcat -b crash -d`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1126,3 +1149,6 @@
 | `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `TST-UI-2797` (`[Verified]`, `.1`–`.3`) covering speed-derived `PACE` & multi-metric averaging, off-scale hiding, `Ø` gutter auto-fit & priority collision suppression, narrow-canvas guard, dotted pixel rhythm, and Light/Dark AMOLED `Rule 8.5` PNG (`70/70` targeted tests PASS across 7 suites, `0` new warnings). |
 | `1.0.33` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Added and verified `TST-UI-2798` (`[Verified]`, `.1`–`.3`) covering WCAG `Z1..Z7` stroke contrast, hard-stepped vertical gradient stops, single-point/scrub zone colors, zone-orthogonal multi-source overlay palette, dynamic unzoned round ticks, and Light/Dark AMOLED `Rule 8.5` PNG (`66/66` targeted tests PASS across 8 suites, `0` new warnings). |
 | `1.0.32` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Added and verified `TST-UI-2799` (`[Verified]`, `.1`–`.4`) covering pure Compose `PeriodsScreen` day-click NavHost routing, `de_DE` comma/dot calibration input + `StateRestorationTester` + Save-only/Cancel-zero-write draft tests for Fused/TPMS/Radar, single 1x `WindowInsetsCompat` bottom-sheet tests for `FilterBottomSheetBody` & `AppBottomSheetContent`, and Light/Dark + live `emulator-5554` PNG verification (`98/98` PASS across 17 suites). |
+| `1.0.35` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Added `TST-UI-2800` (`[Planned]`, `.1`–`.4`) covering background repository scopes, `FilteredSensorData` `StateFlow` conflation & unbind-before-connect leak tests, `RrArtifactFilter` `O(N)` equivalence/performance tests, single-push `ProxySensor`/`FilterManager` & `deviceId` rename survival tests, and cockpit 1-Hz recomposition bounds (`TrackingTabGridContent`, `TrackingTabsScreen`). |
+| `1.0.36` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Gate 3 (`ATT-9635`) revision on `TST-UI-2800`: added steady-value sparkline/`W_PRIME_BAL` liveness + NaN equality tests, 92-element causal window + multi-thread safety checks, end-to-end `deviceId` rename survival (`TrackingViewModel`/sparklines), full `itpmsLock`/`trackLock`/`connectionLock` + `ProxySensor` swap coverage, and `DisplayBrightnessMode.SYSTEM`/`CUSTOM`/`AUTO` code-grounding. |
+| `1.0.37` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Promoted `TST-UI-2800` to `[Verified]` (`128/128` PASS across 20 suites incl. `BANALServiceRepositoryHotpathTest` 6/6, `RrArtifactFilterPerformanceEquivalenceTest` 3/3, `ProxySensorAndFilterManagerIdKeyTest` 5/5, `CockpitRecompositionBoundsComposeTest` 2/2, `ArchitectureConformanceContractTest` 11/11, `UiReflectionOnlyTestAuditContractTest` 4/4; `0` new warnings; live `emulator-5554` PNGs & `0` crashes; SHA-256 bundle under `docs/engineering/test_evidence/tickets/ATT-8126/`). |

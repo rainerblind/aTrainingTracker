@@ -20,12 +20,16 @@ package com.atrainingtracker.banalservice.filters
 
 import com.atrainingtracker.banalservice.sensor.SensorType
 
-data class FilterData(
+data class FilterData @JvmOverloads constructor(
     @JvmField var deviceName: String?,
     @JvmField var sensorType: SensorType,
     @JvmField var filterType: FilterType,
-    @JvmField var filterConstant: Double
+    @JvmField var filterConstant: Double,
+    @JvmField var deviceId: Long = -1L
 ) {
     val hashKey: String
-        get() = "$deviceName-${sensorType.name}-${filterType.name}-$filterConstant"
+        get() {
+            val deviceKey = if (deviceId > 0L) "id:$deviceId" else deviceName
+            return "$deviceKey-${sensorType.name}-${filterType.name}-$filterConstant"
+        }
 }

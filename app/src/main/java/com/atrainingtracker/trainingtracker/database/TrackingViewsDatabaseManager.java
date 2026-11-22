@@ -1117,7 +1117,8 @@ public class TrackingViewsDatabaseManager extends BaseDatabaseManager<TrackingVi
 
                 int sourceDeviceIdx = c.getColumnIndex(TrackingViewsDbHelper.SOURCE_DEVICE_ID);
                 int sourceDeviceId = sourceDeviceIdx != -1 ? c.getInt(sourceDeviceIdx) : -1;
-                String deviceName = devicesDatabaseManager.getDeviceName(sourceDeviceId);
+                long normalizedDeviceId = sourceDeviceId > 0 ? sourceDeviceId : -1L;
+                String deviceName = normalizedDeviceId > 0L ? devicesDatabaseManager.getDeviceName(sourceDeviceId) : null;
 
                 int filterTypeIdx = c.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE);
                 String filterTypeStr = filterTypeIdx != -1 ? c.getString(filterTypeIdx) : null;
@@ -1126,7 +1127,7 @@ public class TrackingViewsDatabaseManager extends BaseDatabaseManager<TrackingVi
                 int filterConstIdx = c.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT);
                 double filterConstant = filterConstIdx != -1 ? c.getDouble(filterConstIdx) : 1.0;
 
-                return new FilterData(deviceName, sensorType, filterType, filterConstant);
+                return new FilterData(deviceName, sensorType, filterType, filterConstant, normalizedDeviceId);
             });
         }
     }

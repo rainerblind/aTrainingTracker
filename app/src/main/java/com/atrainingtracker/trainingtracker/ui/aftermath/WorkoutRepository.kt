@@ -274,7 +274,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     private val job = SupervisorJob()
-    override val coroutineContext = Dispatchers.Main + job
+    override val coroutineContext = Dispatchers.Default + job
 
     // Helper instances, initialized lazily
     @VisibleForTesting

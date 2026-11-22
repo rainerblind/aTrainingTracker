@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.33  
+**Version**: 1.0.36  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 56
+**Total Requirements**: 57
 
 ---
 
@@ -2172,6 +2172,43 @@
 
 ---
 
+### REQ-UI-2800: Live Sensor & Cockpit Hotpath De-Coupling — Background Repository Scopes, `O(N)` RR Median Precomputation, Single-Push `ProxySensor`/`FilterManager` & Stable 1-Hz Recomposition Boundaries (`ATT-8126`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2800`
+- **System Requirement(s)**: Derived (SW-only — internal concurrency, HRV DSP algorithmic efficiency, sensor-filter keying, and Compose recomposition boundary optimization under Epic `ATT-8119`)
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `BANALServiceRepository.kt`, `FilteredSensorData.kt`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `WorkoutRepository.kt`, `EquipmentRepository.kt`, `SportTypesRepository.kt`, `RrArtifactFilter.kt`, `ProxySensor.java`, `FilterData.kt`, `FilterManager.kt`, `MyFilter.kt`, `DeviceManager.java`, `TrackingViewsDatabaseManager.java`, `EditSensorFieldViewModel.kt`, `TrackingTabGridContent.kt`, `TrackingTabsScreen.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Eliminates avoidable Main-thread polling, per-beat redundant sorts/allocations under `@Synchronized`, double initial filter pushes, name-fragile filter keys, and 1-Hz root cockpit recompositions during multi-hour live recordings (`ATT-8126`).
+- **Description**:
+  1. *Background Repository Scopes, Structural `FilteredSensorData` Conflation, Sparkline/W'bal Liveness & Concurrency (`REQ-UI-2800.1`)*:
+     - `BANALServiceRepository.repositoryScope` and `WorkoutRepository.coroutineContext` SHALL execute on `Dispatchers.Default` (with `@VisibleForTesting` dispatcher injection on `BANALServiceRepository`), while `EquipmentRepository.coroutineContext` and `SportTypesRepository.coroutineContext` SHALL execute on `Dispatchers.IO`.
+     - `FilteredSensorData` SHALL override structural `equals`/`hashCode` over `(sensorType, value [Objects.equals for NaN parity], stringValue, deviceName, deviceId, filterType, mFilterConstant.toBits())` (excluding `SensorData.mTimestamp`) so `_allFilteredSensorData` `StateFlow` conflates unchanged 1-Hz snapshots, while decoupled `_sparklineTick` and `_wPrimeTelemetryHeartbeat` flows keep steady-value `showGraph` sparklines progressing and `W_PRIME_BAL` freshness timers alive (zero wakeups on views without those elements).
+     - `BANALServiceRepository` SHALL guard `processItpmsTelemetryTick`, atomic `loadAndApplyItpmsBaseline` generation check + apply, `clearBreadcrumbs` estimator resets, and `persistConvergedCircumferences` snapshotting under `itpmsLock`; guard `applyRetroactiveAltitudeCorrection` under `trackLock`; and guard `bind`/`unbind`/`forceUnbind`/`onServiceConnected`/`onServiceDisconnected` (plus `bindService` false/throw reset) under `connectionLock`.
+  2. *Single-Pass `O(N)` Local Median Precomputation & Thread-Safe Scratch-Buffer Sorting in `RrArtifactFilter` (`REQ-UI-2800.2`)*:
+     - `RrArtifactFilter` SHALL precompute `localMedians: DoubleArray` and `dRrs: DoubleArray` once in `O(N)` using **method-local** `DoubleArray` scratch buffers (`2 * MEDIAN_HALF_WINDOW + 1` and `QD_WINDOW_SIZE + 1 == 92` capacity covering `filterLiveCausal`'s `[i - 86, i + 6)` window), pass `localMedians` into `processBeats(...)`, and produce bit-exact `FilterResult` outputs with full thread-safety.
+  3. *Single-Push `ProxySensor`/`FilterManager` & End-to-End Stable `deviceId` Keying (`REQ-UI-2800.3`)*:
+     - `ProxySensor.addSensorListener` SHALL register on `mSensorListeners` and forward to `mSourceSensor` once outside `mSourceLock` (`REQ-SEN-021.2`) with post-register `mSourceSensor != source` concurrent-swap re-check, without pushing a spurious leading `null` when bound.
+     - `FilterManager.rebindFilter` SHALL rely on `newSensor.addSensorListener(myFilter)` for single initial delivery without manually calling `myFilter.newValue(currentValue)` a second time.
+     - `FilterData` (`@JvmOverloads deviceId: Long = -1L`), `DeviceManager.getMyDeviceById(long)` (`<= 1,708` LoC), `FilterManager.resolveSensor` (returning `byId.getSensor(sensorType)` directly without name fallback when `byId != null`), `MyFilter` (`mDeviceId` + live `mDeviceName` sync on bind/rebind), `FilteredSensorData` (`deviceId`), `TrackingViewModel`, and `BANALServiceRepository` sparklines SHALL key and match pinned sensors by `deviceId > 0L` (with `deviceName`/global `null` fallback) so device renames keep cockpit tiles and sparklines live end-to-end.
+  4. *Stable Cockpit 1-Hz Recomposition Boundaries (`REQ-UI-2800.4`)*:
+     - `TrackingTabGridContent` SHALL wrap `gridActions` in `remember(viewModel)`.
+     - `TrackingTabsScreen` SHALL collect `allFilteredSensorData` strictly inside `LaunchedEffect(brightnessMode, activityType, tuningConfig, trackingTabsViewModel, batterySaverController)` gated on `brightnessMode == DisplayBrightnessMode.AUTO` (skipped in `SYSTEM`/`CUSTOM`) and collect `currentLocation` inside `LaunchedEffect(controlViewModel, routeSelectorViewModel)`, while preserving `beyondViewportPageCount = 0` (`REQ-TRK-079.2`) and `SensorGridScreen` root GPS decoupling (`REQ-UI-2793`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `BANALServiceRepository`, *When* unchanged `FilteredSensorData` snapshots are polled or `bind`+`unbind` occurs before `onServiceConnected`, *Then* polling runs on `Dispatchers.Default`, unchanged snapshots conflate with zero duplicate emissions, and no `ServiceConnection` leaks.
+  • *Given* a 300-beat RR window in `RrArtifactFilter.filterLiveCausal` / `filterBidirectionalBeats`, *When* evaluated, *Then* outputs match reference classification identically with single-pass `O(N)` median precomputation and zero per-beat nested median recomputation.
+  • *Given* `ProxySensor` wrapping an active sensor, `FilterManager.rebindFilter`, and a renamed device with `deviceId > 0L`, *When* bound/rebound, *Then* listeners receive the initial value strictly once and `FilterManager` keeps resolving the renamed device by `deviceId`.
+  • *Given* `TrackingTabGridContent` & `TrackingTabsScreen` receiving 1-Hz sensor and GPS updates, *When* `brightnessMode != AUTO` (or `AUTO`), *Then* `gridActions` stays referentially identical (`===`), root `TrackingTabsScreen` does not recompose on 1-Hz sensor/GPS ticks, and `beyondViewportPageCount == 0` holds.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-UI-2800` reinforcing `REQ-TRK-055`, `REQ-TRK-059.6`, `REQ-TRK-060.2`, `REQ-TRK-079.2`, `REQ-FIL-038`, `REQ-SEN-021.2`, `REQ-SEN-034`, and `REQ-UI-2793`.
+  2. *Historical Origin & Commit Trace*: `ATT-6037` already decoupled `SensorGridScreen` root `currentLocationFlow`; `REQ-TRK-079.2` already bound `beyondViewportPageCount = 0`; `ATT-9160` already hoisted `allMRrs` in `filterLiveCausal`.
+  3. *Root Reason for Existing Formulation*: Repository scopes defaulted to `Dispatchers.Main` historically before `StateFlow` adoption; `FilterData` predated stable `deviceId` plumbing; `TrackingTabsScreen` collected `allFilteredSensorData` at root before `brightnessMode` gating.
+  4. *Preservation of Core Invariants*: Preserves `REQ-SEN-021.2` lock-order discipline in `ProxySensor`, `REQ-FIL-038.3` disconnect clearing, `REQ-TRK-059.6` 1-Hz sparkline feeding, `REQ-TRK-079.2` `beyondViewportPageCount = 0`, `REQ-HRV-048` exact artifact flags, `DeviceManager.java <= 1,708`, `WorkoutRepository.kt <= 5,117`, and `0` string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2208,3 +2245,6 @@
 | `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9170`, `--as agent1`) | `ATT-9170` | Added and verified `REQ-UI-2797` (`[Verified]`, `.1`–`.3`) adding dotted grey entire-workout average reference lines (`drawAverageReferenceLine`) and top-priority auto-fitted `Ø` Y-axis gutter labels (`computeWorkoutAverage`, `formatAverageYAxisLabel`, `resolveTelemetryYAxisLabels`) across all `TelemetryMetricGraph` charts in Workout Summary & Workout Details while keeping `ElevationProfile` untouched. |
 | `1.0.32` | 2026-11-22 | Lane 2 Author (`ATT-9164`, `--as agent1`) | `ATT-9164` | Added and verified `REQ-UI-2798` (`[Verified]`, `.1`–`.3`) rendering `HEART_RATE` and `POWER` graphs in WCAG 2.1 AA theme-adaptive zone colors (`TTColor.zoneStrokeColor`, `buildZoneBandsVerticalGradientStops`), zone-orthogonal multi-source overlay contrast (`overlayStrokeColor`), non-overlapping zone boundary Y-axis labels integrated with `ATT-9170` `Ø` priority, and accent-color + nice round-tick fallback (`calculateNiceIntermediateTicks`) when unzoned. |
 | `1.0.31` | 2026-11-22 | Lane 3 Author (`ATT-8125`, `--as agent1`) | `ATT-8125` | Added and verified `REQ-UI-2799` (`[Verified]`, `.1`–`.3`) replacing legacy `PeriodsScreen` `android.R.id.content` `FragmentTransaction` with pure Compose `onStartWorkoutList` day routing, hardening `EditDeviceDialog`/`EditDeviceViewModel` with rotation-safe dirty draft retention, `de_DE` comma/dot calibration input buffer, and Save-only / Cancel-zero-write persistence for Fused/TPMS/Radar options, removing duplicate outer `ATrainingTrackerApp` bottom-sheet insets, and adding `imePadding()` to `FilterBottomSheetScaffold` (`98/98` targeted tests PASS, Light/Dark & live `emulator-5554` PNGs verified). |
+| `1.0.34` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Added `REQ-UI-2800` (`[Planned]`, `.1`–`.4`) for background repository scopes (`BANALServiceRepository`, `WorkoutRepository`, `EquipmentRepository`, `SportTypesRepository`), structural `FilteredSensorData` `StateFlow` conflation & unbind-before-connect leak closure, `O(N)` `RrArtifactFilter` local-median/scratch-buffer precomputation, single-push `ProxySensor`/`FilterManager` + `deviceId` filter keying, and cockpit 1-Hz recomposition bounds (`TrackingTabGridContent`, `TrackingTabsScreen`). |
+| `1.0.35` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Gate 3 (`ATT-9635`) revision on `REQ-UI-2800`: added decoupled `_sparklineTick`/`_wPrimeTelemetryHeartbeat` liveness + NaN-safe `FilteredSensorData` equality, method-local `QD_WINDOW_SIZE + 1` (92) scratch buffers & `DoubleArray` `computeDifferences`, end-to-end `deviceId` rename survival (`TrackingViewModel`/sparklines/`MyFilter`), full `itpmsLock`/`trackLock`/`connectionLock` coverage, `ProxySensor` post-register re-check, and `DisplayBrightnessMode.SYSTEM`/`CUSTOM`/`AUTO` code-grounding. |
+| `1.0.36` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Promoted `REQ-UI-2800` to `[Verified]` after Stage 4–5 implementation & verification (`128/128` PASS across 20 targeted suites, `0` new compiler warnings, `DeviceManager.java` `1,679 <= 1,708`, live `emulator-5554` smoke & cockpit grid PNGs verified `0` crashes, `docs/engineering/test_evidence/tickets/ATT-8126/`). |
