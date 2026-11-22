@@ -1,7 +1,7 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.34  
+**Version**: 1.0.35  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1838,9 +1838,9 @@
      - `TelemetryMetricType` SHALL add `SLOPE` (`%` formatting, `TelemetryGraphColorPreferences` key `telemetry_graph_color_SENSOR_SLOPE` matching `SensorType.SLOPE` with `THEME_DEFAULT` default).
      - `ElevationProfile.kt` (with extracted `ElevationProfileOverlayComponents.kt`, `<= 1,500` LoC) SHALL accept `overlaySeries: List<TelemetrySourceSeries>` and, strictly when `>= 2` `ALTITUDE` sources exist, expose a compact `Layers` selector, render distinct secondary curves within shared bounds, display a compact `Ø` mean comparison legend, and update readouts during synchronized `DISTANCE`/`TIME` scrubbing.
      - `TelemetryMetricGraph.kt` (with extracted `TelemetryOverlayComponents.kt`, `<= 1,965` LoC) SHALL render multi-source overlays for `SPEED` (`MyHelper.mps2userUnit`), `PACE` (user pace min/km or min/mi with inverted Y-axis clamping), and `SLOPE` (`%`) with synchronized scrubbing and `Rule 64` plot bounds.
-  4. *Persisted Per-Chart Visibility Selection in Workout Details (`REQ-PER-044.4`)*:
-     - `MyPreferenceManager` SHALL persist per-chart visibility (`hidden_telemetry_charts` DataStore `stringSetPreferencesKey`, default empty = all charts visible on upgrade) across `SPEED_PACE`, `SLOPE`, `HEART_RATE`, `POWER`, `CADENCE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD`.
-     - Shared `TelemetryChartStack.kt` (reused by `MapDetailLayout.kt <= 1,500` LoC and `TrackOnMapScreen.kt`) SHALL expose a Material 3 `DropdownMenu` chart-visibility selector (`design_guidelines.md §1`) that stays accessible even when charts are hidden, preserves `Rule 64` horizontal plot alignment and `Rule 48` axis labels, and gates `hasTelemetrySeries` / `hasTelemetryGraphs` across `SLOPE` and `CADENCE` as well.
+  4. *Persisted Per-Chart Visibility Selection & Canonical Order in Workout Details (`REQ-PER-044.4`, refined by `ATT-9355`)*:
+     - `MyPreferenceManager` SHALL persist per-chart visibility (`hidden_telemetry_charts` DataStore `stringSetPreferencesKey` keyed by enum `.name`, default empty = all charts visible on upgrade) across `TelemetryChartKind` in canonical order: `SPEED_PACE`, `SLOPE`, `CADENCE`, `POWER`, `HEART_RATE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD` (`ATT-9355`).
+     - Shared `TelemetryChartStack.kt` (reused by `MapDetailLayout.kt <= 1,500` LoC and `TrackOnMapScreen.kt`) SHALL render both stacked graphs and the Material 3 `DropdownMenu` chart-visibility selector (`design_guidelines.md §1`) in that exact canonical order, stay accessible even when charts are hidden, preserve `Rule 64` horizontal plot alignment and `Rule 48` axis labels, and gate `hasTelemetrySeries` / `hasTelemetryGraphs` across `SLOPE` and `CADENCE` as well.
   5. *9-Locale Parity & Rule 8.5 Visual Compose Verification (`REQ-PER-044.5`)*:
      - All new strings (`track_type_att_fused`, `graph_heading_slope`, chart-visibility filter labels, source display labels, and `Ø` mean strings with indexed positional specifiers `%1$s`/`%1$d`) SHALL achieve 100% 9-locale parity (`EN/DE/ES/FR/IT/JA/NL/PL/PT`) with zero inline emojis (`ATT-5400`), and `track_type_network` SHALL be removed cleanly. Stage 4 SHALL render and inspect `docs/engineering/walkthroughs/img/ATT-8080_multisource_charts_visibility.png` (Light & Dark) via `read_file` (`Rule 8.5`).
 
@@ -2213,3 +2213,4 @@
 | `1.0.32` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Refined `REQ-WKO-039` (`[Planned]`, `.1`–`.3`, with 4-field Chesterton's Fence Audit) to gate PMC ACWR on `MIN_CTL_FOR_ACWR = 15.0` and normalize Tier-4 RPE fallback onto the TSS scale via `calculateRpeTss()` (`RPE 1..10 -> 20..140` TSS/h, 1h @ RPE 8 = `100.0` TSS) while keeping `REQ-WKO-038` `calculateSessionRpe()` untouched. |
 | `1.0.33` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Implemented]` (`PowerPhysiologyCalculator.kt`: `MIN_CTL_FOR_ACWR = 15.0`, `calculateRpeTss()`, Tier-4 delegation, `calculateSessionRpe()` untouched). |
 | `1.0.34` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 Tier-1 suites, `0` `app/` drift, `0` new warnings, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |
+| `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Refined `REQ-PER-044.4` (`[Verified]`) to swap `CADENCE` and `HEART_RATE` in `TelemetryChartStack.kt` & `MapModels.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`) while preserving DataStore enum-name persistence and `WorkoutSummary.kt` invariants. |

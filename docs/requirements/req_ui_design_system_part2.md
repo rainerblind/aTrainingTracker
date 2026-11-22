@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 2 of 5)
 
 **Document ID**: `DOC-REQ-UI-P2`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -375,18 +375,18 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `MapDetailLayout.kt`, `WorkoutSummary.kt`
-- **Rationale**: The system SHALL order continuous telemetry metric graphs such that the Speed/Pace graph precedes the Heart Rate graph, clustering the continuous Heart Rate curve directly adjacent to the 5-zone distribution card (ATT-1813):
-1. *Layout Ordering in MapDetailLayout.kt*: In detailed inspection view (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`), under `showZoomControls`, continuous telemetry graphs SHALL be arranged strictly in the order: (1) Speed / Pace Graph if `hasSpeedData(path)`, (2) Heart Rate Graph if `hasHeartRateData(path)`, (3) Cycling Power Graph if `hasPowerData(path)`. This sequence SHALL precede `analyticsContent`.
-2. *Layout Ordering in WorkoutSummary.kt*: In workout summary cards (`WorkoutSummary.kt`), under `showTelemetryCharts`, continuous telemetry graphs SHALL be arranged strictly in the order: (1) Speed / Pace Graph if `hasSpeedData(telemetryPoints)`, (2) Heart Rate Graph if `hasHeartRateData(telemetryPoints)`, (3) Cycling Power Graph if `hasPowerData(telemetryPoints)`. This sequence SHALL precede `showZoneAnalysis` cards.
-3. *Clustered Visual Flow*: For workouts recording Heart Rate and Speed/Pace without a cycling power meter, the continuous Heart Rate graph SHALL sit directly adjacent to the Heart Rate Zone Distribution card without Speed/Pace intervening, providing a cohesive cardiovascular visual rhythm.
-4. *Preservation of Core Invariants*: Conditional metric presence checks, zero extra whitespace for absent metrics, synchronized scrubbing via `selectedDistance`, sport-adaptive Pace/Speed units, and 9-language localization parity remain 100% preserved.
+- **Implementation**: `TelemetryChartStack.kt`, `MapModels.kt`, `MapDetailLayout.kt`, `WorkoutSummary.kt`
+- **Rationale**: The system SHALL order continuous telemetry metric graphs such that mechanical/kinematic metrics (`Speed/Pace`, `Slope`, `Cadence`, `Power`) precede cardiovascular/physiological metrics (`Heart Rate`, `W'bal`, `DFA a1`, `rMSSD`), keeping Speed/Pace above Heart Rate and clustering Heart Rate adjacent to physiological exertion charts (`ATT-1813`, refined by `ATT-9355`):
+1. *Layout Ordering in `TelemetryChartStack.kt` / `MapDetailLayout.kt` (`ATT-9355`)*: In Workout Details (`TelemetryChartStack.kt` / `MapModels.kt`, rendered via `MapDetailLayout.kt` / `WorkoutDetailTabbedContent.kt` and `"Visible Charts"` dropdown), continuous telemetry graphs SHALL be arranged strictly in the order: `SPEED_PACE`, `SLOPE`, `CADENCE`, `POWER`, `HEART_RATE`, `W_PRIME_BAL`, `HRV_DFA_A1`, `HRV_RMSSD` (omitting absent metrics cleanly).
+2. *Layout Ordering in WorkoutSummary.kt*: In workout summary cards (`WorkoutSummary.kt`), under `showTelemetryCharts`, continuous telemetry graphs SHALL remain arranged strictly in the order: (1) Speed / Pace Graph if `hasSpeedData(telemetryPoints)`, (2) Heart Rate Graph if `hasHeartRateData(telemetryPoints)`, (3) Cycling Power Graph if `hasPowerData(telemetryPoints)`. This sequence SHALL precede `showZoneAnalysis` cards.
+3. *Clustered Visual Flow*: Mechanical/kinematic output graphs (`Speed/Pace → Slope → Cadence → Power`) group cleanly at the top of Workout Details `CHARTS`, while `Heart Rate` sits directly above physiological/autonomic series (`W'bal → DFA a1 → rMSSD`) and adjacent to zone cards when power is absent.
+4. *Preservation of Core Invariants*: Conditional metric presence checks, zero extra whitespace for absent metrics, enum-name DataStore `hidden_telemetry_charts` compatibility, synchronized scrubbing via `selectedDistance`, `Rule 64` plot alignment, sport-adaptive Pace/Speed units, `WorkoutSummary.kt`/`WorkoutExtrema` stability, and 9-language localization parity remain 100% preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-214`), refining `REQ-UI-206` under Epic `ATT-111` (*Compact Post-Workout Visual Analytics & Graphs*).
-2. *Historical Origin & Commit Trace*: `ATT-1740` introduced `TelemetryMetricGraph.kt` and `REQ-UI-206` with arbitrary HR -> Speed -> Power ordering.
-3. *Root Reason for Existing Formulation*: Metric curves were initially arranged matching raw data structure ordering rather than user cognitive flow.
-4. *Preservation of Core Invariants*: Synchronized multi-metric scrubbing, dynamic scaling, sport-adaptive units, and localization parity are 100% strictly preserved.
+1. *Original Requirement ID & Target*: Refines `REQ-UI-214` (`ATT-1813`, originally refining `REQ-UI-206`) and `REQ-PER-044.4` (`ATT-8080`), targeting `TelemetryChartStack.kt` and `MapModels.kt` (`ATT-9355`).
+2. *Historical Origin & Commit Trace*: `ATT-1740` introduced `TelemetryMetricGraph.kt` (`REQ-UI-206`); `ATT-1813` ordered Speed/Pace before Heart Rate; `ATT-8080` extracted `TelemetryChartStack.kt` with `SPEED_PACE → SLOPE → HEART_RATE → POWER → CADENCE`; `ATT-9355` swaps `CADENCE` and `HEART_RATE`.
+3. *Root Reason for Existing Formulation*: `HEART_RATE` originally preceded `POWER` and `CADENCE` before `SLOPE`, `CADENCE`, `W_PRIME_BAL`, and `HRV_*` graphs were added, splitting mechanical output (`Speed`, `Slope`, `Power`, `Cadence`) around `Heart Rate`.
+4. *Preservation of Core Invariants*: Speed/Pace still precedes Heart Rate; `WorkoutSummary.kt` and `WorkoutExtrema` remain untouched; `hidden_telemetry_charts` persists by enum `.name` (100% backwards-compatible); synchronized scrubbing, `Rule 64` alignment, and 9-locale parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a completed workout with Heart Rate and GPS speed in Aftermath (`TrackOnMapScreen`),
@@ -3981,3 +3981,4 @@ e. Dismiss / Done button.
 | `1.0.1` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Added `REQ-UI-2789` `[Planned]` for marginal histogram, X-axis tick, and `PathPreviewMap` cluster thumbnail deduplication. |
 | `1.0.2` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `REQ-UI-2789` to `[Implemented]` in Stage 4 (`TelemetryChartCanvasHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`). |
 | `1.0.3` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `REQ-UI-2789` to `[Verified]` in Stage 5 (Rule 7.5 Fast Path reusing Gate 4 `ATT-9433` @ `2b4277ca`: `277/277` PASS across 61 suites, `4/4` linters, both `Rule 8.5` PNGs PASS). |
+| `1.0.4` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Refined `REQ-UI-214` (`[Verified]`) with 4-field Chesterton's Fence Audit for swapped `CADENCE`/`HEART_RATE` order in `TelemetryChartStack.kt` & `MapModels.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`) while preserving `WorkoutSummary.kt` and `WorkoutExtrema`. |

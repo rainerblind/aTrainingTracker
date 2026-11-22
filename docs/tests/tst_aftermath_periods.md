@@ -1,7 +1,7 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.38  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1194,8 +1194,8 @@
      • Verify `OverlaySeriesAccumulator` retains negative `SLOPE` (`-8.0%`), `0.0%` flat, and `<= 0.0 m` sea-level `ALTITUDE` samples across GPS and trackless workouts while maintaining `> 0` gating for `HR`/`CADENCE` and `>= 0` for `POWER`/`SPEED_mps`.
   3. *`ElevationProfile` Overlays, `SPEED`/`PACE` Unit Conversion & `SLOPE` Graph (`TST-PER-052.3`, `TelemetryMetricUtilsTest.kt`, `TelemetryGraphColorPreferencesTest.kt`, `ElevationProfileOverlayTest.kt`, `TelemetryMetricGraphOverlayTest.kt`, `MapDetailLayoutScrubSynchronizationTest.kt`, `TelemetryChartStackVisibilityTest.kt`)*:
      • Verify `TelemetryMetricType.SLOPE` (`%` formatting, `telemetry_graph_color_SENSOR_SLOPE` key), `SPEED`/`PACE` m/s -> user-unit (`km/h`/`mi/h`) and inverted-pace (`min/km`/`min/mi`) overlay conversion, `ElevationProfile` `Layers` toggle (`<= 1` hidden, `>= 2` shows curves + `Ø` mean legend), and synchronized `DISTANCE`/`TIME` scrubbing across `ElevationProfile`, `SPEED`/`PACE`, `SLOPE`, `HR`, `POWER`, and `CADENCE`.
-  4. *Persisted Per-Chart Visibility Toggles & `Rule 64` Alignment (`TST-PER-052.4`, `TelemetryChartStackVisibilityTest.kt`)*:
-     • Verify DataStore `hidden_telemetry_charts` defaults to all charts enabled, toggling individual charts (e.g. showing `Slope`/`Cadence` and hiding `W'bal`) updates `CHARTS` immediately and persists across sessions, filter trigger remains accessible when all charts are hidden, and `Rule 64` horizontal plot alignment holds.
+  4. *Persisted Per-Chart Visibility Toggles, Canonical Order & `Rule 64` Alignment (`TST-PER-052.4`, `TelemetryChartStackVisibilityTest.kt`, refined by `ATT-9355`)*:
+     • Verify DataStore `hidden_telemetry_charts` defaults to all charts enabled and decodes by enum `.name`, toggling individual charts updates `CHARTS` immediately and persists across sessions, filter trigger remains accessible when all charts are hidden, `Rule 64` horizontal plot alignment holds, and both rendered graphs and `"Visible Charts"` dropdown items follow `SPEED_PACE -> SLOPE -> CADENCE -> POWER -> HEART_RATE -> W_PRIME_BAL -> HRV_DFA_A1 -> HRV_RMSSD` (`testTelemetryChartStack_ordersCadenceBeforePowerAndHeartRateAfterPower_att9355`, `testCaptureCadenceHeartRateOrderLightAndDarkScreenshot_att9355`).
   5. *9-Locale Parity, LoC Ceilings & `Rule 8.5` PNG (`TST-PER-052.5`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `TelemetryChartStackVisibilityTest.kt`)*:
      • Verify 100% 9-locale parity (`track_type_att_fused`, `graph_heading_slope`, visibility/overlay strings, zero `track_type_network`, zero emojis), pass `ArchitectureConformanceContractTest` (`WorkoutRepository.kt <= 5,117`, `TelemetryMetricGraph.kt <= 1,965`, `MapDetailLayout.kt <= 1,500`, `ElevationProfile.kt <= 1,500`) and `DetailedDesignParityContractTest`, and inspect `docs/engineering/walkthroughs/img/ATT-8080_multisource_charts_visibility.png` (Light & Dark) via `read_file`.
 
@@ -1453,3 +1453,4 @@
 | `1.0.36` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Refined `TST-WKO-039` (`[Planned]`, `.1`–`.2`) covering `MIN_CTL_FOR_ACWR = 15.0` low-CTL gating, all 10 `calculateRpeTss` levels (`20..140` TSS/h) + invalid/non-finite guards, Tier-4 TSS equivalence (`1h @ RPE 8 == 100.0`), and `REQ-WKO-038` Foster sRPE preservation. |
 | `1.0.37` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-WKO-039` to `[Implemented]` with exact verbatim `PowerPhysiologyCalculatorTest` and `WorkoutRpeFeelTest` method citations. |
 | `1.0.38` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-WKO-039` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` across 7 suites, `0` `app/` drift, `3/3` safety linters PASS, `--check-verified-evidence` `exit 0`). |
+| `1.0.39` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Updated `TST-PER-052.4` (`[Verified]`) adding behavioral Compose UI bounds & dropdown order tests + Light/Dark PNG (`TelemetryChartStackVisibilityTest.kt`) for swapped `CADENCE`/`HEART_RATE` order (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`). |

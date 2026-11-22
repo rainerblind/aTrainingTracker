@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:19:39.565Z" hostname="rainer-HP-EliteBook-850-G5" time="19.455">
+  <properties/>
+  <testcase name="testCaptureMultiSourceChartsAndVisibilityScreenshot" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="15.505"/>
+  <testcase name="testSpeedPaceAndSlopeOverlays_convertUnitsAndToggleLegend" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="1.353"/>
+  <testcase name="testMyPreferenceManager_persistsHiddenChartsAndIgnoresUnknownTokens" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.479"/>
+  <testcase name="testGermanLocaleFormatting_usesCommasUniformlyAcrossHeadersAndOverlays" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.191"/>
+  <testcase name="testLandscapeModeWithoutElevationProfile_visibleChartsDoesNotOverlapZoomToolbar" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.556"/>
+  <testcase name="testTelemetryChartStack_ordersCadenceBeforePowerAndHeartRateAfterPower_att9355" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.293"/>
+  <testcase name="testTrackTypeEnum_includesAttFusedAndExcludesNetwork" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.097"/>
+  <testcase name="testCaptureCadenceHeartRateOrderLightAndDarkScreenshot_att9355" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.537"/>
+  <testcase name="testTelemetryChartStack_togglesPerChartVisibilityAndShowsEmptyHintWhenAllHidden" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartStackVisibilityTest" time="0.442"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
