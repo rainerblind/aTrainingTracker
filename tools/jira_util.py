@@ -32,6 +32,7 @@ from sprint_metrics import (
     parse_sprint_gate_metrics,
     parse_subtask_verdict_from_text,
     record_sprint_metrics,
+    refresh_human_acceptance_rates,
 )
 
 try:
@@ -4973,9 +4974,38 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
     return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history, repo_root=repo_root)
 
 
-def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator", weekly_rollup=True):
+def cmd_sprint_metrics(
+    sprint_arg=None,
+    record=False,
+    post_to_retro=False,
+    backfill=None,
+    role="coordinator",
+    weekly_rollup=True,
+    refresh_human_acceptance=False,
+):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
+
+    if refresh_human_acceptance:
+        def _fetch_for_sprint(s_id, s_name):
+            clauses = []
+            if s_id is not None and str(s_id).isdigit():
+                clauses.append(f"sprint = {int(s_id)}")
+            if s_name:
+                safe_lbl = str(s_name).strip().replace('"', '')
+                clauses.append(f'labels = "sprint-{safe_lbl}"')
+            if not clauses:
+                return []
+            jql = f"project = ATT AND issuetype not in subTaskIssueTypes() AND ({' OR '.join(clauses)})"
+            return paged_jql_search(jql, ["summary", "status", "issuetype", "labels"], role=role)
+
+        updated = refresh_human_acceptance_rates(_fetch_for_sprint)
+        print(f"Refreshed human_acceptance_rate_percent for {len(updated)} historical sprint(s):")
+        for u in updated:
+            print(f"  - {u['sprint_name']} (id {u['sprint_id']}): {u['old_rate']}% -> {u['new_rate']}% ({u['accepted']}/{u['total']})")
+        if not sprint_arg and not record and not post_to_retro and backfill is None:
+            return
+
     boards = jira_request(f"{base}/rest/agile/1.0/board", role=role)["values"]
     if not boards:
         print("Error: No Agile board found.", file=sys.stderr)
@@ -7039,6 +7069,7 @@ if __name__ == "__main__":
         post_to_retro = False
         weekly_rollup = True
         backfill = None
+        refresh_ha = False
         idx = 1
         while idx < len(remaining_argv):
             a = remaining_argv[idx]
@@ -7048,6 +7079,8 @@ if __name__ == "__main__":
                 post_to_retro = True
             elif a == "--no-weekly-rollup":
                 weekly_rollup = False
+            elif a in ("--refresh-human-acceptance", "--backfill-human-acceptance"):
+                refresh_ha = True
             elif a.startswith("--sprint="):
                 sprint_arg = a.split("=", 1)[1]
             elif a == "--sprint" and idx + 1 < len(remaining_argv):
@@ -7061,7 +7094,15 @@ if __name__ == "__main__":
             elif not a.startswith("--") and not sprint_arg:
                 sprint_arg = a
             idx += 1
-        cmd_sprint_metrics(sprint_arg=sprint_arg, record=record, post_to_retro=post_to_retro, backfill=backfill, role=active_role, weekly_rollup=weekly_rollup)
+        cmd_sprint_metrics(
+            sprint_arg=sprint_arg,
+            record=record,
+            post_to_retro=post_to_retro,
+            backfill=backfill,
+            role=active_role,
+            weekly_rollup=weekly_rollup,
+            refresh_human_acceptance=refresh_ha,
+        )
     elif cmd in ("export-gates", "export_gates"):
         sprint_arg = None
         out_arg = None

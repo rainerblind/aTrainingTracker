@@ -34,12 +34,16 @@ except ImportError:  # pragma: no cover - defensive fallback
 
 # Subtask stage markers mapping to Gate numbers
 STAGE_MAP = {
-    1: {"prefix": "[analysis]", "name": "Analysis (Gate 1)"},
-    2: {"prefix": "[req & test spec]", "name": "Req & Test Spec (Gate 2)"},
-    3: {"prefix": "[impl-plan]", "name": "Impl-Plan (Gate 3)"},
-    4: {"prefix": "[implementation]", "name": "Implementation (Gate 4)"},
-    5: {"prefix": "[test]", "name": "Test (Gate 5)"},
-    6: {"prefix": "[final review (agent)]", "name": "Final Review (Agent) (Gate 6)"},
+    1: {"prefix": "[analysis]", "aliases": ("[analysis]",), "name": "Analysis (Gate 1)"},
+    2: {"prefix": "[req & test spec]", "aliases": ("[req & test spec]",), "name": "Req & Test Spec (Gate 2)"},
+    3: {
+        "prefix": "[impl-plan]",
+        "aliases": ("[impl-plan]", "[implementation plan]"),
+        "name": "Impl-Plan (Gate 3)",
+    },
+    4: {"prefix": "[implementation]", "aliases": ("[implementation]",), "name": "Implementation (Gate 4)"},
+    5: {"prefix": "[test]", "aliases": ("[test]",), "name": "Test (Gate 5)"},
+    6: {"prefix": "[final review (agent)]", "aliases": ("[final review (agent)]",), "name": "Final Review (Agent) (Gate 6)"},
 }
 
 FINAL_REVIEW_BOUNCE_RE = re.compile(
@@ -197,14 +201,15 @@ def _render_ascii_bar(val, max_val, width=10):
 
 
 def identify_gate_number(summary):
-    """Determines Gate number (1..5) from subtask summary prefix (including numbered bounce suffixes)."""
+    """Determines Gate number (1..5) from subtask summary prefix (including aliases & numbered bounce suffixes)."""
     s_lower = (summary or "").lower()
     for g in range(1, 6):
         data = STAGE_MAP[g]
-        prefix = data["prefix"]
-        stem = prefix[:-1]
-        if prefix in s_lower or re.search(rf"{re.escape(stem)}\s*-\s*bounce\s*\d+\]", s_lower):
-            return g
+        prefixes = data.get("aliases") or (data["prefix"],)
+        for prefix in prefixes:
+            stem = prefix[:-1]
+            if prefix in s_lower or re.search(rf"{re.escape(stem)}\s*-\s*bounce\s*\d+\]", s_lower):
+                return g
     return None
 
 
@@ -621,14 +626,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
 
     overall_ftpr = (
         round((total_passed_first_time / total_evaluated_subtasks) * 100.0, 1)
-        if total_evaluated_subtasks > 0 else 100.0
+        if total_evaluated_subtasks > 0 else None
     )
 
     total_evaluated_e2e = sum(gate_data[g]["total"] for g in range(1, 7))
     total_passed_first_time_e2e = sum(gate_data[g]["passed_first_time"] for g in range(1, 7))
     end_to_end_ftpr = (
         round((total_passed_first_time_e2e / total_evaluated_e2e) * 100.0, 1)
-        if total_evaluated_e2e > 0 else 100.0
+        if total_evaluated_e2e > 0 else None
     )
 
     # Gate 6: Stage 6 ('Final Review (Agent)') Cold Carbon Review
@@ -636,8 +641,8 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     pft6 = gate_data[6]["passed_first_time"]
     rev6 = gate_data[6]["revisions"]
     bounces6 = gate_data[6]["bounces"]
-    ftpr6 = round((pft6 / tot6) * 100.0, 1) if tot6 > 0 else 100.0
-    escape_rate6 = round(1.0 - (ftpr6 / 100.0), 4)
+    ftpr6 = round((pft6 / tot6) * 100.0, 1) if tot6 > 0 else None
+    escape_rate6 = round(1.0 - (ftpr6 / 100.0), 4) if ftpr6 is not None else 0.0
 
     # Downstream defect escape attribution across upstream gates (REQ-PRO-092.4)
     # Stage 6 bounces represent defects that escaped upstream verification barriers (Gates 3, 4, 5).
@@ -656,9 +661,9 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
         pft = gate_data[g]["passed_first_time"]
         rev = gate_data[g]["revisions"]
         unver = gate_data[g]["unverified"]
-        ftpr = round((pft / tot) * 100.0, 1) if tot > 0 else 100.0
+        ftpr = round((pft / tot) * 100.0, 1) if tot > 0 else None
         # Escape rate p_g is the defect escape probability from authoring into rework
-        escape_rate = round(1.0 - (ftpr / 100.0), 4)
+        escape_rate = round(1.0 - (ftpr / 100.0), 4) if ftpr is not None else 0.0
 
         # REQ-PRO-092.4: If Stage 6 bounces occurred, attribute downstream escape to Gates 3, 4, 5
         if g in (3, 4, 5) and bounces6 > 0:
@@ -715,7 +720,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     # REQ-PRO-092.5 / REQ-PRO-122.4: Metric Plausibility Warning Thresholds (Gates 1-5 only; never masked by Gate 6)
     plausibility_warnings = []
     total_revisions_gates_1_to_5 = sum(gate_data[g]["revisions"] for g in range(1, 6))
-    if total_evaluated_subtasks >= 20 and overall_ftpr >= 100.0 and total_revisions_gates_1_to_5 == 0:
+    if total_evaluated_subtasks >= 20 and overall_ftpr is not None and overall_ftpr >= 100.0 and total_revisions_gates_1_to_5 == 0:
         gate6_note = (
             f" (despite {rev6} Gate 6 revisions and {bounces6} bounces)"
             if (rev6 > 0 or bounces6 > 0) else ""
@@ -842,13 +847,13 @@ def calculate_spc_limits(history, current_metrics=None):
     keys_to_track = [
         (
             "overall_ftpr",
-            lambda m: m.get("quality_gates", {}).get("overall_ftpr_percent", 100.0),
+            lambda m: m.get("quality_gates", {}).get("overall_ftpr_percent"),
             lambda m: m.get("quality_gates", {}).get("total_subtasks_evaluated"),
             True,
         ),
         (
             "human_acceptance",
-            lambda m: m.get("quality_gates", {}).get("human_acceptance_rate_percent", 100.0),
+            lambda m: m.get("quality_gates", {}).get("human_acceptance_rate_percent"),
             lambda m: m.get("throughput", {}).get("total_tickets"),
             True,
         ),
@@ -930,14 +935,14 @@ def calculate_spc_limits(history, current_metrics=None):
 
     # ASPICE 4.0 Finding M3 / REQ-PRO-107.3: Multi-Sprint 100% FTPR Rubber-Stamping Alert
     if current_metrics and filtered_history:
-        curr_ftpr = current_metrics.get("quality_gates", {}).get("overall_ftpr_percent", 0.0)
+        curr_ftpr = current_metrics.get("quality_gates", {}).get("overall_ftpr_percent")
         curr_subtasks = current_metrics.get("quality_gates", {}).get("total_subtasks_evaluated", 0)
-        if curr_ftpr >= 100.0 and curr_subtasks > 0:
+        if curr_ftpr is not None and curr_ftpr >= 100.0 and curr_subtasks > 0:
             consecutive_100_count = 1
             for hist in reversed(filtered_history):
-                h_ftpr = hist.get("quality_gates", {}).get("overall_ftpr_percent", 0.0)
+                h_ftpr = hist.get("quality_gates", {}).get("overall_ftpr_percent")
                 h_subtasks = hist.get("quality_gates", {}).get("total_subtasks_evaluated", 0)
-                if h_ftpr >= 100.0 and h_subtasks > 0:
+                if h_ftpr is not None and h_ftpr >= 100.0 and h_subtasks > 0:
                     consecutive_100_count += 1
                 else:
                     break
@@ -1016,6 +1021,94 @@ def load_historical_metrics(filepath=DEFAULT_METRICS_PATH, repo_root=None):
     return records
 
 
+def refresh_human_acceptance_rates(
+    fetch_issues_for_sprint_fn,
+    filepath=DEFAULT_METRICS_PATH,
+    repo_root=None,
+    now=None,
+):
+    """
+    ATT-9499 / Finding M15:
+    Backfills/refreshes human_acceptance_rate_percent and human_accepted_tickets
+    for historical sprint records in process_metrics.jsonl from terminal Jira statuses
+    (including tickets archived into queue 453 / labeled sprint-<SCHICHT>).
+    Returns list of dicts summarizing updated sprints.
+    """
+    target = Path(repo_root) / filepath if repo_root else Path(filepath)
+    if not target.exists():
+        return []
+
+    records = load_historical_metrics(filepath=filepath, repo_root=repo_root)
+    if not records:
+        return []
+
+    ref_iso = (
+        now.isoformat()
+        if isinstance(now, datetime.datetime)
+        else datetime.datetime.now(datetime.timezone.utc).isoformat()
+    )
+    updated_summary = []
+
+    for rec in records:
+        s_id = rec.get("sprint_id")
+        s_name = rec.get("sprint_name")
+        if not s_id and not s_name:
+            continue
+        issues = fetch_issues_for_sprint_fn(s_id, s_name) or []
+        # Exclude subtasks, Review & Retro ceremony tickets, and Epic container ATT-232
+        parent_tickets = []
+        seen_keys = set()
+        for iss in issues:
+            k = iss.get("key")
+            if k and k in seen_keys:
+                continue
+            fields = iss.get("fields", {}) or {}
+            if fields.get("issuetype", {}).get("subtask", False):
+                continue
+            summ_l = (fields.get("summary") or "").lower()
+            if "review & retro" in summ_l or k == "ATT-232":
+                continue
+            if k:
+                seen_keys.add(k)
+            parent_tickets.append(iss)
+
+        if not parent_tickets:
+            continue
+
+        accepted = 0
+        for iss in parent_tickets:
+            st_name = ((iss.get("fields") or {}).get("status") or {}).get("name", "").strip().lower()
+            if st_name in TERMINAL_CLOSED_STATUSES:
+                accepted += 1
+
+        total = len(parent_tickets)
+        new_rate = round((accepted / total) * 100.0, 1)
+        qg = rec.setdefault("quality_gates", {})
+        old_rate = qg.get("human_acceptance_rate_percent")
+        qg["human_accepted_tickets"] = accepted
+        qg["human_acceptance_rate_percent"] = new_rate
+        qg["human_acceptance_sample_size"] = total
+        qg["human_acceptance_refreshed_at"] = ref_iso
+        updated_summary.append({
+            "sprint_id": s_id,
+            "sprint_name": s_name,
+            "old_rate": old_rate,
+            "new_rate": new_rate,
+            "accepted": accepted,
+            "total": total,
+        })
+
+    with open(target, "w", encoding="utf-8") as f:
+        for r in records:
+            f.write(json.dumps(r, sort_keys=True) + "\n")
+
+    return updated_summary
+
+
+def _fmt_pct(val):
+    return "N/A" if val is None else f"{val}%"
+
+
 def format_metrics_markdown(metrics, spc=None, history=None):
     """Formats quantitative metrics and SPC analysis into a clean markdown table."""
     s_name = metrics.get("sprint_name", "")
@@ -1033,12 +1126,12 @@ def format_metrics_markdown(metrics, spc=None, history=None):
         "",
         "h3. 1. Throughput & Quality Gate First-Time-Pass-Rates (FTPR)",
         f"* *Ticket Throughput*: {tp.get('completed_tickets')}/{tp.get('total_tickets')} tickets ({tp.get('completion_rate_percent')}%) | *Velocity*: {tp.get('completed_story_points')} SP",
-        f"* *Overall Gate FTPR*: *{qg.get('overall_ftpr_percent')}%* (evaluated across {qg.get('total_subtasks_evaluated')} sub-tasks)",
+        f"* *Overall Gate FTPR*: *{_fmt_pct(qg.get('overall_ftpr_percent'))}* (evaluated across {qg.get('total_subtasks_evaluated')} sub-tasks)",
         *(
-            [f"* *End-to-End Gate FTPR (Gates 1–6)*: *{qg.get('end_to_end_ftpr_percent')}%*"]
+            [f"* *End-to-End Gate FTPR (Gates 1–6)*: *{_fmt_pct(qg.get('end_to_end_ftpr_percent'))}*"]
             if "end_to_end_ftpr_percent" in qg else []
         ),
-        f"* *Human Acceptance Rate*: *{qg.get('human_acceptance_rate_percent')}%*{accepted_suffix}",
+        f"* *Human Acceptance Rate*: *{_fmt_pct(qg.get('human_acceptance_rate_percent'))}*{accepted_suffix}",
         "",
         "|| Gate / Stage || Sub-tasks || 1st-Time Pass || Revisions || FTPR % || Defect Escape Rate (p) ||",
     ]
@@ -1048,10 +1141,11 @@ def format_metrics_markdown(metrics, spc=None, history=None):
         if not info and g == 6:
             continue
         info = info or {}
+        ftpr_val = info.get("ftpr_percent")
         lines.append(
             f"| {info.get('name', f'Gate {g}')} | {info.get('total_subtasks', 0)} | "
             f"{info.get('passed_first_time', 0)} | {info.get('revisions', 0)} | "
-            f"*{info.get('ftpr_percent', 100.0)}%* | {info.get('escape_rate_p', 0.0)} |"
+            f"*{_fmt_pct(ftpr_val)}* | {info.get('escape_rate_p', 0.0)} |"
         )
 
     p6_str = f", p6={sc.get('p6_final_review_agent_escape')}" if "p6_final_review_agent_escape" in sc else ""

@@ -899,6 +899,72 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertEqual(parse_subtask_verdict_from_text("Gate 4: __PASS__"), "PASS")
         self.assertEqual(parse_subtask_verdict_from_text("_APPROVED_"), "PASS")
 
+    def test_gate3_implementation_plan_alias_and_zero_subtask_na_ftpr_and_backfill(self):
+        """ATT-9499 / Findings M14 & M15: Match [Implementation Plan] at Gate 3, report None/N/A for 0/0 FTPR, and backfill human acceptance."""
+        from sprint_metrics import refresh_human_acceptance_rates
+
+        # 1. Both [Impl-Plan] and [Implementation Plan] (plus bounce suffixes) map to Gate 3
+        self.assertEqual(identify_gate_number("[Impl-Plan] Design sync"), 3)
+        self.assertEqual(identify_gate_number("[Implementation Plan] Design sync"), 3)
+        self.assertEqual(identify_gate_number("[Implementation Plan - Bounce 2] Design sync"), 3)
+
+        # 2. Gate with 0 evaluated subtasks reports None (rendered N/A), never fabricated 100.0%
+        issues = [
+            {
+                "key": "ATT-9901",
+                "fields": {
+                    "summary": "Ticket with Implementation Plan subtask only",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "Medium"},
+                    "subtasks": [
+                        {
+                            "fields": {"summary": "[Implementation Plan] Atomic steps", "status": {"name": "Erledigt"}},
+                            "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] GATE_VERDICT: PASS"}],
+                        }
+                    ],
+                },
+            }
+        ]
+        m = parse_sprint_gate_metrics(issues, {"id": 464, "name": "2026-47.4"})
+        g3 = m["quality_gates"]["gates"]["gate_3"]
+        g1 = m["quality_gates"]["gates"]["gate_1"]
+        self.assertEqual(g3["total_subtasks"], 1)
+        self.assertEqual(g3["ftpr_percent"], 100.0)
+        self.assertEqual(g1["total_subtasks"], 0)
+        self.assertIsNone(g1["ftpr_percent"])
+        md = format_metrics_markdown(m)
+        self.assertIn("| Analysis (Gate 1) | 0 | 0 | 0 | *N/A* |", md)
+
+        # 3. Sprint with zero evaluated subtasks reports overall_ftpr_percent = None (N/A)
+        m_empty = parse_sprint_gate_metrics(
+            [{"key": "ATT-9902", "fields": {"summary": "Empty", "status": {"name": "Zu erledigen"}, "subtasks": []}}],
+            {"id": 465, "name": "2026-47.5"},
+        )
+        self.assertIsNone(m_empty["quality_gates"]["overall_ftpr_percent"])
+        self.assertIn("*Overall Gate FTPR*: *N/A*", format_metrics_markdown(m_empty))
+
+        # 4. Backfill/refresh updates flatlined 0.0% human_acceptance_rate_percent from terminal Jira statuses
+        record_sprint_metrics(m, filepath=self.metrics_file)
+        self.assertEqual(load_historical_metrics(filepath=self.metrics_file)[0]["quality_gates"]["human_acceptance_rate_percent"], 0.0)
+
+        def fake_fetch(s_id, s_name):
+            self.assertEqual(s_id, 464)
+            return [
+                {"key": "ATT-9901", "fields": {"summary": "Ticket 1", "status": {"name": "Erledigt"}, "issuetype": {"subtask": False}}},
+                {"key": "ATT-9902", "fields": {"summary": "Ticket 2", "status": {"name": "Erledigt"}, "issuetype": {"subtask": False}}},
+                {"key": "ATT-9903", "fields": {"summary": "Ticket 3", "status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}}},
+                {"key": "ATT-9904", "fields": {"summary": "Review & Retro - 2026-47.4", "status": {"name": "Erledigt"}, "issuetype": {"subtask": False}}},
+            ]
+
+        updated = refresh_human_acceptance_rates(fake_fetch, filepath=self.metrics_file)
+        self.assertEqual(len(updated), 1)
+        self.assertEqual(updated[0]["accepted"], 2)
+        self.assertEqual(updated[0]["total"], 3)
+        self.assertEqual(updated[0]["new_rate"], 66.7)
+        reloaded = load_historical_metrics(filepath=self.metrics_file)[0]
+        self.assertEqual(reloaded["quality_gates"]["human_acceptance_rate_percent"], 66.7)
+        self.assertEqual(reloaded["quality_gates"]["human_accepted_tickets"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
