@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 1 of 3)
 
 **Document ID**: `DOC-TST-UI-P1`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -316,7 +316,7 @@
 - **Test Description**: 1. Open the app to the main tracking screen. 2. Inspect the header area.
 
 ### TST-UI-074: **Weekly Period Date Range** [Verified]
-- **Requirement(s)**: `REQ-UI-116`
+- **Requirement(s)**: `REQ-UI-116`, `REQ-UI-521`
 - **Component**: **Weekly Period Date Range**
 - **Jira**: ``ATT-386``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Navigate to the 'Weeks' tab. 3. Inspect the period items.
@@ -468,7 +468,7 @@
   5. Execute full unit test suite.
 
 ### TST-UI-078: **Cluster Naming Dialog Localization Audit** [Verified]
-- **Requirement(s)**: `REQ-UI-123`
+- **Requirement(s)**: `REQ-UI-123`, `REQ-UI-522`
 - **Component**: **Cluster Naming Dialog Localization Audit**
 - **Jira**: `ATT-565`, `ATT-5664`, `ATT-5662`
 - **Test Description**:

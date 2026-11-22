@@ -6,7 +6,7 @@ AR(1) DFA alpha-1 regimes, rMSSD innovation scaling, artifact/gap injection with
 and Python standard library compliance (TST-PRO-005.6).
 
 Requirement: REQ-SIM-001 (REQ-TST-005.1..4)
-Test Spec: TST-SIM-001 (TST-TST-005.1..5)
+Test Spec: TST-SIM-001 (TST-SIM-001.1..5)
 """
 
 import ast

@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-TST-PRO-P1`  
-**Version**: 1.0.3  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -16,7 +16,7 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
-- **Requirement(s)**: `REQ-TRK-001`, `REQ-TRK-003`, `REQ-TRK-007`, `REQ-MAP-003`
+- **Requirement(s)**: `REQ-TRK-001`, `REQ-TRK-003`, `REQ-TRK-007`, `REQ-MAP-003`, `REQ-MAP-001`
 - **Component**: **Tracking**
 - **Test Description**: Start workout, background app for 10 min, check bearing jitter.
 
@@ -77,7 +77,7 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
-- **Requirement(s)**: `REQ-UI-111`
+- **Requirement(s)**: `REQ-UI-111`, `REQ-UI-010`
 - **Component**: **UI Layout**
 - **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::trackingTabConfigHeader_narrowWidth_allButtonsFitAndTrigger_TST_INT_005` (`ATT-8327`)
 - **Test Description**: Open the Tab Configuration on a narrow device or split-screen.
@@ -86,7 +86,7 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
-- **Requirement(s)**: `REQ-UI-111`
+- **Requirement(s)**: `REQ-UI-111`, `REQ-UI-010`
 - **Component**: **UI Layout**
 - **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/components/ProcessStabilityComposeUiTest.kt::ProcessStabilityComposeUiTest::configHeaderAndSensorGrid_toggleAndButtonSequenceAudit_TST_INT_006` (`ATT-8327`)
 - **Test Description**: Audit the checkbox sequence in the tab configuration header.
@@ -357,7 +357,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-EXP-005`, `REQ-UI-109`
+- **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-EXP-005`, `REQ-UI-109`, `REQ-DAT-001`, `REQ-UI-008`
 - **Component**: **Stability**
 - **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt::ArchitectureConformanceContractTest` (`ATT-8327`)
 - **Test Description**: Static analysis and architectural audit.

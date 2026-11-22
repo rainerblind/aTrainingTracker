@@ -1,7 +1,7 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.5  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -53,7 +53,7 @@
   6. Run automated regression suite `./gradlew testDebugUnitTest` including `DisplaySettingsTest`.
 
 ### TST-NAV-005: **Direct Units Settings Dialog Verification** [Verified]
-- **Requirement(s)**: `REQ-SET-053`
+- **Requirement(s)**: `REQ-SET-053`, `REQ-SET-005`
 - **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `UnitsSettingsDialog.kt`, `UnitsSettingsDialogTest.kt`
 - **Code**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/settings/units/UnitsSettingsDialogTest.kt` (`testUnitsDialog_savePersistsSelection`, `testUnitsDialog_cancelDiscardsChanges`)
 - **Jira**: ``ATT-262` / `ATT-8326``

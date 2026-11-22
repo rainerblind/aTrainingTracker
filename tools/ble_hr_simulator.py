@@ -8,7 +8,7 @@ Emulates a standard Bluetooth Low Energy Heart Rate Service (UUID 0x180D) with:
 - Device Information (UUID 0x180A) with Manufacturer Name (0x2A29)
 
 Requirement: REQ-SIM-001 (REQ-TST-005.1..4)
-Tests: TST-SIM-001 (TST-TST-005.1..5), tools/test_ble_hr_simulator.py
+Tests: TST-SIM-001 (TST-SIM-001.1..5), tools/test_ble_hr_simulator.py
 
 Usage:
     python3 tools/ble_hr_simulator.py                     # Default: 135 BPM, 100% Battery, RR enabled

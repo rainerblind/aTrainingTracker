@@ -5003,7 +5003,7 @@ SWE_DERIVED_PREFIXES = {
     "REV",
     "STP",
     "HRV", "WKO",
-    "ARC", "BLD", "BUG", "INT", "LIV", "LOG", "MAN", "NFR", "PRO", "REG", "SEC", "STB", "STR", "TOOL", "TST",
+    "ARC", "BLD", "BUG", "INT", "LIV", "LOG", "MAN", "NFR", "PRO", "REG", "SEC", "SIM", "STB", "STR", "TOOL", "TST",
 }
 
 SYSTEM_REFINED_PREFIXES = {

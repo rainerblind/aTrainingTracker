@@ -1,16 +1,16 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.53  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 99
+**Total Tests**: 102
 
-**Total Tests**: 94
+**Total Tests**: 100
 
 ---
 
@@ -1714,6 +1714,24 @@
      • *Given* mocked `get_config`, `paged_jql_search`, and `create_issue`, *When* any of the 4 `ensure_weekly_*_ticket()` helpers is called while not overdue, *Then* `paged_jql_search` and `create_issue` are NOT called and `None` is returned; *When* `ensure_weekly_full_test_suite_ticket()` is overdue with no open ticket, *Then* it creates a `Verbesserung` under `ATT-232` (`add_to_sprint=False`, `rank_top=True`, `points=3.0`, `priority="High"`, labels `["process", "verification", "weekly-test-suite", "weekly-review", "tier-c"]`, canonical KW checklist); *When* an open `weekly-test-suite` ticket exists, *Then* it returns the open key without duplicating; and `ensure_weekly_reviews()` returns all 4 pillar keys (`code_review`, `aspice_audit`, `emulator_sweep`, `full_test_suite`). Tag with `TST-PRO-136.2`.
   3. *Governance, Release Gate & QA Plan Synchronization (`TST-PRO-136.3`, `tools/verify_requirement_governance.py`, `tools/verify_skills.py`)*:
      • *Given* updated `.agents/skills/release-manager/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/rules/aspice_governance.md`, and `docs/management/qa_plan.md`, *When* `verify_requirement_governance.py`, `verify_skills.py`, and `auto_gate.py --ticket ATT-9567 --tier tier-c` run, *Then* all governance, skill frontmatter, work-product version bumps, and SHA-256 evidence checks pass (`Localization Parity: N/A - Python tooling & governance docs only`). Tag with `TST-PRO-136.3`.
+
+### TST-SIM-001: Developer BLE Heart Rate & HRV Simulator Verification Suite (`tools/test_ble_hr_simulator.py`) [Verified]
+- **Requirement(s)**: `REQ-SIM-001`
+- **Component**: `tools/ble_hr_simulator.py`, `tools/test_ble_hr_simulator.py`
+- **Jira**: `ATT-6675`
+- **Test Description**: Verifies BLE 0x2A37 byte packing & `--no-rr` contract (`TST-SIM-001.1`), phase-locked beat accumulator drift (`TST-SIM-001.2`), AR(1) DFA alpha-1 / rMSSD regimes (`TST-SIM-001.3`), artifact & gap injection (`TST-SIM-001.4`), and Python stdlib AST compliance (`TST-SIM-001.5`).
+
+### TST-SIM-002: Developer BLE Garmin Varia / RearVue 820 Radar Simulator Verification Suite (`tools/test_ble_radar_simulator.py`) [Verified]
+- **Requirement(s)**: `REQ-SIM-002`
+- **Component**: `tools/ble_radar_simulator.py`, `tools/test_ble_radar_simulator.py`
+- **Jira**: `ATT-6676`, `ATT-7541`, `ATT-7737`
+- **Test Description**: Verifies V2 binary threat stream & 24-bit coordinate packing (`TST-SIM-002.1`), V1 sequence header (`TST-SIM-002.2`), tail-light control & RearVue 820 6a4e2f00 (`TST-SIM-002.3`), 5 Hz kinematics & unique preset target IDs (`TST-SIM-002.4`), watchdog starvation & 31-byte PDU budget (`TST-SIM-002.5`), and Python stdlib AST compliance (`TST-SIM-002.6`).
+
+### TST-SIM-003: Developer Workout Replay BLE HRV & Radar Verification Suite (`tools/test_replay_workout.py`) [Verified]
+- **Requirement(s)**: `REQ-SIM-003`
+- **Component**: `tools/replay_workout.py`, `tools/test_replay_workout.py`
+- **Jira**: `ATT-6677`
+- **Test Description**: Verifies BLE 0x2A37 Bit 4 RR packing & Auto-HRV intensity mapping (`TST-SIM-003.1`, `.2`), Garmin Varia UUIDs & payload serialization (`TST-SIM-003.3`), 5 Hz kinematics presets & overtake removal (`TST-SIM-003.4`), and CLI argument parsing & stdlib compliance (`TST-SIM-003.5`).
 
 ---
 

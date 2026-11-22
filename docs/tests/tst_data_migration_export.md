@@ -1,7 +1,7 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.24  
+**Version**: 1.0.25  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -386,7 +386,7 @@
 - **Test Description**: 1. Enqueue > 3 unclustered workout interaction requests in `BackupRestoreViewModel`. 2. Verify `interactionSemaphore(3)` limits active `_interactionQueue` size to <= 3 pending items and resumes admission as items resolve.
 
 ### TST-MIG-014: **Sparse Data Import** [Verified]
-- **Requirement(s)**: `REQ-MIG-018`
+- **Requirement(s)**: `REQ-MIG-018`, `REQ-MIG-051`
 - **Component**: **Sparse Data Import**
 - **Jira**: ``ATT-403``
 - **Test Description**: 1. Import a TCX file missing HR/Power. 2. Inspect summary and DB schema.

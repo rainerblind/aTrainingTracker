@@ -1,7 +1,7 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.39  
+**Version**: 1.0.40  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -318,7 +318,7 @@
   6. Enter fingerprint editing: drag Min and Max Altitude markers, save, and verify persisted coordinates.
 
 ### TST-SET-053: **Workout Cluster Auto-Naming Counter Ergonomics Verification** [Verified]
-- **Requirement(s)**: `REQ-SET-066`
+- **Requirement(s)**: `REQ-SET-066`, `REQ-SET-004`
 - **Component**: **Workout Cluster Auto-Naming Counter Ergonomics Verification**
 - **Jira**: ``ATT-785``
 - **Test Description**:
@@ -651,7 +651,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-PRI-002: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification** [Verified]
-- **Requirement(s)**: `REQ-PRI-003`
+- **Requirement(s)**: `REQ-PRI-003`, `REQ-PRI-001`
 - **Component**: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification**
 - **Jira**: ``ATT-2075``
 - **Test Description**:
@@ -883,7 +883,7 @@
   • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.
 
 ### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-SET-082`
+- **Requirement(s)**: `REQ-SET-082`, `REQ-SET-001`
 - **Component**: **AthleteMetricsDatabaseManager / AthleteMetricsRepository / WorkoutRepository / TelemetryMetricGraph / ZonesSettingsViewModel**
 - **Jira**: `ATT-4844`, `ATT-5399`
 - **Test Description**:
@@ -1086,7 +1086,7 @@
   • Run targeted unit tests (`com.atrainingtracker.trainingtracker.clusters.*`, `com.atrainingtracker.trainingtracker.database.WorkoutCluster*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`) ensuring zero regressions.
 
 ### TST-SET-098: **Equipment Lookup Normalization, Strava Ingestion & Deduplication Reconciliation Suite** [Verified]
-- **Requirement(s)**: `REQ-SET-098`
+- **Requirement(s)**: `REQ-SET-098`, `REQ-SET-002`
 - **Component**: `EquipmentDbHelper.java`, `StravaBulkExportImporter.kt`, `StravaEquipmentSynchronizeThread.java`, `WorkoutSummariesDatabaseManager.java`, `SportTypeEquipmentLinkManager.kt`
 - **Jira**: `ATT-6215`
 - **Test Description**:

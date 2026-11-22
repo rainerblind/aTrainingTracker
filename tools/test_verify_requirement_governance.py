@@ -2198,8 +2198,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertTrue(ok, f"Expected live repository to pass traceability governance, got: {diag}")
         self.assertEqual(report["unbaselined_orphans"], [])
         self.assertEqual(report["stale_orphans"], [])
-        self.assertEqual(report["orphan_count"], 15)
-        self.assertEqual(report["baseline_count"], 15)
+        self.assertEqual(report["orphan_count"], 0)
+        self.assertEqual(report["baseline_count"], 0)
 
     def test_scenario_54_verify_qa_audits_enforces_auditor_independence(self):
         """TST-PRO-091.4: verify_qa_audits enforces auditor role independence (qa/agent2 vs coordinator/agent1)."""
@@ -3224,8 +3224,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 "**Status**: Reviewed  \n"
                 "**Approver**: Pending PO Sign-Off  \n"
                 "**Total Requirements**: 1\n\n"
-                "### REQ-PRO-999: Sample (ATT-9999) [Implemented]\n"
-                "- **Tests**: `TST-PRO-999`\n\n"
+                "### REQ-DOM-999: Sample (ATT-9999) [Implemented]\n"
+                "- **Tests**: `TST-DOM-999`\n\n"
                 "## Change History\n\n"
                 "| Version | Date | Author | Ticket | Summary of Changes |\n"
                 "| :--- | :--- | :--- | :--- | :--- |\n"
@@ -3238,8 +3238,8 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 "**Status**: Reviewed  \n"
                 "**Approver**: Pending PO Sign-Off  \n"
                 "**Total Tests**: 1\n\n"
-                "### TST-PRO-999: Sample (ATT-9999) [Implemented]\n"
-                "- **Requirement(s)**: `REQ-PRO-999`\n\n"
+                "### TST-DOM-999: Sample (ATT-9999) [Implemented]\n"
+                "- **Requirement(s)**: `REQ-DOM-999`\n\n"
                 "## Change History\n\n"
                 "| Version | Date | Author | Ticket | Summary of Changes |\n"
                 "| :--- | :--- | :--- | :--- | :--- |\n"
@@ -3286,9 +3286,9 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             with open(os.path.join(tmpdir, "docs", "tests.md"), "w", encoding="utf-8") as f:
                 f.write(tst_master)
             with open(os.path.join(tmpdir, "app", "src", "test", "java", "SampleContractTest.kt"), "w", encoding="utf-8") as f:
-                f.write("// Traces to: TST-PRO-999\nclass SampleContractTest { fun testSample_TST_PRO_999() {} }\n")
+                f.write("// Traces to: TST-DOM-999\nclass SampleContractTest { fun testSample_TST_DOM_999() {} }\n")
             with open(os.path.join(tmpdir, "app", "build", "test-results", "testDebugUnitTest", "TEST-SampleContractTest.xml"), "w", encoding="utf-8") as f:
-                f.write('<testsuite name="SampleContractTest" tests="1" failures="0" errors="0" skipped="0"><testcase name="testSample_TST_PRO_999" classname="SampleContractTest"/></testsuite>\n')
+                f.write('<testsuite name="SampleContractTest" tests="1" failures="0" errors="0" skipped="0"><testcase name="testSample_TST_DOM_999" classname="SampleContractTest"/></testsuite>\n')
 
             subprocess.run(["git", "add", "."], cwd=tmpdir, env=git_env, check=True, stdout=subprocess.DEVNULL)
             old_env = dict(git_env)
