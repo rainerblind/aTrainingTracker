@@ -115,7 +115,7 @@ class DevicesDatabaseManagerTest {
         } returns emptyCursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val result = manager.hasPairedRemoteDevices()
@@ -151,7 +151,7 @@ class DevicesDatabaseManagerTest {
         } returns populatedCursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val result = manager.hasPairedRemoteDevices()
@@ -176,7 +176,7 @@ class DevicesDatabaseManagerTest {
         } throws RuntimeException("Disk I/O error")
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val result = manager.hasPairedRemoteDevices()
@@ -187,13 +187,13 @@ class DevicesDatabaseManagerTest {
     @Test
     fun testHasPairedRemoteDevices_whenDbNullOrClosed_returnsFalse() {
         val managerNull = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase? = null
+            override val database: SQLiteDatabase get() = uncheckedNull()
         }
         assertFalse("Expected false when database is null", managerNull.hasPairedRemoteDevices())
 
         every { mockDb.isOpen } returns false
         val managerClosed = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
         assertFalse("Expected false when database is closed", managerClosed.hasPairedRemoteDevices())
     }
@@ -220,7 +220,7 @@ class DevicesDatabaseManagerTest {
         } returns populatedCursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val result = manager.hasPairedHeartRateDevices()
@@ -255,7 +255,7 @@ class DevicesDatabaseManagerTest {
         } returns emptyCursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         assertFalse("Expected false when no paired HRM exists", manager.hasPairedHeartRateDevices())
@@ -265,13 +265,13 @@ class DevicesDatabaseManagerTest {
     @Test
     fun testHasPairedHeartRateDevices_whenDbNullOrClosed_returnsFalse() {
         val managerNull = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase? = null
+            override val database: SQLiteDatabase get() = uncheckedNull()
         }
         assertFalse("Expected false when db is null", managerNull.hasPairedHeartRateDevices())
 
         every { mockDb.isOpen } returns false
         val managerClosed = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
         assertFalse("Expected false when db is closed", managerClosed.hasPairedHeartRateDevices())
     }
@@ -300,7 +300,7 @@ class DevicesDatabaseManagerTest {
         } returns 42L
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val id = manager.insertNewBluetoothDeviceIntoDB(
@@ -343,7 +343,7 @@ class DevicesDatabaseManagerTest {
         } returns 101L
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val id = manager.insertNewAntDeviceIntoDB(
@@ -381,7 +381,7 @@ class DevicesDatabaseManagerTest {
         } returns cursor
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val baseline = manager.getBaselineCircumference(42L)
@@ -402,7 +402,7 @@ class DevicesDatabaseManagerTest {
         } returns 1
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         manager.setBaselineCircumference(42L, 2.105)
@@ -440,7 +440,7 @@ class DevicesDatabaseManagerTest {
         } returns 1
 
         val manager = object : DevicesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         manager.resetBaselineCircumference(42L)
@@ -486,4 +486,7 @@ class DevicesDatabaseManagerTest {
         assertTrue("WhereArgs must contain 'Luftdruck'", whereArgsSlot.captured.contains("Luftdruck"))
         assertTrue("WhereArgs must contain 'Air Pressure'", whereArgsSlot.captured.contains("Air Pressure"))
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> uncheckedNull(): T = null as T
 }

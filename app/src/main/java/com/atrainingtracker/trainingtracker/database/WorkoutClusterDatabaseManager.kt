@@ -22,6 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.SqliteSchemaUtils
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
@@ -783,24 +784,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             columnType: String,
             defaultValue: String? = null
         ) {
-            try {
-                db.rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
-                    val nameIdx = cursor.getColumnIndex("name")
-                    while (cursor.moveToNext()) {
-                        if (nameIdx != -1 && columnName.equals(cursor.getString(nameIdx), ignoreCase = true)) {
-                            return
-                        }
-                    }
-                }
-                var sql = "ALTER TABLE $tableName ADD COLUMN $columnName $columnType"
-                if (defaultValue != null) {
-                    sql += " DEFAULT $defaultValue"
-                }
-                db.execSQL(sql)
-                Log.i("WorkoutClusterDbHelper", "Added missing column [$columnName] to table [$tableName]")
-            } catch (e: Exception) {
-                Log.e("WorkoutClusterDbHelper", "Error checking/adding column: $columnName", e)
-            }
+            SqliteSchemaUtils.addColumnIfNotExistsLenient(db, tableName, columnName, columnType, defaultValue)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

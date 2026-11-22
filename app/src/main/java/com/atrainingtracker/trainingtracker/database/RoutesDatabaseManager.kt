@@ -22,6 +22,9 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.inTransaction
+import com.atrainingtracker.database.mapRows
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import com.atrainingtracker.R
@@ -139,20 +142,18 @@ class RoutesDatabaseManager private constructor(context: Context) {
         path: List<PathPoint>,
         waypoints: List<RouteWaypoint> = emptyList()
     ): Long {
-        val db = getDatabase()
-        db.beginTransaction()
-        return try {
-            // 1. Calculate Bounds if missing (ATT-352)
+        return getDatabase().inTransaction { db ->
+            // 1. Calculate Bounds if missing (ATT-352, REQ-DAT-047.4)
             var minLat = summary.minLat; var maxLat = summary.maxLat
             var minLng = summary.minLng; var maxLng = summary.maxLng
-            
+
             if (minLat == null && path.isNotEmpty()) {
-                minLat = 90.0; maxLat = -90.0; minLng = 180.0; maxLng = -180.0
-                path.forEach { p ->
-                    if (p.latLng.latitude < minLat!!) minLat = p.latLng.latitude
-                    if (p.latLng.latitude > maxLat!!) maxLat = p.latLng.latitude
-                    if (p.latLng.longitude < minLng!!) minLng = p.latLng.longitude
-                    if (p.latLng.longitude > maxLng!!) maxLng = p.latLng.longitude
+                val bounds = StreamSummaryCalculator.computeBounds(path.map { it.latLng })
+                if (bounds != null) {
+                    minLat = bounds.minLat
+                    maxLat = bounds.maxLat
+                    minLng = bounds.minLng
+                    maxLng = bounds.maxLng
                 }
             }
 
@@ -240,11 +241,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
             // 4. Insert the route waypoints (REQ-MAP-026)
             insertWaypointsInternal(db, routeId, waypoints)
-
-            db.setTransactionSuccessful()
             routeId
-        } finally {
-            db.endTransaction()
         }
     }
 
@@ -253,13 +250,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
      */
     fun insertWaypoints(routeId: Long, waypoints: List<RouteWaypoint>) {
         if (waypoints.isEmpty()) return
-        val db = getDatabase()
-        db.beginTransaction()
-        try {
+        getDatabase().inTransaction { db ->
             insertWaypointsInternal(db, routeId, waypoints)
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
     }
 
@@ -455,24 +447,18 @@ class RoutesDatabaseManager private constructor(context: Context) {
      */
     fun pruneExpiredStravaRoutes(maxAgeMs: Long = 7 * 24 * 60 * 60 * 1000L): Int {
         val cutoff = System.currentTimeMillis() - maxAgeMs
-        val db = getDatabase()
-        db.beginTransaction()
-        return try {
-            val expiredIds = mutableListOf<Long>()
+        return getDatabase().inTransaction { db ->
             val selection = "${RouteContract.COLUMN_SOURCE} = ? AND ${RouteContract.COLUMN_SYNCED_AT} > 0 AND ${RouteContract.COLUMN_SYNCED_AT} < ?"
             val selectionArgs = arrayOf(RouteSource.STRAVA.name, cutoff.toString())
 
-            db.query(
+            val expiredIds = db.query(
                 RouteContract.TABLE_ROUTES,
                 arrayOf(RouteContract.COLUMN_ID),
                 selection,
                 selectionArgs,
                 null, null, null
-            ).use { cursor ->
-                val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
-                while (cursor.moveToNext()) {
-                    expiredIds.add(cursor.getLong(idIdx))
-                }
+            ).mapRows { cursor ->
+                cursor.getLong(cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID))
             }
 
             for (id in expiredIds) {
@@ -481,10 +467,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(id.toString()))
             }
 
-            db.setTransactionSuccessful()
             expiredIds.size
-        } finally {
-            db.endTransaction()
         }
     }
 
@@ -493,9 +476,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * (e.g. unstarred or deleted on Strava).
      */
     fun pruneOrphanStravaRoutes(activeStravaIds: Set<String>): Int {
-        val db = getDatabase()
-        db.beginTransaction()
-        return try {
+        return getDatabase().inTransaction { db ->
             val orphanIds = mutableListOf<Long>()
             db.query(
                 RouteContract.TABLE_ROUTES,
@@ -521,10 +502,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 db.delete(RouteContract.TABLE_ROUTES, "${RouteContract.COLUMN_ID} = ?", arrayOf(id.toString()))
             }
 
-            db.setTransactionSuccessful()
             orphanIds.size
-        } finally {
-            db.endTransaction()
         }
     }
 
@@ -1022,30 +1000,24 @@ class RoutesDatabaseManager private constructor(context: Context) {
             db.query(RouteContract.TABLE_ROUTES, arrayOf(RouteContract.COLUMN_ID), null, null, null, null, null).use { cursor ->
                 while (cursor.moveToNext()) {
                     val routeId = cursor.getLong(0)
-                    db.query(RouteContract.TABLE_ROUTE_POINTS, 
-                        arrayOf(RouteContract.COLUMN_LAT, RouteContract.COLUMN_LNG), 
-                        "${RouteContract.COLUMN_ROUTE_ID_FK} = ?", 
-                        arrayOf(routeId.toString()), null, null, null).use { pointCursor ->
-                        
-                        if (pointCursor.moveToFirst()) {
-                            var minLat = 90.0; var maxLat = -90.0; var minLng = 180.0; var maxLng = -180.0
-                            do {
-                                val lat = pointCursor.getDouble(0)
-                                val lng = pointCursor.getDouble(1)
-                                if (lat < minLat) minLat = lat
-                                if (lat > maxLat) maxLat = lat
-                                if (lng < minLng) minLng = lng
-                                if (lng > maxLng) maxLng = lng
-                            } while (pointCursor.moveToNext())
-                            
-                            val cv = ContentValues().apply {
-                                put(RouteContract.COLUMN_BOUND_MIN_LAT, minLat)
-                                put(RouteContract.COLUMN_BOUND_MIN_LNG, minLng)
-                                put(RouteContract.COLUMN_BOUND_MAX_LAT, maxLat)
-                                put(RouteContract.COLUMN_BOUND_MAX_LNG, maxLng)
-                            }
-                            db.update(RouteContract.TABLE_ROUTES, cv, "${RouteContract.COLUMN_ID} = ?", arrayOf(routeId.toString()))
+                    val points = db.query(
+                        RouteContract.TABLE_ROUTE_POINTS,
+                        arrayOf(RouteContract.COLUMN_LAT, RouteContract.COLUMN_LNG),
+                        "${RouteContract.COLUMN_ROUTE_ID_FK} = ?",
+                        arrayOf(routeId.toString()), null, null, null
+                    ).mapRows { pointCursor ->
+                        LatLng(pointCursor.getDouble(0), pointCursor.getDouble(1))
+                    }
+
+                    val bounds = StreamSummaryCalculator.computeBounds(points)
+                    if (bounds != null) {
+                        val cv = ContentValues().apply {
+                            put(RouteContract.COLUMN_BOUND_MIN_LAT, bounds.minLat)
+                            put(RouteContract.COLUMN_BOUND_MIN_LNG, bounds.minLng)
+                            put(RouteContract.COLUMN_BOUND_MAX_LAT, bounds.maxLat)
+                            put(RouteContract.COLUMN_BOUND_MAX_LNG, bounds.maxLng)
                         }
+                        db.update(RouteContract.TABLE_ROUTES, cv, "${RouteContract.COLUMN_ID} = ?", arrayOf(routeId.toString()))
                     }
                 }
             }

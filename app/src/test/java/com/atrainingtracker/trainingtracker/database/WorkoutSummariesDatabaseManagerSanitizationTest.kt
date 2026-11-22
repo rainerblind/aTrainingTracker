@@ -56,7 +56,7 @@ class WorkoutSummariesDatabaseManagerSanitizationTest {
         mockDb = mockk(relaxed = true)
 
         manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
     }
 

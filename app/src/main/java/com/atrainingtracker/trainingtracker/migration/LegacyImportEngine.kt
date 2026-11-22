@@ -42,6 +42,7 @@ import com.dropbox.core.v2.DbxClientV2
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.cloud.googledrive.DriveFileEntry
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CancellationException
@@ -1076,58 +1077,36 @@ object LegacyImportEngine {
             Log.w(TAG, "Failed to save laps for workout $workoutId", e)
         }
         
-        // 2. Ascent/Descent (5-minute moving average filter) (ATT-301)
+        // 2. Ascent/Descent (5-minute moving average filter) (ATT-301, REQ-DAT-047.4)
         var totalAscent: Int? = null
         var totalDescent: Int? = null
         if (altitudes.isNotEmpty()) {
-            var ascent = 0.0
-            var descent = 0.0
-            val windowSize = 300 // 5 mins @ 1Hz
-            var windowSum = 0.0
-            val windowQueue = java.util.ArrayDeque<Double>()
-            var lastFiltered: Double? = null
-
-            altitudes.forEach { rawAlt ->
-                windowSum += rawAlt
-                windowQueue.addLast(rawAlt)
-                if (windowQueue.size > windowSize) {
-                    windowSum -= windowQueue.removeFirst()
-                }
-                val filtered = windowSum / windowQueue.size
-                val prevFiltered = lastFiltered
-                if (prevFiltered != null) {
-                    val delta = filtered - prevFiltered
-                    if (delta > 0) ascent += delta
-                    else if (delta < 0) descent += -delta
-                }
-                lastFiltered = filtered
-            }
-            totalAscent = ascent.toInt()
-            totalDescent = descent.toInt()
+            val ascentDescent = StreamSummaryCalculator.computeAscentDescentMovingAverage(
+                altitudes,
+                StreamSummaryCalculator.DEFAULT_MOVING_AVERAGE_WINDOW
+            )
+            totalAscent = ascentDescent.ascending.toInt()
+            totalDescent = ascentDescent.descending.toInt()
         }
 
-        // 3. Map & Streams (REQ-DAT-023: Douglas-Peucker simplification & compact scalar streams)
-        val simplifiedPoints = if (points.isNotEmpty()) PolyUtil.simplify(points, 10.0) else emptyList()
-        val polyline = if (simplifiedPoints.isNotEmpty()) PolyUtil.encode(simplifiedPoints) else ""
+        // 3. Map & Streams (REQ-DAT-023, REQ-DAT-047.4: Douglas-Peucker simplification & compact scalar streams)
+        val polyline = StreamSummaryCalculator.encodePolyline(
+            points,
+            StreamSummaryCalculator.DEFAULT_POLYLINE_SIMPLIFY_TOLERANCE_M
+        ) ?: ""
 
-        val sampledAltitudes = if (altitudes.size > 5) {
-            altitudes.filterIndexed { index, _ -> (index + 1) % 5 == 0 }
-        } else {
-            altitudes
-        }
-        val altitudeStream = if (sampledAltitudes.isNotEmpty()) NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null
+        val altitudeStream = StreamSummaryCalculator.encodeDoubleStream(
+            StreamSummaryCalculator.subsampleLegacyStride(altitudes, StreamSummaryCalculator.DEFAULT_LEGACY_STRIDE)
+        )
+        val distanceStream = StreamSummaryCalculator.encodeDoubleStream(
+            StreamSummaryCalculator.subsampleLegacyStride(distances, StreamSummaryCalculator.DEFAULT_LEGACY_STRIDE)
+        )
 
-        val sampledDistances = if (distances.size > 5) {
-            distances.filterIndexed { index, _ -> (index + 1) % 5 == 0 }
-        } else {
-            distances
-        }
-        val distanceStream = if (sampledDistances.isNotEmpty()) NumericalEncodingUtils.encodeDoubles(sampledDistances) else null
-
-        val minLat = if (points.isNotEmpty()) points.minOf { it.latitude } else null
-        val minLng = if (points.isNotEmpty()) points.minOf { it.longitude } else null
-        val maxLat = if (points.isNotEmpty()) points.maxOf { it.latitude } else null
-        val maxLng = if (points.isNotEmpty()) points.maxOf { it.longitude } else null
+        val bounds = StreamSummaryCalculator.computeBounds(points)
+        val minLat = bounds?.minLat
+        val minLng = bounds?.minLng
+        val maxLat = bounds?.maxLat
+        val maxLng = bounds?.maxLng
 
         workoutRepo.updateImportedWorkoutStats(
             workoutId = workoutId,

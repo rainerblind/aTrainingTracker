@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database.hrv
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.inTransaction
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import androidx.annotation.VisibleForTesting
@@ -205,9 +206,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
      */
     @Synchronized
     fun insertEntry(entry: HrvReadinessEntry): Long {
-        val db = database
-        db.beginTransaction()
-        try {
+        return database.inTransaction { db ->
             val cv = entry.toContentValues()
             val rowId = db.insert(HrvReadinessDbHelper.TABLE_HRV_READINESS, null, cv)
             if (rowId > 0) {
@@ -220,10 +219,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     pinnedId = if (isPinned) rowId else null
                 )
             }
-            db.setTransactionSuccessful()
-            return rowId
-        } finally {
-            db.endTransaction()
+            rowId
         }
     }
 
@@ -236,9 +232,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     fun updateEntry(entry: HrvReadinessEntry): Boolean {
         if (entry.id <= 0) return false
         val previous = getEntryById(entry.id)
-        val db = database
-        db.beginTransaction()
-        try {
+        return database.inTransaction { db ->
             val cv = entry.toContentValues()
             val rows = db.update(
                 HrvReadinessDbHelper.TABLE_HRV_READINESS,
@@ -271,10 +265,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     pinnedId = if (isPinned) entry.id else null
                 )
             }
-            db.setTransactionSuccessful()
-            return rows > 0
-        } finally {
-            db.endTransaction()
+            rows > 0
         }
     }
 
@@ -284,9 +275,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun deleteEntry(id: Long): Boolean {
         val existing = getEntryById(id) ?: return false
-        val db = database
-        db.beginTransaction()
-        try {
+        return database.inTransaction { db ->
             val rows = db.delete(
                 HrvReadinessDbHelper.TABLE_HRV_READINESS,
                 "${HrvReadinessDbHelper.COLUMN_ID} = ?",
@@ -301,10 +290,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     pinnedId = null
                 )
             }
-            db.setTransactionSuccessful()
-            return rows > 0
-        } finally {
-            db.endTransaction()
+            rows > 0
         }
     }
 
@@ -317,9 +303,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
         if (isPrimary && existing.artifactRatePct != null && existing.artifactRatePct > MAX_VALID_ARTIFACT_RATE_PCT) {
             return false
         }
-        val db = database
-        db.beginTransaction()
-        try {
+        return database.inTransaction { db ->
             if (isPrimary) {
                 recomputePrimaryForDayInternal(
                     db = db,
@@ -342,10 +326,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
                     pinnedId = null
                 )
             }
-            db.setTransactionSuccessful()
-            return true
-        } finally {
-            db.endTransaction()
+            true
         }
     }
 
@@ -358,13 +339,8 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
         posture: HrvPosture,
         sensorModality: HrvSensorModality = HrvSensorModality.ECG
     ) {
-        val db = database
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             recomputePrimaryForDayInternal(db, dateIso, posture, sensorModality, null)
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
     }
 

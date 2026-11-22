@@ -80,9 +80,7 @@ class LapsDatabaseManagerTest {
     }
 
     private fun injectMockDatabase(manager: LapsDatabaseManager, db: SQLiteDatabase) {
-        val dbField: Field = LapsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, db)
+        manager.setDatabaseForTesting(db)
     }
 
     private fun setupMockCursorColumns(mockCursor: Cursor) {

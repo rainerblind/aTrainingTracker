@@ -85,6 +85,8 @@ import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import com.atrainingtracker.database.SqliteSchemaUtils;
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
@@ -2977,22 +2979,7 @@ public class TrackerService extends Service {
      */
     @VisibleForTesting
     public static Set<String> getTableColumnNames(@NonNull SQLiteDatabase db, @NonNull String tableName) {
-        Set<String> columnNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        String quotedTable = quoteSqlColumnIdentifier(unquoteSqlColumnIdentifier(tableName));
-        String sql = "PRAGMA table_info(" + quotedTable + ")";
-        try (Cursor cursor = db.rawQuery(sql, null)) {
-            if (cursor != null) {
-                int nameIndex = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (nameIndex >= 0) {
-                        columnNames.add(cursor.getString(nameIndex));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to read PRAGMA table_info for " + tableName, e);
-        }
-        return columnNames;
+        return SqliteSchemaUtils.getTableColumnNames(db, tableName);
     }
 
     /**
@@ -3186,14 +3173,13 @@ public class TrackerService extends Service {
             if (pointsToSimplify == null || pointsToSimplify.isEmpty()) {
                 pointsToSimplify = liveSession.getSampledLatLngs();
             }
-            List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
-                    ? PolyUtil.simplify(pointsToSimplify, 10.0)
-                    : Collections.emptyList();
-            String polyline = PolyUtil.encode(simplifiedPoints);
-            List<Double> sampledAltitudes = liveSession.getSampledAltitudes();
-            List<Double> sampledDistances = liveSession.getSampledDistances();
-            String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes != null ? sampledAltitudes : Collections.emptyList());
-            String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledDistances != null ? sampledDistances : Collections.emptyList());
+            String encodedPolyline = StreamSummaryCalculator.encodePolyline(
+                    pointsToSimplify,
+                    StreamSummaryCalculator.DEFAULT_POLYLINE_SIMPLIFY_TOLERANCE_M
+            );
+            String polyline = encodedPolyline != null ? encodedPolyline : "";
+            String altStream = StreamSummaryCalculator.encodeDoubleStreamOrEmpty(liveSession.getSampledAltitudes());
+            String distStream = StreamSummaryCalculator.encodeDoubleStreamOrEmpty(liveSession.getSampledDistances());
             repository.updateMapAndStreams(workoutId, polyline, altStream, distStream);
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting map polyline and elevation/distance streams", t);

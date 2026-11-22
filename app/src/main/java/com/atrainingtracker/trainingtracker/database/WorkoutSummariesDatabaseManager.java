@@ -22,6 +22,9 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.database.SqliteSchemaUtils;
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -66,24 +69,29 @@ import java.util.TimeZone;
  * Architectural Role: Primary data management layer for workout history summaries.
  * Threading: Methods should generally be called from background contexts to avoid UI block.
  */
-public class WorkoutSummariesDatabaseManager {
+public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper> {
     private static final String TAG = "WorkoutSummariesDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
-    private static WorkoutSummariesDbHelper cWorkoutSummariesDbHelper;
     private static volatile WorkoutSummariesDatabaseManager cInstance;
-    private SQLiteDatabase mDatabase = null;
     private Context mContext = null;
 
     /**
      * Protected constructor to allow subclassing in unit tests.
      */
     protected WorkoutSummariesDatabaseManager(Context context) {
+        super(createDbHelper(context));
         if (context != null) {
             Context appContext = context.getApplicationContext();
             this.mContext = appContext != null ? appContext : context;
-            cWorkoutSummariesDbHelper = new WorkoutSummariesDbHelper(this.mContext);
         }
+    }
+
+    @Nullable
+    private static WorkoutSummariesDbHelper createDbHelper(@Nullable Context context) {
+        if (context == null) return null;
+        Context appContext = context.getApplicationContext();
+        return new WorkoutSummariesDbHelper(appContext != null ? appContext : context);
     }
 
     /**
@@ -110,27 +118,6 @@ public class WorkoutSummariesDatabaseManager {
     public static void setInstanceForTesting(@Nullable WorkoutSummariesDatabaseManager instance) {
         synchronized (WorkoutSummariesDatabaseManager.class) {
             cInstance = instance;
-        }
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cWorkoutSummariesDbHelper.close();
-            }
-            mDatabase = cWorkoutSummariesDbHelper.getWritableDatabase();
-            return mDatabase;
         }
     }
 
@@ -1372,21 +1359,12 @@ public class WorkoutSummariesDatabaseManager {
         values.put(WorkoutSummaries.ALTITUDE_STREAM, altitudeStream);
         values.put(WorkoutSummaries.DISTANCE_STREAM, distanceStream);
 
-        if (polyline != null && !polyline.isEmpty()) {
-            List<LatLng> decoded = PolyUtil.decode(polyline);
-            if (!decoded.isEmpty()) {
-                double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
-                for (LatLng p : decoded) {
-                    if (p.latitude < minLat) minLat = p.latitude;
-                    if (p.latitude > maxLat) maxLat = p.latitude;
-                    if (p.longitude < minLng) minLng = p.longitude;
-                    if (p.longitude > maxLng) maxLng = p.longitude;
-                }
-                values.put(WorkoutSummaries.BOUND_MIN_LAT, minLat);
-                values.put(WorkoutSummaries.BOUND_MIN_LNG, minLng);
-                values.put(WorkoutSummaries.BOUND_MAX_LAT, maxLat);
-                values.put(WorkoutSummaries.BOUND_MAX_LNG, maxLng);
-            }
+        StreamSummaryCalculator.GeoBounds bounds = StreamSummaryCalculator.computeBoundsFromPolyline(polyline);
+        if (bounds != null) {
+            values.put(WorkoutSummaries.BOUND_MIN_LAT, bounds.getMinLat());
+            values.put(WorkoutSummaries.BOUND_MIN_LNG, bounds.getMinLng());
+            values.put(WorkoutSummaries.BOUND_MAX_LAT, bounds.getMaxLat());
+            values.put(WorkoutSummaries.BOUND_MAX_LNG, bounds.getMaxLng());
         }
 
         getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
@@ -1480,26 +1458,13 @@ public class WorkoutSummariesDatabaseManager {
                     List<Double> shiftedAlts = new ArrayList<>(alts.size());
                     for (Double a : alts) shiftedAlts.add(a + offset);
 
-                    // Recompute ascent and descent from updated altitude profile (ATT-4845)
-                    double ascending = 0.0;
-                    double descending = 0.0;
-                    for (int i = 1; i < shiftedAlts.size(); i++) {
-                        Double prev = shiftedAlts.get(i - 1);
-                        Double curr = shiftedAlts.get(i);
-                        if (prev != null && curr != null) {
-                            double diff = curr - prev;
-                            if (diff > 0) {
-                                ascending += diff;
-                            } else if (diff < 0) {
-                                descending += -diff;
-                            }
-                        }
-                    }
+                    // Recompute ascent and descent from updated altitude profile (ATT-4845, REQ-DAT-047.4)
+                    StreamSummaryCalculator.AscentDescent ascentDescent = StreamSummaryCalculator.computeAscentDescentRaw(shiftedAlts);
 
                     ContentValues streamValues = new ContentValues();
-                    streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(shiftedAlts));
-                    streamValues.put(WorkoutSummaries.ASCENDING, ascending);
-                    streamValues.put(WorkoutSummaries.DESCENDING, descending);
+                    streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, StreamSummaryCalculator.encodeDoubleStreamOrEmpty(shiftedAlts));
+                    streamValues.put(WorkoutSummaries.ASCENDING, ascentDescent.getAscending());
+                    streamValues.put(WorkoutSummaries.DESCENDING, ascentDescent.getDescending());
                     db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
                 }
             } else {
@@ -1513,26 +1478,13 @@ public class WorkoutSummariesDatabaseManager {
                         shiftedAlts.add(alts.get(i) + offset * fraction);
                     }
 
-                    // Recompute ascent and descent from updated altitude profile (ATT-4845)
-                    double ascending = 0.0;
-                    double descending = 0.0;
-                    for (int i = 1; i < shiftedAlts.size(); i++) {
-                        Double prev = shiftedAlts.get(i - 1);
-                        Double curr = shiftedAlts.get(i);
-                        if (prev != null && curr != null) {
-                            double diff = curr - prev;
-                            if (diff > 0) {
-                                ascending += diff;
-                            } else if (diff < 0) {
-                                descending += -diff;
-                            }
-                        }
-                    }
+                    // Recompute ascent and descent from updated altitude profile (ATT-4845, REQ-DAT-047.4)
+                    StreamSummaryCalculator.AscentDescent ascentDescent = StreamSummaryCalculator.computeAscentDescentRaw(shiftedAlts);
 
                     ContentValues streamValues = new ContentValues();
-                    streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(shiftedAlts));
-                    streamValues.put(WorkoutSummaries.ASCENDING, ascending);
-                    streamValues.put(WorkoutSummaries.DESCENDING, descending);
+                    streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, StreamSummaryCalculator.encodeDoubleStreamOrEmpty(shiftedAlts));
+                    streamValues.put(WorkoutSummaries.ASCENDING, ascentDescent.getAscending());
+                    streamValues.put(WorkoutSummaries.DESCENDING, ascentDescent.getDescending());
                     db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
 
                     // Recompute Min/Max extrema from updated stream
@@ -2683,28 +2635,7 @@ public class WorkoutSummariesDatabaseManager {
          * Safely adds a column to a table only if it does not already exist.
          */
         private void addColumnIfNotExists(SQLiteDatabase db, String tableName, String columnName, String columnType, String defaultValue) {
-            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + tableName + ")", null)) {
-                boolean exists = false;
-                while (cursor.moveToNext()) {
-                    // The "name" column in PRAGMA table_info holds the column names
-                    String existingColumn = cursor.getString(cursor.getColumnIndexOrThrow("name"));
-                    if (columnName.equalsIgnoreCase(existingColumn)) {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (!exists) {
-                    String sql = "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnType;
-                    if (defaultValue != null) {
-                        sql += " DEFAULT " + defaultValue;
-                    }
-                    db.execSQL(sql);
-                    Log.i(TAG, "Added missing column [" + columnName + "] to table [" + tableName + "]");
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error checking/adding column: " + columnName, e);
-            }
+            SqliteSchemaUtils.addColumnIfNotExistsLenient(db, tableName, columnName, columnType, defaultValue);
         }
 
         private boolean doesTableExist(@NonNull SQLiteDatabase db, @NonNull String tableName) {
@@ -2716,19 +2647,7 @@ public class WorkoutSummariesDatabaseManager {
         }
 
         private boolean doesColumnExist(@NonNull SQLiteDatabase db, @NonNull String tableName, @NonNull String columnName) {
-            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + tableName + ")", null)) {
-                if (cursor != null) {
-                    int nameIdx = cursor.getColumnIndex("name");
-                    while (cursor.moveToNext()) {
-                        if (nameIdx != -1 && columnName.equalsIgnoreCase(cursor.getString(nameIdx))) {
-                            return true;
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                // Table might not exist
-            }
-            return false;
+            return SqliteSchemaUtils.hasColumn(db, tableName, columnName);
         }
 
         //Called whenever newVersion != oldVersion
@@ -2989,23 +2908,14 @@ public class WorkoutSummariesDatabaseManager {
                 while (cursor.moveToNext()) {
                     long id = cursor.getLong(idIdx);
                     String polyline = cursor.getString(polylineIdx);
-                    if (polyline != null && !polyline.isEmpty()) {
-                        List<LatLng> decoded = PolyUtil.decode(polyline);
-                        if (!decoded.isEmpty()) {
-                            double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
-                            for (LatLng p : decoded) {
-                                if (p.latitude < minLat) minLat = p.latitude;
-                                if (p.latitude > maxLat) maxLat = p.latitude;
-                                if (p.longitude < minLng) minLng = p.longitude;
-                                if (p.longitude > maxLng) maxLng = p.longitude;
-                            }
-                            ContentValues cv = new ContentValues();
-                            cv.put(WorkoutSummaries.BOUND_MIN_LAT, minLat);
-                            cv.put(WorkoutSummaries.BOUND_MIN_LNG, minLng);
-                            cv.put(WorkoutSummaries.BOUND_MAX_LAT, maxLat);
-                            cv.put(WorkoutSummaries.BOUND_MAX_LNG, maxLng);
-                            db.update(WorkoutSummaries.TABLE, cv, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(id)});
-                        }
+                    StreamSummaryCalculator.GeoBounds bounds = StreamSummaryCalculator.computeBoundsFromPolyline(polyline);
+                    if (bounds != null) {
+                        ContentValues cv = new ContentValues();
+                        cv.put(WorkoutSummaries.BOUND_MIN_LAT, bounds.getMinLat());
+                        cv.put(WorkoutSummaries.BOUND_MIN_LNG, bounds.getMinLng());
+                        cv.put(WorkoutSummaries.BOUND_MAX_LAT, bounds.getMaxLat());
+                        cv.put(WorkoutSummaries.BOUND_MAX_LNG, bounds.getMaxLng());
+                        db.update(WorkoutSummaries.TABLE, cv, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(id)});
                     }
                 }
             } catch (Exception e) {
@@ -3131,12 +3041,13 @@ public class WorkoutSummariesDatabaseManager {
             }
 
             ContentValues values = new ContentValues();
-            if (!latLngs.isEmpty()) {
-                values.put(WorkoutSummaries.MAP_POLYLINE, PolyUtil.encode(latLngs));
+            String encodedPolyline = StreamSummaryCalculator.encodePolyline(latLngs);
+            if (encodedPolyline != null) {
+                values.put(WorkoutSummaries.MAP_POLYLINE, encodedPolyline);
             }
             if (!altitudes.isEmpty()) {
-                values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(altitudes));
-                values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(distances));
+                values.put(WorkoutSummaries.ALTITUDE_STREAM, StreamSummaryCalculator.encodeDoubleStreamOrEmpty(altitudes));
+                values.put(WorkoutSummaries.DISTANCE_STREAM, StreamSummaryCalculator.encodeDoubleStreamOrEmpty(distances));
             }
 
             if (values.size() > 0) {

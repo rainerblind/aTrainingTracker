@@ -181,9 +181,7 @@ class TrackingViewsRealSqliteMigrationTest {
         database.version = 14
 
         val manager = TrackingViewsDatabaseManager.getInstance(context)
-        val dbField = TrackingViewsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, database)
+        manager.setDatabaseForTesting(database)
 
         // Seed Tab 1 (viewId = 1) with 2 rows and a divider at row 2
         val r1Tab1 = ContentValues().apply {
@@ -328,9 +326,7 @@ class TrackingViewsRealSqliteMigrationTest {
         database.version = 14
 
         val manager = TrackingViewsDatabaseManager.getInstance(context)
-        val dbField = TrackingViewsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, database)
+        manager.setDatabaseForTesting(database)
 
         // Seed Tab 1 with 2 rows and 1 divider
         val r1 = ContentValues().apply {
@@ -422,9 +418,7 @@ class TrackingViewsRealSqliteMigrationTest {
         database.version = 14
 
         val manager = TrackingViewsDatabaseManager.getInstance(context)
-        val dbField = TrackingViewsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, database)
+        manager.setDatabaseForTesting(database)
 
         // Seed Tab 1 with gapped rows: Row 1, Row 3, Row 5
         val r1 = ContentValues().apply {

@@ -67,7 +67,7 @@ class SportTypeDatabaseManagerStravaTest {
         every { mockCursor.close() } returns Unit
 
         val testManager = object : SportTypeDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         every {
@@ -96,7 +96,7 @@ class SportTypeDatabaseManagerStravaTest {
         every { fallbackCursor.close() } returns Unit
 
         val testManager = object : SportTypeDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         // Direct lookup fails

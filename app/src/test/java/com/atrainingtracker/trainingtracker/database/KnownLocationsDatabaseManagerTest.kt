@@ -103,9 +103,7 @@ class KnownLocationsDatabaseManagerTest {
     }
 
     private fun injectMockDatabase(manager: KnownLocationsDatabaseManager, db: SQLiteDatabase) {
-        val dbField: Field = KnownLocationsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, db)
+        manager.setDatabaseForTesting(db)
     }
 
     private fun setupMockCursorColumns(cursor: Cursor) {

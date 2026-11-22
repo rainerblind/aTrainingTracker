@@ -15,6 +15,8 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabaseLockedException
+import com.atrainingtracker.database.SqliteSchemaUtils
+import com.atrainingtracker.database.inTransaction
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -240,43 +242,40 @@ object ImportEngine {
                         val oldId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
                         
                         // Single unified SQLite transaction across main, lapsDb, and samplesDb (REQ-MIG-043.1)
-                        dedicatedDb.beginTransaction()
                         var effectiveBaseName = fileBaseName
                         try {
-                            if (isBaseNameTakenAttached(dedicatedDb, fileBaseName)) {
-                                effectiveBaseName = disambiguateBaseNameAttached(dedicatedDb, fileBaseName, timeStart)
-                            }
+                            dedicatedDb.inTransaction {
+                                if (isBaseNameTakenAttached(dedicatedDb, fileBaseName)) {
+                                    effectiveBaseName = disambiguateBaseNameAttached(dedicatedDb, fileBaseName, timeStart)
+                                }
 
-                            // a. Insert Summary with resolution via insertOrThrow (REQ-MIG-043.4)
-                            val newId = insertSummaryWithResolution(
-                                context, 
-                                dedicatedDb, 
-                                cursor, 
-                                sportTypeMapping, 
-                                equipmentMapping, 
-                                effectiveBaseName
-                            )
-                            require(newId > 0) { "Inserted summary returned non-positive id: $newId" }
-                            
-                            // b. Copy Extrema with static schema mapping (REQ-MIG-043.5)
-                            copyRelatedRows(srcSummariesDb, dedicatedDb, WorkoutSummaries.TABLE_EXTREMA_VALUES, oldId, newId)
-                            
-                            // c. Copy Accumulated Sensors with static schema mapping (REQ-MIG-043.5)
-                            copyRelatedRows(srcSummariesDb, dedicatedDb, WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, oldId, newId)
-                            
-                            // d. Copy Laps into attached lapsDb (REQ-MIG-043.1)
-                            copyLapsAttached(srcLapsDb, dedicatedDb, oldId, newId)
-                            
-                            // e. Copy Samples Table into attached samplesDb (REQ-MIG-043.1)
-                            copySamplesTableAttached(srcSamplesDb, dedicatedDb, fileBaseName, effectiveBaseName)
-                            
-                            dedicatedDb.setTransactionSuccessful()
+                                // a. Insert Summary with resolution via insertOrThrow (REQ-MIG-043.4)
+                                val newId = insertSummaryWithResolution(
+                                    context,
+                                    dedicatedDb,
+                                    cursor,
+                                    sportTypeMapping,
+                                    equipmentMapping,
+                                    effectiveBaseName
+                                )
+                                require(newId > 0) { "Inserted summary returned non-positive id: $newId" }
+
+                                // b. Copy Extrema with static schema mapping (REQ-MIG-043.5)
+                                copyRelatedRows(srcSummariesDb, dedicatedDb, WorkoutSummaries.TABLE_EXTREMA_VALUES, oldId, newId)
+
+                                // c. Copy Accumulated Sensors with static schema mapping (REQ-MIG-043.5)
+                                copyRelatedRows(srcSummariesDb, dedicatedDb, WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, oldId, newId)
+
+                                // d. Copy Laps into attached lapsDb (REQ-MIG-043.1)
+                                copyLapsAttached(srcLapsDb, dedicatedDb, oldId, newId)
+
+                                // e. Copy Samples Table into attached samplesDb (REQ-MIG-043.1)
+                                copySamplesTableAttached(srcSamplesDb, dedicatedDb, fileBaseName, effectiveBaseName)
+                            }
                             importedCount++
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to import workout $fileBaseName (effective: $effectiveBaseName)", e)
                             if (e is InterruptedException) throw e
-                        } finally {
-                            dedicatedDb.endTransaction()
                         }
                     }
                 }
@@ -568,53 +567,45 @@ object ImportEngine {
             WorkoutSamplesDatabaseManager.getTableName(targetBaseName)
         }
         
-        // 1. Inspect source table schema via PRAGMA table_info
+        // 1. Inspect source table schema via SqliteSchemaUtils (PRAGMA table_info, REQ-DAT-047.2)
         val columnDefs = mutableListOf<String>()
         val columnNames = mutableListOf<String>()
         val allowedTypes = setOf("INTEGER", "REAL", "TEXT", "BLOB", "NUMERIC")
 
-        srcDb.rawQuery("PRAGMA table_info($srcTableName)", null).use { cursor ->
-            val nameIdx = cursor.getColumnIndexOrThrow("name")
-            val typeIdx = cursor.getColumnIndexOrThrow("type")
-            val notNullIdx = cursor.getColumnIndexOrThrow("notnull")
-            val dfltIdx = cursor.getColumnIndexOrThrow("dflt_value")
-            val pkIdx = cursor.getColumnIndexOrThrow("pk")
+        for (colInfo in SqliteSchemaUtils.getTableColumnInfos(srcDb, srcTableName)) {
+            val colName = colInfo.name
+            val rawType = colInfo.type.trim().uppercase().ifEmpty { "TEXT" }
+            val colType = if (allowedTypes.contains(rawType)) rawType else "TEXT"
+            val isNotNull = colInfo.notNull
+            val dfltVal = colInfo.defaultValue
+            val isPk = colInfo.isPrimaryKey
 
-            while (cursor.moveToNext()) {
-                val colName = cursor.getString(nameIdx)
-                val rawType = cursor.getString(typeIdx)?.trim()?.uppercase() ?: "TEXT"
-                val colType = if (allowedTypes.contains(rawType)) rawType else "TEXT"
-                val isNotNull = cursor.getInt(notNullIdx) == 1
-                val dfltVal = cursor.getString(dfltIdx)
-                val isPk = cursor.getInt(pkIdx) > 0
-
-                val escapedColName = colName.replace("\"", "\"\"")
-                columnNames.add(colName)
-                val defBuilder = java.lang.StringBuilder("\"$escapedColName\" $colType")
-                if (isPk) {
-                    defBuilder.append(" PRIMARY KEY")
-                }
-                if (isNotNull) {
-                    defBuilder.append(" NOT NULL")
-                }
-                if (dfltVal != null) {
-                    val sanitizedDefault = when {
-                        dfltVal.matches(Regex("^-?[0-9]+(\\.[0-9]+)?$")) -> dfltVal
-                        dfltVal.equals("CURRENT_TIMESTAMP", ignoreCase = true) -> "CURRENT_TIMESTAMP"
-                        dfltVal.equals("NULL", ignoreCase = true) -> "NULL"
-                        else -> {
-                            val unquoted = if (dfltVal.startsWith("'") && dfltVal.endsWith("'") && dfltVal.length >= 2) {
-                                dfltVal.substring(1, dfltVal.length - 1).replace("''", "'")
-                            } else {
-                                dfltVal
-                            }
-                            "'" + unquoted.replace("'", "''") + "'"
-                        }
-                    }
-                    defBuilder.append(" DEFAULT $sanitizedDefault")
-                }
-                columnDefs.add(defBuilder.toString())
+            val escapedColName = colName.replace("\"", "\"\"")
+            columnNames.add(colName)
+            val defBuilder = java.lang.StringBuilder("\"$escapedColName\" $colType")
+            if (isPk) {
+                defBuilder.append(" PRIMARY KEY")
             }
+            if (isNotNull) {
+                defBuilder.append(" NOT NULL")
+            }
+            if (dfltVal != null) {
+                val sanitizedDefault = when {
+                    dfltVal.matches(Regex("^-?[0-9]+(\\.[0-9]+)?$")) -> dfltVal
+                    dfltVal.equals("CURRENT_TIMESTAMP", ignoreCase = true) -> "CURRENT_TIMESTAMP"
+                    dfltVal.equals("NULL", ignoreCase = true) -> "NULL"
+                    else -> {
+                        val unquoted = if (dfltVal.startsWith("'") && dfltVal.endsWith("'") && dfltVal.length >= 2) {
+                            dfltVal.substring(1, dfltVal.length - 1).replace("''", "'")
+                        } else {
+                            dfltVal
+                        }
+                        "'" + unquoted.replace("'", "''") + "'"
+                    }
+                }
+                defBuilder.append(" DEFAULT $sanitizedDefault")
+            }
+            columnDefs.add(defBuilder.toString())
         }
 
         if (columnDefs.isNotEmpty()) {

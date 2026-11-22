@@ -22,6 +22,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.database.SqliteSchemaUtils;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -54,17 +56,15 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class TrackingViewsDatabaseManager {
+public class TrackingViewsDatabaseManager extends BaseDatabaseManager<TrackingViewsDatabaseManager.TrackingViewsDbHelper> {
     private static final String TAG = "TrackingViewsDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // singleton pattern
     private static volatile TrackingViewsDatabaseManager cInstance;
-    private final TrackingViewsDbHelper cDbHelper;
-    private SQLiteDatabase mDatabase = null;
 
     private TrackingViewsDatabaseManager(@NonNull Context context) {
-        this.cDbHelper = new TrackingViewsDbHelper(context.getApplicationContext());
+        super(new TrackingViewsDbHelper(context.getApplicationContext()));
     }
 
     @NonNull
@@ -79,26 +79,7 @@ public class TrackingViewsDatabaseManager {
         return cInstance;
     }
 
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database is closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cDbHelper.close();
-            }
-            mDatabase = cDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
-    }
+
 
 
 
@@ -292,59 +273,19 @@ public class TrackingViewsDatabaseManager {
     }
 
     private boolean hasShowColumns(SQLiteDatabase db) {
-        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
-            if (cursor != null) {
-                int nameIdx = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (TrackingViewsDbHelper.SHOW_VALUE.equalsIgnoreCase(cursor.getString(nameIdx))) {
-                        return true;
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-        return false;
+        return SqliteSchemaUtils.hasColumn(db, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.SHOW_VALUE);
     }
 
     private boolean hasColWeightColumn(SQLiteDatabase db) {
-        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
-            if (cursor != null) {
-                int nameIdx = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (TrackingViewsDbHelper.COL_WEIGHT.equalsIgnoreCase(cursor.getString(nameIdx))) {
-                        return true;
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-        return false;
+        return SqliteSchemaUtils.hasColumn(db, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.COL_WEIGHT);
     }
 
     private boolean hasGraphColumns(SQLiteDatabase db) {
-        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
-            if (cursor != null) {
-                int nameIdx = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (TrackingViewsDbHelper.SHOW_GRAPH.equalsIgnoreCase(cursor.getString(nameIdx))) {
-                        return true;
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-        return false;
+        return SqliteSchemaUtils.hasColumn(db, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.SHOW_GRAPH);
     }
 
     private boolean hasGraphColorColumn(SQLiteDatabase db) {
-        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
-            if (cursor != null) {
-                int nameIdx = cursor.getColumnIndex("name");
-                while (cursor.moveToNext()) {
-                    if (TrackingViewsDbHelper.GRAPH_COLOR.equalsIgnoreCase(cursor.getString(nameIdx))) {
-                        return true;
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-        return false;
+        return SqliteSchemaUtils.hasColumn(db, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.GRAPH_COLOR);
     }
 
     public void insertSensorFieldAt(
@@ -1196,7 +1137,7 @@ public class TrackingViewsDatabaseManager {
      * without overwriting or deleting existing user-customized tracking tabs (REQ-UI-409.2).
      */
     public void ensurePowerTabExistsForBikePower() {
-        cDbHelper.ensurePowerTabExistsForBikePower(getDatabase());
+        mDbHelper.ensurePowerTabExistsForBikePower(getDatabase());
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2038,19 +1979,7 @@ public class TrackingViewsDatabaseManager {
                 Log.i(TAG, "Upgrading database to version 15: Adding ShowBikeBell column");
                 db.beginTransaction();
                 try {
-                    boolean columnExists = false;
-                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + VIEWS_TABLE + ")", null)) {
-                        if (cursor != null) {
-                            int nameIndex = cursor.getColumnIndex("name");
-                            while (cursor.moveToNext()) {
-                                if (SHOW_BIKE_BELL.equalsIgnoreCase(cursor.getString(nameIndex))) {
-                                    columnExists = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (!columnExists) {
+                    if (!SqliteSchemaUtils.hasColumn(db, VIEWS_TABLE, SHOW_BIKE_BELL)) {
                         addColumn(db, VIEWS_TABLE, SHOW_BIKE_BELL, "int DEFAULT 0");
                     }
                     db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_BIKE_BELL + " = 1 WHERE "
@@ -2072,22 +2001,11 @@ public class TrackingViewsDatabaseManager {
                 if (hasRowsTable) {
                     db.beginTransaction();
                     try {
-                        boolean hasShowValue = false;
-                        boolean hasShowBar = false;
-                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
-                            if (cursor != null) {
-                                int nameIndex = cursor.getColumnIndex("name");
-                                while (cursor.moveToNext()) {
-                                    String colName = cursor.getString(nameIndex);
-                                    if (SHOW_VALUE.equalsIgnoreCase(colName)) hasShowValue = true;
-                                    if (SHOW_BAR.equalsIgnoreCase(colName)) hasShowBar = true;
-                                }
-                            }
-                        }
-                        if (!hasShowValue) {
+                        java.util.Set<String> cols = SqliteSchemaUtils.getTableColumnNames(db, ROWS_TABLE);
+                        if (!cols.contains(SHOW_VALUE)) {
                             addColumn(db, ROWS_TABLE, SHOW_VALUE, "int DEFAULT 1");
                         }
-                        if (!hasShowBar) {
+                        if (!cols.contains(SHOW_BAR)) {
                             addColumn(db, ROWS_TABLE, SHOW_BAR, "int DEFAULT 0");
                         }
                         // Backfill defaults: ShowValue = 1 across all rows
@@ -2115,17 +2033,7 @@ public class TrackingViewsDatabaseManager {
                 if (hasRowsTable) {
                     db.beginTransaction();
                     try {
-                        boolean hasColWeight = false;
-                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
-                            if (cursor != null) {
-                                int nameIndex = cursor.getColumnIndex("name");
-                                while (cursor.moveToNext()) {
-                                    String colName = cursor.getString(nameIndex);
-                                    if (COL_WEIGHT.equalsIgnoreCase(colName)) hasColWeight = true;
-                                }
-                            }
-                        }
-                        if (!hasColWeight) {
+                        if (!SqliteSchemaUtils.hasColumn(db, ROWS_TABLE, COL_WEIGHT)) {
                             addColumn(db, ROWS_TABLE, COL_WEIGHT, "real DEFAULT 1.0");
                         }
                         // Backfill defaults: ColWeight = 1.0 across all rows
@@ -2148,22 +2056,11 @@ public class TrackingViewsDatabaseManager {
                 if (hasRowsTable) {
                     db.beginTransaction();
                     try {
-                        boolean hasShowValue = false;
-                        boolean hasShowBar = false;
-                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
-                            if (cursor != null) {
-                                int nameIndex = cursor.getColumnIndex("name");
-                                while (cursor.moveToNext()) {
-                                    String colName = cursor.getString(nameIndex);
-                                    if (SHOW_VALUE.equalsIgnoreCase(colName)) hasShowValue = true;
-                                    if (SHOW_BAR.equalsIgnoreCase(colName)) hasShowBar = true;
-                                }
-                            }
-                        }
-                        if (!hasShowValue) {
+                        java.util.Set<String> cols = SqliteSchemaUtils.getTableColumnNames(db, ROWS_TABLE);
+                        if (!cols.contains(SHOW_VALUE)) {
                             addColumn(db, ROWS_TABLE, SHOW_VALUE, "int DEFAULT 1");
                         }
-                        if (!hasShowBar) {
+                        if (!cols.contains(SHOW_BAR)) {
                             addColumn(db, ROWS_TABLE, SHOW_BAR, "int DEFAULT 0");
                         }
 
@@ -2278,22 +2175,11 @@ public class TrackingViewsDatabaseManager {
                 if (hasRowsTable) {
                     db.beginTransaction();
                     try {
-                        boolean hasShowGraph = false;
-                        boolean hasGraphHorizonS = false;
-                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
-                            if (cursor != null) {
-                                int nameIndex = cursor.getColumnIndex("name");
-                                while (cursor.moveToNext()) {
-                                    String colName = cursor.getString(nameIndex);
-                                    if (SHOW_GRAPH.equalsIgnoreCase(colName)) hasShowGraph = true;
-                                    if (GRAPH_HORIZON_S.equalsIgnoreCase(colName)) hasGraphHorizonS = true;
-                                }
-                            }
-                        }
-                        if (!hasShowGraph) {
+                        java.util.Set<String> cols = SqliteSchemaUtils.getTableColumnNames(db, ROWS_TABLE);
+                        if (!cols.contains(SHOW_GRAPH)) {
                             addColumn(db, ROWS_TABLE, SHOW_GRAPH, "int DEFAULT 0");
                         }
-                        if (!hasGraphHorizonS) {
+                        if (!cols.contains(GRAPH_HORIZON_S)) {
                             addColumn(db, ROWS_TABLE, GRAPH_HORIZON_S, "int DEFAULT 300");
                         }
                         // Backfill defaults: ShowGraph = 0, GraphHorizonS = 300 across all rows
@@ -2310,19 +2196,7 @@ public class TrackingViewsDatabaseManager {
                 Log.i(TAG, "Upgrading database to version 20: Adding ShowMmpCurve column to ViewsTable (ATT-6688)");
                 db.beginTransaction();
                 try {
-                    boolean columnExists = false;
-                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + VIEWS_TABLE + ")", null)) {
-                        if (cursor != null) {
-                            int nameIndex = cursor.getColumnIndex("name");
-                            while (cursor.moveToNext()) {
-                                if (SHOW_MMP_CURVE.equalsIgnoreCase(cursor.getString(nameIndex))) {
-                                    columnExists = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (!columnExists) {
+                    if (!SqliteSchemaUtils.hasColumn(db, VIEWS_TABLE, SHOW_MMP_CURVE)) {
                         addColumn(db, VIEWS_TABLE, SHOW_MMP_CURVE, "int DEFAULT 0");
                     }
                     db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_MMP_CURVE + " = 0 WHERE " + SHOW_MMP_CURVE + " IS NULL;");
@@ -2336,19 +2210,7 @@ public class TrackingViewsDatabaseManager {
                 Log.i(TAG, "Upgrading database to version 21: Adding ShowRadarLight column to ViewsTable (ATT-7972)");
                 db.beginTransaction();
                 try {
-                    boolean columnExists = false;
-                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + VIEWS_TABLE + ")", null)) {
-                        if (cursor != null) {
-                            int nameIndex = cursor.getColumnIndex("name");
-                            while (cursor.moveToNext()) {
-                                if (SHOW_RADAR_LIGHT.equalsIgnoreCase(cursor.getString(nameIndex))) {
-                                    columnExists = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (!columnExists) {
+                    if (!SqliteSchemaUtils.hasColumn(db, VIEWS_TABLE, SHOW_RADAR_LIGHT)) {
                         addColumn(db, VIEWS_TABLE, SHOW_RADAR_LIGHT, "int DEFAULT 0");
                         db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_RADAR_LIGHT + " = 1 WHERE ("
                                 + ACTIVITY_TYPE + " = '" + ActivityType.BIKE_SPEED_AND_CADENCE.name() + "' OR "
@@ -2366,19 +2228,7 @@ public class TrackingViewsDatabaseManager {
                 Log.i(TAG, "Upgrading database to version 22: Adding GraphColor column to LayoutRowsTable (ATT-7760)");
                 db.beginTransaction();
                 try {
-                    boolean columnExists = false;
-                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
-                        if (cursor != null) {
-                            int nameIndex = cursor.getColumnIndex("name");
-                            while (cursor.moveToNext()) {
-                                if (GRAPH_COLOR.equalsIgnoreCase(cursor.getString(nameIndex))) {
-                                    columnExists = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (!columnExists) {
+                    if (!SqliteSchemaUtils.hasColumn(db, ROWS_TABLE, GRAPH_COLOR)) {
                         addColumn(db, ROWS_TABLE, GRAPH_COLOR, "text DEFAULT 'GLOBAL_DEFAULT'");
                     }
                     db.execSQL("UPDATE " + ROWS_TABLE + " SET " + GRAPH_COLOR + " = 'GLOBAL_DEFAULT' WHERE " + GRAPH_COLOR + " IS NULL;");

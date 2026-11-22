@@ -23,6 +23,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -50,19 +52,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-public class SegmentsDatabaseManager {
+public class SegmentsDatabaseManager extends BaseDatabaseManager<SegmentsDatabaseManager.SegmentsDbHelper> {
     private static final String TAG = SegmentsDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     // --- Modern Singleton Pattern ---
     private static volatile SegmentsDatabaseManager cInstance;
-    private final SegmentsDbHelper cSegmentsDbHelper;
     private final Context mContext;
-    private SQLiteDatabase mDatabase = null;
 
     private SegmentsDatabaseManager(@NonNull Context context) {
+        super(new SegmentsDbHelper(context.getApplicationContext()));
         this.mContext = context.getApplicationContext();
-        this.cSegmentsDbHelper = new SegmentsDbHelper(this.mContext);
     }
 
     @NonNull
@@ -80,27 +80,6 @@ public class SegmentsDatabaseManager {
     @androidx.annotation.VisibleForTesting
     public static void resetForTesting(SegmentsDatabaseManager newInstance) {
         cInstance = newInstance;
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cSegmentsDbHelper.close();
-            }
-            mDatabase = cSegmentsDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
     }
     // --- End of Singleton Pattern ---
 
@@ -335,21 +314,12 @@ public class SegmentsDatabaseManager {
             String polyline = segment.getMap().getPolyline();
             cv.put(Segments.MAP_POLYLINE, polyline);
             
-            if (polyline != null && !polyline.isEmpty()) {
-                List<LatLng> decoded = PolyUtil.decode(polyline);
-                if (!decoded.isEmpty()) {
-                    double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
-                    for (LatLng p : decoded) {
-                        if (p.latitude < minLat) minLat = p.latitude;
-                        if (p.latitude > maxLat) maxLat = p.latitude;
-                        if (p.longitude < minLng) minLng = p.longitude;
-                        if (p.longitude > maxLng) maxLng = p.longitude;
-                    }
-                    cv.put(Segments.BOUND_MIN_LAT, minLat);
-                    cv.put(Segments.BOUND_MIN_LNG, minLng);
-                    cv.put(Segments.BOUND_MAX_LAT, maxLat);
-                    cv.put(Segments.BOUND_MAX_LNG, maxLng);
-                }
+            StreamSummaryCalculator.GeoBounds bounds = StreamSummaryCalculator.computeBoundsFromPolyline(polyline);
+            if (bounds != null) {
+                cv.put(Segments.BOUND_MIN_LAT, bounds.getMinLat());
+                cv.put(Segments.BOUND_MIN_LNG, bounds.getMinLng());
+                cv.put(Segments.BOUND_MAX_LAT, bounds.getMaxLat());
+                cv.put(Segments.BOUND_MAX_LNG, bounds.getMaxLng());
             }
         }
 
@@ -602,7 +572,7 @@ public class SegmentsDatabaseManager {
                 db.endTransaction();
             }
             // Recreate the tables
-            cSegmentsDbHelper.onCreate(db);
+            mDbHelper.onCreate(db);
             if (DEBUG) Log.d(TAG, "All segment tables deleted and recreated.");
         } catch (SQLException e) {
             Log.e(TAG, "Error deleting all tables in SegmentsDatabase", e);
@@ -779,23 +749,14 @@ public class SegmentsDatabaseManager {
                 while (cursor.moveToNext()) {
                     long id = cursor.getLong(idIdx);
                     String polyline = cursor.getString(polylineIdx);
-                    if (polyline != null && !polyline.isEmpty()) {
-                        List<LatLng> decoded = PolyUtil.decode(polyline);
-                        if (!decoded.isEmpty()) {
-                            double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
-                            for (LatLng p : decoded) {
-                                if (p.latitude < minLat) minLat = p.latitude;
-                                if (p.latitude > maxLat) maxLat = p.latitude;
-                                if (p.longitude < minLng) minLng = p.longitude;
-                                if (p.longitude > maxLng) maxLng = p.longitude;
-                            }
-                            ContentValues cv = new ContentValues();
-                            cv.put(Segments.BOUND_MIN_LAT, minLat);
-                            cv.put(Segments.BOUND_MIN_LNG, minLng);
-                            cv.put(Segments.BOUND_MAX_LAT, maxLat);
-                            cv.put(Segments.BOUND_MAX_LNG, maxLng);
-                            db.update(Segments.TABLE_STARRED_SEGMENTS, cv, Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(id)});
-                        }
+                    StreamSummaryCalculator.GeoBounds bounds = StreamSummaryCalculator.computeBoundsFromPolyline(polyline);
+                    if (bounds != null) {
+                        ContentValues cv = new ContentValues();
+                        cv.put(Segments.BOUND_MIN_LAT, bounds.getMinLat());
+                        cv.put(Segments.BOUND_MIN_LNG, bounds.getMinLng());
+                        cv.put(Segments.BOUND_MAX_LAT, bounds.getMaxLat());
+                        cv.put(Segments.BOUND_MAX_LNG, bounds.getMaxLng());
+                        db.update(Segments.TABLE_STARRED_SEGMENTS, cv, Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(id)});
                     }
                 }
             } catch (Exception e) {

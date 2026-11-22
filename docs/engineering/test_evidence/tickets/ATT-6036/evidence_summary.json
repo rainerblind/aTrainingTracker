@@ -1,0 +1,49 @@
+{
+  "android_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "checks": [
+    {
+      "details": "Android: Skipped (--skip-tests). | Python: Skipped (--skip-tests).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (9260 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "d23513f33b06752b1b02171e0271a57690d73e53",
+  "junit_xml_files": [],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-22T05:54:20.461840+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att6036_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-6036",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

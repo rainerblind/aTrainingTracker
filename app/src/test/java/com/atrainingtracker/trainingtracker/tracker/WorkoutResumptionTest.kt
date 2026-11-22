@@ -124,7 +124,7 @@ class WorkoutResumptionTest {
 
         val mockContext = mockk<Context>(relaxed = true)
         val dbManager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         assertTrue("hasUnfinishedWorkout should return true when FINISHED == 0", dbManager.hasUnfinishedWorkout())
@@ -154,7 +154,7 @@ class WorkoutResumptionTest {
 
         val mockContext = mockk<Context>(relaxed = true)
         val dbManager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         assertFalse("hasUnfinishedWorkout should return false when FINISHED == 1", dbManager.hasUnfinishedWorkout())
@@ -184,7 +184,7 @@ class WorkoutResumptionTest {
 
         val mockContext = mockk<Context>(relaxed = true)
         val dbManager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         assertFalse("hasUnfinishedWorkout should return false when no rows exist", dbManager.hasUnfinishedWorkout())
@@ -209,7 +209,7 @@ class WorkoutResumptionTest {
 
         val mockContext = mockk<Context>(relaxed = true)
         val dbManager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         dbManager.discardOrFinishUnfinishedWorkout()

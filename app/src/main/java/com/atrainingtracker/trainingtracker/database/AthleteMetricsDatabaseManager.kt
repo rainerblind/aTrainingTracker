@@ -24,6 +24,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
+import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
 
@@ -442,9 +443,7 @@ class AthleteMetricsDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun seedEntriesInTransaction(seedCandidates: List<AthleteMetricEntry>) {
         if (seedCandidates.isEmpty()) return
-        val db = database
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             for (candidate in seedCandidates) {
                 if (!candidate.metricType.isValidMetricValue(candidate.value)) continue
                 val existing = getLatestEntry(candidate.metricType)
@@ -457,9 +456,6 @@ class AthleteMetricsDatabaseManager private constructor(context: Context) {
                     db.insert(AthleteMetricsDbHelper.TABLE_HISTORY, null, values)
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
     }
 
@@ -630,9 +626,7 @@ class AthleteMetricsDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun seedZoneSnapshotsInTransaction(candidates: List<ZoneSnapshotEntry>) {
         if (candidates.isEmpty()) return
-        val db = database
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             for (candidate in candidates) {
                 try {
                     ZoneSnapshotEntry.validateBoundaries(candidate.zoneType, candidate.boundaries)
@@ -649,9 +643,6 @@ class AthleteMetricsDatabaseManager private constructor(context: Context) {
                     db.insert(AthleteMetricsDbHelper.TABLE_ZONE_HISTORY, null, values)
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
     }
 

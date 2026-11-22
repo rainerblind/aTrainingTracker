@@ -116,7 +116,7 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
     @Test
     fun testUpdateWorkoutData_persistsRaceTrueAsOne() {
         val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         every {
@@ -147,7 +147,7 @@ class WorkoutSummariesDatabaseRaceMigrationTest {
     @Test
     fun testUpdateWorkoutData_persistsRaceFalseAsZero() {
         val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         every {

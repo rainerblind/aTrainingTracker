@@ -400,6 +400,20 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
     // -- Configuring Sensor Fields
     /**
+     * Executes a view-configuration database mutation on [Dispatchers.IO] and then increments
+     * [configUpdateTrigger] on [Dispatchers.Main] to notify UI collectors ({@code REQ-DAT-047.3}).
+     */
+    private suspend fun <T> mutateViewConfig(block: () -> T): T {
+        val result = withContext(Dispatchers.IO) {
+            block()
+        }
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+        return result
+    }
+
+    /**
      * Updates the configuration of a specific sensor field in the database.
      */
     suspend fun updateSensorFieldConfig(
@@ -416,30 +430,21 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         showGraph: Boolean = false,
         graphHorizonSeconds: Int = 300,
         graphColor: String = "GLOBAL_DEFAULT"
-    ) {
-        withContext(Dispatchers.IO) {
-
-            // write the new config to the database
-            viewsDbManager.updateSensorView(
-                sensorFieldId,
-                newSensorType,
-                newViewSize,
-                newSourceDeviceId,
-                newFilterType,
-                newFilterConstant,
-                showValue,
-                showBar,
-                colWeight,
-                showGraph,
-                graphHorizonSeconds,
-                graphColor
-            )
-        }
-
-        // notify collectors that the data has changed by incrementing the value
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    ) = mutateViewConfig {
+        viewsDbManager.updateSensorView(
+            sensorFieldId,
+            newSensorType,
+            newViewSize,
+            newSourceDeviceId,
+            newFilterType,
+            newFilterConstant,
+            showValue,
+            showBar,
+            colWeight,
+            showGraph,
+            graphHorizonSeconds,
+            graphColor
+        )
     }
 
     suspend fun insertSensorFieldConfig(
@@ -460,8 +465,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         graphColor: String = "GLOBAL_DEFAULT"
     ) {
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
-
-        withContext(Dispatchers.IO) {
+        mutateViewConfig {
             viewsDbManager.insertSensorFieldAt(
                 tabViewId,
                 rowNr,
@@ -479,230 +483,90 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 graphColor
             )
         }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
     }
 
-    suspend fun updateColWeight(sensorFieldId: Long, colWeight: Float) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateColWeight(sensorFieldId, colWeight)
-        }
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateColWeight(sensorFieldId: Long, colWeight: Float) = mutateViewConfig {
+        viewsDbManager.updateColWeight(sensorFieldId, colWeight)
     }
 
-    suspend fun updateRowSplit(tabViewId: Long, rowNr: Int, leftWeight: Float, rightWeight: Float) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateRowSplit(tabViewId, rowNr, leftWeight, rightWeight)
-        }
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateRowSplit(tabViewId: Long, rowNr: Int, leftWeight: Float, rightWeight: Float) = mutateViewConfig {
+        viewsDbManager.updateRowSplit(tabViewId, rowNr, leftWeight, rightWeight)
     }
 
-    suspend fun deleteSensorField(sensorFieldId: Long) {
-        // delete from DB
-        withContext(Dispatchers.IO) {
-            viewsDbManager.deleteSensorField(sensorFieldId)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun deleteSensorField(sensorFieldId: Long) = mutateViewConfig {
+        viewsDbManager.deleteSensorField(sensorFieldId)
     }
 
-    suspend fun swapSensorFields(fieldIdA: Long, fieldIdB: Long) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.swapSensorFields(fieldIdA, fieldIdB)
-        }
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun swapSensorFields(fieldIdA: Long, fieldIdB: Long) = mutateViewConfig {
+        viewsDbManager.swapSensorFields(fieldIdA, fieldIdB)
     }
 
-    suspend fun moveSensorField(sensorFieldId: Long, targetRow: Int, targetCol: Int) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.moveSensorField(sensorFieldId, targetRow, targetCol)
-        }
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun moveSensorField(sensorFieldId: Long, targetRow: Int, targetCol: Int) = mutateViewConfig {
+        viewsDbManager.moveSensorField(sensorFieldId, targetRow, targetCol)
     }
 
 
     /*******************************************************************
      * Configure Tabs
     **/
-    suspend fun updateTabName(tabViewId: Long, name: String) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateNameOfTabView(tabViewId, name)
-        }
-
-       // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateTabName(tabViewId: Long, name: String) = mutateViewConfig {
+        viewsDbManager.updateNameOfTabView(tabViewId, name)
     }
 
-    suspend fun updateShowMap(tabViewId: Long, showMap: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowMap(tabViewId, showMap)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowMap(tabViewId: Long, showMap: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowMap(tabViewId, showMap)
     }
 
-    suspend fun updateShowLapButton(tabViewId: Long, showLapButton: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowLapButton(tabViewId, showLapButton)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowLapButton(tabViewId: Long, showLapButton: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowLapButton(tabViewId, showLapButton)
     }
 
-    suspend fun updateShowLiveSegments(tabViewId: Long, showLiveSegments: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowLiveSegments(tabViewId, showLiveSegments)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowLiveSegments(tabViewId: Long, showLiveSegments: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowLiveSegments(tabViewId, showLiveSegments)
     }
 
-    suspend fun updateShowElevationProfile(tabViewId: Long, showElevationProfile: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowElevationProfile(tabViewId, showElevationProfile)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowElevationProfile(tabViewId: Long, showElevationProfile: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowElevationProfile(tabViewId, showElevationProfile)
     }
 
-    suspend fun updateShowLiveClimbs(tabViewId: Long, showLiveClimbs: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowLiveClimbs(tabViewId, showLiveClimbs)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowLiveClimbs(tabViewId: Long, showLiveClimbs: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowLiveClimbs(tabViewId, showLiveClimbs)
     }
 
-    suspend fun updateShowNavigationHints(tabViewId: Long, showNavigationHints: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowNavigationHints(tabViewId, showNavigationHints)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowNavigationHints(tabViewId: Long, showNavigationHints: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowNavigationHints(tabViewId, showNavigationHints)
     }
 
-    suspend fun updateShowBikeBell(tabViewId: Long, showBikeBell: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowBikeBell(tabViewId, showBikeBell)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowBikeBell(tabViewId: Long, showBikeBell: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowBikeBell(tabViewId, showBikeBell)
     }
 
-    suspend fun updateShowMmpCurve(tabViewId: Long, showMmpCurve: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowMmpCurve(tabViewId, showMmpCurve)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowMmpCurve(tabViewId: Long, showMmpCurve: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowMmpCurve(tabViewId, showMmpCurve)
     }
 
-    suspend fun updateShowRadarLight(tabViewId: Long, showRadarLight: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateShowRadarLight(tabViewId, showRadarLight)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateShowRadarLight(tabViewId: Long, showRadarLight: Boolean) = mutateViewConfig {
+        viewsDbManager.updateShowRadarLight(tabViewId, showRadarLight)
     }
 
-    suspend fun updateElevationProfileScope(tabViewId: Long, scope: ElevationProfileScope) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateElevationProfileScope(tabViewId, scope.dbValue)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateElevationProfileScope(tabViewId: Long, scope: ElevationProfileScope) = mutateViewConfig {
+        viewsDbManager.updateElevationProfileScope(tabViewId, scope.dbValue)
     }
 
-    suspend fun updateElevationProfileLookahead(tabViewId: Long, lookaheadMeters: Int) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.updateElevationProfileLookahead(tabViewId, lookaheadMeters)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun updateElevationProfileLookahead(tabViewId: Long, lookaheadMeters: Int) = mutateViewConfig {
+        viewsDbManager.updateElevationProfileLookahead(tabViewId, lookaheadMeters)
     }
 
-
-    suspend fun addEmptyTabView(tabViewId: Long, addAfter: Boolean) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.addEmptyTabView(tabViewId, addAfter)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun addEmptyTabView(tabViewId: Long, addAfter: Boolean) = mutateViewConfig {
+        viewsDbManager.addEmptyTabView(tabViewId, addAfter)
     }
 
-    suspend fun deleteTab(tabViewId: Long) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.deleteTabView(tabViewId)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun deleteTab(tabViewId: Long) = mutateViewConfig {
+        viewsDbManager.deleteTabView(tabViewId)
     }
 
-    suspend fun moveTabView(tabViewId: Long, moveLeft: Boolean): Int {
-        val newIndex = withContext(Dispatchers.IO) {
-            viewsDbManager.moveTabView(tabViewId, moveLeft)
-        }
-
-        // trigger recreation of UI
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
-        return newIndex
+    suspend fun moveTabView(tabViewId: Long, moveLeft: Boolean): Int = mutateViewConfig {
+        viewsDbManager.moveTabView(tabViewId, moveLeft)
     }
 
     /**
@@ -711,16 +575,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
      *
      * @return List of newly created view IDs.
      */
-    suspend fun copyTabView(sourceViewId: Long, targetTypes: List<ActivityType>): List<Long> {
-        val newIds = withContext(Dispatchers.IO) {
-            viewsDbManager.copyTabViewToActivityTypes(sourceViewId, targetTypes)
-        }
-
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
-
-        return newIds
+    suspend fun copyTabView(sourceViewId: Long, targetTypes: List<ActivityType>): List<Long> = mutateViewConfig {
+        viewsDbManager.copyTabViewToActivityTypes(sourceViewId, targetTypes)
     }
 
     // --- Section Dividers (REQ-UI-411) ---
@@ -743,22 +599,12 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
-    suspend fun setSectionDivider(viewId: Long, rowNr: Int, title: String?) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.setSectionDivider(viewId, rowNr, title)
-        }
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun setSectionDivider(viewId: Long, rowNr: Int, title: String?) = mutateViewConfig {
+        viewsDbManager.setSectionDivider(viewId, rowNr, title)
     }
 
-    suspend fun deleteSectionDivider(viewId: Long, rowNr: Int) {
-        withContext(Dispatchers.IO) {
-            viewsDbManager.deleteSectionDivider(viewId, rowNr)
-        }
-        withContext(Dispatchers.Main) {
-            configUpdateTrigger.value++
-        }
+    suspend fun deleteSectionDivider(viewId: Long, rowNr: Int) = mutateViewConfig {
+        viewsDbManager.deleteSectionDivider(viewId, rowNr)
     }
 
     /**

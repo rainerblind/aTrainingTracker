@@ -42,10 +42,12 @@ import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.ArrayList;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.database.SqliteSchemaUtils;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SportTypeDatabaseManager {
+public class SportTypeDatabaseManager extends BaseDatabaseManager<SportTypeDatabaseManager.SportTypeDbHelper> {
 
     private static final String TAG = "SportTypeDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
@@ -54,14 +56,12 @@ public class SportTypeDatabaseManager {
 
     // --- Modern Singleton Pattern ---
     private static volatile SportTypeDatabaseManager cInstance;
-    private final SportTypeDbHelper cDbHelper;
     private final Context mContext; // Store context for operations like getting drawables
-    private SQLiteDatabase mDatabase = null;
 
     @androidx.annotation.VisibleForTesting
     protected SportTypeDatabaseManager(@NonNull Context context) {
+        super(new SportTypeDbHelper(context.getApplicationContext()));
         this.mContext = context.getApplicationContext();
-        this.cDbHelper = new SportTypeDbHelper(this.mContext);
     }
 
     @NonNull
@@ -79,27 +79,6 @@ public class SportTypeDatabaseManager {
     @androidx.annotation.VisibleForTesting
     public static void resetForTesting(SportTypeDatabaseManager newInstance) {
         cInstance = newInstance;
-    }
-
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cDbHelper.close();
-            }
-            mDatabase = cDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
     }
     // --- End of Singleton Pattern ---
 
@@ -895,19 +874,7 @@ public class SportTypeDatabaseManager {
             try {
                 // Ensure schema evolution (ALTER TABLE) is executed first before data updates
                 if (oldVersion < 3) {
-                    boolean columnExists = false;
-                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + SportType.TABLE + ")", null)) {
-                        int nameColIdx = cursor.getColumnIndex("name");
-                        while (cursor.moveToNext()) {
-                            if (SportType.IS_PLACEHOLDER.equalsIgnoreCase(cursor.getString(nameColIdx))) {
-                                columnExists = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!columnExists) {
-                        db.execSQL("ALTER TABLE " + SportType.TABLE + " ADD COLUMN " + SportType.IS_PLACEHOLDER + " INTEGER DEFAULT 0");
-                    }
+                    SqliteSchemaUtils.addColumnIfNotExists(db, SportType.TABLE, SportType.IS_PLACEHOLDER, "INTEGER DEFAULT 0");
                 }
 
                 if (oldVersion < 2) {

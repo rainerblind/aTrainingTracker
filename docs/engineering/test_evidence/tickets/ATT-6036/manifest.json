@@ -1,0 +1,11 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "d23513f33b06752b1b02171e0271a57690d73e53",
+  "files": {
+    "evidence_summary.json": "2fe4ae7664d270814e0bb0a8e6f188de894c2fa9973330b20dc0aca35229d67f",
+    "screenshots/att6036_emulator_smoke.png": "5cf132867b5be8e543e6b6853d8b691a39961ac8884ab1e49a7dfdfcd8b3f42b"
+  },
+  "run_started_utc": "2026-11-22T05:54:20.461840+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-6036"
+}

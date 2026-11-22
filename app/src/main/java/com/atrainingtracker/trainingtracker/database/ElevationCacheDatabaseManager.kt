@@ -22,6 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.inTransaction
 import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import androidx.annotation.VisibleForTesting
@@ -321,11 +322,8 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun putBatchElevations(items: List<ElevationCacheItem>): Int {
         if (items.isEmpty()) return 0
-        val db = database
         var insertedCount = 0
-
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             for (item in items) {
                 val cv = ElevationCacheItem.toContentValues(item)
                 val rowId = db.insertWithOnConflict(
@@ -338,9 +336,6 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                     insertedCount++
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return insertedCount
     }
@@ -427,11 +422,9 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
         }
 
         if (items.isEmpty()) return 0
-        val db = database
         var processedCount = 0
 
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             val updateCv = ContentValues()
             for (item in items) {
                 // Try updating existing SEGMENT_SEED to ROUTE_SEED
@@ -463,9 +456,6 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                     processedCount++
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return processedCount
     }
@@ -515,11 +505,9 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
         }
 
         if (items.isEmpty()) return 0
-        val db = database
         var insertedCount = 0
 
-        db.beginTransaction()
-        try {
+        database.inTransaction { db ->
             for (item in items) {
                 val cv = ElevationCacheItem.toContentValues(item)
                 val rowId = db.insertWithOnConflict(
@@ -532,9 +520,6 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                     insertedCount++
                 }
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
         }
         return insertedCount
     }

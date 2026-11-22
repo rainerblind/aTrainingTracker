@@ -22,6 +22,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
+import com.atrainingtracker.database.SqliteSchemaUtils;
 import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteStatement;
@@ -52,17 +54,15 @@ import java.util.List;
 import java.util.Set;
 
 
-public class WorkoutSamplesDatabaseManager {
+public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper> {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
     private static volatile WorkoutSamplesDatabaseManager cInstance;
-    private final WorkoutSamplesDbHelper cDbHelper;
     private final Context mContext;
-    private SQLiteDatabase mDatabase = null;
 
     private WorkoutSamplesDatabaseManager(@NonNull Context context) {
+        super(new WorkoutSamplesDbHelper(context));
         this.mContext = context.getApplicationContext() != null ? context.getApplicationContext() : context;
-        this.cDbHelper = new WorkoutSamplesDbHelper(context);
     }
 
     @NonNull
@@ -81,40 +81,13 @@ public class WorkoutSamplesDatabaseManager {
     public static synchronized void resetForTesting(@Nullable WorkoutSamplesDatabaseManager newInstance) {
         if (cInstance != null) {
             try {
-                if (cInstance.mDatabase != null && cInstance.mDatabase.isOpen()) {
-                    cInstance.mDatabase.close();
-                }
-                cInstance.cDbHelper.close();
+                cInstance.closeDatabase();
             } catch (Exception ignored) {
             }
         }
         cInstance = newInstance;
     }
 
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    public SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            // If the database was closed, ensure the helper clears its reference
-            if (mDatabase != null) {
-                cDbHelper.close();
-            }
-            mDatabase = cDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // some high level helper methods
-    ////////////////////////////////////////////////////////////////////////////////////////////////
     @Nullable
     public Double calcExtremaValue(WorkoutSummariesDatabaseManager workoutSummariesDatabaseManager, String baseFileName, @NonNull ExtremaType extremaType, @NonNull SensorType sensorType) {
         if (DEBUG)
@@ -1387,16 +1360,8 @@ public class WorkoutSamplesDatabaseManager {
         return 0L;
     }
 
-    // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
     private static boolean existsColumnInTable(@NonNull SQLiteDatabase inDatabase, String inTable, String columnToCheck) {
-        try (Cursor mCursor = inDatabase.rawQuery("SELECT * FROM " + inTable + " LIMIT 0", null)) {
-            // getColumnIndex() gives us the index (0 to ...) of the column - otherwise we get a -1
-            return mCursor != null && mCursor.getColumnIndex(columnToCheck) != -1;
-        } catch (Exception Exp) {
-            // Something went wrong. Missing the database? The table?
-            Log.d("... - existsColumnInTable", "When checking whether a column exists in the table, an error occurred: " + Exp.getMessage());
-            return false;
-        }
+        return SqliteSchemaUtils.hasColumn(inDatabase, inTable, columnToCheck);
     }
 
     /**

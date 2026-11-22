@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.tracker
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.SqliteSchemaUtils
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
@@ -532,16 +533,7 @@ class MultisportLapCoordinator(
     }
 
     private fun readTableColumns(db: SQLiteDatabase, table: String): Set<String> {
-        val result = HashSet<String>()
-        db.rawQuery("PRAGMA table_info($table)", null).use { cursor ->
-            val nameIdx = cursor.getColumnIndex("name")
-            while (cursor.moveToNext()) {
-                if (nameIdx >= 0) {
-                    result.add(cursor.getString(nameIdx))
-                }
-            }
-        }
-        return result
+        return SqliteSchemaUtils.getTableColumnNames(db, table)
     }
 
     private fun clampAnchor(

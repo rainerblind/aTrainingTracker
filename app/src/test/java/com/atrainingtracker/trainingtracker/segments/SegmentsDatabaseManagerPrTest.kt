@@ -80,9 +80,7 @@ class SegmentsDatabaseManagerPrTest {
         constructor.isAccessible = true
         manager = constructor.newInstance(mockContext)
 
-        val dbField = SegmentsDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, mockDb)
+        manager.setDatabaseForTesting(mockDb)
     }
 
     @After

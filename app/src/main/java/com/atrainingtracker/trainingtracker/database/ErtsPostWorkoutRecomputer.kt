@@ -36,11 +36,11 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sqrt
+import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -124,8 +124,7 @@ object ErtsPostWorkoutRecomputer {
     }
 
     internal fun subsampleStream(values: List<Double>, stepSize: Int = WorkoutSummaries.ENCODING_STEP_SIZE): List<Double> {
-        if (values.size <= 1 || stepSize <= 1) return values
-        return values.filterIndexed { index, _ -> index % stepSize == 0 || index == values.lastIndex }
+        return StreamSummaryCalculator.subsampleStream(values, stepSize)
     }
 
     const val MAX_PLAUSIBLE_SPEED_MPS = 100.0 // 360 km/h
@@ -644,8 +643,7 @@ object ErtsPostWorkoutRecomputer {
         var lapCumulativeDist = 0.0
         var currentLapNr: Long? = null
 
-        db.beginTransaction()
-        try {
+        return db.inTransaction {
             val stmt: SQLiteStatement = db.compileStatement(sql)
             for (i in rawRows.indices) {
                 val row = rawRows[i]
@@ -671,10 +669,7 @@ object ErtsPostWorkoutRecomputer {
                 stmt.bindLong(bindIdx, row.rowId)
                 stmt.executeUpdateDelete()
             }
-            db.setTransactionSuccessful()
-            return true
-        } finally {
-            db.endTransaction()
+            true
         }
     }
 
@@ -773,7 +768,7 @@ object ErtsPostWorkoutRecomputer {
                 } else null
             }
             if (validLatLngs.isNotEmpty()) {
-                polyline = PolyUtil.encode(PolyUtil.simplify(validLatLngs, POLYLINE_SIMPLIFY_TOLERANCE_M))
+                polyline = StreamSummaryCalculator.encodePolyline(validLatLngs, POLYLINE_SIMPLIFY_TOLERANCE_M)
             }
 
             var cumDist = 0.0
@@ -781,7 +776,7 @@ object ErtsPostWorkoutRecomputer {
                 cumDist += pt.deltaDistanceMeters
                 cumDist
             }
-            distanceStream = NumericalEncodingUtils.encodeDoubles(subsampleStream(distances))
+            distanceStream = StreamSummaryCalculator.encodeDoubleStreamOrEmpty(subsampleStream(distances))
             totalDistance = cumDist
         }
 
@@ -792,7 +787,7 @@ object ErtsPostWorkoutRecomputer {
 
         if (smoothedAltitude != null && smoothedAltitude.isNotEmpty()) {
             val altitudes = smoothedAltitude.map { it.altitudeM }
-            altitudeStream = NumericalEncodingUtils.encodeDoubles(subsampleStream(altitudes))
+            altitudeStream = StreamSummaryCalculator.encodeDoubleStreamOrEmpty(subsampleStream(altitudes))
             totalAscent = smoothedAltitude.last().ascentM
             totalDescent = smoothedAltitude.last().descentM
         }
@@ -913,8 +908,7 @@ object ErtsPostWorkoutRecomputer {
         smoothedAltitude: List<SmoothedAltitudeSlopePoint>?,
         authoritativeAvgSpeed: Double? = null
     ) {
-        summariesDb.beginTransaction()
-        try {
+        summariesDb.inTransaction {
             if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
                 val speeds = smoothedOdometry.map { it.speedMps }
                 val maxSpeed = speeds.maxOrNull() ?: 0.0
@@ -960,10 +954,6 @@ object ErtsPostWorkoutRecomputer {
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SLOPE, ExtremaType.MIN, minSlope, null)
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SLOPE, ExtremaType.MAX, maxSlope, null)
             }
-
-            summariesDb.setTransactionSuccessful()
-        } finally {
-            summariesDb.endTransaction()
         }
     }
 

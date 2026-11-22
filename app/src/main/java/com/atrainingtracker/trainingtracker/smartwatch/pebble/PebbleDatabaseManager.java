@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import com.atrainingtracker.database.BaseDatabaseManager;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -44,20 +45,17 @@ import java.util.List;
 /**
  * Created by rainer on 21.02.16.
  */
-public class PebbleDatabaseManager {
+public class PebbleDatabaseManager extends BaseDatabaseManager<PebbleDatabaseManager.PebbleDbHelper> {
     private static final String TAG = PebbleDatabaseManager.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
     // --- Modern Singleton Pattern ---
     private static volatile PebbleDatabaseManager cInstance;
-    private final PebbleDbHelper cPebbleDbHelper;
     private final Context mContext;
-    @Nullable
-    private SQLiteDatabase mDatabase = null;
 
     private PebbleDatabaseManager(@NonNull Context context) {
+        super(new PebbleDbHelper(context.getApplicationContext()));
         this.mContext = context.getApplicationContext();
-        this.cPebbleDbHelper = new PebbleDbHelper(this.mContext);
     }
 
     @NonNull
@@ -73,34 +71,10 @@ public class PebbleDatabaseManager {
     }
 
     /**
-     * Returns a writable database instance and ensures it remains open,
-     * transparently reopening if previously closed ({@code REQ-STB-024.3}).
-     */
-    private SQLiteDatabase getDatabase() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            return mDatabase;
-        }
-        synchronized (this) {
-            if (mDatabase != null && mDatabase.isOpen()) {
-                return mDatabase;
-            }
-            if (mDatabase != null) {
-                cPebbleDbHelper.close();
-            }
-            mDatabase = cPebbleDbHelper.getWritableDatabase();
-            return mDatabase;
-        }
-    }
-
-    /**
      * Closes the active {@code PebbleView.db} database and helper handles cleanly ({@code REQ-STB-024.3}).
      */
     public synchronized void close() {
-        if (mDatabase != null && mDatabase.isOpen()) {
-            mDatabase.close();
-        }
-        mDatabase = null;
-        cPebbleDbHelper.close();
+        closeDatabase();
     }
 
     /**
@@ -120,8 +94,9 @@ public class PebbleDatabaseManager {
     }
 
     @VisibleForTesting
+    @Override
     public synchronized boolean isDatabaseOpen() {
-        return mDatabase != null && mDatabase.isOpen();
+        return super.isDatabaseOpen();
     }
 
     @VisibleForTesting

@@ -87,6 +87,8 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDat
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.database.SqliteSchemaUtils
+import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
 import com.atrainingtracker.trainingtracker.ui.map.TelemetrySourcePoint
@@ -665,17 +667,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             return false
         }
 
-        val existingColumns = mutableSetOf<String>()
-        try {
-            samplesDb.rawQuery("PRAGMA table_info($currentTable)", null).use { cursor ->
-                val nameCol = cursor.getColumnIndex("name")
-                if (nameCol != -1) {
-                    while (cursor.moveToNext()) {
-                        existingColumns.add(cursor.getString(nameCol))
-                    }
-                }
-            }
-        } catch (_: Exception) {}
+        val existingColumns = SqliteSchemaUtils.getTableColumnNames(samplesDb, currentTable).toMutableSet()
 
         if (existingColumns.isEmpty()) {
             try {
@@ -2016,20 +2008,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     )
 
     private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
-        val cols = mutableSetOf<String>()
-        try {
-            db.rawQuery("PRAGMA table_info($tableName)", null).use { c ->
-                val nameIdx = c.getColumnIndex("name")
-                if (nameIdx >= 0) {
-                    while (c.moveToNext()) {
-                        cols.add(c.getString(nameIdx))
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to inspect columns for table $tableName", e)
-        }
-        return cols
+        return SqliteSchemaUtils.getTableColumnNames(db, tableName)
     }
 
     suspend fun getWorkoutTrackPoints(
@@ -3504,90 +3483,30 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     )
                 }
 
-                // 5. Streams, Polyline & Extrema
+                // 5. Streams, Polyline & Extrema (REQ-DAT-047.4)
                 val retainedLatLngs = retainedSamples.mapNotNull { it.latLng }
-                val newPolyline = if (retainedLatLngs.isNotEmpty()) com.google.maps.android.PolyUtil.encode(retainedLatLngs) else null
+                val newPolyline = StreamSummaryCalculator.encodePolyline(retainedLatLngs)
 
-                var minLat: Double? = null
-                var minLng: Double? = null
-                var maxLat: Double? = null
-                var maxLng: Double? = null
-                if (retainedLatLngs.isNotEmpty()) {
-                    minLat = retainedLatLngs.minOf { it.latitude }
-                    maxLat = retainedLatLngs.maxOf { it.latitude }
-                    minLng = retainedLatLngs.minOf { it.longitude }
-                    maxLng = retainedLatLngs.maxOf { it.longitude }
-                }
+                val bounds = StreamSummaryCalculator.computeBounds(retainedLatLngs)
+                val minLat: Double? = bounds?.minLat
+                val minLng: Double? = bounds?.minLng
+                val maxLat: Double? = bounds?.maxLat
+                val maxLng: Double? = bounds?.maxLng
 
-                // Downsample streams for summary
-                val hasAnyAltitude = retainedSamples.any { it.altitude != null && !it.altitude.isNaN() }
-                val sampledAltitudes = mutableListOf<Double>()
-                val sampledDistances = mutableListOf<Double>()
-                if (hasAnyAltitude) {
-                    for (i in retainedSamples.indices) {
-                        if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
-                            val s = retainedSamples[i]
-                            val alt = s.altitude ?: run {
-                                var prevAlt: Double? = null
-                                var prevDist = 0.0
-                                for (k in i - 1 downTo 0) {
-                                    val a = retainedSamples[k].altitude
-                                    if (a != null && !a.isNaN()) {
-                                        prevAlt = a
-                                        prevDist = retainedSamples[k].distanceTotalM
-                                        break
-                                    }
-                                }
-                                var nextAlt: Double? = null
-                                var nextDist = 0.0
-                                for (k in i + 1 until retainedSamples.size) {
-                                    val a = retainedSamples[k].altitude
-                                    if (a != null && !a.isNaN()) {
-                                        nextAlt = a
-                                        nextDist = retainedSamples[k].distanceTotalM
-                                        break
-                                    }
-                                }
-                                when {
-                                    prevAlt != null && nextAlt != null -> {
-                                        val distSpan = nextDist - prevDist
-                                        if (distSpan > 1e-6) {
-                                            prevAlt + (nextAlt - prevAlt) * ((s.distanceTotalM - prevDist) / distSpan)
-                                        } else {
-                                            prevAlt
-                                        }
-                                    }
-                                    prevAlt != null -> prevAlt
-                                    nextAlt != null -> nextAlt
-                                    else -> 0.0
-                                }
-                            }
-                            sampledAltitudes.add(alt)
-                            sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
-                        }
-                    }
-                } else {
-                    for (i in retainedSamples.indices) {
-                        if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
-                            val s = retainedSamples[i]
-                            sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
-                        }
-                    }
-                }
-                val encodedAltitudes = if (sampledAltitudes.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null
-                val encodedDistances = if (sampledDistances.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledDistances) else null
+                // Downsample streams for summary with distance-weighted missing-altitude interpolation
+                val downsampled = StreamSummaryCalculator.subsampleWithAltitudeInterpolation(
+                    altitudes = retainedSamples.map { it.altitude },
+                    distances = retainedSamples.map { it.distanceTotalM },
+                    distanceOrigin = startSample.distanceTotalM,
+                    stepSize = WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE
+                )
+                val encodedAltitudes = StreamSummaryCalculator.encodeDoubleStream(downsampled.sampledAltitudes)
+                val encodedDistances = StreamSummaryCalculator.encodeDoubleStream(downsampled.sampledDistances)
 
-                // Ascent / Descent calculation
-                var ascending = 0.0
-                var descending = 0.0
-                for (i in 1 until retainedSamples.size) {
-                    val prevAlt = retainedSamples[i - 1].altitude
-                    val currAlt = retainedSamples[i].altitude
-                    if (prevAlt != null && currAlt != null) {
-                        val diff = currAlt - prevAlt
-                        if (diff > 0) ascending += diff else descending += -diff
-                    }
-                }
+                // Ascent / Descent calculation (nullable-gap-preserving raw delta)
+                val ascentDescent = StreamSummaryCalculator.computeAscentDescentRaw(retainedSamples.map { it.altitude })
+                val ascending = ascentDescent.ascending
+                val descending = ascentDescent.descending
 
                 // Extrema recalculation
                 val extremaUpdates = mutableListOf<WorkoutSummariesDatabaseManager.ExtremaUpdateRecord>()

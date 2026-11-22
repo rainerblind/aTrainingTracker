@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database.hrv
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import com.atrainingtracker.database.inTransaction
 import androidx.annotation.VisibleForTesting
 
 /**
@@ -72,9 +73,7 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun insertIntervals(intervals: List<WorkoutRrInterval>): Int {
         if (intervals.isEmpty()) return 0
-        val db = database
-        db.beginTransaction()
-        try {
+        return database.inTransaction { db ->
             val sql = """
                 INSERT OR REPLACE INTO ${WorkoutRrDbHelper.TABLE_WORKOUT_RR} (
                     ${WorkoutRrDbHelper.COLUMN_WORKOUT_ID},
@@ -97,10 +96,7 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
                 stmt.executeInsert()
                 count++
             }
-            db.setTransactionSuccessful()
-            return count
-        } finally {
-            db.endTransaction()
+            count
         }
     }
 
@@ -113,9 +109,7 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun updateBeatQualityFlags(workoutId: Long, updates: List<BeatQualityFlagUpdate>): Int {
         if (updates.isEmpty()) return 0
-        val db = database
-        db.beginTransaction()
-        try {
+        return database.inTransaction { db ->
             val sql = """
                 UPDATE ${WorkoutRrDbHelper.TABLE_WORKOUT_RR}
                 SET ${WorkoutRrDbHelper.COLUMN_ARTIFACT_FLAG} = ?,
@@ -133,10 +127,7 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
                     updatedRows += stmt.executeUpdateDelete()
                 }
             }
-            db.setTransactionSuccessful()
-            return updatedRows
-        } finally {
-            db.endTransaction()
+            updatedRows
         }
     }
 

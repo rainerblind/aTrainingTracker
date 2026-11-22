@@ -166,7 +166,7 @@ class WorkoutSummariesDatabaseSourceMigrationTest {
     @Test
     fun testGetEncodedStreams_extractsMapPolylineAndElevationStreams() {
         val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         val cursor = mockk<Cursor>(relaxed = true)
@@ -207,7 +207,7 @@ class WorkoutSummariesDatabaseSourceMigrationTest {
     @Test
     fun testUpdateWorkoutData_persistsSource() {
         val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
-            override fun getDatabase(): SQLiteDatabase = mockDb
+            override val database: SQLiteDatabase get() = mockDb
         }
 
         every {

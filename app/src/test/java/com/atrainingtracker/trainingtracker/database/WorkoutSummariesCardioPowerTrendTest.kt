@@ -53,20 +53,14 @@ class WorkoutSummariesCardioPowerTrendTest {
         mockDb = mockk(relaxed = true)
         every { mockDb.isOpen } returns true
 
-        manager = WorkoutSummariesDatabaseManager.getInstance(mockContext)
-        val dbField = WorkoutSummariesDatabaseManager::class.java.getDeclaredField("mDatabase")
-        dbField.isAccessible = true
-        dbField.set(manager, mockDb)
-
-        val helperField = WorkoutSummariesDatabaseManager::class.java.getDeclaredField("cWorkoutSummariesDbHelper")
-        helperField.isAccessible = true
-        val mockHelper = mockk<WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper>(relaxed = true)
-        helperField.set(null, mockHelper)
-        every { mockHelper.writableDatabase } returns mockDb
+        manager = object : WorkoutSummariesDatabaseManager(null) {
+            override val database: SQLiteDatabase get() = mockDb
+        }
     }
 
     @After
     fun tearDown() {
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         unmockkAll()
     }
 
