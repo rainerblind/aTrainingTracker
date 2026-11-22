@@ -115,11 +115,11 @@ class ArchitectureConformanceContractTest {
         const val MAX_MONOLITH_LOC_THRESHOLD = 1500
         val MAX_MONOLITH_FILE_LOC_BASELINE: Map<String, Int> = mapOf(
             "com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt" to 5117,
-            "com/atrainingtracker/trainingtracker/tracker/TrackerService.java" to 3559,
+            "com/atrainingtracker/trainingtracker/tracker/TrackerService.java" to 3220,
             "com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java" to 3148,
             "com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java" to 2631,
             "com/atrainingtracker/trainingtracker/settings/TuningPreferencesDataStore.kt" to 2410,
-            "com/atrainingtracker/trainingtracker/TrainingApplication.java" to 2135,
+            "com/atrainingtracker/trainingtracker/TrainingApplication.java" to 2050,
             "com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceDialog.kt" to 2004,
             "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt" to 1975,
             "com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt" to 1965,

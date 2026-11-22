@@ -24,8 +24,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import io.mockk.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -44,10 +46,13 @@ class TrainingApplicationTrackingTest {
         var stateChangedNotified = false
         var startedServiceIntent: Intent? = null
         var stoppedServiceIntent: Intent? = null
+        val broadcastActions = mutableListOf<String?>()
+        var onStartServiceHook: (() -> Unit)? = null
 
         override fun getApplicationContext(): Context = this
 
         override fun startService(service: Intent?): ComponentName? {
+            onStartServiceHook?.invoke()
             startedServiceIntent = service
             return null
         }
@@ -58,7 +63,7 @@ class TrainingApplicationTrackingTest {
         }
 
         override fun sendBroadcast(intent: Intent) {
-            // No-op for unit tests
+            broadcastActions.add(intent.action)
         }
 
         override fun getPackageName(): String = "com.atrainingtracker.trainingtracker"
@@ -143,7 +148,12 @@ class TrainingApplicationTrackingTest {
     @After
     fun tearDown() {
         unmockkAll()
+        TrackerService.setInstanceForTesting(null)
         TrainingApplication.cTrackingMode = TrackingMode.READY
+        TrainingApplication.setActiveWorkoutIdForTesting(-1L)
+        TrainingApplication.setManualPauseLock(false, null)
+        TrainingApplication.setAutoPaused(false, null)
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
     }
 
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {
@@ -387,6 +397,231 @@ class TrainingApplicationTrackingTest {
 
         assertEquals("Must initialize in PAUSED", TrackingMode.PAUSED, TrainingApplication.cTrackingMode)
         assertTrue("Must be auto-paused", TrainingApplication.isAutoPaused())
+    }
+
+    /**
+     * TST-TRK-094.3 (ATT-6034): Verifies exact ordering in stopTracking(): pause locks are cleared
+     * BEFORE ACTION_STOP dispatch, while cTrackingMode=READY, sActiveWorkoutId=-1, and clearBreadcrumbs()
+     * execute AFTER dispatch without broadcasting RESET_ACCUMULATORS_INTENT.
+     */
+    @Test
+    fun testStopTracking_resetsPauseLocksBeforeDispatchAndActiveStateAfterDispatch() {
+        val mockService = mockk<TrackerService>(relaxed = true)
+        TrackerService.setInstanceForTesting(mockService)
+
+        TrainingApplication.cTrackingMode = TrackingMode.PAUSED
+        TrainingApplication.setActiveWorkoutIdForTesting(42L)
+        TrainingApplication.setManualPauseLock(true, app)
+        TrainingApplication.setAutoPaused(true, app)
+
+        var seenManualPauseDuringDispatch = true
+        var seenAutoPauseDuringDispatch = true
+        var seenModeDuringDispatch: TrackingMode? = null
+        var seenActiveWorkoutIdDuringDispatch = -1L
+
+        app.onStartServiceHook = {
+            seenManualPauseDuringDispatch = TrainingApplication.isManualPauseLocked()
+            seenAutoPauseDuringDispatch = TrainingApplication.isAutoPaused()
+            seenModeDuringDispatch = TrainingApplication.cTrackingMode
+            seenActiveWorkoutIdDuringDispatch = TrainingApplication.getActiveWorkoutID()
+        }
+
+        val stopTrackingMethod = TrainingApplication::class.java.getDeclaredMethod("stopTracking")
+        stopTrackingMethod.isAccessible = true
+        stopTrackingMethod.invoke(app)
+
+        assertFalse("Manual pause lock must be cleared BEFORE ACTION_STOP dispatch", seenManualPauseDuringDispatch)
+        assertFalse("Auto-pause flag must be cleared BEFORE ACTION_STOP dispatch", seenAutoPauseDuringDispatch)
+        assertEquals("TrackingMode must NOT reset to READY until AFTER dispatch", TrackingMode.PAUSED, seenModeDuringDispatch)
+        assertEquals("Active workout ID must NOT reset until AFTER dispatch", 42L, seenActiveWorkoutIdDuringDispatch)
+
+        assertEquals("TrackingMode must be READY after stopTracking", TrackingMode.READY, TrainingApplication.cTrackingMode)
+        assertEquals("Active workout ID must be -1 after stopTracking", -1L, TrainingApplication.getActiveWorkoutID())
+        assertTrue("stopTracking must not broadcast RESET_ACCUMULATORS_INTENT", app.broadcastActions.isEmpty())
+        verify(exactly = 1) { mockRepo.clearBreadcrumbs() }
+    }
+
+    /**
+     * TST-TRK-094.3 (ATT-6034): Verifies static resetTrackingStateOnAbort() handles both null
+     * and non-null cAppContext cleanly.
+     */
+    @Test
+    fun testResetTrackingStateOnAbort_nullAndNonNullContextParity() {
+        TrainingApplication.cTrackingMode = TrackingMode.TRACKING
+        TrainingApplication.setActiveWorkoutIdForTesting(55L)
+        TrainingApplication.setManualPauseLock(true, app)
+        TrainingApplication.setAutoPaused(true, app)
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
+
+        TrainingApplication.resetTrackingStateOnAbort()
+
+        assertEquals(TrackingMode.READY, TrainingApplication.cTrackingMode)
+        assertEquals(-1L, TrainingApplication.getActiveWorkoutID())
+        assertFalse(TrainingApplication.isManualPauseLocked())
+        assertFalse(TrainingApplication.isAutoPaused())
+        verify(exactly = 0) { mockRepo.clearBreadcrumbs() }
+
+        // Now with non-null cAppContext
+        TrainingApplication.cTrackingMode = TrackingMode.TRACKING
+        TrainingApplication.setActiveWorkoutIdForTesting(56L)
+        setStaticField(TrainingApplication::class.java, "cAppContext", app)
+
+        TrainingApplication.resetTrackingStateOnAbort()
+
+        assertEquals(TrackingMode.READY, TrainingApplication.cTrackingMode)
+        assertEquals(-1L, TrainingApplication.getActiveWorkoutID())
+        assertEquals(1, app.broadcastActions.size)
+        verify(exactly = 1) { mockRepo.clearBreadcrumbs() }
+    }
+
+    /**
+     * TST-TRK-094.3 (ATT-6034): Verifies onTrackingAborted() clears pause locks, resets active
+     * tracking state, cancels notification, broadcasts RESET_ACCUMULATORS_INTENT, and clears breadcrumbs.
+     */
+    @Test
+    fun testOnTrackingAborted_resetsAllStateCancelsNotificationAndBroadcastsReset() {
+        val mockNotifManager = mockk<androidx.core.app.NotificationManagerCompat>(relaxed = true)
+        val notifField = TrainingApplication::class.java.getDeclaredField("mNotificationManager").apply { isAccessible = true }
+        notifField.set(app, mockNotifManager)
+        val workoutIdField = TrainingApplication::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(app, 77L)
+
+        TrainingApplication.cTrackingMode = TrackingMode.TRACKING
+        TrainingApplication.setActiveWorkoutIdForTesting(77L)
+        TrainingApplication.setManualPauseLock(true, app)
+        TrainingApplication.setAutoPaused(true, app)
+
+        app.onTrackingAborted()
+
+        assertEquals(TrackingMode.READY, TrainingApplication.cTrackingMode)
+        assertEquals(-1L, TrainingApplication.getActiveWorkoutID())
+        assertEquals(-1L, workoutIdField.get(app))
+        assertFalse(TrainingApplication.isManualPauseLocked())
+        assertFalse(TrainingApplication.isAutoPaused())
+        verify(exactly = 1) { mockNotifManager.cancel(TrainingApplication.TRACKING_NOTIFICATION_ID) }
+        verify(exactly = 1) { mockRepo.clearBreadcrumbs() }
+        assertEquals(1, app.broadcastActions.size)
+        assertTrue(app.stateChangedNotified)
+    }
+
+    /**
+     * TST-TRK-094.3 (ATT-6034): Verifies trackingStopped() preserves its distinct semantics and
+     * does NOT reset cTrackingMode, sActiveWorkoutId, or pause locks.
+     */
+    @Test
+    fun testTrackingStopped_preservesUntouchedSemantics_doesNotResetModeOrPauseLocks() {
+        val mockNotifManager = mockk<androidx.core.app.NotificationManagerCompat>(relaxed = true)
+        val notifField = TrainingApplication::class.java.getDeclaredField("mNotificationManager").apply { isAccessible = true }
+        notifField.set(app, mockNotifManager)
+        val workoutIdField = TrainingApplication::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(app, 99L)
+
+        mockkStatic(WorkoutNavigationEvents::class)
+        every { WorkoutNavigationEvents.triggerEdit(any()) } just Runs
+
+        TrainingApplication.cTrackingMode = TrackingMode.TRACKING
+        TrainingApplication.setActiveWorkoutIdForTesting(99L)
+        TrainingApplication.setManualPauseLock(true, app)
+        TrainingApplication.setAutoPaused(true, app)
+
+        val trackingStoppedMethod = TrainingApplication::class.java.getDeclaredMethod("trackingStopped")
+        trackingStoppedMethod.isAccessible = true
+        trackingStoppedMethod.invoke(app)
+
+        assertEquals("trackingStopped must NOT mutate cTrackingMode", TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
+        assertEquals("trackingStopped must NOT mutate sActiveWorkoutId", 99L, TrainingApplication.getActiveWorkoutID())
+        assertTrue("trackingStopped must NOT clear manual pause lock", TrainingApplication.isManualPauseLocked())
+        assertTrue("trackingStopped must NOT clear auto-pause flag", TrainingApplication.isAutoPaused())
+        verify(exactly = 1) { mockRepo.clearBreadcrumbs() }
+        verify(exactly = 1) { WorkoutNavigationEvents.triggerEdit(99L) }
+        verify(exactly = 1) { mockNotifManager.cancel(TrainingApplication.TRACKING_NOTIFICATION_ID) }
+        assertEquals(1, app.broadcastActions.size)
+    }
+
+    /**
+     * TST-TRK-094.4 (ATT-6034): Characterization & unit test covering all 18 Strava sync
+     * preference getters/setters, distinct "never" string resources, and null-prefs safety.
+     */
+    @Test
+    fun testStravaSyncPreferences_all18MethodsDistinctKeysNeverStringsAndNullSafety() {
+        val backingStrings = mutableMapOf<String, String>()
+        val backingBooleans = mutableMapOf<String, Boolean>()
+        val mockEditor = mockk<SharedPreferences.Editor>(relaxed = true)
+        every { mockEditor.putString(any(), any()) } answers {
+            backingStrings[firstArg()] = secondArg()
+            mockEditor
+        }
+        every { mockEditor.putBoolean(any(), any()) } answers {
+            backingBooleans[firstArg()] = secondArg()
+            mockEditor
+        }
+        every { mockPrefs.edit() } returns mockEditor
+        every { mockPrefs.getString(any(), any()) } answers {
+            backingStrings[firstArg()] ?: secondArg()
+        }
+        every { mockPrefs.getBoolean(any(), any()) } answers {
+            backingBooleans[firstArg()] ?: secondArg()
+        }
+
+        val mockCtx = mockk<Context>(relaxed = true)
+        every { mockCtx.getString(R.string.lastUpdateOfEquipmentNever) } returns "equipment-never"
+        every { mockCtx.getString(R.string.lastUpdateOfRoutesNever) } returns "routes-never"
+        every { mockCtx.getString(R.string.lastUpdateOfSegmentsNever) } returns "segments-never"
+        setStaticField(TrainingApplication::class.java, "cAppContext", mockCtx)
+
+        // Default values with initialized prefs + distinct "never" string resources
+        assertEquals("equipment-never", TrainingApplication.getLastUpdateTimeOfStravaEquipment())
+        assertEquals("routes-never", TrainingApplication.getLastUpdateTimeOfStravaRoutes())
+        assertEquals("segments-never", TrainingApplication.getLastUpdateTimeOfStravaSegments())
+        assertTrue(TrainingApplication.isAutomatedStravaEquipmentSyncEnabled())
+        assertTrue(TrainingApplication.isAutomatedStravaRoutesSyncEnabled())
+        assertTrue(TrainingApplication.isAutomatedStravaSegmentsSyncEnabled())
+        assertEquals("1", TrainingApplication.getStravaEquipmentSyncIntervalDays())
+        assertEquals("1", TrainingApplication.getStravaRoutesSyncIntervalDays())
+        assertEquals("1", TrainingApplication.getStravaSegmentsSyncIntervalDays())
+
+        // Write & read back independently (ensuring no cross-entity key collision)
+        TrainingApplication.setLastUpdateTimeOfStravaEquipment("2026-11-22 08:00")
+        TrainingApplication.setLastUpdateTimeOfStravaRoutes("2026-11-22 09:00")
+        TrainingApplication.setLastUpdateTimeOfStravaSegments("2026-11-22 10:00")
+        TrainingApplication.setAutomatedStravaEquipmentSyncEnabled(false)
+        TrainingApplication.setAutomatedStravaRoutesSyncEnabled(true)
+        TrainingApplication.setAutomatedStravaSegmentsSyncEnabled(false)
+        TrainingApplication.setStravaEquipmentSyncIntervalDays("7")
+        TrainingApplication.setStravaRoutesSyncIntervalDays("14")
+        TrainingApplication.setStravaSegmentsSyncIntervalDays("30")
+
+        assertEquals("2026-11-22 08:00", TrainingApplication.getLastUpdateTimeOfStravaEquipment())
+        assertEquals("2026-11-22 09:00", TrainingApplication.getLastUpdateTimeOfStravaRoutes())
+        assertEquals("2026-11-22 10:00", TrainingApplication.getLastUpdateTimeOfStravaSegments())
+        assertFalse(TrainingApplication.isAutomatedStravaEquipmentSyncEnabled())
+        assertTrue(TrainingApplication.isAutomatedStravaRoutesSyncEnabled())
+        assertFalse(TrainingApplication.isAutomatedStravaSegmentsSyncEnabled())
+        assertEquals("7", TrainingApplication.getStravaEquipmentSyncIntervalDays())
+        assertEquals("14", TrainingApplication.getStravaRoutesSyncIntervalDays())
+        assertEquals("30", TrainingApplication.getStravaSegmentsSyncIntervalDays())
+
+        // Null cSharedPreferences fallback safety (coding_standards.md §5.5)
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
+        assertEquals("equipment-never", TrainingApplication.getLastUpdateTimeOfStravaEquipment())
+        assertEquals("routes-never", TrainingApplication.getLastUpdateTimeOfStravaRoutes())
+        assertEquals("segments-never", TrainingApplication.getLastUpdateTimeOfStravaSegments())
+        assertTrue(TrainingApplication.isAutomatedStravaEquipmentSyncEnabled())
+        assertTrue(TrainingApplication.isAutomatedStravaRoutesSyncEnabled())
+        assertTrue(TrainingApplication.isAutomatedStravaSegmentsSyncEnabled())
+        assertEquals("1", TrainingApplication.getStravaEquipmentSyncIntervalDays())
+        assertEquals("1", TrainingApplication.getStravaRoutesSyncIntervalDays())
+        assertEquals("1", TrainingApplication.getStravaSegmentsSyncIntervalDays())
+
+        // Null cAppContext + null cSharedPreferences returns "" cleanly without NPE
+        setStaticField(TrainingApplication::class.java, "cAppContext", null)
+        assertEquals("", TrainingApplication.getLastUpdateTimeOfStravaEquipment())
+        assertEquals("", TrainingApplication.getLastUpdateTimeOfStravaRoutes())
+        assertEquals("", TrainingApplication.getLastUpdateTimeOfStravaSegments())
+        // Setters with null prefs must be no-op without throwing
+        TrainingApplication.setLastUpdateTimeOfStravaEquipment("x")
+        TrainingApplication.setAutomatedStravaRoutesSyncEnabled(false)
+        TrainingApplication.setStravaSegmentsSyncIntervalDays("3")
     }
 }
 

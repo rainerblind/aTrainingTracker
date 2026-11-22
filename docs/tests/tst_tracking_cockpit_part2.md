@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.6  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 90
+**Total Tests**: 91
 
 ---
 
@@ -1975,6 +1975,20 @@
      • Verify `disconnectFromGatt()` / `shutDown()` clears `mIsStvzo`/`mModelNumber`, drops late model-number updates or fallback timers without re-registering, and prevents clamped post-disconnect `setLightMode()` races from resurrecting `SOLID` in `RadarLightController`/`RadarStateRepository`; verify `BTLERadarDevice.java <= 1,500` LoC.
 - **Verification Evidence**: Verified (`ATT-8123` Bounce 1, Gate 3 `ATT-9606` PASSED; `141/141` targeted unit/Compose/contract tests PASS across 8 suites via `./gradlew :app:testDebugUnitTest --rerun`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; `BTLERadarDevice.java` `1,467/1,500` LoC; Light/Dark Compose preview + live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` visually inspected per `Rule 8.5`; `auto_gate.py` SHA-256 evidence bundle at `docs/engineering/test_evidence/tickets/ATT-8123/manifest.json`).
 
+### TST-TRK-094: **TrackerService Shutdown Dedup, Type-Safe Lap Extraction, PostWorkoutFinalizer, TrainingApplication Teardown & Parameterized Strava Sync Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-094`
+- **Component**: `TrackerService.java`, `PostWorkoutFinalizer.kt`, `LapTelemetryExtractor.kt`, `BANALService.java`, `TrainingApplication.java`, `StravaSyncScheduler.kt`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`
+- **Jira**: `ATT-6034`
+- **Test Description**:
+  1. *Type-Safe Lap Extraction & Shutdown Dedup (`TST-TRK-094.1`, `LapTelemetryExtractorTest.kt`, `TrackerServiceFinalizationTest.kt`)*:
+  • Verify `LapTelemetryExtractor.extract(...)` accepts all `Number` subtypes (`Integer`, `Long`, `Float`, `Double`), guards non-numeric/`NaN`/`Infinity`/`null` without `ClassCastException`, preserves `"??:??:??"` / `"0"` fallback strings, and computes `0.0` speed when `lapTimeSeconds <= 0`; verify `handleActionStop()`/`onDestroy()` preserve all `ATT-6178`/`REQ-TRK-033`/`034`/`076` invariants.
+  2. *`PostWorkoutFinalizer` Characterization & Delegation Parity (`TST-TRK-094.2`, `PostWorkoutFinalizerTest.kt`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceResumeTest.kt`)*:
+  • Verify all 7 fault-isolated finalization stages (map/streams, extrema/apex, aerobic efficiency/decoupling/power-HR dynamics gated on `deferHrPhysiologyToPostProcessing` + immediate NP/IF/TSS/Work/Wkg, `guessCommuteAndTrainer` XOR truth table, identity/clustering/auto-naming/milestones, converged wheel circumferences, diagnostic JSON) and `TrackerService` 0-/1-/4-arg delegation parity.
+  3. *`TrainingApplication` Teardown Helper Ordering (`TST-TRK-094.3`, `TrainingApplicationTrackingTest.kt`)*:
+  • Verify `stopTracking()` clears pause locks strictly before `ACTION_STOP`/`stopService` dispatch and resets `cTrackingMode = READY` / `sActiveWorkoutId = -1` / `clearBreadcrumbs` strictly after dispatch, `resetTrackingStateOnAbort()` works statically with null/non-null `cAppContext`, `onTrackingAborted()` cancels notification and broadcasts `RESET_ACCUMULATORS_INTENT`, and `trackingStopped()` leaves pause/mode flags untouched.
+  4. *Parameterized Strava Sync Prefs, Shared Worker Scheduler & Monolith Ratchets (`TST-TRK-094.4`, `StravaSyncSchedulerTest.kt`, `Strava*SyncWorkerTest.kt`, `TrainingApplicationTrackingTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+  • Verify all 18 Strava `Equipment`/`Routes`/`Segments` preference methods preserve keys, distinct `"never"` string resources, and null-pref safety; verify `StravaSyncScheduler` preserves `WORK_NAME`, `TAG`, WorkManager availability guard, cancellation, and backoff constraints across all 3 workers; verify tightened `TrackerService.java <= 3,220` & `TrainingApplication.java <= 2,050` LoC baselines and `DetailedDesignParityContractTest`.
 
 ---
 
@@ -2107,3 +2121,5 @@
 | `1.0.3` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Added `TST-TRK-093` (`TST-TRK-093.1`–`.4`) & Gate 3 (`ATT-9608`) revision covering Polar H10 `startRecording` anchor, trailing RR trimming, single-pass post-backfill physiology/HRV recomputation, `MyBTLEDevice.pauseGattOperations()` GATT release, `TST-CON-054.3` reconciliation, and Part 1/2 regression lock. |
 | `1.0.4` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Promoted `TST-TRK-093` to `[Verified]` (`549/549` dependent tests PASS, `0` new compiler warnings, clean `emulator-5554` smoke, evidence bundle `docs/engineering/test_evidence/tickets/ATT-8124/`). |
 | `1.0.5` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Stage 6 Bounce 1/5 sync with `sprint/2026-11-22_01_Früh` (`1c3fbfd8`, preserving `TST-TRK-092`, `TST-CON-055`, `TST-TRK-093`) and added `MyBTLEDeviceLifecycleTest` regression tests for all 3 `mIsGattPaused` concurrency races. |
+| `1.0.6` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Added `TST-TRK-094` `[Planned]` (`TST-TRK-094.1`–`.4`, strictly symmetric `REQ-TRK-094`, `N/A - no UI strings`) covering `LapTelemetryExtractor`, `TrackerService` shutdown dedup, `PostWorkoutFinalizer`, `TrainingApplication` teardown helpers, and parameterized Strava sync prefs & scheduling. |
+| `1.0.7` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Promoted `TST-TRK-094` to `[Verified]` (`224/224` PASS across 34 unit/contract suites incl. Stage 6 Bounce 1 lazy `activeSessionDeviceIdsProvider` fault-isolation test, `0` fail, `0` err, `0` skip, clean `emulator-5554` smoke, SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-6034/manifest.json`). |

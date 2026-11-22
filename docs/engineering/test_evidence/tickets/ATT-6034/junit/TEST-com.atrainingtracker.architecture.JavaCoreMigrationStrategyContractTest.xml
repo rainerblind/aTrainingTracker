@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:49:00.730Z" hostname="rainer-HP-EliteBook-850-G5" time="0.714">
+  <properties/>
+  <testcase name="testChildTicketSizingAndTraceability_TST_ARC_005_3" classname="com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest" time="0.47"/>
+  <testcase name="testAdrExistenceAndStructuralIntegrity_TST_ARC_005_1" classname="com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest" time="0.011"/>
+  <testcase name="testKeepVsMigrateConsistencyAndJavaCountReconciliation_TST_PRO_129_1" classname="com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest" time="0.17"/>
+  <testcase name="testClassInventoryAndDecisionCoverage_TST_ARC_005_2" classname="com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest" time="0.049"/>
+  <testcase name="testArchitectureDocIntegration_TST_ARC_005_4" classname="com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

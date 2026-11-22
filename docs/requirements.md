@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.134  
+**Version**: 1.0.135  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -14,7 +14,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit (Part 1)](requirements/req_tracking_cockpit_part1.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK`, `WEA` | 110 | 99 | 11 | 0 |
 | [Tracking & Live Sensor Cockpit (Part 2)](requirements/req_tracking_cockpit_part2.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 49 | 49 | 0 | 0 |
-| [Tracking & Live Sensor Cockpit (Part 3)](requirements/req_tracking_cockpit_part3.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 40 | 40 | 0 | 0 |
+| [Tracking & Live Sensor Cockpit (Part 3)](requirements/req_tracking_cockpit_part3.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 41 | 41 | 0 | 0 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `RAD`, `SPT`, `WKO` | 72 | 58 | 14 | 0 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 76 | 64 | 12 | 0 |
 | [Persistence, Migration & Cloud Export (Part 1)](requirements/req_data_migration_export_part1.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 114 | 99 | 15 | 0 |
@@ -31,7 +31,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1338 across 18 domain shards.
+**Total Living Requirements**: 1339 across 18 domain shards.
 
 ---
 
@@ -107,3 +107,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.129` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Added `req_tracking_cockpit_part3.md` (`REQ-TRK-093` `[Verified]`), synced with `sprint/2026-11-22_01_Früh` (`1c3fbfd8`, `ATT-8123`/`ATT-9170`), and hardened `MyBTLEDevice` pause concurrency (Bounce 1). |
 | `1.0.132` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Synchronized master index for `[Verified]` `REQ-PER-047` (Bounce 1 heal: strict `extractSensorSample` suffix allowlist, unit-reactive `LiveExtremaLabels`, `LiveWorkoutBroadcastTrackerTest` cleanup, sprint merge; `44/44` PASS across 8 suites + Light/Dark AMOLED `Rule 8.5` PNG). |
 | `1.0.133` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Promoted `REQ-UI-2800` to `[Verified]` (`req_ui_design_system_part5.md` v1.0.36; Bounce 1 healed: `136/136` PASS across 21 targeted suites, `0` compiler warnings, live `emulator-5554` PNGs & `0` crashes). |
+| `1.0.135` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Added and verified `REQ-TRK-094` `[Verified]` in `req_tracking_cockpit_part3.md` (`TrackerService.java` `3,180/3,220` LoC, `TrainingApplication.java` `2,038/2,050` LoC) and synchronized master index (`Total=1334`, `Verified=1208`, `Implemented=125`, `Planned=1`). |

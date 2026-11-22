@@ -20,14 +20,13 @@ package com.atrainingtracker.trainingtracker.segments
 
 import android.content.Context
 import android.util.Log
-import androidx.preference.PreferenceManager
-import androidx.work.*
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSyncScheduler
 import java.text.DateFormat
 import java.util.Date
-import java.util.concurrent.TimeUnit
 
 /**
  * Background [CoroutineWorker] that periodically synchronizes starred Strava segments
@@ -86,42 +85,15 @@ class StravaSegmentsSyncWorker(
          * @param context Application or activity context.
          */
         fun schedule(context: Context) {
-            try {
-                if (!TrainingApplication.isWorkManagerAvailable()) {
-                    Log.w(TAG, "WorkManager is unavailable on this device; cannot schedule automated segments sync.")
-                    return
-                }
-
-                val stravaConnected = TrainingApplication.getStravaAccessToken() != null
-                val enabled = TrainingApplication.isAutomatedStravaSegmentsSyncEnabled()
-
-                if (!stravaConnected || !enabled) {
-                    WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-                    Log.d(TAG, "Automated Strava segments sync cancelled (connected=$stravaConnected, enabled=$enabled).")
-                    return
-                }
-
-                val intervalDays = TrainingApplication.getStravaSegmentsSyncIntervalDays().toLongOrNull() ?: 1L
-
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .setRequiresBatteryNotLow(true)
-                    .build()
-
-                val workRequest = PeriodicWorkRequestBuilder<StravaSegmentsSyncWorker>(intervalDays, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
-                    .build()
-
-                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                    WORK_NAME,
-                    ExistingPeriodicWorkPolicy.UPDATE,
-                    workRequest
-                )
-                Log.i(TAG, "Periodic Strava segments sync scheduled every $intervalDays day(s).")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to schedule periodic Strava segments sync", e)
-            }
+            StravaSyncScheduler.schedulePeriodicSync(
+                context = context,
+                workerClass = StravaSegmentsSyncWorker::class.java,
+                tag = TAG,
+                workName = WORK_NAME,
+                entityLabel = "segments",
+                isEnabled = { TrainingApplication.isAutomatedStravaSegmentsSyncEnabled() },
+                getIntervalDays = { TrainingApplication.getStravaSegmentsSyncIntervalDays() }
+            )
         }
     }
 }

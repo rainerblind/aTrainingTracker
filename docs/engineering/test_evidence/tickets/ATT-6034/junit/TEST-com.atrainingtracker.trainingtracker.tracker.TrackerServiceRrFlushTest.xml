@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T13:24:45.602Z" hostname="rainer-HP-EliteBook-850-G5" time="0.176">
+  <properties/>
+  <testcase name="testFlushLiveRrQueueSync_interleavesRemainingQueueItemsSequentially" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest" time="0.099"/>
+  <testcase name="testRrBeatListener_enforcesMonotonicBeatTimestampFloor" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest" time="0.006"/>
+  <testcase name="testFlushLiveRrQueueSync_flushesSynchronouslyWhenNoPriorAsyncFlush" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest" time="0.006"/>
+  <testcase name="testFlushLiveRrQueueSync_handlesEmptyQueueWithoutPendingFlushes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest" time="0.003"/>
+  <testcase name="testFlushLiveRrQueueSync_blocksUntilInFlightAsyncFlushCompletes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceRrFlushTest" time="0.056"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "pool-69-thread-1" java.lang.RuntimeException: Method w in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.w(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.performIdempotentMainThreadTeardown(TrackerService.java:1441)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$4(TrackerService.java:1567)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.runOnMainThread(TrackerService.java:1612)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1564)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-72-thread-1" java.lang.RuntimeException: Method w in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.w(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.performIdempotentMainThreadTeardown(TrackerService.java:1441)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$4(TrackerService.java:1567)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.runOnMainThread(TrackerService.java:1612)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1564)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-75-thread-1" java.lang.RuntimeException: Method w in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.w(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.performIdempotentMainThreadTeardown(TrackerService.java:1441)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$4(TrackerService.java:1567)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.runOnMainThread(TrackerService.java:1612)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1564)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-78-thread-1" java.lang.RuntimeException: Method w in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.w(Log.java)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.performIdempotentMainThreadTeardown(TrackerService.java:1441)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$4(TrackerService.java:1567)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.runOnMainThread(TrackerService.java:1612)
+	at com.atrainingtracker.trainingtracker.tracker.TrackerService.lambda$enqueueAsyncFinalization$5(TrackerService.java:1564)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+]]></system-err>
+</testsuite>

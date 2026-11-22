@@ -20,9 +20,9 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava
 
 import android.content.Context
 import android.util.Log
-import androidx.work.*
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import java.util.concurrent.TimeUnit
 
 /**
  * Background [CoroutineWorker] that periodically synchronizes athlete bikes and shoes
@@ -84,42 +84,15 @@ class StravaEquipmentSyncWorker(
          * @param context Application or activity context.
          */
         fun schedule(context: Context) {
-            try {
-                if (!TrainingApplication.isWorkManagerAvailable()) {
-                    Log.w(TAG, "WorkManager is unavailable on this device; cannot schedule automated equipment sync.")
-                    return
-                }
-
-                val stravaConnected = TrainingApplication.getStravaAccessToken() != null
-                val enabled = TrainingApplication.isAutomatedStravaEquipmentSyncEnabled()
-
-                if (!stravaConnected || !enabled) {
-                    WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-                    Log.d(TAG, "Automated Strava equipment sync cancelled (connected=$stravaConnected, enabled=$enabled).")
-                    return
-                }
-
-                val intervalDays = TrainingApplication.getStravaEquipmentSyncIntervalDays().toLongOrNull() ?: 1L
-
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .setRequiresBatteryNotLow(true)
-                    .build()
-
-                val workRequest = PeriodicWorkRequestBuilder<StravaEquipmentSyncWorker>(intervalDays, TimeUnit.DAYS)
-                    .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
-                    .build()
-
-                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                    WORK_NAME,
-                    ExistingPeriodicWorkPolicy.UPDATE,
-                    workRequest
-                )
-                Log.i(TAG, "Periodic Strava equipment sync scheduled every $intervalDays day(s).")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to schedule periodic Strava equipment sync", e)
-            }
+            StravaSyncScheduler.schedulePeriodicSync(
+                context = context,
+                workerClass = StravaEquipmentSyncWorker::class.java,
+                tag = TAG,
+                workName = WORK_NAME,
+                entityLabel = "equipment",
+                isEnabled = { TrainingApplication.isAutomatedStravaEquipmentSyncEnabled() },
+                getIntervalDays = { TrainingApplication.getStravaEquipmentSyncIntervalDays() }
+            )
         }
     }
 }
