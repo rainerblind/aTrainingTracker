@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLayoutAndVisibilityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:52:49.421Z" hostname="rainer-HP-EliteBook-850-G5" time="0.045">
+  <properties/>
+  <testcase name="testWorkoutClusterDetailDashboardSplitPaneAndTabHostingContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLayoutAndVisibilityTest" time="0.016"/>
+  <testcase name="testTrendSeriesEmptyForLessThanTwoWorkouts" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLayoutAndVisibilityTest" time="0.021"/>
+  <testcase name="testWorkoutClusterTrendChartCardHiddenContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLayoutAndVisibilityTest" time="0.001"/>
+  <testcase name="testDensityAdaptivePointSizingAndOutlierVisualContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLayoutAndVisibilityTest" time="0.001"/>
+  <testcase name="testModularityAndLineCount" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLayoutAndVisibilityTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

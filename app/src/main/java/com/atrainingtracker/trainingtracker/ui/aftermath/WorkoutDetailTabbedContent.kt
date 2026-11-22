@@ -188,7 +188,9 @@ fun WorkoutDetailTabbedContent(
     val mapTabIndex = remember(visibleTabs) {
         val idx = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
         if (idx >= 0) idx else visibleTabs.indexOfFirst {
-            WorkoutDetailSectionType.ELEVATION in it.sections || WorkoutDetailSectionType.CHARTS in it.sections
+            WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR in it.sections ||
+                WorkoutDetailSectionType.ELEVATION in it.sections ||
+                WorkoutDetailSectionType.CHARTS in it.sections
         }
     }
 
@@ -315,12 +317,15 @@ fun WorkoutDetailTabbedContent(
                 val activeSections = remember(tab, availability, detailPreferences) {
                     tab.normalizedSections.filter { availability.isSectionActive(it, detailPreferences) }
                 }
+                val hasCarriageTimelineData = activityCarriageTimeline != null && activityCarriageTimeline.segments.isNotEmpty()
+                val tabHasActivityCarriageBar = WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR in activeSections && hasCarriageTimelineData
                 val tabHasElevation = WorkoutDetailSectionType.ELEVATION in activeSections && hasAltitudeData
                 val tabHasCharts = WorkoutDetailSectionType.CHARTS in activeSections
-                val orderedLowerSections = remember(activeSections, hasAltitudeData) {
+                val orderedLowerSections = remember(activeSections, hasAltitudeData, hasCarriageTimelineData) {
                     activeSections.filter { section ->
                         section != WorkoutDetailSectionType.MAP &&
-                            (section != WorkoutDetailSectionType.ELEVATION || hasAltitudeData)
+                            (section != WorkoutDetailSectionType.ELEVATION || hasAltitudeData) &&
+                            (section != WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR || hasCarriageTimelineData)
                     }
                 }
                 val usesCustomOrderedLowerPane = orderedLowerSections.isNotEmpty() &&
@@ -443,6 +448,8 @@ fun WorkoutDetailTabbedContent(
                             topEndActions = mapTopEndActions,
                             metadataContent = null,
                             analyticsContent = null,
+                            activityCarriageTimeline = activityCarriageTimeline,
+                            showActivityCarriageBar = tabHasActivityCarriageBar,
                             customLowerContent = if (usesCustomOrderedLowerPane) {
                                 { renderOrderedSections(this) }
                             } else {
@@ -454,8 +461,8 @@ fun WorkoutDetailTabbedContent(
 
                     WorkoutDetailTabLayoutMode.MODE_A_CARD_SCROLL -> {
                         // Mode A: No Map in tab -> Single unified vertical scroll container
-                        // respecting configured tab section order for ELEVATION & CHARTS (REQ-UI-2795 / ATT-9508)
-                        if (tabHasElevation || tabHasCharts) {
+                        // respecting configured tab section order for ACTIVITY_CARRIAGE_BAR, ELEVATION & CHARTS (REQ-UI-2795, REQ-UI-2796)
+                        if (tabHasActivityCarriageBar || tabHasElevation || tabHasCharts) {
                             MapDetailLayout(
                                 bSportType = workoutData.bSportType,
                                 zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -485,6 +492,8 @@ fun WorkoutDetailTabbedContent(
                                 onToggleChartVisibility = onToggleChartVisibility,
                                 metadataContent = null,
                                 analyticsContent = null,
+                                activityCarriageTimeline = activityCarriageTimeline,
+                                showActivityCarriageBar = tabHasActivityCarriageBar,
                                 customLowerContent = if (usesCustomOrderedLowerPane) {
                                     { renderOrderedSections(this) }
                                 } else {
@@ -990,6 +999,9 @@ private fun RenderWorkoutDetailCardSections(
             }
             WorkoutDetailSectionType.MAP -> {
                 // Pinned in MapDetailLayout top split pane in MODE_B_SPLIT_MAP / MODE_C_FULL_MAP (REQ-UI-408.3)
+            }
+            WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR -> {
+                lowerContentScope?.ActivityCarriageBarSection()
             }
             WorkoutDetailSectionType.ELEVATION -> {
                 lowerContentScope?.ElevationProfileSection()

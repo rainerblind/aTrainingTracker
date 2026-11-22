@@ -61,6 +61,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThreshol
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageTimeline
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -129,6 +130,9 @@ private fun Modifier.chartInteractiveTouchDetector(
  */
 interface MapDetailLowerContentScope {
     @Composable
+    fun ActivityCarriageBarSection(modifier: Modifier = Modifier)
+
+    @Composable
     fun ElevationProfileSection(modifier: Modifier = Modifier)
 
     @Composable
@@ -186,7 +190,9 @@ fun MapDetailLayout(
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
     hiddenCharts: Set<TelemetryChartKind> = emptySet(),
     onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
-    customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null
+    customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null,
+    activityCarriageTimeline: ActivityCarriageTimeline? = null,
+    showActivityCarriageBar: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -260,9 +266,15 @@ fun MapDetailLayout(
         path = activeScrubPath,
         enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel
     )
-    val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
+    val hasActivityCarriageBar = showActivityCarriageBar &&
+        activityCarriageTimeline != null &&
+        activityCarriageTimeline.segments.isNotEmpty() &&
+        !activeScrubPath.isNullOrEmpty()
+    val carriageBarDomain = if (showElevationProfile) tuningConfig.elevationXAxisDomain else activeTelemetryDomain
+    val carriageBarTotalSpan = if (showElevationProfile) elevationTotalSpan else telemetryTotalSpan
+    val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs || hasActivityCarriageBar) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || customLowerContent != null || hasTelemetryGraphs
-    val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null || customLowerContent != null
+    val hasLowerSection = (showElevationProfile || hasTelemetryGraphs || hasActivityCarriageBar) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null || customLowerContent != null
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -528,6 +540,35 @@ fun MapDetailLayout(
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
         val density = LocalDensity.current
+        val renderActivityCarriageBarSection: @Composable (Modifier) -> Unit = { sectionModifier ->
+            if (hasActivityCarriageBar) {
+                ActivityCarriageSyncBar(
+                    timeline = activityCarriageTimeline,
+                    pathPoints = activeScrubPath,
+                    currentDistance = selectedDistance,
+                    onDistanceSelected = { selectedDistance = it },
+                    xAxisDomain = carriageBarDomain,
+                    zoomScale = profileZoomScale,
+                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, carriageBarTotalSpan, profileZoomScale),
+                    onZoomChanged = { z, s ->
+                        profileZoomScale = z
+                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, carriageBarTotalSpan, z)
+                    },
+                    isPanMode = isPanMode,
+                    alignWithTelemetryCharts = showElevationHistogram || showTelemetryCharts,
+                    modifier = sectionModifier
+                        .fillMaxWidth()
+                        .testTag("workout_detail_section_ACTIVITY_CARRIAGE_BAR")
+                        .chartInteractiveTouchDetector(
+                            density = density,
+                            isLandscape = isLandscape,
+                            alignWithHistogram = showElevationHistogram || showTelemetryCharts,
+                            onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                        )
+                )
+            }
+        }
+
         val renderElevationProfileSection: @Composable (Modifier) -> Unit = { sectionModifier ->
             if (showElevationProfile) {
                 activeScrubPath?.let { path ->
@@ -656,6 +697,11 @@ fun MapDetailLayout(
             if (customLowerContent != null) {
                 val lowerContentScope = object : MapDetailLowerContentScope {
                     @Composable
+                    override fun ActivityCarriageBarSection(modifier: Modifier) {
+                        renderActivityCarriageBarSection(modifier)
+                    }
+
+                    @Composable
                     override fun ElevationProfileSection(modifier: Modifier) {
                         renderElevationProfileSection(modifier)
                     }
@@ -686,7 +732,7 @@ fun MapDetailLayout(
                     }
                 }
             } else {
-                if (showElevationProfile || hasTelemetryGraphs) {
+                if (showElevationProfile || hasTelemetryGraphs || hasActivityCarriageBar) {
                     activeScrubPath?.let {
                         Surface(
                             color = MaterialTheme.colorScheme.surface,
@@ -703,8 +749,9 @@ fun MapDetailLayout(
                                 drawLayer(elevationLayer)
                             }) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
+                                    renderActivityCarriageBarSection(Modifier)
                                     renderElevationProfileSection(Modifier)
-                                    renderTelemetryChartsSection(Modifier, !showElevationProfile)
+                                    renderTelemetryChartsSection(Modifier, !showElevationProfile && !hasActivityCarriageBar)
                                 }
                             }
                         }

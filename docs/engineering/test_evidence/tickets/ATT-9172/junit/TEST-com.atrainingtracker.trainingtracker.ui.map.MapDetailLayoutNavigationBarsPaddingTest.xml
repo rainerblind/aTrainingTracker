@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:52:57.468Z" hostname="rainer-HP-EliteBook-850-G5" time="0.212">
+  <properties/>
+  <testcase name="testMapScreenWithTrack_sizesBottomSheetToMaxSheetHeight" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" time="0.058"/>
+  <testcase name="testMapDetailLayout_providesDefensiveSpacerWhenBothElevationAndAnalyticsAreAbsent" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_preservesNavigationBarsPaddingOnAnalyticsContent" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_appliesNavigationBarsPaddingToElevationProfileWhenAnalyticsContentIsNull" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" time="0.0"/>
+  <testcase name="testLiveSegmentSheet_configuresMapDetailLayoutForBottomSheetMode" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" time="0.004"/>
+  <testcase name="testSensorGridScreen_configuresLiveSegmentBottomSheet" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutNavigationBarsPaddingTest" time="0.15"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

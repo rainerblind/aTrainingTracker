@@ -65,6 +65,7 @@ class WorkoutDetailTabsTest {
         assertEquals(
             listOf(
                 WorkoutDetailSectionType.MAP,
+                WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR,
                 WorkoutDetailSectionType.ELEVATION,
                 WorkoutDetailSectionType.CHARTS
             ),
@@ -144,8 +145,8 @@ class WorkoutDetailTabsTest {
 
         val serialized = WorkoutDetailTabConfig.serializeTabs(customTabs)
         assertTrue(
-            "Serialized payload must start with version prefix v3|",
-            serialized.startsWith("v3|")
+            "Serialized payload must start with version prefix v4|",
+            serialized.startsWith("v4|")
         )
 
         val deserialized = WorkoutDetailTabConfig.deserializeTabs(serialized)
@@ -321,6 +322,7 @@ class WorkoutDetailTabsTest {
             hasDetails = true,
             hasExtrema = true,
             hasMap = true,
+            hasActivityCarriageBar = true,
             hasElevation = true,
             hasCharts = true,
             hasZones = true
@@ -483,6 +485,7 @@ class WorkoutDetailTabsTest {
             hasDescription = true,
             hasExtrema = true,
             hasMap = true,
+            hasActivityCarriageBar = true,
             hasElevation = true,
             hasCharts = true,
             hasZones = true,
@@ -705,8 +708,9 @@ class WorkoutDetailTabsTest {
         assertEquals("tab_hrv", defaults[3].id)
         assertEquals(WorkoutDetailTabPreset.HRV, defaults[3].preset)
         assertEquals(listOf(WorkoutDetailSectionType.HRV), defaults[3].sections)
-        assertEquals(14, WorkoutDetailSectionType.entries.size)
+        assertEquals(15, WorkoutDetailSectionType.entries.size)
         assertEquals(14, WorkoutSectionType.entries.size)
+        assertNull(WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR.toWorkoutSectionTypeOrNull())
         assertEquals(WorkoutSectionType.HRV, WorkoutDetailSectionType.HRV.toWorkoutSectionTypeOrNull())
         assertEquals(WorkoutDetailSectionType.HRV, WorkoutSectionType.HRV.toWorkoutDetailSectionType())
     }
@@ -774,7 +778,7 @@ class WorkoutDetailTabsTest {
         edited = WorkoutDetailTabConfig.deleteTab(edited, hrvIdx)
 
         val serialized = WorkoutDetailTabConfig.serializeTabs(edited)
-        assertTrue("Serialized payload must use v3| prefix", serialized.startsWith("v3|"))
+        assertTrue("Serialized payload must use v4| prefix", serialized.startsWith("v4|"))
 
         val roundTripped = WorkoutDetailTabConfig.deserializeTabs(serialized)
         assertEquals(4, roundTripped.size)

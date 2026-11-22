@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.30  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 52
+**Total Tests**: 53
 
 ---
 
@@ -1011,6 +1011,25 @@
 
 ---
 
+### TST-UI-2796: **Synchronized Activity & Carriage Mode Bar Verification Suite (`ATT-9172`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2796` (`REQ-UI-2796.1`–`REQ-UI-2796.3`)
+- **Component**: `ActivityCarriageSyncBar.kt`, `MapDetailLayout.kt`, `ActivityCarriageTimelineCard.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `values*/strings_workout_details.xml`, `ActivityCarriageSyncBarUiTest.kt`, `WorkoutDetailTabsTest.kt`, `AdvancedTuningAccordionTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-9172` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Domain Projection & Active-Mode Lookup Pure-JVM Tests (`TST-UI-2796.1`, `ActivityCarriageSyncBarUiTest`)*:
+     - Verify `ActivityCarriageBarMath.projectSegmentsToDomain` across `DISTANCE` (preserving zero-distance `STATIONARY` stop coordinate) and `TIME` domains, `resolveModeAtDomainPosition`, and `resolveCursorDomainPosition` across GPS Distance, GPS Time, and Trackless Time (`activityCarriageBarMath_projectsDistanceAndTimeDomainsAndResolvesActiveMode_tstUi2796_1`).
+  2. *`v3|` -> `v4|` Tab Migration, Removal Persistence & Gesture Isolation (`TST-UI-2796.2`, `ActivityCarriageSyncBarUiTest`, `WorkoutDetailTabsTest`, `AdvancedTuningAccordionTest`)*:
+     - Verify legacy `v3|` payloads auto-migrate `ACTIVITY_CARRIAGE_BAR` directly after `MAP` in `tab_map_graphs` without re-injecting deleted tabs, `v4|` persists user removal, `WorkoutSectionType` stays 14 entries (`toWorkoutSectionTypeOrNull() == null`), and `requiresHorizontalGestureIsolation` locks only when active and touched (`tabConfig_v3MigratesActivityCarriageBarAfterMapAndV4PreservesRemoval_tstUi2796_2`).
+  3. *`Rule 64` Plot Alignment, Bidirectional Scrubbing & Zoom Coupling Compose Tests (`TST-UI-2796.3`, `ActivityCarriageSyncBarUiTest`)*:
+     - Render `WorkoutDetailTabbedContent` in `MODE_B_SPLIT_MAP` (`[MAP, ACTIVITY_CARRIAGE_BAR, ELEVATION, CHARTS]`) and verify `ACTIVITY_CARRIAGE_BAR` renders below the map and strictly above `ELEVATION`/`CHARTS` with identical horizontal bounds (`Rule 64`), tapping the bar updates `activity_carriage_scrub_readout` (`WALKING_TRANSITION`) AND `scrubbing_telemetry_badge`, scrubbing `ELEVATION` updates the bar readout (`BIKE_JERSEY_BACK`), and zooming rescales cleanly (`karteUndDiagramme_rendersBarBelowMapAlignedWithElevationAndBidirectionalScrubbing_tstUi2796_3`).
+  4. *Graceful Omission When Telemetry Absent & Coexistence Without `ELEVATION` (`TST-UI-2796.4`, `ActivityCarriageSyncBarUiTest`)*:
+     - Verify `ACTIVITY_CARRIAGE_BAR` is omitted cleanly when `activityCarriageTimeline == null` (`karteUndDiagramme_omitsBarWhenTelemetryAbsentAndSupportsBarWithoutElevation_tstUi2796_4`) and renders directly below `MAP` above `CHARTS` when `ELEVATION` is disabled (`karteUndDiagramme_supportsActivityBarInsteadOfElevation_tstUi2796_4`).
+  5. *`Rule 8.5` Light/Dark PNG, 9-Locale Parity & Contract Suites (`TST-UI-2796.5`)*:
+     - Capture and inspect Light & Dark/AMOLED PNG (`captureActivityCarriageSyncBarLightAndDarkScreenshot_tstUi2796_5`, `docs/engineering/test_evidence/tickets/ATT-9172/screenshots/att9172_activity_carriage_sync_bar_light_dark.png`) via `read_file`, and verify `TranslationParityTest` (9/9 locales), `ArchitectureConformanceContractTest`, and `InterfaceSignatureDriftContractTest` PASS.
+- **Verified Evidence (`ATT-9172`, `docs/engineering/test_evidence/tickets/ATT-9172/`)**: `ActivityCarriageSyncBarUiTest#activityCarriageBarMath_projectsDistanceAndTimeDomainsAndResolvesActiveMode_tstUi2796_1`, `ActivityCarriageSyncBarUiTest#tabConfig_v3MigratesActivityCarriageBarAfterMapAndV4PreservesRemoval_tstUi2796_2`, `ActivityCarriageSyncBarUiTest#karteUndDiagramme_rendersBarBelowMapAlignedWithElevationAndBidirectionalScrubbing_tstUi2796_3`, `ActivityCarriageSyncBarUiTest#karteUndDiagramme_omitsBarWhenTelemetryAbsentAndSupportsBarWithoutElevation_tstUi2796_4`, `ActivityCarriageSyncBarUiTest#karteUndDiagramme_supportsActivityBarInsteadOfElevation_tstUi2796_4`, `ActivityCarriageSyncBarUiTest#captureActivityCarriageSyncBarLightAndDarkScreenshot_tstUi2796_5`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1044,3 +1063,4 @@
 | `1.0.28` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `TST-UI-2793` (`[Verified]`, `.1`–`.3`) covering `ElevationProfile` Canvas hoisting/coalescing + Light/Dark PNG, `MapScreenWithTrack` `StateFlow` forwarding, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, shared `AppHttpClient` pool/timeout/injection tests, and `emulator-5554` visual checks. |
 | `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `TST-UI-2794` (`[Verified]`, `.1`–`.3`) covering Robolectric `v2.createComposeRule()` Climb peek/expand/hide/BackHandler tests, Light/Dark PNG + live `emulator-5554` peek/expand/dismiss checks, and `BottomSheetVisualContractTest`/`ClimbDetailSheetContractTest` parity (`76/76` targeted tests PASS). |
 | `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `TST-UI-2795` (`[Verified]`, `.1`–`.4`) covering Robolectric `v2.createComposeRule()` section ordering in `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP`, synchronized scrubbing, chart visibility toggles, `HorizontalPager` gesture isolation & pointer-up unlock, Light/Dark PNG, and live `emulator-5554` verification (`82/82` targeted tests PASS across 14 suites). |
+| `1.0.31` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `TST-UI-2796` (`[Verified]`, `.1`–`.5`) covering `ActivityCarriageBarMath` `DISTANCE`/`TIME` projection, `v3|` -> `v4|` migration & removal persistence, `Rule 64` plot alignment, bidirectional scrubbing & zoom coupling, absence omission & `ELEVATION` coexistence, 9-locale `TranslationParityTest`, and Light/Dark `Rule 8.5` PNG (`78/78` targeted tests PASS across 8 suites). |

@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.29  
+**Version**: 1.0.30  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 52
+**Total Requirements**: 53
 
 ---
 
@@ -2045,6 +2045,40 @@
 
 ---
 
+### REQ-UI-2796: Synchronized Activity & Carriage Mode Bar Below Map Coupled with Scrubbing & Zoom (`ATT-9172`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2796`
+- **System Requirement(s)**: Derived (SW-only — Compose visualization of existing `ACTIVITY_AND_CARRIAGE_MODE` telemetry from `REQ-PER-045` / `REQ-FIL-028`, extending `REQ-UI-408` and `REQ-UI-2795`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `ActivityCarriageSyncBar.kt`, `MapDetailLayout.kt`, `ActivityCarriageTimelineCard.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `values*/strings_workout_details.xml`
+- **Localization Parity**: `9/9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) via values*/strings_workout_details.xml`
+- **Rationale**: Athletes reviewing workouts in `Karte & Diagramme` need a spatially synchronized, color-coded Activity & Carriage Mode bar directly below the map and coupled 1:1 with the scrubbing cursor, map marker, zoom/pan viewport, and `DISTANCE`/`TIME` X-axis domains while keeping `Höhenprofil` (`ELEVATION`) independently configurable (`ATT-9172`).
+- **Description**:
+  1. *Synchronized Segmented Bar & Exact `Rule 64` Plot Alignment (`REQ-UI-2796.1`)*:
+     - `ActivityCarriageSyncBar` (`ActivityCarriageSyncBar.kt`) SHALL render a compact, color-coded horizontal segmented bar using canonical `TTColor.getCarriageModeColor(mode)` and `carriageModeIcon(mode)` shared with `ActivityCarriageTimelineCard.kt`, matching `ElevationProfile` and `TelemetryMetricGraph` horizontal plot geometry pixel-for-pixel (`startPaddingPx = 50.dp`, portrait `endPaddingPx = 52.dp` when aligned with histograms, landscape `0.72f`/`0.28f` split).
+     - `ActivityCarriageBarMath.projectSegmentsToDomain(...)` SHALL project segments accurately across both `ProfileXAxisDomain.DISTANCE` (preserving zero-distance stationary stops as crisp markers) and `ProfileXAxisDomain.TIME` in lockstep with `MapDetailLayout`.
+  2. *1:1 Bidirectional Scrubbing, Active-Mode Readout & Zoom/Pan Coupling (`REQ-UI-2796.2`)*:
+     - Dragging or tapping along `ActivityCarriageSyncBar` SHALL update `MapDetailLayout`'s shared `selectedDistance`, moving the map marker and vertical scrub cursors across `ElevationProfile` and `TelemetryChartStack` simultaneously; scrubbing any chart below SHALL update the vertical indicator on `ActivityCarriageSyncBar` in lockstep.
+     - While scrubbing, `ActivityCarriageSyncBar` SHALL display a compact active-mode readout badge (`testTag("activity_carriage_scrub_readout")`) showing the scrubbed `PhoneCarriageMode` color dot, icon, and localized `labelResId`.
+     - Zooming/panning via `GlobalTelemetryZoomToolbar` or bar/chart gestures SHALL rescale and shift `ActivityCarriageSyncBar` 1:1 (`profileZoomScale`, `viewportStartFraction`, `isPanMode`) with `ChartGestureDisambiguator` vertical/horizontal disambiguation and `HorizontalPager` gesture isolation + pointer-up unlock.
+  3. *Configurable Tab Section, `v4|` Migration, `ELEVATION` Coexistence & Graceful Omission (`REQ-UI-2796.3`)*:
+     - `WorkoutDetailSectionType` SHALL add `ACTIVITY_CARRIAGE_BAR` (`15`th detail-only section; `toWorkoutSectionTypeOrNull() -> null`, leaving `WorkoutSectionType` at `14` entries for `WorkoutSummary.kt`), placed by default in `tab_map_graphs` as `[MAP, ACTIVITY_CARRIAGE_BAR, ELEVATION, CHARTS]` so users can display it alongside `Höhenprofil`, instead of `Höhenprofil`, or at any custom position.
+     - `WorkoutDetailTabConfig` SHALL bump `SCHEMA_PREFIX` to `"v4|"`, auto-migrating legacy pre-`v4|` (`v1|`/`v2|`/`v3|`) configs lacking `ACTIVITY_CARRIAGE_BAR` by inserting it directly after `MAP` in `tab_map_graphs` while preserving explicit user removals on `v4|` (`REQ-UI-2787.1`).
+     - When `activityCarriageTimeline == null || segments.isEmpty()`, `ACTIVITY_CARRIAGE_BAR` SHALL be omitted cleanly with zero placeholder or layout gap. `workout_detail_section_activity_carriage_bar` SHALL have 9-locale parity across all `values*/strings_workout_details.xml`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a workout with `ACTIVITY_AND_CARRIAGE_MODE` data opened in `Karte & Diagramme`, *When* rendered, *Then* `ActivityCarriageSyncBar` appears directly below the map, strictly above `ElevationProfile` and `TelemetryChartStack`, with identical horizontal plot edges (`Rule 64`).
+  • *Given* the user scrubs/taps the Activity bar or any chart below, *When* the scrub position crosses mode transitions, *Then* `selectedDistance`, `ScrubbingTelemetryBadge`, and `activity_carriage_scrub_readout` update in lockstep across `DISTANCE` and `TIME` domains and zoom/pan viewports.
+  • *Given* a legacy workout without `ACTIVITY_AND_CARRIAGE_MODE` data OR a tab configured with `[MAP, ACTIVITY_CARRIAGE_BAR, CHARTS]` (no `ELEVATION`), *When* rendered, *Then* the bar omits cleanly when telemetry is absent and renders directly below the map instead of `ELEVATION` when `ELEVATION` is disabled.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-PER-045` (`ATT-8916`), `REQ-UI-408` (`ATT-3920`), `REQ-UI-2787.1` (`ATT-8079`), and `REQ-UI-2795` (`ATT-9508`), targeting `ActivityCarriageSyncBar.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, and `TrackOnMapScreen.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-8916` added `ActivityCarriageTimelineCard` in `DETAILS` without altering `v3|`/`14`-entry enums; `ATT-9508` introduced `MapDetailLowerContentScope` enabling arbitrary ordered lower-pane sections in `MapDetailLayout`.
+  3. *Root Reason for Existing Formulation*: `REQ-PER-045.4` deferred synchronized map/chart bar integration until upstream classifier fixes (`ATT-9157`, `ATT-9062`) and ordered lower-pane slotting (`ATT-9508`) landed.
+  4. *Preservation of Core Invariants*: Preserves `WorkoutSectionType` (`14` entries) and `WorkoutSummary.kt`, preserves `ActivityCarriageTimelineCard` in `DETAILS`, preserves `ELEVATION` independently configurable, preserves `v4|` persistence of user removals (`REQ-UI-2787.1`), `MapDetailLayout` backward compatibility, `<= 1,500` LoC ceilings, and 9-locale `TranslationParityTest`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2077,3 +2111,4 @@
 | `1.0.27` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `REQ-UI-2793` (`[Verified]`, `.1`–`.3`) for `ElevationProfile` Canvas Paint/Path/climb-summit hoisting & coalesced color runs, `MapScreenWithTrack` direct `StateFlow` forwarding + `MapContentScopeImpl` `Rule 66` plain `mutableListOf` + `contentRevision` fix, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, and shared base `AppHttpClient` (emulator + Light/Dark PNGs visually verified via `read_file`, automated gate & evidence bundle in `docs/engineering/test_evidence/tickets/ATT-6037/`). |
 | `1.0.28` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `REQ-UI-2794` (`[Verified]`, `.1`–`.3`) promoting `MapPeekSelection.Climb` to `isSheetBacked = true` in `MapScreenWithTrack` via `BottomSheetScaffold` + `BottomSheetDesign.PeekHeightClimb` (`192.dp`) + `ClimbOnMapScreen` dynamic `measuredHeaderHeight` + `SheetValue.Hidden` selection cleanup, superseding `REQ-UI-2790.2` modal Climb carve-out while preserving `ClimbDetailSheet` for `RouteOnMapScreen`. |
 | `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `REQ-UI-2795` (`[Verified]`, `.1`–`.3`) introducing `MapDetailLowerContentScope` / `customLowerContent` in `MapDetailLayout.kt` and custom-ordered `ELEVATION` & `CHARTS` rendering across `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP` in `WorkoutDetailTabbedContent.kt` while fixing `PointerEventPass.Initial` pointer-up unlock and preserving `MAP` split-pane pinning, synchronized scrubbing, chart visibility toggles, and `HorizontalPager` gesture isolation (`82/82` targeted tests PASS, Light/Dark PNG & live `emulator-5554` verified). |
+| `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9172`, `--as agent1`) | `ATT-9172` | Added and verified `REQ-UI-2796` (`[Verified]`, `.1`–`.3`) introducing synchronized `ActivityCarriageSyncBar` (`ActivityCarriageBarMath`, `Rule 64` `50.dp` alignment, bidirectional scrubbing + active-mode readout chip, 1:1 zoom/pan & `DISTANCE`/`TIME` support, configurable `WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR` + `v4|` migration, graceful omission when absent, and 9-locale `strings_workout_details.xml` parity). |

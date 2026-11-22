@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:52:58.101Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="testLiveSegmentSheet_evaluatesAndForwardsExternalScrubDistance" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.0"/>
+  <testcase name="testLiveSegmentSheet_delegatesToLiveTrackingEntitySheet" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_liveSegmentContainerWrapsContentHeight" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.002"/>
+  <testcase name="testMapDetailLayout_attachesNestedScrollConditionally" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.001"/>
+  <testcase name="testMapDetailLayout_branchesViewportModifierOnShowMapOrHasScrollableContent" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.001"/>
+  <testcase name="testMapDetailLayout_synchronizesSelectedDistanceWithoutNullGating" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.001"/>
+  <testcase name="testLiveSegmentSheet_forwardsWrapContentHeightAndSuppressesMap" classname="com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

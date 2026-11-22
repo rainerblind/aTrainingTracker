@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileHistogramAlignmentContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:52:40.180Z" hostname="rainer-HP-EliteBook-850-G5" time="0.3">
+  <properties/>
+  <testcase name="testElevationProfile_defaultsAlignWithTelemetryChartsToFalse" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileHistogramAlignmentContractTest" time="0.114"/>
+  <testcase name="testHistogramGatingLogic_workoutDetailsVsNonWorkoutCallers" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileHistogramAlignmentContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_declaresShowElevationHistogramGatedOnWorkoutData" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileHistogramAlignmentContractTest" time="0.13"/>
+  <testcase name="testWorkoutSummary_suppressesHistogramOnCompactElevationCard" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileHistogramAlignmentContractTest" time="0.056"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
