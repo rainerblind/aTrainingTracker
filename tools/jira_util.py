@@ -5064,13 +5064,30 @@ def ensure_weekly_reviews(role="coordinator", force=False):
     }
 
 
+def _fetch_po_review_followup_types(role="coordinator"):
+    """Fetches {issue_key: issuetype_name} for all PO review follow-up tickets (label po-review-followup)."""
+    try:
+        followups = paged_jql_search(
+            "project = ATT AND labels = po-review-followup",
+            ["issuetype"],
+            role=role,
+        )
+        return {
+            i["key"]: ((i.get("fields") or {}).get("issuetype") or {}).get("name", "")
+            for i in followups
+            if i.get("key")
+        }
+    except BaseException:
+        return {}
+
+
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator", history=None):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
     issues = fetch_all_sprint_issues(
         base,
         sprint_id,
-        f"summary,status,issuetype,priority,subtasks,comment,labels,description,created,resolution,resolutiondate,{STORY_POINTS_FIELD}",
+        f"summary,status,issuetype,priority,subtasks,comment,issuelinks,labels,description,created,resolution,resolutiondate,{STORY_POINTS_FIELD}",
         role=role
     )
 
@@ -5095,9 +5112,16 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
                     except Exception:
                         st["comments"] = []
 
+    followup_types = _fetch_po_review_followup_types(role=role)
     sprint_info = {"id": sprint_id, "name": sprint_name}
     repo_root = os.path.abspath(os.path.join(_tools_dir, ".."))
-    return parse_sprint_gate_metrics(parent_issues, sprint_info, history=history, repo_root=repo_root)
+    return parse_sprint_gate_metrics(
+        parent_issues,
+        sprint_info,
+        history=history,
+        repo_root=repo_root,
+        followup_issue_types_by_key=followup_types,
+    )
 
 
 def cmd_sprint_metrics(
@@ -5113,6 +5137,8 @@ def cmd_sprint_metrics(
     base = config['JIRA_URL'].rstrip('/')
 
     if refresh_human_acceptance:
+        followup_types = _fetch_po_review_followup_types(role=role)
+
         def _fetch_for_sprint(s_id, s_name):
             clauses = []
             if s_id is not None and str(s_id).isdigit():
@@ -5123,12 +5149,20 @@ def cmd_sprint_metrics(
             if not clauses:
                 return []
             jql = f"project = ATT AND issuetype not in subTaskIssueTypes() AND ({' OR '.join(clauses)})"
-            return paged_jql_search(jql, ["summary", "status", "issuetype", "labels"], role=role)
+            return paged_jql_search(jql, ["summary", "status", "issuetype", "labels", "issuelinks", "comment"], role=role)
 
-        updated = refresh_human_acceptance_rates(_fetch_for_sprint)
-        print(f"Refreshed human_acceptance_rate_percent for {len(updated)} historical sprint(s):")
+        updated = refresh_human_acceptance_rates(
+            _fetch_for_sprint,
+            followup_issue_types_by_key=followup_types,
+        )
+        print(f"Refreshed human_acceptance_rate_percent & PO breakdown for {len(updated)} historical sprint(s):")
         for u in updated:
-            print(f"  - {u['sprint_name']} (id {u['sprint_id']}): {u['old_rate']}% -> {u['new_rate']}% ({u['accepted']}/{u['total']})")
+            sp = u.get("po_acceptance_split") or {}
+            print(
+                f"  - {u['sprint_name']} (id {u['sprint_id']}): {u['old_rate']}% -> {u['new_rate']}% ({u['accepted']}/{u['total']}) | "
+                f"clean={sp.get('clean_accepted', 0)} ref={sp.get('accepted_with_refinement', 0)} bug={sp.get('accepted_with_bug_escape', 0)} "
+                f"po_comments={sp.get('with_po_comment', 0)}/{sp.get('total_accepted', 0)}"
+            )
         if not sprint_arg and not record and not post_to_retro and backfill is None:
             return
 

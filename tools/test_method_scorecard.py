@@ -174,11 +174,35 @@ class TestMethodScorecard(unittest.TestCase):
 
     def test_classify_po_acceptance_buckets_distinguishes_clean_refinement_bug_and_ignores_beifang(self):
         accepted = [
-            {"key": "ATT-1", "fields": {"issuelinks": []}},
-            {"key": "ATT-2", "fields": {"issuelinks": [{"inwardIssue": {"key": "ATT-20", "fields": {"issuetype": {"name": "Verbesserung"}}}}]}},
-            {"key": "ATT-3", "fields": {"issuelinks": [{"inwardIssue": {"key": "ATT-30", "fields": {"issuetype": {"name": "Bug"}}}}]}},
+            {
+                "key": "ATT-1",
+                "fields": {
+                    "issuelinks": [],
+                    "comment": {"comments": [{"body": "[Automated comment by AI Coordinator]\n\n[PO Review Comment]: Looks great!"}]},
+                },
+            },
+            {
+                "key": "ATT-2",
+                "fields": {
+                    "issuelinks": [{"inwardIssue": {"key": "ATT-20", "fields": {"issuetype": {"name": "Verbesserung"}}}}],
+                    "comment": {"comments": [{"body": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "[PO Review Comment]: Accepted with spacing follow-up."}]}]}}]},
+                },
+            },
+            {
+                "key": "ATT-3",
+                "fields": {
+                    "issuelinks": [{"inwardIssue": {"key": "ATT-30", "fields": {"issuetype": {"name": "Bug"}}}}],
+                    "comment": {"comments": [{"body": "Just a bot status update."}]},
+                },
+            },
             # ATT-4 has an unrelated non-followup link (e.g. Epic/Beifang not in po-review-followup) -> still clean
-            {"key": "ATT-4", "fields": {"issuelinks": [{"inwardIssue": {"key": "ATT-40", "fields": {"issuetype": {"name": "Bug"}}}}]}},
+            {
+                "key": "ATT-4",
+                "fields": {
+                    "issuelinks": [{"inwardIssue": {"key": "ATT-40", "fields": {"issuetype": {"name": "Bug"}}}}],
+                    "comment": {"comments": [{"body": "[PO Review Comment]: Clean acceptance."}]},
+                },
+            },
         ]
         followup_types = {"ATT-20": "Verbesserung", "ATT-30": "Bug"}
         split = method_scorecard.classify_po_acceptance_buckets(accepted, followup_types)
@@ -187,6 +211,8 @@ class TestMethodScorecard(unittest.TestCase):
             "clean_accepted": 2,
             "accepted_with_refinement": 1,
             "accepted_with_bug_escape": 1,
+            "with_po_comment": 3,
+            "po_comment_coverage_percent": 75.0,
         })
 
 

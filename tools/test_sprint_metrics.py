@@ -965,6 +965,84 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertEqual(reloaded["quality_gates"]["human_acceptance_rate_percent"], 66.7)
         self.assertEqual(reloaded["quality_gates"]["human_accepted_tickets"], 2)
 
+    def test_sprint_metrics_po_acceptance_followup_split_and_comment_coverage(self):
+        """PO Acceptance stats in sprint_metrics track linked follow-ups (clean/refinement/bug) & [PO Review Comment] coverage."""
+        from sprint_metrics import refresh_human_acceptance_rates
+
+        followup_types = {"ATT-9951": "Verbesserung", "ATT-9952": "Bug"}
+        parent_issues = [
+            {
+                "key": "ATT-9940",
+                "fields": {
+                    "summary": "Clean ticket",
+                    "status": {"name": "Erledigt"},
+                    "issuelinks": [],
+                    "comment": {"comments": [{"body": "[PO Review Comment]: Verified on Pixel 10, works cleanly."}]},
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-9941",
+                "fields": {
+                    "summary": "Accepted with refinement",
+                    "status": {"name": "Erledigt"},
+                    "issuelinks": [{"inwardIssue": {"key": "ATT-9951", "fields": {"issuetype": {"name": "Verbesserung"}}}}],
+                    "comment": {"comments": [{"body": "[PO Review Comment]: Accepted; follow-up ATT-9951 filed for contrast."}]},
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-9942",
+                "fields": {
+                    "summary": "Accepted with bug escape",
+                    "status": {"name": "Erledigt"},
+                    "issuelinks": [{"inwardIssue": {"key": "ATT-9952", "fields": {"issuetype": {"name": "Bug"}}}}],
+                    "comment": {"comments": [{"body": "Agent comment only"}]},
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-9943",
+                "fields": {
+                    "summary": "Still awaiting PO",
+                    "status": {"name": "Final Review (Human)"},
+                    "issuelinks": [],
+                    "comment": {"comments": []},
+                    "subtasks": [],
+                },
+            },
+        ]
+
+        m = parse_sprint_gate_metrics(
+            parent_issues,
+            {"id": 474, "name": "2026-11-22_01_Früh"},
+            followup_issue_types_by_key=followup_types,
+        )
+        split = m["quality_gates"]["po_acceptance_split"]
+        self.assertEqual(split, {
+            "total_accepted": 3,
+            "clean_accepted": 1,
+            "accepted_with_refinement": 1,
+            "accepted_with_bug_escape": 1,
+            "with_po_comment": 2,
+            "po_comment_coverage_percent": 66.7,
+        })
+        md = format_metrics_markdown(m)
+        self.assertIn("PO Acceptance Breakdown", md)
+        self.assertIn("Clean=1 | Refinement (Verbesserung/Feature)=1 | Bug Escape=1", md)
+        self.assertIn("PO Comment Coverage=2/3 (66.7%)", md)
+
+        # Verify refresh_human_acceptance_rates also persists po_acceptance_split
+        record_sprint_metrics(m, filepath=self.metrics_file)
+        updated = refresh_human_acceptance_rates(
+            lambda sid, sname: parent_issues,
+            filepath=self.metrics_file,
+            followup_issue_types_by_key=followup_types,
+        )
+        self.assertEqual(updated[0]["po_acceptance_split"]["with_po_comment"], 2)
+        reloaded = load_historical_metrics(filepath=self.metrics_file)[0]
+        self.assertEqual(reloaded["quality_gates"]["po_acceptance_split"]["accepted_with_bug_escape"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

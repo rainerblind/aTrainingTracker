@@ -241,47 +241,19 @@ def read_po_minutes(po_sessions_path, iso_week):
 
 def classify_po_acceptance_buckets(accepted_issues, followup_issue_types_by_key=None):
     """
-    Split PO-accepted ('Erledigt') issues into 3 truthful buckets based on linked PO review follow-ups:
-      - clean_accepted: 0 linked follow-up issues (unrelated Beifang is never linked!)
-      - accepted_with_refinement: >= 1 linked Verbesserung/Feature follow-up and 0 linked Bug follow-ups
-      - accepted_with_bug_escape: >= 1 linked Bug follow-up (true PO-caught implementation escape)
+    Delegate to sprint_metrics.classify_po_acceptance_buckets so weekly scorecard and per-Schicht
+    metrics use identical 3-way follow-up bucketing (clean / refinement / bug_escape) AND
+    persisted '[PO Review Comment]' coverage tracking.
     """
-    followup_types = followup_issue_types_by_key or {}
-    buckets = {
-        "total_accepted": len(accepted_issues),
-        "clean_accepted": 0,
-        "accepted_with_refinement": 0,
-        "accepted_with_bug_escape": 0,
-    }
-    for issue in accepted_issues:
-        fields = issue.get("fields") or {}
-        links = fields.get("issuelinks") or []
-        linked_bug = False
-        linked_refinement = False
-        for lk in links:
-            other = lk.get("outwardIssue") or lk.get("inwardIssue") or {}
-            other_key = other.get("key")
-            if not other_key:
-                continue
-            other_fields = other.get("fields") or {}
-            other_type = (
-                followup_types.get(other_key)
-                or (other_fields.get("issuetype") or {}).get("name", "")
-            ).strip().lower()
-            # Count only if linked issue is tracked in followup_types (po-review-followup) OR explicitly flagged
-            if followup_issue_types_by_key is not None and other_key not in followup_types:
-                continue
-            if other_type == "bug":
-                linked_bug = True
-            elif other_type in ("verbesserung", "improvement", "feature"):
-                linked_refinement = True
-        if linked_bug:
-            buckets["accepted_with_bug_escape"] += 1
-        elif linked_refinement:
-            buckets["accepted_with_refinement"] += 1
-        else:
-            buckets["clean_accepted"] += 1
-    return buckets
+    tools_dir = os.path.dirname(os.path.abspath(__file__))
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    import sprint_metrics
+
+    return sprint_metrics.classify_po_acceptance_buckets(
+        accepted_issues,
+        followup_issue_types_by_key=followup_issue_types_by_key,
+    )
 
 
 def collect_jira_metrics(start_date, end_date, role="coordinator"):
@@ -306,7 +278,7 @@ def collect_jira_metrics(start_date, end_date, role="coordinator"):
         f"AND updated >= '{start_s}' AND updated < '{end_plus_one}'"
     )
     tier_issues = jira_util.paged_jql_search(
-        tier_jql, ["labels", "status", "issuelinks", jira_util.STORY_POINTS_FIELD], role=role, config=config
+        tier_jql, ["labels", "status", "issuelinks", "comment", jira_util.STORY_POINTS_FIELD], role=role, config=config
     )
     tiers = {t: {"tickets": 0, "story_points": 0.0} for t in ("tier-a", "tier-b", "tier-c", "unclassified")}
     accepted_issues = []
@@ -521,11 +493,15 @@ def render_scorecard_markdown(card):
     ]
     po_split = card.get("po_acceptance_split")
     if po_split:
+        cov_str = ""
+        if "with_po_comment" in po_split:
+            cov_pct = _fmt(po_split.get("po_comment_coverage_percent"), "%")
+            cov_str = f" | `po_comment_coverage`: {po_split['with_po_comment']}/{po_split['total_accepted']} ({cov_pct})"
         lines.append(
             f"**PO Acceptance Split**: `clean`: {po_split['clean_accepted']} | "
             f"`with_refinement`: {po_split['accepted_with_refinement']} | "
             f"`with_bug_escape`: {po_split['accepted_with_bug_escape']} "
-            f"(total accepted: {po_split['total_accepted']})"
+            f"(total accepted: {po_split['total_accepted']}{cov_str})"
         )
     return "\n".join(lines)
 

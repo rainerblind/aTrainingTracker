@@ -431,7 +431,90 @@ def parse_verdicts_from_comments(comments):
     return verdicts
 
 
-def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None, repo_root=None):
+PO_REVIEW_COMMENT_MARKER = "[po review comment]"
+
+
+def has_po_review_comment(issue):
+    """
+    Returns True if the issue carries a persisted '[PO Review Comment]' entry
+    (posted atomically via set-fixversion / PO Abnahme) or a direct comment authored by the human PO.
+    """
+    fields = issue.get("fields") or {}
+    comments = issue.get("comments") or (fields.get("comment") or {}).get("comments") or []
+    for c in comments:
+        body_txt = extract_text_from_comment_body(c.get("body", ""))
+        if PO_REVIEW_COMMENT_MARKER in body_txt.lower():
+            return True
+        author = c.get("author") or {}
+        if author.get("accountId") == "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78":
+            if body_txt.strip():
+                return True
+    return False
+
+
+def classify_po_acceptance_buckets(accepted_issues, followup_issue_types_by_key=None):
+    """
+    Split PO-accepted ('Erledigt'/terminal) issues into 3 truthful buckets based on linked
+    PO review follow-ups (label 'po-review-followup'; unrelated Beifang is never linked!)
+    AND measure persisted '[PO Review Comment]' coverage:
+      - clean_accepted: 0 linked follow-up issues
+      - accepted_with_refinement: >= 1 linked Verbesserung/Feature follow-up and 0 linked Bug follow-ups
+      - accepted_with_bug_escape: >= 1 linked Bug follow-up (true PO-caught implementation escape)
+      - with_po_comment / po_comment_coverage_percent: accepted tickets with recorded PO review comment
+    """
+    followup_types = followup_issue_types_by_key or {}
+    total = len(accepted_issues)
+    buckets = {
+        "total_accepted": total,
+        "clean_accepted": 0,
+        "accepted_with_refinement": 0,
+        "accepted_with_bug_escape": 0,
+        "with_po_comment": 0,
+        "po_comment_coverage_percent": None,
+    }
+    for issue in accepted_issues:
+        fields = issue.get("fields") or {}
+        if has_po_review_comment(issue):
+            buckets["with_po_comment"] += 1
+        links = fields.get("issuelinks") or []
+        linked_bug = False
+        linked_refinement = False
+        for lk in links:
+            other = lk.get("outwardIssue") or lk.get("inwardIssue") or {}
+            other_key = other.get("key")
+            if not other_key:
+                continue
+            other_fields = other.get("fields") or {}
+            other_type = (
+                followup_types.get(other_key)
+                or (other_fields.get("issuetype") or {}).get("name", "")
+            ).strip().lower()
+            if followup_issue_types_by_key is not None and other_key not in followup_types:
+                continue
+            if other_type == "bug":
+                linked_bug = True
+            elif other_type in ("verbesserung", "improvement", "feature"):
+                linked_refinement = True
+        if linked_bug:
+            buckets["accepted_with_bug_escape"] += 1
+        elif linked_refinement:
+            buckets["accepted_with_refinement"] += 1
+        else:
+            buckets["clean_accepted"] += 1
+
+    if total > 0:
+        buckets["po_comment_coverage_percent"] = round((buckets["with_po_comment"] / total) * 100.0, 1)
+    return buckets
+
+
+def parse_sprint_gate_metrics(
+    parent_issues,
+    sprint_info,
+    history=None,
+    now=None,
+    repo_root=None,
+    followup_issue_types_by_key=None,
+):
     """
     Calculates PA 4.1 Quantitative Process Metrics from a list of parent issues and their subtasks.
     Each parent issue dict must contain 'fields' with 'summary', 'status', 'priority', 'subtasks',
@@ -450,6 +533,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
     total_tickets = len(parent_issues)
     completed_tickets = 0
     human_accepted_tickets = 0
+    human_accepted_issues = []
     total_sp = 0.0
     completed_sp = 0.0
     risk_counts = {"Low": 0, "Medium": 0, "High": 0, "Highest": 0}
@@ -482,6 +566,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
             completed_tickets += 1
         if is_human_accepted:
             human_accepted_tickets += 1
+            human_accepted_issues.append(issue)
 
         # Story points
         sp_val = fields.get("customfield_10016") or fields.get("customfield_10026") or fields.get("story_points")
@@ -704,10 +789,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
             cumulative_escape_prob *= p
         cumulative_escape_prob = float(f"{cumulative_escape_prob:.2e}")
 
-    # Truthful Human Acceptance Rate: exclusively terminal human-accepted statuses (Erledigt/Done/Closed)
+    # Truthful Human Acceptance Rate + 3-way follow-up & PO comment coverage breakdown
     human_acceptance_rate = (
         round((human_accepted_tickets / total_tickets) * 100.0, 1)
         if total_tickets > 0 else 0.0
+    )
+    po_acceptance_split = classify_po_acceptance_buckets(
+        human_accepted_issues,
+        followup_issue_types_by_key=followup_issue_types_by_key,
     )
 
     resolved_bug_count = closed_bugs + fixed_awaiting_human
@@ -772,6 +861,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info, history=None, now=None
             },
             "human_acceptance_rate_percent": human_acceptance_rate,
             "human_accepted_tickets": human_accepted_tickets,
+            "po_acceptance_split": po_acceptance_split,
         },
         "plausibility_warnings": plausibility_warnings,
     }
@@ -1026,10 +1116,12 @@ def refresh_human_acceptance_rates(
     filepath=DEFAULT_METRICS_PATH,
     repo_root=None,
     now=None,
+    followup_issue_types_by_key=None,
 ):
     """
     ATT-9499 / Finding M15:
-    Backfills/refreshes human_acceptance_rate_percent and human_accepted_tickets
+    Backfills/refreshes human_acceptance_rate_percent, human_accepted_tickets, and
+    po_acceptance_split (clean / refinement / bug-escape + PO comment coverage)
     for historical sprint records in process_metrics.jsonl from terminal Jira statuses
     (including tickets archived into queue 453 / labeled sprint-<SCHICHT>).
     Returns list of dicts summarizing updated sprints.
@@ -1075,19 +1167,25 @@ def refresh_human_acceptance_rates(
         if not parent_tickets:
             continue
 
-        accepted = 0
+        accepted_issues = []
         for iss in parent_tickets:
             st_name = ((iss.get("fields") or {}).get("status") or {}).get("name", "").strip().lower()
             if st_name in TERMINAL_CLOSED_STATUSES:
-                accepted += 1
+                accepted_issues.append(iss)
 
+        accepted = len(accepted_issues)
         total = len(parent_tickets)
         new_rate = round((accepted / total) * 100.0, 1)
+        po_split = classify_po_acceptance_buckets(
+            accepted_issues,
+            followup_issue_types_by_key=followup_issue_types_by_key,
+        )
         qg = rec.setdefault("quality_gates", {})
         old_rate = qg.get("human_acceptance_rate_percent")
         qg["human_accepted_tickets"] = accepted
         qg["human_acceptance_rate_percent"] = new_rate
         qg["human_acceptance_sample_size"] = total
+        qg["po_acceptance_split"] = po_split
         qg["human_acceptance_refreshed_at"] = ref_iso
         updated_summary.append({
             "sprint_id": s_id,
@@ -1096,6 +1194,7 @@ def refresh_human_acceptance_rates(
             "new_rate": new_rate,
             "accepted": accepted,
             "total": total,
+            "po_acceptance_split": po_split,
         })
 
     with open(target, "w", encoding="utf-8") as f:
@@ -1132,6 +1231,17 @@ def format_metrics_markdown(metrics, spc=None, history=None):
             if "end_to_end_ftpr_percent" in qg else []
         ),
         f"* *Human Acceptance Rate*: *{_fmt_pct(qg.get('human_acceptance_rate_percent'))}*{accepted_suffix}",
+        *(
+            [
+                f"* *PO Acceptance Breakdown*: Clean={qg['po_acceptance_split'].get('clean_accepted', 0)} | "
+                f"Refinement (Verbesserung/Feature)={qg['po_acceptance_split'].get('accepted_with_refinement', 0)} | "
+                f"Bug Escape={qg['po_acceptance_split'].get('accepted_with_bug_escape', 0)} | "
+                f"PO Comment Coverage={qg['po_acceptance_split'].get('with_po_comment', 0)}/{qg['po_acceptance_split'].get('total_accepted', 0)} "
+                f"({_fmt_pct(qg['po_acceptance_split'].get('po_comment_coverage_percent'))})"
+            ]
+            if isinstance(qg.get("po_acceptance_split"), dict) and qg["po_acceptance_split"].get("total_accepted", 0) > 0
+            else []
+        ),
         "",
         "|| Gate / Stage || Sub-tasks || 1st-Time Pass || Revisions || FTPR % || Defect Escape Rate (p) ||",
     ]
