@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-TST-PRO-P1`  
-**Version**: 1.0.5  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part1`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 148
+**Total Tests**: 149
 
 ---
 
@@ -1199,6 +1199,22 @@
   • Verify 100% parity across all 9 supported locales (0 new UI strings introduced).
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
+
+### TST-LIV-002: **LiveSegmentsRepository Zero Per-Tick Logcat Flood & Transition-Only Logging Verification** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-LIV-006`
+- **Component**: `LiveSegmentsRepository.kt`, `LiveSegmentsRepositoryTest.kt`
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepositoryTest.kt::LiveSegmentsRepositoryTest::testFarFarAwaySegments_zeroPerTickLogcatFlood_across60Segments`, `app/src/test/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepositoryTest.kt::LiveSegmentsRepositoryTest::testStatusTransitions_logOnlyOnActualStatusChanges_neverOnSteadyStateTicks` (`ATT-9603`)
+- **Jira**: `ATT-9603` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Zero Per-Tick Flood Across 60 Distant Segments (`TST-LIV-002.1`, `LiveSegmentsRepositoryTest.testFarFarAwaySegments_zeroPerTickLogcatFlood_across60Segments`)*:
+  • Seed 60 `FAR_FAR_AWAY` segments ~450 km away and replay 20 consecutive 1-Hz `updateLiveSegments()` ticks with `DEBUG == true`.
+  • Assert `0` invocations across `Log.v`, `Log.d`, `Log.i`, `Log.w`, and `Log.e`.
+  2. *Transition-Only Debug Logging & Functional Parity (`TST-LIV-002.2`, `LiveSegmentsRepositoryTest.testStatusTransitions_logOnlyOnActualStatusChanges_neverOnSteadyStateTicks`)*:
+  • Exercise steady-state ticks interleaved with all 5 status transitions (`FAR_FAR_AWAY -> APPROACHING -> ON_SEGMENT -> ON_SEGMENT_CLOSE_TO_FINISH -> FINISHED -> FAR_FAR_AWAY`).
+  • Assert `Log.i` fires strictly once per status transition (`5` total) and `0` times on steady-state ticks, while all existing `LiveSegmentsRepository*Test` suites pass cleanly.
 
 ### TST-ARC-001: **Safe Enum Deserialization, Observability & Architecture Guard Verification Suite** [Verified]
 - **Priority**: High
@@ -2510,3 +2526,4 @@
 | `1.0.1` | 2026-11-19 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Reconciled legacy superseded wording in `TST-STR-017`, `TST-PRO-007`, `TST-PRO-008`, `TST-PRO-010`, `TST-PRO-017`, `TST-PRO-019`, and `TST-PRO-020` via Chesterton's Fence against `REQ-PRO-120`/`125`/`Rule 7.5` while keeping all `48` TSTs at `[Implemented]` pending Stage 4/5 execution. |
 | `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Stage 5: Promoted `41` executable/reconciled TSTs to `[Verified]` with verification evidence citations (`156/156` Python + `151/151` Kotlin PASS at `d266d87b`); honestly retained `7` Bucket C TSTs at `[Implemented]`. |
 | `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Stage 6 Bounce 1/3 doc-only fix: corrected Python method names in `Verification Evidence`, aligned `TST-PRO-006` wording to `6-stage`, expanded exact file paths across all `41` TSTs, and synced revision history. |
+| `1.0.6` | 2026-11-22 | Lane 2 (`ATT-9603`, `--as agent1`) | `ATT-9603` | Added and verified `TST-LIV-002` (`LiveSegmentsRepositoryTest` 16/16 PASS; 20/20 across `*LiveSegments*`). |

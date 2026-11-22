@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-22T22:50:24.352Z" hostname="rainer-HP-EliteBook-850-G5" time="2.898">
+  <properties/>
+  <testcase name="testLiveSegment_offSegmentDeviation_resetsLastSegmentIndexToNull" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.634"/>
+  <testcase name="testFinished_prDelta_missingPr" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.156"/>
+  <testcase name="testStatusTransitions_logOnlyOnActualStatusChanges_neverOnSteadyStateTicks" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.155"/>
+  <testcase name="testLiveSegment_finish_resetsLastSegmentIndexToNull" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.157"/>
+  <testcase name="testFinished_prDelta_extremeOutlier" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.138"/>
+  <testcase name="testFarFarAwaySegments_zeroPerTickLogcatFlood_across60Segments" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.189"/>
+  <testcase name="testFinished_populatesDistancePastFinishAndPrDelta_withoutOverloadingOffset" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.158"/>
+  <testcase name="testApproachingSegment_detectsWhenWithin250mAndAlignedHeading" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.149"/>
+  <testcase name="testFinished_prDelta_exactTie" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.159"/>
+  <testcase name="testOffTrack_revertsToFarFarAway" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.148"/>
+  <testcase name="testApproachingSegment_ignoresWhenHeadingDiverges" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.138"/>
+  <testcase name="testInitialReconcile_createsLiveSegmentsWithDirectionalGates" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.136"/>
+  <testcase name="testOnSegment_calculatesOrthogonalProgressAndSmoothRemainingDistance" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.141"/>
+  <testcase name="testFinished_prDelta_slowerThanPr" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.148"/>
+  <testcase name="testLiveSegment_lastSegmentIndex_propagatesAndAdvancesOnSegment" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.146"/>
+  <testcase name="testCrossingStartGate_transitionsToOnSegment" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest" time="0.144"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
