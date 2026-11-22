@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:59:21.360Z" hostname="rainer-HP-EliteBook-850-G5" time="1.392">
+  <properties/>
+  <testcase name="testInit_automaticallyLoadsEquipmentOnCreation" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.455"/>
+  <testcase name="testLoadEquipment_cancelsPreviousPendingJob" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.242"/>
+  <testcase name="testEquipmentViewModel_preservesReflectionConstructor" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.229"/>
+  <testcase name="testObserveSyncStatus_reloadsOnFallingEdge" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.232"/>
+  <testcase name="testObserveSyncStatus_suppressesColdStartRedundancy" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.234"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

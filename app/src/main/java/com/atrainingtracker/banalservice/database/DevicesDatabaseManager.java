@@ -52,6 +52,9 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import com.atrainingtracker.database.BaseDatabaseManager;
 import com.atrainingtracker.database.SqliteSchemaUtils;
 import java.util.LinkedList;
@@ -595,26 +598,27 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
         if (DEBUG) Log.d(TAG, "readCalibrationFactor");
 
         double calibrationFactor = 1;
+        boolean found = false;
 
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.CALIBRATION_FACTOR);
-
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            calibrationFactor = cursor.getDouble(0);
-        } else {  // device not yet known (should never happen?) => get default calibration factor?
-            if (DEBUG) Log.d(TAG, "readCalibrationFactor: device is not yet known");
-            cursor = getCursor(db, deviceID, DevicesDbHelper.DEVICE_TYPE);
-            if (cursor.getCount() > 0) {
-                cursor.moveToFirst();
-                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(0), TAG);
-                if (deviceType != null) {
-                    calibrationFactor = deviceType.getDefaultCalibrationFactor();
-                }
+        try (Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.CALIBRATION_FACTOR)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                calibrationFactor = cursor.getDouble(0);
+                found = true;
             }
         }
 
-        cursor.close();
+        if (!found) {
+            if (DEBUG) Log.d(TAG, "readCalibrationFactor: device calibration factor is missing or NULL");
+            try (Cursor fallbackCursor = getCursor(db, deviceID, DevicesDbHelper.DEVICE_TYPE)) {
+                if (fallbackCursor != null && fallbackCursor.moveToFirst() && !fallbackCursor.isNull(0)) {
+                    DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, fallbackCursor.getString(0), TAG);
+                    if (deviceType != null) {
+                        calibrationFactor = deviceType.getDefaultCalibrationFactor();
+                    }
+                }
+            }
+        }
 
         return calibrationFactor;
     }
@@ -826,25 +830,30 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
         }
     }
 
+    private static final Set<String> ALLOWED_INT_COLUMNS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            DevicesDbHelper.LAST_BATTERY_PERCENTAGE,
+            DevicesDbHelper.PAIRED,
+            DevicesDbHelper.POLAR_H10_OFFLINE_RECORDING,
+            DevicesDbHelper.POLAR_LIVE_IMU_ENABLED
+    )));
+
     private void setInt(long deviceID, String key, int value) {
         if (DEBUG) Log.i(TAG, "setInt: deviceID=" + deviceID + ", key=" + key + ", value=" + value);
 
-        // check list with allowed keys
-        if (DevicesDbHelper.LAST_BATTERY_PERCENTAGE.equals(key)) {
+        if (key == null || !ALLOWED_INT_COLUMNS.contains(key)) {
+            throw new IllegalArgumentException("Unsupported int column for setInt: " + key);
+        }
 
-            ContentValues values = new ContentValues();
-            values.put(key, value);
+        ContentValues values = new ContentValues();
+        values.put(key, value);
 
-            int updates = getDatabase().update(DevicesDbHelper.DEVICES,
-                    values,
-                    DevicesDbHelper.C_ID + "=?",
-                    new String[]{Long.toString(deviceID)});
+        int updates = getDatabase().update(DevicesDbHelper.DEVICES,
+                values,
+                DevicesDbHelper.C_ID + "=?",
+                new String[]{Long.toString(deviceID)});
 
-            if (updates == 0) { // not known yet
-                if (DEBUG) Log.d(TAG, "set: there should already be an entry in the database");
-            }
-        } else {
-            if (DEBUG) Log.d(TAG, "setInt: called with wrong/unknown key: " + key);
+        if (updates == 0) { // not known yet
+            if (DEBUG) Log.d(TAG, "set: there should already be an entry in the database");
         }
     }
 

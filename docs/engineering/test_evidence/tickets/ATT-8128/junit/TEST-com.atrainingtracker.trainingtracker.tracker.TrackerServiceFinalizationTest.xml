@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" tests="34" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:53:59.865Z" hostname="rainer-HP-EliteBook-850-G5" time="19.549">
+  <properties/>
+  <testcase name="testOnDestroy_WhenTrackingInterrupted_DoesNotCallEndWorkoutToPreserveUnfinishedWorkout" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.469"/>
+  <testcase name="testOnDestroy_defersUnbindBanalUntilAfterFinalization" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.313"/>
+  <testcase name="testOnDestroy_duringActionStopWithEndWorkoutFailureOrCompletedFuture_completesCleanupSafely_tstTrk092_3" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.541"/>
+  <testcase name="testDetermineForegroundServiceType_WithoutHealthPermission_OmitsHealthType" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.192"/>
+  <testcase name="testActionStop_KeepsBanalServiceBoundUntilEndWorkoutCompletes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.203"/>
+  <testcase name="testFinalizeLiveSession_GuidedHrvTest_PreservesProtocolNameAndSuppressesClusterOverwrite_TST_TRK_072_10d" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="1.459"/>
+  <testcase name="testTeardownSuppressed_whenRestartedDuringFinalization" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.364"/>
+  <testcase name="testActionStop_WhenDuplicateStopReceived_IgnoresSecondStopSafely" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.205"/>
+  <testcase name="testEndWorkout_withActiveLiveSession_persistsOnlyObservedSensorTypes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.95"/>
+  <testcase name="testOnStartCommand_duringAsyncFinalization_noRejectedExecution_and_isolatedParameters" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.2"/>
+  <testcase name="testInFlightTick_whenIsStoppingTrue_abortsWithoutSampleWrite" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.24"/>
+  <testcase name="testBanalFinalizationSnapshot_capturesAllTelemetryCorrectly" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.223"/>
+  <testcase name="testFinalizeLiveSession_triggersPersistConvergedCircumferences" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.206"/>
+  <testcase name="testMySensorManager_GetAccumulatedSensorTypeSet_ReturnsDefensiveCopyAndResistsConcurrentRegistration" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="1.301"/>
+  <testcase name="testOnDestroy_NonBlockingMainThreadAndFifoFinalizationOnRealDbExecutor" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.796"/>
+  <testcase name="testAverageSpeed_ZeroActiveTime_ReturnsZeroAndNeverNaNOrInfinity" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.183"/>
+  <testcase name="testHandleActionStop_doesNotShutdownExecutors_executorsOnlyShutdownInOnDestroy" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.18"/>
+  <testcase name="testFinalizeLiveSession_upsertsComputedPowerAndLineDistanceMetrics" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.609"/>
+  <testcase name="testOnDestroy_RealDbExecutorWhenInterrupted_SkipsEndWorkoutAndCompletesTeardown" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.19"/>
+  <testcase name="testFinalizeLiveSession_usesSnapshotMetrics_isolatedFromServiceFieldMutations" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.395"/>
+  <testcase name="testHandleActionStop_stopsRadarTrafficSimulator" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.181"/>
+  <testcase name="testFinalizeLiveSession_errandBikeUsesMovingSpeedForIdentityAndPreservesSessionSpeedExtrema_tstFil030_4" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.585"/>
+  <testcase name="testActionStop_WhenNotTracking_CallsStopSelfImmediately" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.181"/>
+  <testcase name="testEndWorkout_withSnapshot_persistsFinalLapAndAccumulatedSensorsEvenIfBanalServiceDestroyed" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.884"/>
+  <testcase name="testCleanTerminalTeardown_whenNotRestarted" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.187"/>
+  <testcase name="testOnDestroy_WhenTrackingNotInterrupted_CallsEndWorkout" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.178"/>
+  <testcase name="testOnDestroy_duringActiveActionStopFinalization_returnsNonBlockingWithoutPrematureUnbind_tstTrk092_1" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.196"/>
+  <testcase name="testEndWorkout_consistentSingleH10ArmedSnapshot_defersHrPhysiologyAndPassesAnchorAndEndTime_TST_TRK_093_3" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="3.055"/>
+  <testcase name="testEndWorkout_decouplesPostProcessingAndBroadcastsTrackingFinishedImmediately_tstTrk091_1" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="1.113"/>
+  <testcase name="testFinalizeLiveSession_ZeroActiveTimeAndDownstreamFailures_StillPersistsMapAndStreamsFirst" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.988"/>
+  <testcase name="testEndWorkout_WhenSaveAccumulatedSensorTypesAndSportTypeThrow_StillCommitsFinishedAndMapStreams" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="2.205"/>
+  <testcase name="testPostEndWorkoutCleanupAfterOnDestroy_runsIdempotentlyWithoutExceptionOnDestroyedService_tstTrk092_2" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.2"/>
+  <testcase name="testTrackerService_IsRunningLifecycle" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.183"/>
+  <testcase name="testActionStop_MaintainsForegroundStatusDuringEndWorkoutAndStopsSelfAfterCompletion" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest" time="0.189"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

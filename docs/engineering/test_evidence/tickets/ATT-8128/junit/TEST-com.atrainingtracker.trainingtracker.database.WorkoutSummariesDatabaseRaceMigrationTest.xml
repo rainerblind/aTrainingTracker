@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:47:06.100Z" hostname="rainer-HP-EliteBook-850-G5" time="2.81">
+  <properties/>
+  <testcase name="testDbVersion_isAtLeast23" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.539"/>
+  <testcase name="testUpdateWorkoutData_persistsRaceTrueAsOne" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.675"/>
+  <testcase name="testRaceColumnConstant_isRace" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.519"/>
+  <testcase name="testUpdateWorkoutData_persistsRaceFalseAsZero" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.54"/>
+  <testcase name="testOnUpgrade_fromV22ToV23_addsRaceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.536"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

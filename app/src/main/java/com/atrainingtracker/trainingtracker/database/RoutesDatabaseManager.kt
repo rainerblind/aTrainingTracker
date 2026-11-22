@@ -512,8 +512,6 @@ class RoutesDatabaseManager private constructor(context: Context) {
      */
     fun duplicateRouteAsLocal(routeId: Long): Long {
         val route = getRouteById(routeId) ?: return -1L
-        val path = getRoutePath(routeId)
-        val waypoints = getWaypointsForRoute(routeId)
         val duplicatedSummary = route.summary.copy(
             id = 0L,
             externalId = "",
@@ -521,7 +519,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
             source = RouteSource.LOCAL_GPX,
             syncedAt = 0L
         )
-        return insertRoute(duplicatedSummary, path, waypoints)
+        return insertRoute(duplicatedSummary, route.path, route.waypoints)
     }
 
     /**
@@ -938,6 +936,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTE_POINTS}")
                 db.execSQL("DROP TABLE IF EXISTS ${RouteContract.TABLE_ROUTES}")
                 onCreate(db)
+                return
             }
 
             if (oldVersion == 5) {

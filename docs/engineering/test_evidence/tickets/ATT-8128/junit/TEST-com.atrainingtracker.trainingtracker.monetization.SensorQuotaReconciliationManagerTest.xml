@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:50:56.267Z" hostname="rainer-HP-EliteBook-850-G5" time="0.377">
+  <properties/>
+  <testcase name="testDismissKeepTwoSensors_reconcilesDefaultIds_toPreventBypass" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.261"/>
+  <testcase name="testConfirmKeepTwoSensors_reconcilesSelectedIds_andClearsEvent" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.018"/>
+  <testcase name="testDetermineRecommendedUnpairDeviceId_remoteSensorPrioritization" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.012"/>
+  <testcase name="testCheckDowngradeReconciliation_doesNotTrigger_whenPairedDevicesCountLessThanOrEqualTwo" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.012"/>
+  <testcase name="testDetermineDefaultKeepDeviceIds_noRemoteSensors_fallsBackToBarometer" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.005"/>
+  <testcase name="testDetermineDefaultKeepDeviceIds_onlyFusedPaired_preservesFusedAndActiveRemote" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.006"/>
+  <testcase name="testDetermineDefaultKeepDeviceIds_bothGpsAndFusedPaired_preselectsFusedAndActiveRemote" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.004"/>
+  <testcase name="testParseLastSeenTimestamp_underNonUtcTimezoneRanksUtcIsoStrictlyAboveOlderLegacyLocal_TST_DAT_044_3" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.01"/>
+  <testcase name="testCheckDowngradeReconciliation_doesNotTrigger_whenProTierActive" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.013"/>
+  <testcase name="testCheckDowngradeReconciliation_triggers_whenFreeTierAndPairedDevicesGreaterThanTwo" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.013"/>
+  <testcase name="testDetermineDefaultKeepDeviceIds_remoteSensorsSortedByLastSeenTimestamp" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.006"/>
+  <testcase name="testDetermineRecommendedUnpairDeviceId_unpairHierarchy" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.005"/>
+  <testcase name="testCheckDowngradeReconciliation_suppressed_duringActiveTracking" classname="com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManagerTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

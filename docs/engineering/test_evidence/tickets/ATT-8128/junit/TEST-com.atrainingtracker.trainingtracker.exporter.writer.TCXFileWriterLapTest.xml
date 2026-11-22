@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterLapTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:47:41.558Z" hostname="rainer-HP-EliteBook-850-G5" time="8.756">
+  <properties/>
+  <testcase name="testTcxExportWithLapNameOnly" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterLapTest" time="2.956"/>
+  <testcase name="testTcxExportSerializesLapNotesExtensionsAndActivityNotes" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterLapTest" time="2.959"/>
+  <testcase name="testEscapeXml" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterLapTest" time="2.84"/>
+  <system-out><![CDATA[GENERATED XML:
+<?xml version="1.0"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/ActivityExtension/v2 http://www.garmin.com/xmlschemas/ActivityExtensionv2.xsd http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2026-09-12T10:00:00Z</Id>
+      <Lap StartTime="2026-09-12T10:00:00Z">
+        <TotalTimeSeconds>300.0</TotalTimeSeconds>
+        <DistanceMeters>1000.0</DistanceMeters>
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-12T10:00:00Z</Time>
+            <Position>
+              <LatitudeDegrees>48.0</LatitudeDegrees>
+              <LongitudeDegrees>11.0</LongitudeDegrees>
+            </Position>
+            <AltitudeMeters>0.0</AltitudeMeters>
+            <DistanceMeters>0.0</DistanceMeters>
+            <HeartRateBpm xsi:type="HeartRateInBeatsPerMinute_t">
+              <Value>1</Value>
+            </HeartRateBpm>
+            <Extensions>
+              <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+            <Speed>0.0</Speed>
+            <Watts>0</Watts>
+            <RunCadence>0</RunCadence>
+              </TPX>
+            </Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-12T10:04:00Z</Time>
+            <AltitudeMeters>0.0</AltitudeMeters>
+            <DistanceMeters>1000.0</DistanceMeters>
+            <HeartRateBpm xsi:type="HeartRateInBeatsPerMinute_t">
+              <Value>1</Value>
+            </HeartRateBpm>
+            <Extensions>
+              <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+            <Speed>0.0</Speed>
+            <Watts>0</Watts>
+            <RunCadence>0</RunCadence>
+              </TPX>
+            </Extensions>
+          </Trackpoint>
+        </Track>
+        <Notes>[Warm-up] 10m easy Zone 1</Notes>
+        <Extensions>
+          <att:LapExtension xmlns:att="http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1">
+            <att:Name>Warm-up</att:Name>
+            <att:Description>10m easy Zone 1</att:Description>
+          </att:LapExtension>
+        </Extensions>
+      </Lap>
+      <Lap StartTime="2026-09-12T10:05:00Z">
+        <TotalTimeSeconds>600.0</TotalTimeSeconds>
+        <DistanceMeters>2500.0</DistanceMeters>
+        <Track>
+          <Trackpoint>
+            <Time>2026-09-12T10:05:00Z</Time>
+            <AltitudeMeters>0.0</AltitudeMeters>
+            <DistanceMeters>2000.0</DistanceMeters>
+            <HeartRateBpm xsi:type="HeartRateInBeatsPerMinute_t">
+              <Value>2</Value>
+            </HeartRateBpm>
+            <Extensions>
+              <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+            <Speed>0.0</Speed>
+            <Watts>0</Watts>
+            <RunCadence>0</RunCadence>
+              </TPX>
+            </Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-09-12T10:15:00Z</Time>
+            <AltitudeMeters>0.0</AltitudeMeters>
+            <DistanceMeters>3000.0</DistanceMeters>
+            <HeartRateBpm xsi:type="HeartRateInBeatsPerMinute_t">
+              <Value>2</Value>
+            </HeartRateBpm>
+            <Extensions>
+              <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+            <Speed>0.0</Speed>
+            <Watts>0</Watts>
+            <RunCadence>0</RunCadence>
+              </TPX>
+            </Extensions>
+          </Trackpoint>
+        </Track>
+        <Notes>[Hill &amp; Climb] Zone 4 &lt;hard&gt; &quot;tempo&quot; &apos;efforts&apos;</Notes>
+        <Extensions>
+          <att:LapExtension xmlns:att="http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1">
+            <att:Name>Hill &amp; Climb</att:Name>
+            <att:Description>Zone 4 &lt;hard&gt; &quot;tempo&quot; &apos;efforts&apos;</att:Description>
+          </att:LapExtension>
+        </Extensions>
+      </Lap>
+      <Notes>Morning progression ride &amp; run</Notes>
+      <Creator xsi:type="Device_t">
+        <Name>null null</Name>
+        <UnitId>0</UnitId>
+        <ProductID>1</ProductID>
+        <Version>
+          <VersionMajor>5</VersionMajor>
+          <VersionMinor>0</VersionMinor>
+          <BuildMajor>273</BuildMajor>
+          <BuildMinor>0</BuildMinor>
+        </Version>
+      </Creator>
+      <Extensions>
+        <att:ActivityExtension xmlns:att="http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1">
+          <att:Description>Morning progression ride &amp; run</att:Description>
+        </att:ActivityExtension>
+      </Extensions>
+    </Activity>
+  </Activities>
+  <Author xsi:type="Application_t">
+    <Name>aTrainingTracker</Name>
+    <Build>
+      <Version>
+        <VersionMajor>5</VersionMajor>
+        <VersionMinor>0</VersionMinor>
+        <BuildMajor>273</BuildMajor>
+        <BuildMinor>0</BuildMinor>
+      </Version>
+      <Type>Release</Type>
+    </Build>
+    <LangID>en</LangID>
+    <PartNumber>000-00000-00</PartNumber>
+  </Author>
+</TrainingCenterDatabase>
+
+]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

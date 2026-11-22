@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:38:03.639Z" hostname="rainer-HP-EliteBook-850-G5" time="3.653">
+  <properties/>
+  <testcase name="testDemGuard_whenNotPaired_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="0.957"/>
+  <testcase name="testBarometerGuard_whenNoHardwareOrNotPaired_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="0.877"/>
+  <testcase name="testAllSensorsAvailable_allowsUserPreferencesToControlState" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="0.908"/>
+  <testcase name="testGpsGuard_whenLocationUnpairedOrPermissionDenied_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="0.911"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:37:38.835Z" hostname="rainer-HP-EliteBook-850-G5" time="10.34">
+  <properties/>
+  <testcase name="testStartSearchForPairedDevices_clampsSearchQueue_whenFreeTier" classname="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" time="8.465"/>
+  <testcase name="testStartSearchForPairedDevices_doesNotClampSearchQueue_whenProTier" classname="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" time="1.875"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

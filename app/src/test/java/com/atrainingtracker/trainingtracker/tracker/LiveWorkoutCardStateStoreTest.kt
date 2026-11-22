@@ -487,4 +487,58 @@ class LiveWorkoutCardStateStoreTest {
 
         jobs.forEach { it.cancel() }
     }
+
+    @Test
+    fun applyLiveSnapshot_matchesExistingRowsBySensorTypeAcrossLocaleSwitchAndSetsSensorTypeOnNewRows_TST_DAT_044_5() {
+        val englishRows = listOf(
+            ExtremaDataRow(
+                sensorLabel = "HR", unitLabel = "bpm", minValue = "120", avgValue = "140", maxValue = "175",
+                iconResId = R.drawable.ic_heart_rate, sensorType = SensorType.HR
+            ),
+            ExtremaDataRow(
+                sensorLabel = "Speed", unitLabel = "km/h", minValue = "8.0", avgValue = "11.0", maxValue = "15.0",
+                iconResId = R.drawable.ic_speed, sensorType = SensorType.SPEED_mps
+            ),
+            ExtremaDataRow(
+                sensorLabel = "Pace", unitLabel = "min/km", minValue = "4:00", avgValue = "5:27", maxValue = "7:30",
+                iconResId = R.drawable.ic_speed, sensorType = SensorType.PACE_spm
+            ),
+            ExtremaDataRow(
+                sensorLabel = "Power", unitLabel = "W", minValue = "150", avgValue = "240", maxValue = "390",
+                iconResId = R.drawable.ic_power, sensorType = SensorType.POWER
+            )
+        )
+        val activeRun = createWorkoutData(
+            id = 42L,
+            finished = false,
+            bSportType = BSportType.RUN,
+            extremaRows = englishRows
+        )
+        val germanLabels = LiveExtremaLabels(
+            hrLabel = "HF", hrUnit = "bpm",
+            speedLabel = "Geschw.", speedUnit = "km/h",
+            paceLabel = "Tempo", paceUnit = "min/km",
+            powerLabel = "Leistung", powerUnit = "W",
+            cadenceLabel = "Schrittfreq.", cadenceUnit = "spm"
+        )
+        val snapshot = LiveWorkoutCardSnapshot(
+            workoutId = 42L,
+            avgSpeedMps = 3.333,
+            avgHeartRateBpm = 165.0,
+            avgPowerWatts = 290.0,
+            avgCadenceRpm = 178.0
+        )
+
+        val overlaid = applyLiveSnapshot(activeRun, snapshot, extremaLabels = germanLabels)
+
+        // All 4 existing English rows updated in-place by SensorType without duplicates; new Cadence row appended with SensorType.CADENCE
+        assertEquals(5, overlaid.extremaRows.size)
+        val byType = overlaid.extremaRows.associateBy { it.sensorType }
+        assertEquals("165", byType[SensorType.HR]?.avgValue)
+        assertEquals("290", byType[SensorType.POWER]?.avgValue)
+        assertNotNull(byType[SensorType.SPEED_mps]?.avgValue)
+        assertNotNull(byType[SensorType.PACE_spm]?.avgValue)
+        assertEquals("178", byType[SensorType.CADENCE]?.avgValue)
+        assertEquals("Schrittfreq.", byType[SensorType.CADENCE]?.sensorLabel)
+    }
 }

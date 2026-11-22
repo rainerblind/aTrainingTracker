@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:00:05.805Z" hostname="rainer-HP-EliteBook-850-G5" time="3.723">
+  <properties/>
+  <testcase name="shouldAutoAcknowledgeStopTrackingCoachmark prevents premature dismissal on READY to TRACKING transition" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.256"/>
+  <testcase name="all 9 supported locales define non-empty stop tracking coachmark strings" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.981"/>
+  <testcase name="TuningPreferencesDataStore registers KEY_HAS_SEEN_STOP_TRACKING_HINT in ALL_KEYS for factory reset" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.231"/>
+  <testcase name="shouldShowStopTrackingCoachmark returns false while DataStore is still loading (null)" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.218"/>
+  <testcase name="shouldShowStopTrackingCoachmark evaluates visibility matrix accurately" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.216"/>
+  <testcase name="ViewModel session state survives configuration changes and resets on READY transition" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.635"/>
+  <testcase name="StopTrackingCoachmarkBanner and TrackingTabsScreen enforce zero-jump overlay, 4-inch telemetry clearance, and 48dp touch targets" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.319"/>
+  <testcase name="shouldAutoAcknowledgeStopTrackingCoachmark suppresses dismissal during in-flight pager scroll animations" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.215"/>
+  <testcase name="synchronous optimistic dismissal suppresses coachmark immediately even when DataStore write is delayed or interrupted" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest" time="0.651"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

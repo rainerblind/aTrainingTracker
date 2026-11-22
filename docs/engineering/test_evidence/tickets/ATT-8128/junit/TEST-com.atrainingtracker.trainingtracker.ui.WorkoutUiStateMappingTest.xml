@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:55:13.874Z" hostname="rainer-HP-EliteBook-850-G5" time="0.062">
+  <properties/>
+  <testcase name="testWorkoutCardUiState_fromWorkoutData_finishedWorkout" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.027"/>
+  <testcase name="testBuildLapRowUiStates_customDescriptionAndClick" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.014"/>
+  <testcase name="testWorkoutCardUiState_activelyTracked_disablesContextMenuActions" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.001"/>
+  <testcase name="testWorkoutCardUiState_unfinishedWorkout_reducesAlphaAndEnablesMarkFinished" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.001"/>
+  <testcase name="testBuildLapRowUiStates_cyclingSport_formatsSpeedAndAwardsBadges" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.003"/>
+  <testcase name="testExtremaUiState_emptyData_producesEmptyRows" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.005"/>
+  <testcase name="testBuildLapRowUiStates_runningSport_formatsPace" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.002"/>
+  <testcase name="testBuildLapRowUiStates_zeroSpeedLap_resolvesDash" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.003"/>
+  <testcase name="testExtremaUiState_fromExtremaData_resolvesNullsAndMinRelevance" classname="com.atrainingtracker.trainingtracker.ui.WorkoutUiStateMappingTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

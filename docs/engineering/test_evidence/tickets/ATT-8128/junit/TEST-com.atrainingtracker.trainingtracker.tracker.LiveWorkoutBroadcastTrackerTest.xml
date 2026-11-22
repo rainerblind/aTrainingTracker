@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutBroadcastTrackerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:51:06.229Z" hostname="rainer-HP-EliteBook-850-G5" time="0.01">
+  <properties/>
+  <testcase name="onDiscreteEdge_andInvalidWorkoutIds_andReset_behaveSafely_TST_STB_020_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutBroadcastTrackerTest" time="0.002"/>
+  <testcase name="onPauseStateTick_emitsOnlyOnStateTransitionEdges_TST_STB_020_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutBroadcastTrackerTest" time="0.001"/>
+  <testcase name="onSessionInitialized_dispatchesOnceAndSuppressesSteadyStateTicks_TST_STB_020_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutBroadcastTrackerTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

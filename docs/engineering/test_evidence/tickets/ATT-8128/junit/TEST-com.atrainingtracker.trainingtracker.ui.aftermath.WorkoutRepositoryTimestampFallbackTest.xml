@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTimestampFallbackTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:54:48.950Z" hostname="rainer-HP-EliteBook-850-G5" time="0.011">
+  <properties/>
+  <testcase name="testParseTimestampOffset_isoFormatWithT_parsesSuccessfully" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTimestampFallbackTest" time="0.001"/>
+  <testcase name="testParseTimestampOffset_invalidFormat_returnsNullGracefully" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTimestampFallbackTest" time="0.001"/>
+  <testcase name="testParseTimestampOffset_subsequentSamples_computesRelativeElapsedSeconds" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTimestampFallbackTest" time="0.004"/>
+  <testcase name="testParseTimestampOffset_nullOrEmptyString_returnsNullAndPreservesAnchor" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTimestampFallbackTest" time="0.002"/>
+  <testcase name="testParseTimestampOffset_initialSample_establishesAnchorAtZeroOffset" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryTimestampFallbackTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

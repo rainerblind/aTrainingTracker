@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:53:34.320Z" hostname="rainer-HP-EliteBook-850-G5" time="0.666">
+  <properties/>
+  <testcase name="testMyPreferenceManager_constructorIsPrivateSharesProcessScopeAndReusesSingleton" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.549"/>
+  <testcase name="testSettingsDataStore_constructorIsPrivateAndNormalizesActivityContext" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.007"/>
+  <testcase name="testSettingsDataStore_fallbackSingletonUpgradesOnRealFilesDirCancelsDiscardedScopeAndRespectsOverride" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.056"/>
+  <testcase name="testSettingsDataStore_createForTestingNormalizesContextAndSupportsTestScopeCancellation" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.007"/>
+  <testcase name="testHasRealFilesDir_rejectsNullEmptyAndThrowingAndAcceptsRealDirectory" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.017"/>
+  <testcase name="testMyPreferenceManager_fallbackSingletonUpgradesOnRealFilesDirWithoutCancellingSharedScope" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.011"/>
+  <testcase name="testProFeatureManager_constructorIsPrivateNormalizesActivityContextAndPreservesJvmStatic" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

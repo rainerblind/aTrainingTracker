@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.DeviceStatusRowContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:45:00.794Z" hostname="rainer-HP-EliteBook-850-G5" time="0.053">
+  <properties/>
+  <testcase name="testDeviceStatusRowClassExists" classname="com.atrainingtracker.banalservice.ui.devices.DeviceStatusRowContractTest" time="0.005"/>
+  <testcase name="testDeviceStatusRow_referencesRequiredStrings" classname="com.atrainingtracker.banalservice.ui.devices.DeviceStatusRowContractTest" time="0.012"/>
+  <testcase name="testDeviceStatusRow_hasIsConnectedParameterWithDefault" classname="com.atrainingtracker.banalservice.ui.devices.DeviceStatusRowContractTest" time="0.036"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

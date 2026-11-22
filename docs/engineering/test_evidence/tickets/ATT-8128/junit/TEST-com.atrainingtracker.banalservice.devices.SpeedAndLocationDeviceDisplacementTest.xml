@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:39:05.779Z" hostname="rainer-HP-EliteBook-850-G5" time="7.456">
+  <properties/>
+  <testcase name="testTeleportationSpike_isRejectedFromDistanceAccumulation" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="2.092"/>
+  <testcase name="testSubSecondTeleportationSpike_isRejected" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.774"/>
+  <testcase name="testPlausibleHighSpeed_isAccumulated" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.722"/>
+  <testcase name="testPauseOrLongInterval_dtOver30Seconds_accumulatesNormally" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.867"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

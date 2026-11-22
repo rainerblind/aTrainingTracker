@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" tests="7" skipped="0" failures="1" errors="0" timestamp="2026-11-22T19:43:58.002Z" hostname="rainer-HP-EliteBook-850-G5" time="3.704">
+  <properties/>
+  <testcase name="pairing unconfigured BIKE_POWER emits zone onboarding event with tab 2 and pwr_paired reason" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="1.065"/>
+  <testcase name="pairing configured BIKE_POWER does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.453"/>
+  <testcase name="unpairing an already paired device does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.456"/>
+  <testcase name="pairing configured HRM does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.458"/>
+  <testcase name="pairing non-physiological sensors completes silently without emitting zone event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.435"/>
+  <testcase name="pairing unconfigured HRM emits zone onboarding event with tab 0 and hr_paired reason" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.417">
+    <failure message="kotlinx.coroutines.test.UncaughtExceptionsBeforeTest: There were uncaught exceptions before the test started. Please avoid this, as such exceptions are also reported in a platform-dependent manner so that they are not lost." type="kotlinx.coroutines.test.UncaughtExceptionsBeforeTest">kotlinx.coroutines.test.UncaughtExceptionsBeforeTest: There were uncaught exceptions before the test started. Please avoid this, as such exceptions are also reported in a platform-dependent manner so that they are not lost.
+	at kotlinx.coroutines.test.TestScopeImpl.enter(TestScope.kt:231)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:308)
+	at kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:167)
+	at kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)
+	at kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0$default(TestBuilders.kt:159)
+	at kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0$default(TestBuilders.kt:1)
+	at com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest.pairing unconfigured HRM emits zone onboarding event with tab 0 and hr_paired reason(DeviceListViewModelPairingTest.kt:123)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:175)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:84)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:47)
+	at org.gradle.api.internal.tasks.testing.junit.AbstractJUnitTestDefinitionProcessor.processTestDefinition(AbstractJUnitTestDefinitionProcessor.java:65)
+	at org.gradle.api.internal.tasks.testing.SuiteTestDefinitionProcessor.processTestDefinition(SuiteTestDefinitionProcessor.java:53)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.gradle.internal.dispatch.MethodInvocation.invokeOn(MethodInvocation.java:77)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:28)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:19)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:88)
+	at jdk.proxy1/jdk.proxy1.$Proxy4.processTestDefinition(Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$2.run(TestWorker.java:178)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+	Suppressed: java.lang.IllegalStateException: Dispatchers.Main was accessed when the platform dispatcher was absent and the test dispatcher was unset. Please make sure that Dispatchers.setMain() is called before accessing Dispatchers.Main and that Dispatchers.Main is not accessed after Dispatchers.resetMain().
+		at kotlinx.coroutines.test.internal.TestMainDispatcherJvmKt.reportMissingMainCoroutineDispatcher(TestMainDispatcherJvm.kt:45)
+		at kotlinx.coroutines.test.internal.TestMainDispatcherJvmKt.access$reportMissingMainCoroutineDispatcher(TestMainDispatcherJvm.kt:1)
+		at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:20)
+		at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+		at kotlinx.coroutines.test.internal.TestMainDispatcher.getMainDispatcher(TestMainDispatcher.kt:18)
+		at kotlinx.coroutines.test.internal.TestMainDispatcher.getDispatcher(TestMainDispatcher.kt:22)
+		at kotlinx.coroutines.test.internal.TestMainDispatcher.isDispatchNeeded(TestMainDispatcher.kt:32)
+		at kotlinx.coroutines.internal.DispatchedContinuationKt.safeIsDispatchNeeded(DispatchedContinuation.kt:262)
+		at kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWithInternal(DispatchedContinuation.kt:324)
+		at kotlinx.coroutines.DispatchedCoroutine.afterResume(Builders.common.kt:588)
+		at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+		at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+		at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+		at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+		at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+		at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+		at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+		at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+		at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+		Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(410), &quot;coroutine#410&quot;:DispatchedCoroutine{Completed}@6ecfba2b, Dispatchers.IO]
+	Caused by: java.lang.IllegalStateException: Module with the Main dispatcher had failed to initialize. For tests Dispatchers.setMain from kotlinx-coroutines-test module can be used
+		at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.missing(MainDispatchers.kt:111)
+		at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.dispatch(MainDispatchers.kt:101)
+		at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.dispatch(MainDispatchers.kt:84)
+		at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:22)
+		... 16 more
+	Caused by: java.lang.RuntimeException: Method getMainLooper in android.os.Looper not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+		at android.os.Looper.getMainLooper(Looper.java)
+		at kotlinx.coroutines.android.AndroidDispatcherFactory.createDispatcher(HandlerDispatcher.kt:51)
+		at kotlinx.coroutines.internal.MainDispatchersKt.tryCreateDispatcher(MainDispatchers.kt:53)
+		at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:15)
+		... 16 more
+</failure>
+  </testcase>
+  <testcase name="testOnPairedChanged_unpairingAutoPairedDevice_updatesDeviceWithPairedFalse" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.42"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Exception in thread "DefaultDispatcher-worker-5" java.lang.IllegalStateException: Dispatchers.Main was accessed when the platform dispatcher was absent and the test dispatcher was unset. Please make sure that Dispatchers.setMain() is called before accessing Dispatchers.Main and that Dispatchers.Main is not accessed after Dispatchers.resetMain().
+	at kotlinx.coroutines.test.internal.TestMainDispatcherJvmKt.reportMissingMainCoroutineDispatcher(TestMainDispatcherJvm.kt:45)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherJvmKt.access$reportMissingMainCoroutineDispatcher(TestMainDispatcherJvm.kt:1)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:20)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at kotlinx.coroutines.test.internal.TestMainDispatcher.getMainDispatcher(TestMainDispatcher.kt:18)
+	at kotlinx.coroutines.test.internal.TestMainDispatcher.getDispatcher(TestMainDispatcher.kt:22)
+	at kotlinx.coroutines.test.internal.TestMainDispatcher.isDispatchNeeded(TestMainDispatcher.kt:32)
+	at kotlinx.coroutines.internal.DispatchedContinuationKt.safeIsDispatchNeeded(DispatchedContinuation.kt:262)
+	at kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWithInternal(DispatchedContinuation.kt:324)
+	at kotlinx.coroutines.DispatchedCoroutine.afterResume(Builders.common.kt:588)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(410), "coroutine#410":DispatchedCoroutine{Completed}@6ecfba2b, Dispatchers.IO]
+Caused by: java.lang.IllegalStateException: Module with the Main dispatcher had failed to initialize. For tests Dispatchers.setMain from kotlinx-coroutines-test module can be used
+	at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.missing(MainDispatchers.kt:111)
+	at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.dispatch(MainDispatchers.kt:101)
+	at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.dispatch(MainDispatchers.kt:84)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:22)
+	... 16 more
+Caused by: java.lang.RuntimeException: Method getMainLooper in android.os.Looper not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.os.Looper.getMainLooper(Looper.java)
+	at kotlinx.coroutines.android.AndroidDispatcherFactory.createDispatcher(HandlerDispatcher.kt:51)
+	at kotlinx.coroutines.internal.MainDispatchersKt.tryCreateDispatcher(MainDispatchers.kt:53)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:15)
+	... 16 more
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

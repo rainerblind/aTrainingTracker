@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.workoutextrema
 
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -52,7 +53,8 @@ data class ExtremaDataRow(
     val isMinRelevant: Boolean = true,
     val boldMin: Boolean = false,
     val boldAvg: Boolean = false,
-    val boldMax: Boolean = false
+    val boldMax: Boolean = false,
+    val sensorType: SensorType? = null
 ) {
     /**
      * Helper to check if any value is present for this sensor.

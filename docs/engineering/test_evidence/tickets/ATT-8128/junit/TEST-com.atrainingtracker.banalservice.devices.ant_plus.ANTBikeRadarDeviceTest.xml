@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:40:09.910Z" hostname="rainer-HP-EliteBook-850-G5" time="32.7">
+  <properties/>
+  <testcase name="testZeroBinTargetIngestion_decodesAtZeroDistanceAndLatchesClearance" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.442"/>
+  <testcase name="testMultiInstanceAntRadar_silentDeviceReturnsFalse" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.327"/>
+  <testcase name="testWatchdogTimeout_resetsStateToDisconnectedError" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.272"/>
+  <testcase name="testConfigureChannel_continuesWhenLibConfigThrowsAntCommandFailedException" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.749"/>
+  <testcase name="testTrackContinuity_acrossSlotShifts_retainsIdentityAndSinglePass" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.333"/>
+  <testcase name="testAllThreeEmissionSites_preserveManualIsAutoModeAndRestoreOnSetAutoMode" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.321"/>
+  <testcase name="testDecodeBroadcastData_preservesAudioSnoozeAndLightMode" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.387"/>
+  <testcase name="testDecodeBroadcastData_page0x31_unpacksTargets5to8" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.375"/>
+  <testcase name="testRadarDevice_shutDown_clearsTargets_andSetsDisconnectedState" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.357"/>
+  <testcase name="testRadarDevice_onReceiveMessage_postsToHandler_andSerializesState" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.641"/>
+  <testcase name="testIsReceivingData_isolatedToAntPlusSource" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.315"/>
+  <testcase name="testDecodeBroadcastData_commonPages_handledCleanly" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.383"/>
+  <testcase name="testServiceConnection_usesAcquireAntPlusChannelAsync_andConfiguresChannel" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.815"/>
+  <testcase name="testConfigureChannel_setsCorrectAntParameters" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.477"/>
+  <testcase name="testDecodeBroadcastData_systemStatusError_triggersWatchdog" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.542"/>
+  <testcase name="testHardwarePacket_preemptsActiveRadarTrafficSimulator" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.454"/>
+  <testcase name="testPendingHandleCancellation_onShutDown_watchdog_and_disconnect" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.61"/>
+  <testcase name="testANTBikeRadarDevice_oneHzDriverGating_limitsScalarSensorUpdates" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.475"/>
+  <testcase name="testRadarDevice_postShutdown_dropsMessagesAndEvents" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.7"/>
+  <testcase name="testDecodeBroadcastData_page0x30_unpacksTargetsAccurately" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.392"/>
+  <testcase name="testRadarDevice_channelEvent_reOpensChannel_whenTracking" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.647"/>
+  <testcase name="testRadarDevice_channelEvent_reOpensChannel_whenSearching" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.685"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

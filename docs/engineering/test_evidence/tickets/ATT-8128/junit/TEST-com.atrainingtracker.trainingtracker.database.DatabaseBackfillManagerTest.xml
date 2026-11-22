@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:45:11.402Z" hostname="rainer-HP-EliteBook-850-G5" time="0.341">
+  <properties/>
+  <testcase name="testExecutePendingBackfillsConvergesAndIsIdempotent" classname="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" time="0.125"/>
+  <testcase name="testDalGracefulFallbackOnUnmigratedRows" classname="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" time="0.105"/>
+  <testcase name="testHasPendingBackfillsDetectsUnpopulatedData" classname="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" time="0.111"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:44:08.616Z" hostname="rainer-HP-EliteBook-850-G5" time="0.174">
+  <properties/>
+  <testcase name="testDevicesTabbedScreen_matrixTabsLinkIconContract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.117"/>
+  <testcase name="testDevicesTabbedScreen_sortOrderContract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.01"/>
+  <testcase name="testDevicesTabbedScreen_onScanForSensors_contract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.0"/>
+  <testcase name="testDevicesTabbedScreen_fiveTabsContract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.047"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

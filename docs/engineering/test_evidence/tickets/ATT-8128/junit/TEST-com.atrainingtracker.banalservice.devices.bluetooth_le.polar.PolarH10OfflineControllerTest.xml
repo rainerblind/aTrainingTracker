@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:42:13.105Z" hostname="rainer-HP-EliteBook-850-G5" time="44.486">
+  <properties/>
+  <testcase name="testZeroGapFastPath_bypassesPftpDownload" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="4.72"/>
+  <testcase name="testStopAndBackfill_timeout_persistsPendingSyncMetadata" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.673"/>
+  <testcase name="testStopAndBackfillWorkout_trimsTrailingBeats_skipsEmptyDbWrite_andRespectsRunPostBackfillRecompute_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.72"/>
+  <testcase name="testExecuteArming_success_armsRecording" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.631"/>
+  <testcase name="testStopAndBackfill_zeroPatchedRows_doesNotRecordHrAccumulatedSensorType" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.736"/>
+  <testcase name="testBackfillAndPendingSync_reuseSharedCoordinatorSingletonWithoutCleanup" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.905"/>
+  <testcase name="testRemoveExercise_onlyAfterSqliteCommit" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.681"/>
+  <testcase name="testStopAndBackfill_hangingWaitForConnection_timesOutAtStopConnectionTimeoutMs" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.708"/>
+  <testcase name="testExecuteArming_capturesPostStartRecordingAnchorAndResetsLifecycle_TST_TRK_093_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.637"/>
+  <testcase name="testBuildAnchoredSamples_handlesThreeEndTimeCasesAndInvalidRr_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.689"/>
+  <testcase name="testSyncPendingWorkout_trimsByExpectedEndMsAndRunsPhysiologyBeforeHrv_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.636"/>
+  <testcase name="testExecuteArming_failure_handlesGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.621"/>
+  <testcase name="testSyncPendingWorkout_nullBaseFileName_doesNotRecordHrAccumulatedSensorType" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.608"/>
+  <testcase name="testFringeFlapInvariance_alreadyArmed_doesNotRearm" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.659"/>
+  <testcase name="testStopAndBackfill_gapsExist_fetchesAndPatchesDb" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.644"/>
+  <testcase name="testDismissPendingSync_clearsPendingFlag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.68"/>
+  <testcase name="testApiLevelBelow33_bypassesBackfill" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.6"/>
+  <testcase name="testSyncPendingWorkout_success_fetchesPatchesAndClearsFlag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.618"/>
+  <testcase name="testWorkoutStopped_resetsArmedState" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.626"/>
+  <testcase name="testArmForActiveWorkout_skipsUnwornH10WhenOtherHrmReceives" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.667"/>
+  <testcase name="testStopAndBackfillWorkout_staleArmedTokenPreservesNewerWorkoutArmedStateAndSuppressesNotification_tstTrk091_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.617"/>
+  <testcase name="testSyncPendingWorkout_cancellationExceptionIsRethrown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.596"/>
+  <testcase name="testRenamedH10_armsAndSyncsPendingWorkoutViaDisHardwareMetadata" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.611"/>
+  <testcase name="testApiLevelBelow33_doesNotArm" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.576"/>
+  <testcase name="testStopAndBackfill_confirmedDisconnectedDevice_fastFailsWithoutWaitingForConnection" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.626"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

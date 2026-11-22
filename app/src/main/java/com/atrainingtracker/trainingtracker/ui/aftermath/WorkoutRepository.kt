@@ -1815,6 +1815,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
     private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private val pendingNotifyInitialLoadedIds = mutableSetOf<Long>()
     internal val ineligibleCardioPowerWorkoutIds: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val recentHrvThresholdsCache = LruCache<Long, HrvSessionThreshold>(HRV_THRESHOLD_CACHE_SIZE)
     @VisibleForTesting internal fun getHrvThresholdsCacheSize(): Int = recentHrvThresholdsCache.size()
@@ -3993,10 +3994,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 else -> {}
             }
 
-            // 2. Update the ExtremaDataRow in the list
-            val sensorLabel = application.getString(sensorType.shortNameId)
+            // 2. Update the ExtremaDataRow in the list (language-independent SensorType match, lazy label fallback)
+            val fallbackLabel by lazy { application.getString(sensorType.shortNameId) }
             val updatedRows = updated.extremaRows.map { row ->
-                if (row.sensorLabel == sensorLabel) {
+                if (row.sensorType == sensorType || (row.sensorType == null && row.sensorLabel == fallbackLabel)) {
                     when (extremaType) {
                         ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
                         ExtremaType.AVG -> row.copy(avgValue = formattedValue)
@@ -4309,7 +4310,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 currentList.map { existing ->
                     if (existing.id == workout.id) {
                         val mergedExtremaRows = workout.extremaRows.map { rowFromDb ->
-                            val existingRow = existing.extremaRows.find { it.sensorLabel == rowFromDb.sensorLabel }
+                            val existingRow = existing.extremaRows.find {
+                                if (rowFromDb.sensorType != null && it.sensorType != null) {
+                                    it.sensorType == rowFromDb.sensorType
+                                } else {
+                                    it.sensorLabel == rowFromDb.sensorLabel
+                                }
+                            }
                             if (existingRow != null) {
                                 rowFromDb.copy(
                                     minLatLng = if (rowFromDb.minLatLng == null) existingRow.minLatLng else rowFromDb.minLatLng,
@@ -4445,11 +4452,22 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * @param workoutId The primary key of the session to reload.
      */
     suspend fun reloadWorkoutData(workoutId: Long) {
+        reloadWorkoutDataInternal(workoutId, notifyInitialLoaded = false)
+    }
+
+    private suspend fun reloadWorkoutDataInternal(workoutId: Long, notifyInitialLoaded: Boolean) {
+        var shouldNotify = notifyInitialLoaded
         val shouldStart = synchronized(activeReloadWorkoutIds) {
             if (!activeReloadWorkoutIds.add(workoutId)) {
                 dirtyReloadWorkoutIds.add(workoutId)
+                if (notifyInitialLoaded) {
+                    pendingNotifyInitialLoadedIds.add(workoutId)
+                }
                 false
             } else {
+                if (pendingNotifyInitialLoadedIds.remove(workoutId)) {
+                    shouldNotify = true
+                }
                 true
             }
         }
@@ -4458,15 +4476,28 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             return
         }
 
+        var released = false
         try {
             do {
-                if (DEBUG) Log.i(TAG, "reloadWorkoutData: executing pass for workoutId=$workoutId")
+                val notifyThisPass = synchronized(activeReloadWorkoutIds) {
+                    val hadPending = pendingNotifyInitialLoadedIds.remove(workoutId)
+                    val effective = shouldNotify || hadPending
+                    shouldNotify = false
+                    effective
+                }
+                if (DEBUG) Log.i(TAG, "reloadWorkoutData: executing pass for workoutId=$workoutId (notifyInitialLoaded=$notifyThisPass)")
 
                 withContext(Dispatchers.IO) {
                     summariesManager.getWorkoutCursor(workoutId).use { cursor ->
                         if (cursor?.moveToFirst() == true) {
                             // Get the fresh data from the database.
-                            val freshWorkoutData = mapper.fromCursor(cursor)
+                            val rawWorkoutData = mapper.fromCursor(cursor)
+                            val freshWorkoutData = if (notifyThisPass && rawWorkoutData.radarTrafficSummary != null && !rawWorkoutData.fileBaseName.isNullOrBlank()) {
+                                val fullRadar = getRadarTrafficSummary(rawWorkoutData.fileBaseName)
+                                if (fullRadar != null) rawWorkoutData.copy(radarTrafficSummary = fullRadar) else rawWorkoutData
+                            } else {
+                                rawWorkoutData
+                            }
                             
                             // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
                             val existing = _allWorkouts.value.find { it.id == workoutId }
@@ -4482,22 +4513,36 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                                 WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData.toClusterWorkoutSnapshot())
                             }
 
+                            if (notifyThisPass) {
+                                _initialWorkoutLoaded.postValue(freshWorkoutData)
+                            }
+
                             addOrUpdateWorkout(freshWorkoutData)
                         }
                     }
                 }
             } while (synchronized(activeReloadWorkoutIds) {
                 if (dirtyReloadWorkoutIds.remove(workoutId)) {
+                    if (pendingNotifyInitialLoadedIds.remove(workoutId)) {
+                        shouldNotify = true
+                    }
+                    true
+                } else if (pendingNotifyInitialLoadedIds.remove(workoutId)) {
+                    shouldNotify = true
                     true
                 } else {
                     activeReloadWorkoutIds.remove(workoutId)
+                    released = true
                     false
                 }
             })
         } finally {
-            synchronized(activeReloadWorkoutIds) {
-                activeReloadWorkoutIds.remove(workoutId)
-                dirtyReloadWorkoutIds.remove(workoutId)
+            if (!released) {
+                synchronized(activeReloadWorkoutIds) {
+                    activeReloadWorkoutIds.remove(workoutId)
+                    dirtyReloadWorkoutIds.remove(workoutId)
+                    pendingNotifyInitialLoadedIds.remove(workoutId)
+                }
             }
         }
     }
@@ -4787,9 +4832,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutClusterEngine.getInstance(application)
                 .assignClusterToWorkout(application, workoutId, clusterId, forceIdentity = true)
 
-            // Reload fresh data from DB to propagate inferred identity to UI
-            reloadWorkoutData(workoutId)
-            loadWorkout(workoutId)
+            // Single coalesced DB reload updating both _allWorkouts and _initialWorkoutLoaded (ATT-8128)
+            reloadWorkoutDataInternal(workoutId, notifyInitialLoaded = true)
         }
     }
 
@@ -4802,8 +4846,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
         WorkoutClusterRepository.getInstance(application).refreshClusters()
 
-        reloadWorkoutData(workoutId)
-        loadWorkout(workoutId)
+        reloadWorkoutDataInternal(workoutId, notifyInitialLoaded = true)
     }
 
     /**
@@ -4819,8 +4862,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutClusterEngine.getInstance(application)
                 .createNewClusterFromWorkout(application, workout.toClusterWorkoutSnapshot(), customName, hasCounter, customWorkoutName)
 
-            reloadWorkoutData(workout.id)
-            loadWorkout(workout.id)
+            reloadWorkoutDataInternal(workout.id, notifyInitialLoaded = true)
         }
     }
 
@@ -4837,8 +4879,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             WorkoutClusterEngine.getInstance(application)
                 .createNewClusterFromWorkout(application, workoutId, customName, hasCounter, customWorkoutName)
 
-            reloadWorkoutData(workoutId)
-            loadWorkout(workoutId)
+            reloadWorkoutDataInternal(workoutId, notifyInitialLoaded = true)
         }
     }
 

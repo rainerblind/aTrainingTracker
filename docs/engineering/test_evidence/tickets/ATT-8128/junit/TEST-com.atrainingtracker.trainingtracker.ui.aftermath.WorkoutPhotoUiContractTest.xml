@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:53:03.309Z" hostname="rainer-HP-EliteBook-850-G5" time="3.237">
+  <properties/>
+  <testcase name="testPhotoLocationMarkersInWorkoutRepository" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="1.114"/>
+  <testcase name="testWorkoutPhotoEntryPropertiesAndAccessors" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.296"/>
+  <testcase name="testPhotoLocationMarkerExcludedWhenNullIslandCoordinates" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.292"/>
+  <testcase name="testWorkoutSummary_photoSectionDividerContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.293"/>
+  <testcase name="testWorkoutPhotoStrip_neutralStylingAndHeaderAddButtonContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.302"/>
+  <testcase name="testWorkoutPhotoPreviewBottomSheetComposableExists" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.312"/>
+  <testcase name="testWorkoutPhotoPreviewBottomSheet_stackedButtonsContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.308"/>
+  <testcase name="testWorkoutPhotoStripComposableExists" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.319"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

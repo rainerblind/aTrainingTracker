@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:44:52.319Z" hostname="rainer-HP-EliteBook-850-G5" time="4.219">
+  <properties/>
+  <testcase name="testFilterManager_rebindFilter_ingestsInitialValueStrictlyOnceInMovingAverage_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.335"/>
+  <testcase name="testEndToEndDeviceRenameSurvival_filterManagerViewModelAndSparklinesStayLive_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="3.53"/>
+  <testcase name="testProxySensor_addSensorListener_concurrentSwapDuringAttachReattachesCleanly_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.102"/>
+  <testcase name="testResolveSensor_whenDeviceFoundByIdButSensorMissing_doesNotFallbackToDeviceName_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.116"/>
+  <testcase name="testProxySensor_addSensorListener_deliversSingleInitialValueWithoutLeadingNull_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.136"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

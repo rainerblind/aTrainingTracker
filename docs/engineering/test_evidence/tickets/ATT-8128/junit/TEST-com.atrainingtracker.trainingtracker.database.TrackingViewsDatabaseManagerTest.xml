@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" tests="31" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:47:44.379Z" hostname="rainer-HP-EliteBook-850-G5" time="21.484">
+  <properties/>
+  <testcase name="testDeleteTabView_deletesSectionDividers" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.655"/>
+  <testcase name="testOnUpgrade_from13To14_createsSectionDividersTable" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.649"/>
+  <testcase name="testUpdateElevationProfileScope_updatesViewsTable" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.643"/>
+  <testcase name="testUpdateElevationProfileLookahead_updatesViewsTable" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.65"/>
+  <testcase name="testSwapSensorFields_sameId_isNoOp" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.657"/>
+  <testcase name="testIsBarSupported_sportDependentFeasibility" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.653"/>
+  <testcase name="testOnUpgrade_from11To12_addsColumnsAndExecutesRepairSql" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.649"/>
+  <testcase name="testOnUpgrade_from10To11_executesRepairSql" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.677"/>
+  <testcase name="testOnUpgrade_from16To17_addsColWeight" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.636"/>
+  <testcase name="testMoveTabView_viewNotFound_returnsMinusOne" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.637"/>
+  <testcase name="testUpdateShowNavigationHints_updatesViewsTable" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.642"/>
+  <testcase name="testOnCreate_seedsCanonicalDefaultTabConfigurationMatrix" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="1.482"/>
+  <testcase name="testAddDefaultTab_insertsViewSize" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.677"/>
+  <testcase name="testInsertSensorFieldAt_newRow_shiftsSectionDividersAndExecutesTransactionally" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.686"/>
+  <testcase name="testMoveSensorField_newRowRequested_createsRowAndNormalizes" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.716"/>
+  <testcase name="testSetSectionDivider_insertsWithOnConflictReplace" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.675"/>
+  <testcase name="testMoveSensorField_parksCompactsAndNormalizes" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.705"/>
+  <testcase name="testMoveTabView_swapsAdjacentTabsAndNormalizesLayoutNrAtomically" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.678"/>
+  <testcase name="testOnUpgrade_from12To13_addsElevationProfileColumns" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.671"/>
+  <testcase name="testUpdateShowLiveClimbs_updatesViewsTable" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.645"/>
+  <testcase name="testGetAllFilterData_handlesNullAndInvalidEnumsWithoutThrowing" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.693"/>
+  <testcase name="testDatabaseVersionIs22" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.669"/>
+  <testcase name="testCopyTabViewToActivityTypes_copiesViewsRowsAndDividersTransactionally" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.675"/>
+  <testcase name="testOnUpgrade_from15To16_addsShowValueAndShowBar" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.656"/>
+  <testcase name="testAddDefaultTab_backwardCompatibleOverload_delegatesWithClimbsAndHintsEnabled" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.708"/>
+  <testcase name="testCopyTabViewToActivityTypes_emptyTargetList_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.648"/>
+  <testcase name="testDeleteSectionDivider_deletesRow" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.651"/>
+  <testcase name="testInsertSensorFieldAt_parameterAndBoundaryValidation" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.651"/>
+  <testcase name="testSwapSensorFields_distinctIds_swapsCoordinatesAtomically" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.69"/>
+  <testcase name="testMoveTabView_atLeftBoundary_returnsZeroAndDoesNotModify" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.688"/>
+  <testcase name="testAddDefaultTab_propagatesAllConfigurableToggles" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManagerTest" time="0.67"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

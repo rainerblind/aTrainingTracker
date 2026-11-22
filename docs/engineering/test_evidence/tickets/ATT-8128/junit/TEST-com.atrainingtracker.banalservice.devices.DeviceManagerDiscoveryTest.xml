@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:38:22.084Z" hostname="rainer-HP-EliteBook-850-G5" time="12.061">
+  <properties/>
+  <testcase name="testBtDiscovery_newDevice_autoPairsAndNotifies" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="3.079"/>
+  <testcase name="testActiveWorkout_autoPairingImmunity_suppressesImmediatePairingChanged" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.099"/>
+  <testcase name="testAntDiscovery_newDevice_autoPairsAndNotifies" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.227"/>
+  <testcase name="testDbInsertionFailure_resilience_skipsNewlyFoundAndNotifications" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.154"/>
+  <testcase name="testManualUnpair_overridesAutoPairPostWorkoutSearch" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.502"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

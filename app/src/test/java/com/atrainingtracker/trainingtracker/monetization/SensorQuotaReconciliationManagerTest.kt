@@ -383,4 +383,52 @@ class SensorQuotaReconciliationManagerTest {
         // When only location sensor present, fallback to location sensor
         assertEquals(2L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused)))
     }
+
+    @Test
+    fun testParseLastSeenTimestamp_underNonUtcTimezoneRanksUtcIsoStrictlyAboveOlderLegacyLocal_TST_DAT_044_3() {
+        val originalLocale = java.util.Locale.getDefault()
+        val originalTz = java.util.TimeZone.getDefault()
+        try {
+            // Summer time in Europe/Berlin is UTC+2 (CEST)
+            java.util.Locale.setDefault(java.util.Locale.GERMANY)
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Berlin"))
+
+            val manager = SensorQuotaReconciliationManager(
+                context = mockContext,
+                devicesDBRepository = mockDeviceRepo,
+                proFeatureManager = mockProFeatureManager,
+                isTrackingProvider = { false }
+            )
+
+            // 2026-07-15T12:00:00Z = 14:00:00 CEST (older, written as legacy local DateFormat)
+            val olderMillis = java.time.Instant.parse("2026-07-15T12:00:00Z").toEpochMilli()
+            // 2026-07-15T12:30:00Z = 14:30:00 CEST (30 min newer, written as canonical UTC ISO-8601 'Z')
+            val newerMillis = java.time.Instant.parse("2026-07-15T12:30:00Z").toEpochMilli()
+
+            val legacyLocalOlder = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(olderMillis))
+            val utcIsoNewer = com.atrainingtracker.banalservice.database.LastActiveDateFormatter.formatEpochMillis(newerMillis)
+            assertEquals("2026-07-15T12:30:00Z", utcIsoNewer)
+
+            val parsedOlder = manager.parseLastSeenTimestamp(legacyLocalOlder)
+            val parsedNewer = manager.parseLastSeenTimestamp(utcIsoNewer)
+
+            assertEquals(olderMillis, parsedOlder)
+            assertEquals(newerMillis, parsedNewer)
+            assertTrue(
+                "UTC 'Z' timestamp (12:30Z = 14:30 CEST) must strictly outrank older legacy local timestamp (14:00 CEST)",
+                parsedNewer > parsedOlder
+            )
+
+            // End-to-end ranking verification: newer UTC sensor must be kept, older legacy sensor recommended for unpair
+            val pairedFused = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+            val olderLegacyHrm = createUiDevice(2L, DeviceType.HRM, isConnected = false, lastSeen = legacyLocalOlder)
+            val newerUtcPower = createUiDevice(3L, DeviceType.BIKE_POWER, isConnected = false, lastSeen = utcIsoNewer)
+
+            assertEquals(setOf(1L, 3L), manager.determineDefaultKeepDeviceIds(listOf(pairedFused, olderLegacyHrm, newerUtcPower)))
+            assertEquals(2L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused, olderLegacyHrm, newerUtcPower)))
+        } finally {
+            java.util.Locale.setDefault(originalLocale)
+            java.util.TimeZone.setDefault(originalTz)
+        }
+    }
 }

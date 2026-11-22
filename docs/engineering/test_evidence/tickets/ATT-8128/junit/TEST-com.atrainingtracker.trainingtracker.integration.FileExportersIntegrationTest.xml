@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:48:07.578Z" hostname="rainer-HP-EliteBook-850-G5" time="2.133">
+  <properties/>
+  <testcase name="testExportManager_exportStatusDatabase_lifecycleTransitions" classname="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" time="0.579"/>
+  <testcase name="testGpxAndTcxWriters_fromRealSqlite_produceValidXml" classname="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" time="0.501"/>
+  <testcase name="testFitFileWriter_fromRealSqlite_producesDecodableFitBinary" classname="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" time="1.052"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@2553193], context=[android.app.ContextImpl@7675540c], intentFilter=[android.content.IntentFilter@47c1e281]]]
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@2553193], context=[android.app.ContextImpl@7675540c], intentFilter=[android.content.IntentFilter@47c1e281]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

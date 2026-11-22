@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.35  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 132
+**Total Tests**: 133
 
 ---
 
@@ -2510,10 +2510,34 @@
 
 ---
 
+### TST-DAT-044: **SQLite Null-Safety, `LIMIT 1`/Single-PRAGMA Samples, Cursor-Safe/UTC Devices, `paired = 1` Filtering, Routes Hygiene & Locale-Independent Extrema Verification (`ATT-8128`)** [Verified]
+- **Requirement(s)**: `REQ-DAT-048` (`REQ-DAT-048.1`–`REQ-DAT-048.5`)
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `WorkoutSamplesDatabaseManager.java`, `DevicesDatabaseManager.java`, `LastActiveDateFormatter.kt`, `DeviceStatusRow.kt`, `DeviceSortOrder.kt`, `SensorQuotaReconciliationManager.kt`, `DeviceDataRepository.kt`, `RoutesDatabaseManager.kt`, `ExtremaData.kt`, `WorkoutDataMapper.kt`, `LiveWorkoutCardStateStore.kt`, `WorkoutRepository.kt`
+- **Jira**: `ATT-8128` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Implemented Unit Tests**:
+  - `WorkoutSummariesDatabaseManagerTest.kt`: `testNullableGetters_returnNullOnSqlNullAndPreserveNonNullValues_TST_DAT_044_1` (`8/8` PASS) + adjacent summaries suites (`14/14`)
+  - `WorkoutSamplesDatabaseManagerTest.kt`: `testCalcExtremaValue_startEndUseSingleColumnLimit1AndPaceAvgZeroGuards_TST_DAT_044_2`, `testPruneAndShiftSamples_readsTableSchemaViaSinglePragmaCall_TST_DAT_044_2` (`11/11` PASS) + `WorkoutSamplesDatabaseManagerEscapingTest` (`6/6`)
+  - `DevicesDatabaseManagerTest.kt` (`16/16` PASS), `DevicesDatabaseManagerLastActiveTest.kt` (`4/4` PASS), `DeviceSortOrderTest.kt` (`6/6` PASS), `SensorQuotaReconciliationManagerTest.kt`: `testParseLastSeenTimestamp_underNonUtcTimezoneRanksUtcIsoStrictlyAboveOlderLegacyLocal_TST_DAT_044_3` (`13/13` PASS), `DeviceDataRepositoryPairedRemoteTest.kt` (`1/1` PASS) + adjacent device/migration suites (`34/34` PASS)
+  - `RoutesDatabaseManagerTTLTest.kt`: single-query `duplicateRouteAsLocal` & `testOnUpgradeFromVersion4_callsOnCreateAndReturnsWithoutRedundantAlterTable_TST_DAT_044_4` (`6/6` PASS) + adjacent route suites (`16/16` PASS)
+  - `WorkoutDataMapperExtremaTest.kt` (`2/2` PASS) + adjacent mapper suites (`23/23` PASS); `LiveWorkoutCardStateStoreTest.kt`: `applyLiveSnapshot_matchesExistingRowsBySensorTypeAcrossLocaleSwitchAndSetsSensorTypeOnNewRows_TST_DAT_044_5` (`6/6` PASS); `WorkoutRepositoryExtremaAndClusterTest.kt` (`5/5` PASS, incl. guarded `finally` cleanup & `pendingNotifyInitialLoadedIds` coalescing) + `WorkoutRepositoryConcurrencyTest` (`6/6`), `ExportStatusTest` (`3/3`), `SaveClusteringTest` (`5/5`), `EditWorkoutViewModelTest` (`16/16`), `EditWorkoutClusteringTest` (`6/6`)
+  - Contract suites: `ArchitectureConformanceContractTest` (`11/11` PASS), `TryWithResourcesCursorAuditTest` (`5/5` PASS), `DetailedDesignParityContractTest` (`3/3` PASS), `DatabaseSchemaRegistryParityContractTest` (`2/2` PASS)
+- **Test Description**:
+  1. *Null-Safe Summary Getters (`TST-DAT-044.1`)*: Assert all 5 nullable getters in `WorkoutSummariesDatabaseManager` preserve SQL `NULL` as `null` (never `0`/`0.0`) and handle `baseFileName == null` without NPE.
+  2. *`LIMIT 1` Extrema & Single-PRAGMA Crop (`TST-DAT-044.2`)*: Assert `calcExtremaValue(START/END)` passes 1-column projection, `IS NOT NULL` selection, `_id ASC`/`DESC`, and `limit = "1"`, `PACE_spm`/`AVG SPEED_mps` guard division by zero, and `pruneAndShiftSamples` calls `SqliteSchemaUtils.getTableColumnNames` once.
+  3. *Devices Cursor Safety, `setInt` Allowlist, UTC `lastActive` & `paired = 1` (`TST-DAT-044.3`)*: Assert both cursors close on `getCalibrationFactor` empty/NULL fallback, `setInt` rejects unknown column with `IllegalArgumentException`, `LastActiveDateFormatter` round-trips UTC ISO-8601 across `de_DE -> en_US` and parses legacy `DateFormat` rows, and `getPairedRemoteDevices` filters `protocol=? AND paired=1` in SQL.
+  4. *Routes Upgrade & Duplication Hygiene (`TST-DAT-044.4`)*: Assert `onUpgrade(db, 4, 11)` stops immediately after `onCreate(db)` without `ALTER TABLE` statements and `duplicateRouteAsLocal` queries `TABLE_ROUTE_POINTS` and `TABLE_ROUTE_WAYPOINTS` once.
+  5. *Numeric `isMinRelevant`, `SensorType` Extrema Matching & Single Cluster Reload (`TST-DAT-044.5`)*: Assert `isMinRelevant` evaluates numeric `rawMinVal`/`speedMax` across `de_DE`/`en_US`, `updateExtremaValueInMemory` & `addOrUpdateWorkout` match by `SensorType` across runtime language change with lazy label fallback when `sensorType == null`, and `assignClusterToWorkout`/`unassignClusterFromWorkout` execute `getWorkoutCursor` once while guaranteeing `_initialWorkoutLoaded` notification even under concurrent reload coalescing.
+- **Verification Evidence**: Verified (`ATT-8128` Bounce 1/5 healed, Gate 3 `ATT-9646` PASSED; `215/215` Pass 1 across 41 suites + `163/163` Bounce 1/5 targeted tests PASS across 30 suites incl. `SensorQuotaReconciliationManagerTest` `13/13`, `LiveWorkoutCardStateStoreTest` `6/6`, `WorkoutRepositoryExtremaAndClusterTest` `5/5`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `Rule 8.5` inspected `docs/engineering/test_evidence/tickets/ATT-8128/screenshots/att8128_emulator_smoke.png`; refreshed SHA-256 machine evidence bundle at `docs/engineering/test_evidence/tickets/ATT-8128/manifest.json`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.38` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Stage 6 Bounce 1/5 heal: added non-UTC timezone ranking test in `SensorQuotaReconciliationManagerTest` (`13/13`), guarded `finally` cleanup test in `WorkoutRepositoryExtremaAndClusterTest` (`5/5`), and cross-locale `SensorType` test in `LiveWorkoutCardStateStoreTest` (`6/6`); `163/163` targeted tests PASS across 30 suites (`0` new warnings) + refreshed SHA-256 evidence bundle. |
+| `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Promoted `TST-DAT-044` to `[Verified]` (`215/215` PASS across 41 targeted unit & contract suites, `0` fail, `0` err, `0` skip, `0` new compiler warnings; `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `Rule 8.5` PNG bundled; SHA-256 evidence bundle). |
+| `1.0.36` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Added `[Planned]` `TST-DAT-044` (`TST-DAT-044.1`–`TST-DAT-044.5`, strictly symmetric `REQ-DAT-048`) covering SQLite null-safe summary getters, `LIMIT 1`/single-PRAGMA sample queries, cursor-safe `getCalibrationFactor` + fail-fast `setInt` + cross-locale UTC `LastActiveDateFormatter`, `paired = 1` SQL filtering, `RoutesDbHelper.onUpgrade` early return & single-read `duplicateRouteAsLocal`, numeric `isMinRelevant`, `SensorType`-keyed `ExtremaDataRow`, and single-reload cluster mutations. |
 | `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Stage 6 Bounce 1/5 heal: added mixed foreign+own, legacy signed-byte radar, and redefined `developerDataIndex` FIT tests (`FitWorkoutParserTest` `7/7`), >1 Hz sub-second GPX & `parseIsoToEpochMillis` tests (`GpxWorkoutParserTest` `6/6`, `WorkoutTimestampParserTest` `4/4`), `106/106` PASS across 14 suites, and `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke (`0` crashes, `Rule 8.5` PNG bundled). |
 | `1.0.34` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Promoted `TST-MIG-058` to `[Verified]` (`98/98` targeted unit & contract tests PASS across 13 suites incl. `FitWorkoutParserTest` `4/4`, `FitLosslessRoundTripTest` `6/6`, `FitFileWriterRadarTest` `2/2`, `HrvPostWorkoutRecomputerTest` `14/14`, `GpxWorkoutParserTest` `5/5`, `GPXFileWriterTest` `5/5`, `HealthConnectRecordMapperTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`; `0` new warnings; SHA-256 evidence bundle). |
 | `1.0.33` | 2026-11-22 | Lane 2 Author (`ATT-8127`, `--as agent1`) | `ATT-8127` | Added `[Planned]` `TST-MIG-058` (`TST-MIG-058.1`–`TST-MIG-058.5`, strictly symmetric `REQ-MIG-058`) covering FIT epoch lap matching & `APP_ID` scoping, `HrvPostWorkoutRecomputer` `java.time` UTC parsing, `GpxWorkoutParser` peak `maxSpeed`, `GPXFileWriter` XML escaping & zero Lap DB queries, and `Locale.GERMANY` numeric calories in `HealthConnectRecordMapper`. |

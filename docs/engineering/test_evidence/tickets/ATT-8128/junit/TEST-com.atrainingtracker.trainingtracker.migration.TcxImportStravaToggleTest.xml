@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.TcxImportStravaToggleTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:50:34.260Z" hostname="rainer-HP-EliteBook-850-G5" time="19.519">
+  <properties/>
+  <testcase name="testImportFromTcx_uploadToStravaFalseVsTrue_persistsFlagAndSchedulesExport_TST_MIG_025" classname="com.atrainingtracker.trainingtracker.migration.TcxImportStravaToggleTest" time="6.495"/>
+  <testcase name="testPreImportTuningBottomSheet_showsSwitchWhenStravaConnectedAndPersistsToggle_TST_MIG_025" classname="com.atrainingtracker.trainingtracker.migration.TcxImportStravaToggleTest" time="6.793"/>
+  <testcase name="testPreImportTuningBottomSheet_hidesSwitchWhenStravaDisconnected_TST_MIG_025" classname="com.atrainingtracker.trainingtracker.migration.TcxImportStravaToggleTest" time="0.555"/>
+  <testcase name="testBulkRecoverFromDropbox_forwardsUploadToStravaFlag_TST_MIG_025" classname="com.atrainingtracker.trainingtracker.migration.TcxImportStravaToggleTest" time="5.674"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutClimbIngestionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:55:13.997Z" hostname="rainer-HP-EliteBook-850-G5" time="7.032">
+  <properties/>
+  <testcase name="testWorkoutClimbIngestion_rejectsBarometerThermalDriftViaDemGroundTruth" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutClimbIngestionTest" time="2.109"/>
+  <testcase name="testExtractAndPersistClimbsFromWorkout_detectsAndInsertsClimbs" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutClimbIngestionTest" time="1.616"/>
+  <testcase name="testExtractAndPersistClimbsFromWorkout_flatTrack_doesNothing" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutClimbIngestionTest" time="1.565"/>
+  <testcase name="testExtractAndPersistClimbsFromWorkout_tooFewPoints_doesNothing" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutClimbIngestionTest" time="1.742"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

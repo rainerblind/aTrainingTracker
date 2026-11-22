@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ClockDeviceResilienceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T19:38:13.653Z" hostname="rainer-HP-EliteBook-850-G5" time="8.403">
+  <properties/>
+  <testcase name="testClockTimeTask_formatsTimeOfDayWithoutCalendarAllocation" classname="com.atrainingtracker.banalservice.devices.ClockDeviceResilienceTest" time="1.824"/>
+  <testcase name="testClockDevice_reusableDateFieldInspectionAndZeroAllocationContract" classname="com.atrainingtracker.banalservice.devices.ClockDeviceResilienceTest" time="1.563"/>
+  <testcase name="testClockDeviceMonotonicTimeAdvancement" classname="com.atrainingtracker.banalservice.devices.ClockDeviceResilienceTest" time="1.754"/>
+  <testcase name="testClockDeviceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.devices.ClockDeviceResilienceTest" time="1.615"/>
+  <testcase name="testClockTimeTaskCatchesTransientExceptionAndContinuesIncrementingSensors" classname="com.atrainingtracker.banalservice.devices.ClockDeviceResilienceTest" time="1.647"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

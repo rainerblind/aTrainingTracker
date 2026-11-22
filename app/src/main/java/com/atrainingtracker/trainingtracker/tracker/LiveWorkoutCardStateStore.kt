@@ -509,7 +509,8 @@ fun applyLiveSnapshot(
         if (validAvgHr != null) {
             upsertLiveExtremaAvgRow(
                 rows = rows,
-                matches = { it.sensorLabel == extremaLabels.hrLabel || it.iconResId == R.drawable.ic_heart_rate },
+                sensorType = SensorType.HR,
+                fallbackMatches = { it.sensorLabel == extremaLabels.hrLabel || it.iconResId == R.drawable.ic_heart_rate },
                 sensorLabel = extremaLabels.hrLabel,
                 unitLabel = extremaLabels.hrUnit,
                 formattedAvg = SensorType.HR.myFormatter.format(validAvgHr),
@@ -520,7 +521,8 @@ fun applyLiveSnapshot(
         if (validAvgSpeed != null) {
             upsertLiveExtremaAvgRow(
                 rows = rows,
-                matches = { it.sensorLabel == extremaLabels.speedLabel },
+                sensorType = SensorType.SPEED_mps,
+                fallbackMatches = { it.sensorLabel == extremaLabels.speedLabel },
                 sensorLabel = extremaLabels.speedLabel,
                 unitLabel = extremaLabels.speedUnit,
                 formattedAvg = formatters.speed.format(validAvgSpeed),
@@ -530,7 +532,8 @@ fun applyLiveSnapshot(
             if (workoutData.bSportType == BSportType.RUN) {
                 upsertLiveExtremaAvgRow(
                     rows = rows,
-                    matches = { it.sensorLabel == extremaLabels.paceLabel },
+                    sensorType = SensorType.PACE_spm,
+                    fallbackMatches = { it.sensorLabel == extremaLabels.paceLabel },
                     sensorLabel = extremaLabels.paceLabel,
                     unitLabel = extremaLabels.paceUnit,
                     formattedAvg = formatters.pace.format(1.0 / validAvgSpeed),
@@ -542,7 +545,8 @@ fun applyLiveSnapshot(
         if (validAvgPower != null) {
             upsertLiveExtremaAvgRow(
                 rows = rows,
-                matches = { it.sensorLabel == extremaLabels.powerLabel || it.iconResId == R.drawable.ic_power },
+                sensorType = SensorType.POWER,
+                fallbackMatches = { it.sensorLabel == extremaLabels.powerLabel || it.iconResId == R.drawable.ic_power },
                 sensorLabel = extremaLabels.powerLabel,
                 unitLabel = extremaLabels.powerUnit,
                 formattedAvg = SensorType.POWER.myFormatter.format(validAvgPower),
@@ -553,7 +557,8 @@ fun applyLiveSnapshot(
         if (validAvgCadence != null) {
             upsertLiveExtremaAvgRow(
                 rows = rows,
-                matches = { it.sensorLabel == extremaLabels.cadenceLabel },
+                sensorType = SensorType.CADENCE,
+                fallbackMatches = { it.sensorLabel == extremaLabels.cadenceLabel },
                 sensorLabel = extremaLabels.cadenceLabel,
                 unitLabel = extremaLabels.cadenceUnit,
                 formattedAvg = SensorType.CADENCE.myFormatter.format(validAvgCadence),
@@ -578,14 +583,17 @@ fun applyLiveSnapshot(
 
 private fun upsertLiveExtremaAvgRow(
     rows: MutableList<ExtremaDataRow>,
-    matches: (ExtremaDataRow) -> Boolean,
+    sensorType: SensorType,
+    fallbackMatches: (ExtremaDataRow) -> Boolean,
     sensorLabel: String,
     unitLabel: String,
     formattedAvg: String,
     iconResId: Int,
     boldMax: Boolean
 ) {
-    val existingIdx = rows.indexOfFirst(matches)
+    val existingIdx = rows.indexOfFirst { row ->
+        row.sensorType == sensorType || (row.sensorType == null && fallbackMatches(row))
+    }
     if (existingIdx >= 0) {
         rows[existingIdx] = rows[existingIdx].copy(avgValue = formattedAvg)
     } else {
@@ -600,7 +608,8 @@ private fun upsertLiveExtremaAvgRow(
                 isMinRelevant = false,
                 boldMin = false,
                 boldAvg = true,
-                boldMax = boldMax
+                boldMax = boldMax,
+                sensorType = sensorType
             )
         )
     }

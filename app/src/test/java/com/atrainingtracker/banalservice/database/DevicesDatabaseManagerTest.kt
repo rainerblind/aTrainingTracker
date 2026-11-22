@@ -487,6 +487,112 @@ class DevicesDatabaseManagerTest {
         assertTrue("WhereArgs must contain 'Air Pressure'", whereArgsSlot.captured.contains("Air Pressure"))
     }
 
+    @Test
+    fun testGetCalibrationFactor_closesBothCursorsOnEmptyAndNullFallback_TST_DAT_044_3() {
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override val database: SQLiteDatabase get() = mockDb
+        }
+
+        // Case 1: Primary cursor has SQL NULL calibration factor -> falls back to DEVICE_TYPE and closes BOTH cursors
+        val nullCalibCursor = mockk<android.database.Cursor>(relaxed = true)
+        every { nullCalibCursor.moveToFirst() } returns true
+        every { nullCalibCursor.isNull(0) } returns true
+
+        val fallbackTypeCursor = mockk<android.database.Cursor>(relaxed = true)
+        every { fallbackTypeCursor.moveToFirst() } returns true
+        every { fallbackTypeCursor.isNull(0) } returns false
+        every { fallbackTypeCursor.getString(0) } returns com.atrainingtracker.banalservice.devices.DeviceType.BIKE_SPEED.name
+
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                match { it.contentEquals(arrayOf(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR)) },
+                any(), any(), isNull(), isNull(), isNull()
+            )
+        } returns nullCalibCursor
+
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                match { it.contentEquals(arrayOf(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)) },
+                any(), any(), isNull(), isNull(), isNull()
+            )
+        } returns fallbackTypeCursor
+
+        val factor = manager.getCalibrationFactor(10L)
+
+        assertEquals(
+            com.atrainingtracker.banalservice.devices.DeviceType.BIKE_SPEED.defaultCalibrationFactor,
+            factor,
+            0.0001
+        )
+        verify(exactly = 1) { nullCalibCursor.close() }
+        verify(exactly = 1) { fallbackTypeCursor.close() }
+
+        // Case 2: Primary cursor empty -> falls back and closes BOTH cursors
+        val emptyPrimaryCursor = mockk<android.database.Cursor>(relaxed = true)
+        every { emptyPrimaryCursor.moveToFirst() } returns false
+        val emptyFallbackCursor = mockk<android.database.Cursor>(relaxed = true)
+        every { emptyFallbackCursor.moveToFirst() } returns false
+
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                match { it.contentEquals(arrayOf(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR)) },
+                any(), any(), isNull(), isNull(), isNull()
+            )
+        } returns emptyPrimaryCursor
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                match { it.contentEquals(arrayOf(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)) },
+                any(), any(), isNull(), isNull(), isNull()
+            )
+        } returns emptyFallbackCursor
+
+        assertEquals(1.0, manager.getCalibrationFactor(99L), 0.0001)
+        verify(exactly = 1) { emptyPrimaryCursor.close() }
+        verify(exactly = 1) { emptyFallbackCursor.close() }
+    }
+
+    @Test
+    fun testSetInt_rejectsUnsupportedColumnAndUpdatesAllowedColumn_TST_DAT_044_3() {
+        every { mockDb.update(any(), any(), any(), any()) } returns 1
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override val database: SQLiteDatabase get() = mockDb
+        }
+
+        val setIntMethod = DevicesDatabaseManager::class.java.getDeclaredMethod(
+            "setInt",
+            Long::class.javaPrimitiveType,
+            String::class.java,
+            Int::class.javaPrimitiveType
+        )
+        setIntMethod.isAccessible = true
+
+        // Allowed column succeeds
+        setIntMethod.invoke(manager, 7L, DevicesDatabaseManager.DevicesDbHelper.LAST_BATTERY_PERCENTAGE, 85)
+        verify(exactly = 1) {
+            mockDb.update(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                any(),
+                "${DevicesDatabaseManager.DevicesDbHelper.C_ID}=?",
+                arrayOf("7")
+            )
+        }
+
+        // Unsupported column fails fast with IllegalArgumentException (wrapped in InvocationTargetException via reflection)
+        try {
+            setIntMethod.invoke(manager, 7L, "unsupported_col", 1)
+            org.junit.Assert.fail("Expected IllegalArgumentException for unsupported setInt column")
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            assertTrue(
+                "Cause must be IllegalArgumentException, got ${e.targetException}",
+                e.targetException is IllegalArgumentException
+            )
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun <T> uncheckedNull(): T = null as T
 }
