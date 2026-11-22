@@ -1,0 +1,63 @@
+{
+  "android_test_summary": {
+    "details": "95 Android unit tests passed (11 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 95
+  },
+  "checks": [
+    {
+      "details": "Android: 95 Android unit tests passed (11 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (8607 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "b7c909431ed908c00367775a0bc93f10f4586c49",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutFieldsLayoutTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutLayoutContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutPolarRetrySyncUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-22T00:10:30.708551+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9174_edit_workout_polar_retry_banner_light_dark.png",
+    "screenshots/ATT-9174_emulator_edit_workout_banner.png",
+    "screenshots/ATT-9174_emulator_edit_workout_after_dismiss.png"
+  ],
+  "ticket_key": "ATT-9174",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

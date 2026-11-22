@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.38  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 114
+**Total Tests**: 115
 
 ---
 
@@ -1702,6 +1702,25 @@
 
 ---
 
+### TST-SET-129: **`EditWorkoutScreen` Polar Pending Retry Sync Banner, Dismiss & Refresh Verification Suite** (`ATT-9174`) [Verified]
+- **Requirement(s)**: `REQ-SET-127` (`REQ-SET-127.1`–`REQ-SET-127.3`)
+- **Component**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `PolarH10RetrySyncBanner.kt`, `EditWorkoutPolarRetrySyncUiTest.kt`, `EditWorkoutViewModelTest.kt`
+- **Jira**: `ATT-9174` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration, On-Device Manual
+- **Test Description**:
+  1. *Behavioral Compose UI Tests (`TST-SET-129.1`, `EditWorkoutPolarRetrySyncUiTest#editWorkout_whenPolarSyncPendingFalse_hidesBanner`, `EditWorkoutPolarRetrySyncUiTest#editWorkout_whenPolarSyncPendingTrue_rendersVerityBannerTriggersCoordinatorAndRefreshesOnCompletion`, `EditWorkoutPolarRetrySyncUiTest#editWorkout_whenStopTimeFastFailMarksPolarPendingAfterOpen_reactivelyMountsBanner`, `EditWorkoutPolarRetrySyncUiTest#editWorkout_dismissPolarBanner_hidesBannerClearsCoordinatorAndPersistsDismiss`, `EditWorkoutPolarRetrySyncUiTest#editWorkout_unpairedPolarSensor_showsUnpairedHintDisablesSyncNowAndKeepsDismissEnabled`, `EditWorkoutPolarRetrySyncUiTest#editWorkout_captureLightDarkPolarRetryBannerPng_rule85`)*:
+     • Verify banner is hidden when `polarSyncPending == false`, renders flush inside `EditWorkoutScreen` when `polarSyncPending == true`, and reactively mounts when post-processing fast-fail flips `polarSyncPending` to `true` after `EditWorkoutScreen` opens.
+     • Verify tapping **"Sync Now"** launches `PolarRetrySyncCoordinator`, disables controls while syncing, triggers `repository.refreshWorkout(workoutId)` on completion, hides the banner when `polarSyncPending` becomes `false`, and preserves unsaved user edits.
+     • Verify tapping **"Dismiss"** hides the banner immediately, persists `repository.dismissPolarSyncPending(workoutId)`, and ignores stale `allWorkouts` snapshots.
+     • Verify unpaired Polar sensor state renders `ATT-9509` unpaired hint, disables **"Sync Now"**, and keeps **"Dismiss"** enabled.
+  2. *`EditWorkoutViewModel` Dismiss & Completion Refresh Unit Tests (`TST-SET-129.2`, `TST-SET-129.3`, `EditWorkoutViewModelTest#testDismissPolarSyncPending_clearsStatePersistsAndSurvivesStaleRefresh_tstSet129_2`, `EditWorkoutViewModelTest#testPolarRetrySyncCompletion_refreshesMatchingWorkoutAndPreservesUserEdits_tstSet129_3`)*:
+     • Verify `dismissPolarSyncPending()` updates `_workoutData`, delegates to `WorkoutRepository`, and prevents stale `allWorkouts` refresh resurrection.
+     • Verify `PolarRetrySyncCoordinator.completedWorkoutEvents` refreshes only matching `workoutId`, updates summary stats, hides the banner, and preserves all user edits.
+  3. *Visual Screenshot & Live `emulator-5554` Verification (`TST-SET-129.4`, `Rule 8.5` & `Rule 9.3`)*:
+     • Capture Light/Dark Compose PNG (`ATT-9174_edit_workout_polar_retry_banner_light_dark.png`) and live `emulator-5554` screencaps before and after Dismiss (`ATT-9174_emulator_edit_workout_banner.png`, `ATT-9174_emulator_edit_workout_after_dismiss.png`), inspect all via `read_file`, verify DB persistence (`polarSyncPending = 0`) and clean `logcat`.
+- **Verification Evidence**: `65/65 PASS` (`0` fail, `0` err, `0` skip) across 10 Tier-1 suites (`EditWorkoutPolarRetrySyncUiTest` `6/6`, `EditWorkoutViewModelTest` `16/16`, `PolarH10RetrySyncBannerTest` `9/9`, `PolarRetrySyncCoordinatorTest` `3/3`, `EditWorkoutLayoutContractTest` `1/1`, `EditWorkoutClassificationLayoutContractTest` `3/3`, `EditWorkoutFieldsLayoutTest` `3/3`, `ArchitectureConformanceContractTest` `11/11`, `UiReflectionOnlyTestAuditContractTest` `4/4`, `RepositoryUiCleanlinessContractTest` `9/9`); Light/Dark Compose PNG and live `emulator-5554` before/after Dismiss screenshots verified via `read_file`; evidence bundle under `docs/engineering/test_evidence/tickets/ATT-9174/` and deliverable `docs/engineering/tickets/ATT-9174.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1744,3 +1763,4 @@
 | `1.0.36` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `TST-SET-128` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9573` @ `36870006`, `Rule 7.5`, `0` `app/` drift): `123/123 PASS` across 11 Tier-1 suites (`17/17` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
 | `1.0.37` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Stage 6 Bounce 1/3 heal: added `+7` regression tests (`24/24` verbatim new methods, `130/130 PASS` across 11 Tier-1 suites) covering `BTLEHeartRateDevice` `0x10` RR gate on lost contact/zero HR, `PolarOnlineStreamingBridge` Verity PPI TOCTOU + `processPpiData` workout drop + `forceStopFirmwarePpi` on workout connect & recovery + `resumeAfterOfflineSync`/`evaluateHrStaleness` re-arming, `OneShotTimer` superseding guard, and drift-free `nextCheckDelayMs` + optical reset tier re-sync; set `[Implemented]` pending Gate 4 / Stage 5 Bounce 1 re-verification. |
 | `1.0.38` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `TST-SET-128` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9575` @ `1099f4a9`, `Rule 7.5`, `0` `app/` drift): `130/130 PASS` across 11 Tier-1 suites (`24/24` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
+| `1.0.39` | 2026-11-22 | Lane 3 Author (`ATT-9174`, `--as agent1`) | `ATT-9174` | Added and verified `TST-SET-129` (`EditWorkoutPolarRetrySyncUiTest` `6/6` + `EditWorkoutViewModelTest` `+2` new methods; `65/65 PASS` across 10 Tier-1 suites, Light/Dark Compose PNG + live `emulator-5554` before/after Dismiss verified via `read_file`). |

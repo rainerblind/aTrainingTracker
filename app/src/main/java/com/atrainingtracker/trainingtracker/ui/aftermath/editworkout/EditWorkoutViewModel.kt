@@ -26,6 +26,7 @@ import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRetrySyncCoordinator
 import com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
@@ -107,17 +108,20 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         internal set
 
     private var userClearedRecordingErrors: Boolean = false
+    private var userDismissedPolarSyncPending: Boolean = false
 
     companion object {
         /**
          * Merges asynchronously refreshed telemetry/derived fields from [fresh] into [current]
          * while strictly preserving all 19 user-editable metadata fields and any explicit warning
-         * clearance performed in the editor (`REQ-TRK-091.2`, `ATT-9154`).
+         * clearance or Polar retry banner dismissal performed in the editor
+         * (`REQ-TRK-091.2`, `ATT-9154`, `REQ-SET-127`, `ATT-9174`).
          */
         internal fun mergeTelemetryPreservingUserEdits(
             current: WorkoutData,
             fresh: WorkoutData,
-            preserveClearedRecordingErrors: Boolean = false
+            preserveClearedRecordingErrors: Boolean = false,
+            preserveDismissedPolarSyncPending: Boolean = false
         ): WorkoutData = fresh.copy(
             workoutName = current.workoutName,
             sportId = current.sportId,
@@ -138,7 +142,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             race = current.race,
             uploadToStrava = current.uploadToStrava,
             syncToHealthConnect = current.syncToHealthConnect,
-            recordingErrors = if (preserveClearedRecordingErrors) null else fresh.recordingErrors
+            recordingErrors = if (preserveClearedRecordingErrors) null else fresh.recordingErrors,
+            polarSyncPending = if (preserveDismissedPolarSyncPending) false else fresh.polarSyncPending
         )
     }
 
@@ -156,6 +161,15 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 .collect { data ->
                     fetchClusterSuggestions(data)
                 }
+        }
+
+        // Refresh workout summary/telemetry state when deferred Polar retry sync completes (REQ-SET-127.3, ATT-9174)
+        viewModelScope.launch {
+            PolarRetrySyncCoordinator.completedWorkoutEvents.collect { completedWorkoutId ->
+                if (completedWorkoutId == workoutId) {
+                    repository.refreshWorkout(workoutId)
+                }
+            }
         }
     }
 
@@ -236,7 +250,12 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 .collect { fresh ->
                     _workoutData.update { current ->
                         if (current != null) {
-                            mergeTelemetryPreservingUserEdits(current, fresh, userClearedRecordingErrors)
+                            mergeTelemetryPreservingUserEdits(
+                                current = current,
+                                fresh = fresh,
+                                preserveClearedRecordingErrors = userClearedRecordingErrors,
+                                preserveDismissedPolarSyncPending = userDismissedPolarSyncPending
+                            )
                         } else {
                             null
                         }
@@ -482,6 +501,17 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             repository.clearRecordingErrors(workoutId)
             _workoutData.update { it?.copy(recordingErrors = null) }
         }
+    }
+
+    /**
+     * Dismisses the pending Polar H10 / Polar Verity Sense retry sync banner for this workout,
+     * clearing editor state immediately and persisting `polarSyncPending = 0` via [WorkoutRepository]
+     * (`REQ-SET-127.2`, `ATT-9174`).
+     */
+    fun dismissPolarSyncPending() {
+        userDismissedPolarSyncPending = true
+        _workoutData.update { it?.copy(polarSyncPending = false) }
+        repository.dismissPolarSyncPending(workoutId)
     }
 
 

@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -101,7 +102,8 @@ fun PolarPendingRetrySyncSection(
     modifier: Modifier = Modifier,
     polarDeviceId: String? = null,
     isSensorPairedOverride: Boolean? = null,
-    checkSensorPaired: (suspend (String?, Boolean) -> Boolean)? = null
+    checkSensorPaired: (suspend (String?, Boolean) -> Boolean)? = null,
+    outerPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 ) {
     val context = LocalContext.current
     val isVeritySense = PolarVeritySenseOfflineController.isVerityPendingSync(polarExerciseId)
@@ -141,7 +143,8 @@ fun PolarPendingRetrySyncSection(
         errorMessage = syncState.errorMessage,
         isVeritySense = isVeritySense,
         isSwimBusy = isSwimBusy,
-        isSensorPaired = isSensorPaired
+        isSensorPaired = isSensorPaired,
+        outerPadding = outerPadding
     )
 }
 
@@ -203,7 +206,8 @@ fun PolarH10RetrySyncBanner(
     errorMessage: String? = null,
     isVeritySense: Boolean = false,
     isSwimBusy: Boolean = false,
-    isSensorPaired: Boolean = true
+    isSensorPaired: Boolean = true,
+    outerPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 ) {
     val titleRes = when {
         isSwimBusy -> R.string.polar_verity_swim_busy_title
@@ -224,7 +228,7 @@ fun PolarH10RetrySyncBanner(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(outerPadding),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer

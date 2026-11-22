@@ -1,0 +1,24 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "b7c909431ed908c00367775a0bc93f10f4586c49",
+  "files": {
+    "evidence_summary.json": "d20c1851c7f6aabc998c684a35d1857c52ca59fba6b02c900c7eea66161524a9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "ac8a839098538832cb75dcf6e0ae03f115a6b297decd5f23c885ba6602564aec",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest.xml": "b9feff2afcab557ea96eecdd242b4610fe25839fb2e0b1ba6741c169ad2de364",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml": "342fadd408d5a5738b599ad9be01396cec850366f93c60a1923a859c0514105a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.PolarH10RetrySyncBannerTest.xml": "ef4147f26065f5e72f024606cf3d532851d780c80fd49c051c41246e7f189637",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest.xml": "b0d71d57c13b86fc7952f6c0eec6e153034e29e09c6da580ea5acfebad00c434",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutEquipmentTest.xml": "7b723e0fd8dee4c61227b3ed337cc3dce10a03dbf65f5c34a049a990d0eb80aa",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutFieldsLayoutTest.xml": "950f1f5fbaae286bf977076b01804965c11b0ad510a799a8f41336ab79f75fc2",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutLayoutContractTest.xml": "ce2f7b01468787746c3ec38353ce79615bb3fc321f7c8ea7a7ed87cbe088d6de",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutPolarRetrySyncUiTest.xml": "b1490f37198c243cc83052055773da579f44576a07ccd949f2b27c94537abf54",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml": "40f1402cae2439083557724ccc3ad61a6f367d5eb04c22c9740811013ec124f9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest.xml": "f964cb1d915394c57849a5b54253d2654d7dd381f86400e3f8a49fbef3447eac",
+    "screenshots/ATT-9174_edit_workout_polar_retry_banner_light_dark.png": "e09bb8af02e042327de417948144a967a81dc1d9993052be88f56232b159c9dc",
+    "screenshots/ATT-9174_emulator_edit_workout_after_dismiss.png": "00c9feae1e5970cee08e4385dbd197714abc289afec3d9843495c2c23c6bdd53",
+    "screenshots/ATT-9174_emulator_edit_workout_banner.png": "1ace838928aae65450cc90aa4900c12881569deab4fb07a4e0b05602615d7242"
+  },
+  "run_started_utc": "2026-11-22T00:10:30.708551+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9174"
+}
