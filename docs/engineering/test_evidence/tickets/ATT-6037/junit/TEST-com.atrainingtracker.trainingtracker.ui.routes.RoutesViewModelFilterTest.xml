@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:30:19.945Z" hostname="rainer-HP-EliteBook-850-G5" time="5.742">
+  <properties/>
+  <testcase name="testViewModel_FilterCriteriaLifecycleMethods" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" time="0.978"/>
+  <testcase name="testRoutesFlow_FilteredBySelection" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" time="0.998"/>
+  <testcase name="testRoutesFlow_FilteredBySearchQuery" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" time="0.96"/>
+  <testcase name="testRoutesFlow_FilteredByDistanceAndElevation" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" time="0.944"/>
+  <testcase name="testRoutesFlow_UnfilteredCombinesWithSortOrder" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" time="0.924"/>
+  <testcase name="testRoutesFlow_FilteredBySource" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest" time="0.938"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

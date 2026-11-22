@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:30:01.050Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testElevationProfile_declaresShowScrubbingBadgeParameterWithDefaultTrue" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_unifiesToolbarAndLowerColumnInSharedBox" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_suppressesInternalBadgeInElevationProfile" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <testcase name="testElevationProfile_internalBadgeGatedByShowScrubbingBadge" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_memoizesHeartRateAndPowerThresholds" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_hoistsScrubbingPointAndAltitudeWithTracklessSupport" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_anchorsScrubbingTelemetryBadgeAtTopEnd" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutScrubbingBadgeContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

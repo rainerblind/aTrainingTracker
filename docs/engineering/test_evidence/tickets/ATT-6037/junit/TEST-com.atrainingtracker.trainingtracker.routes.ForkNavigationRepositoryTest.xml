@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:09.878Z" hostname="rainer-HP-EliteBook-850-G5" time="0.113">
+  <properties/>
+  <testcase name="onLocationChanged_twoSelectedRoutesWithUnselectedCompetitor_onlyConsidersSelectedRoutes" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.025"/>
+  <testcase name="onLocationChanged_quiescentThrottling_skipsEvaluationWhenUnderTimeAndDistanceThresholds" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.005"/>
+  <testcase name="onLocationChanged_activeAlert_evaluatesEveryFixWithoutThrottling" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.008"/>
+  <testcase name="onLocationChanged_deviatesFromBoth_dismissesPrompt" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.004"/>
+  <testcase name="onLocationChanged_pastForkOnBranchA_whenAutoFollowDisabled_suppressesAutoBindAndDismissesAlert" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.016"/>
+  <testcase name="dismissPrompt_clearsAlertWithoutBinding" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.004"/>
+  <testcase name="selectRouteManually_bindsRouteImmediatelyAndClearsState" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.015"/>
+  <testcase name="onLocationChanged_fewerThanTwoSelectedRoutes_skipsEvaluationAndClearsAlert" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.005"/>
+  <testcase name="onLocationChanged_approachingFork_triggersAlertState" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.004"/>
+  <testcase name="onLocationChanged_pastForkOnBranchA_autoBindsRouteA" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.013"/>
+  <testcase name="selectRouteManually_whenAutoFollowDisabled_stillBindsRouteImmediately" classname="com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

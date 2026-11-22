@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridMapDecouplingComposeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:28.776Z" hostname="rainer-HP-EliteBook-850-G5" time="1.711">
+  <properties/>
+  <testcase name="testSensorGridScreen_mapStateFlowAndLocationTicksDoNotRecomposeParentHost_tstUi2793_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridMapDecouplingComposeTest" time="1.304"/>
+  <testcase name="testSensorGridScreen_elevationProfileConsumesActiveNavigatedRouteFromMapStateFlow_tstUi2793_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridMapDecouplingComposeTest" time="0.407"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

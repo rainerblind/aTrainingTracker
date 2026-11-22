@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSecurityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:51.994Z" hostname="rainer-HP-EliteBook-850-G5" time="0.804">
+  <properties/>
+  <testcase name="testAuthorizationUrl_scopedByApplicationId" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSecurityTest" time="0.093"/>
+  <testcase name="testManifest_stravaOAuthCallbackActivity_declaresApplicationIdSchemeScoping" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSecurityTest" time="0.135"/>
+  <testcase name="testCallbackActivity_legacyUnscopedUri_ignoredWithoutConsumingState" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSecurityTest" time="0.15"/>
+  <testcase name="testCallbackActivity_matchingVariantScheme_consumesStateAndProcessesCallback" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSecurityTest" time="0.214"/>
+  <testcase name="testCallbackActivity_mismatchedVariantScheme_ignoredWithoutConsumingState" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSecurityTest" time="0.211"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -142,8 +142,9 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayConfigSection
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneDisplayOptionsDraft
 import com.atrainingtracker.trainingtracker.ui.settings.defaultZoneProfileTarget
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
-import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.routes.ForkDecisionState
@@ -215,8 +216,6 @@ interface TabToggleActions {
     }
 }
 
-private class SegmentIndexHolder(var index: Int? = null)
-
 /**
  * A generic screen that displays a grid of sensor fields for either tracking or configuration.
  * It adapts its UI and behavior based on the provided [screenMode].
@@ -235,7 +234,8 @@ fun SensorGridScreen(
     fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     tabToggleActions: TabToggleActions = TabToggleActions.Empty,
     isTabActive: Boolean = true,
-    activityType: ActivityType = ActivityType.getDefaultActivityType()
+    activityType: ActivityType = ActivityType.getDefaultActivityType(),
+    mapStateFlow: StateFlow<TrackingMapState>? = null
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
@@ -328,7 +328,6 @@ fun SensorGridScreen(
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
-    val currentLocation by currentLocationFlow.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     // Control the sheet state (REQ-UI-327, REQ-UI-343)
@@ -367,16 +366,17 @@ fun SensorGridScreen(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val isLandscapeWithMap = isLandscape && state.mapState.showMap && screenMode != ScreenMode.CONFIGURATION
+    val showMap = state.showMap || (mapStateFlow == null && state.mapState.showMap)
+    val isLandscapeWithMap = isLandscape && showMap && screenMode != ScreenMode.CONFIGURATION
 
-    val packedRows = remember(state.fields, tuningConfig, screenMode, isLandscape, state.mapState.showMap) {
-        if (isLandscape && !state.mapState.showMap && screenMode != ScreenMode.CONFIGURATION) {
+    val packedRows = remember(state.fields, tuningConfig, screenMode, isLandscape, showMap) {
+        if (isLandscape && !showMap && screenMode != ScreenMode.CONFIGURATION) {
             packVisibleRowsForLandscape(
                 fields = state.fields,
                 tuningConfig = tuningConfig,
                 screenMode = screenMode,
                 isLandscape = isLandscape,
-                showMap = state.mapState.showMap
+                showMap = showMap
             )
         } else {
             packVisibleRowsForTuning(state.fields, tuningConfig, screenMode)
@@ -384,32 +384,6 @@ fun SensorGridScreen(
     }
     val trackingDividerMap = remember(state.sectionDividers) {
         state.sectionDividers.associateBy { it.rowNr }
-    }
-
-    val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
-    val segmentIndexHolder = remember(activeNavigatedRoute?.id) { SegmentIndexHolder() }
-    val resolvedProfile = remember(
-        state.showElevationProfile,
-        activeNavigatedRoute,
-        if (state.showElevationProfile) state.pathPoints else null,
-        if (state.showElevationProfile) currentLocation else null,
-        state.elevationProfileScope,
-        state.elevationProfileLookahead
-    ) {
-        if (!state.showElevationProfile) {
-            ResolvedElevationProfileData(emptyList(), emptyList(), null, false, null)
-        } else {
-            val res = TrackingElevationProfileResolver.resolve(
-                activeNavigatedRoute = activeNavigatedRoute,
-                recordedPathPoints = state.pathPoints,
-                currentLocation = currentLocation,
-                scope = state.elevationProfileScope,
-                lookaheadDistanceMeters = state.elevationProfileLookahead,
-                lastSegmentIndex = segmentIndexHolder.index
-            )
-            segmentIndexHolder.index = res.segmentIndex
-            res
-        }
     }
 
     val sheetContentLambda: @Composable ColumnScope.() -> Unit = {
@@ -495,28 +469,21 @@ fun SensorGridScreen(
                                         .fillMaxWidth()
                                         .weight(1f, fill = true)
                                 ) {
-                                    TrackingMapContainer(
-                                        mapState = state.mapState,
-                                        currentLocationFlow = currentLocationFlow,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isTabActive = isTabActive
-                                    )
+                                    TrackingMapSlot(mapStateFlow, state.mapState, currentLocationFlow, Modifier.fillMaxSize(), isTabActive)
                                 }
 
                                 if (state.showElevationProfile) {
-                                    Surface(
+                                    TrackingElevationProfileSection(
+                                        pathPoints = state.pathPoints,
+                                        scope = state.elevationProfileScope,
+                                        lookaheadMeters = state.elevationProfileLookahead,
+                                        mapStateFlow = mapStateFlow,
+                                        fallbackMapRoutes = state.mapRoutes,
+                                        currentLocationFlow = currentLocationFlow,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(top = 8.dp)
-                                    ) {
-                                        ElevationProfile(
-                                            pathPoints = resolvedProfile.pathPoints,
-                                            currentDistance = resolvedProfile.markerDistance,
-                                            climbs = resolvedProfile.climbs,
-                                            showEmptyState = true,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
+                                    )
                                 }
 
                                 if (state.showMmpCurve) {
@@ -935,7 +902,7 @@ fun SensorGridScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358 / REQ-UI-409.3 / REQ-TRK-040.4)
-                    val sensorGridModifier = (if (state.mapState.showMap) {
+                    val sensorGridModifier = (if (showMap) {
                         Modifier
                             .fillMaxWidth()
                             .defaultMinSize(minHeight = 48.dp)
@@ -961,19 +928,14 @@ fun SensorGridScreen(
                         modifier = sensorGridModifier
                     )
 
-                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944 / REQ-UI-358 / ATT-3343)
-                    if (state.mapState.showMap) {
+                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944 / REQ-UI-358 / ATT-3343 / REQ-UI-2793)
+                    if (showMap) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f, fill = true) // Consumes all remaining vertical space (REQ-UI-358)
                         ) {
-                            TrackingMapContainer(
-                                mapState = state.mapState,
-                                currentLocationFlow = currentLocationFlow,
-                                modifier = Modifier.fillMaxSize(),
-                                isTabActive = isTabActive
-                            )
+                            TrackingMapSlot(mapStateFlow, state.mapState, currentLocationFlow, Modifier.fillMaxSize(), isTabActive)
                         }
                     }
 
@@ -992,19 +954,17 @@ fun SensorGridScreen(
                     }
 
                     if (state.showElevationProfile) {
-                        Surface(
+                        TrackingElevationProfileSection(
+                            pathPoints = state.pathPoints,
+                            scope = state.elevationProfileScope,
+                            lookaheadMeters = state.elevationProfileLookahead,
+                            mapStateFlow = mapStateFlow,
+                            fallbackMapRoutes = state.mapRoutes,
+                            currentLocationFlow = currentLocationFlow,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 8.dp, bottom = fabBottomClearance)
-                        ) {
-                            ElevationProfile(
-                                pathPoints = resolvedProfile.pathPoints,
-                                currentDistance = resolvedProfile.markerDistance,
-                                climbs = resolvedProfile.climbs,
-                                showEmptyState = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        )
                     }
 
                     if (state.showMmpCurve) {
@@ -1338,6 +1298,35 @@ fun NavigationHintsOverlay(
             )
         }
     }
+}
+
+@Composable
+private fun TrackingMapSlot(
+    mapStateFlow: StateFlow<TrackingMapState>?,
+    fallbackMapState: TrackingMapState,
+    currentLocationFlow: StateFlow<LatLng?>,
+    modifier: Modifier,
+    isTabActive: Boolean
+) {
+    if (mapStateFlow != null) {
+        TrackingMapContainer(mapStateFlow, currentLocationFlow, modifier, isTabActive)
+    } else {
+        TrackingMapContainer(fallbackMapState, currentLocationFlow, modifier, isTabActive)
+    }
+}
+
+/**
+ * Flow-collecting recomposition barrier for the live tracking map (`REQ-UI-326`, `REQ-UI-2793`).
+ */
+@Composable
+fun TrackingMapContainer(
+    mapStateFlow: StateFlow<TrackingMapState>,
+    currentLocationFlow: StateFlow<LatLng?>,
+    modifier: Modifier = Modifier,
+    isTabActive: Boolean = true
+) {
+    val mapState by mapStateFlow.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.STARTED)
+    TrackingMapContainer(mapState, currentLocationFlow, modifier, isTabActive)
 }
 
 /**

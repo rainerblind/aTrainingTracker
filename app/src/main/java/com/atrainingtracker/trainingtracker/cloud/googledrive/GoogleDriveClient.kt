@@ -16,6 +16,7 @@
 package com.atrainingtracker.trainingtracker.cloud.googledrive
 
 import android.util.Log
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -62,11 +63,7 @@ data class RecursiveScanResult(
  */
 class GoogleDriveClient(
     private val tokenProvider: () -> String?,
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
-        .build(),
+    internal val client: OkHttpClient = defaultHttpClient,
     private val baseUrl: String = "https://www.googleapis.com",
     private val tokenRefresher: (() -> String?)? = null,
     private val accountProvider: (() -> String?)? = null
@@ -76,6 +73,14 @@ class GoogleDriveClient(
         private const val TAG = "GoogleDriveClient"
         private const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
         private const val JSON_MIME_TYPE = "application/json; charset=UTF-8"
+
+        private val defaultHttpClient: OkHttpClient by lazy {
+            AppHttpClient.newBuilder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .build()
+        }
 
         private val hierarchyLock = Any()
         private val globalFolderCache = GoogleDriveFolderCache()

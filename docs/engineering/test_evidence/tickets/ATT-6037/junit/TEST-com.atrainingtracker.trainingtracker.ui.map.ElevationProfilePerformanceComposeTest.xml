@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:43.790Z" hostname="rainer-HP-EliteBook-850-G5" time="7.738">
+  <properties/>
+  <testcase name="testMapContentScopeImpl_renderUpdatesOnDynamicLayerTogglesAndTrackGrowthAtConstantZoom_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.473"/>
+  <testcase name="testDrawElevationSegmentsCoalesced_mergesContiguousColorRunsReusingSinglePath_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.251"/>
+  <testcase name="testCaptureElevationProfileLightAndDarkComparisonPng_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="1.819"/>
+  <testcase name="testPrecomputeClimbDrawData_extractsExactSummitAndSpanBounds_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.091"/>
+  <testcase name="testMapScreenWithTrack_forwardsCurrentLocationFlowWithoutParentRecomposition_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="4.292"/>
+  <testcase name="testElevationProfile_rendersWithClimbsZoomControlsAndLiveScrubbingRedraws_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.69"/>
+  <testcase name="testBuildClimbBadgePaintCache_populatesAllCategoriesWithScaledDensity_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.121"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

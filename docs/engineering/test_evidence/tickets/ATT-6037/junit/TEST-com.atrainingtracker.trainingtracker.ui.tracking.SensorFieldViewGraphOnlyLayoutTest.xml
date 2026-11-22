@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewGraphOnlyLayoutTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:28.407Z" hostname="rainer-HP-EliteBook-850-G5" time="0.076">
+  <properties/>
+  <testcase name="testSensorFieldView_graphOnlySparklineAppliesHeightInMinConstraint" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewGraphOnlyLayoutTest" time="0.063"/>
+  <testcase name="testSensorGridScreen_rowIntrinsicMinSafety" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewGraphOnlyLayoutTest" time="0.001"/>
+  <testcase name="testResolveSparklineHeight_graphOnlyMode_enforcesStrictlyPositiveHeights" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewGraphOnlyLayoutTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -175,12 +175,12 @@ fun ATrainingTrackerMap(
     val scope = remember(zoomFocus, primaryColor, context, directionIcons, bSportType) {
         MapContentScopeImpl(zoomFocus, primaryColor, context, directionIcons, bSportType)
     }
-    scope.collect(content)
+    val contentRevision = scope.collect(content)
 
     val currentZoom = cameraPositionState.position.zoom
     MapBoundsController(
         tracks = scope.tracks,
-        markers = scope.markers,
+        markers = scope.markers.toList(),
         segments = scope.segments,
         routes = scope.routes,
         zoomFocus = zoomFocus,
@@ -255,8 +255,9 @@ fun ATrainingTrackerMap(
                     }
                 }
 
-                // Render the DSL content
-                scope.Render(currentZoom)
+                // Render the DSL content with monotonic contentRevision so Compose Strong Skipping
+                // always recomposes dynamic layer toggles and track updates at constant zoom (REQ-UI-2793)
+                scope.Render(currentZoom, contentRevision)
 
                 // Render Shared Overlays (Scrubber, User Location)
                 val scrubPath = activeScrubPath ?: emptyList()

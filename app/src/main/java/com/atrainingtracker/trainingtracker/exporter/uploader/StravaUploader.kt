@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -45,7 +46,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
-open class StravaUploader @JvmOverloads constructor(context: Context, internal var client: OkHttpClient = OkHttpClient()) : BaseExporter(context) {
+open class StravaUploader @JvmOverloads constructor(context: Context, internal var client: OkHttpClient = AppHttpClient.shared) : BaseExporter(context) {
 
     internal var sleepStrategy: (Long) -> Unit = { millis ->
         try {

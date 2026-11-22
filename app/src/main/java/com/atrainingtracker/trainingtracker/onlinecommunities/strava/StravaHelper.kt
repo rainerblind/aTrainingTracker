@@ -25,6 +25,7 @@ import android.util.Log
 import androidx.browser.customtabs.CustomTabsIntent
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -76,7 +77,7 @@ object StravaHelper {
         }
 
     private val defaultHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        AppHttpClient.newBuilder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .callTimeout(20, TimeUnit.SECONDS)

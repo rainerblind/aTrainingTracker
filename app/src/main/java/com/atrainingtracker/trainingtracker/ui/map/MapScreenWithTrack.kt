@@ -107,7 +107,6 @@ import com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Type-safe mutually exclusive selection state for map overlays and peek/modal sheets (`REQ-UI-2790.2`).
@@ -176,7 +175,6 @@ fun MapScreenWithTrack(
     onNavigateBack: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
     val allClusters by viewModel.allClusters.collectAsStateWithLifecycle()
@@ -366,7 +364,7 @@ fun MapScreenWithTrack(
                     zoomFocus = if (initialBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.LOCAL_SEGMENTS,
                     initialBounds = initialBounds,
                     bSportType = uiState.bSportType,
-                    currentLocationFlow = MutableStateFlow(currentLocation),
+                    currentLocationFlow = viewModel.currentLocation,
                     contentPadding = WindowInsets.navigationBars.asPaddingValues(),
                     onMapClick = { peekSelection = null },
                     modifier = Modifier.fillMaxSize()

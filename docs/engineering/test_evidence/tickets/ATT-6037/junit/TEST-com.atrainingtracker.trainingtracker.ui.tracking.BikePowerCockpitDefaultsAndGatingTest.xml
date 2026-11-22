@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:24.032Z" hostname="rainer-HP-EliteBook-850-G5" time="4.37">
+  <properties/>
+  <testcase name="testBikePowerSensorCatalog_containsWPrimeBalAndAllPowerMetrics" classname="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" time="0.561"/>
+  <testcase name="testEnsurePowerTabExistsForBikePower_selectsBeforeNonDestructiveInsert" classname="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" time="0.927"/>
+  <testcase name="testAllGatedState_rendersEmptyPackedRowsAndPreservesMinSizeWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" time="0.627"/>
+  <testcase name="testTabPowerLocalizationParity_all9LocalesIncludingJapanese" classname="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" time="0.733"/>
+  <testcase name="testPackVisibleRowsForTuning_isViewOnlyAndRestoresOriginalRowNrColNrOnToggleRoundTrip" classname="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" time="0.576"/>
+  <testcase name="testBikePowerDefaultTabs_standardPowerMapAndLapsLayouts" classname="com.atrainingtracker.trainingtracker.ui.tracking.BikePowerCockpitDefaultsAndGatingTest" time="0.946"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

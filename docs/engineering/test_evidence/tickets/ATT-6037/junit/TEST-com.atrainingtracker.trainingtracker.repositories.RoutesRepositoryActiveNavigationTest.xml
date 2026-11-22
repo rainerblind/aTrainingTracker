@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.RoutesRepositoryActiveNavigationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:09.061Z" hostname="rainer-HP-EliteBook-850-G5" time="0.801">
+  <properties/>
+  <testcase name="testSetActiveNavigatedRoute_withAutoSelectedTrue_updatesProvenance" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositoryActiveNavigationTest" time="0.224"/>
+  <testcase name="testIsRouteAutoSelected_defaultsToFalse" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositoryActiveNavigationTest" time="0.192"/>
+  <testcase name="testSetActiveNavigatedRoute_updatesStateFlow" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositoryActiveNavigationTest" time="0.192"/>
+  <testcase name="testActiveNavigatedRouteId_defaultsToNull" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositoryActiveNavigationTest" time="0.192"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

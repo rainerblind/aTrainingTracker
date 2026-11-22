@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" tests="32" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:14.376Z" hostname="rainer-HP-EliteBook-850-G5" time="54.077">
+  <properties/>
+  <testcase name="testDuplicateDetectionInStatusField" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="2.559"/>
+  <testcase name="testFindExistingStravaActivityReturnsNullWhenHttpError" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.775"/>
+  <testcase name="testFreshUploadWithCustomNameSendsName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.796"/>
+  <testcase name="testFindExistingStravaActivityForWorkout_queriesMetadataFromDatabase" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.934"/>
+  <testcase name="testDuplicateReconciliationFetchesAndEnrichesMissingRetiredGear" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.747"/>
+  <testcase name="testFreshUploadSendsSportTypeAndGear" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.714"/>
+  <testcase name="testDuplicateReconciliationEnrichesKnownLocalEquipment" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.682"/>
+  <testcase name="testDuplicateWithStravaDefaultNamePreservesLocalAppNameAndProtectsStrava" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.692"/>
+  <testcase name="testDuplicateWithStravaDefaultNameAndEmojiPreservesLocalAppName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.713"/>
+  <testcase name="testDuplicateDetectionInErrorField" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.764"/>
+  <testcase name="testFindExistingStravaActivity_rejectsFalseStartDurationMismatch" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.651"/>
+  <testcase name="testDuplicateWithTcxImportedNameEnrichesLocalAndProtectsStrava" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.717"/>
+  <testcase name="testMetadataPreservedAcrossBothPaths" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.686"/>
+  <testcase name="testProcessSegmentEfforts_updatesPrWhenAchievementsArrayContainsPrRank1" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.751"/>
+  <testcase name="testDuplicateWithFallbackNameEnrichesLocalAndProtectsStrava" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.806"/>
+  <testcase name="testDuplicateReconciliationEnrichesDetailedSportType" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.687"/>
+  <testcase name="testFindExistingStravaActivityReturnsNullWhenNoActivities" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.705"/>
+  <testcase name="testFindExistingStravaActivity_filtersAllCandidatesAndMatchesCompatible" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.72"/>
+  <testcase name="testFindExistingStravaActivityMatchesClosestWithinWindow" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.707"/>
+  <testcase name="testStaleLocalActivityIdFallsThroughToPreUploadDiscovery" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.75"/>
+  <testcase name="testIsDefaultStravaNameEvaluation" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.667"/>
+  <testcase name="testNonDuplicateReturnsNull" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.668"/>
+  <testcase name="testDuplicateWithCustomNameProtectsStravaNameAndEnrichesLocal" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.587"/>
+  <testcase name="testFreshUploadWithFallbackNameOmitsName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.496"/>
+  <testcase name="testPreUploadDiscoveryFindsDefaultTitlePreservesLocalName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.529"/>
+  <testcase name="testFindExistingStravaActivity_rejectsCrossSportMismatch" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.493"/>
+  <testcase name="testProcessSegmentEfforts_updatesPrWhenRankIs1" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.524"/>
+  <testcase name="testParseTimeToEpochSecondsFormats" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.488"/>
+  <testcase name="testProcessSegmentEfforts_doesNotUpdateRepoWhenDbReturnsFalse" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.554"/>
+  <testcase name="testPreUploadDiscoveryFindsExistingActivityBypassesUploadAndEnrichesCustomName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.469"/>
+  <testcase name="testFindExistingStravaActivity_skipsUnparseableDate" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.563"/>
+  <testcase name="testDuplicateDetectionWithDirectIdPhrasing" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.481"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

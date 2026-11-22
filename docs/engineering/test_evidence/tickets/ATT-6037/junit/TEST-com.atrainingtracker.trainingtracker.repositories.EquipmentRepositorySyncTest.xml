@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:52.827Z" hostname="rainer-HP-EliteBook-850-G5" time="16.227">
+  <properties/>
+  <testcase name="testExceptionInRunGuaranteesResetToFalse" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="2.153"/>
+  <testcase name="testPrunedProgressStringsRemovedAcrossAllLocales" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.958"/>
+  <testcase name="testThrowableInRunGuaranteesResetToFalse" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.465"/>
+  <testcase name="testWorkerDebounceSuppressesDuplicateRuns" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.516"/>
+  <testcase name="testNineLanguageParityForLastUpdateOfEquipmentNow" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="2.156"/>
+  <testcase name="testNonBlockingDialogFreeExecutionAndBroadcast" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.469"/>
+  <testcase name="testThreadLifecycleTransitionsAndReset" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.358"/>
+  <testcase name="testSharedPreferencesNeverMutatedWithTransientNow" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.31"/>
+  <testcase name="testIsSyncingInitialStateIsFalse" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.419"/>
+  <testcase name="testSetSyncingUpdatesStateFlow" classname="com.atrainingtracker.trainingtracker.repositories.EquipmentRepositorySyncTest" time="1.422"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

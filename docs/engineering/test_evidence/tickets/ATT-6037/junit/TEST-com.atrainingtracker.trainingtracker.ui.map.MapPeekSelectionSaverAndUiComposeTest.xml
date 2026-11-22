@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapPeekSelectionSaverAndUiComposeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:30:01.081Z" hostname="rainer-HP-EliteBook-850-G5" time="2.314">
+  <properties/>
+  <testcase name="testMapPeekSelection_stateRestorationTester_survivesConfigurationChange_tstUi2790_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapPeekSelectionSaverAndUiComposeTest" time="0.221"/>
+  <testcase name="testMapScreenWithTrack_targetLocationRendersKnownLocationSheetAndZeroOverlap_tstUi2790_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapPeekSelectionSaverAndUiComposeTest" time="1.994"/>
+  <testcase name="testMapPeekSelectionSaver_roundTripsNullAndAllFiveVariants_tstUi2790_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapPeekSelectionSaverAndUiComposeTest" time="0.099"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:57.939Z" hostname="rainer-HP-EliteBook-850-G5" time="8.889">
+  <properties/>
+  <testcase name="testSyncSegmentsAsyncRethrowsCancellationException" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.093"/>
+  <testcase name="testSharedPreferencesNeverMutatedWithTransientNowString" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.104"/>
+  <testcase name="testNineLanguageParityForLastUpdateOfSegmentsNow" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.419"/>
+  <testcase name="testIsSyncingTransitionsDuringSyncAndResetsOnCompletion" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.025"/>
+  <testcase name="testRefreshingSportsCleanupOnWorkerFailure" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.029"/>
+  <testcase name="testIsSyncingInitialStateIsFalse" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.001"/>
+  <testcase name="testIsSyncingResetsToFalseOnExceptionInFinally" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.137"/>
+  <testcase name="testSyncSegmentsAsyncCatchesExceptionAndLogsError" classname="com.atrainingtracker.trainingtracker.segments.SegmentsRepositorySyncTest" time="1.081"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

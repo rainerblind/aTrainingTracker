@@ -59,7 +59,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.OkHttpClient
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.Request
 
 /**
@@ -403,7 +403,7 @@ class RoutesRepository internal constructor(
                 // Strava API: GET /athletes/{id}/routes
                 val url = "https://www.strava.com/api/v3/athletes/$athleteId/routes?per_page=100"
 
-                val client = OkHttpClient()
+                val client = AppHttpClient.shared
                 val request = Request.Builder()
                     .url(url)
                     .addHeader("Authorization", "Bearer $accessToken")
@@ -533,7 +533,7 @@ class RoutesRepository internal constructor(
      * Resolves authenticated athlete ID if not yet cached.
      */
     private fun fetchAuthenticatedAthleteId(accessToken: String): Int {
-        val client = OkHttpClient()
+        val client = AppHttpClient.shared
         val request = Request.Builder()
             .url("https://www.strava.com/api/v3/athlete")
             .addHeader("Authorization", "Bearer $accessToken")
@@ -559,7 +559,7 @@ class RoutesRepository internal constructor(
         val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
         val url = "https://www.strava.com/api/v3/routes/$routeId/streams?keys=latlng,distance,altitude"
 
-        val client = OkHttpClient()
+        val client = AppHttpClient.shared
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", "Bearer $accessToken")

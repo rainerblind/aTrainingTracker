@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.26  
+**Version**: 1.0.27  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 49
+**Total Requirements**: 50
 
 ---
 
@@ -1954,6 +1954,30 @@
   3. *Root Reason for Existing Formulation*: Previously `currentAcwrZone == null` unconditionally mapped to `acwrZoneText = null` because `acwr` was only `null` when `ctl <= 0.01` (empty history).
   4. *Preservation of Core Invariants*: Preserves `ATT-9357` Row 1 curve swatches/legend, Row 2 neutral `outlineVariant` borders, `IntrinsicSize.Min` uniform row heights, `currentLocale` formatting, `AthleteProfileScreen.kt` (`1,596/1,975` LoC untouched), and `ATT-5678` trademark-free 9-locale strings.
 
+### REQ-UI-2793: ElevationProfile Canvas Hoisting, MapState Decoupling & Shared Base OkHttpClient (`ATT-6037`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2793`
+- **System Requirement(s)**: Derived (SW-only — Compose draw-pass & recomposition performance refinement of `REQ-UI-326`, `REQ-MAP-051`, `REQ-MAP-052`, plus app-wide HTTP connection-pool sharing)
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `ElevationProfile.kt`, `ElevationProfileDrawHelpers.kt`, `MapScreenWithTrack.kt`, `MapContentScope.kt`, `ATrainingTrackerMap.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `TrackingElevationProfileSection.kt`, `TrackingTabGridContent.kt`, `AppHttpClient.kt`, `StravaHelper.kt`, `StravaAuthRepository.kt`, `StravaDataPurgeManager.kt`, `StravaUploader.kt`, `SegmentsRepository.kt`, `RoutesRepository.kt`, `ElevationService.kt`, `GoogleDriveClient.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Eliminates per-frame `Paint`/`Path`/`PathEffect` and $O(n)$ summit-scan allocations in `ElevationProfile`, stops `MapScreenWithTrack`, `ATrainingTrackerMap`/`MapContentScopeImpl`, and `SensorGridScreen` from recomposing on 1-Hz GPS updates via unremembered `MutableStateFlow` / composition-time `mutableStateListOf` mutation / `_uiState` copy-back, and shares OkHttp's `ConnectionPool` and `Dispatcher` app-wide without regressing service-specific timeouts or test injections (`ATT-6037`).
+- **Description**:
+  1. *ElevationProfile Canvas Allocation Hoisting & Coalesced Color Runs (`REQ-UI-2793.1`)*: `ElevationProfile.kt` and `ElevationProfileDrawHelpers.kt` SHALL precompute per-climb summit and span bounds via `remember(climbs)` (`precomputeClimbDrawData`), hoist a 6-category `ClimbCategory` `Paint` cache via `remember(density, colorScheme)` (`buildClimbBadgePaintCache`), hoist a single reusable `Path` (`remember { Path() }`) and `PathEffect`, and draw visible fill polygons coalesced per contiguous color run (`drawElevationSegmentsCoalesced`) followed by crisp top stroke segments. `MapScreenWithTrack.kt` SHALL forward `viewModel.currentLocation` directly to `ATrainingTrackerMap` without collecting `currentLocation` at top level or instantiating a fresh `MutableStateFlow` per recomposition, and `MapContentScopeImpl` (`MapContentScope.kt`) SHALL back its synchronously collected DSL lists with plain `mutableListOf` (`Rule 66`), return a monotonic `contentRevision: Long` from `collect()` passed into `Render(currentZoom, contentRevision)` (preventing Compose Strong Skipping from freezing layer updates at constant zoom), and pass `scope.markers.toList()` to `MapBoundsController`.
+  2. *True `mapState` Decoupling in `TrackingViewModel` & `SensorGridScreen` (`REQ-UI-2793.2`)*: `TrackingViewModel.observeMapState()` SHALL update strictly `_mapState.value` without copying 12 map fields back into `_uiState`, and `loadSensorFieldStates()` SHALL NOT pull volatile `_mapState.value` fields into `TrackingScreenState`. `TrackingTabGridContent` SHALL pass `mapStateFlow = viewModel.mapState` to `SensorGridScreen` without collecting it at the parent scope. `SensorGridScreen` SHALL collect `mapStateFlow` strictly inside `TrackingMapContainer` (`collectAsStateWithLifecycle`) and collect `currentLocationFlow` plus distinct `activeNavigatedRoute` strictly inside `TrackingElevationProfileSection` when `showElevationProfile == true`, preserving `TrackingScreenState` backward-compatible defaults (`REQ-UI-326`) and `SensorGridScreen.kt <= 1,953` LoC.
+  3. *App-Wide Shared Base `OkHttpClient` (`REQ-UI-2793.3`)*: `AppHttpClient` (`com.atrainingtracker.trainingtracker.util`) SHALL provide a singleton `shared: OkHttpClient` and `newBuilder(): OkHttpClient.Builder`. All 9 default production HTTP sites (`StravaAuthRepository`, `StravaDataPurgeManager`, `StravaUploader`, `SegmentsRepository` ×3, `RoutesRepository` ×3) SHALL use `AppHttpClient.shared`, and all 3 custom-timeout sites (`StravaHelper` 15/15/20 s, `ElevationService` 5/5/5 s, `GoogleDriveClient` 30/60/60 s) SHALL derive via `AppHttpClient.newBuilder()` sharing the base `ConnectionPool` and `Dispatcher` while preserving custom timeouts and test constructor/setter injections.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `ElevationProfile` with climbs and 600 segments across 3 contiguous slope-color bands, *When* redrawing during zoom/pan/scrubbing, *Then* `precomputeClimbDrawData` and `buildClimbBadgePaintCache` avoid per-frame scans/`Paint` allocations, `drawElevationSegmentsCoalesced` reuses one `Path` emitting 3 coalesced fills, and `MapScreenWithTrack` does not recompose on `currentLocation` emissions.
+  • *Given* `TrackingViewModel` and `SensorGridScreen` with active `mapStateFlow` and `currentLocationFlow`, *When* 1-Hz GPS speed, bearing, track, or location ticks emit, *Then* `viewModel.mapState` updates immediately while `viewModel.uiState` remains referentially unchanged (`===`) and `SensorGridScreen` sensor tiles incur zero host recompositions.
+  • *Given* all production default and custom-timeout HTTP clients, *When* instantiated with default parameters, *Then* all clients share `AppHttpClient.shared`'s `ConnectionPool` and `Dispatcher` while preserving custom timeouts (`StravaHelper`, `ElevationService`, `GoogleDriveClient`) and test injections (`StravaHelper.httpClient`, `ElevationService`, `GoogleDriveClient`, `StravaUploader`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-326` (*Tracking Map Recomposition Boundary Isolation*, `ATT-2944`), `REQ-MAP-051`, and `REQ-MAP-052` targeting `ElevationProfile.kt`, `MapScreenWithTrack.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `TrackingTabGridContent.kt`, and all production `OkHttpClient` sites.
+  2. *Historical Origin & Commit Trace*: `ATT-2944` introduced `_mapState` but retained `_uiState` copy-back for legacy readers; `ATT-3775` added speed/bearing assertions on `uiState`; `ATT-6033` Round 1–3 code reviews verified all 12 `OkHttpClient` sites and timeout/injection fences.
+  3. *Root Reason for Existing Formulation*: Copy-back kept `SensorGridScreen` working prior to migrating it to `mapStateFlow`; individual repositories instantiated `OkHttpClient()` locally before a shared app-level base client existed.
+  4. *Preservation of Core Invariants*: Preserves `TrackingScreenState` defaults (`TrackingMapIsolationContractTest`, `InterfaceSignatureDriftContractTest`), `SensorGridScreen.kt <= 1,953` LoC & `ElevationProfile.kt <= 1,500` LoC (`ArchitectureConformanceContractTest`), `Rule 66` `SegmentIndexHolder`, custom HTTP timeouts, test injections, and 0 string modifications.
+
 ---
 
 ## Change History
@@ -1985,3 +2009,4 @@
 | `1.0.24` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-UI-2792` to `[Implemented]` (`PerformanceManagementChartCard.kt` neutral building-base badge + 9-locale `values*/strings.xml` parity). |
 | `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `REQ-UI-2792` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` incl. `TranslationParityTest` `11/11`, `0` `app/` drift, `Rule 8.5` Light/Dark PNG certified, `--check-verified-evidence` `exit 0`). |
 | `1.0.26` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Refined `REQ-UI-2791.1`: replaced thick top-only `3.dp` bar on Row 1 `PmcStatBadge` cards with clean uniform `1.5.dp` all-around colored borders matching curve colors while preserving Row 2 neutral `1.dp` `outlineVariant` borders and 3-curve `FlowRow` legend. |
+| `1.0.27` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `REQ-UI-2793` (`[Verified]`, `.1`–`.3`) for `ElevationProfile` Canvas Paint/Path/climb-summit hoisting & coalesced color runs, `MapScreenWithTrack` direct `StateFlow` forwarding + `MapContentScopeImpl` `Rule 66` plain `mutableListOf` + `contentRevision` fix, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, and shared base `AppHttpClient` (emulator + Light/Dark PNGs visually verified via `read_file`, automated gate & evidence bundle in `docs/engineering/test_evidence/tickets/ATT-6037/`). |

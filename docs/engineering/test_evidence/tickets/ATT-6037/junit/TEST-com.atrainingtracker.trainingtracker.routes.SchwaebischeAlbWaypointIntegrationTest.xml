@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.SchwaebischeAlbWaypointIntegrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:58.304Z" hostname="rainer-HP-EliteBook-850-G5" time="1.311">
+  <properties/>
+  <testcase name="testParseAllSchwaebischeAlbGpxFiles_extractsAll29WaypointsAccurately" classname="com.atrainingtracker.trainingtracker.routes.SchwaebischeAlbWaypointIntegrationTest" time="1.311"/>
+  <system-out><![CDATA[File: 2026-03-12_2823713171_GPX Download_ Wentaler Felsenmeer – Wentalweg Waldweg Runde von Wental mit Seitentälern und Feldinsel Klösterle.gpx -> 9 waypoints, 130 trackpoints
+File: 2026-03-12_2823712016_GPX Download_ Gipfelkreuz auf dem Jusi – Panoramablick vom Jusi Runde von Kohlberg.gpx -> 9 waypoints, 159 trackpoints
+File: Schwäbische Alb Nebelhoehle- Schloss lichtenstein.gpx -> 1 waypoints, 525 trackpoints
+File: Schwäbische AlbUracher Wasserfall (1).gpx -> 1 waypoints, 103 trackpoints
+File: 2026-03-12_2823714489_GPX Download_ Aussichtspunkt Floriansberg – Weinberge am Floriansberg Runde von Kohlberg.gpx -> 9 waypoints, 207 trackpoints
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

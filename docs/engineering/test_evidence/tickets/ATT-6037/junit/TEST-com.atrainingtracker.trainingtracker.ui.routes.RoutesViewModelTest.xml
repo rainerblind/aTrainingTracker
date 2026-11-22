@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:17.233Z" hostname="rainer-HP-EliteBook-850-G5" time="6.737">
+  <properties/>
+  <testcase name="testBatchImport_allValidFiles_TST_MAP_055_1" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="1.305"/>
+  <testcase name="testBatchImport_allFilesFailed_TST_MAP_055_3" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="1.214"/>
+  <testcase name="testBatchImport_emptyUriList_TST_MAP_055_4" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="1.23"/>
+  <testcase name="testBatchImport_clearBatchImportResult_TST_MAP_055_5" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="1.019"/>
+  <testcase name="testBatchImport_partialFailure_TST_MAP_055_2" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.974"/>
+  <testcase name="testBatchImport_withSportTypeOverride_TST_MAP_056_1" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.993"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

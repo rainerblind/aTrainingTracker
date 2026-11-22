@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:25:54Z" hostname="rainer-HP-EliteBook-850-G5" time="1.23">
+  <properties/>
+  <testcase name="testListFilesRecursivelyResult_onHttpError_returnsIncompleteScanResultWithError" classname="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" time="0.559"/>
+  <testcase name="testListFilesRecursively_handlesPaginationWithNextPageToken" classname="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" time="0.136"/>
+  <testcase name="testListFilesRecursivelyResult_onSuccess_returnsCompleteScanResult" classname="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" time="0.132"/>
+  <testcase name="testResolveFolderHierarchy_returnsNullWhenFolderDoesNotExist" classname="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" time="0.137"/>
+  <testcase name="testDownloadFileById_writesBinaryContentToTargetFile" classname="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" time="0.137"/>
+  <testcase name="testListFilesRecursively_filtersByTargetExtensionsAndTraversesSubfolders" classname="com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClientRecursiveListingTest" time="0.128"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

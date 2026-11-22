@@ -235,17 +235,21 @@ class TrackingViewModelMapStateTest {
         assertEquals(0.0f, viewModel.mapState.value.userBearing, 0.001f)
         val initialSegmentsRef = viewModel.mapState.value.mapSegments
         val initialRoutesRef = viewModel.mapState.value.mapRoutes
+        val initialUiStateRef = viewModel.uiState.value
 
         // 1. Emit speed and bearing in READY mode (currentTrack does NOT emit)
         currentSpeedFlow.value = 8.5
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(8.5f, viewModel.mapState.value.userSpeed, 0.001f)
-        assertEquals(8.5f, viewModel.uiState.value.userSpeed, 0.001f)
+        // REQ-UI-2793 / REQ-UI-326: GPS speed ticks must NOT copy back into uiState
+        assertSame(initialUiStateRef, viewModel.uiState.value)
+        assertEquals(0.0f, viewModel.uiState.value.userSpeed, 0.001f)
 
         currentBearingFlow.value = 135.0
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(135.0f, viewModel.mapState.value.userBearing, 0.001f)
-        assertEquals(135.0f, viewModel.uiState.value.userBearing, 0.001f)
+        assertSame(initialUiStateRef, viewModel.uiState.value)
+        assertEquals(0.0f, viewModel.uiState.value.userBearing, 0.001f)
 
         // Static layer lists must remain referentially identical across speed/bearing emissions (REQ-MAP-051)
         assertSame(initialSegmentsRef, viewModel.mapState.value.mapSegments)
@@ -255,14 +259,16 @@ class TrackingViewModelMapStateTest {
         currentTrackFlow.value = listOf(LatLng(48.137, 11.575))
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, viewModel.mapState.value.currentTrack.size)
+        assertSame(initialUiStateRef, viewModel.uiState.value)
 
         currentSpeedFlow.value = 14.2
         currentBearingFlow.value = 270.5
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(14.2f, viewModel.mapState.value.userSpeed, 0.001f)
         assertEquals(270.5f, viewModel.mapState.value.userBearing, 0.001f)
-        assertEquals(14.2f, viewModel.uiState.value.userSpeed, 0.001f)
-        assertEquals(270.5f, viewModel.uiState.value.userBearing, 0.001f)
+        assertSame(initialUiStateRef, viewModel.uiState.value)
+        assertEquals(0.0f, viewModel.uiState.value.userSpeed, 0.001f)
+        assertEquals(0.0f, viewModel.uiState.value.userBearing, 0.001f)
 
         // 3. Emit null speed/bearing -> safely resets to 0.0f
         currentSpeedFlow.value = null

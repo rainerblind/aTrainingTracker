@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridBottomSheetGestureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:28.732Z" hostname="rainer-HP-EliteBook-850-G5" time="0.0">
+  <properties/>
+  <testcase name="testSensorGridScreen_declaresCoroutineScopeForSheetExpansion" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridBottomSheetGestureTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_bottomSwipeGestureDetector_gatedOnShouldShowBottomSheetAndNotExpanded" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridBottomSheetGestureTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_bottomSwipeGestureDetector_triggersExpandOnUpwardDrag" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridBottomSheetGestureTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_inactiveState_suppressesGestureInterceptors" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridBottomSheetGestureTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_peekHeader_triggersExpandOnClick" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridBottomSheetGestureTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

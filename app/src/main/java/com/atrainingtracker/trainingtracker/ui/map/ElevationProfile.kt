@@ -239,15 +239,7 @@ fun getElevationGradeColor(gradePercent: Double): Color {
     }
 }
 
-private data class ElevationSegment(
-    val dist1: Double,
-    val timeSec1: Long,
-    val altNorm1: Float,
-    val dist2: Double,
-    val timeSec2: Long,
-    val altNorm2: Float,
-    val color: Color
-)
+
 
 @Composable
 fun ElevationProfile(
@@ -500,6 +492,10 @@ fun ElevationProfile(
     val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 8.dp else cachedData.adaptiveHeight
 
     val density = LocalDensity.current
+    val cachedClimbs = remember(climbs) { precomputeClimbDrawData(climbs) }
+    val climbBadgePaints = remember(density, colorScheme) { buildClimbBadgePaintCache(density) }
+    val reusableFillPath = remember { Path() }
+    val markerDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(10f, 10f)) }
     val badgeTextSizeDp: Dp = with(density) { 10.sp.toDp() }
     val requiredClimbTopClearance: Dp = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(
         badgeTextSizeDp = badgeTextSizeDp.value
@@ -832,73 +828,57 @@ fun ElevationProfile(
                     currentA += cachedData.altStep
                 }
 
-                // Render Summit Category Badges (REQ-UI-274)
-                if (!isTimeDomain && climbs.isNotEmpty()) {
-                    climbs.forEach { climb ->
-                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude ?: Double.NEGATIVE_INFINITY } ?: climb.pathPoints.lastOrNull()
-                        if (summitPt != null && summitPt.distance in currentStartDist..(currentStartDist + visibleSpan)) {
-                            val summitAlt = summitPt.altitude ?: cachedData.minAlt
-                            val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitPt.distance, currentStartDist, visibleSpan, width)
+                // Render Summit Category Badges using hoisted Paint cache & precomputed summits (REQ-UI-274, REQ-UI-2793)
+                if (!isTimeDomain && cachedClimbs.isNotEmpty()) {
+                    val pillPaddingH = 6.dp.toPx()
+                    val pillPaddingV = 2.dp.toPx()
+                    val pillCornerRadius = 4.dp.toPx()
+                    val stemOffsetPx = 8.dp.toPx()
+                    val effectiveTopPaddingPx = effectiveTopPadding.toPx()
+                    val safetyMarginPx = 2.dp.toPx()
+                    for (i in cachedClimbs.indices) {
+                        val climbData = cachedClimbs[i]
+                        val summitDist = climbData.summitDistance ?: continue
+                        if (summitDist in currentStartDist..(currentStartDist + visibleSpan)) {
+                            val summitAlt = climbData.summitAltitude ?: cachedData.minAlt
+                            val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitDist, currentStartDist, visibleSpan, width)
                             val summitY = height - (((summitAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
-                            val (bgColor, textColor, _) = getClimbCategoryColors(climb.category)
-                            val badgeText = climbCategoryLabels[climb.category] ?: ""
-
-                            val badgePaint = Paint().apply {
-                                color = textColor.toArgb()
-                                textSize = 10.sp.toPx()
-                                isAntiAlias = true
-                                isFakeBoldText = true
-                                textAlign = Paint.Align.CENTER
-                            }
-                            val bgPaint = Paint().apply {
-                                color = bgColor.toArgb()
-                                isAntiAlias = true
-                                style = Paint.Style.FILL
-                            }
+                            val paints = climbBadgePaints[climbData.category] ?: continue
+                            val badgePaint = paints.badgePaint
+                            val bgPaint = paints.bgPaint
+                            val stemPaint = paints.stemPaint
+                            val badgeText = climbCategoryLabels[climbData.category] ?: ""
 
                             val textWidth = badgePaint.measureText(badgeText)
-                            val pillPaddingH = 6.dp.toPx()
-                            val pillPaddingV = 2.dp.toPx()
                             val pillHeight = badgePaint.textSize + pillPaddingV * 2
                             val pillWidth = textWidth + pillPaddingH * 2
-                            val minAllowedPillTop = -(effectiveTopPadding.toPx()) + 2.dp.toPx()
-                            val unconstrainedPillBottom = summitY - 8.dp.toPx()
+                            val unconstrainedPillBottom = summitY - stemOffsetPx
                             val unconstrainedPillTop = unconstrainedPillBottom - pillHeight
                             val pillTop = ElevationProfileZoomMath.calculateClampedPillTop(
                                 unconstrainedPillTop = unconstrainedPillTop,
-                                effectiveTopPaddingPx = effectiveTopPadding.toPx(),
-                                safetyMarginPx = 2.dp.toPx()
+                                effectiveTopPaddingPx = effectiveTopPaddingPx,
+                                safetyMarginPx = safetyMarginPx
                             )
                             val pillBottom = pillTop + pillHeight
                             val pillLeft = ElevationProfileZoomMath.calculateClampedPillLeft(
                                 summitXPx = summitX,
                                 pillWidthPx = pillWidth,
                                 canvasWidthPx = width,
-                                safetyMarginPx = 2.dp.toPx()
+                                safetyMarginPx = safetyMarginPx
                             )
                             val pillRight = pillLeft + pillWidth
 
-                            // Pin stem to the summit
-                            val stemPaint = Paint().apply {
-                                color = bgColor.toArgb()
-                                strokeWidth = 1.5.dp.toPx()
-                                isAntiAlias = true
-                            }
                             canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)
-
-                            // Category pill background
                             canvas.nativeCanvas.drawRoundRect(
                                 pillLeft,
                                 pillTop,
                                 pillRight,
                                 pillBottom,
-                                4.dp.toPx(),
-                                4.dp.toPx(),
+                                pillCornerRadius,
+                                pillCornerRadius,
                                 bgPaint
                             )
-
-                            // Category text
                             val textY = pillBottom - pillPaddingV - badgePaint.descent()
                             canvas.nativeCanvas.drawText(badgeText, (pillLeft + pillRight) / 2f, textY, badgePaint)
                         }
@@ -907,37 +887,26 @@ fun ElevationProfile(
             }
 
             clipRect(left = 0f, top = 0f, right = width, bottom = height) {
-                cachedData.segments.forEach { seg ->
-                    val v1 = if (isTimeDomain) seg.timeSec1.toDouble() else seg.dist1
-                    val v2 = if (isTimeDomain) seg.timeSec2.toDouble() else seg.dist2
-                    if (v2 < currentStartDist) return@forEach
-                    if (v1 > currentStartDist + visibleSpan) return@forEach
-
-                    val x1 = ElevationProfileZoomMath.distanceToCanvasX(v1, currentStartDist, visibleSpan, width)
-                    val y1 = height - (seg.altNorm1 * height)
-                    val x2 = ElevationProfileZoomMath.distanceToCanvasX(v2, currentStartDist, visibleSpan, width)
-                    val y2 = height - (seg.altNorm2 * height)
-                    drawPath(
-                        Path().apply {
-                            moveTo(x1, y1)
-                            lineTo(x2, y2)
-                            lineTo(x2, height)
-                            lineTo(x1, height)
-                            close()
-                        },
-                        seg.color.copy(alpha = TTAlpha.Disabled)
-                    )
-                    drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
-                }
+                drawElevationSegmentsCoalesced(
+                    segments = cachedData.segments,
+                    isTimeDomain = isTimeDomain,
+                    currentStartDist = currentStartDist,
+                    visibleSpan = visibleSpan,
+                    width = width,
+                    height = height,
+                    strokeWidthPx = 2.dp.toPx(),
+                    reusableFillPath = reusableFillPath
+                )
 
                 // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299, REQ-UI-307)
-                if (!isTimeDomain && climbs.isNotEmpty()) {
+                if (!isTimeDomain && cachedClimbs.isNotEmpty()) {
                     val baselineY = height - 2.dp.toPx()
-                    climbs.forEach { climb ->
-                        val cPoints = climb.pathPoints
-                        val startDist = cPoints.firstOrNull()?.distance ?: return@forEach
-                        val endDist = cPoints.lastOrNull()?.distance ?: return@forEach
-                        if (endDist < currentStartDist || startDist > currentStartDist + visibleSpan) return@forEach
+                    val climbStrokePx = 4.dp.toPx()
+                    for (i in cachedClimbs.indices) {
+                        val climbData = cachedClimbs[i]
+                        val startDist = climbData.startDistance ?: continue
+                        val endDist = climbData.endDistance ?: continue
+                        if (endDist < currentStartDist || startDist > currentStartDist + visibleSpan) continue
 
                         val rawX1 = ElevationProfileZoomMath.distanceToCanvasX(startDist, currentStartDist, visibleSpan, width)
                         val rawX2 = ElevationProfileZoomMath.distanceToCanvasX(endDist, currentStartDist, visibleSpan, width)
@@ -945,12 +914,11 @@ fun ElevationProfile(
                         val x2 = rawX2.coerceIn(0f, width)
 
                         if (x2 > x1) {
-                            val (bgColor, _, _) = getClimbCategoryColors(climb.category)
                             drawLine(
-                                color = bgColor,
+                                color = climbData.bgColor,
                                 start = Offset(x1, baselineY),
                                 end = Offset(x2, baselineY),
-                                strokeWidth = 4.dp.toPx(),
+                                strokeWidth = climbStrokePx,
                                 cap = StrokeCap.Round
                             )
                         }
@@ -993,7 +961,7 @@ fun ElevationProfile(
                         start = Offset(markerX, 0f),
                         end = Offset(markerX, height),
                         strokeWidth = 1.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                        pathEffect = markerDashEffect
                     )
                     if (!showZoomControls) {
                         drawIntoCanvas { canvas ->

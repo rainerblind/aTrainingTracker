@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.27  
+**Version**: 1.0.28  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 49
+**Total Tests**: 50
 
 ---
 
@@ -951,6 +951,27 @@
   3. *`Rule 8.5` Light/Dark PNG & Live Emulator Verification (`TST-UI-2792.3`, `PerformanceManagementChartCardTest#testCapturePmcBuildingBaseLightAndDarkComparisonPng_tstUi2792_3`, `emulator-5554`)*: Capture Light and Dark/AMOLED PNG (`/tmp/att9360_verify/ATT-9360_pmc_building_base_light_dark.png`) for the `CTL = 7.0 < 15.0` cold-start state and visually inspect via `read_file` confirming `"—"` + neutral `"Aufbauphase"`, zero red alarm, and intact Row 1/Row 2 layout; verify live on `emulator-5554` in Stage 5/6.
 - **Verified Evidence (`51ce6830`, `ATT-9534` PASS, `67/67` Tier-1 PASS)**: `PerformanceManagementChartCardTest#testAcwrBuildingBaseHint_shownNeutrallyWhenLowCtlAndOmittedWhenEmpty_tstUi2792_1`, `PerformanceManagementChartCardTest#testAcwrBuildingBaseHint_omittedWhenPmcHistoryCompletelyEmpty_tstUi2792_1`, `PerformanceManagementChartCardTest#testCapturePmcBuildingBaseLightAndDarkComparisonPng_tstUi2792_3`, `AthleteProfileContractAndLocalizationTest`, `TranslationParityTest`, `ArchitectureConformanceContractTest#testMonolithLocRatchet_noNewOrGrowingGodClasses`, `UiReflectionOnlyTestAuditContractTest`.
 
+### TST-UI-2793: **ElevationProfile Canvas Hoisting, MapState Decoupling & Shared Base OkHttpClient Verification Suite (`ATT-6037`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2793` (`REQ-UI-2793.1`–`REQ-UI-2793.3`)
+- **Component**: `ElevationProfile.kt`, `ElevationProfileDrawHelpers.kt`, `MapScreenWithTrack.kt`, `MapContentScope.kt`, `ATrainingTrackerMap.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `TrackingElevationProfileSection.kt`, `TrackingTabGridContent.kt`, `AppHttpClient.kt`, `ElevationProfilePerformanceComposeTest.kt`, `SensorGridMapDecouplingComposeTest.kt`, `TrackingViewModelMapStateTest.kt`, `AppHttpClientPoolSharingTest.kt`
+- **Jira**: `ATT-6037` | **Priority**: Medium | **Type**: Non-Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *ElevationProfile Canvas Hoisting & MapScreenWithTrack Flow Forwarding (`TST-UI-2793.1`, `ElevationProfilePerformanceComposeTest`)*:
+     - Verify `precomputeClimbDrawData` extracts peak summit altitude/distance and start/end spans across populated and null-altitude climbs (`testPrecomputeClimbDrawData_extractsExactSummitAndSpanBounds_tstUi2793_1`).
+     - Verify `buildClimbBadgePaintCache` caches all 6 `ClimbCategory` Paint triples scaled to `Density` (`testBuildClimbBadgePaintCache_populatesAllCategoriesWithScaledDensity_tstUi2793_1`).
+     - Verify `drawElevationSegmentsCoalesced` coalesces 600 segments across 3 contiguous slope-color bands into 3 fill draw calls reusing a single `Path` in Distance, zoomed viewport, and Time domains (`testDrawElevationSegmentsCoalesced_mergesContiguousColorRunsReusingSinglePath_tstUi2793_1`).
+     - Render `ElevationProfile` with climbs, zoom controls, scrubbing badge, and legend toggle via Robolectric `v2.createComposeRule()` (`testElevationProfile_rendersWithClimbsZoomControlsAndLiveScrubbingRedraws_tstUi2793_1`), and capture Light/Dark comparison PNG (`testCaptureElevationProfileLightAndDarkComparisonPng_tstUi2793_1`).
+     - Render `MapScreenWithTrack` via Robolectric `v2.createComposeRule()` and assert 10 GPS `currentLocation` emissions trigger 0 host recompositions (`testMapScreenWithTrack_forwardsCurrentLocationFlowWithoutParentRecomposition_tstUi2793_1`), and verify non-`LocalInspectionMode` `MapContentScopeImpl.Render(currentZoom, contentRevision)` recomposes dynamically on monotonic revision increments at constant zoom & scope identity while skipping when unchanged (`testMapContentScopeImpl_renderUpdatesOnDynamicLayerTogglesAndTrackGrowthAtConstantZoom_tstUi2793_1`).
+  2. *True `mapState` Decoupling in `TrackingViewModel` & `SensorGridScreen` (`TST-UI-2793.2`, `TrackingViewModelMapStateTest`, `SensorGridMapDecouplingComposeTest`, `TrackingMapIsolationContractTest`)*:
+     - Verify `TrackingViewModel.observeMapState()` updates `mapState` immediately on speed/bearing/track ticks while `uiState` remains referentially identical (`assertSame`) with zero copy-back (`testObserveMapState_reactsImmediatelyToCurrentSpeedAndCurrentBearingWithoutCurrentTrackEmission`).
+     - Render `SensorGridScreen` via Robolectric `v2.createComposeRule()` and verify 10 GPS `mapStateFlow` + `currentLocationFlow` updates trigger 0 parent/sensor-tile recompositions (`testSensorGridScreen_mapStateFlowAndLocationTicksDoNotRecomposeParentHost_tstUi2793_2`), and verify `TrackingElevationProfileSection` transitions falsifiably from `R.string.elevation_profile_empty_state` displayed -> absent when `mapStateFlow` emits an active navigated route (with `state.mapRoutes` empty) -> displayed again when cleared (`testSensorGridScreen_elevationProfileConsumesActiveNavigatedRouteFromMapStateFlow_tstUi2793_2`).
+  3. *Shared Base `AppHttpClient`, Custom Timeouts & Test Injections (`TST-UI-2793.3`, `AppHttpClientPoolSharingTest`, `ElevationServiceTest`)*:
+     - Verify `AppHttpClient.shared` singleton identity and `AppHttpClient.newBuilder()` `ConnectionPool`/`Dispatcher` sharing (`testSharedBaseClient_returnsSingletonAndDerivedClientsSharePoolAndDispatcher_tstUi2793_3`).
+     - Verify `StravaHelper` (15/15/20 s), `ElevationService` (5/5/5 s), `GoogleDriveClient` (30/60/60 s), `StravaUploader`, and `StravaAuthRepository` share the base pool/dispatcher and preserve all custom timeouts and constructor/setter test injections (`testProductionClients_shareBasePoolPreserveCustomTimeoutsAndTestInjections_tstUi2793_3`).
+  4. *Emulator Visual Verification (`Rule 8.5`) & Architecture Contracts*:
+     - Deploy `com.atrainingtracker.debug` onto `emulator-5554`, verify clean `logcat -b crash -d`, capture live screenshots of `SensorGridScreen` (`Karte` tab) and `MapScreenWithTrack` plus Light/Dark `ElevationProfile` PNG (`docs/engineering/test_evidence/tickets/ATT-6037/screenshots/`), inspect all 3 PNGs via `read_file`, and confirm `ArchitectureConformanceContractTest`, `InterfaceSignatureDriftContractTest`, and `UiReflectionOnlyTestAuditContractTest` pass (`Localization Parity: N/A - 0 new or modified UI strings`).
+- **Verified Evidence (`ATT-6037`, `docs/engineering/test_evidence/tickets/ATT-6037/`)**: `ElevationProfilePerformanceComposeTest#testPrecomputeClimbDrawData_extractsExactSummitAndSpanBounds_tstUi2793_1`, `ElevationProfilePerformanceComposeTest#testBuildClimbBadgePaintCache_populatesAllCategoriesWithScaledDensity_tstUi2793_1`, `ElevationProfilePerformanceComposeTest#testDrawElevationSegmentsCoalesced_mergesContiguousColorRunsReusingSinglePath_tstUi2793_1`, `ElevationProfilePerformanceComposeTest#testElevationProfile_rendersWithClimbsZoomControlsAndLiveScrubbingRedraws_tstUi2793_1`, `ElevationProfilePerformanceComposeTest#testCaptureElevationProfileLightAndDarkComparisonPng_tstUi2793_1`, `ElevationProfilePerformanceComposeTest#testMapScreenWithTrack_forwardsCurrentLocationFlowWithoutParentRecomposition_tstUi2793_1`, `SensorGridMapDecouplingComposeTest#testSensorGridScreen_mapStateFlowAndLocationTicksDoNotRecomposeParentHost_tstUi2793_2`, `SensorGridMapDecouplingComposeTest#testSensorGridScreen_elevationProfileConsumesActiveNavigatedRouteFromMapStateFlow_tstUi2793_2`, `TrackingViewModelMapStateTest#testObserveMapState_reactsImmediatelyToCurrentSpeedAndCurrentBearingWithoutCurrentTrackEmission`, `AppHttpClientPoolSharingTest#testSharedBaseClient_returnsSingletonAndDerivedClientsSharePoolAndDispatcher_tstUi2793_3`, `AppHttpClientPoolSharingTest#testProductionClients_shareBasePoolPreserveCustomTimeoutsAndTestInjections_tstUi2793_3`.
+
 ---
 
 ## Change History
@@ -983,3 +1004,4 @@
 | `1.0.25` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-UI-2792` to `[Implemented]` with exact verbatim `PerformanceManagementChartCardTest` method citations and `Rule 8.5` PNG path. |
 | `1.0.26` | 2026-11-21 | Single-Lane Author (`ATT-9360`, `--as agent1`) | `ATT-9360` | Promoted `TST-UI-2792` to `[Verified]` in Stage 5 (`Rule 7.5` Doc-Only Fast Path reusing Gate 4 `ATT-9534` @ `51ce6830`: `67/67 PASS` incl. `TranslationParityTest` `11/11`, `0` `app/` drift, `Rule 8.5` PNG certified, `--check-verified-evidence` `exit 0`, `docs/engineering/walkthroughs/ATT-9360_walkthrough.md`). |
 | `1.0.27` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Updated `TST-UI-2791.2`/`.3` for `ATT-9558`: removed top-only `3.dp` bar assertions and added Light & Dark AMOLED uniform colored border pixel-symmetry tests (`testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInLightTheme_att9558`, `testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInDarkAmoledTheme_att9558`). |
+| `1.0.28` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `TST-UI-2793` (`[Verified]`, `.1`–`.3`) covering `ElevationProfile` Canvas hoisting/coalescing + Light/Dark PNG, `MapScreenWithTrack` `StateFlow` forwarding, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, shared `AppHttpClient` pool/timeout/injection tests, and `emulator-5554` visual checks. |

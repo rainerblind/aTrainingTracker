@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:37.531Z" hostname="rainer-HP-EliteBook-850-G5" time="14.452">
+  <properties/>
+  <testcase name="testStoreJSONData_parsesStravaSubscriberPremium" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="1.242"/>
+  <testcase name="testStoreJSONData_nonSubscriber" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.93"/>
+  <testcase name="testRefreshFailureWithInvalidClientSecretNeverPurgesData" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.961"/>
+  <testcase name="testExpiryMarginRefreshesEagerly" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.913"/>
+  <testcase name="testStoreJSONData_parsesStravaSubscriberSummit" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="1.023"/>
+  <testcase name="testValidUnexpiredTokenReturnsCachedImmediately" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.951"/>
+  <testcase name="testAuthorizationUrl_withState_includesStateParameter" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.903"/>
+  <testcase name="testNetworkTimeoutReturnsNullCleanly" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.931"/>
+  <testcase name="testRefreshFailureWithInvalidRefreshTokenTriggersPurge" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.948"/>
+  <testcase name="testAuthorizationUrl_withoutState_preservesBackwardCompatibility" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.935"/>
+  <testcase name="testNonJsonErrorBodyDefaultsToNoPurge" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.977"/>
+  <testcase name="testSanitizeForLog" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.881"/>
+  <testcase name="testRefreshFailureWithInvalidGrantTriggersPurge" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.971"/>
+  <testcase name="testConcurrentRefreshDeduplication" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.955"/>
+  <testcase name="testGetRedirectUri_scopedByApplicationId" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelperTest" time="0.929"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
