@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-TST-PRO-P1`  
-**Version**: 1.0.4  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1527,6 +1527,7 @@
   • Verify `application/octet-stream` is scoped with `.gpx` path extension patterns.
   3. *Manifest Background Location Rationale Comment Audit (`TST-BLD-003.3`)*:
   • Verify `AndroidManifest.xml` does not contain misleading "Not necessary" comments regarding `ACCESS_BACKGROUND_LOCATION` and correctly documents Android 14+ FGS `START_STICKY` recovery contract (`REQ-TRK-015`).
+  • Verify `gradle.properties` documents `REQ-BLD-003.4`, retains `android.newDsl=false` and `android.builtInKotlin=false`, and enables `android.nonFinalResIds=true` and `android.enableAppCompileTimeRClass=true` (`ATT-9365`).
   4. *Clean-Room Full Suite Regression Execution & Translation Parity (`TST-BLD-003.4`)*:
   • Execute `./gradlew testDebugUnitTest` and `TranslationParityTest` asserting 100% pass rate with zero regressions across all 9 supported locales.
 

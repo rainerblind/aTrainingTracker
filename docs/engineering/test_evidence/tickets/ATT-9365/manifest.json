@@ -1,0 +1,11 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "14c610a8dcfa7b658e8b77097337509c33650adc",
+  "files": {
+    "evidence_summary.json": "6c36a75d8ea6af4362e5e0764600f4e196be342d4a1c0f5dd0de4fed2cb98601",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest.xml": "db4568aad64bea4b1108401ee020aa732aecd6d17a66b6f05df01020fe7522ec"
+  },
+  "run_started_utc": "2026-11-22T22:24:36.331532+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9365"
+}

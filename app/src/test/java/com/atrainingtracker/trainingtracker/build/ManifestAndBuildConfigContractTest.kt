@@ -243,5 +243,13 @@ class ManifestAndBuildConfigContractTest {
             "gradle.properties must retain android.builtInKotlin=false",
             content.contains("android.builtInKotlin=false")
         )
+        assertTrue(
+            "gradle.properties must enable android.nonFinalResIds=true for incremental Kotlin compilation (REQ-BLD-003.4, ATT-9365)",
+            content.contains("android.nonFinalResIds=true")
+        )
+        assertTrue(
+            "gradle.properties must enable android.enableAppCompileTimeRClass=true to isolate R.jar on resource edits (REQ-BLD-003.4, ATT-9365)",
+            content.contains("android.enableAppCompileTimeRClass=true")
+        )
     }
 }

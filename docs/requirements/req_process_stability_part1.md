@@ -1,7 +1,7 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P1`  
-**Version**: 1.0.2  
+**Version**: 1.0.3  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2156,7 +2156,7 @@ The workflow SHALL mandate that:
 • `app/src/main/AndroidManifest.xml` SHALL retain active `<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />` required by Android 14+ (`Build.VERSION_CODES.UPSIDE_DOWN_CAKE`) for background `START_STICKY` FGS recovery (`REQ-TRK-015`).
 • The misleading legacy manifest comment claiming background location is not necessary SHALL be replaced with accurate documentation explaining the Android 14+ FGS promotion contract.
 4. *Preservation of Build & Memory Invariants (`REQ-BLD-003.4`)*:
-• The application SHALL retain `android:largeHeap="true"` (`REQ-PER-012`) to support high-density period heatmaps and multi-session GIS vector tracks without OOM, retain local patched core library `local-repo/androidx.core:1.15.0-patched` (`REQ-UI-164`) against defective OEM ROM accessibility crashes, and preserve AGP 9 build property flags until AGP 10.
+• The application SHALL retain `android:largeHeap="true"` (`REQ-PER-012`) to support high-density period heatmaps and multi-session GIS vector tracks without OOM, retain local patched core library `local-repo/androidx.core:1.15.0-patched` (`REQ-UI-164`) against defective OEM ROM accessibility crashes, preserve AGP 9 compatibility flags (`android.newDsl=false`, `android.builtInKotlin=false`) for Secrets Gradle Plugin / legacy Kotlin plugin compatibility until AGP 10, and enable `android.nonFinalResIds=true` and `android.enableAppCompileTimeRClass=true` (`ATT-9365`) so resource edits do not invalidate `R.jar` across Kotlin compilation.
 5. *Automated Manifest Security Contract Verification (`REQ-BLD-003.5`)*:
 • `ManifestSecurityContractTest.kt` SHALL verify via automated contract test that `ConfigPebbleViewsActivity` is not exported (`android:exported="false"`), `GpxImportActivity` contains no `host="*"` or `file` scheme, `ACCESS_BACKGROUND_LOCATION` is declared, and `largeHeap="true"` is retained.
 
