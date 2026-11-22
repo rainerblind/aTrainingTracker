@@ -30,6 +30,8 @@ else:
 
 format_commit_with_trailers = _psl_mod.format_commit_with_trailers
 is_lock_busy = _psl_mod.is_lock_busy
+prepare_warm_verify_worktree = _psl_mod.prepare_warm_verify_worktree
+run_in_warm_worktree = _psl_mod.run_in_warm_worktree
 run_locked = _psl_mod.run_locked
 run_merge_ticket = _psl_mod.run_merge_ticket
 sprint_lock = _psl_mod.sprint_lock
@@ -498,6 +500,183 @@ class TestFlockSerialization(unittest.TestCase):
                 lock_path=self.lock_file,
             )
         self.assertFalse(os.path.exists(os.path.join(wt_bad, ".git", "rebase-merge")))
+
+    def test_warm_verify_worktree_reuses_build_cache_and_preserves_branches(self):
+        """
+        ATT-9581: Verifies persistent warm verify worktree checks out feature/<KEY> in
+        detached HEAD, preserves ignored app/build/ caches across reviews, cleans stray
+        untracked files, links local.properties, and never corrupts feature/* or sprint/*.
+        """
+        main_repo = self._init_git_repo()
+        with open(os.path.join(main_repo, ".gitignore"), "w") as f:
+            f.write("/app/build/\n.gradle/\nlocal.properties\n")
+        with open(os.path.join(main_repo, "local.properties"), "w") as f:
+            f.write("sdk.dir=/fake/sdk\n")
+        subprocess.run(["git", "add", ".gitignore"], cwd=main_repo, check=True)
+        subprocess.run(["git", "commit", "-m", "Add gitignore"], cwd=main_repo, check=True, capture_output=True)
+
+        sprint_before = subprocess.check_output(
+            ["git", "rev-parse", "refs/heads/sprint/2026-46.3"], cwd=main_repo, text=True
+        ).strip()
+
+        wt1 = os.path.join(self.temp_dir.name, "wt_feat1")
+        wt2 = os.path.join(self.temp_dir.name, "wt_feat2")
+        warm_dir = os.path.join(self.temp_dir.name, "warm_verify")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-W1", wt1, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-W2", wt2, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+
+        with open(os.path.join(wt1, "w1.txt"), "w") as f:
+            f.write("ticket 1\n")
+        subprocess.run(["git", "add", "w1.txt"], cwd=wt1, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-W1 commit"], cwd=wt1, check=True, capture_output=True)
+        w1_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=wt1, text=True).strip()
+
+        with open(os.path.join(wt2, "w2.txt"), "w") as f:
+            f.write("ticket 2\n")
+        subprocess.run(["git", "add", "w2.txt"], cwd=wt2, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-W2 commit"], cwd=wt2, check=True, capture_output=True)
+        w2_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=wt2, text=True).strip()
+
+        # First Stage 6 verification on feature/ATT-W1
+        rc1 = run_in_warm_worktree(
+            cmd=[
+                sys.executable,
+                "-c",
+                "import os; open('app/build/warm.bin', 'w').write('cached') if os.path.isdir('app/build') else (os.makedirs('app/build'), open('app/build/warm.bin', 'w').write('cached'))",
+            ],
+            ref="feature/ATT-W1",
+            warm_dir=warm_dir,
+            cwd=wt1,
+            lock_path=self.lock_file,
+        )
+        self.assertEqual(rc1, 0)
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=warm_dir, text=True).strip(),
+            w1_sha,
+        )
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=warm_dir, text=True).strip(),
+            "HEAD",
+        )
+        self.assertTrue(os.path.exists(os.path.join(warm_dir, "local.properties")))
+        self.assertTrue(os.path.isfile(os.path.join(warm_dir, "app", "build", "warm.bin")))
+
+        # Simulate leftover untracked file and dirty tracked file inside warm_dir
+        with open(os.path.join(warm_dir, "stray.tmp"), "w") as f:
+            f.write("junk\n")
+        with open(os.path.join(warm_dir, "README.md"), "a") as f:
+            f.write("dirty edit\n")
+
+        # Second Stage 6 verification on feature/ATT-W2 reuses warm_dir and keeps app/build/
+        rc2 = run_in_warm_worktree(
+            cmd=[sys.executable, "-c", "import os, sys; sys.exit(0 if os.path.isfile('w2.txt') and not os.path.exists('w1.txt') else 1)"],
+            ref="feature/ATT-W2",
+            warm_dir=warm_dir,
+            cwd=wt2,
+            lock_path=self.lock_file,
+        )
+        self.assertEqual(rc2, 0)
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=warm_dir, text=True).strip(),
+            w2_sha,
+        )
+        self.assertFalse(os.path.exists(os.path.join(warm_dir, "stray.tmp")))
+        with open(os.path.join(warm_dir, "app", "build", "warm.bin"), "r") as f:
+            self.assertEqual(f.read(), "cached")
+
+        # feature/* and sprint/* refs must remain untouched
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-parse", "refs/heads/sprint/2026-46.3"], cwd=main_repo, text=True).strip(),
+            sprint_before,
+        )
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-parse", "refs/heads/feature/ATT-W1"], cwd=main_repo, text=True).strip(),
+            w1_sha,
+        )
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-parse", "refs/heads/feature/ATT-W2"], cwd=main_repo, text=True).strip(),
+            w2_sha,
+        )
+
+    def test_warm_verify_worktree_guards_branch_worktree_and_symlinks(self):
+        """
+        ATT-9581: Refuses to overwrite main/branch worktrees and cleans ANT-Android-SDKs symlinks.
+        """
+        main_repo = self._init_git_repo()
+        wt1 = os.path.join(self.temp_dir.name, "wt_branch")
+        warm_dir = os.path.join(self.temp_dir.name, "warm_guard")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-GUARD", wt1, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+
+        # Must refuse branch-attached worktree or main_repo
+        with sprint_lock(lock_path=self.lock_file):
+            with self.assertRaises(RuntimeError):
+                prepare_warm_verify_worktree(ref="HEAD", warm_dir=main_repo, cwd=wt1)
+            with self.assertRaises(RuntimeError):
+                prepare_warm_verify_worktree(ref="HEAD", warm_dir=wt1, cwd=main_repo)
+
+            info = prepare_warm_verify_worktree(ref="feature/ATT-GUARD", warm_dir=warm_dir, cwd=main_repo)
+            self.assertEqual(os.path.realpath(info["warm_dir"]), os.path.realpath(warm_dir))
+
+            # Simulate stray symlink at ANT-Android-SDKs
+            sdk_link = os.path.join(warm_dir, "ANT-Android-SDKs")
+            os.symlink("/tmp", sdk_link)
+            self.assertTrue(os.path.islink(sdk_link))
+            prepare_warm_verify_worktree(ref="feature/ATT-GUARD", warm_dir=warm_dir, cwd=main_repo)
+            self.assertFalse(os.path.islink(sdk_link))
+
+    def test_cli_verify_warm_executes_and_propagates_exit_code(self):
+        """ATT-9581: CLI --verify-warm --ref executes command inside warm worktree under flock."""
+        main_repo = self._init_git_repo()
+        wt1 = os.path.join(self.temp_dir.name, "wt_cli")
+        warm_dir = os.path.join(self.temp_dir.name, "warm_cli")
+        subprocess.run(
+            ["git", "worktree", "add", "-b", "feature/ATT-CLI", wt1, "sprint/2026-46.3"],
+            cwd=main_repo,
+            check=True,
+            capture_output=True,
+        )
+        with open(os.path.join(wt1, "cli_marker.txt"), "w") as f:
+            f.write("ok\n")
+        subprocess.run(["git", "add", "cli_marker.txt"], cwd=wt1, check=True)
+        subprocess.run(["git", "commit", "-m", "ATT-CLI marker"], cwd=wt1, check=True, capture_output=True)
+
+        cli_path = os.path.join(os.path.dirname(__file__), "parallel_sprint_lock.py")
+        res = subprocess.run(
+            [
+                sys.executable,
+                cli_path,
+                "--lock-file",
+                self.lock_file,
+                "--verify-warm",
+                "--ref",
+                "feature/ATT-CLI",
+                "--warm-dir",
+                warm_dir,
+                "--",
+                sys.executable,
+                "-c",
+                "import os, sys; sys.exit(0 if os.path.isfile('cli_marker.txt') else 9)",
+            ],
+            cwd=main_repo,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0, res.stderr)
 
 
 if __name__ == "__main__":
