@@ -21,7 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -29,9 +29,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
@@ -363,128 +366,158 @@ fun ControlTrackingScreen(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val showBatteryBanner = !isIgnoringBatteryOptimizations && !isBatteryBannerDismissed
+
+    // Scrollable container with min-height matching viewport prevents bottomContent (RouteSelectionButton)
+    // and SportTypeSelector from being crushed to zero-height (0, 0, 0, 0) bounds when stacked banners
+    // or compact viewports exceed available height (ATT-9364), while preserving centered layout when space allows.
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize()
     ) {
-        LocationCalibrationBadge(
-            status = locationCalibrationStatus,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        BatteryOptimizationWarningBanner(
-            visible = !isIgnoringBatteryOptimizations && !isBatteryBannerDismissed,
-            onFixClick = { launchBatteryOptimizationIntent(context) },
-            onDismissClick = { isBatteryBannerDismissed = true },
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        // Status banner when actively searching for sensors (REQ-UI-301, ATT-2479)
-        SearchArea(
-            searchingFor = searchingFor
-        )
-
-        // Sensor header section: RemoteDevices and ResearchButton with symmetrical centering (REQ-UI-301, REQ-UI-313, ATT-2791)
-        if (devices.isNotEmpty()) {
-            Row(
+        val viewportHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .heightIn(min = viewportHeight)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                if (showResearchButton) {
-                    ResearchButton(
-                        isEnabled = searchingFor == null,
-                        onClick = handleSearchClick
+                // Top section: calibration badge, battery warning, search area, sensor header
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    LocationCalibrationBadge(
+                        status = locationCalibrationStatus,
+                        modifier = if (locationCalibrationStatus != null) Modifier.padding(bottom = 8.dp) else Modifier
                     )
-                }
-                RemoteDevices(
-                    devices = devices,
-                    onDeviceClick = onDeviceClick,
-                    modifier = Modifier.weight(1f)
-                )
-                if (showResearchButton) {
-                    // Symmetrical balancing anchor matching ResearchButton width to mathematically center RemoteDevices (REQ-UI-313)
-                    Box(
-                        modifier = Modifier
-                            .alpha(0f)
-                            .clearAndSetSemantics { }
-                    ) {
-                        ResearchButton(
-                            isEnabled = false,
-                            onClick = {}
-                        )
+
+                    BatteryOptimizationWarningBanner(
+                        visible = showBatteryBanner,
+                        onFixClick = { launchBatteryOptimizationIntent(context) },
+                        onDismissClick = { isBatteryBannerDismissed = true },
+                        modifier = if (showBatteryBanner) Modifier.padding(bottom = 8.dp) else Modifier
+                    )
+
+                    // Status banner when actively searching for sensors (REQ-UI-301, ATT-2479)
+                    SearchArea(
+                        searchingFor = searchingFor
+                    )
+
+                    // Sensor header section: RemoteDevices and ResearchButton with symmetrical centering (REQ-UI-301, REQ-UI-313, ATT-2791)
+                    if (devices.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (showResearchButton) {
+                                ResearchButton(
+                                    isEnabled = searchingFor == null,
+                                    onClick = handleSearchClick
+                                )
+                            }
+                            RemoteDevices(
+                                devices = devices,
+                                onDeviceClick = onDeviceClick,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (showResearchButton) {
+                                // Symmetrical balancing anchor matching ResearchButton width to mathematically center RemoteDevices (REQ-UI-313)
+                                Box(
+                                    modifier = Modifier
+                                        .alpha(0f)
+                                        .clearAndSetSemantics { }
+                                ) {
+                                    ResearchButton(
+                                        isEnabled = false,
+                                        onClick = {}
+                                    )
+                                }
+                            }
+                        }
+                    } else if (showResearchButton) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ResearchButton(
+                                isEnabled = searchingFor == null,
+                                onClick = handleSearchClick
+                            )
+                        }
+                    } else if (searchingFor == null) {
+                        // Onboarding button when 0 sensors paired and not searching (REQ-SEN-020, ATT-4051)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = onPairSensor,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = stringResource(R.string.onboarding_pair_sensor_action))
+                            }
+                        }
                     }
                 }
-            }
-        } else if (showResearchButton) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ResearchButton(
-                    isEnabled = searchingFor == null,
-                    onClick = handleSearchClick
-                )
-            }
-        } else if (searchingFor == null) {
-            // Onboarding button when 0 sensors paired and not searching (REQ-SEN-020, ATT-4051)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = onPairSensor,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+
+                // Center section: Large Control Buttons (Start/Pause/Stop) + Sport Selection
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                    ControlTrackingButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        mode = trackingMode,
+                        enabled = true,
+                        hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations ||
+                            (hasPairedBluetoothSensors && !hasBluetoothPermission),
+                        onStart = handleStartClick,
+                        onPause = onPause,
+                        onResume = onResume,
+                        onStop = onStop
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.onboarding_pair_sensor_action))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Sport Selection
+                    SportTypeSelector(
+                        currentSport = currentSport,
+                        onSportSelected = onSportSelected
+                    )
+                }
+
+                // Bottom section: Flexible bottom content slot (e.g. Route Selection in ATT-2458)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    bottomContent()
                 }
             }
         }
-
-        // Pushes the main control buttons to the center
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Large Control Buttons (Start/Pause/Stop)
-        ControlTrackingButton(
-            modifier = Modifier.fillMaxWidth(),
-            mode = trackingMode,
-            enabled = true,
-            hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations ||
-                                   (hasPairedBluetoothSensors && !hasBluetoothPermission),
-            onStart = handleStartClick,
-            onPause = onPause,
-            onResume = onResume,
-            onStop = onStop
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Sport Selection
-        SportTypeSelector(
-            currentSport = currentSport,
-            onSportSelected = onSportSelected
-        )
-
-        // Pushes the main control buttons to the center
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Flexible bottom content slot (e.g. Route Selection in ATT-2458)
-        bottomContent()
     }
 
     // Material 3 Permission Rationale Sheet (REQ-PRI-003, ATT-2075)

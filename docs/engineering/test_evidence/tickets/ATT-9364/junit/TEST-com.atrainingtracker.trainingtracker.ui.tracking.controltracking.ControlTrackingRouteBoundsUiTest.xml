@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteBoundsUiTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:16:33.007Z" hostname="rainer-HP-EliteBook-850-G5" time="17.282">
+  <properties/>
+  <testcase name="controlTrackingScreen_germanLocalePortrait_displaysPositiveBoundsForKeineStreckenInDerNaehe" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteBoundsUiTest" time="16.602"/>
+  <testcase name="controlTrackingScreen_compactViewportWithStackedBanners_preservesPositiveBoundsForNoRoutesNearby" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteBoundsUiTest" time="0.467"/>
+  <testcase name="routeSelectionButton_whenActiveRouteSelected_omitsNoRoutesNearbyFromSemantics" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteBoundsUiTest" time="0.212"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
