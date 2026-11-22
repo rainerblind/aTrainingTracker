@@ -804,6 +804,7 @@ class BTSearchForNewDevicesEngineTest {
 
             assertFalse(PolarOfflineCapabilityStore.hasPmdService(mockContext, testAddress))
             assertFalse(PolarOfflineCapabilityStore.hasPftpService(mockContext, testAddress))
+            assertTrue(PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(mockContext, testAddress))
             assertNull(PolarOfflineCapabilityStore.getModelNumber(mockContext, testAddress))
             assertNull(PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, testAddress))
             assertEquals(
@@ -811,6 +812,10 @@ class BTSearchForNewDevicesEngineTest {
                 PolarOfflineCapabilityStore.getDeviceType(mockContext, testAddress)
             )
             assertFalse(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(mockContext, "CardioSense HRM", "", testAddress))
+            assertFalse(
+                "Non-Polar HRM confirmed during pairing must reject Polar H10 rename",
+                PolarOfflineGattCoordinator.isPolarH10Device(mockContext, "Polar H10", "", testAddress)
+            )
             verify(exactly = 1) {
                 mockCallback.onNewDeviceFound(DeviceType.HRM, testAddress, any(), any(), any())
             }

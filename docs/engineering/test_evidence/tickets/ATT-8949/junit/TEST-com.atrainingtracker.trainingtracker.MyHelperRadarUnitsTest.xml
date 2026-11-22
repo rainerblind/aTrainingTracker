@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:22:34.560Z" hostname="rainer-HP-EliteBook-850-G5" time="2.463">
+  <properties/>
+  <testcase name="getShortUnitsId_radarApproachSpeed_imperial_matchesSpeedAndResolvesMiPerHour" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.139"/>
+  <testcase name="getUnitsId_radarApproachSpeed_metric_matchesSpeedAndResolvesKmh" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.15"/>
+  <testcase name="getUnitsId_radarApproachSpeed_imperial_matchesSpeedAndResolvesMilePerHour" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.178"/>
+  <testcase name="trackingViewModel_radarApproachSpeedTile_resolvesMetricAndImperialShortUnits" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="1.538"/>
+  <testcase name="getMergedDevicesUseCase_radarApproachSpeed_resolvesMetricAndImperialUnits" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.215"/>
+  <testcase name="getShortUnitsId_radarApproachSpeed_metric_matchesSpeedAndResolvesKmh" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.118"/>
+  <testcase name="radarApproachSpeed_preservesInternalUnitDeprecatedUnitIdAndDistanceFallback" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.125"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

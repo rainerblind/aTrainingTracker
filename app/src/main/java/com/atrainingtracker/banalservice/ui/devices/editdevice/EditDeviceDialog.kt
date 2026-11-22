@@ -81,6 +81,7 @@ fun EditDeviceDialog(
     viewModel: EditDeviceViewModel = viewModel()
 ) {
     val snapshot by viewModel.deviceSnapshot.collectAsStateWithLifecycle()
+    val persistedIdentity by viewModel.persistedDeviceIdentity.collectAsStateWithLifecycle()
     val liveData by viewModel.deviceLiveData.collectAsStateWithLifecycle(initialValue = null)
     val wheelCircumferenceHistory by viewModel.wheelCircumferenceHistory.collectAsStateWithLifecycle()
     val deviceNotFound by viewModel.deviceNotFound.collectAsStateWithLifecycle()
@@ -216,9 +217,13 @@ fun EditDeviceDialog(
                     WheelSensorGuidanceCard(onShowGuidance = { showWheelGuidanceDialog = true })
                 }
 
-                // 10. Polar H10 & Verity Sense Internal Backup Recording (ATT-7762, ATT-7923, REQ-SET-104, REQ-SET-108)
-                if (data.deviceType == DeviceType.HRM) {
-                    PolarOfflineDeviceSection(data = data, viewModel = viewModel)
+                // 10. Polar H10 & Verity Sense Internal Backup Recording (ATT-7762, ATT-7923, ATT-8949, REQ-SET-104, REQ-SET-108, REQ-CON-049.4)
+                if (data.deviceType == DeviceType.HRM && data.protocol == Protocol.BLUETOOTH_LE) {
+                    PolarOfflineDeviceSection(
+                        data = data,
+                        persistedIdentity = persistedIdentity ?: data,
+                        viewModel = viewModel
+                    )
                 }
 
                 // 11. Live Data Preview
@@ -1506,7 +1511,8 @@ fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
     deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
 
 /**
- * Returns true if [data] identifies a Polar H10 chest strap via hardware DIS/SDK metadata or legacy name fallback (`REQ-CON-049.4`).
+ * Returns true if [data] identifies a BLE Polar H10 chest strap via hardware DIS/SDK metadata or
+ * guarded legacy fallback (`REQ-CON-049.4`). Non-BLE protocols (e.g., ANT+) always return `false`.
  */
 @JvmOverloads
 fun isPolarH10Device(
@@ -1514,6 +1520,7 @@ fun isPolarH10Device(
     context: android.content.Context? = null,
     macAddress: String? = null
 ): Boolean {
+    if (data.protocol != Protocol.BLUETOOTH_LE) return false
     return PolarOfflineGattCoordinator.isPolarH10Device(
         context = context,
         name = data.deviceName,
@@ -1523,7 +1530,8 @@ fun isPolarH10Device(
 }
 
 /**
- * Returns true if [data] identifies a Polar Verity Sense / compatible optical Polar offline HR sensor (ATT-7923, `REQ-CON-049.4`).
+ * Returns true if [data] identifies a BLE Polar Verity Sense / compatible optical Polar offline HR
+ * sensor (`ATT-7923`, `REQ-CON-049.4`). Non-BLE protocols (e.g., ANT+) always return `false`.
  */
 @JvmOverloads
 fun isPolarVeritySenseDevice(
@@ -1531,6 +1539,7 @@ fun isPolarVeritySenseDevice(
     context: android.content.Context? = null,
     macAddress: String? = null
 ): Boolean {
+    if (data.protocol != Protocol.BLUETOOTH_LE) return false
     return PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
         context = context,
         name = data.deviceName,
@@ -1540,12 +1549,15 @@ fun isPolarVeritySenseDevice(
 }
 
 @Composable
-private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
-    val dialogContext = LocalContext.current
-    val polarMac = if (data.protocol == Protocol.BLUETOOTH_LE) {
-        remember(data.id) {
+private fun PolarOfflineDeviceSection(
+    data: DeviceUiData,
+    persistedIdentity: DeviceUiData,
+    viewModel: EditDeviceViewModel
+) {
+    val polarMac = if (persistedIdentity.protocol == Protocol.BLUETOOTH_LE) {
+        remember(persistedIdentity.id) {
             try {
-                viewModel.getBluetoothMacAddress(data.id)
+                viewModel.getBluetoothMacAddress(persistedIdentity.id)
             } catch (_: Throwable) {
                 null
             }
@@ -1553,52 +1565,48 @@ private fun PolarOfflineDeviceSection(data: DeviceUiData, viewModel: EditDeviceV
     } else {
         null
     }
-    val isH10 = isPolarH10Device(data, dialogContext, polarMac)
-    val isVeritySense = !isH10 && isPolarVeritySenseDevice(data, dialogContext, polarMac)
+    PolarOfflineDeviceSectionContent(
+        data = data,
+        persistedIdentity = persistedIdentity,
+        polarMac = polarMac,
+        onOfflineRecordingChanged = viewModel::onPolarH10OfflineRecordingChanged,
+        onLiveImuEnabledChanged = viewModel::onPolarLiveImuEnabledChanged
+    )
+}
+
+/**
+ * Stateless Polar backup & live-IMU toggle section gated on [persistedIdentity] (immutable pre-edit
+ * device identity) and hardware capability metadata so live keystroke drafts in the rename field
+ * cannot falsely enable or hide Polar options (`REQ-CON-049.4`).
+ */
+@Composable
+internal fun PolarOfflineDeviceSectionContent(
+    data: DeviceUiData,
+    persistedIdentity: DeviceUiData,
+    polarMac: String?,
+    onOfflineRecordingChanged: (Boolean) -> Unit,
+    onLiveImuEnabledChanged: (Boolean) -> Unit
+) {
+    val dialogContext = LocalContext.current
+    val isH10 = isPolarH10Device(persistedIdentity, dialogContext, polarMac)
+    val isVeritySense = !isH10 && isPolarVeritySenseDevice(persistedIdentity, dialogContext, polarMac)
     if (isH10 || isVeritySense) {
+        val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PolarBackupRecordingSection(
-                data = data,
-                viewModel = viewModel,
-                isVeritySense = isVeritySense
+            PolarBackupRecordingCard(
+                checked = data.polarH10OfflineRecording,
+                isVeritySense = isVeritySense,
+                isAndroid13Plus = isAndroid13Plus,
+                onCheckedChange = onOfflineRecordingChanged
             )
-            PolarLiveImuSection(
-                data = data,
-                viewModel = viewModel,
-                isVeritySense = isVeritySense
+            PolarLiveImuCard(
+                checked = data.polarLiveImuEnabled,
+                isVeritySense = isVeritySense,
+                isAndroid13Plus = isAndroid13Plus,
+                onCheckedChange = onLiveImuEnabledChanged
             )
         }
     }
-}
-
-@Composable
-private fun PolarBackupRecordingSection(
-    data: DeviceUiData,
-    viewModel: EditDeviceViewModel,
-    isVeritySense: Boolean
-) {
-    val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
-    PolarBackupRecordingCard(
-        checked = data.polarH10OfflineRecording,
-        isVeritySense = isVeritySense,
-        isAndroid13Plus = isAndroid13Plus,
-        onCheckedChange = { viewModel.onPolarH10OfflineRecordingChanged(it) }
-    )
-}
-
-@Composable
-private fun PolarLiveImuSection(
-    data: DeviceUiData,
-    viewModel: EditDeviceViewModel,
-    isVeritySense: Boolean
-) {
-    val isAndroid13Plus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
-    PolarLiveImuCard(
-        checked = data.polarLiveImuEnabled,
-        isVeritySense = isVeritySense,
-        isAndroid13Plus = isAndroid13Plus,
-        onCheckedChange = { viewModel.onPolarLiveImuEnabledChanged(it) }
-    )
 }
 
 /**

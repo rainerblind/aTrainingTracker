@@ -216,7 +216,12 @@ class PolarPmdStreamCoordinator(
             return when {
                 lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.toString() ||
                     lowerKey.contains("2a24") || lowerKey.contains("model") -> {
-                    PolarOfflineCapabilityStore.recordDisMetadata(context, macAddress, modelNumber = trimmedValue)
+                    PolarOfflineCapabilityStore.recordDisMetadata(
+                        context = context,
+                        macAddress = macAddress,
+                        modelNumber = trimmedValue,
+                        confirmedPolarService = true
+                    )
                     true
                 }
                 lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.toString() ||

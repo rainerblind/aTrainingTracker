@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:23:48.909Z" hostname="rainer-HP-EliteBook-850-G5" time="15.051">
+  <properties/>
+  <testcase name="testTrackingAbort_resetsApplicationStateInvariants" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="5.802"/>
+  <testcase name="testRecreateValuesWhenResuming_missingRecord_completesExceptionally" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.68"/>
+  <testcase name="testApplyResumedState_invalidBaseFileName_failsDefensively" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.364"/>
+  <testcase name="testEndToEndMonotonicContinuityAcrossCrashRecovery" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.38"/>
+  <testcase name="testStartTypeInvariants_acrossStartupTiers" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.786"/>
+  <testcase name="testApplyResumedState_validRecord_populatesStateAndInitializes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.254"/>
+  <testcase name="testApplyResumedState_reanchorsBarometerAndResumesPolarSidecarForCrashAndUserResume_TST_STB_025_1" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.784"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+System.logW: A resource failed to call AbstractCursor.close. 
+System.logW: A resource failed to call AbstractCursor.close. 
+Intent = Intent { act=com.atrainingtracker.banalservice.RESET_ACCUMULATORS_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>

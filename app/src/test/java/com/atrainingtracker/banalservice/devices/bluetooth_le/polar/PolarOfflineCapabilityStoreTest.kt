@@ -180,4 +180,83 @@ class PolarOfflineCapabilityStoreTest {
         PolarOfflineCapabilityStore.recordDisMetadata(context, mac, serialNumber = "1234567890123")
         assertEquals("0A1B2C3D", PolarOfflineCapabilityStore.getPolarDeviceId(context, mac))
     }
+
+    @Test
+    fun testConfirmedNonPolarGatt_blocksNameHeuristicsEvenWhenRenamedPolarH10OrVeritySense_TST_CON_049_1() {
+        // REQ-CON-049.1 / REQ-CON-049.4 / TST-CON-049.1
+        val mac = "AA:BB:CC:DD:EE:08"
+        PolarOfflineCapabilityStore.seedLegacyDeviceTypeIfUnknown(
+            context,
+            mac,
+            PolarOfflineCapabilityStore.PolarDeviceType.H10,
+            "11223344"
+        )
+        PolarOfflineCapabilityStore.recordGattServiceCapabilities(
+            context = context,
+            macAddress = mac,
+            hasPmdService = false,
+            hasPftpService = false
+        )
+
+        // Simulate process restart
+        PolarOfflineCapabilityStore.resetForTesting()
+        assertTrue(PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(context, mac))
+        assertEquals(PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN, PolarOfflineCapabilityStore.getDeviceType(context, mac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarH10Device(context, "Polar H10", "", mac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarH10Device(context, "Polar H10 1234ABCD", "Polar Electro", mac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(context, "Polar Verity Sense", "", mac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarOfflineCapableDevice(context, "Polar H10", "", mac))
+    }
+
+    @Test
+    fun testPolarGatedBareSenseDisAndEmptyNameResilience_TST_CON_049_1() {
+        // REQ-CON-049.2 / REQ-CON-049.4 / TST-CON-049.1
+        assertEquals(
+            PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN,
+            PolarOfflineCapabilityStore.classifyModelNumber("Sense", hasPolarServices = false)
+        )
+        assertEquals(
+            PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+            PolarOfflineCapabilityStore.classifyModelNumber("Sense", hasPolarServices = true)
+        )
+        assertEquals(
+            PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN,
+            PolarOfflineCapabilityStore.classifyModelNumber("CardioSense", hasPolarServices = true)
+        )
+
+        val senseMac = "AA:BB:CC:DD:EE:09"
+        // DIS "Sense" arriving before PMD/PFTP is promoted and persisted to SharedPreferences once Polar services are confirmed
+        PolarOfflineCapabilityStore.recordDisMetadata(context, senseMac, modelNumber = "Sense", serialNumber = "AABB1122")
+        assertEquals(PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN, PolarOfflineCapabilityStore.getDeviceType(context, senseMac))
+        PolarOfflineCapabilityStore.recordGattServiceCapabilities(context, senseMac, hasPmdService = true, hasPftpService = true)
+        // Simulate process restart to verify KEY_TYPE_PREFIX persistence
+        PolarOfflineCapabilityStore.resetForTesting()
+        assertEquals(PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE, PolarOfflineCapabilityStore.getDeviceType(context, senseMac))
+        assertTrue(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(context, "", "", senseMac))
+
+        // Legacy offline_rec_ Verity Sense without polar_type_ also survives empty name ""
+        val legacyVerityMac = "AA:BB:CC:DD:EE:0A"
+        PolarOfflineCapabilityStore.markOfflineRecordingCapable(context, legacyVerityMac)
+        assertTrue(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(context, "", "", legacyVerityMac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarH10Device(context, "", "", legacyVerityMac))
+    }
+
+    @Test
+    fun testLegacySeedSuppressionAndExplicitNonPolarManufacturerGuard_TST_CON_049_1() {
+        // REQ-CON-049.3 / REQ-CON-049.4 / TST-CON-049.1
+        val garminMac = "AA:BB:CC:DD:EE:0B"
+        assertFalse(PolarOfflineGattCoordinator.isPolarH10Device(context, "Polar H10", "Garmin", garminMac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(context, "Polar Verity Sense", "Wahoo", garminMac))
+
+        // Un-reconnected non-Polar rename suppression blocks name fallback, but real Polar GATT/DIS overrides it
+        val renamedMac = "AA:BB:CC:DD:EE:0C"
+        PolarOfflineCapabilityStore.suppressLegacyNameHeuristicIfUnknown(context, renamedMac)
+        assertTrue(PolarOfflineCapabilityStore.isLegacyNameHeuristicSuppressed(context, renamedMac))
+        assertFalse(PolarOfflineGattCoordinator.isPolarH10Device(context, "Polar H10", "", renamedMac))
+
+        PolarOfflineCapabilityStore.recordGattServiceCapabilities(context, renamedMac, hasPmdService = true, hasPftpService = true)
+        PolarOfflineCapabilityStore.recordDisMetadata(context, renamedMac, modelNumber = "H10", serialNumber = "DEADBEEF")
+        assertFalse(PolarOfflineCapabilityStore.isLegacyNameHeuristicSuppressed(context, renamedMac))
+        assertTrue(PolarOfflineGattCoordinator.isPolarH10Device(context, "", "", renamedMac))
+    }
 }

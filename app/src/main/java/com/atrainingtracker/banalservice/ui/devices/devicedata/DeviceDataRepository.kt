@@ -363,7 +363,47 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                     } while (c.moveToNext())
                 }
             }
+            uiDeviceDataList.forEach { device ->
+                runCatching { backfillLegacyPolarIdentityIfNeeded(device) }
+                    .onFailure { e ->
+                        Log.w("DeviceDataRepository", "Legacy Polar backfill skipped for device ${device.id}: ${e.message}")
+                    }
+            }
             _allDevices.value = uiDeviceDataList
+        }
+    }
+
+    /**
+     * Backfills a hardware-overridable legacy Polar sensor classification (`H10` / `VERITY_SENSE`)
+     * and canonical 8-hex ID for pre-`ATT-8717` paired BLE HRM rows lacking hardware DIS/GATT metadata
+     * (`REQ-CON-049.3`). Also preserves legacy `offline_rec_`-only Verity Sense devices (whose display
+     * name no longer carries Verity tokens) so renaming them to `"Polar H10"` cannot bleed into H10.
+     */
+    fun backfillLegacyPolarIdentityIfNeeded(device: DeviceUiData) {
+        if (device.protocol != Protocol.BLUETOOTH_LE || device.deviceType != DeviceType.HRM) return
+        val mac = devicesDatabaseManager.getBluetoothMACAddress(device.id)?.takeIf { it.isNotBlank() } ?: return
+        if (PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(application, mac) ||
+            PolarOfflineCapabilityStore.hasHardwareDeviceType(application, mac) ||
+            PolarOfflineCapabilityStore.isLegacyNameHeuristicSuppressed(application, mac)
+        ) {
+            return
+        }
+        if (device.manufacturer.isNotBlank() && !device.manufacturer.contains("polar", ignoreCase = true)) {
+            return
+        }
+        val legacyType = when {
+            PolarOfflineGattCoordinator.isPolarH10Name(device.deviceName, device.manufacturer) ->
+                PolarOfflineCapabilityStore.PolarDeviceType.H10
+            PolarOfflineGattCoordinator.isPolarVeritySenseName(device.deviceName, device.manufacturer) ->
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE
+            PolarOfflineCapabilityStore.hasOfflineRecordingCapability(application, mac) ->
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE
+            else -> PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN
+        }
+        if (legacyType != PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN) {
+            val extractedId = PolarOfflineGattCoordinator.extractPolarId(application, device.deviceName, mac)
+                .takeIf { PolarOfflineCapabilityStore.isValidCanonicalPolarId(it) }
+            PolarOfflineCapabilityStore.seedLegacyDeviceTypeIfUnknown(application, mac, legacyType, extractedId)
         }
     }
 
@@ -394,6 +434,23 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
             if (originalState == finalState) {
                 return@withContext
+            }
+
+            if (originalState.protocol == Protocol.BLUETOOTH_LE &&
+                originalState.deviceType == DeviceType.HRM &&
+                originalState.deviceName != finalState.deviceName
+            ) {
+                backfillLegacyPolarIdentityIfNeeded(originalState)
+                val mac = devicesDatabaseManager.getBluetoothMACAddress(finalState.id)?.takeIf { it.isNotBlank() }
+                if (mac != null &&
+                    PolarOfflineCapabilityStore.getDeviceType(application, mac) ==
+                    PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN &&
+                    !PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(application, mac) &&
+                    !PolarOfflineCapabilityStore.hasPolarServiceCapability(application, mac) &&
+                    !PolarOfflineCapabilityStore.hasOfflineRecordingCapability(application, mac)
+                ) {
+                    PolarOfflineCapabilityStore.suppressLegacyNameHeuristicIfUnknown(application, mac)
+                }
             }
 
             // update the device in the main device database

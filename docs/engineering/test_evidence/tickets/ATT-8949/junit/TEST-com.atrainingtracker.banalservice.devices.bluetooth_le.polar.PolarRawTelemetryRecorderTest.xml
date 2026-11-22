@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:20:58.675Z" hostname="rainer-HP-EliteBook-850-G5" time="0.984">
+  <properties/>
+  <testcase name="preConnectedBridge_capturesFramesWhenWorkoutStartsLater" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.127"/>
+  <testcase name="testAppendCsvLine_exactParityWithStringFormatAcrossEdgeCases_TST_STB_023_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.08"/>
+  <testcase name="activeWorkoutRecorder_attachesWhenReplacementBridgeConnectsViaSessionOpen_andPersistsSidecar" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.097"/>
+  <testcase name="streamingSession_recordsMultiChannelFrames_andProducesValidGzipFile" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.071"/>
+  <testcase name="offlineExerciseSync_persistsSidecarFile" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.068"/>
+  <testcase name="highVolumeBurst_bufferedWithoutDropping" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.143"/>
+  <testcase name="emptyRecordingSession_discardsFile_leavingZeroOrphans" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.075"/>
+  <testcase name="testResumeOrStartActiveSession_salvagesTruncatedTmpDropsPartialLineAndAppendsPostCrashRows_TST_STB_025_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.09"/>
+  <testcase name="testDropOldestBackpressure_onUndeliveredElementCountsDropsAndCancelsScopeOnStop_TST_STB_023_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest" time="0.233"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STOPPED_FOR_ONE_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ONE_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$8@6f644660], context=[android.app.ContextImpl@5b2e9a8e], intentFilter=[android.content.IntentFilter@4427beda]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STOPPED_FOR_ONE_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+System.logW: A resource failed to call AbstractCursor.close. 
+]]></system-err>
+</testsuite>

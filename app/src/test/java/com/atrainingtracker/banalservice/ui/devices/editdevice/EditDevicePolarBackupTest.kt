@@ -113,6 +113,32 @@ class EditDevicePolarBackupTest {
     }
 
     @Test
+    fun testProtocolGateNonPolarMfgAndEmptyNameResilience_TST_CON_049_4() {
+        // REQ-CON-049.4 / TST-CON-049.4: Non-BLE (ANT+) HRM renamed "Polar H10" must never expose Polar options
+        val antHrmNamedPolar = createHrmUiData("Polar H10", manufacturer = "").copy(protocol = Protocol.ANT_PLUS)
+        assertFalse(isPolarH10Device(antHrmNamedPolar))
+        assertFalse(isPolarVeritySenseDevice(antHrmNamedPolar))
+
+        // Explicitly non-Polar manufacturer blocks legacy name fallback
+        val garminNamedPolar = createHrmUiData("Polar H10", manufacturer = "Garmin")
+        assertFalse(isPolarH10Device(garminNamedPolar))
+        assertFalse(isPolarVeritySenseDevice(garminNamedPolar))
+
+        // Empty-name Verity Sense (legacy offline_rec_ or hardware VERITY_SENSE) & H10 stay detected
+        val verityMac = "AA:BB:CC:DD:EE:03"
+        PolarOfflineCapabilityStore.markOfflineRecordingCapable(null, verityMac)
+        val emptyVerity = createHrmUiData("", manufacturer = "")
+        assertTrue(isPolarVeritySenseDevice(emptyVerity, macAddress = verityMac))
+        assertFalse(isPolarH10Device(emptyVerity, macAddress = verityMac))
+
+        val h10Mac = "AA:BB:CC:DD:EE:04"
+        PolarOfflineCapabilityStore.recordDisMetadata(null, h10Mac, modelNumber = "H10", serialNumber = "1C3B2421")
+        val emptyH10 = createHrmUiData("", manufacturer = "")
+        assertTrue(isPolarH10Device(emptyH10, macAddress = h10Mac))
+        assertFalse(isPolarVeritySenseDevice(emptyH10, macAddress = h10Mac))
+    }
+
+    @Test
     fun testPolarBackupRecordingCard_andStringsContractExist() {
         val clazz = Class.forName("com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogKt")
         val cardMethod = clazz.declaredMethods.firstOrNull { it.name.startsWith("PolarBackupRecordingCard") }

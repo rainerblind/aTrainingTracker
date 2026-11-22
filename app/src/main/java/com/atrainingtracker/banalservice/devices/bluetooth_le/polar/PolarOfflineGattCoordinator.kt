@@ -904,9 +904,14 @@ object PolarOfflineGattCoordinator {
             (lowerName.contains("h10") && (lowerName.contains("polar") || lowerMfg.contains("polar")))
     }
 
+    private fun hasExplicitNonPolarManufacturer(manufacturer: String): Boolean {
+        return manufacturer.isNotBlank() && !manufacturer.contains("polar", ignoreCase = true)
+    }
+
     /**
-     * Returns true when persisted DIS/SDK hardware metadata identifies a Polar H10, or (strictly when
-     * hardware type is `UNKNOWN` on un-reconnected rows) legacy name heuristics match (`REQ-CON-049.4`).
+     * Returns true when persisted DIS/SDK hardware metadata (or backfilled legacy Polar type)
+     * identifies a Polar H10, or (strictly when hardware type is `UNKNOWN`, not confirmed non-Polar
+     * via GATT, not rename-suppressed, and manufacturer is blank or Polar) legacy name heuristics match (`REQ-CON-049.4`).
      */
     @JvmStatic
     @JvmOverloads
@@ -916,10 +921,17 @@ object PolarOfflineGattCoordinator {
         manufacturer: String = "",
         macAddress: String? = null
     ): Boolean {
+        if (PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(context, macAddress)) {
+            return false
+        }
         return when (PolarOfflineCapabilityStore.getDeviceType(context, macAddress)) {
             PolarOfflineCapabilityStore.PolarDeviceType.H10 -> true
             PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE -> false
-            PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN -> isPolarH10Name(name, manufacturer)
+            PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN -> {
+                !PolarOfflineCapabilityStore.isLegacyNameHeuristicSuppressed(context, macAddress) &&
+                    !hasExplicitNonPolarManufacturer(manufacturer) &&
+                    isPolarH10Name(name, manufacturer)
+            }
         }
     }
 
@@ -938,9 +950,10 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
-     * Returns true for Polar Verity Sense / OH1 sensors confirmed via DIS/SDK hardware metadata, or
-     * (strictly when hardware type is `UNKNOWN` on un-reconnected rows) legacy name/offline capability
-     * heuristics (`REQ-CON-049.4`).
+     * Returns true for Polar Verity Sense / OH1 sensors confirmed via DIS/SDK hardware metadata,
+     * backfilled legacy type, or legacy `offline_rec_` capability (independent of empty display name),
+     * or (strictly when hardware type is `UNKNOWN`, not confirmed non-Polar via GATT, not
+     * rename-suppressed, and manufacturer is blank or Polar) legacy name heuristics (`REQ-CON-049.4`).
      */
     @JvmStatic
     @JvmOverloads
@@ -950,13 +963,18 @@ object PolarOfflineGattCoordinator {
         manufacturer: String = "",
         macAddress: String? = null
     ): Boolean {
+        if (PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(context, macAddress)) {
+            return false
+        }
         val storedType = PolarOfflineCapabilityStore.getDeviceType(context, macAddress)
         if (storedType == PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE) return true
         if (storedType == PolarOfflineCapabilityStore.PolarDeviceType.H10) return false
-        if (isPolarH10Name(name, manufacturer)) return false
-        val isKnownModel = isPolarVeritySenseName(name, manufacturer)
-        val hasCap = PolarOfflineCapabilityStore.hasOfflineRecordingCapability(context, macAddress)
-        return isKnownModel || (hasCap && name.isNotEmpty())
+        val suppressed = PolarOfflineCapabilityStore.isLegacyNameHeuristicSuppressed(context, macAddress)
+        val nonPolarMfg = hasExplicitNonPolarManufacturer(manufacturer)
+        if (!suppressed && !nonPolarMfg && isPolarH10Name(name, manufacturer)) return false
+        if (PolarOfflineCapabilityStore.hasOfflineRecordingCapability(context, macAddress)) return true
+        if (suppressed || nonPolarMfg) return false
+        return isPolarVeritySenseName(name, manufacturer)
     }
 
     /**
@@ -970,6 +988,9 @@ object PolarOfflineGattCoordinator {
         manufacturer: String = "",
         macAddress: String? = null
     ): Boolean {
+        if (PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(context, macAddress)) {
+            return false
+        }
         return isPolarH10Device(context, name, manufacturer, macAddress) ||
             isPolarVeritySenseDevice(context, name, manufacturer, macAddress) ||
             PolarOfflineCapabilityStore.hasPolarServiceCapability(context, macAddress)

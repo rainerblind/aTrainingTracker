@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:20:05.586Z" hostname="rainer-HP-EliteBook-850-G5" time="11.588">
+  <properties/>
+  <testcase name="testSpeedAndLocationDeviceGPS_checkOrReRegister_isIdempotentWhenAlreadyRegistered" classname="com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest" time="2.337"/>
+  <testcase name="testTrainingApplication_structuralWiring_callsCheckOrInitializeLocationDevices" classname="com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest" time="2.272"/>
+  <testcase name="testTrackerService_structuralWiring_callsCheckOrInitializeLocationDevices" classname="com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest" time="2.421"/>
+  <testcase name="testDeviceManager_whenPermissionGrantedPostInit_instantiatesGpsDevice" classname="com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest" time="2.313"/>
+  <testcase name="testSpeedAndLocationDeviceGPS_reregisterUpdates_whenInitiallyUnavailable" classname="com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest" time="2.244"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

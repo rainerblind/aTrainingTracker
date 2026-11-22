@@ -547,9 +547,18 @@ class BTLEHeartRateDeviceTest {
             every { nonPolarGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
             nonPolar.callConfigureServices(nonPolarGatt)
             assertFalse(PolarOfflineCapabilityStore.hasPmdService(mockContext, "AA:BB:CC:DD:EE:78"))
+            assertTrue(PolarOfflineCapabilityStore.isConfirmedNonPolarGatt(mockContext, "AA:BB:CC:DD:EE:78"))
             assertEquals(
                 PolarOfflineCapabilityStore.PolarDeviceType.UNKNOWN,
                 PolarOfflineCapabilityStore.getDeviceType(mockContext, "AA:BB:CC:DD:EE:78")
+            )
+            assertFalse(
+                "GATT-confirmed non-Polar HRM renamed to Polar H10 must never match H10",
+                PolarOfflineGattCoordinator.isPolarH10Device(mockContext, "Polar H10", "", "AA:BB:CC:DD:EE:78")
+            )
+            assertFalse(
+                "GATT-confirmed non-Polar HRM renamed to Polar Verity Sense must never match Verity Sense",
+                PolarOfflineGattCoordinator.isPolarVeritySenseDevice(mockContext, "Polar Verity Sense", "", "AA:BB:CC:DD:EE:78")
             )
         } finally {
             PolarOfflineCapabilityStore.resetForTesting()

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.TrackingRobustnessTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:19:05.901Z" hostname="rainer-HP-EliteBook-850-G5" time="31.843">
+  <properties/>
+  <testcase name="testBanalServiceGetSportTypeId_withEmptyList_fallsBackToDefaultSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="6.702"/>
+  <testcase name="testBatterySaverControllerRelease_cancelsCoroutineScope" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.347"/>
+  <testcase name="testClockDeviceMonotonicTimeAdvancement" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.262"/>
+  <testcase name="testDeviceManagerCreatePairedRemoteDevices_closesCursorDeterministically" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="3.333"/>
+  <testcase name="testBanalServiceNewLap_withPositiveLapTime_computesAccurateLapSpeed" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.344"/>
+  <testcase name="testBanalServiceGetSportTypeId_withNonEmptyList_returnsFirstMatchingSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.106"/>
+  <testcase name="testClockDeviceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.144"/>
+  <testcase name="testAltitudeFromPressureDeviceShutDown_doesNotRegisterReceiver" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.003"/>
+  <testcase name="testTrackerServiceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.16"/>
+  <testcase name="testMyDevice_inMemoryDeviceNameCachingAndInvalidation" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.098"/>
+  <testcase name="testBanalServiceGetSportTypeId_withNullList_fallsBackToDefaultSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.129"/>
+  <testcase name="testBanalServiceNewLap_withZeroLapTime_computesZeroSpeedWithoutNaNOrInfinity" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.213"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

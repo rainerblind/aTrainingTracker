@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:21:42.921Z" hostname="rainer-HP-EliteBook-850-G5" time="4.508">
+  <properties/>
+  <testcase name="pairing unconfigured BIKE_POWER emits zone onboarding event with tab 2 and pwr_paired reason" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="1.919"/>
+  <testcase name="pairing configured BIKE_POWER does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.441"/>
+  <testcase name="unpairing an already paired device does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.44"/>
+  <testcase name="pairing configured HRM does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.429"/>
+  <testcase name="pairing non-physiological sensors completes silently without emitting zone event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.454"/>
+  <testcase name="pairing unconfigured HRM emits zone onboarding event with tab 0 and hr_paired reason" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.419"/>
+  <testcase name="testOnPairedChanged_unpairingAutoPairedDevice_updatesDeviceWithPairedFalse" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.406"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>
