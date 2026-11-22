@@ -6421,7 +6421,8 @@ def record_review(
                 "Provide --findings with assessment details."
             )
 
-    reviewer = (str(reviewer).strip() if reviewer is not None else "") or "Human"
+    raw_vendor = str(vendor).strip() if vendor is not None and str(vendor).strip() else None
+    raw_reviewer = str(reviewer).strip() if reviewer is not None and str(reviewer).strip() else ""
     vendor, model, version, review_type, scope = _classify_review_actor(
         review_type=review_type,
         vendor=vendor,
@@ -6429,6 +6430,30 @@ def record_review(
         version=version,
         scope=scope,
     )
+
+    effective_role = (role or "coordinator").strip().lower()
+    is_human_actor = effective_role in ("human", "user", "rainer")
+    if review_type == "Human Sprint Review (Layer 4)" and not is_human_actor:
+        if verdict_clean not in ("NOT PERFORMED", "SKIPPED"):
+            raise ValueError(
+                f"Actor guardrail violation (ATT-9496 / Finding K2-R): Autonomous role '{effective_role}' "
+                f"cannot record Layer 4 Human Sprint Review with verdict '{verdict_clean}'. "
+                "Autonomous deferrals MUST use --verdict 'NOT PERFORMED' or 'SKIPPED' (only human actors may record PASS/PARTIAL/FAIL)."
+            )
+        if raw_vendor and raw_vendor.lower() in _HUMAN_REVIEW_TOKENS:
+            raise ValueError(
+                f"Actor guardrail violation (ATT-9496 / Finding K2-R): Autonomous role '{effective_role}' "
+                f"cannot attribute Vendor: '{raw_vendor}' on a Layer 4 Human Sprint Review. "
+                "Omit --vendor so truthful autonomous agent deferral metadata is recorded."
+            )
+        vendor = f"Autonomous Agent ({effective_role})"
+        model = f"Autonomous {effective_role} (Layer 4 Human Review Deferred)"
+        if not raw_reviewer or raw_reviewer.lower() in _HUMAN_REVIEW_TOKENS:
+            reviewer = f"Autonomous {effective_role} (Deferred Layer 4)"
+        else:
+            reviewer = f"{raw_reviewer} (Recorded by autonomous {effective_role}; Human Review Deferred)"
+    else:
+        reviewer = raw_reviewer or "Human"
 
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')

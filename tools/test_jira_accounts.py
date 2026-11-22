@@ -1002,8 +1002,9 @@ class TestJiraCliTooling(unittest.TestCase):
                 content = f.read()
             self.assertIn("3 / 25 tickets (>= 10% dynamic threshold enforced)", content)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_record_review_command_generates_markdown(self, mock_request):
+    def test_record_review_command_generates_markdown(self, mock_request, _mock_cfg):
         """TST-PRO-062.1: Verify record-review generates structured review markdown for Human and AI reviews."""
         def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
             if "/rest/agile/1.0/board" in url and "/sprint" not in url:
@@ -1023,7 +1024,7 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_request.side_effect = mock_jira_side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # 1. Human Ceremony 2 Review
+            # 1. Human Ceremony 2 Review (explicit human actor)
             out_human = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.3.md")
             path1, meta1 = jira_util.record_review(
                 sprint_arg=None,
@@ -1033,6 +1034,7 @@ class TestJiraCliTooling(unittest.TestCase):
                 findings="Sprint tickets accepted during Ceremony 2.",
                 out_path=out_human,
                 repo_root=tmpdir,
+                role="human",
             )
             self.assertEqual(path1, out_human)
             self.assertTrue(os.path.exists(out_human))
@@ -1086,8 +1088,9 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("ATT-6155", content_ai)
             self.assertIn("ASPICE compliance and role integrity verified.", content_ai)
 
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     @patch("jira_util.jira_request")
-    def test_record_review_validation_and_skipped_handling(self, mock_request):
+    def test_record_review_validation_and_skipped_handling(self, mock_request, _mock_cfg):
         """TST-PRO-062.1: Verify record-review validates verdicts, mandates findings, and handles SKIPPED/NOT PERFORMED."""
         mock_request.return_value = {}
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1135,7 +1138,7 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertNotIn("Independent review conducted successfully", content_s)
             self.assertNotIn("Zero critical process or technical deviations", content_s)
 
-            # 7. Valid PARTIAL review
+            # 7. Valid PARTIAL review (explicit human actor)
             out_part = os.path.join(tmpdir, "docs", "engineering", "reviews", "partial.md")
             path_p, _ = jira_util.record_review(
                 sprint_arg="2026-46.8",
@@ -1145,6 +1148,7 @@ class TestJiraCliTooling(unittest.TestCase):
                 findings="Partial review conducted for high-risk items only.",
                 out_path=out_part,
                 repo_root=tmpdir,
+                role="human",
             )
             with open(out_part, "r", encoding="utf-8") as f:
                 content_p = f.read()
@@ -1157,7 +1161,7 @@ class TestJiraCliTooling(unittest.TestCase):
         """TST-PRO-062.1: Named human reviewers classify as Layer 4 Human without External AI Model; cross-vendor-ai requires vendor+model."""
         mock_request.return_value = {}
         with tempfile.TemporaryDirectory() as tmpdir:
-            # 1. Named human reviewer without vendor/model defaults to Layer 4 Human
+            # 1. Named human reviewer without vendor/model defaults to Layer 4 Human (explicit human actor)
             out_named = os.path.join(tmpdir, "docs", "engineering", "reviews", "named_human.md")
             _, meta_named = jira_util.record_review(
                 sprint_arg="2026-46.4",
@@ -1167,6 +1171,7 @@ class TestJiraCliTooling(unittest.TestCase):
                 findings="Sprint deliverables accepted by PO.",
                 out_path=out_named,
                 repo_root=tmpdir,
+                role="human",
             )
             self.assertEqual(meta_named["reviewer"], "Rainer Blind")
             self.assertEqual(meta_named["review_type"], "Human Sprint Review (Layer 4)")
@@ -1181,7 +1186,7 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertNotIn("External AI Model", content_named)
             self.assertNotIn("Cross-Vendor AI Review (Layer 5)", content_named)
 
-            # 2. Explicit review_type="human" and case-insensitive vendor="HUMAN"
+            # 2. Explicit review_type="human" and case-insensitive vendor="HUMAN" (explicit human actor)
             for extra_kw in (
                 {"review_type": "human"},
                 {"vendor": "HUMAN"},
@@ -1196,6 +1201,7 @@ class TestJiraCliTooling(unittest.TestCase):
                     findings="Autonomous close pending PO verification.",
                     out_path=out_exp,
                     repo_root=tmpdir,
+                    role="human",
                     **extra_kw,
                 )
                 self.assertEqual(meta_exp["review_type"], "Human Sprint Review (Layer 4)")
@@ -1242,8 +1248,54 @@ class TestJiraCliTooling(unittest.TestCase):
                         verdict="PASS",
                         findings="Validation test.",
                         repo_root=tmpdir,
+                        role="human",
                         **bad_kwargs,
                     )
+
+    @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
+    @patch("jira_util.jira_request")
+    def test_record_review_actor_guardrail_blocks_autonomous_human_verdicts(self, mock_request, _mock_cfg):
+        """ATT-9496 / Finding K2-R: Autonomous roles cannot record PASS/PARTIAL/FAIL or Vendor: Human on Layer 4."""
+        mock_request.return_value = {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for agent_role in ("coordinator", "agent1", "agent2"):
+                for forbidden_verdict in ("PASS", "PARTIAL", "FAIL"):
+                    with self.assertRaises(ValueError, msg=f"{agent_role} should not record {forbidden_verdict}"):
+                        jira_util.record_review(
+                            sprint_arg="2026-47.9",
+                            reviewer="Human",
+                            verdict=forbidden_verdict,
+                            findings="Attempted autonomous Layer 4 sign-off.",
+                            repo_root=tmpdir,
+                            role=agent_role,
+                        )
+                with self.assertRaises(ValueError, msg=f"{agent_role} should not spoof Vendor: Human"):
+                    jira_util.record_review(
+                        sprint_arg="2026-47.9",
+                        vendor="Human",
+                        verdict="SKIPPED",
+                        findings="Deferred to PO queue 453.",
+                        repo_root=tmpdir,
+                        role=agent_role,
+                    )
+
+            # Autonomous SKIPPED / NOT PERFORMED without Vendor: Human records truthful agent metadata
+            out_def = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-47.9.md")
+            _, meta_def = jira_util.record_review(
+                sprint_arg="2026-47.9",
+                verdict="NOT PERFORMED",
+                findings="Autonomous Schicht closeout; deferred to Bereit für PO Abnahme (453).",
+                out_path=out_def,
+                repo_root=tmpdir,
+                role="coordinator",
+            )
+            self.assertEqual(meta_def["review_type"], "Human Sprint Review (Layer 4)")
+            self.assertEqual(meta_def["vendor"], "Autonomous Agent (coordinator)")
+            self.assertNotEqual(meta_def["vendor"].lower(), "human")
+            with open(out_def, "r", encoding="utf-8") as f:
+                txt = f.read()
+            self.assertIn("**Vendor**: Autonomous Agent (coordinator)", txt)
+            self.assertNotIn("**Vendor**: Human\n", txt)
 
     def test_record_review_historical_records_repaired(self):
         """TST-PRO-062.3: Verify sprint_2026-46.4.md and sprint_2026-47.1.md attribute Rainer Blind to Layer 4 Human."""
