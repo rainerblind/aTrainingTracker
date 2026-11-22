@@ -41,7 +41,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
 import com.atrainingtracker.database.CursorProvider;
 import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
 

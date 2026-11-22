@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:59:52.013Z" hostname="rainer-HP-EliteBook-850-G5" time="0.315">
+  <properties/>
+  <testcase name="testDatabaseSchemaRegistry_referencesEquipmentDbVersionDirectly" classname="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" time="0.083"/>
+  <testcase name="testReconcileDuplicates_retiredStravaGearPreservedWhenDuplicateRetired" classname="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" time="0.105"/>
+  <testcase name="testReconcileDuplicates_mergesTriplicateEnduranceBikesAndCascadesLinks" classname="com.atrainingtracker.trainingtracker.database.EquipmentDeduplicationMigrationTest" time="0.127"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

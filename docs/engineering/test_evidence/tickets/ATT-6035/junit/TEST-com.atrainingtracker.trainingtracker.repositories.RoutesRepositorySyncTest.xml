@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:04:52.406Z" hostname="rainer-HP-EliteBook-850-G5" time="9.355">
+  <properties/>
+  <testcase name="testSharedPreferencesNeverMutatedWithTransientNowString" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.006"/>
+  <testcase name="testIsSyncingTransitionsDuringSyncAndResetsOnCompletion" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.022"/>
+  <testcase name="testSyncClusterNameChange_updatesRouteWithoutCallingClusterEngine_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.85"/>
+  <testcase name="testIsSyncingInitialStateIsFalse" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="0.935"/>
+  <testcase name="testIsSyncingEmitsTrueWhileSyncingIsActive" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.082"/>
+  <testcase name="testNineLanguageParityForLastUpdateOfRoutesNow" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.487"/>
+  <testcase name="testUpdateRouteSummary_propagatesToClusterRepositoryWithoutRecursion_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="1.029"/>
+  <testcase name="testIsSyncingResetsToFalseOnExceptionInFinally" classname="com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest" time="0.943"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

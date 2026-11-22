@@ -815,5 +815,30 @@ class WorkoutClustersViewModelTest {
         assertEquals(expectedRoute, viewModel.linkedRoute.value)
         assertEquals(77L, viewModel.linkedRoute.value?.summary?.id)
     }
+
+    @Test
+    fun inheritsBaseMappableListViewModel_managesSortOrderScrollAndLocation_TST_PRO_137_2() = runTest(testDispatcher) {
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        assertTrue(
+            com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel::class.java
+                .isAssignableFrom(WorkoutClustersViewModel::class.java)
+        )
+
+        assertEquals(ClusterSortOrder.RECORDINGS, viewModel.sortOrder.value)
+        assertTrue(viewModel.shouldScrollToTop(ClusterSortOrder.RECORDINGS))
+        assertFalse(viewModel.shouldScrollToTop(ClusterSortOrder.RECORDINGS))
+
+        viewModel.setSortOrder(ClusterSortOrder.DISTANCE_TO_USER)
+        assertEquals(ClusterSortOrder.DISTANCE_TO_USER, viewModel.sortOrder.value)
+        assertTrue(viewModel.shouldScrollToTop(ClusterSortOrder.DISTANCE_TO_USER))
+
+        val locJob = launch { viewModel.isLocationAvailable.collect() }
+        currentLocationFlow.value = LatLng(48.137, 11.576)
+        advanceUntilIdle()
+        assertTrue(viewModel.isLocationAvailable.value)
+        assertTrue(viewModel.shouldScrollToTop(ClusterSortOrder.DISTANCE_TO_USER))
+        locJob.cancel()
+    }
 }
 

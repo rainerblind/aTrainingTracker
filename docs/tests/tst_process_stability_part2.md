@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.53  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 99
+**Total Tests**: 100
 
 **Total Tests**: 94
 
@@ -1717,10 +1717,29 @@
 
 ---
 
+### TST-PRO-137: **Geodesic Consolidation, Mappable ViewModel & `ui/util` Unification, and Calculator/Accumulator Deduplication Verification (`ATT-6035`)** [Verified]
+- **Priority**: Low
+- **Type**: Non-Functional
+- **Verification Method**: Unit, Integration
+- **Requirement(s)**: `REQ-PRO-137` (`REQ-PRO-137.1`–`REQ-PRO-137.3`)
+- **Component**: `GeoUtils`, `AndroidGeoDistance`, `WorkoutClusterEngine`, `SpatialRegionEngine`, `RouteAutoDetector`, `CropWorkoutMath`, `IndirectTpmsEstimator`, `KnownLocationsGeometryMath`, `BaseMappableListViewModel`, `WorkoutClustersViewModel`, `KnownLocationsViewModel`, `ui.util`, `PowerPhysiologyCalculator`, `BikeBellAudioSynthesizer`, `MyAccumulatorSensor`
+- **Jira**: `ATT-6035`
+- **Test Description**:
+  1. *Geodesic Golden-Value & Ellipsoidal Fallback (`TST-PRO-137.1`, `GeoUtilsTest`, `AndroidGeoDistanceTest`, `CropWorkoutMathTest`, `KnownLocationsGeometryMathTest`, `SpatialRegionEngineTest`, `RouteAutoDetectorTest`, `IndirectTpmsEstimatorTest`)*:
+     • *Given* reference WGS-84 coordinates, custom `earthRadiusMeters = 6371009.0`, coincident/near-coincident points (`< 1e-6 m`), and unmocked vs. mocked `Location.distanceBetween`, *When* `GeoUtils.haversineDistanceMeters` and `AndroidGeoDistance.ellipsoidalDistanceMeters` (plus all 6 delegated callers) execute, *Then* outputs match Golden-Value baselines within `< 1e-6 m` and `GeoUtils.kt` declares zero Android imports. Tag with `TST-PRO-137.1`.
+  2. *ViewModel Unification, Declarative `combine(...)` & `ui/util` Consolidation (`TST-PRO-137.2`, `WorkoutClustersViewModelTest`, `KnownLocationsViewModelTest`, `KnownLocationsViewModelRoutesTest`, `CollapsingAppBarNestedScrollConnectionTest`, `NumericalEncodingUtilsTest`, `StreamSummaryCalculatorTest`, `MapDetailLayoutCollapsingHeaderContractTest`, `ArchitectureConformanceContractTest`)*:
+     • *Given* `WorkoutClustersViewModel` and `KnownLocationsViewModel` extending `BaseMappableListViewModel`, live `locationsFlow`/`allClusters`/`allWorkouts`/`currentLocation` emissions, and `ui.util` package migrations, *When* sorting, filtering, unfinished-workout churn, and class/contract checks run, *Then* declarative `combine(...)` avoids `.value` cross-reads and redundant dispatches, `ui.util` classes resolve cleanly, and `ArchitectureConformanceContractTest` passes. Tag with `TST-PRO-137.2`.
+  3. *Calculator, Synthesizer & Accumulator Parity (`TST-PRO-137.3`, `PowerPhysiologyCalculatorTest`, `BikeBellAudioSynthesizerTest`, `MyAccumulatorSensorTest`, `MyAccumulatorSensorResetToTest`, `SensorAndDeviceConcurrencyStressTest`)*:
+     • *Given* power/speed/HR decoupling streams, W' balance series with gaps, 5-mode strike vs. roll synthesis samples, and double/integer/1-based `LAP_NR` accumulators under single- and multi-threaded increments, *When* deduplicated helpers and `BinaryOperator<N>` constructors execute, *Then* outputs match exact pre-refactor numerical parity and concurrent stress tests pass. Tag with `TST-PRO-137.3`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.54` | 2026-11-22 | Lane 1 Author (`ATT-6035`, `--as agent1`) | `ATT-6035` | Added `[Planned]` `TST-PRO-137` (`TST-PRO-137.1`–`.3`) for geodesic golden values, ViewModel & `ui/util` unification, and calculator/accumulator parity. |
+| `1.0.55` | 2026-11-22 | Lane 1 Author (`ATT-6035`, `--as agent1`) | `ATT-6035` | Promoted `TST-PRO-137` (`TST-PRO-137.1`–`.3`) to `[Verified]` (`179/179` targeted tests PASS across 20 suites, `0` warnings, live `emulator-5554` smoke). |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Split oversized `tst_process_stability.md` into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`, `REQ-PRO-129.4`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Added `[Planned]` `TST-PRO-129` test specifications (`ATT-8203_test_spec.md`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8203`) | `ATT-8203` | Promoted `TST-PRO-129` to `[Implemented]` in Stage 4 (`JavaCoreMigrationStrategyContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `tools/test_verify_requirement_governance.py`). |

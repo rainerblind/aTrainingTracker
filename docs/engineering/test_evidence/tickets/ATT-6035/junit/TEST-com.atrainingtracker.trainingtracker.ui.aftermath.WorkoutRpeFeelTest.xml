@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:10:30.344Z" hostname="rainer-HP-EliteBook-850-G5" time="0.289">
+  <properties/>
+  <testcase name="testDbVersionAndColumnConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.002"/>
+  <testcase name="testRpeColor_mapsToAll7Zones" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.022"/>
+  <testcase name="testTestTagsConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.001"/>
+  <testcase name="testSectionAvailability_hasRpeAndFeel" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.008"/>
+  <testcase name="testSessionRpeCalculation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.034"/>
+  <testcase name="testTier4TrainingLoadFallback" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.002"/>
+  <testcase name="testRpeColor_zone7DarkThemeContrast" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.06"/>
+  <testcase name="testRpeEditor_dedicatedFullWidthHeaderLayout" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.001"/>
+  <testcase name="testRpeAnchors_coverFullBorgScale1To10" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.002"/>
+  <testcase name="testFeelEmojisAndAnchors_coverScale1To5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.128"/>
+  <testcase name="testSectionTypeOrderingDefaults" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" time="0.028"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

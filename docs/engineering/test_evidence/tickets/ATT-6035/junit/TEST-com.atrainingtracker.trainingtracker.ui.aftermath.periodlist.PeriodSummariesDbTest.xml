@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:10:43.099Z" hostname="rainer-HP-EliteBook-850-G5" time="3.443">
+  <properties/>
+  <testcase name="testZeroN1BatchFetching_linksStatsAndLongestWorkoutCorrectly" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="0.255"/>
+  <testcase name="testResyncAllPeriods_emitsIncrementalMonths_andMonotonicDualPhaseProgress_TST_PERF_004_005" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="1.42"/>
+  <testcase name="testSelfContainedLongestWorkoutPersistence_persistsAndRestoresAllFields" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="0.117"/>
+  <testcase name="testV26ToV27MigrationParity_andRegistryValidation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="0.121"/>
+  <testcase name="testHierarchicalResync_withTemporalGapMonthsAndWeeks_aggregatesWithoutCorruption_TST_BUG_002" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="0.974"/>
+  <testcase name="testBidirectionalDeletionIntegrityHealing" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="0.425"/>
+  <testcase name="testGatedLegacyFileCleanup_bypassesWhenPreferenceSet" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDbTest" time="0.129"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

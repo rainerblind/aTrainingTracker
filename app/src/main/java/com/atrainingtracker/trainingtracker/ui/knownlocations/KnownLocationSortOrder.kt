@@ -17,12 +17,13 @@ package com.atrainingtracker.trainingtracker.ui.knownlocations
 
 import androidx.annotation.StringRes
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
 
 /**
  * Defines the sorting dimensions available for Known Start Locations (Lieblingsorte).
  * Order of entries dictates the display order in the UI sort dropdown (Name is last).
  */
-enum class KnownLocationSortOrder(@StringRes val labelResId: Int) {
+enum class KnownLocationSortOrder(@StringRes override val labelResId: Int) : MappableSortOrder {
     STARTS(R.string.known_locations_sort_starts),
     DISTANCE_TO_USER(R.string.sort_closest),
     ALTITUDE(R.string.sort_altitude),

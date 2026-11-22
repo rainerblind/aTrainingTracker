@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:44.781Z" hostname="rainer-HP-EliteBook-850-G5" time="7.017">
+  <properties/>
+  <testcase name="testSelectRouteDelegatesToRepository" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="5.837"/>
+  <testcase name="testSelectRoute_bikeRoute_automaticallySynchronizesSportTypeToBike" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.44"/>
+  <testcase name="testActiveSportFiltering_preTracking_filtersBikeAndRunRoutes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.308"/>
+  <testcase name="testDynamicRadiusPreferenceChangeReFiltersRoutes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.025"/>
+  <testcase name="testInitialStateLoadsRoutesAndObservesActiveRoute" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.015"/>
+  <testcase name="testSelectRoute_unknownOrConflictRoute_doesNotAlterSportType" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.049"/>
+  <testcase name="testInRide_evaluatesMatchingCorridorRoutes_andSetsContextEmptyHintRes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.029"/>
+  <testcase name="testInitialStateHasEmptyFilteredRoutesWhenLocationIsNull" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.013"/>
+  <testcase name="testPreTracking_ranksByStartProximity_andSetsContextEmptyHintRes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.019"/>
+  <testcase name="testStopRoute_and_clearRoute_doesNotAlterSportType" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.042"/>
+  <testcase name="testActivateAutoDetectedCandidateSetsRoute" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.033"/>
+  <testcase name="testActiveSportFiltering_inTracking_evaluatesMatchingRoutesFilteredBySport" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.025"/>
+  <testcase name="testLocationChangeTriggersProximityFiltering" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.02"/>
+  <testcase name="testSelectRoute_runRoute_automaticallySynchronizesSportTypeToRun" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.022"/>
+  <testcase name="testLocationUpdateTriggersAutoDetection" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.021"/>
+  <testcase name="testDismissAutoDetectedCandidateClearsState" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.019"/>
+  <testcase name="testStopRouteClearsActiveNavigation" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.017"/>
+  <testcase name="testMultipleRoutesInRadiusSortedByRecencyDescending" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.016"/>
+  <testcase name="testUiStateExposesTotalRouteCountWithoutFilterTabs" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.014"/>
+  <testcase name="testClearRouteClearsActiveNavigation" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.017"/>
+  <testcase name="testActivateCandidate_bikeRoute_automaticallySynchronizesSportTypeToBike" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.022"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

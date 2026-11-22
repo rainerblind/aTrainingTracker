@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
+import com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry

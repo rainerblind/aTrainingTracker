@@ -71,7 +71,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
+import com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 @Composable

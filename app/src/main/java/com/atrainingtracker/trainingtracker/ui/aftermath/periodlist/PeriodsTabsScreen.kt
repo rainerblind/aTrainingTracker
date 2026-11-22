@@ -47,7 +47,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
+import com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 import kotlin.math.max
 

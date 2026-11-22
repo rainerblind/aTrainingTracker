@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMarkerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:09:39.980Z" hostname="rainer-HP-EliteBook-850-G5" time="7.859">
+  <properties/>
+  <testcase name="testWorkoutMarkers_withoutCoordinates_omitsMarkers" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMarkerTest" time="2.787"/>
+  <testcase name="testWorkoutMarkers_withoutLocations_defaultsToStandardTitles" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMarkerTest" time="2.542"/>
+  <testcase name="testWorkoutMarkers_withLocations_formatsLocationTitles" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryMarkerTest" time="2.53"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

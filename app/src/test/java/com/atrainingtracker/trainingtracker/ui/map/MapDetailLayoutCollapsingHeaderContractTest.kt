@@ -35,7 +35,7 @@ class MapDetailLayoutCollapsingHeaderContractTest {
 
     @Test
     fun testCollapsingAppBarNestedScrollConnection_supportsDynamicMaxHeight() {
-        val connectionClass = Class.forName("com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection")
+        val connectionClass = Class.forName("com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection")
         assertNotNull("CollapsingAppBarNestedScrollConnection must exist", connectionClass)
         val hasMaxHeightProp = connectionClass.declaredMethods.any { it.name.contains("AppBarMaxHeight") } ||
             connectionClass.declaredFields.any { it.name.contains("appBarMaxHeight") }

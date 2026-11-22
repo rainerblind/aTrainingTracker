@@ -163,4 +163,34 @@ class MyAccumulatorSensorTest {
         lapSensor.reset()
         assertEquals("reset() on LAP_NR must restore mZeroValue=1", 1, lapSensor.value)
     }
+
+    @Test
+    fun testBinaryOperatorDelegation_directLongAndDoubleIntegerParity_TST_PRO_137_3() {
+        val longSensor = MyAccumulatorSensor(
+            null,
+            SensorType.DISTANCE_m,
+            false,
+            0L,
+            java.util.function.BinaryOperator { a, b -> a + b },
+            java.util.function.BinaryOperator { a, b -> a - b }
+        )
+        longSensor.activateSensor()
+        longSensor.accumulate(100L)
+        longSensor.accumulate(145L)
+        assertEquals(45L, longSensor.value)
+        longSensor.increment(15L)
+        assertEquals(60L, longSensor.value)
+        longSensor.resetTo(200L)
+        assertEquals(200L, longSensor.value)
+        longSensor.reset()
+        assertEquals(0L, longSensor.value)
+
+        val doubleSensor = MyDoubleAccumulatorSensor(null, SensorType.DISTANCE_m, false)
+        doubleSensor.activateSensor()
+        doubleSensor.accumulate(10.5)
+        doubleSensor.accumulate(13.25)
+        assertEquals(2.75, doubleSensor.value, 1e-9)
+        doubleSensor.resetTo(50.0)
+        assertEquals(50.0, doubleSensor.value, 1e-9)
+    }
 }

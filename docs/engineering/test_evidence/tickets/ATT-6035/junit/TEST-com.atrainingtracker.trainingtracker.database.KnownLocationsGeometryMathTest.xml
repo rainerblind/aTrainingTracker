@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:59:52.388Z" hostname="rainer-HP-EliteBook-850-G5" time="0.009">
+  <properties/>
+  <testcase name="calculateMergedGeofence_pinnedTargetForLockedAltitude" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.007"/>
+  <testcase name="calculateDistanceMeters_identicalCoordinates_returnsZero" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.001"/>
+  <testcase name="calculateMergedGeofence_targetEnclosesSource_adoptsTargetGeofence" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.0"/>
+  <testcase name="calculateMergedGeofence_sourceEnclosesTarget_adoptsSourceGeofence" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.0"/>
+  <testcase name="interpolateGeodesic_boundaryFractions_returnsExpectedEndpoints" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.0"/>
+  <testcase name="calculateMergedGeofence_ac2_pinnedTargetForHomeBase" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.0"/>
+  <testcase name="calculateDistanceMeters_oneDegreeLatitude_approximately111km" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.0"/>
+  <testcase name="calculateMergedGeofence_ac1_minimumBoundingCircleMerge" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMathTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

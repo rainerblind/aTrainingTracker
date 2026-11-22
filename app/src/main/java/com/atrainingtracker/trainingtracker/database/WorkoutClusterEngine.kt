@@ -16,8 +16,8 @@
 package com.atrainingtracker.trainingtracker.database
 
 import android.content.Context
-import android.location.Location
 import android.util.Log
+import com.atrainingtracker.trainingtracker.routes.AndroidGeoDistance
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.util.safeEnumValueOf
@@ -135,21 +135,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
         fun stripHitCount(name: String): String = name.replace(Regex(" #\\d+$"), "").trim()
 
         fun distanceBetween(p1: LatLng, p2: LatLng): Float {
-            return try {
-                val res = FloatArray(1)
-                Location.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude, res)
-                res[0]
-            } catch (e: RuntimeException) {
-                // Fallback for JVM unit test execution
-                val earthRadius = 6371000.0
-                val dLat = Math.toRadians(p2.latitude - p1.latitude)
-                val dLon = Math.toRadians(p2.longitude - p1.longitude)
-                val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(Math.toRadians(p1.latitude)) * Math.cos(Math.toRadians(p2.latitude)) *
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2)
-                val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-                (earthRadius * c).toFloat()
-            }
+            return AndroidGeoDistance.ellipsoidalDistanceMeters(
+                p1.latitude, p1.longitude,
+                p2.latitude, p2.longitude
+            ).toFloat()
         }
     }
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:12.178Z" hostname="rainer-HP-EliteBook-850-G5" time="0.022">
+  <properties/>
+  <testcase name="testElevationProfile_capturesOnZoomChangedDirectlyViaRememberUpdatedState" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureContractTest" time="0.0"/>
+  <testcase name="testElevationProfile_suppressesSingleTapInspectionInPanMode" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureContractTest" time="0.001"/>
+  <testcase name="testElevationProfile_resetsPrevCentroidOnDragEngagement" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureContractTest" time="0.0"/>
+  <testcase name="testElevationProfile_excludesMutableStateFromPointerInputKeys" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureContractTest" time="0.021"/>
+  <testcase name="testElevationProfile_removesPrematureVerticalScrollBreak" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

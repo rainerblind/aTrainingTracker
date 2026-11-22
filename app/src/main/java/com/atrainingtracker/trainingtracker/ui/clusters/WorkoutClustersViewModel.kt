@@ -19,10 +19,10 @@ import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
@@ -91,7 +91,11 @@ data class ClusterMapState(
 class WorkoutClustersViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : AndroidViewModel(application) {
+) : BaseMappableListViewModel<WorkoutCluster, ClusterSortOrder>(
+    application = application,
+    initialSortOrder = ClusterSortOrder.RECORDINGS,
+    distanceSortOrder = ClusterSortOrder.DISTANCE_TO_USER
+) {
 
     private val repository = WorkoutClusterRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
@@ -161,9 +165,6 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     private val _filterCriteria = MutableStateFlow(ClusterFilterCriteria(minHitCount = 5))
     val filterCriteria: StateFlow<ClusterFilterCriteria> = _filterCriteria.asStateFlow()
 
-    private val _sortOrder = MutableStateFlow(ClusterSortOrder.RECORDINGS)
-    val sortOrder: StateFlow<ClusterSortOrder> = _sortOrder.asStateFlow()
-
     // --- SPLIT CLUSTER STATE (REQ-SET-096, ATT-5900) ---
     private val _splitCorridorThreshold = MutableStateFlow(500.0)
     val splitCorridorThreshold: StateFlow<Double> = _splitCorridorThreshold.asStateFlow()
@@ -195,26 +196,13 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val isLocationAvailable: StateFlow<Boolean> = currentLocation
+    override val isLocationAvailable: StateFlow<Boolean> = currentLocation
         .map { it != null }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = currentLocation.value != null
         )
-
-    fun setSortOrder(order: ClusterSortOrder) {
-        _sortOrder.value = order
-    }
-
-    /**
-     * Calculates geodetic distance between two geographical coordinates in meters.
-     */
-    fun calculateDistance(uLat: Double, uLon: Double, cLat: Double, cLon: Double): Float {
-        val results = FloatArray(1)
-        android.location.Location.distanceBetween(uLat, uLon, cLat, cLon, results)
-        return results[0]
-    }
 
     /**
      * Sorts a list of [WorkoutCluster]s according to the specified [ClusterSortOrder].

@@ -69,7 +69,7 @@ import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
+import com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 
 /**

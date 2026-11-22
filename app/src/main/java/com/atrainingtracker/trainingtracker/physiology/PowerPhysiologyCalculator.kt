@@ -375,39 +375,29 @@ object PowerPhysiologyCalculator {
         val series = ArrayList<Float?>(powerSamplesWatts.size)
 
         for (rawPower in powerSamplesWatts) {
-            if (rawPower != null && rawPower.isFinite() && rawPower >= 0.0) {
-                hasValidPower = true
-                currentJoules = stepWPrimeBalanceJoules(
-                    prevWPrimeBalJoules = currentJoules,
-                    powerWatts = rawPower,
-                    cpWatts = cpWatts,
-                    wPrimeJoules = wPrimeJoules,
-                    deltaTimeSec = sampleIntervalSec
-                )
-                val currentKj = currentJoules / 1000.0
-                if (currentKj < minKj) minKj = currentKj
-                sumKj += currentKj
-                validCount++
-                lastKj = currentKj
-                series.add(currentKj.toFloat())
-            } else if (hasValidPower) {
-                // During missing samples after workout start, recharge at 0W.
-                currentJoules = stepWPrimeBalanceJoules(
-                    prevWPrimeBalJoules = currentJoules,
-                    powerWatts = 0.0,
-                    cpWatts = cpWatts,
-                    wPrimeJoules = wPrimeJoules,
-                    deltaTimeSec = sampleIntervalSec
-                )
-                val currentKj = currentJoules / 1000.0
-                if (currentKj < minKj) minKj = currentKj
-                sumKj += currentKj
-                validCount++
-                lastKj = currentKj
-                series.add(currentKj.toFloat())
-            } else {
+            val validPower = rawPower?.takeIf { it.isFinite() && it >= 0.0 }
+            if (validPower == null && !hasValidPower) {
                 series.add(null)
+                continue
             }
+            if (validPower != null) {
+                hasValidPower = true
+            }
+            // During missing samples after workout start, recharge at 0W.
+            val effectivePower = validPower ?: 0.0
+            currentJoules = stepWPrimeBalanceJoules(
+                prevWPrimeBalJoules = currentJoules,
+                powerWatts = effectivePower,
+                cpWatts = cpWatts,
+                wPrimeJoules = wPrimeJoules,
+                deltaTimeSec = sampleIntervalSec
+            )
+            val currentKj = currentJoules / 1000.0
+            if (currentKj < minKj) minKj = currentKj
+            sumKj += currentKj
+            validCount++
+            lastKj = currentKj
+            series.add(currentKj.toFloat())
         }
 
         if (!hasValidPower || validCount == 0 || !minKj.isFinite()) {
@@ -572,31 +562,9 @@ object PowerPhysiologyCalculator {
             )
         }
 
-        // Collect paired active Power + HR samples
-        val pairedPower = ArrayList<Double>()
-        val pairedPowerHr = ArrayList<Double>()
-        val powerLimit = minOf(powerSamplesWatts.size, hrSamplesBpm.size)
-        for (i in 0 until powerLimit) {
-            val p = powerSamplesWatts[i]
-            val hr = hrSamplesBpm[i]
-            if (p != null && p.isFinite() && p >= 0.0 && hr != null && hr.isFinite() && hr > 0.0) {
-                pairedPower.add(p)
-                pairedPowerHr.add(hr)
-            }
-        }
-
-        // Collect paired active Speed + HR samples
-        val pairedSpeed = ArrayList<Double>()
-        val pairedSpeedHr = ArrayList<Double>()
-        val speedLimit = minOf(speedSamplesMps.size, hrSamplesBpm.size)
-        for (i in 0 until speedLimit) {
-            val s = speedSamplesMps[i]
-            val hr = hrSamplesBpm[i]
-            if (s != null && s.isFinite() && s > 0.0 && hr != null && hr.isFinite() && hr > 0.0) {
-                pairedSpeed.add(s)
-                pairedSpeedHr.add(hr)
-            }
-        }
+        // Collect paired active Power + HR and Speed + HR samples
+        val (pairedPower, pairedPowerHr) = collectPairedHrSamples(powerSamplesWatts, hrSamplesBpm) { it >= 0.0 }
+        val (pairedSpeed, pairedSpeedHr) = collectPairedHrSamples(speedSamplesMps, hrSamplesBpm) { it > 0.0 }
 
         val hasValidPowerPairs = pairedPower.isNotEmpty() && pairedPower.any { it > 0.0 }
         val hasValidSpeedPairs = pairedSpeed.isNotEmpty() && pairedSpeed.any { it > 0.0 }
@@ -615,67 +583,81 @@ object PowerPhysiologyCalculator {
             )
         }
 
-        if (usePower) {
-            val totalNp = calculateNormalizedPower(pairedPower)
-            val totalAvgHr = pairedPowerHr.average()
-            val totalEf = if (totalNp != null) calculateEfficiencyFactorPower(totalNp, totalAvgHr) else null
-
-            var ef1: Double? = null
-            var ef2: Double? = null
-            var decouplingPct: Double? = null
-            if (pairedPower.size >= 2) {
-                val mid = pairedPower.size / 2
-                val np1 = calculateNormalizedPower(pairedPower.subList(0, mid))
-                val hr1 = pairedPowerHr.subList(0, mid).average()
-                val np2 = calculateNormalizedPower(pairedPower.subList(mid, pairedPower.size))
-                val hr2 = pairedPowerHr.subList(mid, pairedPowerHr.size).average()
-                if (np1 != null && np2 != null) {
-                    ef1 = calculateEfficiencyFactorPower(np1, hr1)
-                    ef2 = calculateEfficiencyFactorPower(np2, hr2)
-                    if (ef1 != null && ef2 != null) {
-                        decouplingPct = calculateAerobicDecouplingFromEf(ef1, ef2)
-                    }
-                }
-            }
-            val isDrift = decouplingPct != null && decouplingPct >= AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
-            return AerobicEfficiencyResult(
-                efficiencyFactor = totalEf,
-                decouplingPct = decouplingPct,
-                efFirstHalf = ef1,
-                efSecondHalf = ef2,
+        return if (usePower) {
+            evaluateAerobicMetric(
+                pairedMetrics = pairedPower,
+                pairedHr = pairedPowerHr,
                 isPowerBased = true,
-                isHighDrift = isDrift
+                aggregateMetric = ::calculateNormalizedPower,
+                computeEf = ::calculateEfficiencyFactorPower
             )
         } else {
-            val totalAvgSpeed = pairedSpeed.average()
-            val totalAvgHr = pairedSpeedHr.average()
-            val totalEf = calculateEfficiencyFactorSpeed(totalAvgSpeed, totalAvgHr)
+            evaluateAerobicMetric(
+                pairedMetrics = pairedSpeed,
+                pairedHr = pairedSpeedHr,
+                isPowerBased = false,
+                aggregateMetric = { it.average() },
+                computeEf = ::calculateEfficiencyFactorSpeed
+            )
+        }
+    }
 
-            var ef1: Double? = null
-            var ef2: Double? = null
-            var decouplingPct: Double? = null
-            if (pairedSpeed.size >= 2) {
-                val mid = pairedSpeed.size / 2
-                val spd1 = pairedSpeed.subList(0, mid).average()
-                val hr1 = pairedSpeedHr.subList(0, mid).average()
-                val spd2 = pairedSpeed.subList(mid, pairedSpeed.size).average()
-                val hr2 = pairedSpeedHr.subList(mid, pairedSpeedHr.size).average()
-                ef1 = calculateEfficiencyFactorSpeed(spd1, hr1)
-                ef2 = calculateEfficiencyFactorSpeed(spd2, hr2)
+    private inline fun collectPairedHrSamples(
+        metricSamples: List<Double?>,
+        hrSamplesBpm: List<Double?>,
+        isValidMetric: (Double) -> Boolean
+    ): Pair<List<Double>, List<Double>> {
+        val pairedMetrics = ArrayList<Double>()
+        val pairedHr = ArrayList<Double>()
+        val limit = minOf(metricSamples.size, hrSamplesBpm.size)
+        for (i in 0 until limit) {
+            val m = metricSamples[i]
+            val hr = hrSamplesBpm[i]
+            if (m != null && m.isFinite() && isValidMetric(m) && hr != null && hr.isFinite() && hr > 0.0) {
+                pairedMetrics.add(m)
+                pairedHr.add(hr)
+            }
+        }
+        return pairedMetrics to pairedHr
+    }
+
+    private inline fun evaluateAerobicMetric(
+        pairedMetrics: List<Double>,
+        pairedHr: List<Double>,
+        isPowerBased: Boolean,
+        aggregateMetric: (List<Double>) -> Double?,
+        computeEf: (Double, Double) -> Double?
+    ): AerobicEfficiencyResult {
+        val totalMetric = aggregateMetric(pairedMetrics)
+        val totalAvgHr = pairedHr.average()
+        val totalEf = totalMetric?.let { computeEf(it, totalAvgHr) }
+
+        var ef1: Double? = null
+        var ef2: Double? = null
+        var decouplingPct: Double? = null
+        if (pairedMetrics.size >= 2) {
+            val mid = pairedMetrics.size / 2
+            val m1 = aggregateMetric(pairedMetrics.subList(0, mid))
+            val hr1 = pairedHr.subList(0, mid).average()
+            val m2 = aggregateMetric(pairedMetrics.subList(mid, pairedMetrics.size))
+            val hr2 = pairedHr.subList(mid, pairedHr.size).average()
+            if (m1 != null && m2 != null) {
+                ef1 = computeEf(m1, hr1)
+                ef2 = computeEf(m2, hr2)
                 if (ef1 != null && ef2 != null) {
                     decouplingPct = calculateAerobicDecouplingFromEf(ef1, ef2)
                 }
             }
-            val isDrift = decouplingPct != null && decouplingPct >= AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
-            return AerobicEfficiencyResult(
-                efficiencyFactor = totalEf,
-                decouplingPct = decouplingPct,
-                efFirstHalf = ef1,
-                efSecondHalf = ef2,
-                isPowerBased = false,
-                isHighDrift = isDrift
-            )
         }
+        val isDrift = decouplingPct != null && decouplingPct >= AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
+        return AerobicEfficiencyResult(
+            efficiencyFactor = totalEf,
+            decouplingPct = decouplingPct,
+            efFirstHalf = ef1,
+            efSecondHalf = ef2,
+            isPowerBased = isPowerBased,
+            isHighDrift = isDrift
+        )
     }
 
     /**

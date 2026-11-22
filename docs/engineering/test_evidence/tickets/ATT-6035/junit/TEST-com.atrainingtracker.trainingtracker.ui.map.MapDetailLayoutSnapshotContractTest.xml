@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutSnapshotContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:11:13.900Z" hostname="rainer-HP-EliteBook-850-G5" time="0.274">
+  <properties/>
+  <testcase name="testMapDetailLayout_onSnapshotReady_rasterizesOnCallerThreadWithoutDefaultDispatcher_TST_REV_007_5" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutSnapshotContractTest" time="0.232"/>
+  <testcase name="testMapDetailLayout_onSnapshotReady_whenForgottenCoroutineScopeException_doesNotInvokeOnError_TST_REV_007_6" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutSnapshotContractTest" time="0.012"/>
+  <testcase name="testMapDetailLayout_onSnapshotReady_whenRasterizationThrows_invokesErrorAndFinally_TST_REV_007_5" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutSnapshotContractTest" time="0.009"/>
+  <testcase name="testMapDetailLayout_onSnapshotReady_whenCancellationExceptionThrown_doesNotInvokeOnError_TST_REV_007_6" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutSnapshotContractTest" time="0.011"/>
+  <testcase name="testMapDetailLayout_onSnapshotReady_whenNonCancellationExceptionThrownInShareAction_invokesOnError_TST_REV_007_6" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutSnapshotContractTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

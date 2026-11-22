@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:42.736Z" hostname="rainer-HP-EliteBook-850-G5" time="0.009">
+  <properties/>
+  <testcase name="testStraightLineGating_acceptsStraightMovement" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.003"/>
+  <testcase name="testRideStartBaselineLock_locksAfter2000Meters" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.001"/>
+  <testcase name="testResetSession_clearsAllState" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.0"/>
+  <testcase name="testGating_rejectsPoorGnssAccuracy" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.0"/>
+  <testcase name="testMultiDayLowPressureAlert_triggersWhenStartCircumferenceBelowThreshold" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.002"/>
+  <testcase name="testStraightLineGating_rejectsHighBearingRate" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.0"/>
+  <testcase name="testGating_rejectsLowSpeed" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.0"/>
+  <testcase name="testSlowPunctureDetection_triggersOnInRideDeflation" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.003"/>
+  <testcase name="testSlopeCorrection_accuratelyScales3dDistance" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.0"/>
+  <testcase name="testCorneringImmunity_sharpTurnDoesNotCorruptEstimator" classname="com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

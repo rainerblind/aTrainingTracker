@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:05:02.098Z" hostname="rainer-HP-EliteBook-850-G5" time="0.16">
+  <properties/>
+  <testcase name="testIgnoresActiveRoute" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.134"/>
+  <testcase name="testEvaluateMatchingRoutes_excludesActiveRouteAndDismissedRoute" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.004"/>
+  <testcase name="testRouteAutoDetector_computeBearingPrimitiveOverload_matchesLatLng" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.001"/>
+  <testcase name="testDetectsRouteNearStartWithMatchingHeading" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.005"/>
+  <testcase name="testEvaluateMatchingRoutes_returnsMultipleCorridorMatchesSortedByProximity" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.004"/>
+  <testcase name="testDismissSuppressionPreventsImmediateReDetection" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.004"/>
+  <testcase name="testEmptyRouteListReturnsNull" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.004"/>
+  <testcase name="testIgnoresRouteWhenFarAway" classname="com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

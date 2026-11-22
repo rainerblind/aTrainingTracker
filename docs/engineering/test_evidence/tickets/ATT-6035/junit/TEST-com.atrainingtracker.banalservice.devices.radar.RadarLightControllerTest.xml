@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" tests="39" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:20.054Z" hostname="rainer-HP-EliteBook-850-G5" time="9.384">
+  <properties/>
+  <testcase name="testRadarLightController_onWorkoutResumed_preservesNonCyclingSessionState" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.71"/>
+  <testcase name="testRadarLightController_workoutStoppedFromPausedState_turnsOffTailLight" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.188"/>
+  <testcase name="testRadarLightController_setManualLightMode_updatesModeAndSetsManualOverride" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.181"/>
+  <testcase name="testRadarLightController_sequentialWorkouts_hardwareBrakeAutoBypassPersists" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.205"/>
+  <testcase name="testRadarLightMode_stvzoCapabilityPruning" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.172"/>
+  <testcase name="testRadarLightController_triggerBrakeLight_underStvzo_strictlyClampedToSolid" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.183"/>
+  <testcase name="testRadarLightController_workoutLifecycleHooks_safeWithNullFilesDir" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.318"/>
+  <testcase name="testRadarLightController_fixedWorkoutMode_dispatchesOnStartAndOffOnStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.196"/>
+  <testcase name="testRadarLightController_onWorkoutPaused_withLightOffPreBrake_restoresOffMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.193"/>
+  <testcase name="testRadarLightController_onWorkoutStopped_cleansUpBrakeHoldAndPreventsResuscitation" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.177"/>
+  <testcase name="testRadarLightController_manualMode_skipsAutoDispatchOnStartAndStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.178"/>
+  <testcase name="testRadarLightController_offlineManualMode_updatesPreferredModeWithoutOffHighlight" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.18"/>
+  <testcase name="testRadarLightMode_commandByteMappingAndResolution" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.176"/>
+  <testcase name="testRadarLightController_outsideWorkoutSelection_persistsAcrossLifecycleAndWorkoutStart" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.18"/>
+  <testcase name="testRadarLightController_setManualLightMode_stvzoSynchronizesRepositoryState" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.173"/>
+  <testcase name="testRadarLightController_stvzoAutoPruning_fallsBackToSolid" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.179"/>
+  <testcase name="testRadarLightController_synchronousAutoSwitch_startAndStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.182"/>
+  <testcase name="testRadarLightController_triggerBrakeLight_underNightConditions_clampedToSolid" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.179"/>
+  <testcase name="testRadarLightController_onHardwareLightModeWriteFailed_reconcilesCleanly" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.17"/>
+  <testcase name="testRadarLightController_registerAndSetMode_dispatchesToDevice" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.163"/>
+  <testcase name="testRadarLightController_hydrateFromPreferences_loadsPersistedSelectionBeforeWorkoutStart" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="1.839"/>
+  <testcase name="testRadarLightController_radarLightDeviceClientInterface_supportsAntPlusClient" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.196"/>
+  <testcase name="testRadarLightController_triggerBrakeLight_dispatchesBrakeModeAndRestoresPreBrakeModeAfterHold" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.182"/>
+  <testcase name="testRadarLightController_smartAutomationMode_startsSmartEngineWithoutPreDispatchingDefaultMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.184"/>
+  <testcase name="testRadarLightController_registerRadarDevice_withoutLightSupport_doesNotStartListening" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.177"/>
+  <testcase name="testRadarLightController_debouncedCycleNextMode_andStvzo" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.184"/>
+  <testcase name="testRadarLightController_unregisterRadarDevice_resetsIsStvzo" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.183"/>
+  <testcase name="testRadarLightController_setManualLightMode_stvzoPruning" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.176"/>
+  <testcase name="testRadarLightController_updateHardwareLightMode_reflectsGattRead" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.18"/>
+  <testcase name="testRadarLightController_onWorkoutPaused_and_onWorkoutResumed" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.185"/>
+  <testcase name="testRadarLightController_gatedStateMutation_whenDispatchFails_stateNotMutated" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.181"/>
+  <testcase name="testRadarLightController_onWorkoutStarted_withoutLightAvailable_doesNotStartListening" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.176"/>
+  <testcase name="testRadarLightController_trafficSimulatorIntegration" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.187"/>
+  <testcase name="testRadarLightController_manualOverrideSurvivesIncomingFramesUntilSetAutoMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.165"/>
+  <testcase name="testRadarLightController_workoutStartStop_persistsAcrossRides" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.195"/>
+  <testcase name="testRadarLightController_setManualLightMode_withoutLightSupport_failsGracefully" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.178"/>
+  <testcase name="testRadarLightController_onWorkoutStarted_nonCyclingWorkout_doesNotStartListening" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.183"/>
+  <testcase name="testRadarLightController_hardwareAutoBypass_rearVue820" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.171"/>
+  <testcase name="testRadarLightController_isRearVue820Model" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.173"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

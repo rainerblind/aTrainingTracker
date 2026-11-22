@@ -31,7 +31,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageTimelin
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator

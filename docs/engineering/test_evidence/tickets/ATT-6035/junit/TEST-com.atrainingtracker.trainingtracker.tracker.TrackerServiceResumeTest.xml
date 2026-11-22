@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:06:05.712Z" hostname="rainer-HP-EliteBook-850-G5" time="43.644">
+  <properties/>
+  <testcase name="testResumedSession_publicationSafety_assignsLiveSessionOnlyAfterRehydrationCompletes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.607"/>
+  <testcase name="testRehydrateLiveSession_corruptPolyline_stillRestoresAltitudeDistanceAndExtrema" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.596"/>
+  <testcase name="testRecreateValuesWhenResuming_queriesTargetedProjectionAndAppliesState" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.462"/>
+  <testcase name="testResumedSession_whenServiceRecreated_constructsNewSessionAndRehydratesFromDb" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.45"/>
+  <testcase name="testRehydrateLiveSession_restoresAccumulatedSensorTypesAndCombinesWithNewSamples" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.595"/>
+  <testcase name="testGetTableName_rejectsNullEmptyOrLiteralNullString" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.467"/>
+  <testcase name="testResumedSession_whenServiceRemainsAlive_reusesLiveSessionAndPreservesRawLatLngs" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.453"/>
+  <testcase name="testApplyResumedState_updatesSamplesTableNameAndCompletesFuture" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.443"/>
+  <testcase name="testApplyResumedState_inMemoryPauseResume_preservesMultisportActiveLegAndAnchor" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.463"/>
+  <testcase name="testRecreateValuesWhenResuming_emptyTable_logsWarningAndEarlyReturnsWithoutMutation" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.268"/>
+  <testcase name="testApplyResumedState_seedsAllNineSensorAccumulators" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.562"/>
+  <testcase name="testDeferredResumeServiceRecreation_whenBanalServiceConnectsLater_restoresTableNameAndWritesSamplesToResumedTable" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.389"/>
+  <testcase name="testApplyResumedState_instantiatesAndRehydratesLiveSession_fromEncodedStreamsAndExtrema" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.301"/>
+  <testcase name="testDeferredResumeByUser_whenBanalServiceConnectsLater_recreatesValuesBeforeCreateNewLapAndSearchingFinished" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.313"/>
+  <testcase name="testSampleAndWriteToDb_whileIsRehydratingTrue_skipsLiveSessionMutationWithoutRace" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.406"/>
+  <testcase name="testResumedSession_finalizeLiveSession_persistsCombinedRouteStreamsAndMergedExtrema" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.296"/>
+  <testcase name="testHandleMissingColumns_selfHealsMissingTableWhenBaseFileNameValid_andRejectsUnrecoverableError" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.301"/>
+  <testcase name="testRecreateValuesWhenResuming_missingColumn_failsFastWithoutPartialMutation" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.272"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

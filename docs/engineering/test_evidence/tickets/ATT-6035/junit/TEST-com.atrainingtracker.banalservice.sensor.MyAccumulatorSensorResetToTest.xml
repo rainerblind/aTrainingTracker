@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorResetToTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:30.301Z" hostname="rainer-HP-EliteBook-850-G5" time="0.218">
+  <properties/>
+  <testcase name="resetTo_integerAccumulator_setsExactCompositeValueWithoutMutatingValueOrLastAbsolute" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorResetToTest" time="0.095"/>
+  <testcase name="resetTo_doubleAccumulator_preservesMonotonicDeltaAndInactiveGuard" classname="com.atrainingtracker.banalservice.sensor.MyAccumulatorSensorResetToTest" time="0.122"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>

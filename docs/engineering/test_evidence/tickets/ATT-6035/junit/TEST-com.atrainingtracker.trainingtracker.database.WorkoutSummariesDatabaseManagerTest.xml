@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:02:21.581Z" hostname="rainer-HP-EliteBook-850-G5" time="2.918">
+  <properties/>
+  <testcase name="testHasUnfinishedWorkout_returnsFalseWhenNoMatchingRows" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.428"/>
+  <testcase name="testHasUnfinishedWorkout_appliesNullAndZeroFinishedFilter" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.415"/>
+  <testcase name="testGetFinishedWorkoutCountForSportType_queriesFinishedAndBSport" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.415"/>
+  <testcase name="testGetEarliestWorkoutYear_returnsNullWhenEmptyOrInvalid" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.418"/>
+  <testcase name="testGetFinishedWorkoutCountForSport_queriesFinishedAndSportId" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.401"/>
+  <testcase name="testDiscardOrFinishUnfinishedWorkout_appliesNullAndZeroWhereClause" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.419"/>
+  <testcase name="testGetEarliestWorkoutYear_returnsYearWhenRecordExists" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerTest" time="0.421"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

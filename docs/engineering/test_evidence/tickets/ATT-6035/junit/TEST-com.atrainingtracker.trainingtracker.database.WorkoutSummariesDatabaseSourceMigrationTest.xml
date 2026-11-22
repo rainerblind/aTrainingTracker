@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:02:24.531Z" hostname="rainer-HP-EliteBook-850-G5" time="3.734">
+  <properties/>
+  <testcase name="testCountColumnConstant_isCount" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.462"/>
+  <testcase name="testDbVersion_isAtLeast26" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.418"/>
+  <testcase name="testGetEncodedStreams_extractsMapPolylineAndElevationStreams" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.471"/>
+  <testcase name="testOnUpgrade_fromV24ToV25_addsCountColumnToExtremaValues" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.445"/>
+  <testcase name="testUpdateWorkoutData_persistsSource" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.629"/>
+  <testcase name="testOnUpgrade_fromV25ToV26_addsIndexes" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.435"/>
+  <testcase name="testOnUpgrade_fromV23ToV24_addsSourceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.435"/>
+  <testcase name="testSourceColumnConstant_isSource" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.439"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

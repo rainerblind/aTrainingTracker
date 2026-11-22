@@ -36,7 +36,7 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRep
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager

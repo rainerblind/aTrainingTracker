@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:06:17.652Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="calculateInitialBearing_isAlwaysNormalizedBetween0And360" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.001"/>
+  <testcase name="isValidGpsCoordinate_validAuthenticCoordinates_returnsTrue" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="calculateInitialBearing_intercardinalDirections_accurateAzimuth" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="isValidGpsCoordinate_nullIsland_returnsFalse" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="isValidGpsCoordinate_outOfBoundsLatitudeOrLongitude_returnsFalse" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="haversineDistanceMeters_poleToEquator_matchesQuarterMeridian" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="isValidGpsCoordinate_nullCoordinates_returnsFalse" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="haversineDistanceMeters_goldenValues_withinSubMicrometerTolerance_TST_PRO_137_1" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="haversineDistanceMeters_coincidentPoints_returnsZero" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="isValidGpsCoordinate_nonFiniteValues_returnsFalse" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="calculateInitialBearing_cardinalDirections_computesExactAzimuth" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="haversineDistanceMeters_oneDegreeAlongEquator_matchesTheoreticalArc" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <testcase name="haversineDistanceMeters_parisToLondon_accurateWithinTolerance" classname="com.atrainingtracker.trainingtracker.routes.GeoUtilsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

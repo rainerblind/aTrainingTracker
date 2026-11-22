@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:04:09.399Z" hostname="rainer-HP-EliteBook-850-G5" time="4.939">
+  <properties/>
+  <testcase name="testPerformFullRestore_rejectsCorruptDatabaseIntegrityCheckFailed" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.727"/>
+  <testcase name="testPerformFullRestore_recoversFromInterruptedRestoreViaEmergencyRollback" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.575"/>
+  <testcase name="testPerformFullRestore_rejectsArchiveMissingDatabasesDirectory" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.587"/>
+  <testcase name="testPerformFullRestore_rejectsForwardSchemaVersionDowngrade" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.594"/>
+  <testcase name="testExecuteEmergencyRollback_abortsIfRollbackSnapshotMissingOrEmpty" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.584"/>
+  <testcase name="testRestoreJournalManager_recoversInterruptedRestoreOnStartup" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.573"/>
+  <testcase name="testPerformFullRestore_succeedsWithValidBackup" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.663"/>
+  <testcase name="testValidateBackupArchive_returnsLocalizedErrorStringResourceIds" classname="com.atrainingtracker.trainingtracker.migration.FullRestoreValidationSecurityTest" time="0.636"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

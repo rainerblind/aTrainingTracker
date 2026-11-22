@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:05:02.265Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testNewSession_startsCleanWithZeroLeakedTrackOrExtremaFromPriorSession_TST_UI_029" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.003"/>
+  <testcase name="testLateSpatialBindingForMax" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.0"/>
+  <testcase name="testLateSpatialBindingForMin" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.0"/>
+  <testcase name="testRehydrateStreams_emptyOrNullLists_doesNotCrashOrPopulateDummyCoords" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.0"/>
+  <testcase name="testRehydrateSensorStats_preservesMinMaxAndWeightedAvg_includingMidWorkoutCountAndNewlyPairedSensor" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.0"/>
+  <testcase name="testRehydrateStreams_restoresStartAndLastLatLng_andContinuesDeltaEncodingFromLastSample" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.001"/>
+  <testcase name="testAltitudeCorrectionPreservesAnchoredMinPosition" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

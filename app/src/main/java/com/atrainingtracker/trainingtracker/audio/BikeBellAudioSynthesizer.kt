@@ -139,6 +139,32 @@ class BikeBellAudioSynthesizer(
         @Deprecated("Replaced by AMP_CLAPPER", ReplaceWith("AMP_CLAPPER"))
         const val AMP_4: Double = AMP_CLAPPER
 
+        private fun calculateFiveModeSample(
+            dt: Double,
+            fundamental: Double,
+            tauHum: Double,
+            tauFundamental: Double,
+            tauTierce: Double,
+            tauNominal: Double,
+            tauClapper: Double
+        ): Double {
+            if (dt < 0.0) return 0.0
+            val ratio = fundamental / FUNDAMENTAL_FREQ
+            val f0 = HUM_FREQ * ratio
+            val f1 = FUNDAMENTAL_FREQ * ratio
+            val f2 = TIERCE_FREQ * ratio
+            val f3 = NOMINAL_FREQ * ratio
+            val f4 = CLAPPER_FREQ * ratio
+
+            val attack = 1.0 - Math.exp(-dt / TAU_ATTACK)
+            val s0 = AMP_HUM * Math.exp(-dt / tauHum) * Math.sin(2.0 * Math.PI * f0 * dt)
+            val s1 = AMP_FUNDAMENTAL * Math.exp(-dt / tauFundamental) * Math.sin(2.0 * Math.PI * f1 * dt)
+            val s2 = AMP_TIERCE * Math.exp(-dt / tauTierce) * Math.sin(2.0 * Math.PI * f2 * dt)
+            val s3 = AMP_NOMINAL * Math.exp(-dt / tauNominal) * Math.sin(2.0 * Math.PI * f3 * dt)
+            val s4 = AMP_CLAPPER * Math.exp(-dt / tauClapper) * Math.sin(2.0 * Math.PI * f4 * dt)
+            return attack * (s0 + s1 + s2 + s3 + s4)
+        }
+
         /**
          * Calculates acoustic amplitude sample for a single bell dome strike at offset [dt].
          *
@@ -151,21 +177,15 @@ class BikeBellAudioSynthesizer(
          * @return Dimensionless acoustic sample in range [-1.0, 1.0].
          */
         fun calculateStrikeSample(dt: Double, fundamental: Double): Double {
-            if (dt < 0.0) return 0.0
-            val ratio = fundamental / FUNDAMENTAL_FREQ
-            val f0 = HUM_FREQ * ratio
-            val f1 = FUNDAMENTAL_FREQ * ratio
-            val f2 = TIERCE_FREQ * ratio
-            val f3 = NOMINAL_FREQ * ratio
-            val f4 = CLAPPER_FREQ * ratio
-
-            val attack = 1.0 - Math.exp(-dt / TAU_ATTACK)
-            val s0 = AMP_HUM * Math.exp(-dt / TAU_HUM) * Math.sin(2.0 * Math.PI * f0 * dt)
-            val s1 = AMP_FUNDAMENTAL * Math.exp(-dt / TAU_FUNDAMENTAL) * Math.sin(2.0 * Math.PI * f1 * dt)
-            val s2 = AMP_TIERCE * Math.exp(-dt / TAU_TIERCE) * Math.sin(2.0 * Math.PI * f2 * dt)
-            val s3 = AMP_NOMINAL * Math.exp(-dt / TAU_NOMINAL) * Math.sin(2.0 * Math.PI * f3 * dt)
-            val s4 = AMP_CLAPPER * Math.exp(-dt / TAU_CLAPPER) * Math.sin(2.0 * Math.PI * f4 * dt)
-            return attack * (s0 + s1 + s2 + s3 + s4)
+            return calculateFiveModeSample(
+                dt = dt,
+                fundamental = fundamental,
+                tauHum = TAU_HUM,
+                tauFundamental = TAU_FUNDAMENTAL,
+                tauTierce = TAU_TIERCE,
+                tauNominal = TAU_NOMINAL,
+                tauClapper = TAU_CLAPPER
+            )
         }
 
         /**
@@ -173,21 +193,15 @@ class BikeBellAudioSynthesizer(
          * and attack envelope smoothing (REQ-UI-421.4, ATT-5282).
          */
         fun calculateRollStrikeSample(dt: Double, fundamental: Double): Double {
-            if (dt < 0.0) return 0.0
-            val ratio = fundamental / FUNDAMENTAL_FREQ
-            val f0 = HUM_FREQ * ratio
-            val f1 = FUNDAMENTAL_FREQ * ratio
-            val f2 = TIERCE_FREQ * ratio
-            val f3 = NOMINAL_FREQ * ratio
-            val f4 = CLAPPER_FREQ * ratio
-
-            val attack = 1.0 - Math.exp(-dt / TAU_ATTACK)
-            val s0 = AMP_HUM * Math.exp(-dt / 0.10) * Math.sin(2.0 * Math.PI * f0 * dt)
-            val s1 = AMP_FUNDAMENTAL * Math.exp(-dt / 0.08) * Math.sin(2.0 * Math.PI * f1 * dt)
-            val s2 = AMP_TIERCE * Math.exp(-dt / 0.05) * Math.sin(2.0 * Math.PI * f2 * dt)
-            val s3 = AMP_NOMINAL * Math.exp(-dt / 0.025) * Math.sin(2.0 * Math.PI * f3 * dt)
-            val s4 = AMP_CLAPPER * Math.exp(-dt / 0.012) * Math.sin(2.0 * Math.PI * f4 * dt)
-            return attack * (s0 + s1 + s2 + s3 + s4)
+            return calculateFiveModeSample(
+                dt = dt,
+                fundamental = fundamental,
+                tauHum = 0.10,
+                tauFundamental = 0.08,
+                tauTierce = 0.05,
+                tauNominal = 0.025,
+                tauClapper = 0.012
+            )
         }
 
         /**

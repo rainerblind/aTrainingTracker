@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.InterServiceIngestionIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:03:28.870Z" hostname="rainer-HP-EliteBook-850-G5" time="1.031">
+  <properties/>
+  <testcase name="testTrackerService_serviceDisconnected_nullSafety" classname="com.atrainingtracker.trainingtracker.integration.InterServiceIngestionIntegrationTest" time="0.322"/>
+  <testcase name="testTrackerService_batchPolling_persistsRealSqliteAndUpdatesLiveSession" classname="com.atrainingtracker.trainingtracker.integration.InterServiceIngestionIntegrationTest" time="0.405"/>
+  <testcase name="testBanalServiceComm_realSensorPriorityArbitration" classname="com.atrainingtracker.trainingtracker.integration.InterServiceIngestionIntegrationTest" time="0.304"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@7d8a67c3], context=[android.app.ContextImpl@162c5011], intentFilter=[android.content.IntentFilter@148f441b]], Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@5dfa0b4a], context=[android.app.ContextImpl@162c5011], intentFilter=[android.content.IntentFilter@65f74360]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@2cc8cdbe], context=[android.app.ContextImpl@162c5011], intentFilter=[android.content.IntentFilter@64daf5f6]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@5b6719e9], context=[android.app.ContextImpl@162c5011], intentFilter=[android.content.IntentFilter@388873de]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@79c7f2c1], context=[android.app.ContextImpl@15d660df], intentFilter=[android.content.IntentFilter@573e27df]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$1@44ad1be8], context=[android.app.ContextImpl@15d660df], intentFilter=[android.content.IntentFilter@180acdd0]]]
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@7639aec1], context=[android.app.ContextImpl@15d660df], intentFilter=[android.content.IntentFilter@371fa7f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@56fa683a], context=[android.app.ContextImpl@15d660df], intentFilter=[android.content.IntentFilter@2787c1f4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@62965e66], context=[android.app.ContextImpl@cd918e5], intentFilter=[android.content.IntentFilter@32159f1]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

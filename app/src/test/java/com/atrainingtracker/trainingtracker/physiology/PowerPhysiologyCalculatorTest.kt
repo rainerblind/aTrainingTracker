@@ -591,5 +591,59 @@ class PowerPhysiologyCalculatorTest {
         val expectedKj = baseStream.sum() * 2.0 / 1000.0
         assertEquals(expectedKj, metrics.workKj!!, 1e-4)
     }
+
+    @Test
+    fun computeWPrimeBalanceSeries_leadingNullsAndMidGapRecharge_exactNumericParity_TST_PRO_137_3() {
+        val cp = 250.0
+        val wPrimeKj = 20.0
+        val samples = listOf(null, Double.NaN, 350.0, 350.0, null, -5.0, 200.0)
+        val result = PowerPhysiologyCalculator.computeWPrimeBalanceSeries(samples, cp, wPrimeKj, 1.0)
+
+        assertNull(result.seriesKj[0])
+        assertNull(result.seriesKj[1])
+        // Step 2: 20000 - (350 - 250)*1 = 19900 J = 19.9 kJ
+        assertEquals(19.9f, result.seriesKj[2]!!, 1e-5f)
+        // Step 3: 19900 - 100 = 19800 J = 19.8 kJ
+        assertEquals(19.8f, result.seriesKj[3]!!, 1e-5f)
+        // Step 4 & 5 (null / negative after start): recharge at 0 W
+        var expectedJ = 19800.0
+        expectedJ = PowerPhysiologyCalculator.stepWPrimeBalanceJoules(expectedJ, 0.0, cp, 20_000.0, 1.0)
+        assertEquals((expectedJ / 1000.0).toFloat(), result.seriesKj[4]!!, 1e-5f)
+        expectedJ = PowerPhysiologyCalculator.stepWPrimeBalanceJoules(expectedJ, 0.0, cp, 20_000.0, 1.0)
+        assertEquals((expectedJ / 1000.0).toFloat(), result.seriesKj[5]!!, 1e-5f)
+        expectedJ = PowerPhysiologyCalculator.stepWPrimeBalanceJoules(expectedJ, 200.0, cp, 20_000.0, 1.0)
+        assertEquals((expectedJ / 1000.0).toFloat(), result.seriesKj[6]!!, 1e-5f)
+        assertEquals(expectedJ / 1000.0, result.endWPrimeBalKj!!, 1e-9)
+    }
+
+    @Test
+    fun computeAerobicEfficiencyAndDecoupling_powerVsSpeedAsymmetricPredicatesAndAggregators_TST_PRO_137_3() {
+        val hr = listOf(140.0, 140.0, 150.0, 150.0)
+        // Power allows 0.0 samples in paired set while speed strictly requires s > 0.0
+        val powerWithZero = listOf(0.0, 200.0, 200.0, 200.0)
+        val powerRes = PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+            powerSamplesWatts = powerWithZero,
+            speedSamplesMps = emptyList(),
+            hrSamplesBpm = hr,
+            bSportType = com.atrainingtracker.banalservice.BSportType.BIKE
+        )
+        assertTrue(powerRes.isPowerBased)
+        val expectedNp = PowerPhysiologyCalculator.calculateNormalizedPower(powerWithZero)!!
+        assertEquals(expectedNp / 145.0, powerRes.efficiencyFactor!!, 1e-9)
+
+        // Speed branch on RUN ignores 0.0 m/s samples and uses mean aggregator
+        val speedWithZero = listOf(0.0, 3.0, 3.0, 3.0, 3.0)
+        val hrRun = listOf(130.0, 140.0, 140.0, 150.0, 150.0)
+        val runRes = PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+            powerSamplesWatts = listOf(null, null, null, null, null),
+            speedSamplesMps = speedWithZero,
+            hrSamplesBpm = hrRun,
+            bSportType = com.atrainingtracker.banalservice.BSportType.RUN
+        )
+        assertFalse(runRes.isPowerBased)
+        assertEquals((3.0 * 60.0) / 145.0, runRes.efficiencyFactor!!, 1e-9)
+        assertEquals((3.0 * 60.0) / 140.0, runRes.efFirstHalf!!, 1e-9)
+        assertEquals((3.0 * 60.0) / 150.0, runRes.efSecondHalf!!, 1e-9)
+    }
 }
 

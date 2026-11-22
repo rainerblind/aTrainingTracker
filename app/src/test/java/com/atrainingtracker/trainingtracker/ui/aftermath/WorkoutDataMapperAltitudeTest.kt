@@ -25,7 +25,7 @@ import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
-import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals

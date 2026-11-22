@@ -21,13 +21,18 @@ package com.atrainingtracker.banalservice.sensor;
 import com.atrainingtracker.banalservice.devices.MyDevice;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
-public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> {
+import java.util.Objects;
+import java.util.function.BinaryOperator;
+
+public class MyAccumulatorSensor<N extends Number> extends MySensor<N> {
     private static final String TAG = "MyAccumulatorSensor";
 
     Boolean mRespectPause;
     protected volatile N mInitialValue;  // necessary to manipulate the output that we get via getValue()...
     protected N mZeroValue; // In almost all cases, this will be 0.  In some special cases, like a lap sensor, this will be 1.
     protected volatile N mLastAbsoluteValue;
+    private final BinaryOperator<N> mAddOp;
+    private final BinaryOperator<N> mSubOp;
 
     @Override
     @Deprecated
@@ -36,9 +41,13 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
         super.newValue(value);
     }
 
-    protected abstract N add(N a, N b);
+    protected final N add(N a, N b) {
+        return mAddOp.apply(a, b);
+    }
 
-    protected abstract N sub(N a, N b);
+    protected final N sub(N a, N b) {
+        return mSubOp.apply(a, b);
+    }
 
 
     public void accumulate(N absoluteValue) {
@@ -119,8 +128,16 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
      *    Unfortunately, this seems to be difficult for the ANT+ and Bluetooth LE devices.  These devices simply count the wheel revolutions or steps.  Thus, it is difficult to not increment the distance when paused.
      */
     @SuppressWarnings("unchecked")
-    public MyAccumulatorSensor(MyDevice myDevice, SensorType sensorType, Boolean respectPause, N zeroValue) {
+    public MyAccumulatorSensor(
+            MyDevice myDevice,
+            SensorType sensorType,
+            Boolean respectPause,
+            N zeroValue,
+            BinaryOperator<N> addOp,
+            BinaryOperator<N> subOp) {
         super(myDevice, sensorType);
+        mAddOp = Objects.requireNonNull(addOp, "addOp must not be null");
+        mSubOp = Objects.requireNonNull(subOp, "subOp must not be null");
         mRespectPause = respectPause;
         mZeroValue = zeroValue;
         N initialVal = zeroValue;

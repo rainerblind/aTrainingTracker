@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P2`  
-**Version**: 1.0.58  
+**Version**: 1.0.59  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 83
+**Total Requirements**: 84
 
 **Total Requirements**: 78
 
@@ -2712,10 +2712,38 @@
 
 ---
 
+### REQ-PRO-137: Geodesic Distance Consolidation, Mappable ViewModel & `ui/util` Unification, and Calculator/Accumulator Deduplication (`ATT-6035`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PRO-137`
+- **Priority**: Low
+- **Type**: Non-Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `GeoUtils.kt`, `AndroidGeoDistance.kt`, `WorkoutClusterEngine.kt`, `SpatialRegionEngine.kt`, `RouteAutoDetector.kt`, `CropWorkoutMath.kt`, `IndirectTpmsEstimator.kt`, `KnownLocationsGeometryMath.kt`, `BaseMappableListViewModel.kt`, `WorkoutClustersViewModel.kt`, `KnownLocationsViewModel.kt`, `KnownLocationSortOrder.kt`, `CollapsingAppBarNestedScrollConnection.kt`, `EncodingUtils.kt`, `PowerPhysiologyCalculator.kt`, `BikeBellAudioSynthesizer.kt`, `MyAccumulatorSensor.java`, `MyDoubleAccumulatorSensor.java`, `MyIntegerAccumulatorSensor.java`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Eliminates duplicated Haversine/ellipsoidal distance formulas without silently shifting ellipsoidal vs. spherical behavior, unifies mappable list ViewModels and `ui/util` packages, removes imperative `.value` cross-reads in `KnownLocationsViewModel`, and deduplicates physiological/audio/accumulator pipelines (`ATT-6035`).
+- **Description**:
+  1. *Geodesic Distance Consolidation (`REQ-PRO-137.1`)*: `GeoUtils.haversineDistanceMeters` SHALL remain free of Android imports and accept `@JvmOverloads earthRadiusMeters: Double = EARTH_RADIUS_METERS` (`6371000.0`). `AndroidGeoDistance.ellipsoidalDistanceMeters(...): Double` SHALL invoke `Location.distanceBetween` with `catch (RuntimeException)` fallback to `GeoUtils.haversineDistanceMeters`. `WorkoutClusterEngine.distanceBetween` (`Float`), `SpatialRegionEngine.distanceBetween` (`Double`), `RouteAutoDetector.computeDistanceMeters` (`Float`), `CropWorkoutMath.haversineDistanceMeters` (`EPSILON` clamp), `IndirectTpmsEstimator.computeDistanceMeters`, and `KnownLocationsGeometryMath.calculateDistanceMeters` (`R = 6371009.0`) SHALL delegate to these canonical helpers preserving semantics within `< 1e-6 m`.
+  2. *ViewModel & `ui/util` Unification (`REQ-PRO-137.2`)*: `BaseMappableListViewModel.calculateDistance` SHALL delegate to `AndroidGeoDistance.ellipsoidalDistanceMeters(...).toFloat()`. `WorkoutClustersViewModel` and `KnownLocationsViewModel` (`KnownLocationSortOrder : MappableSortOrder`) SHALL inherit `BaseMappableListViewModel`, and `KnownLocationsViewModel` SHALL drive reactive state via declarative `combine(...)` flows without `.value` cross-reads. `trainingtracker.ui.utils` (`CollapsingAppBarNestedScrollConnection.kt`, `EncodingUtils.kt`) SHALL consolidate into `trainingtracker.ui.util` (leaving `ui/util/Event.kt` untouched).
+  3. *Calculation & Accumulator Deduplication (`REQ-PRO-137.3`)*: `PowerPhysiologyCalculator` SHALL extract shared helpers for `computeAerobicEfficiencyAndDecoupling` (aggregator + predicate parameters) and `computeWPrimeBalanceSeries`. `BikeBellAudioSynthesizer` SHALL extract a shared 5-mode sine-sum helper for `calculateStrikeSample` and `calculateRollStrikeSample`. `MyAccumulatorSensor<N>` SHALL accept `BinaryOperator<N>` addition and subtraction operators so `MyDoubleAccumulatorSensor` and `MyIntegerAccumulatorSensor` eliminate duplicated `add`/`sub` overrides while preserving public constructors and concurrent thread-safety.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new `REQ-PRO-137` (`REQ-PRO-137.1`–`REQ-PRO-137.3`), refining `REQ-MAP-035`, `REQ-SET-095.4`, `REQ-UI-368`, `REQ-UI-421.4`, and `REQ-TRK-078.4`.
+  2. *Historical Origin & Commit Trace*: `ATT-6033` Review Rounds 1–3 identified WGS-84 ellipsoidal vs. spherical semantics, `KnownLocationsGeometryMath` `R = 6371009.0`, `CropWorkoutMath.EPSILON`, and `MyAccumulatorSensor` callers.
+  3. *Root Reason for Existing Formulation*: Organic growth across route, cluster, period, audio, and sensor modules left localized formula and package duplicates.
+  4. *Preservation of Core Invariants*: Preserves `GeoUtils.kt` Android-free guarantee, `WorkoutClusterEngine` `Float` & `SpatialRegionEngine` `Double` signatures, `KnownLocationsViewModel` single-arg `Application` constructor, `ArchitectureConformanceContractTest` 22-entry baseline, `MyDoubleAccumulatorSensor`/`MyIntegerAccumulatorSensor` public constructors, and `0` string edits.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `GeoUtils.haversineDistanceMeters` and `AndroidGeoDistance.ellipsoidalDistanceMeters`, *When* invoked across all 6 delegated callers, *Then* outputs match Golden-Value baselines within `< 1e-6 m` and `GeoUtils.kt` has zero Android imports.
+  • *Given* `WorkoutClustersViewModel`, `KnownLocationsViewModel`, and `ui/util`, *When* sorting, filtering, or importing `CollapsingAppBarNestedScrollConnection` / `NumericalEncodingUtils`, *Then* both ViewModels extend `BaseMappableListViewModel`, `KnownLocationsViewModel` uses declarative `combine(...)` without `.value` cross-reads, and zero `ui.utils` references remain in `app/src/`.
+  • *Given* `PowerPhysiologyCalculator`, `BikeBellAudioSynthesizer`, and `MyDoubleAccumulatorSensor` / `MyIntegerAccumulatorSensor`, *When* executed on parity inputs and concurrent stress threads, *Then* outputs match pre-refactor results within floating-point parity and pass all concurrency invariants.
+- **Invariants**: Zero Android imports in `GeoUtils.kt`; `ui/util/Event.kt` untouched (`ATT-8130`); `WorkoutClustersViewModel.kt:100` `MyPreferenceManager(application)` untouched (`ATT-8121`); `Localization Parity: N/A - 0 new or modified UI strings`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.61` | 2026-11-22 | Lane 1 Author (`ATT-6035`, `--as agent1`) | `ATT-6035` | Added `[Planned]` `REQ-PRO-137` (`REQ-PRO-137.1`–`.3`) for geodesic consolidation, mappable ViewModel & `ui/util` unification, and calculator/accumulator deduplication. |
+| `1.0.62` | 2026-11-22 | Lane 1 Author (`ATT-6035`, `--as agent1`) | `ATT-6035` | Promoted `REQ-PRO-137` (`REQ-PRO-137.1`–`.3`) to `[Verified]` after targeted unit/contract verification (`179/179` tests across 20 suites, `0` compiler warnings, live `emulator-5554` smoke). |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Promoted `REQ-PRO-127` to `[Verified]` after Stage 5 verification (`490/490` `tools/` + `56/56` Hoechstmass Python tests, `113/113` Gradle contract tests across 16 suites, `27/27` shards `<= 4,000` lines, `--coverage` Cat 4 `1244/1244` `100%`, governance `exit 0`). |
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8205`) | `ATT-8205` | Added `[Planned]` `REQ-PRO-128` (`REQ-PRO-128.1`–`REQ-PRO-128.5`: extended verdict keywords & ADF/`unverified` parity, additive `end_to_end_ftpr_percent`, multi-signal `risk_distribution`, extended German/English bug statuses + Höchstmaß parity, zero-comment stage subtask closure guard). |

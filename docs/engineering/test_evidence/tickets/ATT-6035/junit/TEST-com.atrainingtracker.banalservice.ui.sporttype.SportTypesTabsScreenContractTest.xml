@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:58:53.564Z" hostname="rainer-HP-EliteBook-850-G5" time="0.076">
+  <properties/>
+  <testcase name="testSportTypeCard_usageItemDateFormattingIntegration" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest" time="0.01"/>
+  <testcase name="testSportTypeCard_mappingStringsContract" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest" time="0.021"/>
+  <testcase name="testSportTypeCard_composableContract" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest" time="0.044"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

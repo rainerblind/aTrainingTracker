@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:03:31.725Z" hostname="rainer-HP-EliteBook-850-G5" time="1.304">
+  <properties/>
+  <testcase name="testWorkoutRepository_directQuery_realSqliteResolution" classname="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" time="0.404"/>
+  <testcase name="testWorkoutSummariesViewModel_observesRealSqliteFlowEmissions" classname="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" time="0.551"/>
+  <testcase name="testBanalServiceRepository_reactiveStateFlows" classname="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" time="0.349"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

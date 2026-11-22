@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.RepositoryServiceCleanlinessContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:07:59.728Z" hostname="rainer-HP-EliteBook-850-G5" time="0.046">
+  <properties/>
+  <testcase name="testBanalService_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryServiceCleanlinessContractTest" time="0.007"/>
+  <testcase name="testPairedRemoteDeviceDto_contractValidation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryServiceCleanlinessContractTest" time="0.002"/>
+  <testcase name="testDeviceManager_zeroDatabaseManagerInstantiationAndZeroCursorLeak" classname="com.atrainingtracker.trainingtracker.ui.RepositoryServiceCleanlinessContractTest" time="0.025"/>
+  <testcase name="testTrackerService_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryServiceCleanlinessContractTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

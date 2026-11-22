@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:13:01.936Z" hostname="rainer-HP-EliteBook-850-G5" time="0.067">
+  <properties/>
+  <testcase name="testDownwardScroll_consumesInPreScroll_andExpandsImmediately" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.065"/>
+  <testcase name="testInitialState_isUncollapsed" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.0"/>
+  <testcase name="testUpwardScroll_clampsAtMaxHeight" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.001"/>
+  <testcase name="testUpwardScroll_consumesInPreScroll_andCollapses" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.0"/>
+  <testcase name="testDownwardScroll_clampsAtZero_andDefersExcessToChild" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.0"/>
+  <testcase name="testDownwardScroll_whenQuickReturnDisabled_defersToPostScroll" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.001"/>
+  <testcase name="testSubPixelPrecision_accumulatesWithoutIntegerTruncationJitter" classname="com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnectionTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

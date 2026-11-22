@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:59:42.788Z" hostname="rainer-HP-EliteBook-850-G5" time="7.13">
+  <properties/>
+  <testcase name="testRunningWeightedCentroidCalculation" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="0.789"/>
+  <testcase name="testCalculateSimilarity_MatchesWhenAltitudeExtremaAlign" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="0.699"/>
+  <testcase name="testCalculateSimilarity_FallbackTo4TermsWhenPreferenceDisabled" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="0.77"/>
+  <testcase name="testLearnFromWorkout_UpdatesAltitudeExtremaCentroidsInDatabase" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="2.534"/>
+  <testcase name="testCalculateSimilarity_RejectsWhenAltitudeExtremaDiverge" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="0.688"/>
+  <testcase name="testClusterTolerancePreferencePersistence" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="0.906"/>
+  <testcase name="testCalculateSimilarity_FallbackTo4TermsWhenAltitudeNull" classname="com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest" time="0.744"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Possibly running android unit test without robolectric
+java.lang.RuntimeException: Method isLoggable in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.isLoggable(Log.java)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at io.mockk.proxy.jvm.advice.MethodCall.call(MethodCall.kt:17)
+	at io.mockk.proxy.jvm.advice.SelfCallEliminatorCallable.call(SelfCallEliminatorCallable.kt:13)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.handleOriginalCall(JvmMockFactoryHelper.kt:122)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.access$handleOriginalCall(JvmMockFactoryHelper.kt:28)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1$invocation$1$1.invoke(JvmMockFactoryHelper.kt:45)
+	at io.mockk.impl.stub.MockKStub$handleInvocation$originalPlusToString$1.invoke(MockKStub.kt:258)
+	at io.mockk.impl.stub.SpyKStub.defaultAnswer(SpyKStub.kt:13)
+	at io.mockk.impl.stub.MockKStub.answer(MockKStub.kt:59)
+	at io.mockk.impl.recording.states.AnsweringState.call(AnsweringState.kt:18)
+	at io.mockk.impl.recording.CommonCallRecorder.call(CommonCallRecorder.kt:65)
+	at io.mockk.impl.stub.MockKStub.handleInvocation(MockKStub.kt:297)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1.invocation(JvmMockFactoryHelper.kt:41)
+	at io.mockk.proxy.jvm.advice.Interceptor.call(Interceptor.kt:27)
+	at android.util.Log.isLoggable(Log.java)
+	at okhttp3.internal.platform.android.AndroidLog.enableLogging(AndroidLog.kt:132)
+	at okhttp3.internal.platform.android.AndroidLog.enable(AndroidLog.kt:109)
+	at okhttp3.internal.platform.PlatformRegistry.findPlatform(PlatformRegistry.kt:25)
+	at okhttp3.internal.platform.Platform$Companion.findPlatform(Platform.kt:252)
+	at okhttp3.internal.platform.Platform$Companion.access$findPlatform(Platform.kt:230)
+	at okhttp3.internal.platform.Platform.<clinit>(Platform.kt:231)
+	at okhttp3.OkHttpClient$Builder.<init>(OkHttpClient.kt:607)
+	at okhttp3.OkHttpClient.<init>(OkHttpClient.kt:279)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.shared_delegate$lambda$0(AppHttpClient.kt:38)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.getShared(AppHttpClient.kt:37)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.newBuilder(AppHttpClient.kt:46)
+	at com.atrainingtracker.trainingtracker.elevation.ElevationService$Companion.getInstance(ElevationService.kt:61)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.<init>(KnownLocationsRepository.kt:87)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository$Companion.getInstance(KnownLocationsRepository.kt:378)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.ensureStartingLocationAnchor(WorkoutClusterEngine.kt:289)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.learnFromWorkout(WorkoutClusterEngine.kt:247)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.learnFromWorkout$default(WorkoutClusterEngine.kt:195)
+	at com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest.testLearnFromWorkout_UpdatesAltitudeExtremaCentroidsInDatabase(AltitudeAwareClusterMatchingTest.kt:360)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:175)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:84)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:47)
+	at org.gradle.api.internal.tasks.testing.junit.AbstractJUnitTestDefinitionProcessor.processTestDefinition(AbstractJUnitTestDefinitionProcessor.java:65)
+	at org.gradle.api.internal.tasks.testing.SuiteTestDefinitionProcessor.processTestDefinition(SuiteTestDefinitionProcessor.java:53)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.gradle.internal.dispatch.MethodInvocation.invokeOn(MethodInvocation.java:77)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:28)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:19)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:88)
+	at jdk.proxy1/jdk.proxy1.$Proxy4.processTestDefinition(Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$2.run(TestWorker.java:178)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

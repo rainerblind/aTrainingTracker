@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:52.595Z" hostname="rainer-HP-EliteBook-850-G5" time="8.09">
+  <properties/>
+  <testcase name="testRecurringRouteClusterMath_onlyCountsClustersWithRepeatVisitsGte3" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="7.575"/>
+  <testcase name="testYearHorizon_2026_filtersAnnualWrappedWithoutSqlError" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="0.106"/>
+  <testcase name="testGetAvailableYears_returnsDistinctDescendingYears" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="0.07"/>
+  <testcase name="testSportFilterAll_includesAllSportsWithoutDroppingUnknownOrSwim" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="0.085"/>
+  <testcase name="testGlobalLifetimeEvaluation_retainsHistoryAcrossYearsAndUnlocksPioneer" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="0.083"/>
+  <testcase name="testSportFilter_running_filtersCyclingOut" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="0.092"/>
+  <testcase name="testAllTimeHorizon_aggregatesBothWorkouts" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest" time="0.077"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

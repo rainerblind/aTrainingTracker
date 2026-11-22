@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:11:22.887Z" hostname="rainer-HP-EliteBook-850-G5" time="46.483">
+  <properties/>
+  <testcase name="testLinkedEquipmentBySport_precomputesEquipmentMappingWithoutMainThreadDb" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="3.86"/>
+  <testcase name="selectCluster_whenClusterSelected_updatesClusterWorkoutsState" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.767"/>
+  <testcase name="testExecuteClusterSplit_delegatesToRepositoryAndReconcilesSplitEvent_TST_PER_048_3" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.777"/>
+  <testcase name="testWorkoutClustersViewModel_unassignWorkout_updatesRepository" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.599"/>
+  <testcase name="selectCluster_withOver30Workouts_loadsDetailMapAndCancelsSupersededSelection_TST_PERF_002" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.448"/>
+  <testcase name="selectClusterById_whenClusterNotInList_queriesRepository" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.441"/>
+  <testcase name="testEagerMainDispatcherInit_withSynchronousMutationEmission_doesNotThrowNpe_TST_PER_051_2" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.24"/>
+  <testcase name="testClusterMutations_trimWhitespaceAndRejectBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.336"/>
+  <testcase name="testWorkoutClustersViewModel_createNewClusterFromWorkout_delegatesToEngineAndRefreshes" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.257"/>
+  <testcase name="inheritsBaseMappableListViewModel_managesSortOrderScrollAndLocation_TST_PRO_137_2" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.204"/>
+  <testcase name="selectCluster_withLinkedRoute_populatesLinkedRouteStateFlow_TST_SET_023" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.202"/>
+  <testcase name="selectCluster_whenNull_clearsClusterWorkoutsAndPeekSelection" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.007"/>
+  <testcase name="clearFilterCriteria_resetsCriteriaToEmptyWithNullMinHitCount" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="1.95"/>
+  <testcase name="filterCriteria_defaultsToMinHitCount5OnInitialization" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.039"/>
+  <testcase name="updateFilterCriteria_preservesOrModifiesCriteriaState" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.104"/>
+  <testcase name="selectWorkoutForPeek_afterSelectCluster_resolvesWorkoutAndLoadsTrackAndMarkers" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.12"/>
+  <testcase name="recalculateClusters_propagatesMigrationStatusAndCompletionEvent_TST_PERF_003_007" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.062"/>
+  <testcase name="testClusterMutationEvents_renamedMergedDeleted_reconcilesViewModelState_TST_PER_048_3" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="2.106"/>
+  <testcase name="selectClusterById_whenClusterInList_selectsDirectly" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="1.986"/>
+  <testcase name="selectWorkoutForPeek_cancelsPreviousInFlightJob" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest" time="1.977"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

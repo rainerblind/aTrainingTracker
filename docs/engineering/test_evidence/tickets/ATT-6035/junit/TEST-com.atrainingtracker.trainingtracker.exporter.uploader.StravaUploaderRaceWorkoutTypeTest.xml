@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRaceWorkoutTypeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:02:31.785Z" hostname="rainer-HP-EliteBook-850-G5" time="4.167">
+  <properties/>
+  <testcase name="testDoUpdate_bikeRace_setsWorkoutType11" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRaceWorkoutTypeTest" time="1.468"/>
+  <testcase name="testDoUpdate_raceFalse_omitsWorkoutType" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRaceWorkoutTypeTest" time="1.328"/>
+  <testcase name="testDoUpdate_runRace_setsWorkoutType1" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRaceWorkoutTypeTest" time="1.371"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

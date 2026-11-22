@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T07:12:24.059Z" hostname="rainer-HP-EliteBook-850-G5" time="9.715">
+  <properties/>
+  <testcase name="moveOrAssignWorkoutToCluster_nonGpsWorkout_usesAssignClusterToWorkout" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest" time="2.466"/>
+  <testcase name="getCandidateClustersForWorkout_nonGpsWorkout_fallsBackToAllClustersWithNaN" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest" time="2.338"/>
+  <testcase name="moveOrAssignWorkoutToCluster_gpsWorkout_usesMoveWorkoutToCluster" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest" time="2.482"/>
+  <testcase name="trackOnMapAftermathViewModel_clusterActionsDelegateToRepository" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest" time="2.429"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
