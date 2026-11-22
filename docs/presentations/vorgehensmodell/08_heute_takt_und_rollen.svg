@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-s08">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="106" fill="#0F172A"/>
+  <rect x="0" y="102" width="1600" height="4" fill="#0D9488"/>
+  <rect x="48" y="22" width="200" height="28" rx="14" fill="#0D9488"/>
+  <text x="148.0" y="40.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">HEUTE · ORGANISATION</text>
+  <text x="266" y="45" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="30" font-weight="800" fill="#FFFFFF">Wie der Schichtbetrieb heute tickt: Takt &amp; Rollen</text>
+  <text x="48" y="81" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="500" fill="#CBD5E1">Drei feste Schichten rund um die Uhr und eine glasklare Aufgabenteilung zwischen Mensch, Schichtführer und KI-Teams</text>
+  <text x="1552" y="44" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#94A3B8">Folie 8 / 10</text>
+  <text x="1552" y="78" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="500" fill="#64748B">aTrainingTracker · Vorgehensmodell</text>
+
+  <rect x="50" y="138" width="1504" height="198" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="134" width="1504" height="198" rx="16" fill="#FFFFFF" stroke="#5EEAD4" stroke-width="1.8"/>
+  <text x="80" y="172" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="20" font-weight="800" fill="#0F172A">Der 24-Stunden-Takt: 3 Schichten, 3 feste Übergaben, 0 Leerlauf</text>
+  <rect x="80" y="196" width="596" height="82" rx="12" fill="#F0FDFA" stroke="#0D9488" stroke-width="2.4"/>
+  <text x="378.0" y="232" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="21" font-weight="800" fill="#115E59">Frühschicht</text>
+  <text x="378.0" y="259" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="600" fill="#334155">05:00 – 15:00 Uhr (10 h)</text>
+  <rect x="684" y="196" width="416" height="82" rx="12" fill="#EFF6FF" stroke="#2563EB" stroke-width="2.4"/>
+  <text x="892.0" y="232" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="21" font-weight="800" fill="#1E40AF">Spätschicht</text>
+  <text x="892.0" y="259" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="600" fill="#334155">15:00 – 22:00 Uhr (7 h)</text>
+  <rect x="1108" y="196" width="412" height="82" rx="12" fill="#EEF2FF" stroke="#4338CA" stroke-width="2.4"/>
+  <text x="1314.0" y="232" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="21" font-weight="800" fill="#1E3A8A">Nachtschicht</text>
+  <text x="1314.0" y="259" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="600" fill="#334155">22:00 – 05:00 Uhr (7 h)</text>
+  <circle cx="80" cy="278" r="8" fill="#D97706" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="80" y="305" text-anchor="start" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="800" fill="#92400E">05:00 Übergabe</text>
+  <circle cx="680" cy="278" r="8" fill="#D97706" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="680" y="305" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="800" fill="#92400E">15:00 Übergabe</text>
+  <circle cx="1104" cy="278" r="8" fill="#D97706" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="1104" y="305" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="800" fill="#92400E">22:00 Übergabe</text>
+  <circle cx="1520" cy="278" r="8" fill="#D97706" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="1520" y="305" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="800" fill="#92400E">05:00 Übergabe</text>
+  <rect x="50" y="364" width="480" height="400" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="360" width="480" height="400" rx="16" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.8"/>
+  <rect x="48" y="360" width="480" height="74" rx="16" fill="#EEF2FF"/>
+  <rect x="48" y="418" width="480" height="16" fill="#EEF2FF"/>
+  <circle cx="90" cy="387" r="9.0" fill="#4338CA"/>
+  <path d="M 74.8 412.2 C 74.8 398.0, 105.2 398.0, 105.2 412.2 Z" fill="#4338CA"/>
+  <text x="126" y="395" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#1E3A8A">1. Mensch (Product Owner)</text>
+  <text x="126" y="419" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="600" fill="#64748B">Strategie &amp; letzte Instanz</text>
+  <circle cx="82" cy="472" r="5.5" fill="#4338CA"/>
+  <text x="100" y="477" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Gibt Aufgaben frei</text>
+  <text x="100" y="502" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Wählt aus, was die KI bauen darf.</text>
+  <circle cx="82" cy="568" r="5.5" fill="#4338CA"/>
+  <text x="100" y="573" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Nimmt Ergebnisse ab</text>
+  <text x="100" y="598" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Nur der Mensch schließt Tickets final.</text>
+  <circle cx="82" cy="664" r="5.5" fill="#4338CA"/>
+  <text x="100" y="669" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Testet im echten Leben</text>
+  <text x="100" y="694" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Outdoor- &amp; Hardware-Tests am Smartphone.</text>
+  <rect x="562" y="364" width="480" height="400" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="560" y="360" width="480" height="400" rx="16" fill="#FFFFFF" stroke="#5EEAD4" stroke-width="1.8"/>
+  <rect x="560" y="360" width="480" height="74" rx="16" fill="#F0FDFA"/>
+  <rect x="560" y="418" width="480" height="16" fill="#F0FDFA"/>
+  <circle cx="602" cy="397" r="15" fill="none" stroke="#0D9488" stroke-width="2.8"/>
+  <polyline points="602,389 602,397 608,401" fill="none" stroke="#0D9488" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="638" y="395" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#115E59">2. Schichtführer (Koordinator)</text>
+  <text x="638" y="419" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="600" fill="#64748B">Taktgeber ohne Eigenbau</text>
+  <circle cx="594" cy="472" r="5.5" fill="#0D9488"/>
+  <text x="612" y="477" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Steuert 3 parallele Spuren</text>
+  <text x="612" y="502" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Verteilt getrennte Themen konfliktfrei.</text>
+  <circle cx="594" cy="568" r="5.5" fill="#0D9488"/>
+  <text x="612" y="573" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Sichert die Übergabe</text>
+  <text x="612" y="598" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Testet, protokolliert &amp; startet Folgeschicht.</text>
+  <circle cx="594" cy="664" r="5.5" fill="#0D9488"/>
+  <text x="612" y="669" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Darf nichts überstimmen</text>
+  <text x="612" y="694" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Qualitäts-Urteile sind unantastbar.</text>
+  <rect x="1074" y="364" width="480" height="400" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1072" y="360" width="480" height="400" rx="16" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.8"/>
+  <rect x="1072" y="360" width="480" height="74" rx="16" fill="#EFF6FF"/>
+  <rect x="1072" y="418" width="480" height="16" fill="#EFF6FF"/>
+  <line x1="1114" y1="377" x2="1114" y2="384" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="1114" cy="375" r="3" fill="#2563EB"/>
+  <rect x="1098" y="384" width="32" height="24" rx="6" fill="#2563EB"/>
+  <circle cx="1108" cy="395" r="3" fill="#FFFFFF"/>
+  <circle cx="1120" cy="395" r="3" fill="#FFFFFF"/>
+  <rect x="1108" y="401" width="12" height="2.6" rx="1.3" fill="#FFFFFF"/>
+  <text x="1150" y="395" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#1E40AF">3. KI-Teams (Bauen ⇄ Prüfen)</text>
+  <text x="1150" y="419" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="600" fill="#64748B">Getrennte Rollen &amp; smarte Modelle</text>
+  <circle cx="1106" cy="472" r="5.5" fill="#2563EB"/>
+  <text x="1124" y="477" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Strikte Rollentrennung</text>
+  <text x="1124" y="502" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Niemand prüft seine eigene Arbeit.</text>
+  <circle cx="1106" cy="568" r="5.5" fill="#2563EB"/>
+  <text x="1124" y="573" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Gezielte Modellwahl</text>
+  <text x="1124" y="598" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Schnell für Routine, stark für Komplexes &amp; UI.</text>
+  <circle cx="1106" cy="664" r="5.5" fill="#2563EB"/>
+  <text x="1124" y="669" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16.5" font-weight="800" fill="#0F172A">Kein Festfahren</text>
+  <text x="1124" y="694" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Bei Unklarheit: Frage an Mensch &amp; weiter!</text>
+  <rect x="50" y="790" width="1504" height="78" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="786" width="1504" height="78" rx="14" fill="#F0FDFA" stroke="#0D9488" stroke-width="2.2"/>
+  <text x="800" y="832" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18.5" font-weight="700" fill="#115E59">Kernprinzip beim Schichtwechsel: Jeder neue Schichtführer liest den echten Projektstand — niemals alte Chatverläufe.</text>
+</svg>

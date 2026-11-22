@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-s01">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="106" fill="#0F172A"/>
+  <rect x="0" y="102" width="1600" height="4" fill="#4338CA"/>
+  <rect x="48" y="22" width="130" height="28" rx="14" fill="#4338CA"/>
+  <text x="113.0" y="40.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">ÜBERBLICK</text>
+  <text x="196" y="45" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="30" font-weight="800" fill="#FFFFFF">Unsere Reise in 5 Stufen (Juni – Nov. 2026)</text>
+  <text x="48" y="81" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="500" fill="#CBD5E1">Wie wir in 5 Monaten vom spontanen Vibe-Coding zum 24/7-Schichtbetrieb nach Höchstmaß gewachsen sind</text>
+  <text x="1552" y="44" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#94A3B8">Folie 1 / 10</text>
+  <text x="1552" y="78" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="500" fill="#64748B">aTrainingTracker · Vorgehensmodell</text>
+
+  <line x1="80" y1="510" x2="1520" y2="170" stroke="#CBD5E1" stroke-width="2.5" stroke-dasharray="8,8"/>
+  <rect x="50" y="364" width="274" height="164" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="360" width="274" height="164" rx="16" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.8"/>
+  <rect x="66" y="376" width="84" height="26" rx="13" fill="#475569"/>
+  <text x="108" y="393.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#FFFFFF">Stufe 1</text>
+  <text x="304" y="394" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E293B">Bis Jun 2026</text>
+  <text x="66" y="438" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="23" font-weight="800" fill="#1E293B">Vibe-Coding</text>
+  <text x="66" y="472" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">1 Agent baut</text>
+  <text x="66" y="496" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">ad-hoc drauflos</text>
+  <line x1="326" y1="442.0" x2="351" y2="390.0" stroke="#475569" stroke-width="2.8" stroke-linecap="round" marker-end="url(#arr-slate)"/>
+  <rect x="357" y="312" width="274" height="164" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="355" y="308" width="274" height="164" rx="16" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.8"/>
+  <rect x="373" y="324" width="84" height="26" rx="13" fill="#2563EB"/>
+  <text x="415" y="341.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#FFFFFF">Stufe 2</text>
+  <text x="611" y="342" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E40AF">Juni 2026</text>
+  <text x="373" y="386" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="23" font-weight="800" fill="#1E40AF">Augenmaß</text>
+  <text x="373" y="420" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">Zweitmeinung</text>
+  <text x="373" y="444" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">nach Bauchgefühl</text>
+  <line x1="633" y1="390.0" x2="658" y2="338.0" stroke="#2563EB" stroke-width="2.8" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+  <rect x="664" y="260" width="274" height="164" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="662" y="256" width="274" height="164" rx="16" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.8"/>
+  <rect x="680" y="272" width="84" height="26" rx="13" fill="#4338CA"/>
+  <text x="722" y="289.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#FFFFFF">Stufe 3</text>
+  <text x="918" y="290" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E3A8A">Jun – Aug</text>
+  <text x="680" y="334" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="23" font-weight="800" fill="#1E3A8A">Sorgfältig</text>
+  <text x="680" y="368" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">Ticket für Ticket</text>
+  <text x="680" y="392" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">sauber getestet</text>
+  <line x1="940" y1="338.0" x2="965" y2="286.0" stroke="#4338CA" stroke-width="2.8" stroke-linecap="round" marker-end="url(#arr-indigo)"/>
+  <rect x="971" y="208" width="274" height="164" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="969" y="204" width="274" height="164" rx="16" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.8"/>
+  <rect x="987" y="220" width="84" height="26" rx="13" fill="#D97706"/>
+  <text x="1029" y="237.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#FFFFFF">Stufe 4</text>
+  <text x="1225" y="238" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#92400E">Sep – Mitte Nov</text>
+  <text x="987" y="282" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="23" font-weight="800" fill="#92400E">Höchstmaß</text>
+  <text x="987" y="316" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">ASPICE-Gates,</text>
+  <text x="987" y="340" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">Worktrees &amp; S6</text>
+  <line x1="1247" y1="286.0" x2="1272" y2="234.0" stroke="#D97706" stroke-width="2.8" stroke-linecap="round" marker-end="url(#arr-amber)"/>
+  <rect x="1278" y="156" width="274" height="164" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1276" y="152" width="274" height="164" rx="16" fill="#F0FDFA" stroke="#0D9488" stroke-width="3"/>
+  <rect x="1294" y="168" width="84" height="26" rx="13" fill="#0D9488"/>
+  <text x="1336" y="185.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="800" fill="#FFFFFF">Stufe 5</text>
+  <text x="1532" y="186" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#115E59">Ab Nov · AKTIV</text>
+  <text x="1294" y="230" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="23" font-weight="800" fill="#115E59">Schichtbetrieb</text>
+  <text x="1294" y="264" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">24/7 im Takt auf</text>
+  <text x="1294" y="288" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15.5" font-weight="500" fill="#334155">3 parallelen Spuren</text>
+  <rect x="50" y="562" width="930" height="206" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="558" width="930" height="206" rx="16" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.8"/>
+  <text x="76" y="594" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#0F172A">Wachstum der dokumentierten Anforderungen (Juni – Nov. 2026)</text>
+  <polygon points="110.0,722 110.0,716.3 272.0,707.5 434.0,699.7 596.0,664.5 758.0,642.6 920.0,632.0 920.0,722" fill="#EFF6FF" fill-opacity="0.8"/>
+  <polyline points="110.0,716.3 272.0,707.5 434.0,699.7 596.0,664.5 758.0,642.6 920.0,632.0" fill="none" stroke="#2563EB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="110.0" cy="716.3" r="6" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="110.0" y="702.3" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#1E40AF">80</text>
+  <text x="110.0" y="746" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="600" fill="#64748B">Jun</text>
+  <circle cx="272.0" cy="707.5" r="6" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="272.0" y="693.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#1E40AF">204</text>
+  <text x="272.0" y="746" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="600" fill="#64748B">Jul</text>
+  <circle cx="434.0" cy="699.7" r="6" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="434.0" y="685.7" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#1E40AF">313</text>
+  <text x="434.0" y="746" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="600" fill="#64748B">Sep</text>
+  <circle cx="596.0" cy="664.5" r="6" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="596.0" y="650.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#1E40AF">809</text>
+  <text x="596.0" y="746" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="600" fill="#64748B">Okt</text>
+  <circle cx="758.0" cy="642.6" r="6" fill="#2563EB" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="758.0" y="628.6" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#1E40AF">1116</text>
+  <text x="758.0" y="746" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="600" fill="#64748B">Mitte Nov</text>
+  <circle cx="920.0" cy="632.0" r="8" fill="#0D9488" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="920.0" y="618.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#115E59">1265</text>
+  <text x="920.0" y="746" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="600" fill="#64748B">Heute</text>
+  <rect x="1006" y="562" width="548" height="62" rx="12" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1004" y="558" width="548" height="62" rx="12" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.6"/>
+  <rect x="1004" y="558" width="8" height="62" rx="4" fill="#2563EB"/>
+  <text x="1032" y="599" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="28" font-weight="800" fill="#1E40AF">1.265</text>
+  <text x="1175" y="586" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="800" fill="#0F172A">Anforderungen</text>
+  <text x="1175" y="607" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="500" fill="#64748B">81 % automatisch verifiziert</text>
+  <rect x="1006" y="634" width="548" height="62" rx="12" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1004" y="630" width="548" height="62" rx="12" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.6"/>
+  <rect x="1004" y="630" width="8" height="62" rx="4" fill="#D97706"/>
+  <text x="1032" y="671" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="28" font-weight="800" fill="#92400E">80</text>
+  <text x="1175" y="658" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="800" fill="#0F172A">Retrospektiven</text>
+  <text x="1175" y="679" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="500" fill="#64748B">Jeder Engpass floss ins Modell</text>
+  <rect x="1006" y="706" width="548" height="62" rx="12" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1004" y="702" width="548" height="62" rx="12" fill="#FFFFFF" stroke="#5EEAD4" stroke-width="1.6"/>
+  <rect x="1004" y="702" width="8" height="62" rx="4" fill="#0D9488"/>
+  <text x="1032" y="743" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="28" font-weight="800" fill="#115E59">3× 24h</text>
+  <text x="1175" y="730" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="800" fill="#0F172A">Schichtbetrieb</text>
+  <text x="1175" y="751" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13.5" font-weight="500" fill="#64748B">3 Schichten · 3 parallele Spuren</text>
+  <rect x="50" y="790" width="1504" height="78" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="786" width="1504" height="78" rx="14" fill="#EEF2FF" stroke="#4338CA" stroke-width="2.2"/>
+  <text x="800" y="832" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="700" fill="#1E3A8A">Leitgedanke: Jede neue Stufe entstand nicht am Reißbrett — sondern aus einem echten Schmerz der Stufe davor.</text>
+</svg>

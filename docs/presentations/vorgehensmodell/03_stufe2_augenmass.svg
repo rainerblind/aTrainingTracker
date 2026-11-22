@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-s03">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="106" fill="#0F172A"/>
+  <rect x="0" y="102" width="1600" height="4" fill="#2563EB"/>
+  <rect x="48" y="22" width="140" height="28" rx="14" fill="#2563EB"/>
+  <text x="117.9" y="40.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">STUFE 2 VON 5</text>
+  <text x="206" y="45" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="30" font-weight="800" fill="#FFFFFF">Augenmaß — Mensch + gezielte Zweitmeinung</text>
+  <text x="48" y="81" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="500" fill="#CBD5E1">Weiterhin ohne schweres Prozess-Gerüst — aber ein zweiter Agent kritisiert den ersten, bis das Gefühl stimmt</text>
+  <text x="1552" y="44" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#94A3B8">Folie 3 / 10</text>
+  <text x="1552" y="78" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="500" fill="#64748B">aTrainingTracker · Vorgehensmodell</text>
+
+  <rect x="48" y="124" width="228" height="38" rx="19" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.3"/>
+  <text x="162.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#065F46">✓ 1. Vibe-Coding</text>
+  <line x1="280" y1="143" x2="299" y2="143" stroke="#059669" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-emerald)"/>
+  <rect x="303" y="124" width="228" height="38" rx="19" fill="#2563EB" stroke="#1E40AF" stroke-width="2"/>
+  <text x="417.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">2. Augenmaß</text>
+  <line x1="535" y1="143" x2="554" y2="143" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+  <rect x="558" y="124" width="228" height="38" rx="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+  <text x="672.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#64748B">3. Sorgfältig</text>
+  <line x1="790" y1="143" x2="809" y2="143" stroke="#475569" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-slate)"/>
+  <rect x="813" y="124" width="228" height="38" rx="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+  <text x="927.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#64748B">4a. Höchstmaß</text>
+  <line x1="1045" y1="143" x2="1064" y2="143" stroke="#475569" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-slate)"/>
+  <rect x="1068" y="124" width="228" height="38" rx="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+  <text x="1182.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#64748B">4b. Härtung</text>
+  <line x1="1300" y1="143" x2="1319" y2="143" stroke="#475569" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-slate)"/>
+  <rect x="1323" y="124" width="228" height="38" rx="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+  <text x="1437.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#64748B">5. Schichtbetrieb</text>
+  <rect x="50" y="190" width="1504" height="206" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="186" width="1504" height="206" rx="16" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.6"/>
+  <text x="76" y="218" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="700" fill="#1E40AF">SO LÄUFT ES AB · VIER-AUGEN-PRINZIP AUF ZURUF</text>
+  <rect x="86" y="242" width="250" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="84" y="238" width="250" height="128" rx="14" fill="#FFFFFF" stroke="#A5B4FC" stroke-width="1.8"/>
+  <circle cx="209.0" cy="266" r="9.0" fill="#4338CA"/>
+  <path d="M 193.8 291.2 C 193.8 277.0, 224.2 277.0, 224.2 291.2 Z" fill="#4338CA"/>
+  <text x="209.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#1E3A8A">Mensch</text>
+  <text x="209.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Steuert &amp; entscheidet</text>
+  <line x1="334" y1="302" x2="424" y2="302" stroke="#2563EB" stroke-width="3.0" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+  <rect x="341.7" y="271.0" width="74.6" height="22" rx="6" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1"/>
+  <text x="379.0" y="286.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#1E40AF">Auftrag</text>
+  <rect x="430" y="242" width="290" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="428" y="238" width="290" height="128" rx="14" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.8"/>
+  <line x1="573.0" y1="256" x2="573.0" y2="263" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="573.0" cy="254" r="3" fill="#2563EB"/>
+  <rect x="557.0" y="263" width="32" height="24" rx="6" fill="#2563EB"/>
+  <circle cx="567.0" cy="274" r="3" fill="#FFFFFF"/>
+  <circle cx="579.0" cy="274" r="3" fill="#FFFFFF"/>
+  <rect x="567.0" y="280" width="12" height="2.6" rx="1.3" fill="#FFFFFF"/>
+  <text x="573.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#1E40AF">KI 1 · Umsetzer</text>
+  <text x="573.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Schreibt Code-Entwurf</text>
+  <line x1="718" y1="284" x2="868" y2="284" stroke="#D97706" stroke-width="3.0" stroke-linecap="round" marker-end="url(#arr-amber)"/>
+  <rect x="740.1" y="253.0" width="105.8" height="22" rx="6" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1"/>
+  <text x="793.0" y="268.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#92400E">Prüf bitte!</text>
+  <line x1="868" y1="326" x2="718" y2="326" stroke="#E11D48" stroke-width="3.0" stroke-linecap="round" stroke-dasharray="7,5" marker-end="url(#arr-rose)"/>
+  <rect x="759.6" y="337.0" width="66.8" height="22" rx="6" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1"/>
+  <text x="793.0" y="352.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#9F1239">Kritik</text>
+  <rect x="874" y="242" width="300" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="872" y="238" width="300" height="128" rx="14" fill="#FFFBEB" stroke="#D97706" stroke-width="2.6"/>
+  <path d="M 1022.0 260 L 1036.0 266 V 277 C 1036.0 286 1029.0 291 1022.0 294 C 1015.0 291 1008.0 286 1008.0 277 V 266 Z" fill="#D97706"/>
+  <polyline points="1017.0,277 1021.0,281 1028.0,272" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1022.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#92400E">KI 2 · Zweitmeinung</text>
+  <text x="1022.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Frischer, kritischer Blick</text>
+  <line x1="1172" y1="302" x2="1264" y2="302" stroke="#059669" stroke-width="3.0" stroke-linecap="round" marker-end="url(#arr-emerald)"/>
+  <rect x="1172.9" y="271.0" width="90.2" height="22" rx="6" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1"/>
+  <text x="1218.0" y="286.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#065F46">Gefühl ok</text>
+  <rect x="1270" y="242" width="248" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1268" y="238" width="248" height="128" rx="14" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.8"/>
+  <circle cx="1392.0" cy="276" r="15" fill="#059669"/>
+  <polyline points="1385.0,277 1390.0,282 1400.0,270" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1392.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Übernahme</text>
+  <text x="1392.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Manuell in die App</text>
+  <rect x="50" y="418" width="734" height="344" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="414" width="734" height="344" rx="16" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.8"/>
+  <rect x="48" y="414" width="734" height="46" rx="16" fill="#059669"/>
+  <rect x="48" y="442" width="734" height="18" fill="#059669"/>
+  <text x="72" y="444" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#FFFFFF">PROS — Was gut funktioniert</text>
+  <rect x="68" y="482" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+  <circle cx="96" cy="520" r="13" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="96" y="525.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#065F46">+</text>
+  <text x="124" y="513" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Großer Qualitätssprung</text>
+  <text x="124" y="538" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Ein zweiter Blick deckt grobe Logikfehler und Lücken sofort auf.</text>
+  <rect x="68" y="570" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+  <circle cx="96" cy="608" r="13" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="96" y="613.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#065F46">+</text>
+  <text x="124" y="601" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Bricht die Ja-Sager-Spirale</text>
+  <text x="124" y="626" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Der Prüfer ist nicht in die Lösung des ersten Agenten verliebt.</text>
+  <rect x="68" y="658" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+  <circle cx="96" cy="696" r="13" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="96" y="701.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#065F46">+</text>
+  <text x="124" y="689" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Weiterhin schnell &amp; schlank</text>
+  <text x="124" y="714" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Pragmatisch einsetzbar — ohne starres Formularwesen.</text>
+  <rect x="820" y="418" width="734" height="344" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="818" y="414" width="734" height="344" rx="16" fill="#FFF1F2" stroke="#FDA4AF" stroke-width="1.8"/>
+  <rect x="818" y="414" width="734" height="46" rx="16" fill="#E11D48"/>
+  <rect x="818" y="442" width="734" height="18" fill="#E11D48"/>
+  <text x="842" y="444" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#FFFFFF">CONS — Wo die Grenzen liegen</text>
+  <rect x="838" y="482" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+  <circle cx="866" cy="520" r="13" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <text x="866" y="525" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#9F1239">−</text>
+  <text x="894" y="513" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Abhängig vom Bauchgefühl</text>
+  <text x="894" y="538" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Ohne feste Kriterien werden Randfälle leicht übersehen.</text>
+  <rect x="838" y="570" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+  <circle cx="866" cy="608" r="13" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <text x="866" y="613" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#9F1239">−</text>
+  <text x="894" y="601" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Keine niedergeschriebenen Ziele</text>
+  <text x="894" y="626" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Ohne Anforderungen weiß auch KI 2 nicht, was zwingend gelten muss.</text>
+  <rect x="838" y="658" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+  <circle cx="866" cy="696" r="13" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <text x="866" y="701" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#9F1239">−</text>
+  <text x="894" y="689" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Viel manuelle Handarbeit</text>
+  <text x="894" y="714" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Der Mensch kopiert und moderiert ständig zwischen beiden Chats.</text>
+  <rect x="50" y="786" width="1504" height="82" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="782" width="1504" height="82" rx="14" fill="#EEF2FF" stroke="#4338CA" stroke-width="2.2"/>
+  <rect x="68" y="805" width="210" height="36" rx="18" fill="#4338CA"/>
+  <text x="173.0" y="828" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">WENDEPUNKT → STUFE 3</text>
+  <text x="300" y="829" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17.5" font-weight="600" fill="#1E3A8A">Die App wächst — ohne <tspan font-weight="700" fill="#1E3A8A">klare Tickets, Anforderungen und Tests</tspan> verlieren wir den Überblick.</text>
+</svg>

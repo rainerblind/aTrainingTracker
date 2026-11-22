@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" id="svg-s06">
+  <defs>
+    <marker id="arr-indigo" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#4338CA"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#0D9488"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#D97706"/>
+    </marker>
+    <marker id="arr-rose" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#E11D48"/>
+    </marker>
+    <marker id="arr-emerald" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#059669"/>
+    </marker>
+    <marker id="arr-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1.5 L 9 5 L 1 8.5 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1600" height="900" fill="#F8FAFC"/>
+
+  <rect x="0" y="0" width="1600" height="106" fill="#0F172A"/>
+  <rect x="0" y="102" width="1600" height="4" fill="#E11D48"/>
+  <rect x="48" y="22" width="148" height="28" rx="14" fill="#E11D48"/>
+  <text x="122.2" y="40.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">STUFE 4b VON 5</text>
+  <text x="214" y="45" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="30" font-weight="800" fill="#FFFFFF">Höchstmaß gehärtet — Parallelität &amp; Kalt-Review</text>
+  <text x="48" y="81" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="16" font-weight="500" fill="#CBD5E1">Oktober – Mitte Nov. 2026: Regeln verdichtet, parallele Arbeitsbereiche und ein frischer End-Prüfer ohne Vorwissen</text>
+  <text x="1552" y="44" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#94A3B8">Folie 6 / 10</text>
+  <text x="1552" y="78" text-anchor="end" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="13" font-weight="500" fill="#64748B">aTrainingTracker · Vorgehensmodell</text>
+
+  <rect x="48" y="124" width="228" height="38" rx="19" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.3"/>
+  <text x="162.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#065F46">✓ 1. Vibe-Coding</text>
+  <line x1="280" y1="143" x2="299" y2="143" stroke="#059669" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-emerald)"/>
+  <rect x="303" y="124" width="228" height="38" rx="19" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.3"/>
+  <text x="417.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#065F46">✓ 2. Augenmaß</text>
+  <line x1="535" y1="143" x2="554" y2="143" stroke="#059669" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-emerald)"/>
+  <rect x="558" y="124" width="228" height="38" rx="19" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.3"/>
+  <text x="672.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#065F46">✓ 3. Sorgfältig</text>
+  <line x1="790" y1="143" x2="809" y2="143" stroke="#059669" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-emerald)"/>
+  <rect x="813" y="124" width="228" height="38" rx="19" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.3"/>
+  <text x="927.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#065F46">✓ 4a. Höchstmaß</text>
+  <line x1="1045" y1="143" x2="1064" y2="143" stroke="#059669" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-emerald)"/>
+  <rect x="1068" y="124" width="228" height="38" rx="19" fill="#E11D48" stroke="#9F1239" stroke-width="2"/>
+  <text x="1182.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">4b. Härtung</text>
+  <line x1="1300" y1="143" x2="1319" y2="143" stroke="#E11D48" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-rose)"/>
+  <rect x="1323" y="124" width="228" height="38" rx="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.3"/>
+  <text x="1437.0" y="148" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="700" fill="#64748B">5. Schichtbetrieb</text>
+  <rect x="50" y="190" width="1504" height="206" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="186" width="1504" height="206" rx="16" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.8"/>
+  <text x="76" y="218" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="15" font-weight="700" fill="#9F1239">DIE 3 GROSSEN UPGRADES DIESER PHASE (2.077 COMMITS IM OKTOBER · 1.116 ANFORDERUNGEN)</text>
+  <rect x="86" y="242" width="430" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="84" y="238" width="430" height="128" rx="14" fill="#FFFFFF" stroke="#FCD34D" stroke-width="1.8"/>
+  <circle cx="299.0" cy="276" r="15" fill="#D97706"/>
+  <polyline points="292.0,277 297.0,282 307.0,270" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="299.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#92400E">9 Kernregeln statt 84+</text>
+  <text x="299.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Aufgeräumtes Regelwerk gegen Kontext-Ballast</text>
+  <line x1="514" y1="302" x2="578" y2="302" stroke="#475569" stroke-width="3.0" stroke-linecap="round" marker-end="url(#arr-slate)"/>
+  <rect x="584" y="242" width="436" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="582" y="238" width="436" height="128" rx="14" fill="#FFFFFF" stroke="#5EEAD4" stroke-width="1.8"/>
+  <rect x="783.0" y="262" width="34" height="28" rx="6" fill="none" stroke="#0D9488" stroke-width="2.6"/>
+  <polyline points="794.0,271 789.0,276 794.0,281" fill="none" stroke="#0D9488" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="806.0,271 811.0,276 806.0,281" fill="none" stroke="#0D9488" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="802.0" y1="270" x2="798.0" y2="282" stroke="#0D9488" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="800.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#115E59">Parallele Arbeitsspuren</text>
+  <text x="800.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Getrennte Arbeitskopien ohne Merge-Chaos</text>
+  <line x1="1018" y1="302" x2="1082" y2="302" stroke="#475569" stroke-width="3.0" stroke-linecap="round" marker-end="url(#arr-slate)"/>
+  <rect x="1088" y="242" width="430" height="128" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="1086" y="238" width="430" height="128" rx="14" fill="#FFF1F2" stroke="#E11D48" stroke-width="2.6"/>
+  <path d="M 1301.0 260 L 1315.0 266 V 277 C 1315.0 286 1308.0 291 1301.0 294 C 1294.0 291 1287.0 286 1287.0 277 V 266 Z" fill="#E11D48"/>
+  <polyline points="1296.0,277 1300.0,281 1307.0,272" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1301.0" y="320.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Stufe 6: Kalt-Review</text>
+  <text x="1301.0" y="344.0" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="500" fill="#334155">Frische KI ohne Vorwissen prüft vor dem Menschen</text>
+  <rect x="50" y="418" width="734" height="344" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="414" width="734" height="344" rx="16" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.8"/>
+  <rect x="48" y="414" width="734" height="46" rx="16" fill="#059669"/>
+  <rect x="48" y="442" width="734" height="18" fill="#059669"/>
+  <text x="72" y="444" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#FFFFFF">PROS — Was gut funktioniert</text>
+  <rect x="68" y="482" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+  <circle cx="96" cy="520" r="13" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="96" y="525.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#065F46">+</text>
+  <text x="124" y="513" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Deutlich weniger Fehler beim Menschen</text>
+  <text x="124" y="538" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Der kalte End-Prüfer schickt Mängel automatisch zurück zum Heilen.</text>
+  <rect x="68" y="570" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+  <circle cx="96" cy="608" r="13" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="96" y="613.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#065F46">+</text>
+  <text x="124" y="601" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Echte Parallelität ohne Konflikte</text>
+  <text x="124" y="626" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Mehrere Themen laufen gleichzeitig in isolierten Arbeitskopien.</text>
+  <rect x="68" y="658" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#6EE7B7" stroke-width="1.3"/>
+  <circle cx="96" cy="696" r="13" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="96" y="701.5" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#065F46">+</text>
+  <text x="124" y="689" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#065F46">Privates Handy bleibt geschützt</text>
+  <text x="124" y="714" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Agenten testen strikt im eigenen Android-Emulator.</text>
+  <rect x="820" y="418" width="734" height="344" rx="16" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="818" y="414" width="734" height="344" rx="16" fill="#FFF1F2" stroke="#FDA4AF" stroke-width="1.8"/>
+  <rect x="818" y="414" width="734" height="46" rx="16" fill="#E11D48"/>
+  <rect x="818" y="442" width="734" height="18" fill="#E11D48"/>
+  <text x="842" y="444" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="18" font-weight="800" fill="#FFFFFF">CONS — Wo die Grenzen liegen</text>
+  <rect x="838" y="482" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+  <circle cx="866" cy="520" r="13" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <text x="866" y="525" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#9F1239">−</text>
+  <text x="894" y="513" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Langsam &amp; teuer bei Routine</text>
+  <text x="894" y="538" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Zu viele Voll-Builds und große KI-Modelle bremsten einfache Tickets.</text>
+  <rect x="838" y="570" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+  <circle cx="866" cy="608" r="13" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <text x="866" y="613" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#9F1239">−</text>
+  <text x="894" y="601" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Leerlauf zwischen den Sprints</text>
+  <text x="894" y="626" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Manuelle Übergaben und Pausen unterbrachen den Arbeitsfluss.</text>
+  <rect x="838" y="658" width="694" height="76" rx="12" fill="#FFFFFF" stroke="#FDA4AF" stroke-width="1.3"/>
+  <circle cx="866" cy="696" r="13" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+  <text x="866" y="701" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="19" font-weight="800" fill="#9F1239">−</text>
+  <text x="894" y="689" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17" font-weight="800" fill="#9F1239">Kalt-Review prüfte nur den Code-Text</text>
+  <text x="894" y="714" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14.5" font-weight="500" fill="#334155">Optische &amp; Laufzeit-Fehler in der App fielen noch nicht auf.</text>
+  <rect x="50" y="786" width="1504" height="82" rx="14" fill="#0F172A" fill-opacity="0.06"/>
+  <rect x="48" y="782" width="1504" height="82" rx="14" fill="#F0FDFA" stroke="#0D9488" stroke-width="2.2"/>
+  <rect x="68" y="805" width="210" height="36" rx="18" fill="#0D9488"/>
+  <text x="173.0" y="828" text-anchor="middle" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">WENDEPUNKT → STUFE 5</text>
+  <text x="300" y="829" font-family="'Inter', 'Liberation Sans', 'DejaVu Sans', sans-serif" font-size="17.5" font-weight="600" fill="#115E59">Jetzt fehlt nur noch der <tspan font-weight="700" fill="#115E59">nahtlose 24/7-Takt</tspan>, <tspan font-weight="700" fill="#115E59">Live-Tests im Emulator</tspan> und smarte Modellwahl.</text>
+</svg>
