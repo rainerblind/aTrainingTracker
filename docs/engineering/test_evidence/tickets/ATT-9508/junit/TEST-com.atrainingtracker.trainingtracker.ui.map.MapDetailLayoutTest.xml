@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-22T06:05:58.043Z" hostname="rainer-HP-EliteBook-850-G5" time="0.036">
+  <properties/>
+  <testcase name="testMapDetailLayout_activatesSplitPaneForLowerSection" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_declaresNullableAnalyticsContent" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_telemetryGraphOrdering_speedPrecedesHeartRate" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_integratesGlobalTelemetryZoomToolbar" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_preservesFullWeightForRoutesAndSegments" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_declaresShowTelemetryCharts" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_wiresGlobalZoomState" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_detectsScrollableContent" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testTrackOnMapScreenAndRouteOnMapScreen_zeroHardcoded76dpOffsets_REQ_UI_500_3" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.033"/>
+  <testcase name="testMapDetailLayout_detectsLowerSection" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.001"/>
+  <testcase name="testMapDetailLayout_appliesResilientMinHeightAndScroll" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_unifiesTopEndActionsColumnStacking_REQ_UI_500_1" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -72,6 +72,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -104,15 +105,37 @@ private fun Modifier.chartInteractiveTouchDetector(
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val firstChange = event.changes.firstOrNull()
                 if (firstChange != null) {
-                    val x = firstChange.position.x
-                    val plotStart = startPaddingPx
-                    val plotEnd = size.width - endPaddingPx
-                    val isInPlot = x in plotStart..plotEnd
-                    onInteractiveCanvasTouch(isInPlot)
+                    if (event.changes.none { it.pressed }) {
+                        onInteractiveCanvasTouch(false)
+                    } else {
+                        val x = firstChange.position.x
+                        val plotStart = startPaddingPx
+                        val plotEnd = size.width - endPaddingPx
+                        val isInPlot = x in plotStart..plotEnd
+                        onInteractiveCanvasTouch(isInPlot)
+                    }
                 }
             }
         }
     }
+}
+
+/**
+ * Scope provided to [MapDetailLayout]'s optional `customLowerContent` slot so callers such as
+ * `WorkoutDetailTabbedContent` can interleave the synchronized [ElevationProfileSection] and
+ * [TelemetryChartsSection] in user-configured section order while sharing a single scrubbing
+ * cursor, zoom/pan viewport, multi-sensor overlay state, gesture isolation, and snapshot capture
+ * (`REQ-UI-2795` / `ATT-9508`).
+ */
+interface MapDetailLowerContentScope {
+    @Composable
+    fun ElevationProfileSection(modifier: Modifier = Modifier)
+
+    @Composable
+    fun TelemetryChartsSection(
+        modifier: Modifier = Modifier,
+        applyLandscapeToolbarTopPadding: Boolean = false
+    )
 }
 
 /**
@@ -162,7 +185,8 @@ fun MapDetailLayout(
     onSnapshotComplete: (() -> Unit)? = null,
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
     hiddenCharts: Set<TelemetryChartKind> = emptySet(),
-    onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null
+    onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
+    customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -237,8 +261,8 @@ fun MapDetailLayout(
         enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel
     )
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
-    val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
-    val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null
+    val hasScrollableContent = metadataContent != null || analyticsContent != null || customLowerContent != null || hasTelemetryGraphs
+    val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null || customLowerContent != null
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -368,8 +392,8 @@ fun MapDetailLayout(
                             Modifier.pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
-                                        awaitPointerEvent(PointerEventPass.Initial)
-                                        onInteractiveCanvasTouch(true)
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        onInteractiveCanvasTouch(event.changes.any { it.pressed })
                                     }
                                 }
                             }
@@ -504,6 +528,117 @@ fun MapDetailLayout(
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
         val density = LocalDensity.current
+        val renderElevationProfileSection: @Composable (Modifier) -> Unit = { sectionModifier ->
+            if (showElevationProfile) {
+                activeScrubPath?.let { path ->
+                    Column(
+                        modifier = sectionModifier
+                            .fillMaxWidth()
+                            .testTag("workout_detail_section_ELEVATION")
+                    ) {
+                        if (showZoomControls) {
+                            Text(
+                                text = stringResource(R.string.graph_heading_elevation),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                            )
+                        }
+                        ElevationProfile(
+                            pathPoints = path,
+                            currentDistance = selectedDistance,
+                            minAltitudeOverride = minAltitudeOverride,
+                            maxAltitudeOverride = maxAltitudeOverride,
+                            onDistanceSelected = { selectedDistance = it },
+                            showZoomControls = showZoomControls,
+                            xAxisDomain = tuningConfig.elevationXAxisDomain,
+                            bSportType = bSportType,
+                            zoomScale = profileZoomScale,
+                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
+                            onZoomChanged = { z, s ->
+                                profileZoomScale = z
+                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
+                            },
+                            isPanMode = isPanMode,
+                            showScrubbingBadge = false,
+                            hrZoneThresholds = hrThresholds,
+                            powerZoneThresholds = powerThresholds,
+                            climbs = climbs,
+                            alignWithTelemetryCharts = showElevationHistogram,
+                            overlaySeries = altitudeOverlays,
+                            enabledOverlayIds = enabledAltitudeOverlayIds,
+                            onToggleOverlay = { col ->
+                                enabledAltitudeOverlayIds = if (col in enabledAltitudeOverlayIds) {
+                                    enabledAltitudeOverlayIds - col
+                                } else {
+                                    enabledAltitudeOverlayIds + col
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .chartInteractiveTouchDetector(
+                                    density = density,
+                                    isLandscape = isLandscape,
+                                    alignWithHistogram = showElevationHistogram,
+                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                )
+                        )
+                    }
+                }
+            }
+        }
+
+        val renderTelemetryChartsSection: @Composable (Modifier, Boolean) -> Unit = { sectionModifier, applyLandscapeToolbarTopPadding ->
+            if (showZoomControls && showTelemetryCharts) {
+                activeScrubPath?.let { path ->
+                    TelemetryChartStack(
+                        path = path,
+                        bSportType = bSportType,
+                        tuningConfig = tuningConfig,
+                        selectedDistance = selectedDistance,
+                        onDistanceSelected = { selectedDistance = it },
+                        activeTelemetryDomain = activeTelemetryDomain,
+                        isTrackless = isTrackless,
+                        zoomScale = profileZoomScale,
+                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                        isPanMode = isPanMode,
+                        onZoomChanged = { z, s ->
+                            profileZoomScale = z
+                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                        },
+                        modifier = sectionModifier
+                            .testTag("workout_detail_section_CHARTS")
+                            .then(
+                                if (hasZoomToolbar && isLandscape && applyLandscapeToolbarTopPadding) {
+                                    Modifier.padding(top = GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT)
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                        chartModifier = Modifier
+                            .fillMaxWidth()
+                            .chartInteractiveTouchDetector(
+                                density = density,
+                                isLandscape = isLandscape,
+                                alignWithHistogram = true,
+                                onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                            ),
+                        hiddenCharts = hiddenCharts,
+                        onToggleChartVisibility = onToggleChartVisibility,
+                        hrThresholds = hrThresholds,
+                        powerThresholds = powerThresholds,
+                        hrZoneDistribution = hrZoneDistribution,
+                        powerZoneDistribution = powerZoneDistribution,
+                        hrZoneDisplayMode = hrZoneDisplayMode,
+                        powerZoneDisplayMode = powerZoneDisplayMode,
+                        cardioPowerDynamics = workoutData?.cardioPowerDynamics,
+                        multiSensorOverlays = multiSensorOverlays
+                    )
+                }
+            }
+        }
+
         Column(
             modifier = colModifier.then(
                 if (onInteractiveCanvasTouch != null) {
@@ -518,138 +653,81 @@ fun MapDetailLayout(
                 } else Modifier
             )
         ) {
-            if (showElevationProfile || hasTelemetryGraphs) {
-                activeScrubPath?.let { path ->
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(
-                                if (analyticsContent == null) Modifier.navigationBarsPadding() else Modifier
-                            )
-                    ) {
-                        Box(modifier = Modifier.drawWithContent {
-                            elevationLayer.record {
-                                this@drawWithContent.drawContent()
-                            }
-                            drawLayer(elevationLayer)
-                        }) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                if (showElevationProfile) {
-                                    if (showZoomControls) {
-                                        Text(
-                                            text = stringResource(R.string.graph_heading_elevation),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                                        )
-                                    }
-                                    ElevationProfile(
-                                        pathPoints = path,
-                                        currentDistance = selectedDistance,
-                                        minAltitudeOverride = minAltitudeOverride,
-                                        maxAltitudeOverride = maxAltitudeOverride,
-                                        onDistanceSelected = { selectedDistance = it },
-                                        showZoomControls = showZoomControls,
-                                        xAxisDomain = tuningConfig.elevationXAxisDomain,
-                                        bSportType = bSportType,
-                                        zoomScale = profileZoomScale,
-                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
-                                        onZoomChanged = { z, s ->
-                                            profileZoomScale = z
-                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, elevationTotalSpan, z)
-                                        },
-                                        isPanMode = isPanMode,
-                                        showScrubbingBadge = false,
-                                        hrZoneThresholds = hrThresholds,
-                                        powerZoneThresholds = powerThresholds,
-                                        climbs = climbs,
-                                        alignWithTelemetryCharts = showElevationHistogram,
-                                        overlaySeries = altitudeOverlays,
-                                        enabledOverlayIds = enabledAltitudeOverlayIds,
-                                        onToggleOverlay = { col ->
-                                            enabledAltitudeOverlayIds = if (col in enabledAltitudeOverlayIds) {
-                                                enabledAltitudeOverlayIds - col
-                                            } else {
-                                                enabledAltitudeOverlayIds + col
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .chartInteractiveTouchDetector(
-                                                density = density,
-                                                isLandscape = isLandscape,
-                                                alignWithHistogram = showElevationHistogram,
-                                                onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                            )
-                                    )
-                                }
+            if (customLowerContent != null) {
+                val lowerContentScope = object : MapDetailLowerContentScope {
+                    @Composable
+                    override fun ElevationProfileSection(modifier: Modifier) {
+                        renderElevationProfileSection(modifier)
+                    }
 
-                                // Telemetry Metric Graphs in detailed inspection view
-                                if (showZoomControls && showTelemetryCharts) {
-                                    TelemetryChartStack(
-                                        path = path,
-                                        bSportType = bSportType,
-                                        tuningConfig = tuningConfig,
-                                        selectedDistance = selectedDistance,
-                                        onDistanceSelected = { selectedDistance = it },
-                                        activeTelemetryDomain = activeTelemetryDomain,
-                                        isTrackless = isTrackless,
-                                        zoomScale = profileZoomScale,
-                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
-                                        isPanMode = isPanMode,
-                                        onZoomChanged = { z, s ->
-                                            profileZoomScale = z
-                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
-                                        },
-                                        modifier = if (hasZoomToolbar && isLandscape && !showElevationProfile) {
-                                            Modifier.padding(top = GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT)
-                                        } else {
-                                            Modifier
-                                        },
-                                        chartModifier = Modifier
-                                            .fillMaxWidth()
-                                            .chartInteractiveTouchDetector(
-                                                density = density,
-                                                isLandscape = isLandscape,
-                                                alignWithHistogram = true,
-                                                onInteractiveCanvasTouch = onInteractiveCanvasTouch
-                                            ),
-                                        hiddenCharts = hiddenCharts,
-                                        onToggleChartVisibility = onToggleChartVisibility,
-                                        hrThresholds = hrThresholds,
-                                        powerThresholds = powerThresholds,
-                                        hrZoneDistribution = hrZoneDistribution,
-                                        powerZoneDistribution = powerZoneDistribution,
-                                        hrZoneDisplayMode = hrZoneDisplayMode,
-                                        powerZoneDisplayMode = powerZoneDisplayMode,
-                                        cardioPowerDynamics = workoutData?.cardioPowerDynamics,
-                                        multiSensorOverlays = multiSensorOverlays
-                                    )
+                    @Composable
+                    override fun TelemetryChartsSection(
+                        modifier: Modifier,
+                        applyLandscapeToolbarTopPadding: Boolean
+                    ) {
+                        renderTelemetryChartsSection(modifier, applyLandscapeToolbarTopPadding)
+                    }
+                }
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        elevationLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(elevationLayer)
+                    }) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            lowerContentScope.customLowerContent()
+                        }
+                    }
+                }
+            } else {
+                if (showElevationProfile || hasTelemetryGraphs) {
+                    activeScrubPath?.let {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (analyticsContent == null) Modifier.navigationBarsPadding() else Modifier
+                                )
+                        ) {
+                            Box(modifier = Modifier.drawWithContent {
+                                elevationLayer.record {
+                                    this@drawWithContent.drawContent()
+                                }
+                                drawLayer(elevationLayer)
+                            }) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    renderElevationProfileSection(Modifier)
+                                    renderTelemetryChartsSection(Modifier, !showElevationProfile)
                                 }
                             }
                         }
                     }
+                } else if (analyticsContent == null && !useStatusBarsPadding) {
+                    Spacer(modifier = Modifier.navigationBarsPadding())
                 }
-            } else if (analyticsContent == null && !useStatusBarsPadding) {
-                Spacer(modifier = Modifier.navigationBarsPadding())
-            }
 
-            // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
-            analyticsContent?.let { content ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                ) {
-                    Box(modifier = Modifier.drawWithContent {
-                        analyticsLayer.record {
-                            this@drawWithContent.drawContent()
-                        }
-                        drawLayer(analyticsLayer)
-                    }) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            content()
+                // 4. ANALYTICS (Slotted - REQ-UI-205 / ATT-1393)
+                analyticsContent?.let { content ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                    ) {
+                        Box(modifier = Modifier.drawWithContent {
+                            analyticsLayer.record {
+                                this@drawWithContent.drawContent()
+                            }
+                            drawLayer(analyticsLayer)
+                        }) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                content()
+                            }
                         }
                     }
                 }

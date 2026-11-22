@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.29  
+**Version**: 1.0.30  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 51
+**Total Tests**: 52
 
 ---
 
@@ -992,6 +992,25 @@
 
 ---
 
+### TST-UI-2795: **Workout Details Tab Section Order Verification Suite for ELEVATION and CHARTS (`ATT-9508`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2795` (`REQ-UI-2795.1`–`REQ-UI-2795.3`)
+- **Component**: `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutDetailSectionOrderUiTest.kt`, `WorkoutDetailTabbedContentTest.kt`, `WorkoutDetailTabsTest.kt`, `TrackOnMapLayersUiTest.kt`, `MapDetailLayoutElevationVisibilityUiTest.kt`, `TelemetryChartStackVisibilityTest.kt`
+- **Jira**: `ATT-9508` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *`MODE_A_CARD_SCROLL` Custom Ordering Behavioral Compose Tests (`TST-UI-2795.1`, `WorkoutDetailSectionOrderUiTest`)*:
+     - Render `WorkoutDetailTabbedContent` in `MODE_A_CARD_SCROLL` with `[DETAILS, ELEVATION, ZONES, CHARTS]` (`modeA_rendersDetailsElevationZonesChartsInConfiguredOrder_tstUi2795_1`) and assert strictly `detailsTop < elevationTop < zonesTop < chartsTop` via `getUnclippedBoundsInRoot()`.
+     - Render `WorkoutDetailTabbedContent` in `MODE_A_CARD_SCROLL` with `[CHARTS, ELEVATION]` (`modeA_rendersChartsBeforeElevationWhenConfigured_tstUi2795_1`) and assert strictly `chartsTop < elevationTop`.
+  2. *`MODE_B_SPLIT_MAP` Pinning & Lower-Pane Ordering Compose Test (`TST-UI-2795.2`, `WorkoutDetailSectionOrderUiTest`)*:
+     - Render `WorkoutDetailTabbedContent` in `MODE_B_SPLIT_MAP` with `[DETAILS, CHARTS, MAP, ZONES, ELEVATION]` (`modeB_splitMapKeepsMapPinnedAndOrdersDetailsChartsZonesElevation_tstUi2795_2`), asserting `MAP` stays pinned in the top split pane (`detailsTop > 250.dp`) while the lower scrollable pane renders strictly `detailsTop < chartsTop < zonesTop < elevationTop`.
+  3. *Synchronized Scrubbing, Visibility Toggles & `HorizontalPager` Gesture Isolation (`TST-UI-2795.3`, `WorkoutDetailSectionOrderUiTest`)*:
+     - Verify in a 2-tab `HorizontalPager` with `[DETAILS, ELEVATION, CHARTS]` (`customOrderedSections_preserveScrubbingVisibilityTogglesAndPagerIsolation_tstUi2795_3`) that touching `DETAILS` leaves pager swiping enabled, scrubbing inside `ELEVATION` locks pager swiping and displays `scrubbing_telemetry_badge`, pointer release restores pager swiping, and `charts_visibility_button` toggles `SPEED_PACE` cleanly without disturbing neighboring sections.
+  4. *`Rule 8.5` Light/Dark PNG, Live `emulator-5554` Verification & Contract Parity (`TST-UI-2795.4`)*:
+     - Capture and visually inspect Light & Dark/AMOLED PNG (`captureCustomOrderedWorkoutDetailsLightAndDarkScreenshot_tstUi2795_4`) plus live `emulator-5554` Workout Details verification screenshots (`docs/engineering/test_evidence/tickets/ATT-9508/screenshots/`) via `read_file` with clean `logcat -b crash -d`.
+     - Verify existing `WorkoutDetailTabbedContentTest`, `WorkoutDetailTabsTest`, `WorkoutDetailSummaryDecouplingTest`, `TrackOnMapLayersUiTest`, `MapDetailLayoutElevationVisibilityUiTest`, `MapDetailLayoutOffscreenHeaderUiTest`, `TelemetryChartStackVisibilityTest`, `ElevationProfileOverlayTest`, `MapDetailLayoutNavigationBarsPaddingTest`, `MapDetailLayoutDynamicViewportContractTest`, `MapDetailLayoutScrubSynchronizationTest`, `ArchitectureConformanceContractTest`, and `InterfaceSignatureDriftContractTest` PASS (`Localization Parity: N/A - 0 new or modified UI strings`).
+- **Verified Evidence (`ATT-9508`, `docs/engineering/test_evidence/tickets/ATT-9508/`)**: `WorkoutDetailSectionOrderUiTest#modeA_rendersDetailsElevationZonesChartsInConfiguredOrder_tstUi2795_1`, `WorkoutDetailSectionOrderUiTest#modeA_rendersChartsBeforeElevationWhenConfigured_tstUi2795_1`, `WorkoutDetailSectionOrderUiTest#modeB_splitMapKeepsMapPinnedAndOrdersDetailsChartsZonesElevation_tstUi2795_2`, `WorkoutDetailSectionOrderUiTest#customOrderedSections_preserveScrubbingVisibilityTogglesAndPagerIsolation_tstUi2795_3`, `WorkoutDetailSectionOrderUiTest#captureCustomOrderedWorkoutDetailsLightAndDarkScreenshot_tstUi2795_4`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1024,3 +1043,4 @@
 | `1.0.27` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Updated `TST-UI-2791.2`/`.3` for `ATT-9558`: removed top-only `3.dp` bar assertions and added Light & Dark AMOLED uniform colored border pixel-symmetry tests (`testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInLightTheme_att9558`, `testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInDarkAmoledTheme_att9558`). |
 | `1.0.28` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `TST-UI-2793` (`[Verified]`, `.1`–`.3`) covering `ElevationProfile` Canvas hoisting/coalescing + Light/Dark PNG, `MapScreenWithTrack` `StateFlow` forwarding, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, shared `AppHttpClient` pool/timeout/injection tests, and `emulator-5554` visual checks. |
 | `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `TST-UI-2794` (`[Verified]`, `.1`–`.3`) covering Robolectric `v2.createComposeRule()` Climb peek/expand/hide/BackHandler tests, Light/Dark PNG + live `emulator-5554` peek/expand/dismiss checks, and `BottomSheetVisualContractTest`/`ClimbDetailSheetContractTest` parity (`76/76` targeted tests PASS). |
+| `1.0.30` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `TST-UI-2795` (`[Verified]`, `.1`–`.4`) covering Robolectric `v2.createComposeRule()` section ordering in `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP`, synchronized scrubbing, chart visibility toggles, `HorizontalPager` gesture isolation & pointer-up unlock, Light/Dark PNG, and live `emulator-5554` verification (`82/82` targeted tests PASS across 14 suites). |

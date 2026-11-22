@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 5 of 5)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.28  
+**Version**: 1.0.29  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part5`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 51
+**Total Requirements**: 52
 
 ---
 
@@ -2013,6 +2013,38 @@
 
 ---
 
+### REQ-UI-2795: Workout Details Tab Section Order Compliance for ELEVATION and CHARTS (`ATT-9508`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2795`
+- **System Requirement(s)**: Derived (SW-only — Compose tab-ordering bugfix refining `REQ-UI-408.3` and `REQ-UI-408.5`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutDetailSectionOrderUiTest.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Observed during PO on-device review (Pixel 10, build `5.0.0-dev-c9b5619a`) while testing `ATT-9066`: moving `WorkoutDetailSectionType.CHARTS` (*Telemetrie-Diagramme*) or `WorkoutDetailSectionType.ELEVATION` (*Höhenprofil*) in the Workout Details tab-outline editor had no effect on rendered order because `WorkoutDetailTabbedContent.kt` filtered `ELEVATION` and `CHARTS` out of `nonMapNonGraphSections` while `MapDetailLayout.kt` always rendered them at fixed top slots above `analyticsContent`.
+- **Description**:
+  1. *Scoped Lower-Pane Slot in `MapDetailLayout` (`REQ-UI-2795.1`)*:
+     - `MapDetailLayout` (`MapDetailLayout.kt`) SHALL expose `interface MapDetailLowerContentScope` with `ElevationProfileSection(modifier: Modifier = Modifier)` and `TelemetryChartsSection(modifier: Modifier = Modifier, applyLandscapeToolbarTopPadding: Boolean = false)`, and an optional defaulted parameter `customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null`.
+     - When `customLowerContent == null`, `MapDetailLayout` SHALL preserve 100% identical layout, snapshot capture, and bottom-inset behavior for all legacy callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, `ClimbOnMapScreen`, `LiveSegmentSheet`, `WorkoutClusterHeatmapScreen`, `MapScreenWithTrack`, legacy `TrackOnMapScreen`).
+     - When `customLowerContent != null`, `MapDetailLayout` SHALL render the caller's custom-ordered sections inside the single shared scrollable lower pane wrapped with `navigationBarsPadding()` (`Rule 41`) and recorded by `elevationLayer` (`REQ-REV-015`).
+  2. *Configured Section Ordering Across `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP` (`REQ-UI-2795.2`)*:
+     - `WorkoutDetailTabbedContent` (`WorkoutDetailTabbedContent.kt`) SHALL render all active non-`MAP` sections — including `WorkoutDetailSectionType.ELEVATION` (when `hasAltitudeData`) and `WorkoutDetailSectionType.CHARTS` — in the exact relative order defined by `tab.normalizedSections` in both `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP`, while keeping `MAP` strictly pinned in the top split pane in `MODE_B_SPLIT_MAP` (`REQ-UI-408.3`) and preserving single-section `[MAP, ELEVATION]` / `[ELEVATION]` intrinsic layout.
+     - In Landscape mode with `GlobalTelemetryZoomToolbar` floating at `Alignment.TopEnd`, `TelemetryChartsSection` SHALL apply top toolbar clearance (`applyLandscapeToolbarTopPadding = (index == 0)`) only when `CHARTS` is the first section in the lower pane.
+  3. *Preservation of Synchronized Scrubbing, Overlays, Visibility Toggles & Gesture Isolation (`REQ-UI-2795.3`)*:
+     - Interleaved `ELEVATION` and `CHARTS` sections SHALL share a single `selectedDistance`, `profileZoomScale`, `viewportStartFraction`, `isPanMode`, `activeAltitudeOverlays`, `hiddenCharts` / `onToggleChartVisibility`, and `onInteractiveCanvasTouch` (`PointerEventPass.Initial` reset on `lowerColumn` with child `chartInteractiveTouchDetector` plot override), preserving `HorizontalPager` gesture isolation (`REQ-UI-408.4` / `ATT-5826`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a Workout Details tab in `MODE_A_CARD_SCROLL` configured with `[DETAILS, ELEVATION, ZONES, CHARTS]` or `[CHARTS, ELEVATION]`, *When* the tab renders, *Then* each section's vertical `boundsInRoot.top` matches the exact configured relative order (`detailsTop < elevationTop < zonesTop < chartsTop` and `chartsTop < elevationTop`).
+  • *Given* a Workout Details tab in `MODE_B_SPLIT_MAP` configured with `[DETAILS, CHARTS, MAP, ZONES, ELEVATION]`, *When* the tab renders, *Then* `MAP` remains pinned in the top split pane (`detailsTop > 250.dp`) and the lower scrollable pane renders in exact configured order (`detailsTop < chartsTop < zonesTop < elevationTop`).
+  • *Given* custom-ordered `[DETAILS, ELEVATION, CHARTS]` in a multi-tab `HorizontalPager`, *When* the user touches `DETAILS`, scrubs inside `ELEVATION`, and toggles a chart via `charts_visibility_button`, *Then* `DETAILS` keeps `HorizontalPager` swipe unlocked, scrubbing inside `ELEVATION` locks `HorizontalPager` and displays `scrubbing_telemetry_badge`, releasing restores pager swipe, and toggling `SPEED_PACE` updates `hiddenCharts` cleanly.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-408.3` / `REQ-UI-408.5` (`ATT-3920`) and `REQ-UI-408.4` (`ATT-5826`), targeting `MapDetailLayout.kt` and `WorkoutDetailTabbedContent.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-3920` (`ea5fa705`) reused `MapDetailLayout`'s fixed elevation/charts + `analyticsContent` slots when introducing multi-tab Workout Details; `ATT-5826` added `chartInteractiveTouchDetector` and `lowerColumn` `PointerEventPass.Initial` arbitration.
+  3. *Root Reason for Existing Formulation*: `MapDetailLayout` predated configurable section order (`RouteOnMapScreen`/`SegmentOnMapScreen`), so `WorkoutDetailTabbedContent` delegated graph rendering to fixed boolean flags (`showElevationProfile`, `showTelemetryCharts`) and passed only remaining cards via `analyticsContent`.
+  4. *Preservation of Core Invariants*: Backward-compatible `MapDetailLayout` (`customLowerContent = null`), `MAP` split-pane pinning at index `0`, synchronized scrubbing & zoom across Map/`ElevationProfile`/`TelemetryChartStack`, `Rule 64` plot-width alignment, `Rule 41` `navigationBarsPadding()`, `REQ-REV-015` offscreen snapshot capture, `<= 1,500` LoC per file, and `0` string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2044,3 +2076,4 @@
 | `1.0.26` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Refined `REQ-UI-2791.1`: replaced thick top-only `3.dp` bar on Row 1 `PmcStatBadge` cards with clean uniform `1.5.dp` all-around colored borders matching curve colors while preserving Row 2 neutral `1.dp` `outlineVariant` borders and 3-curve `FlowRow` legend. |
 | `1.0.27` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `REQ-UI-2793` (`[Verified]`, `.1`–`.3`) for `ElevationProfile` Canvas Paint/Path/climb-summit hoisting & coalesced color runs, `MapScreenWithTrack` direct `StateFlow` forwarding + `MapContentScopeImpl` `Rule 66` plain `mutableListOf` + `contentRevision` fix, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, and shared base `AppHttpClient` (emulator + Light/Dark PNGs visually verified via `read_file`, automated gate & evidence bundle in `docs/engineering/test_evidence/tickets/ATT-6037/`). |
 | `1.0.28` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `REQ-UI-2794` (`[Verified]`, `.1`–`.3`) promoting `MapPeekSelection.Climb` to `isSheetBacked = true` in `MapScreenWithTrack` via `BottomSheetScaffold` + `BottomSheetDesign.PeekHeightClimb` (`192.dp`) + `ClimbOnMapScreen` dynamic `measuredHeaderHeight` + `SheetValue.Hidden` selection cleanup, superseding `REQ-UI-2790.2` modal Climb carve-out while preserving `ClimbDetailSheet` for `RouteOnMapScreen`. |
+| `1.0.29` | 2026-11-22 | Lane 2 Author (`ATT-9508`, `--as agent1`) | `ATT-9508` | Added and verified `REQ-UI-2795` (`[Verified]`, `.1`–`.3`) introducing `MapDetailLowerContentScope` / `customLowerContent` in `MapDetailLayout.kt` and custom-ordered `ELEVATION` & `CHARTS` rendering across `MODE_A_CARD_SCROLL` and `MODE_B_SPLIT_MAP` in `WorkoutDetailTabbedContent.kt` while fixing `PointerEventPass.Initial` pointer-up unlock and preserving `MAP` split-pane pinning, synchronized scrubbing, chart visibility toggles, and `HorizontalPager` gesture isolation (`82/82` targeted tests PASS, Light/Dark PNG & live `emulator-5554` verified). |

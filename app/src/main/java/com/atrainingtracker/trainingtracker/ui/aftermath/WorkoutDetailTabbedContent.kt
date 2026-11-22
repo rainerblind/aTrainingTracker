@@ -317,12 +317,59 @@ fun WorkoutDetailTabbedContent(
                 }
                 val tabHasElevation = WorkoutDetailSectionType.ELEVATION in activeSections && hasAltitudeData
                 val tabHasCharts = WorkoutDetailSectionType.CHARTS in activeSections
-                val nonMapNonGraphSections = remember(activeSections) {
-                    activeSections.filter {
-                        it != WorkoutDetailSectionType.MAP &&
-                            it != WorkoutDetailSectionType.ELEVATION &&
-                            it != WorkoutDetailSectionType.CHARTS
+                val orderedLowerSections = remember(activeSections, hasAltitudeData) {
+                    activeSections.filter { section ->
+                        section != WorkoutDetailSectionType.MAP &&
+                            (section != WorkoutDetailSectionType.ELEVATION || hasAltitudeData)
                     }
+                }
+                val usesCustomOrderedLowerPane = orderedLowerSections.isNotEmpty() &&
+                    !(orderedLowerSections.size == 1 && orderedLowerSections[0] == WorkoutDetailSectionType.ELEVATION)
+
+                val renderOrderedSections: @Composable (MapDetailLowerContentScope?) -> Unit = { lowerScope ->
+                    RenderWorkoutDetailCardSections(
+                        sections = orderedLowerSections,
+                        workoutData = workoutData,
+                        tuningConfig = tuningConfig,
+                        detailPreferences = detailPreferences,
+                        splitChartData = splitChartData,
+                        selectedLapNr = selectedLapNr,
+                        onSelectLapNr = onSelectLapNr,
+                        hrZoneDistribution = hrZoneDistribution,
+                        powerZoneDistribution = powerZoneDistribution,
+                        gradeZoneDistribution = gradeZoneDistribution,
+                        effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
+                        effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                        effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
+                        onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
+                        onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                        onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                        activeScrubPath = activeScrubPath,
+                        photos = workoutPhotos,
+                        onPhotoClick = { activePreviewPhoto = it },
+                        onSplitLapClick = onSplitLapClick,
+                        onMoveBoundaryClick = onMoveBoundaryClick,
+                        onLapClick = onLapClick,
+                        hrZoneThresholds = hrZoneThresholds,
+                        powerZoneThresholds = powerZoneThresholds,
+                        configuredFtp = configuredFtp,
+                        configuredHrMax = configuredHrMax,
+                        recentSessions = recentSessions,
+                        isSmoothedStream = isSmoothedStream,
+                        activityCarriageTimeline = activityCarriageTimeline,
+                        onUpdateFtp = onUpdateFtp,
+                        onUpdateHrZones = onUpdateHrZones,
+                        onCalibrateMader = onCalibrateMader,
+                        onAddPhotos = { uris ->
+                            coroutineScope.launch {
+                                uris.forEach { uri ->
+                                    repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                }
+                                photosRefreshKey++
+                            }
+                        },
+                        lowerContentScope = lowerScope
+                    )
                 }
 
                 when (effectiveMode) {
@@ -363,6 +410,7 @@ fun WorkoutDetailTabbedContent(
 
                     WorkoutDetailTabLayoutMode.MODE_B_SPLIT_MAP -> {
                         // Mode B: Map pinned at top + SplitPaneDivider + single lower scrollable pane
+                        // respecting configured tab section order for ELEVATION & CHARTS (REQ-UI-2795 / ATT-9508)
                         MapDetailLayout(
                             bSportType = workoutData.bSportType,
                             zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -394,64 +442,9 @@ fun WorkoutDetailTabbedContent(
                             overlay = mapOverlay,
                             topEndActions = mapTopEndActions,
                             metadataContent = null,
-                            analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
-                                {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .pointerInput(Unit) {
-                                                awaitPointerEventScope {
-                                                    while (true) {
-                                                        awaitPointerEvent(PointerEventPass.Initial)
-                                                        isTouchingInteractiveCanvas = false
-                                                    }
-                                                }
-                                            }
-                                    ) {
-                                        RenderWorkoutDetailCardSections(
-                                            sections = nonMapNonGraphSections,
-                                            workoutData = workoutData,
-                                            tuningConfig = tuningConfig,
-                                            detailPreferences = detailPreferences,
-                                            splitChartData = splitChartData,
-                                            selectedLapNr = selectedLapNr,
-                                            onSelectLapNr = onSelectLapNr,
-                                            hrZoneDistribution = hrZoneDistribution,
-                                            powerZoneDistribution = powerZoneDistribution,
-                                            gradeZoneDistribution = gradeZoneDistribution,
-                                            effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                            effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                            effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
-                                            onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                            onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
-                                            onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
-                                            activeScrubPath = activeScrubPath,
-                                            photos = workoutPhotos,
-                                            onPhotoClick = { activePreviewPhoto = it },
-                                            onSplitLapClick = onSplitLapClick,
-                                            onMoveBoundaryClick = onMoveBoundaryClick,
-                                            onLapClick = onLapClick,
-                                            hrZoneThresholds = hrZoneThresholds,
-                                            powerZoneThresholds = powerZoneThresholds,
-                                            configuredFtp = configuredFtp,
-                                            configuredHrMax = configuredHrMax,
-                                            recentSessions = recentSessions,
-                                            isSmoothedStream = isSmoothedStream,
-                                            activityCarriageTimeline = activityCarriageTimeline,
-                                            onUpdateFtp = onUpdateFtp,
-                                            onUpdateHrZones = onUpdateHrZones,
-                                            onCalibrateMader = onCalibrateMader,
-                                            onAddPhotos = { uris ->
-                                                coroutineScope.launch {
-                                                    uris.forEach { uri ->
-                                                        repository.addWorkoutPhoto(workoutData.id, uri, null)
-                                                    }
-                                                    photosRefreshKey++
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
+                            analyticsContent = null,
+                            customLowerContent = if (usesCustomOrderedLowerPane) {
+                                { renderOrderedSections(this) }
                             } else {
                                 null
                             },
@@ -461,6 +454,7 @@ fun WorkoutDetailTabbedContent(
 
                     WorkoutDetailTabLayoutMode.MODE_A_CARD_SCROLL -> {
                         // Mode A: No Map in tab -> Single unified vertical scroll container
+                        // respecting configured tab section order for ELEVATION & CHARTS (REQ-UI-2795 / ATT-9508)
                         if (tabHasElevation || tabHasCharts) {
                             MapDetailLayout(
                                 bSportType = workoutData.bSportType,
@@ -490,64 +484,9 @@ fun WorkoutDetailTabbedContent(
                                 hiddenCharts = hiddenCharts,
                                 onToggleChartVisibility = onToggleChartVisibility,
                                 metadataContent = null,
-                                analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
-                                    {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .pointerInput(Unit) {
-                                                    awaitPointerEventScope {
-                                                        while (true) {
-                                                            awaitPointerEvent(PointerEventPass.Initial)
-                                                            isTouchingInteractiveCanvas = false
-                                                        }
-                                                    }
-                                                }
-                                        ) {
-                                            RenderWorkoutDetailCardSections(
-                                                sections = nonMapNonGraphSections,
-                                                workoutData = workoutData,
-                                                tuningConfig = tuningConfig,
-                                                detailPreferences = detailPreferences,
-                                                splitChartData = splitChartData,
-                                                selectedLapNr = selectedLapNr,
-                                                onSelectLapNr = onSelectLapNr,
-                                                hrZoneDistribution = hrZoneDistribution,
-                                                powerZoneDistribution = powerZoneDistribution,
-                                                gradeZoneDistribution = gradeZoneDistribution,
-                                                effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                                effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                                effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
-                                                onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                                onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
-                                                onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
-                                                activeScrubPath = activeScrubPath,
-                                                photos = workoutPhotos,
-                                                onPhotoClick = { activePreviewPhoto = it },
-                                                onSplitLapClick = onSplitLapClick,
-                                                onMoveBoundaryClick = onMoveBoundaryClick,
-                                                onLapClick = onLapClick,
-                                                hrZoneThresholds = hrZoneThresholds,
-                                                powerZoneThresholds = powerZoneThresholds,
-                                                configuredFtp = configuredFtp,
-                                                configuredHrMax = configuredHrMax,
-                                                recentSessions = recentSessions,
-                                                isSmoothedStream = isSmoothedStream,
-                                                activityCarriageTimeline = activityCarriageTimeline,
-                                                onUpdateFtp = onUpdateFtp,
-                                                onUpdateHrZones = onUpdateHrZones,
-                                                onCalibrateMader = onCalibrateMader,
-                                                onAddPhotos = { uris ->
-                                                    coroutineScope.launch {
-                                                        uris.forEach { uri ->
-                                                            repository.addWorkoutPhoto(workoutData.id, uri, null)
-                                                        }
-                                                        photosRefreshKey++
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
+                                analyticsContent = null,
+                                customLowerContent = if (usesCustomOrderedLowerPane) {
+                                    { renderOrderedSections(this) }
                                 } else {
                                     null
                                 },
@@ -570,48 +509,7 @@ fun WorkoutDetailTabbedContent(
                                     .padding(vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                RenderWorkoutDetailCardSections(
-                                    sections = nonMapNonGraphSections,
-                                    workoutData = workoutData,
-                                    tuningConfig = tuningConfig,
-                                    detailPreferences = detailPreferences,
-                                    splitChartData = splitChartData,
-                                    selectedLapNr = selectedLapNr,
-                                    onSelectLapNr = onSelectLapNr,
-                                    hrZoneDistribution = hrZoneDistribution,
-                                    powerZoneDistribution = powerZoneDistribution,
-                                    gradeZoneDistribution = gradeZoneDistribution,
-                                    effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                    effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                    effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
-                                    onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                    onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
-                                    onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
-                                    activeScrubPath = activeScrubPath,
-                                    photos = workoutPhotos,
-                                    onPhotoClick = { activePreviewPhoto = it },
-                                    onSplitLapClick = onSplitLapClick,
-                                    onMoveBoundaryClick = onMoveBoundaryClick,
-                                    onLapClick = onLapClick,
-                                    hrZoneThresholds = hrZoneThresholds,
-                                    powerZoneThresholds = powerZoneThresholds,
-                                    configuredFtp = configuredFtp,
-                                    configuredHrMax = configuredHrMax,
-                                    recentSessions = recentSessions,
-                                    isSmoothedStream = isSmoothedStream,
-                                    activityCarriageTimeline = activityCarriageTimeline,
-                                    onUpdateFtp = onUpdateFtp,
-                                    onUpdateHrZones = onUpdateHrZones,
-                                    onCalibrateMader = onCalibrateMader,
-                                    onAddPhotos = { uris ->
-                                        coroutineScope.launch {
-                                            uris.forEach { uri ->
-                                                repository.addWorkoutPhoto(workoutData.id, uri, null)
-                                            }
-                                            photosRefreshKey++
-                                        }
-                                    }
-                                )
+                                renderOrderedSections(null)
                             }
                         }
                     }
@@ -824,7 +722,9 @@ fun WorkoutDetailTabbedContent(
 }
 
 /**
- * Renders the non-map, non-graph card sections in their configured order (`REQ-UI-408.1` / `REQ-UI-408.3`).
+ * Renders the scrollable Workout Detail sections (including synchronized [WorkoutDetailSectionType.ELEVATION]
+ * and [WorkoutDetailSectionType.CHARTS] via [lowerContentScope]) in their exact configured order
+ * (`REQ-UI-408.1`, `REQ-UI-408.3`, `REQ-UI-2795` / `ATT-9508`).
  */
 @Composable
 private fun RenderWorkoutDetailCardSections(
@@ -860,9 +760,10 @@ private fun RenderWorkoutDetailCardSections(
     onSplitLapClick: (() -> Unit)? = null,
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     onLapClick: ((LapData) -> Unit)? = null,
-    activityCarriageTimeline: ActivityCarriageTimeline? = null
+    activityCarriageTimeline: ActivityCarriageTimeline? = null,
+    lowerContentScope: MapDetailLowerContentScope? = null
 ) {
-    sections.forEach { section ->
+    sections.forEachIndexed { index, section ->
         when (section) {
             WorkoutDetailSectionType.RPE_AND_FEEL -> {
                 if (workoutData.rpe != null || workoutData.feel != null) {
@@ -1087,10 +988,16 @@ private fun RenderWorkoutDetailCardSections(
                     )
                 }
             }
-            WorkoutDetailSectionType.MAP,
-            WorkoutDetailSectionType.ELEVATION,
+            WorkoutDetailSectionType.MAP -> {
+                // Pinned in MapDetailLayout top split pane in MODE_B_SPLIT_MAP / MODE_C_FULL_MAP (REQ-UI-408.3)
+            }
+            WorkoutDetailSectionType.ELEVATION -> {
+                lowerContentScope?.ElevationProfileSection()
+            }
             WorkoutDetailSectionType.CHARTS -> {
-                // Handled directly by MapDetailLayout
+                lowerContentScope?.TelemetryChartsSection(
+                    applyLandscapeToolbarTopPadding = (index == 0)
+                )
             }
         }
     }
