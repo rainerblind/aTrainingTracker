@@ -31,6 +31,7 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
         geo_fix_calls = []
         installed_apks = []
         probe_sequence = []
+        dump_paths_seen = []
         state = {"app_loc": "en", "sys_loc": "en-US"}
 
         sdk_by_avd = {
@@ -104,12 +105,16 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
                 res.stdout = "Status: ok\nComplete\n"
             elif "rm" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
                 probe_sequence.append("rm_dump")
+                dump_paths_seen.append(("rm", cmd[-1]))
             elif "uiautomator" in cmd and "dump" in cmd:
                 probe_sequence.append("uiautomator_dump")
-                res.stdout = "UI hierchary dumped to: /sdcard/att_sweep_dump.xml"
+                dump_paths_seen.append(("dump", cmd[-1]))
+                res.stdout = "UI hierchary dumped to: /data/local/tmp/att_sweep_dump.xml"
             elif "geo" in cmd and "fix" in cmd:
                 geo_fix_calls.append((cmd[-2], cmd[-1]))
             elif "cat" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
+                probe_sequence.append("cat_dump")
+                dump_paths_seen.append(("cat", cmd[-1]))
                 res.stdout = (
                     '<hierarchy rotation="0">'
                     '<node package="com.atrainingtracker.debug" text="Start Tracking" bounds="[40,100][500,180]" />'
@@ -155,10 +160,15 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             self.assertEqual(len(active_avds), 0)
             self.assertEqual(installed_apks.count("/mock/app-debug.apk"), 3)
             self.assertEqual(installed_apks.count("/mock/app-debug-androidTest.apk"), 3)
-            # Verify foreground App-UI launch precedes stale-dump removal, uiautomator dump & screencap
+            # Verify foreground App-UI launch precedes stale-dump removal, uiautomator dump, cat, cleanup & screencap
             self.assertEqual(
-                probe_sequence[:5],
-                ["instrument", "am_start", "rm_dump", "uiautomator_dump", "screencap"],
+                probe_sequence[:7],
+                ["instrument", "am_start", "rm_dump", "uiautomator_dump", "cat_dump", "rm_dump", "screencap"],
+            )
+            self.assertTrue(dump_paths_seen)
+            self.assertTrue(
+                all(path == "/data/local/tmp/att_sweep_dump.xml" for _, path in dump_paths_seen),
+                f"Unexpected dump path(s): {dump_paths_seen}",
             )
 
             with open(report_path, encoding="utf-8") as rf:
@@ -418,6 +428,107 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             runner=make_api35_runner("Locales for com.atrainingtracker.debug are [es-ES]\n"),
         )
 
+    def test_uiautomator_dump_uses_data_local_tmp_and_cleans_up_on_read_failure(self):
+        """ATT-9510: Uses /data/local/tmp/att_sweep_dump.xml for dump/cat/rm -f and cleans up on read failure."""
+        expected_path = "/data/local/tmp/att_sweep_dump.xml"
+        seen_ops = []
+
+        def success_runner(cmd, **_kwargs):
+            res = MagicMock()
+            res.returncode = 0
+            res.stderr = ""
+            if "am" in cmd and "start" in cmd:
+                res.stdout = "Status: ok\nComplete\n"
+            elif "rm" in cmd and "-f" in cmd:
+                seen_ops.append(("rm", cmd[-1]))
+                res.stdout = ""
+            elif "uiautomator" in cmd and "dump" in cmd:
+                seen_ops.append(("dump", cmd[-1]))
+                res.stdout = f"UI hierchary dumped to: {expected_path}"
+            elif "cat" in cmd:
+                seen_ops.append(("cat", cmd[-1]))
+                res.stdout = (
+                    '<hierarchy rotation="0">'
+                    '<node package="com.atrainingtracker.debug" text="Track" bounds="[10,10][200,80]" />'
+                    "</hierarchy>"
+                )
+            elif "screencap" in cmd:
+                res.stdout = b"\x89PNG\r\n\x1a\nFAKEPNG"
+            else:
+                res.stdout = ""
+            return res
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sweep.run_ui_probe(
+                "emulator-5554",
+                "com.atrainingtracker.debug",
+                "Pixel_7_Android_36",
+                "en",
+                tmpdir,
+                instrumentation_class=None,
+                runner=success_runner,
+                sleep_fn=lambda _x: None,
+            )
+
+        self.assertEqual(
+            seen_ops,
+            [
+                ("rm", expected_path),
+                ("dump", expected_path),
+                ("cat", expected_path),
+                ("rm", expected_path),
+            ],
+        )
+
+        # Verify finally cleanup still runs rm -f /data/local/tmp/att_sweep_dump.xml if cat fails
+        for fail_mode in ("nonzero", "exception"):
+            seen_ops.clear()
+
+            def failing_cat_runner(cmd, _mode=fail_mode, **_kwargs):
+                res = MagicMock()
+                res.returncode = 0
+                res.stderr = ""
+                if "am" in cmd and "start" in cmd:
+                    res.stdout = "Status: ok\nComplete\n"
+                elif "rm" in cmd and "-f" in cmd:
+                    seen_ops.append(("rm", cmd[-1]))
+                    res.stdout = ""
+                elif "uiautomator" in cmd and "dump" in cmd:
+                    seen_ops.append(("dump", cmd[-1]))
+                    res.stdout = f"UI hierchary dumped to: {expected_path}"
+                elif "cat" in cmd:
+                    seen_ops.append(("cat", cmd[-1]))
+                    if _mode == "exception":
+                        raise OSError("Simulated cat read error")
+                    res.returncode = 1
+                    res.stderr = f"cat: {expected_path}: No such file or directory"
+                    res.stdout = ""
+                else:
+                    res.stdout = ""
+                return res
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                with self.assertRaises((RuntimeError, OSError)):
+                    sweep.run_ui_probe(
+                        "emulator-5554",
+                        "com.atrainingtracker.debug",
+                        "Pixel_7_Android_36",
+                        "en",
+                        tmpdir,
+                        instrumentation_class=None,
+                        runner=failing_cat_runner,
+                        sleep_fn=lambda _x: None,
+                    )
+
+            self.assertEqual(
+                seen_ops,
+                [
+                    ("rm", expected_path),
+                    ("dump", expected_path),
+                    ("cat", expected_path),
+                    ("rm", expected_path),
+                ],
+            )
 
 
 if __name__ == "__main__":

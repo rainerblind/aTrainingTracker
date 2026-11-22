@@ -41,6 +41,7 @@ DEFAULT_PACKAGE = agent_emulator.DEFAULT_PACKAGE
 DEFAULT_MAIN_ACTIVITY = "com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation"
 DEFAULT_INSTRUMENTATION_CLASS = "com.atrainingtracker.trainingtracker.MultiLocaleUiSweepAndroidTest"
 DEFAULT_GEO_FIX: Tuple[float, float] = (11.5761, 48.1372)  # (lon, lat) Munich
+UI_DUMP_DEVICE_PATH = "/data/local/tmp/att_sweep_dump.xml"
 LAUNCHER_PACKAGE_TOKENS: Tuple[str, ...] = ("nexuslauncher", "launcher3", "android.launcher", ".launcher")
 INSTRUMENTATION_FAIL_MARKERS: Tuple[str, ...] = (
     "FAILURES!!!",
@@ -599,10 +600,29 @@ def run_ui_probe(
     sleep_fn(1.0)
 
     # Remove any prior dump so stale XML cannot cause a false pass
-    _run_adb(adb_bin, serial, ["shell", "rm", "-f", "/sdcard/att_sweep_dump.xml"], runner=runner)
-    _run_adb(adb_bin, serial, ["shell", "uiautomator", "dump", "/sdcard/att_sweep_dump.xml"], timeout=30, runner=runner, check=True)
-    xml_res = _run_adb(adb_bin, serial, ["shell", "cat", "/sdcard/att_sweep_dump.xml"], runner=runner, check=True)
-    xml_text = getattr(xml_res, "stdout", "") or ""
+    _run_adb(adb_bin, serial, ["shell", "rm", "-f", UI_DUMP_DEVICE_PATH], runner=runner)
+    try:
+        _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "uiautomator", "dump", UI_DUMP_DEVICE_PATH],
+            timeout=30,
+            runner=runner,
+            check=True,
+        )
+        xml_res = _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "cat", UI_DUMP_DEVICE_PATH],
+            runner=runner,
+            check=True,
+        )
+        xml_text = getattr(xml_res, "stdout", "") or ""
+    finally:
+        try:
+            _run_adb(adb_bin, serial, ["shell", "rm", "-f", UI_DUMP_DEVICE_PATH], runner=runner)
+        except Exception:
+            pass
     validate_captured_ui_xml(xml_text, package)
 
     log_res = _run_adb(adb_bin, serial, ["logcat", "-d", "-v", "time"], runner=runner)
