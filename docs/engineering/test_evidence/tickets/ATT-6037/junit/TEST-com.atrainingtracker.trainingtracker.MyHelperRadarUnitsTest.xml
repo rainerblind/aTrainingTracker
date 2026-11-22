@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:25:19.199Z" hostname="rainer-HP-EliteBook-850-G5" time="20.344">
+  <properties/>
+  <testcase name="getShortUnitsId_radarApproachSpeed_imperial_matchesSpeedAndResolvesMiPerHour" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="11.962"/>
+  <testcase name="getUnitsId_radarApproachSpeed_metric_matchesSpeedAndResolvesKmh" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.112"/>
+  <testcase name="getUnitsId_radarApproachSpeed_imperial_matchesSpeedAndResolvesMilePerHour" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.105"/>
+  <testcase name="trackingViewModel_radarApproachSpeedTile_resolvesMetricAndImperialShortUnits" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="7.489"/>
+  <testcase name="getMergedDevicesUseCase_radarApproachSpeed_resolvesMetricAndImperialUnits" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.404"/>
+  <testcase name="getShortUnitsId_radarApproachSpeed_metric_matchesSpeedAndResolvesKmh" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.121"/>
+  <testcase name="radarApproachSpeed_preservesInternalUnitDeprecatedUnitIdAndDistanceFallback" classname="com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest" time="0.131"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

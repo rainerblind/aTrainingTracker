@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:06.954Z" hostname="rainer-HP-EliteBook-850-G5" time="1.435">
+  <properties/>
+  <testcase name="testFetchElevation_nominalSuccess" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.596"/>
+  <testcase name="testFetchBatchElevations_nominalSuccess" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.141"/>
+  <testcase name="testFetchElevation_timeoutOfflineFallback" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.138"/>
+  <testcase name="testFetchElevation_serverError503_circuitBreaker" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.14"/>
+  <testcase name="testCoordinateQuantization" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.138"/>
+  <testcase name="testFetchBatchElevations_emptyList_returnsEmptyBatch" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.138"/>
+  <testcase name="testFetchElevation_rateLimited429" classname="com.atrainingtracker.trainingtracker.elevation.ElevationServiceTest" time="0.143"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

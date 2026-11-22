@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:25:43.292Z" hostname="rainer-HP-EliteBook-850-G5" time="10.693">
+  <properties/>
+  <testcase name="testSystemContext_coversAllFiveInterfaceDomains" classname="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" time="9.234"/>
+  <testcase name="testSystemContext_codeGroundingParity" classname="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" time="0.226"/>
+  <testcase name="testSystemContext_referencedPlatformSymbolsGrounded" classname="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" time="0.258"/>
+  <testcase name="testSystemContext_allReferencedCodeFilesExistOnDisk" classname="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" time="0.778"/>
+  <testcase name="testSystemContext_documentsOperationalAssumptions" classname="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" time="0.096"/>
+  <testcase name="testSystemContext_fileExistsAndContainsMermaidDiagram" classname="com.atrainingtracker.trainingtracker.build.SystemContextContractTest" time="0.099"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

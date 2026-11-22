@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:29:48.515Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="calculateAdaptiveDistanceStep_calibratesMidRangeAndImperialSteps" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="distanceAndCanvasX_areMutuallyInvertible" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="canvasXToDistance_clampsToBounds" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="applyZoomAtCentroid_clampsAtEdges" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="clampStartDistance_enforcesRouteBoundaries" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="shouldRenderTickLabel_evaluatesBoundaryAndSpacingClearance" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="applyZoomAtCentroid_anchorsAtTouchPoint" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="calculateAdaptiveDistanceStep_adaptsToVisibleRange" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="applyPan_correctlyShiftsStartDistanceAndClamps" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="isDistanceVisible_correctlyFiltersCoordinates" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.0"/>
+  <testcase name="calculateVisibleDistance_clampsScaleAndComputesWindow" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMathTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

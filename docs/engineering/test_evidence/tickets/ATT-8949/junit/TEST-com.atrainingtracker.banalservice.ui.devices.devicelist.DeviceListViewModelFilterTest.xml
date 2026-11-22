@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelFilterTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:23:17.914Z" hostname="rainer-HP-EliteBook-850-G5" time="0.774">
+  <properties/>
+  <testcase name="testGetFilteredDevices_appliesDeviceFilterCriteria" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelFilterTest" time="0.774"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

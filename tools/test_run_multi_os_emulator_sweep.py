@@ -31,6 +31,7 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
         geo_fix_calls = []
         installed_apks = []
         probe_sequence = []
+        dump_paths_seen = []
         state = {"app_loc": "en", "sys_loc": "en-US"}
 
         sdk_by_avd = {
@@ -104,12 +105,16 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
                 res.stdout = "Status: ok\nComplete\n"
             elif "rm" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
                 probe_sequence.append("rm_dump")
+                dump_paths_seen.append(("rm", cmd[-1]))
             elif "uiautomator" in cmd and "dump" in cmd:
                 probe_sequence.append("uiautomator_dump")
-                res.stdout = "UI hierchary dumped to: /sdcard/att_sweep_dump.xml"
+                dump_paths_seen.append(("dump", cmd[-1]))
+                res.stdout = "UI hierchary dumped to: /data/local/tmp/att_sweep_dump.xml"
             elif "geo" in cmd and "fix" in cmd:
                 geo_fix_calls.append((cmd[-2], cmd[-1]))
             elif "cat" in cmd and any("att_sweep_dump.xml" in tok for tok in cmd):
+                probe_sequence.append("cat_dump")
+                dump_paths_seen.append(("cat", cmd[-1]))
                 res.stdout = (
                     '<hierarchy rotation="0">'
                     '<node package="com.atrainingtracker.debug" text="Start Tracking" bounds="[40,100][500,180]" />'
@@ -155,10 +160,15 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             self.assertEqual(len(active_avds), 0)
             self.assertEqual(installed_apks.count("/mock/app-debug.apk"), 3)
             self.assertEqual(installed_apks.count("/mock/app-debug-androidTest.apk"), 3)
-            # Verify foreground App-UI launch precedes stale-dump removal, uiautomator dump & screencap
+            # Verify foreground App-UI launch precedes stale-dump removal, uiautomator dump, cat, cleanup & screencap
             self.assertEqual(
-                probe_sequence[:5],
-                ["instrument", "am_start", "rm_dump", "uiautomator_dump", "screencap"],
+                probe_sequence[:7],
+                ["instrument", "am_start", "rm_dump", "uiautomator_dump", "cat_dump", "rm_dump", "screencap"],
+            )
+            self.assertTrue(dump_paths_seen)
+            self.assertTrue(
+                all(path == "/data/local/tmp/att_sweep_dump.xml" for _, path in dump_paths_seen),
+                f"Unexpected dump path(s): {dump_paths_seen}",
             )
 
             with open(report_path, encoding="utf-8") as rf:
@@ -418,6 +428,244 @@ class TestMultiOsEmulatorSweep(unittest.TestCase):
             runner=make_api35_runner("Locales for com.atrainingtracker.debug are [es-ES]\n"),
         )
 
+    def test_uiautomator_dump_uses_data_local_tmp_and_cleans_up_on_read_failure(self):
+        """ATT-9510: Uses /data/local/tmp/att_sweep_dump.xml for dump/cat/rm -f and cleans up on read failure."""
+        expected_path = "/data/local/tmp/att_sweep_dump.xml"
+        seen_ops = []
+
+        def success_runner(cmd, **_kwargs):
+            res = MagicMock()
+            res.returncode = 0
+            res.stderr = ""
+            if "am" in cmd and "start" in cmd:
+                res.stdout = "Status: ok\nComplete\n"
+            elif "rm" in cmd and "-f" in cmd:
+                seen_ops.append(("rm", cmd[-1]))
+                res.stdout = ""
+            elif "uiautomator" in cmd and "dump" in cmd:
+                seen_ops.append(("dump", cmd[-1]))
+                res.stdout = f"UI hierchary dumped to: {expected_path}"
+            elif "cat" in cmd:
+                seen_ops.append(("cat", cmd[-1]))
+                res.stdout = (
+                    '<hierarchy rotation="0">'
+                    '<node package="com.atrainingtracker.debug" text="Track" bounds="[10,10][200,80]" />'
+                    "</hierarchy>"
+                )
+            elif "screencap" in cmd:
+                res.stdout = b"\x89PNG\r\n\x1a\nFAKEPNG"
+            else:
+                res.stdout = ""
+            return res
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sweep.run_ui_probe(
+                "emulator-5554",
+                "com.atrainingtracker.debug",
+                "Pixel_7_Android_36",
+                "en",
+                tmpdir,
+                instrumentation_class=None,
+                runner=success_runner,
+                sleep_fn=lambda _x: None,
+            )
+
+        self.assertEqual(
+            seen_ops,
+            [
+                ("rm", expected_path),
+                ("dump", expected_path),
+                ("cat", expected_path),
+                ("rm", expected_path),
+            ],
+        )
+
+        # Verify finally cleanup still runs rm -f /data/local/tmp/att_sweep_dump.xml if cat fails
+        for fail_mode in ("nonzero", "exception"):
+            seen_ops.clear()
+
+            def failing_cat_runner(cmd, _mode=fail_mode, **_kwargs):
+                res = MagicMock()
+                res.returncode = 0
+                res.stderr = ""
+                if "am" in cmd and "start" in cmd:
+                    res.stdout = "Status: ok\nComplete\n"
+                elif "rm" in cmd and "-f" in cmd:
+                    seen_ops.append(("rm", cmd[-1]))
+                    res.stdout = ""
+                elif "uiautomator" in cmd and "dump" in cmd:
+                    seen_ops.append(("dump", cmd[-1]))
+                    res.stdout = f"UI hierchary dumped to: {expected_path}"
+                elif "cat" in cmd:
+                    seen_ops.append(("cat", cmd[-1]))
+                    if _mode == "exception":
+                        raise OSError("Simulated cat read error")
+                    res.returncode = 1
+                    res.stderr = f"cat: {expected_path}: No such file or directory"
+                    res.stdout = ""
+                else:
+                    res.stdout = ""
+                return res
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                with self.assertRaises((RuntimeError, OSError)):
+                    sweep.run_ui_probe(
+                        "emulator-5554",
+                        "com.atrainingtracker.debug",
+                        "Pixel_7_Android_36",
+                        "en",
+                        tmpdir,
+                        instrumentation_class=None,
+                        runner=failing_cat_runner,
+                        sleep_fn=lambda _x: None,
+                    )
+
+            self.assertEqual(
+                seen_ops,
+                [
+                    ("rm", expected_path),
+                    ("dump", expected_path),
+                    ("cat", expected_path),
+                    ("rm", expected_path),
+                ],
+            )
+
+    def test_att_9363_scan_logcat_defects_filters_foreign_pids_and_catches_app_defects(self):
+        """ATT-9363: Ignores foreign-PID StrictMode/crashes while catching app PIDs, restarted PIDs, and package blocks."""
+        pkg = "com.atrainingtracker.debug"
+
+        # 1. Foreign system StrictMode / crash / ANR noise only -> 0 defects
+        foreign_noise = (
+            "11-20 21:05:12.345 D/StrictMode( 5807): StrictMode policy violation; ~duration=42 ms: DiskReadViolation\n"
+            "11-20 21:05:13.100 D/StrictMode( 6591): StrictMode policy violation; ~duration=18 ms: UnbufferedIoViolation\n"
+            "11-20 21:05:14.000 E/AndroidRuntime( 5807): FATAL EXCEPTION: AsyncTask #1\n"
+            "11-20 21:05:14.001 E/AndroidRuntime( 5807): Process: com.google.android.gms.gcore.dynamite, PID: 5807\n"
+            "11-20 21:05:14.002 E/AndroidRuntime( 5807): java.util.FormatFlagsConversionMismatchException: Conversion = d\n"
+            "11-20 21:05:15.000 E/ActivityManager(  512): ANR in com.android.providers.contacts\n"
+            "11-20 21:05:16.000 E/ActivityManager(  512): ANR in com.atrainingtracker.debug2\n"
+            "11-20 21:05:17.000 E/ActivityManager(  512): ANR in com.atrainingtracker.debug.other\n"
+        )
+        self.assertEqual(
+            sweep.scan_logcat_defects(foreign_noise, app_pids={"7412"}, package=pkg),
+            [],
+        )
+
+        # 2. Mix of foreign StrictMode + own-app StrictMode + restarted PID discovered from logcat + system-logged ANR
+        mixed_logcat = (
+            "11-20 21:05:10.000 I/ActivityManager(  512): Start proc 7100:com.atrainingtracker.debug/u0a198 for activity\n"
+            "11-20 21:05:11.000 D/StrictMode( 5807): StrictMode policy violation: foreign gcore.dynamite\n"
+            "11-20 21:05:12.000 D/StrictMode( 6591): StrictMode policy violation: foreign contacts\n"
+            "11-20 21:05:12.500 D/StrictMode( 7100): StrictMode policy violation: app restarted PID violation\n"
+            "11-20 21:05:13.000 D/StrictMode( 7412): StrictMode policy violation: app current PID violation\n"
+            "11-20 21:05:14.000 E/AndroidRuntime( 7100): FATAL EXCEPTION: main\n"
+            "11-20 21:05:14.001 I/SystemDaemon(  400): interleaved system log line\n"
+            "11-20 21:05:14.002 E/AndroidRuntime( 7100): Process: com.atrainingtracker.debug, PID: 7100\n"
+            "11-20 21:05:14.003 E/AndroidRuntime( 7100): java.util.IllegalFormatConversionException: d != java.lang.String\n"
+            "11-20 21:05:15.000 E/ActivityManager(  512): ANR in com.atrainingtracker.debug (com.atrainingtracker.debug/.Main)\n"
+        )
+        # Only current PID 7412 came from pidof; 7100 must still be caught via Start proc / Process: lines
+        defects = sweep.scan_logcat_defects(mixed_logcat, app_pids={"7412"}, package=pkg)
+        self.assertEqual(len(defects), 5)
+        self.assertTrue(any("[STRICT_MODE]" in d and "7100" in d for d in defects))
+        self.assertTrue(any("[STRICT_MODE]" in d and "7412" in d for d in defects))
+        self.assertTrue(any("[FATAL_EXCEPTION]" in d and "7100" in d for d in defects))
+        self.assertTrue(any("[FORMAT_EXCEPTION]" in d and "7100" in d for d in defects))
+        self.assertTrue(any("[ANR]" in d and pkg in d for d in defects))
+        self.assertFalse(any("5807" in d or "6591" in d for d in defects))
+
+        # 3. PID-less fatal block mentioning target package vs foreign package
+        pidless_mixed = (
+            "01-01 12:00:01.000 E/AndroidRuntime: FATAL EXCEPTION: Worker\n"
+            "01-01 12:00:01.001 E/AndroidRuntime: Process: com.google.android.gms, PID: 5807\n"
+            "01-01 12:00:01.002 E/AndroidRuntime: java.util.IllegalFormatConversionException: d\n"
+            "\n"
+            "01-01 12:00:02.000 E/AndroidRuntime: FATAL EXCEPTION: main\n"
+            "01-01 12:00:02.001 E/AndroidRuntime: Process: com.atrainingtracker.debug, PID: 8888\n"
+            "01-01 12:00:02.002 E/AndroidRuntime: java.util.UnknownFormatConversionException: Conversion = q\n"
+        )
+        pidless_defects = sweep.scan_logcat_defects(pidless_mixed, app_pids=set(), package=pkg)
+        self.assertEqual(len(pidless_defects), 2)
+        self.assertTrue(any("[FATAL_EXCEPTION]" in d and "main" in d for d in pidless_defects))
+        self.assertTrue(any("[FORMAT_EXCEPTION]" in d and "UnknownFormatConversionException" in d for d in pidless_defects))
+        self.assertFalse(any("Worker" in d for d in pidless_defects))
+
+    def test_att_9363_run_ui_probe_tracks_multi_pid_across_instrument_and_start(self):
+        """ATT-9363: run_ui_probe tracks pidof across am instrument and am start -W and ignores foreign StrictMode."""
+        pkg = "com.atrainingtracker.debug"
+
+        def make_probe_runner(logcat_stdout: str, pid_sequence):
+            pid_iter = iter(pid_sequence)
+
+            def _runner(cmd, **_kwargs):
+                res = MagicMock()
+                res.returncode = 0
+                res.stderr = ""
+                if "am" in cmd and "instrument" in cmd:
+                    res.stdout = "OK (1 test)\n"
+                elif "am" in cmd and "start" in cmd:
+                    res.stdout = "Status: ok\nComplete\n"
+                elif "pidof" in cmd:
+                    rc, out = next(pid_iter, (1, ""))
+                    res.returncode = rc
+                    res.stdout = out
+                elif "uiautomator" in cmd and "dump" in cmd:
+                    res.stdout = "UI hierchary dumped to: /data/local/tmp/att_sweep_dump.xml"
+                elif "cat" in cmd:
+                    res.stdout = (
+                        '<hierarchy rotation="0">'
+                        '<node package="com.atrainingtracker.debug" text="Track" bounds="[10,10][200,80]" />'
+                        "</hierarchy>"
+                    )
+                elif "logcat" in cmd and "-d" in cmd:
+                    res.stdout = logcat_stdout
+                elif "screencap" in cmd:
+                    res.stdout = b"\x89PNG\r\n\x1a\nFAKEPNG"
+                else:
+                    res.stdout = ""
+                return res
+
+            return _runner
+
+        # Case A: Foreign StrictMode noise only -> 0 log_defects
+        foreign_only_logcat = (
+            "11-20 21:05:12.345 D/StrictMode( 5807): StrictMode policy violation: gcore.dynamite\n"
+            "11-20 21:05:13.000 D/StrictMode( 6591): StrictMode policy violation: com.android.providers.contacts\n"
+            "11-20 21:05:14.000 I/ActivityTaskManager(  512): Displayed com.atrainingtracker.debug/.MainActivity\n"
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_defects, bounds_defects, shot = sweep.run_ui_probe(
+                "emulator-5554",
+                pkg,
+                "Pixel_5_Android_12",
+                "en",
+                tmpdir,
+                runner=make_probe_runner(foreign_only_logcat, [(0, "7100 7101\n"), (0, "7412\n"), (0, "7412\n")]),
+                sleep_fn=lambda _x: None,
+            )
+            self.assertEqual(log_defects, [])
+            self.assertEqual(bounds_defects, [])
+            self.assertTrue(os.path.isfile(shot))
+
+        # Case B: Violation from earlier instrumentation PID (7100) + foreground PID (7412) both caught; foreign 5807 ignored
+        mixed_probe_logcat = (
+            "11-20 21:05:11.000 D/StrictMode( 5807): StrictMode policy violation: gcore.dynamite\n"
+            "11-20 21:05:12.000 D/StrictMode( 7100): StrictMode policy violation: DiskRead during instrument\n"
+            "11-20 21:05:13.000 D/StrictMode( 7412): StrictMode policy violation: DiskRead after am start\n"
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_defects, _, _ = sweep.run_ui_probe(
+                "emulator-5554",
+                pkg,
+                "Pixel_5_Android_12",
+                "en",
+                tmpdir,
+                runner=make_probe_runner(mixed_probe_logcat, [(0, "7100\n"), (0, "7412\n"), (1, "")]),
+                sleep_fn=lambda _x: None,
+            )
+            self.assertEqual(len(log_defects), 2)
+            self.assertTrue(any("7100" in d for d in log_defects))
+            self.assertTrue(any("7412" in d for d in log_defects))
+            self.assertFalse(any("5807" in d for d in log_defects))
 
 
 if __name__ == "__main__":

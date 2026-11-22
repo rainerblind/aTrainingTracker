@@ -793,20 +793,12 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         }
 
         override fun disInformationReceived(identifier: String, uuid: UUID, value: String) {
-            if (!PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, identifier) &&
-                !PolarOfflineGattCoordinator.matchesDeviceIdentifier(macAddress, identifier)
-            ) {
-                return
-            }
+            if (!matchesBridgeIdentifier(identifier)) return
             handleDisCharacteristic(uuid.toString(), value)
         }
 
         override fun disInformationReceived(identifier: String, disInfo: DisInfo) {
-            if (!PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, identifier) &&
-                !PolarOfflineGattCoordinator.matchesDeviceIdentifier(macAddress, identifier)
-            ) {
-                return
-            }
+            if (!matchesBridgeIdentifier(identifier)) return
             handleDisCharacteristic(disInfo.key, disInfo.value)
         }
 

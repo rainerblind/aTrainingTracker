@@ -36,8 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.FormBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
@@ -165,7 +165,7 @@ object StravaDataPurgeManager {
         }
 
         try {
-            val client = OkHttpClient()
+            val client = AppHttpClient.shared
             val request = Request.Builder()
                 .url(DEAUTHORIZE_URL)
                 .header("Authorization", "Bearer $token")

@@ -23,6 +23,7 @@ import androidx.annotation.VisibleForTesting
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -57,7 +58,7 @@ class ElevationService @VisibleForTesting constructor(
         fun getInstance(): ElevationService {
             return instance ?: synchronized(this) {
                 instance ?: ElevationService(
-                    OkHttpClient.Builder()
+                    AppHttpClient.newBuilder()
                         .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                         .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
                         .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)

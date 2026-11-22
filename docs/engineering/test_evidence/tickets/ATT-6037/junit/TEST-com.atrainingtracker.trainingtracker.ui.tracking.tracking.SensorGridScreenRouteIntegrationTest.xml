@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:30.507Z" hostname="rainer-HP-EliteBook-850-G5" time="0.027">
+  <properties/>
+  <testcase name="testSensorGridScreen_doesNotDeclareRouteSelectorViewModelParameter" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.001"/>
+  <testcase name="testSensorGridScreen_doesNotForwardLocationUpdatesToRouteSelectorViewModel" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_forkDecisionCard_floatsAsTopCenterOverlay" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testRouteSelectionButton_integratesClearRouteAction" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.009"/>
+  <testcase name="testSensorGridScreen_turnPromptBanner_floatsAsTopCenterOverlayAndGatedByNavigationHints" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_doesNotIntegrateAutoDetectedRouteBanner" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_returnNavigationHud_floatsAsTopCenterOverlayAndGatedByNavigationHints" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.001"/>
+  <testcase name="testSensorGridScreen_doesNotIntegrateRouteActionChipRow" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_mapContainer_doesNotHostNavigationOverlay" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testTurnPromptBanner_stylingTokens_conformsToDesignGuidelines" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.014"/>
+  <testcase name="testSensorGridScreen_doesNotHostRedundantRouteSelectorModalBottomSheet" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_definesNavigationHintsOverlay_encapsulatingAllNavigationAids" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_navigationOverlay_anchorsAtRootTopCenter" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

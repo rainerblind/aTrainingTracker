@@ -1,14 +1,14 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.50  
+**Version**: 1.0.53  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part2`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 98
+**Total Tests**: 99
 
 **Total Tests**: 94
 
@@ -804,8 +804,8 @@
 - **Test Description**:
   1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `code_reviews` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/code_reviews/` present.
   2. *Subsystem Coverage Matrix Parsing & Slice Selection Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: Assert helper function `get_next_review_subsystem()` correctly parses `coverage_matrix.md` with extended package mapping (`repositories/`, `cloud/`, `onlinecommunities/`, `segments/`, `climbs/`) and selects unreviewed or oldest audited subsystem slices.
-  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: Mock Jira API and verify `ensure_weekly_review_ticket()` creates a ticket with generic "current top model" specification and `rank_top=True` under `ATT-232` when overdue and skips creation when an active review ticket already exists.
-  4. *7-Day Cadence & Decoupled Release Gate Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426)*: In `test_is_weekly_review_overdue`, verify that `is_weekly_review_overdue()` returns `False` when the latest review is $\le 7$ days old even when other subsystems remain `UNREVIEWED`, preventing release gating deadlock.
+  3. *Weekly Review Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426, ATT-9567)*: Mock Jira API and verify `ensure_weekly_review_ticket()` checks `is_weekly_review_overdue()` first (skipping Jira queries when `< 6` days), creates a ticket with generic "current top model" specification, `add_to_sprint=False`, and `rank_top=True` under `ATT-232` when overdue, and skips creation when an active review ticket already exists.
+  4. *6-Day Cadence & Decoupled Release Gate Test (`tools/test_jira_accounts.py`, [Verified] ATT-8426, ATT-9567)*: In `test_is_weekly_review_overdue`, verify that `is_weekly_review_overdue()` (default `days_threshold=6`) returns `False` at 5 days even when other subsystems remain `UNREVIEWED` (preventing release gating deadlock) and `True` at 6+ days.
   5. *Governance Documentation, Model Mandate & Claude Non-Simulation Protocol Review (`[Verified] ATT-8426`)*: Verify generic model formulation and explicit Claude non-simulation handoff protocol across `docs/coding_standards.md`, `release_plan.md`, `coverage_matrix.md`, and `template_dual_vendor_code_review.md`.
   6. *Living Documentation Master Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
 
@@ -821,8 +821,8 @@
 - **Jira**: `ATT-8212`
 - **Test Description**:
   1. *Canonical Directory Registration Test (`tools/test_verify_requirement_governance.py`)*: Assert `aspice_audits` is recognized in `ALLOWED_ENGINEERING_ENTRIES` and `verify_canonical_engineering_entries()` passes with `docs/engineering/aspice_audits/` present.
-  2. *ASPICE Audit Currency & Overdue Check Test (`tools/test_jira_accounts.py`)*: Assert `is_weekly_aspice_audit_overdue()` correctly evaluates elapsed days against records in `docs/engineering/aspice_audits/`.
-  3. *Weekly ASPICE Audit Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`)*: Mock Jira API and verify `ensure_weekly_aspice_audit_ticket()` creates a ticket with `rank_top=True` under `ATT-232` when overdue and skips creation when an active ticket already exists.
+  2. *ASPICE Audit Currency & Overdue Check Test (`tools/test_jira_accounts.py`, ATT-9567)*: Assert `is_weekly_aspice_audit_overdue()` correctly evaluates elapsed days at default `days_threshold=6` (`5` days fresh vs. `6` days overdue) against records in `docs/engineering/aspice_audits/`.
+  3. *Weekly ASPICE Audit Ticket Creation & Deduplication Test (`tools/test_jira_accounts.py`, ATT-9567)*: Mock Jira API and verify `ensure_weekly_aspice_audit_ticket()` evaluates overdue first, creates a ticket with `add_to_sprint=False` and `rank_top=True` under `ATT-232` when overdue, and skips creation when an active ticket already exists.
   4. *SUP.1 QA Plan Governance & Release Gate Review*: Verify alignment across `docs/management/qa_plan.md`, `cm_plan.md`, `sprint-planner/SKILL.md`, and `release-manager/SKILL.md`.
   5. *Living Documentation Parity*: Run `python3 tools/verify_requirement_governance.py` confirming 100% parity across `docs/requirements.md` and `docs/tests.md`.
 
@@ -1605,8 +1605,8 @@
      • *Given* physical serial `66020DLCR002FL`, failing `adb install`, failing `am instrument` (`returncode != 0`, `FAILURES!!!`, `INSTRUMENTATION_FAILED`, or missing `OK (`), launcher/empty `uiautomator` XML (`nexuslauncher` / `launcher3` / `""`), failed PNG `screencap`, synthetic `logcat` errors, and clipped/overlapping XML bounds, *When* offline helpers/probes execute, *Then* physical serial raises `RuntimeError`, failed install/instrument/launcher/empty-XML/missing-PNG fail closed (`passed == False` / raises `RuntimeError`), and defect parsers flag every crash and layout defect cleanly. Tag with `TST-PRO-135.2`.
   3. *Governance Directory Allow-List & CM Registration (`TST-PRO-135.3`, `tools/test_verify_requirement_governance.py`)*:
      • *Given* `"emulator_sweeps"` under `docs/engineering/` and `docs/management/cm_plan.md`, *When* `verify_engineering_directory_structure()` runs, *Then* `emulator_sweeps` passes without error. Tag with `TST-PRO-135.3`.
-  4. *Weekly Cadence, 3-Pillar `ensure_weekly_reviews()`, QA Plan & Release Gate (`TST-PRO-135.4`, `tools/test_jira_accounts.py`)*:
-     • *Given* offline mocked Jira API responses, `docs/engineering/emulator_sweeps/` fixtures (`empty`, `> 7 days` with `develop` commits vs fresh `<= 7 days`), and updated `test_ensure_weekly_reviews_coordinates_both_pillars` (mocking all 3 pillars), *When* `is_weekly_emulator_sweep_overdue()`, `ensure_weekly_emulator_sweep_ticket()`, and `ensure_weekly_reviews()` execute, *Then* overdue sweeps create deduplicated `rank_top=True` tickets under `ATT-232`, and `qa_plan.md` + `release-manager/SKILL.md` currency gate checks pass (`Localization Parity: N/A - no UI strings`). Tag with `TST-PRO-135.4`.
+  4. *Weekly Cadence, 4-Pillar `ensure_weekly_reviews()`, QA Plan & Release Gate (`TST-PRO-135.4`, `tools/test_jira_accounts.py`, ATT-9567)*:
+     • *Given* offline mocked Jira API responses, `docs/engineering/emulator_sweeps/` fixtures (`empty`, `>= 6 days` with `develop` commits vs fresh `5 days < 6d`), and updated `test_ensure_weekly_reviews_coordinates_both_pillars` (mocking all 4 pillars), *When* `is_weekly_emulator_sweep_overdue()`, `ensure_weekly_emulator_sweep_ticket()`, and `ensure_weekly_reviews()` execute, *Then* overdue sweeps check local overdue first and create deduplicated `rank_top=True` tickets under `ATT-232`, and `qa_plan.md` + `release-manager/SKILL.md` currency gate checks pass (`Localization Parity: N/A - no UI strings`). Tag with `TST-PRO-135.4`.
   5. *Instrumented Click-Through & Local `emulator-5554` Smoke Execution (`TST-PRO-135.5`, `app/src/androidTest/` & `tools/run_multi_os_emulator_sweep.py`)*:
      • *Given* `MultiLocaleUiSweepAndroidTest.kt` and a booted local `emulator-5554` AVD (`REQ-TST-004`, never physical `66020DLCR002FL`), *When* `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest` and a targeted smoke run of `run_multi_os_emulator_sweep.py` with `--apk` and `--test-apk` execute against `emulator-5554`, *Then* `am instrument` passes with `OK (`, `uiautomator dump` confirms target app package UI (not launcher), and captured PNG screenshot renders active App UI. Tag with `TST-PRO-135.5`.
 
@@ -1700,6 +1700,23 @@
 
 ---
 
+### TST-PRO-136: **Weekly Full Test Suite 4th Pillar & Unified 6-Day Cadence Verification Suite (`ATT-9567`)** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-136` (`REQ-PRO-136.1`–`REQ-PRO-136.3`)
+- **Component**: `tools/jira_util.py`, `tools/test_jira_accounts.py`, `.agents/skills/release-manager/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/rules/aspice_governance.md`, `docs/management/qa_plan.md`
+- **Jira**: `ATT-9567`
+- **Test Description**:
+  1. *6-Day Threshold & Weekly Full Test Suite Overdue Parsing (`TST-PRO-136.1`, `tools/test_jira_accounts.py`: `test_tst_pro_136_1_is_weekly_full_test_suite_overdue`, `test_is_weekly_review_overdue`, `test_is_weekly_aspice_audit_overdue`, `test_tst_pro_135_4_weekly_emulator_sweep_cadence_and_gate_docs`)*:
+     • *Given* isolated temporary `docs/engineering/` fixtures for missing/empty dirs, fresh `5`-day artifacts (`weekly_YYYY_KWww.md` with embedded ISO `Timestamp`, `weekly_YYYY-MM-DD.md`, review/audit/sweep files), and stale `6+`-day artifacts (`weekly_YYYY_KWww.{md,json}` with stale UTC ISO timestamp despite fresh filesystem mtime), *When* all 4 `is_weekly_*_overdue()` functions run with default `days_threshold=6`, *Then* day-5 artifacts return `False` and day-6+ artifacts return `True` (gated by `has_new_commits_fn` for emulator sweep and full test suite). Tag with `TST-PRO-136.1`.
+  2. *Overdue-First Jira Deduplication, 4th Pillar Ticket Creation & 4-Pillar Coordination (`TST-PRO-136.2`, `tools/test_jira_accounts.py`: `test_tst_pro_136_2_ensure_weekly_full_test_suite_ticket_overdue_first_and_dedup`, `test_ensure_weekly_reviews_coordinates_both_pillars`)*:
+     • *Given* mocked `get_config`, `paged_jql_search`, and `create_issue`, *When* any of the 4 `ensure_weekly_*_ticket()` helpers is called while not overdue, *Then* `paged_jql_search` and `create_issue` are NOT called and `None` is returned; *When* `ensure_weekly_full_test_suite_ticket()` is overdue with no open ticket, *Then* it creates a `Verbesserung` under `ATT-232` (`add_to_sprint=False`, `rank_top=True`, `points=3.0`, `priority="High"`, labels `["process", "verification", "weekly-test-suite", "weekly-review", "tier-c"]`, canonical KW checklist); *When* an open `weekly-test-suite` ticket exists, *Then* it returns the open key without duplicating; and `ensure_weekly_reviews()` returns all 4 pillar keys (`code_review`, `aspice_audit`, `emulator_sweep`, `full_test_suite`). Tag with `TST-PRO-136.2`.
+  3. *Governance, Release Gate & QA Plan Synchronization (`TST-PRO-136.3`, `tools/verify_requirement_governance.py`, `tools/verify_skills.py`)*:
+     • *Given* updated `.agents/skills/release-manager/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/rules/aspice_governance.md`, and `docs/management/qa_plan.md`, *When* `verify_requirement_governance.py`, `verify_skills.py`, and `auto_gate.py --ticket ATT-9567 --tier tier-c` run, *Then* all governance, skill frontmatter, work-product version bumps, and SHA-256 evidence checks pass (`Localization Parity: N/A - Python tooling & governance docs only`). Tag with `TST-PRO-136.3`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1757,3 +1774,4 @@
 | `1.0.50` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Added `[Planned]` `TST-STB-026` (`TST-STB-026.1`..`TST-STB-026.3`) for `REQ-STB-026` verifying `ANTBikePowerDevice.onNewCalculatedWheelSpeed` null early-return, standstill `null` pace + `SPEED_THRESHOLD = 8` decay, finite positive pace, and `ArchitectureConformanceContractTest` parity. |
 | `1.0.51` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `TST-STB-026` to `[Implemented]` in Stage 4 (`ANTBikePowerDeviceTest`: `testANTBikePower_nullCalculatedWheelSpeed_returnsWithoutCreatingSensorsOrMutatingDb`, `testANTBikePower_initialZeroWheelSpeed_setsZeroSpeedAndNullPace`, `testANTBikePower_positiveWheelSpeed_computesMetersPerSecondAndFinitePace`, `testANTBikePower_zeroWheelSpeedAfterMotion_decaysPaceToNullAtThreshold`). |
 | `1.0.52` | 2026-11-21 | Lane 2 Author (`ATT-6176`, `--as agent1`) | `ATT-6176` | Promoted `TST-STB-026` to `[Verified]` in Stage 5 (`Rule 7.5` doc-only fast path reusing Gate 4 `ATT-9566` @ `8d76a1f4`: `21/21` targeted Gradle tests PASS [`ANTBikePowerDeviceTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`], `4/4` linters PASS; `ATT-6176_walkthrough.md`). |
+| `1.0.53` | 2026-11-22 | Lane 2 Author (`ATT-9567`, `--as agent1`) | `ATT-9567` | Added `[Verified]` `TST-PRO-136` (`TST-PRO-136.1`–`.3`: Weekly Full Test Suite 4th pillar, overdue-first Jira deduplication, and unified `days_threshold=6` unit tests) and aligned `TST-PRO-095`, `TST-PRO-096`, and `TST-PRO-135.4` to the 6-day cadence. |

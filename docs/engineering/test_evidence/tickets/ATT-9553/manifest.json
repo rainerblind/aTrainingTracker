@@ -1,0 +1,23 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "fed9b361fd8e820fe5d43180854644875696239a",
+  "files": {
+    "evidence_summary.json": "4813bbfe82e1b03c12952d156432d5578c0d70a2b9c705ef32a87c2da7af0db8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest.xml": "da4173b2b54a6c4792d4705e3192b3b42bd1914d3ab5a64a5c3a0609d42fbfc8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesignTest.xml": "b76ae0405a839d97df0cfb038399fc4e7c73f1f77856373d2511ab885ff4f348",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetVisualContractTest.xml": "2d1c70f813a35edfe1839c2411c0b6d489012f6b726938fdccf7548ecffd50d6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffoldContractTest.xml": "92f1ee585866c9ceaffd720eabe5c5347cc21cc86815972cb9cf18552762195c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest.xml": "6b4ad7a77445b0b9f996d7847bdc87c0ef0be266e962a629946f67b425d03f23",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandleTest.xml": "2491235f8768e65d74e0f6f07055d09ac8f335205840eaaae5ff53abec87400f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest.xml": "f841880295781992ef0073fff3a8b768f5b5f14b71e542daccba3ea3ad3f0b7c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapPeekSelectionSaverAndUiComposeTest.xml": "680acafa722ba911692d6c9ae8b061f51c64eee0908ffc61f1616478e5f92fd8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest.xml": "6de0b7801a094510b067374869c254b9618aa8d1ad28ab489990734768545f8f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetLayoutTest.xml": "553ccc9fe92111d1b283fa51998c02c833374e09d737ac6d79bf7897863dfc14",
+    "screenshots/att9553_climb_peek_light_dark.png": "af378eb24a27caa4b469e148ee45667fcba1ccb2bf3d84633833b954e33e4c3f",
+    "screenshots/att9553_emu_climb_expanded.png": "582c530d44605a0820896351aeb33b59c6774cca9724aabb542a53a40576c733",
+    "screenshots/att9553_emu_climb_peek.png": "dfd24605b4e078fbe0da35d26dd3a5943bcc6a68be73baaa14fd468f78646526"
+  },
+  "run_started_utc": "2026-11-22T01:12:21.835651+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9553"
+}

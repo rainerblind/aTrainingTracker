@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:53.605Z" hostname="rainer-HP-EliteBook-850-G5" time="0.024">
+  <properties/>
+  <testcase name="patternItemLists_areReferentiallyIdenticalSingletons" classname="com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest" time="0.002"/>
+  <testcase name="routeWithPathAndSegmentWithPath_shareReferentiallyIdenticalLatLngsAcrossConversions" classname="com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest" time="0.0"/>
+  <testcase name="cropWorkoutPreviewDownsampling_capsLargePathsAndPreservesExactEndpoints" classname="com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest" time="0.019"/>
+  <testcase name="architecturalContracts_verifyKeyedLayersStableScopeAndDecoupledFlows" classname="com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

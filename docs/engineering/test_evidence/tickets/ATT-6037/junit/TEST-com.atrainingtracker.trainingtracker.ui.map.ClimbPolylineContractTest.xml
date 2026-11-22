@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ClimbPolylineContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:30.242Z" hostname="rainer-HP-EliteBook-850-G5" time="0.021">
+  <properties/>
+  <testcase name="testFallbackToEndpoints_whenPathPointsEmpty" classname="com.atrainingtracker.trainingtracker.ui.map.ClimbPolylineContractTest" time="0.012"/>
+  <testcase name="testClimbsHighlightCreation_forAllStandardCategories" classname="com.atrainingtracker.trainingtracker.ui.map.ClimbPolylineContractTest" time="0.002"/>
+  <testcase name="testClear_resetsClimbHighlights" classname="com.atrainingtracker.trainingtracker.ui.map.ClimbPolylineContractTest" time="0.003"/>
+  <testcase name="testDegenerateSinglePointClimb_isIgnored" classname="com.atrainingtracker.trainingtracker.ui.map.ClimbPolylineContractTest" time="0.002"/>
+  <testcase name="testUncategorizedClimbs_renderHighlightPolylineWithNeutralGrey" classname="com.atrainingtracker.trainingtracker.ui.map.ClimbPolylineContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

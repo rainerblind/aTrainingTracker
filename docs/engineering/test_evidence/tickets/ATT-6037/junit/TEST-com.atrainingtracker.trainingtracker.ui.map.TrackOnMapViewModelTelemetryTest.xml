@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapViewModelTelemetryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:14.114Z" hostname="rainer-HP-EliteBook-850-G5" time="2.452">
+  <properties/>
+  <testcase name="testAftermathMapUIState_containsTelemetryPath_defaultEmpty" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapViewModelTelemetryTest" time="0.964"/>
+  <testcase name="testLoadAftermathData_whenTracksEmpty_populatesTelemetryPath" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapViewModelTelemetryTest" time="1.488"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

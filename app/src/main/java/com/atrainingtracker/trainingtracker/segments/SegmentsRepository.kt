@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import okhttp3.OkHttpClient
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.Request
 import kotlin.text.equals
 
@@ -359,7 +359,7 @@ class SegmentsRepository private constructor(private val context: Context) {
         // Strava API: GET /segments/starred
         val url = "https://www.strava.com/api/v3/segments/starred?page=$page&per_page=30"
 
-        val client = OkHttpClient()
+        val client = AppHttpClient.shared
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", "Bearer $accessToken")
@@ -429,7 +429,7 @@ class SegmentsRepository private constructor(private val context: Context) {
         val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
         val url = "https://www.strava.com/api/v3/segments/$segmentId"
 
-        val client = OkHttpClient()
+        val client = AppHttpClient.shared
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", "Bearer $accessToken")
@@ -453,7 +453,7 @@ class SegmentsRepository private constructor(private val context: Context) {
         val accessToken = StravaHelper.getRefreshedAccessToken() ?: return@withContext null
         val url = "https://www.strava.com/api/v3/segments/$segmentId/streams/latlng,distance,altitude,time"
 
-        val client = OkHttpClient()
+        val client = AppHttpClient.shared
         val request = Request.Builder()
             .url(url)
             .addHeader("Authorization", "Bearer $accessToken")

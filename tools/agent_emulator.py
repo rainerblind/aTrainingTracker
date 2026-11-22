@@ -13,13 +13,15 @@ Invariants:
 """
 
 import argparse
+from contextlib import contextmanager
+import fcntl
 import os
 import re
 import shutil
 import subprocess
 import sys
 import time
-from typing import List, Optional, Tuple
+from typing import Iterator, List, Optional, Sequence, Tuple
 
 
 DEFAULT_PACKAGE = "com.atrainingtracker.debug"
@@ -27,6 +29,124 @@ DEFAULT_AVD = "Pixel_8_Android_15"
 FALLBACK_AVD = "Pixel_7_Android_36"
 TARGET_SERIAL = "emulator-5554"
 DEFAULT_GOLDEN_DIR = os.path.join(os.path.dirname(__file__), "golden_db")
+DEFAULT_EMULATOR_LOCK = "/tmp/att_emulator.lock"
+DEFAULT_LOCK_TIMEOUT_SEC = 1800.0
+EMULATOR_LOCK_ENV_VAR = "ATT_EMULATOR_LOCK_HELD"
+SPRINT_LOCK_ENV_VAR = "ATT_SPRINT_LOCK_HELD"
+
+
+@contextmanager
+def emulator_session_lock(
+    lock_path: str = DEFAULT_EMULATOR_LOCK,
+    timeout_sec: float = DEFAULT_LOCK_TIMEOUT_SEC,
+    poll_interval_sec: float = 0.25,
+) -> Iterator[None]:
+    """
+    Exclusive POSIX flock serializing all emulator-5554 lifecycle and UI sessions
+    (installDebug + am start + uiautomator + input tap + screencap + logcat).
+
+    Deadlock-prevention invariant (canonical lock hierarchy):
+      /tmp/att_emulator.lock MUST always be acquired OUTSIDE /tmp/att_build_merge.lock.
+      Nesting emulator_session_lock inside parallel_sprint_lock.py (ATT_SPRINT_LOCK_HELD=1)
+      is rejected immediately to prevent AB-BA deadlocks across parallel lanes.
+    """
+    if os.environ.get(EMULATOR_LOCK_ENV_VAR) == "1" and lock_path == DEFAULT_EMULATOR_LOCK:
+        yield
+        return
+
+    if os.environ.get(SPRINT_LOCK_ENV_VAR) == "1" and lock_path == DEFAULT_EMULATOR_LOCK:
+        raise RuntimeError(
+            "Lock-order inversion detected: ATT_SPRINT_LOCK_HELD=1 (/tmp/att_build_merge.lock) is already held. "
+            "To prevent AB-BA deadlocks, always wrap emulator sessions with "
+            "'python3 tools/agent_emulator.py exec --ensure -- ...' as the OUTER wrapper "
+            "(never nest agent_emulator.py inside parallel_sprint_lock.py)."
+        )
+
+    lock_dir = os.path.dirname(os.path.abspath(lock_path))
+    if lock_dir and not os.path.exists(lock_dir):
+        os.makedirs(lock_dir, exist_ok=True)
+
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
+    try:
+        os.chmod(lock_path, 0o666)
+    except OSError:
+        pass
+
+    start_time = time.monotonic()
+    warned = False
+    prev_env = os.environ.get(EMULATOR_LOCK_ENV_VAR)
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                if lock_path == DEFAULT_EMULATOR_LOCK:
+                    os.environ[EMULATOR_LOCK_ENV_VAR] = "1"
+                break
+            except (BlockingIOError, IOError, OSError):
+                elapsed = time.monotonic() - start_time
+                if elapsed >= timeout_sec:
+                    raise TimeoutError(
+                        f"Timeout ({timeout_sec:.1f}s) exceeded waiting for emulator session lock on {lock_path}"
+                    )
+                if not warned and elapsed >= 1.0:
+                    print(
+                        f"[emulator-lock] Waiting for exclusive emulator session lock on {lock_path} "
+                        f"(held by another lane/Stage-6 reviewer)...",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    warned = True
+                time.sleep(poll_interval_sec)
+        yield
+    finally:
+        if lock_path == DEFAULT_EMULATOR_LOCK:
+            if prev_env is None:
+                os.environ.pop(EMULATOR_LOCK_ENV_VAR, None)
+            else:
+                os.environ[EMULATOR_LOCK_ENV_VAR] = prev_env
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+
+def exec_locked_session(
+    cmd: Sequence[str],
+    ensure: bool = False,
+    seed: bool = False,
+    preferred_avd: Optional[str] = None,
+    boot_timeout_sec: int = 120,
+    lock_timeout_sec: float = DEFAULT_LOCK_TIMEOUT_SEC,
+    lock_path: str = DEFAULT_EMULATOR_LOCK,
+    target_serial: str = TARGET_SERIAL,
+    package: str = DEFAULT_PACKAGE,
+    adb_bin: str = "adb",
+) -> int:
+    """
+    Executes a complete emulator verification session (e.g. installDebug + am start +
+    uiautomator + taps + screencap + logcat) atomically under /tmp/att_emulator.lock.
+    """
+    if not cmd:
+        raise ValueError("exec requires a non-empty command after '--'.")
+
+    with emulator_session_lock(lock_path=lock_path, timeout_sec=lock_timeout_sec):
+        active_serial = target_serial
+        if ensure:
+            active_serial = ensure_emulator(
+                preferred_avd=preferred_avd,
+                timeout_sec=boot_timeout_sec,
+                target_serial=target_serial,
+                adb_bin=adb_bin,
+                seed=seed,
+                package=package,
+            )
+        child_env = os.environ.copy()
+        child_env["ANDROID_SERIAL"] = active_serial
+        child_env["ATT_AGENT_MODE"] = "1"
+        if lock_path == DEFAULT_EMULATOR_LOCK:
+            child_env[EMULATOR_LOCK_ENV_VAR] = "1"
+        proc = subprocess.run(list(cmd), env=child_env)
+        return proc.returncode
 
 CORE_DATABASES = [
     "WorkoutSummaries.db",
@@ -438,6 +558,21 @@ def build_cli_parser() -> argparse.ArgumentParser:
     p_res.add_argument("--serial", default=None, help="Explicit target serial")
     p_res.add_argument("--agent", action="store_true", help="Enforce agent mode physical-phone guardrail")
 
+    # exec (exclusive locked emulator session)
+    p_exec = subparsers.add_parser(
+        "exec",
+        help="Run a complete emulator verification session exclusively under /tmp/att_emulator.lock",
+    )
+    p_exec.add_argument("--ensure", action="store_true", help="Ensure emulator is booted and tuned before running command")
+    p_exec.add_argument("--seed", action="store_true", help="With --ensure, also configure permissions and seed golden DBs")
+    p_exec.add_argument("--avd", default=None, help=f"Preferred AVD name when --ensure is set (default: {DEFAULT_AVD})")
+    p_exec.add_argument("--boot-timeout", type=int, default=120, help="Emulator boot timeout in seconds (default: 120)")
+    p_exec.add_argument("--timeout", type=float, default=DEFAULT_LOCK_TIMEOUT_SEC, help="Lock wait timeout in seconds (default: 1800)")
+    p_exec.add_argument("--lock-file", default=DEFAULT_EMULATOR_LOCK, help=f"Lock file path (default: {DEFAULT_EMULATOR_LOCK})")
+    p_exec.add_argument("--serial", default=TARGET_SERIAL, help="Target emulator serial (default: emulator-5554)")
+    p_exec.add_argument("--package", default=DEFAULT_PACKAGE, help=f"Target package (default: {DEFAULT_PACKAGE})")
+    p_exec.add_argument("cmd", nargs=argparse.REMAINDER, help="Command to execute under the emulator session lock (prefix with --)")
+
     return parser
 
 
@@ -447,21 +582,24 @@ def main() -> None:
 
     try:
         if args.command == "ensure":
-            serial = ensure_emulator(
-                preferred_avd=args.avd,
-                timeout_sec=args.timeout,
-                target_serial=args.serial,
-                seed=args.seed,
-                package=args.package,
-            )
+            with emulator_session_lock():
+                serial = ensure_emulator(
+                    preferred_avd=args.avd,
+                    timeout_sec=args.timeout,
+                    target_serial=args.serial,
+                    seed=args.seed,
+                    package=args.package,
+                )
             print(serial)
 
         elif args.command == "configure-app":
-            configure_app(serial=args.serial, package=args.package)
+            with emulator_session_lock():
+                configure_app(serial=args.serial, package=args.package)
             print(f"Configured permissions and mock location for {args.package} on {args.serial}.")
 
         elif args.command == "seed-db":
-            seeded = seed_db(target_serial=args.target, golden_dir=args.golden_dir, package=args.package)
+            with emulator_session_lock():
+                seeded = seed_db(target_serial=args.target, golden_dir=args.golden_dir, package=args.package)
             print(f"Seeded {len(seeded)} database(s) onto {args.target}: {', '.join(seeded)}")
 
         elif args.command == "sync-from-physical":
@@ -479,6 +617,25 @@ def main() -> None:
         elif args.command == "resolve-target":
             target = resolve_target_device(device_serial=args.serial, agent_mode=args.agent)
             print(target)
+
+        elif args.command == "exec":
+            cmd = list(args.cmd)
+            if cmd and cmd[0] == "--":
+                cmd = cmd[1:]
+            if not cmd:
+                parser.error("exec requires a command (e.g. agent_emulator.py exec --ensure -- bash -c '...')")
+            rc = exec_locked_session(
+                cmd=cmd,
+                ensure=args.ensure,
+                seed=args.seed,
+                preferred_avd=args.avd,
+                boot_timeout_sec=args.boot_timeout,
+                lock_timeout_sec=args.timeout,
+                lock_path=args.lock_file,
+                target_serial=args.serial,
+                package=args.package,
+            )
+            sys.exit(rc)
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

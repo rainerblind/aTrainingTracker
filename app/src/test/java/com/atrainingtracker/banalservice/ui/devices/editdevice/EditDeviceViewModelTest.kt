@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -121,8 +122,19 @@ class EditDeviceViewModelTest {
         )
         every { mockRepo.getDeviceSnapshotById(77L) } returns initial
 
-        val viewModel = EditDeviceViewModel(mockApplication)
+        val mockEquipmentRepo = mockk<EquipmentRepository>(relaxed = true)
+        every { mockEquipmentRepo.getCircumferenceHistoryForDevice(any()) } returns emptyList()
+
+        val viewModel = EditDeviceViewModel(
+            application = mockApplication,
+            devicesRepository = mockRepo,
+            banalServiceRepository = mockBanalRepo,
+            discoveryManager = mockDiscovery,
+            equipmentRepository = mockEquipmentRepo,
+            ioDispatcher = testDispatcher
+        )
         viewModel.loadInitialDeviceData(77L)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         // Stage draft link + position update (Gravel removed, Road added as REAR)
         viewModel.onEquipmentChanged(

@@ -548,23 +548,9 @@ class TrackingViewModel @JvmOverloads constructor(
                 }
             }.collect { newMapState ->
                 if (newMapState != null) {
+                    // REQ-UI-326 / REQ-UI-2793: Keep mapState strictly decoupled from _uiState so
+                    // 1-Hz GPS speed, bearing, and track updates never recompose the sensor grid.
                     _mapState.value = newMapState
-                    _uiState.update { current ->
-                        current.copy(
-                            showMap = newMapState.showMap,
-                            mapState = newMapState,
-                            zoomFocus = newMapState.zoomFocus,
-                            userBearing = newMapState.userBearing,
-                            userSpeed = newMapState.userSpeed,
-                            bSportType = newMapState.bSportType,
-                            currentTrack = newMapState.currentTrack,
-                            mapTracks = newMapState.mapTracks,
-                            mapSegments = newMapState.mapSegments,
-                            activeLiveSegmentIds = newMapState.activeLiveSegmentIds,
-                            mapRoutes = newMapState.mapRoutes,
-                            mapMarkers = newMapState.mapMarkers
-                        )
-                    }
                 }
             }
         }
@@ -711,8 +697,7 @@ class TrackingViewModel @JvmOverloads constructor(
                 // --- Step 2: Apply live sensor data to the base state ---
                 val finalFields = applySensorData(baseFields, allSensorData, currentActivity)
 
-                // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
-                val currentMap = _mapState.value
+                // --- Step 3: Package into TrackingScreenState decoupled from volatile mapState (REQ-UI-2793) ---
                 val showElevation = viewInfo?.showElevationProfile ?: false
                 val showMmp = viewInfo?.showMmpCurve ?: false
                 val currentPoints = if (showElevation) _uiState.value.pathPoints else emptyList()
@@ -738,18 +723,7 @@ class TrackingViewModel @JvmOverloads constructor(
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = currentPoints,
                     mmpCurveData = mmpData,
-                    mmpReferencePoints = cachedPowerBenchmarks,
-                    mapState = currentMap,
-                    zoomFocus = currentMap.zoomFocus,
-                    userSpeed = currentMap.userSpeed,
-                    userBearing = currentMap.userBearing,
-                    bSportType = currentMap.bSportType,
-                    currentTrack = currentMap.currentTrack,
-                    mapTracks = currentMap.mapTracks,
-                    mapSegments = currentMap.mapSegments,
-                    mapRoutes = currentMap.mapRoutes,
-                    activeLiveSegmentIds = currentMap.activeLiveSegmentIds,
-                    mapMarkers = currentMap.mapMarkers
+                    mmpReferencePoints = cachedPowerBenchmarks
                 )
             }.collect { newState ->
                 _uiState.value = newState

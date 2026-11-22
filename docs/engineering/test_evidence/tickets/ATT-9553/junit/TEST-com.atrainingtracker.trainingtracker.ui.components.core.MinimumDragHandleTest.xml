@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandleTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T01:12:33.786Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testMinimumDragHandle_functionExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandleTest" time="0.005"/>
+  <testcase name="testMinimumDragHandle_dimensionsConformToDesignTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandleTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

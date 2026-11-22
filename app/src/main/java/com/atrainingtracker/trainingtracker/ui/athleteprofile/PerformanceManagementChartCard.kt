@@ -106,7 +106,7 @@ fun PerformanceManagementChartCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            // Row 1: Plotted curves — borders and curve swatches strictly anchored to curve colors (REQ-UI-2791.1)
+            // Row 1: Plotted curves — uniform all-around colored borders anchored to curve colors (REQ-UI-2791.1, ATT-9558)
             val tsbZoneText = when (pmcSummary.currentTsbZone) {
                 TsbReadinessZone.FRESH_RACE_READY -> stringResource(R.string.athlete_profile_pmc_zone_fresh)
                 TsbReadinessZone.NEUTRAL -> stringResource(R.string.athlete_profile_pmc_zone_neutral)
@@ -137,8 +137,7 @@ fun PerformanceManagementChartCard(
                     badgeText = null,
                     borderColor = TTColor.PmcCtlBlue,
                     statusColor = TTColor.PmcCtlBlue,
-                    curveSwatchColor = TTColor.PmcCtlBlue,
-                    swatchTestTag = "pmc_swatch_ctl",
+                    emphasizeBorder = true,
                     cardTestTag = "pmc_card_ctl",
                     labelTestTag = "pmc_label_ctl",
                     modifier = Modifier.weight(1f)
@@ -149,8 +148,7 @@ fun PerformanceManagementChartCard(
                     badgeText = null,
                     borderColor = TTColor.PmcAtlMagenta,
                     statusColor = TTColor.PmcAtlMagenta,
-                    curveSwatchColor = TTColor.PmcAtlMagenta,
-                    swatchTestTag = "pmc_swatch_atl",
+                    emphasizeBorder = true,
                     cardTestTag = "pmc_card_atl",
                     labelTestTag = "pmc_label_atl",
                     modifier = Modifier.weight(1f)
@@ -161,8 +159,7 @@ fun PerformanceManagementChartCard(
                     badgeText = tsbZoneText,
                     borderColor = TTColor.PmcTsbAmber,
                     statusColor = tsbZoneColor,
-                    curveSwatchColor = TTColor.PmcTsbAmber,
-                    swatchTestTag = "pmc_swatch_tsb",
+                    emphasizeBorder = true,
                     cardTestTag = "pmc_card_tsb",
                     labelTestTag = "pmc_label_tsb",
                     badgeTextTestTag = "pmc_tsb_readiness_text",
@@ -204,7 +201,7 @@ fun PerformanceManagementChartCard(
                     badgeText = acwrZoneText,
                     borderColor = neutralBorderColor,
                     statusColor = acwrStatusColor,
-                    curveSwatchColor = null,
+                    emphasizeBorder = false,
                     cardTestTag = "pmc_card_acwr",
                     valueTextTestTag = "pmc_acwr_value_text",
                     badgeTextTestTag = "pmc_acwr_zone_text",
@@ -227,7 +224,7 @@ fun PerformanceManagementChartCard(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
-                    curveSwatchColor = null,
+                    emphasizeBorder = false,
                     cardTestTag = "pmc_card_ramp",
                     modifier = Modifier.weight(1f)
                 )
@@ -313,9 +310,8 @@ private fun PmcStatBadge(
     badgeText: String?,
     borderColor: Color,
     statusColor: Color,
-    curveSwatchColor: Color?,
+    emphasizeBorder: Boolean,
     modifier: Modifier = Modifier,
-    swatchTestTag: String? = null,
     cardTestTag: String? = null,
     labelTestTag: String? = null,
     valueTextTestTag: String? = null,
@@ -330,52 +326,45 @@ private fun PmcStatBadge(
         modifier = cardModifier,
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
-        border = BorderStroke(1.dp, borderColor.copy(alpha = if (curveSwatchColor != null) 0.65f else 0.55f))
+        border = BorderStroke(
+            width = if (emphasizeBorder) 1.5.dp else 1.dp,
+            color = borderColor.copy(alpha = if (emphasizeBorder) 0.85f else 0.55f)
+        )
     ) {
-        Column {
-            if (curveSwatchColor != null) {
-                val swatchModifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(color = curveSwatchColor)
-                    .let { if (swatchTestTag != null) it.testTag(swatchTestTag) else it }
-                Box(modifier = swatchModifier)
-            }
-            Column(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                softWrap = true,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (labelTestTag != null) Modifier.testTag(labelTestTag) else Modifier
+            )
+            Text(
+                text = valueText,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (valueTextTestTag != null) Modifier.testTag(valueTextTestTag) else Modifier
+            )
+            if (!badgeText.isNullOrEmpty()) {
                 Text(
-                    text = label,
+                    text = badgeText,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    color = statusColor,
                     maxLines = 2,
                     softWrap = true,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = if (labelTestTag != null) Modifier.testTag(labelTestTag) else Modifier
+                    modifier = if (badgeTextTestTag != null) Modifier.testTag(badgeTextTestTag) else Modifier
                 )
-                Text(
-                    text = valueText,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = if (valueTextTestTag != null) Modifier.testTag(valueTextTestTag) else Modifier
-                )
-                if (!badgeText.isNullOrEmpty()) {
-                    Text(
-                        text = badgeText,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = statusColor,
-                        maxLines = 2,
-                        softWrap = true,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = if (badgeTextTestTag != null) Modifier.testTag(badgeTextTestTag) else Modifier
-                    )
-                }
             }
         }
     }

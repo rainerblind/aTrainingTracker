@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T01:12:35.229Z" hostname="rainer-HP-EliteBook-850-G5" time="29.483">
+  <properties/>
+  <testcase name="testMapContentScopeImpl_renderUpdatesOnDynamicLayerTogglesAndTrackGrowthAtConstantZoom_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="16.02"/>
+  <testcase name="testDrawElevationSegmentsCoalesced_mergesContiguousColorRunsReusingSinglePath_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.321"/>
+  <testcase name="testCaptureElevationProfileLightAndDarkComparisonPng_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="3.273"/>
+  <testcase name="testPrecomputeClimbDrawData_extractsExactSummitAndSpanBounds_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.124"/>
+  <testcase name="testMapScreenWithTrack_forwardsCurrentLocationFlowWithoutParentRecomposition_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="8.597"/>
+  <testcase name="testElevationProfile_rendersWithClimbsZoomControlsAndLiveScrubbingRedraws_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.978"/>
+  <testcase name="testBuildClimbBadgePaintCache_populatesAllCategoriesWithScaledDensity_tstUi2793_1" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfilePerformanceComposeTest" time="0.17"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

@@ -12,9 +12,10 @@ import os
 import re
 import sys
 import io
+import json
 import base64
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 
 # Ensure tools directory is on sys.path
@@ -1543,121 +1544,140 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertEqual(status2, "AUDITED")
 
     def test_is_weekly_review_overdue(self):
-        """TST-PRO-095.4 / ATT-8426: Decoupled 7-day review currency check (not blocked by UNREVIEWED)."""
-        # Traces to: REQ-PRO-095.3, REQ-PRO-095.4, TST-PRO-095.4
+        """TST-PRO-095.4 / TST-PRO-136.1 / ATT-8426 / ATT-9567: Decoupled 6-day review currency check (not blocked by UNREVIEWED)."""
+        # Traces to: REQ-PRO-095.3, REQ-PRO-095.4, REQ-PRO-136.1, TST-PRO-095.4, TST-PRO-136.1
         with tempfile.TemporaryDirectory() as tmpdir:
             reviews_dir = os.path.join(tmpdir, "code_reviews")
             os.makedirs(reviews_dir, exist_ok=True)
 
             # 1. No review files -> overdue (True)
-            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7))
+            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir))
 
-            # 2. Recent review (2 days ago) -> not overdue (False), even when get_next_review_subsystem has UNREVIEWED slices
-            two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
-            review_file = os.path.join(reviews_dir, f"{two_days_ago}_dual_vendor_code_review.md")
+            # 2. Recent review (5 days ago, < 6d default) -> not overdue (False), even when get_next_review_subsystem has UNREVIEWED slices
+            five_days_ago = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d")
+            review_file = os.path.join(reviews_dir, f"{five_days_ago}_dual_vendor_code_review.md")
             with open(review_file, "w", encoding="utf-8") as f:
                 f.write("# Review")
 
             with patch("jira_util.get_next_review_subsystem", return_value=("repositories/", "app/repositories/", "UNREVIEWED")):
-                overdue = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
-                self.assertFalse(overdue, "Recent review within 7 days must not be overdue even if slices remain UNREVIEWED")
+                overdue = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir)
+                self.assertFalse(overdue, "Recent review within 6 days must not be overdue even if slices remain UNREVIEWED")
 
-            # 3. Old review (10 days ago) -> overdue (True)
+            # 3. Boundary review (6 days ago, >= 6d default) -> overdue (True)
             os.remove(review_file)
-            ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-            with open(os.path.join(reviews_dir, f"{ten_days_ago}_dual_vendor_code_review.md"), "w") as f:
+            six_days_ago = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+            with open(os.path.join(reviews_dir, f"{six_days_ago}_dual_vendor_code_review.md"), "w", encoding="utf-8") as f:
                 f.write("# Review")
 
-            overdue_10 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir, days_threshold=7)
-            self.assertTrue(overdue_10, "Review older than 7 days must be overdue")
+            overdue_6 = jira_util.is_weekly_review_overdue(reviews_dir=reviews_dir)
+            self.assertTrue(overdue_6, "Review 6 days or older must be overdue")
 
             # 4. Non-existent directory -> overdue (True)
-            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=os.path.join(tmpdir, "nonexistent"), days_threshold=7))
+            self.assertTrue(jira_util.is_weekly_review_overdue(reviews_dir=os.path.join(tmpdir, "nonexistent")))
 
     @patch("jira_util.create_issue", return_value="ATT-9200")
     @patch("jira_util.paged_jql_search", return_value=[])
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     def test_ensure_weekly_review_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
-        """TST-PRO-095.3 / ATT-8426: Automated review ticket creation with generic models and Claude non-simulation."""
-        # Traces to: REQ-PRO-095.1, REQ-PRO-095.3, TST-PRO-095.3, TST-PRO-095.5
+        """TST-PRO-095.3 / TST-PRO-136.2 / ATT-8426 / ATT-9567: Overdue-first check, backlog creation, and Jira deduplication."""
+        # Traces to: REQ-PRO-095.1, REQ-PRO-095.3, REQ-PRO-136.2, TST-PRO-095.3, TST-PRO-095.5, TST-PRO-136.2
+        with patch("jira_util.is_weekly_review_overdue", return_value=False):
+            self.assertIsNone(jira_util.ensure_weekly_review_ticket(role="coordinator"))
+            mock_search.assert_not_called()
+            mock_create.assert_not_called()
+
         with patch("jira_util.is_weekly_review_overdue", return_value=True), \
              patch("jira_util.get_next_review_subsystem", return_value=("tracker/", "app/tracker/", "UNREVIEWED")):
             key1 = jira_util.ensure_weekly_review_ticket(role="coordinator")
             self.assertEqual(key1, "ATT-9200")
             mock_create.assert_called_once()
             self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertFalse(mock_create.call_args[1].get("add_to_sprint"))
             self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
             desc = mock_create.call_args[1].get("description", "")
             self.assertIn("Current Top Model of Google Gemini + Current Top Model of Anthropic Claude", desc)
             self.assertIn("Claude Non-Simulation Protocol", desc)
             self.assertIn("PENDING / EXTERNAL HANDOFF REQUIRED", desc)
 
-        # Deduplication test: when already open
-        mock_create.reset_mock()
-        mock_search.return_value = [
-            {"key": "ATT-9200", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude Code Review - tracker/ (2026-KW46)", "status": {"name": "Zu erledigen"}}}
-        ]
-        key2 = jira_util.ensure_weekly_review_ticket(role="coordinator")
-        self.assertEqual(key2, "ATT-9200")
-        mock_create.assert_not_called()
+            # Deduplication test: when overdue and already open
+            mock_create.reset_mock()
+            mock_search.return_value = [
+                {"key": "ATT-9200", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude Code Review - tracker/ (2026-KW46)", "status": {"name": "Zu erledigen"}}}
+            ]
+            key2 = jira_util.ensure_weekly_review_ticket(role="coordinator")
+            self.assertEqual(key2, "ATT-9200")
+            mock_create.assert_not_called()
 
     def test_is_weekly_aspice_audit_overdue(self):
-        """TST-PRO-096.3: Overdue determination for ASPICE audit based on elapsed days."""
+        """TST-PRO-096.3 / TST-PRO-136.1: Overdue determination for ASPICE audit at default 6-day threshold."""
         with tempfile.TemporaryDirectory() as tmpdir:
             audits_dir = os.path.join(tmpdir, "aspice_audits")
             os.makedirs(audits_dir, exist_ok=True)
 
             # 1. No audit files -> overdue
-            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir))
 
-            # 2. Recent audit (2 days ago) -> not overdue
-            two_days_ago = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
-            recent_file = os.path.join(audits_dir, f"{two_days_ago}_dual_vendor_aspice_audit.md")
+            # 2. Recent audit (5 days ago, < 6d) -> not overdue
+            five_days_ago = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d")
+            recent_file = os.path.join(audits_dir, f"{five_days_ago}_dual_vendor_aspice_audit.md")
             with open(recent_file, "w", encoding="utf-8") as f:
                 f.write("# Audit")
-            self.assertFalse(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+            self.assertFalse(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir))
 
-            # 3. Old audit (10 days ago) -> overdue
+            # 3. Boundary audit (6 days ago, >= 6d) -> overdue
             os.remove(recent_file)
-            ten_days_ago = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-            with open(os.path.join(audits_dir, f"{ten_days_ago}_dual_vendor_aspice_audit.md"), "w", encoding="utf-8") as f:
+            six_days_ago = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+            with open(os.path.join(audits_dir, f"{six_days_ago}_dual_vendor_aspice_audit.md"), "w", encoding="utf-8") as f:
                 f.write("# Audit")
-            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir, days_threshold=7))
+            self.assertTrue(jira_util.is_weekly_aspice_audit_overdue(audits_dir=audits_dir))
 
     @patch("jira_util.create_issue", return_value="ATT-9201")
     @patch("jira_util.paged_jql_search", return_value=[])
     @patch("jira_util.get_config", return_value={"JIRA_URL": "https://example.atlassian.net"})
     def test_ensure_weekly_aspice_audit_creates_and_deduplicates(self, mock_config, mock_search, mock_create):
-        """TST-PRO-096.3: Automated weekly ASPICE audit ticket creates when overdue and reuses when open."""
+        """TST-PRO-096.3 / TST-PRO-136.2: Overdue-first gate, backlog creation, and Jira deduplication."""
+        with patch("jira_util.is_weekly_aspice_audit_overdue", return_value=False):
+            self.assertIsNone(jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator"))
+            mock_search.assert_not_called()
+            mock_create.assert_not_called()
+
         with patch("jira_util.is_weekly_aspice_audit_overdue", return_value=True):
             key1 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
             self.assertEqual(key1, "ATT-9201")
             mock_create.assert_called_once()
             self.assertTrue(mock_create.call_args[1].get("rank_top"))
+            self.assertFalse(mock_create.call_args[1].get("add_to_sprint"))
             self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
 
-        # Deduplication test: when already open
-        mock_create.reset_mock()
-        mock_search.return_value = [
-            {"key": "ATT-9201", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit (2026-KW46)", "status": {"name": "Zu erledigen"}}}
-        ]
-        key2 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
-        self.assertEqual(key2, "ATT-9201")
-        mock_create.assert_not_called()
+            # Deduplication test: when overdue and already open
+            mock_create.reset_mock()
+            mock_search.return_value = [
+                {"key": "ATT-9201", "fields": {"summary": "Weekly Dual-Vendor Gemini and Claude ASPICE 4.0 Cross-Audit (2026-KW46)", "status": {"name": "Zu erledigen"}}}
+            ]
+            key2 = jira_util.ensure_weekly_aspice_audit_ticket(role="coordinator")
+            self.assertEqual(key2, "ATT-9201")
+            mock_create.assert_not_called()
 
+    @patch("jira_util.ensure_weekly_full_test_suite_ticket", return_value="ATT-9203")
     @patch("jira_util.ensure_weekly_emulator_sweep_ticket", return_value="ATT-9202")
     @patch("jira_util.ensure_weekly_aspice_audit_ticket", return_value="ATT-9201")
     @patch("jira_util.ensure_weekly_review_ticket", return_value="ATT-9200")
-    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit, mock_sweep):
-        """TST-PRO-096.3 / TST-PRO-135.4: ensure_weekly_reviews dispatches code review, ASPICE audit, and emulator sweep pillars."""
+    def test_ensure_weekly_reviews_coordinates_both_pillars(self, mock_review, mock_audit, mock_sweep, mock_suite):
+        """TST-PRO-096.3 / TST-PRO-135.4 / TST-PRO-136.2: ensure_weekly_reviews dispatches all 4 weekly pillars."""
         res = jira_util.ensure_weekly_reviews(role="coordinator", force=True)
         self.assertEqual(
             res,
-            {"code_review": "ATT-9200", "aspice_audit": "ATT-9201", "emulator_sweep": "ATT-9202"},
+            {
+                "code_review": "ATT-9200",
+                "aspice_audit": "ATT-9201",
+                "emulator_sweep": "ATT-9202",
+                "full_test_suite": "ATT-9203",
+            },
         )
         mock_review.assert_called_once_with(role="coordinator", force=True)
         mock_audit.assert_called_once_with(role="coordinator", force=True)
         mock_sweep.assert_called_once_with(role="coordinator", force=True)
+        mock_suite.assert_called_once_with(role="coordinator", force=True)
 
     def test_select_greedy_bin_pack_tickets_with_capacity_ceiling(self):
         """TST-PRO-097.1: Multi-lane greedy bin-packing accumulates tickets up to max_sp_per_lane."""
@@ -4148,16 +4168,17 @@ class TestProcessStabilityLegacyTsts(unittest.TestCase):
         self.assertIn("Ceremony 2", sp)
 
     def test_tst_pro_135_4_weekly_emulator_sweep_cadence_and_gate_docs(self):
-        """TST-PRO-135.4: is_weekly_emulator_sweep_overdue, ensure_weekly_emulator_sweep_ticket, and QA/Release gate docs."""
+        """TST-PRO-135.4 / TST-PRO-136.1 / TST-PRO-136.2: is_weekly_emulator_sweep_overdue (6d), ensure_weekly_emulator_sweep_ticket, and QA/Release gate docs."""
         with tempfile.TemporaryDirectory() as tmpdir:
             sweeps_dir = os.path.join(tmpdir, "docs", "engineering", "emulator_sweeps")
             # 1. Missing directory -> overdue
             self.assertTrue(jira_util.is_weekly_emulator_sweep_overdue(sweeps_dir=sweeps_dir, repo_root=tmpdir))
 
             os.makedirs(sweeps_dir, exist_ok=True)
-            # 2. Fresh sweep (today) -> not overdue even if commits exist
-            today_file = os.path.join(sweeps_dir, f"{datetime.now().strftime('%Y-%m-%d')}_sweep.md")
-            with open(today_file, "w", encoding="utf-8") as f:
+            # 2. Fresh sweep (5 days ago, < 6d default) -> not overdue even if commits exist
+            five_days_ago = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d")
+            fresh_file = os.path.join(sweeps_dir, f"{five_days_ago}_sweep.md")
+            with open(fresh_file, "w", encoding="utf-8") as f:
                 f.write("# Fresh Sweep\n")
             self.assertFalse(
                 jira_util.is_weekly_emulator_sweep_overdue(
@@ -4166,11 +4187,11 @@ class TestProcessStabilityLegacyTsts(unittest.TestCase):
                     has_new_commits_fn=lambda *_args: True,
                 )
             )
-            os.remove(today_file)
+            os.remove(fresh_file)
 
-            # 3. Stale sweep (10 days old) -> overdue iff new develop commits landed
-            old_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
-            old_file = os.path.join(sweeps_dir, f"{old_date}_sweep.md")
+            # 3. Stale sweep (6 days old, >= 6d default) -> overdue iff new develop commits landed
+            six_days_ago = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+            old_file = os.path.join(sweeps_dir, f"{six_days_ago}_sweep.md")
             with open(old_file, "w", encoding="utf-8") as f:
                 f.write("# Stale Sweep\n")
             self.assertTrue(
@@ -4190,27 +4211,34 @@ class TestProcessStabilityLegacyTsts(unittest.TestCase):
 
         with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
              patch("jira_util.paged_jql_search", return_value=[]) as mock_search, \
-             patch("jira_util.is_weekly_emulator_sweep_overdue", return_value=True), \
              patch("jira_util.create_issue", return_value="ATT-9250") as mock_create:
-            k1 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
-            self.assertEqual(k1, "ATT-9250")
-            mock_create.assert_called_once()
-            self.assertTrue(mock_create.call_args[1].get("rank_top"))
-            self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+            # 0. Not overdue -> skip Jira search & creation
+            with patch("jira_util.is_weekly_emulator_sweep_overdue", return_value=False):
+                self.assertIsNone(jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator"))
+                mock_search.assert_not_called()
+                mock_create.assert_not_called()
 
-            mock_create.reset_mock()
-            mock_search.return_value = [
-                {
-                    "key": "ATT-9250",
-                    "fields": {
-                        "summary": "Weekly Multi-OS & 9-Language Emulator UI Verification Sweep (2026-KW47)",
-                        "status": {"name": "Zu erledigen"},
-                    },
-                }
-            ]
-            k2 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
-            self.assertEqual(k2, "ATT-9250")
-            mock_create.assert_not_called()
+            with patch("jira_util.is_weekly_emulator_sweep_overdue", return_value=True):
+                k1 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
+                self.assertEqual(k1, "ATT-9250")
+                mock_create.assert_called_once()
+                self.assertTrue(mock_create.call_args[1].get("rank_top"))
+                self.assertFalse(mock_create.call_args[1].get("add_to_sprint"))
+                self.assertEqual(mock_create.call_args[1].get("parent_key"), "ATT-232")
+
+                mock_create.reset_mock()
+                mock_search.return_value = [
+                    {
+                        "key": "ATT-9250",
+                        "fields": {
+                            "summary": "Weekly Multi-OS & 9-Language Emulator UI Verification Sweep (2026-KW47)",
+                            "status": {"name": "Zu erledigen"},
+                        },
+                    }
+                ]
+                k2 = jira_util.ensure_weekly_emulator_sweep_ticket(role="coordinator")
+                self.assertEqual(k2, "ATT-9250")
+                mock_create.assert_not_called()
 
         with open(os.path.join(REPO_ROOT, "docs", "management", "qa_plan.md"), encoding="utf-8") as f:
             qa_plan = f.read()
@@ -4219,6 +4247,125 @@ class TestProcessStabilityLegacyTsts(unittest.TestCase):
         self.assertIn("run_multi_os_emulator_sweep.py", qa_plan)
         self.assertIn("emulator_sweeps/", qa_plan)
         self.assertIn("is_weekly_emulator_sweep_overdue()", rel_skill)
+        self.assertIn("is_weekly_full_test_suite_overdue()", rel_skill)
+
+    def test_tst_pro_136_1_is_weekly_full_test_suite_overdue(self):
+        """TST-PRO-136.1: is_weekly_full_test_suite_overdue handles missing, fresh (<6d), stale (>=6d), ISO KW timestamps, and develop commit gating."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ev_dir = os.path.join(tmpdir, "docs", "engineering", "test_evidence")
+            # 1. Missing directory -> overdue
+            self.assertTrue(jira_util.is_weekly_full_test_suite_overdue(evidence_dir=ev_dir, repo_root=tmpdir))
+
+            # 2. Empty directory -> overdue
+            os.makedirs(ev_dir, exist_ok=True)
+            self.assertTrue(jira_util.is_weekly_full_test_suite_overdue(evidence_dir=ev_dir, repo_root=tmpdir))
+
+            # 3. Fresh weekly_YYYY_KWww.md (< 6 days) via embedded UTC Timestamp -> NOT overdue even if commits exist
+            fresh_ts = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+            fresh_md = os.path.join(ev_dir, "weekly_2026_KW47.md")
+            with open(fresh_md, "w", encoding="utf-8") as f:
+                f.write(f"# Test & Coverage Evidence: weekly_2026_KW47\n\n- **Timestamp**: `{fresh_ts}`\n")
+            self.assertFalse(
+                jira_util.is_weekly_full_test_suite_overdue(
+                    evidence_dir=ev_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            os.remove(fresh_md)
+
+            # 4. Stale weekly_YYYY_KWww.md (>= 6 days) despite fresh filesystem mtime (git checkout simulation) -> overdue iff new commits
+            stale_ts = (datetime.now(timezone.utc) - timedelta(days=6, hours=1)).isoformat()
+            stale_md = os.path.join(ev_dir, "weekly_2026_KW46.md")
+            with open(stale_md, "w", encoding="utf-8") as f:
+                f.write(f"# Test & Coverage Evidence: weekly_2026_KW46\n\n- **Timestamp**: `{stale_ts}`\n")
+            self.assertTrue(
+                jira_util.is_weekly_full_test_suite_overdue(
+                    evidence_dir=ev_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            self.assertFalse(
+                jira_util.is_weekly_full_test_suite_overdue(
+                    evidence_dir=ev_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: False,
+                )
+            )
+            os.remove(stale_md)
+
+            # 5. JSON-only weekly evidence (weekly_YYYY_KWww.json) + filename-date weekly_YYYY-MM-DD.md
+            stale_json = os.path.join(ev_dir, "weekly_2026_KW45.json")
+            with open(stale_json, "w", encoding="utf-8") as f:
+                json.dump({"target": "weekly_2026_KW45", "timestamp": stale_ts}, f)
+            self.assertTrue(
+                jira_util.is_weekly_full_test_suite_overdue(
+                    evidence_dir=ev_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+            fresh_date_md = os.path.join(ev_dir, f"weekly_{(datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')}.md")
+            with open(fresh_date_md, "w", encoding="utf-8") as f:
+                f.write("# Weekly Full Suite\n")
+            self.assertFalse(
+                jira_util.is_weekly_full_test_suite_overdue(
+                    evidence_dir=ev_dir,
+                    repo_root=tmpdir,
+                    has_new_commits_fn=lambda *_args: True,
+                )
+            )
+
+    def test_tst_pro_136_2_ensure_weekly_full_test_suite_ticket_overdue_first_and_dedup(self):
+        """TST-PRO-136.2: ensure_weekly_full_test_suite_ticket checks overdue first, deduplicates open Jira tickets, and creates backlog Verbesserung."""
+        with patch("jira_util.get_config", return_value={"JIRA_URL": "https://mock.atlassian.net"}), \
+             patch("jira_util.paged_jql_search", return_value=[]) as mock_search, \
+             patch("jira_util.create_issue", return_value="ATT-9569") as mock_create:
+            # 1. Not overdue -> skips Jira query and creation
+            with patch("jira_util.is_weekly_full_test_suite_overdue", return_value=False):
+                self.assertIsNone(jira_util.ensure_weekly_full_test_suite_ticket(role="coordinator"))
+                mock_search.assert_not_called()
+                mock_create.assert_not_called()
+
+            # 2. Overdue and no open Jira ticket -> creates Verbesserung at rank-top under ATT-232
+            with patch("jira_util.is_weekly_full_test_suite_overdue", return_value=True):
+                k1 = jira_util.ensure_weekly_full_test_suite_ticket(role="coordinator")
+                self.assertEqual(k1, "ATT-9569")
+                mock_search.assert_called_once()
+                mock_create.assert_called_once()
+                kw = mock_create.call_args[1]
+                self.assertEqual(kw.get("issuetype_id"), "Verbesserung")
+                self.assertEqual(kw.get("parent_key"), "ATT-232")
+                self.assertFalse(kw.get("add_to_sprint"))
+                self.assertTrue(kw.get("rank_top"))
+                self.assertEqual(kw.get("points"), 3.0)
+                self.assertEqual(kw.get("priority"), "High")
+                self.assertEqual(
+                    kw.get("labels"),
+                    ["process", "verification", "weekly-test-suite", "weekly-review", "tier-c"],
+                )
+                desc = kw.get("description", "")
+                self.assertIn(":app:testDebugUnitTest --rerun", desc)
+                self.assertIn(":app:lintDebug :app:detekt", desc)
+                self.assertIn(":app:koverXmlReportDebug", desc)
+                self.assertIn("generate_test_evidence.py", desc)
+
+                # 3. Overdue and an open ticket already exists -> returns existing key without creating duplicate
+                mock_create.reset_mock()
+                mock_search.return_value = [
+                    {
+                        "key": "ATT-9569",
+                        "fields": {
+                            "summary": "Weekly Full Test Suite, Static Analysis & Finding Remediation (2026-KW47)",
+                            "status": {"name": "Zu erledigen"},
+                            "labels": ["process", "verification", "weekly-test-suite", "tier-c"],
+                        },
+                    }
+                ]
+                k2 = jira_util.ensure_weekly_full_test_suite_ticket(role="coordinator")
+                self.assertEqual(k2, "ATT-9569")
+                mock_create.assert_not_called()
 
 
 class TestMultiHopParentStageTransitions(unittest.TestCase):

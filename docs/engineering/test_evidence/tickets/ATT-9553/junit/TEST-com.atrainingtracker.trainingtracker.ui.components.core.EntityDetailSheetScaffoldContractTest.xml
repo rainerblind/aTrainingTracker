@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffoldContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T01:12:33.639Z" hostname="rainer-HP-EliteBook-850-G5" time="0.141">
+  <properties/>
+  <testcase name="testEntityDetailSheetScaffold_reusedAcrossAllEntityPopups" classname="com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffoldContractTest" time="0.134"/>
+  <testcase name="testEntityDetailSheetScaffold_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffoldContractTest" time="0.005"/>
+  <testcase name="testEntityDetailSheetScaffold_structuralTokensAndStyling" classname="com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffoldContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

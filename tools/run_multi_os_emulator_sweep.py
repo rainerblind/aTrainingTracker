@@ -25,7 +25,7 @@ import re
 import subprocess
 import sys
 import time
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 import xml.etree.ElementTree as ET
 
 _tools_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +41,7 @@ DEFAULT_PACKAGE = agent_emulator.DEFAULT_PACKAGE
 DEFAULT_MAIN_ACTIVITY = "com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation"
 DEFAULT_INSTRUMENTATION_CLASS = "com.atrainingtracker.trainingtracker.MultiLocaleUiSweepAndroidTest"
 DEFAULT_GEO_FIX: Tuple[float, float] = (11.5761, 48.1372)  # (lon, lat) Munich
+UI_DUMP_DEVICE_PATH = "/data/local/tmp/att_sweep_dump.xml"
 LAUNCHER_PACKAGE_TOKENS: Tuple[str, ...] = ("nexuslauncher", "launcher3", "android.launcher", ".launcher")
 INSTRUMENTATION_FAIL_MARKERS: Tuple[str, ...] = (
     "FAILURES!!!",
@@ -64,6 +65,16 @@ LOGCAT_DEFECT_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
 )
 
 _BOUNDS_RE = re.compile(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]")
+_LOGCAT_TIME_OR_BRIEF_PID_RE = re.compile(
+    r"^(?:\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3}\s+)?[VDIWEFA]/[^:\r\n]*?\(\s*(\d+)\s*\):"
+)
+_LOGCAT_THREADTIME_PID_RE = re.compile(
+    r"^\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3}\s+(\d+)\s+\d+\s+[VDIWEFA]\s+"
+)
+_FATAL_CONTINUATION_RE = re.compile(
+    r"^(?:Process:|PID:|at\s|Caused by:|Suppressed:|\.\.\.\s+\d+\s+more\b|\*\*\*|pid:\s*\d+|Build fingerprint:|ABI:|Abort message:|backtrace:|\s+at\s)"
+)
+_EXPLICIT_PROCESS_LINE_RE = re.compile(r"\bProcess:\s*([A-Za-z0-9_.:-]+)")
 
 
 @dataclass
@@ -176,17 +187,171 @@ def resolve_reference_avd(selected_avds: Sequence[str], requested_ref: Optional[
     return selected_avds[0]
 
 
-def scan_logcat_defects(logcat_text: str) -> List[str]:
-    """Scans adb logcat output for FATAL EXCEPTION, ANR, StrictMode, and format crashes."""
+def _compile_package_pattern(package: str) -> re.Pattern:
+    """Matches exact `package` (or `<package>.test` / `<package>:<subproc>`) without prefix/suffix collisions."""
+    return re.compile(
+        rf"(?<![A-Za-z0-9_.]){re.escape(package)}(?:\.test)?(?::[A-Za-z0-9_.-]+)?(?![A-Za-z0-9_.])"
+    )
+
+
+def extract_logcat_pid(line: str) -> Optional[str]:
+    """Extracts normalized numeric PID from a logcat line (`-v time`, `brief`, or `threadtime`)."""
+    stripped = (line or "").strip()
+    if not stripped:
+        return None
+    match = _LOGCAT_TIME_OR_BRIEF_PID_RE.match(stripped) or _LOGCAT_THREADTIME_PID_RE.match(stripped)
+    if not match:
+        return None
+    return str(int(match.group(1)))
+
+
+def discover_app_pids_from_logcat(logcat_text: str, package: str) -> Set[str]:
+    """Extracts PIDs explicitly bound to `package` from ActivityManager/AndroidRuntime/DEBUG logcat lines."""
+    if not logcat_text or not package:
+        return set()
+    pkg_pat = rf"(?<![A-Za-z0-9_.]){re.escape(package)}(?:\.test)?(?::[A-Za-z0-9_.-]+)?"
+    patterns = (
+        re.compile(rf"\bStart proc\s+(\d+):{pkg_pat}(?![A-Za-z0-9_.])"),
+        re.compile(rf"\bProcess:\s*{pkg_pat}(?![A-Za-z0-9_.]),\s*PID:\s*(\d+)\b"),
+        re.compile(rf"\bProcess\s+{pkg_pat}(?![A-Za-z0-9_.])\s*\(pid\s+(\d+)\)"),
+        re.compile(rf"\bpid:\s*(\d+),\s*tid:\s*\d+.*?>>>\s*{pkg_pat}(?![A-Za-z0-9_.])\s*<<<"),
+    )
+    pids: Set[str] = set()
+    for line in logcat_text.splitlines():
+        for pat in patterns:
+            for match in pat.finditer(line):
+                pids.add(str(int(match.group(1))))
+    return pids
+
+
+def _collect_fatal_block(
+    lines: Sequence[str],
+    start_idx: int,
+    start_pid: Optional[str],
+) -> List[Tuple[int, str]]:
+    """Collects lines belonging to a `FATAL EXCEPTION` block starting at `start_idx`."""
+    block: List[Tuple[int, str]] = [(start_idx, lines[start_idx].strip())]
+    limit = min(len(lines), start_idx + 60)
+    fatal_pat = LOGCAT_DEFECT_PATTERNS[0][1]
+    for idx in range(start_idx + 1, limit):
+        stripped = lines[idx].strip()
+        if not stripped:
+            if start_pid is None:
+                break
+            continue
+        line_pid = extract_logcat_pid(lines[idx])
+        if fatal_pat.search(stripped) and (start_pid is None or line_pid == start_pid):
+            break
+        if start_pid is not None:
+            if line_pid == start_pid:
+                block.append((idx, stripped))
+            elif line_pid is None and _FATAL_CONTINUATION_RE.search(stripped):
+                block.append((idx, stripped))
+        else:
+            if line_pid is not None:
+                break
+            if any(pat.search(stripped) for tag, pat in LOGCAT_DEFECT_PATTERNS if tag != "FORMAT_EXCEPTION"):
+                break
+            block.append((idx, stripped))
+    return block
+
+
+def _is_fatal_block_for_app(
+    block: Sequence[Tuple[int, str]],
+    start_pid: Optional[str],
+    known_app_pids: Set[str],
+    package_re: Optional[re.Pattern],
+) -> bool:
+    """Determines whether a `FATAL EXCEPTION` block belongs to the target app process or package."""
+    if start_pid is not None and start_pid in known_app_pids:
+        return True
+    if package_re is None:
+        return False
+    for _, line in block:
+        proc_match = _EXPLICIT_PROCESS_LINE_RE.search(line)
+        if proc_match:
+            return bool(package_re.search(proc_match.group(1)))
+    return any(package_re.search(line) for _, line in block)
+
+
+def scan_logcat_defects(
+    logcat_text: str,
+    app_pids: Optional[Iterable[str]] = None,
+    package: Optional[str] = None,
+) -> List[str]:
+    """
+    Scans adb logcat output for FATAL EXCEPTION, ANR, StrictMode, and format crashes.
+
+    When `app_pids` or `package` is provided, restricts detection strictly to the target
+    app's process PID(s) (including PIDs discovered from logcat lifecycle/crash lines) and
+    crash/ANR blocks referencing `package`, ignoring unrelated system process noise.
+    """
     defects: List[str] = []
-    for line in (logcat_text or "").splitlines():
+    lines = (logcat_text or "").splitlines()
+    filtering_enabled = app_pids is not None or bool(package)
+
+    known_app_pids: Set[str] = set()
+    if app_pids is not None:
+        for pid in app_pids:
+            pid_str = str(pid).strip()
+            if pid_str.isdigit():
+                known_app_pids.add(str(int(pid_str)))
+    if package:
+        known_app_pids.update(discover_app_pids_from_logcat(logcat_text or "", package))
+
+    package_re = _compile_package_pattern(package) if package else None
+    app_fatal_line_indices: Set[int] = set()
+
+    for idx, line in enumerate(lines):
         stripped = line.strip()
         if not stripped:
             continue
+        matched_tag: Optional[str] = None
         for tag, pattern in LOGCAT_DEFECT_PATTERNS:
             if pattern.search(stripped):
-                defects.append(f"[{tag}] {stripped[:240]}")
+                matched_tag = tag
                 break
+        if matched_tag is None:
+            continue
+
+        if not filtering_enabled:
+            defects.append(f"[{matched_tag}] {stripped[:240]}")
+            continue
+
+        line_pid = extract_logcat_pid(stripped)
+        if matched_tag == "FATAL_EXCEPTION":
+            block = _collect_fatal_block(lines, idx, line_pid)
+            if _is_fatal_block_for_app(block, line_pid, known_app_pids, package_re):
+                app_fatal_line_indices.update(b_idx for b_idx, _ in block)
+                defects.append(f"[{matched_tag}] {stripped[:240]}")
+            continue
+
+        if matched_tag == "STRICT_MODE":
+            if line_pid is not None:
+                is_app = line_pid in known_app_pids
+            else:
+                is_app = bool(package_re and package_re.search(stripped))
+            if is_app:
+                defects.append(f"[{matched_tag}] {stripped[:240]}")
+            continue
+
+        if matched_tag == "ANR":
+            is_app = (
+                (line_pid is not None and line_pid in known_app_pids)
+                or bool(package_re and package_re.search(stripped))
+            )
+            if is_app:
+                defects.append(f"[{matched_tag}] {stripped[:240]}")
+            continue
+
+        is_app = (
+            (line_pid is not None and line_pid in known_app_pids)
+            or (idx in app_fatal_line_indices)
+            or bool(package_re and package_re.search(stripped))
+        )
+        if is_app:
+            defects.append(f"[{matched_tag}] {stripped[:240]}")
+
     return defects
 
 
@@ -545,6 +710,20 @@ def set_app_locale(
         _run_adb(adb_bin, serial, ["shell", "am", "force-stop", package], runner=runner)
 
 
+def get_package_pids(
+    serial: str,
+    package: str,
+    adb_bin: str = "adb",
+    runner: Callable = subprocess.run,
+) -> Set[str]:
+    """Queries running PID(s) for `package` via `adb shell pidof <package>`."""
+    res = _run_adb(adb_bin, serial, ["shell", "pidof", package], timeout=15, runner=runner, check=False)
+    if getattr(res, "returncode", 1) != 0:
+        return set()
+    stdout = (getattr(res, "stdout", "") or "").strip()
+    return {str(int(tok)) for tok in stdout.split() if tok.isdigit()}
+
+
 def run_ui_probe(
     serial: str,
     package: str,
@@ -560,6 +739,7 @@ def run_ui_probe(
     """Clears logcat, injects mock GPS, runs instrumentation, launches foreground App UI, and verifies dump + PNG."""
     _run_adb(adb_bin, serial, ["logcat", "-c"], runner=runner, check=True)
     _run_adb(adb_bin, serial, ["emu", "geo", "fix", str(geo_fix[0]), str(geo_fix[1])], runner=runner, check=True)
+    app_pids: Set[str] = set()
 
     if instrumentation_class:
         inst_res = _run_adb(
@@ -583,6 +763,7 @@ def run_ui_probe(
             getattr(inst_res, "stdout", "") or "",
             getattr(inst_res, "stderr", "") or "",
         )
+        app_pids.update(get_package_pids(serial, package, adb_bin=adb_bin, runner=runner))
 
     # Always bring MainActivityWithNavigation to foreground after instrumentation finishes
     start_res = _run_adb(
@@ -597,14 +778,35 @@ def run_ui_probe(
     if "Error:" in start_out:
         raise RuntimeError(f"am start -W failed: {start_out.strip()[:300]}")
     sleep_fn(1.0)
+    app_pids.update(get_package_pids(serial, package, adb_bin=adb_bin, runner=runner))
 
     # Remove any prior dump so stale XML cannot cause a false pass
-    _run_adb(adb_bin, serial, ["shell", "rm", "-f", "/sdcard/att_sweep_dump.xml"], runner=runner)
-    _run_adb(adb_bin, serial, ["shell", "uiautomator", "dump", "/sdcard/att_sweep_dump.xml"], timeout=30, runner=runner, check=True)
-    xml_res = _run_adb(adb_bin, serial, ["shell", "cat", "/sdcard/att_sweep_dump.xml"], runner=runner, check=True)
-    xml_text = getattr(xml_res, "stdout", "") or ""
+    _run_adb(adb_bin, serial, ["shell", "rm", "-f", UI_DUMP_DEVICE_PATH], runner=runner)
+    try:
+        _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "uiautomator", "dump", UI_DUMP_DEVICE_PATH],
+            timeout=30,
+            runner=runner,
+            check=True,
+        )
+        xml_res = _run_adb(
+            adb_bin,
+            serial,
+            ["shell", "cat", UI_DUMP_DEVICE_PATH],
+            runner=runner,
+            check=True,
+        )
+        xml_text = getattr(xml_res, "stdout", "") or ""
+    finally:
+        try:
+            _run_adb(adb_bin, serial, ["shell", "rm", "-f", UI_DUMP_DEVICE_PATH], runner=runner)
+        except Exception:
+            pass
     validate_captured_ui_xml(xml_text, package)
 
+    app_pids.update(get_package_pids(serial, package, adb_bin=adb_bin, runner=runner))
     log_res = _run_adb(adb_bin, serial, ["logcat", "-d", "-v", "time"], runner=runner)
 
     os.makedirs(screenshots_dir, exist_ok=True)
@@ -619,7 +821,11 @@ def run_ui_probe(
     with open(screenshot_path, "wb") as f:
         f.write(png_bytes)
 
-    log_defects = scan_logcat_defects(getattr(log_res, "stdout", "") or "")
+    log_defects = scan_logcat_defects(
+        getattr(log_res, "stdout", "") or "",
+        app_pids=app_pids,
+        package=package,
+    )
     bounds_defects = analyze_uiautomator_bounds(xml_text)
     return log_defects, bounds_defects, screenshot_path
 

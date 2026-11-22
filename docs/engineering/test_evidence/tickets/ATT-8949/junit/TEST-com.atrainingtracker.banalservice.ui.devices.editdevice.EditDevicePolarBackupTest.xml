@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:23:31.222Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="testVeritySenseDetection_matchesRenamedDeviceWithStoredPftpCapability" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.001"/>
+  <testcase name="testProtocolGateNonPolarMfgAndEmptyNameResilience_TST_CON_049_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.001"/>
+  <testcase name="testPolarBackupRecordingCard_andStringsContractExist" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.0"/>
+  <testcase name="testRenamedH10WithDisMetadata_routesToH10NotVeritySenseEvenWithLegacyOfflineRec" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.0"/>
+  <testcase name="testVeritySenseDetection_matchesOpticalModelsAndExcludesH10AndGenericHrm" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

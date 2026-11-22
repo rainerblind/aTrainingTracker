@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:04.406Z" hostname="rainer-HP-EliteBook-850-G5" time="13.306">
+  <properties/>
+  <testcase name="testDoWorkWhenTokenRefreshReturnsNullReturnsSuccessWithoutSyncing" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.345"/>
+  <testcase name="testDoWorkWhenSyncThrowsReturnsRetry" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.333"/>
+  <testcase name="testScheduleWhenAutomatedSyncDisabledCancelsWork" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.164"/>
+  <testcase name="testDoWorkWhenConnectedSyncsSegmentsAndUpdatesTimestamp" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.24"/>
+  <testcase name="testScheduleWhenWorkManagerThrowsLogsErrorGracefully" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.155"/>
+  <testcase name="testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSyncing" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.163"/>
+  <testcase name="testDoWorkWhenStravaDisconnectedPrunesTTLAndReturnsSuccessWithoutSyncing" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.19"/>
+  <testcase name="testScheduleWhenWorkManagerUnavailableReturnsSafely" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.202"/>
+  <testcase name="testScheduleRespectsCustomIntervalDays" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.19"/>
+  <testcase name="testScheduleWhenConnectedEnqueuesPeriodicWorkWith1DayInterval" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.13"/>
+  <testcase name="testScheduleWhenStravaDisconnectedCancelsWork" classname="com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorkerTest" time="1.194"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

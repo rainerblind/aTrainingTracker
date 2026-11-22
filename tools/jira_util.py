@@ -4429,10 +4429,10 @@ def get_next_review_subsystem(matrix_path=None, repo_root=None):
     return (oldest["domain"], oldest["target_path"], oldest["status"])
 
 
-def is_weekly_review_overdue(reviews_dir=None, days_threshold=7, repo_root=None):
+def is_weekly_review_overdue(reviews_dir=None, days_threshold=6, repo_root=None):
     """
-    REQ-PRO-095.3 / REQ-PRO-095.4 / ATT-8426:
-    Returns True if more than days_threshold days have elapsed since the latest
+    REQ-PRO-095.3 / REQ-PRO-095.4 / ATT-8426 / ATT-9567:
+    Returns True if days_threshold (default 6) or more days have elapsed since the latest
     completed review in docs/engineering/code_reviews/ or if no completed review exists.
     Decoupled from UNREVIEWED status to prevent 9-week release preparation deadlock.
     """
@@ -4471,10 +4471,15 @@ def is_weekly_review_overdue(reviews_dir=None, days_threshold=7, repo_root=None)
 
 def ensure_weekly_review_ticket(role="coordinator", force=False):
     """
-    REQ-PRO-095.3:
+    REQ-PRO-095.3 / ATT-9567:
     Ensures one open Weekly Dual-Vendor (Gemini + Claude) Code Review ticket exists
-    under Epic ATT-232, ranked at rank-top, pre-populated with the next target subsystem.
+    under Epic ATT-232 when overdue (>= 6 days), ranked at rank-top, pre-populated
+    with the next target subsystem. Evaluates local overdue status before querying Jira.
     """
+    if not force and not is_weekly_review_overdue():
+        print("Weekly Dual-Vendor Code Review is not overdue (< 6 days).")
+        return None
+
     config = get_config()
     jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Weekly Dual-Vendor" OR summary ~ "Dual-Vendor Code Review") ORDER BY created DESC'
     existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
@@ -4484,10 +4489,6 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
             status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
             print(f"Weekly Dual-Vendor Code Review ticket already open: {issue['key']} — {summary} [{status}]")
             return issue["key"]
-
-    if not force and not is_weekly_review_overdue():
-        print("Weekly Dual-Vendor Code Review is not overdue (< 7 days).")
-        return None
 
     target_domain, target_path, _ = get_next_review_subsystem()
     iso_year, iso_week, _ = datetime.now().isocalendar()
@@ -4527,10 +4528,10 @@ def ensure_weekly_review_ticket(role="coordinator", force=False):
     return new_key
 
 
-def is_weekly_aspice_audit_overdue(audits_dir=None, days_threshold=7, repo_root=None):
+def is_weekly_aspice_audit_overdue(audits_dir=None, days_threshold=6, repo_root=None):
     """
-    REQ-PRO-096.3 / REQ-PRO-096.4:
-    Returns True if more than days_threshold days have elapsed since the latest
+    REQ-PRO-096.3 / REQ-PRO-096.4 / ATT-9567:
+    Returns True if days_threshold (default 6) or more days have elapsed since the latest
     completed audit in docs/engineering/aspice_audits/ or if no completed audit exists.
     """
     if repo_root is None:
@@ -4568,10 +4569,15 @@ def is_weekly_aspice_audit_overdue(audits_dir=None, days_threshold=7, repo_root=
 
 def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
     """
-    REQ-PRO-096.3:
+    REQ-PRO-096.3 / ATT-9567:
     Ensures one open Weekly Dual-Vendor (Gemini + Claude) ASPICE 4.0 Audit ticket exists
-    under Epic ATT-232, ranked at rank-top.
+    under Epic ATT-232 when overdue (>= 6 days), ranked at rank-top. Evaluates local overdue
+    status before querying Jira.
     """
+    if not force and not is_weekly_aspice_audit_overdue():
+        print("Weekly Dual-Vendor ASPICE Audit is not overdue (< 6 days).")
+        return None
+
     config = get_config()
     jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Weekly Dual-Vendor" OR summary ~ "ASPICE 4.0 Audit") ORDER BY created DESC'
     existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
@@ -4581,10 +4587,6 @@ def ensure_weekly_aspice_audit_ticket(role="coordinator", force=False):
             status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
             print(f"Weekly Dual-Vendor ASPICE Audit ticket already open: {issue['key']} — {summary} [{status}]")
             return issue["key"]
-
-    if not force and not is_weekly_aspice_audit_overdue():
-        print("Weekly Dual-Vendor ASPICE Audit is not overdue (< 7 days).")
-        return None
 
     iso_year, iso_week, _ = datetime.now().isocalendar()
     week_label = f"{iso_year}-KW{iso_week:02d}"
@@ -4636,14 +4638,15 @@ def _has_new_develop_commits_since(since_dt, repo_root):
 
 def is_weekly_emulator_sweep_overdue(
     sweeps_dir=None,
-    days_threshold=7,
+    days_threshold=6,
     repo_root=None,
     has_new_commits_fn=None,
 ):
     """
-    REQ-PRO-135.4:
-    Returns True if no sweep report exists in docs/engineering/emulator_sweeps/ or more than
-    days_threshold days have elapsed since the latest sweep report and new develop commits landed.
+    REQ-PRO-135.4 / ATT-9567:
+    Returns True if no sweep report exists in docs/engineering/emulator_sweeps/ or
+    days_threshold (default 6) or more days have elapsed since the latest sweep report
+    and new develop commits landed.
     """
     if repo_root is None:
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -4684,10 +4687,15 @@ def is_weekly_emulator_sweep_overdue(
 
 def ensure_weekly_emulator_sweep_ticket(role="coordinator", force=False):
     """
-    REQ-PRO-135.4 (ATT-8222):
+    REQ-PRO-135.4 / ATT-8222 / ATT-9567:
     Ensures one open Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ticket exists
-    under Epic ATT-232 when overdue (> 7 days with develop commits), ranked at rank-top.
+    under Epic ATT-232 when overdue (>= 6 days with develop commits), ranked at rank-top.
+    Evaluates local overdue status before querying Jira.
     """
+    if not force and not is_weekly_emulator_sweep_overdue():
+        print("Weekly Multi-OS & 9-Language Emulator Sweep is not overdue (< 6 days or no new develop commits).")
+        return None
+
     config = get_config()
     jql = 'project = ATT AND parent = ATT-232 AND status != "Erledigt" AND (summary ~ "Multi-OS & 9-Language" OR summary ~ "Emulator UI Verification Sweep") ORDER BY created DESC'
     existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
@@ -4698,10 +4706,6 @@ def ensure_weekly_emulator_sweep_ticket(role="coordinator", force=False):
             status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
             print(f"Weekly Multi-OS & 9-Language Emulator Sweep ticket already open: {issue['key']} — {summary} [{status}]")
             return issue["key"]
-
-    if not force and not is_weekly_emulator_sweep_overdue():
-        print("Weekly Multi-OS & 9-Language Emulator Sweep is not overdue (< 7 days or no new develop commits).")
-        return None
 
     iso_year, iso_week, _ = datetime.now().isocalendar()
     week_label = f"{iso_year}-KW{iso_week:02d}"
@@ -4731,21 +4735,187 @@ def ensure_weekly_emulator_sweep_ticket(role="coordinator", force=False):
     return new_key
 
 
+def _parse_weekly_test_evidence_timestamp(file_path):
+    """
+    Extract a naive local datetime from a weekly test evidence file
+    (docs/engineering/test_evidence/weekly_*.md or .json):
+      1. Leading YYYY-MM-DD in filename (e.g., weekly_2026-11-21.md)
+      2. Embedded JSON "timestamp" field or Markdown "**Timestamp**: `...`" line
+      3. Filesystem mtime fallback
+    """
+    fname = os.path.basename(file_path)
+    m_fname = re.match(r"^weekly_(\d{4}-\d{2}-\d{2})(?:\b|_|\.)", fname)
+    if m_fname:
+        try:
+            return datetime.strptime(m_fname.group(1), "%Y-%m-%d")
+        except Exception:
+            pass
+
+    def _normalize_iso(raw_ts):
+        dt = datetime.fromisoformat(raw_ts.strip().replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone().replace(tzinfo=None)
+        return dt
+
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
+            if fname.endswith(".json"):
+                data = json.load(fh)
+                raw_ts = data.get("timestamp") if isinstance(data, dict) else None
+                if isinstance(raw_ts, str) and raw_ts.strip():
+                    return _normalize_iso(raw_ts)
+            else:
+                head = fh.read(4096)
+                m_ts = re.search(
+                    r"(?:\*\*Timestamp\*\*\s*:\s*`?|\"timestamp\"\s*:\s*\")(\d{4}-\d{2}-\d{2}T[0-9:.+\-Z]+)",
+                    head,
+                )
+                if m_ts:
+                    return _normalize_iso(m_ts.group(1))
+                m_date = re.search(
+                    r"\*\*Timestamp\*\*\s*:\s*`?(\d{4}-\d{2}-\d{2})\b",
+                    head,
+                )
+                if m_date:
+                    return datetime.strptime(m_date.group(1), "%Y-%m-%d")
+    except Exception:
+        pass
+
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(file_path))
+    except Exception:
+        return None
+
+
+def is_weekly_full_test_suite_overdue(
+    evidence_dir=None,
+    days_threshold=6,
+    repo_root=None,
+    has_new_commits_fn=None,
+):
+    """
+    REQ-PRO-136.1 / ATT-9567:
+    Returns True if no weekly full test suite evidence exists in docs/engineering/test_evidence/
+    (weekly_*.md / weekly_*.json) or days_threshold (default 6) or more days have elapsed since
+    the latest weekly evidence timestamp and new develop commits landed.
+    """
+    if repo_root is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if evidence_dir is None:
+        evidence_dir = os.path.join(repo_root, "docs", "engineering", "test_evidence")
+
+    if not os.path.isdir(evidence_dir):
+        return True
+
+    evidence_files = [
+        f for f in os.listdir(evidence_dir)
+        if f.startswith("weekly_") and (f.endswith(".md") or f.endswith(".json")) and not f.startswith("template_")
+    ]
+    if not evidence_files:
+        return True
+
+    latest_date = None
+    for f in evidence_files:
+        dt = _parse_weekly_test_evidence_timestamp(os.path.join(evidence_dir, f))
+        if dt is not None and (latest_date is None or dt > latest_date):
+            latest_date = dt
+
+    if latest_date is None:
+        return True
+
+    elapsed = (datetime.now() - latest_date).days
+    if elapsed < days_threshold:
+        return False
+
+    commits_checker = has_new_commits_fn or _has_new_develop_commits_since
+    return bool(commits_checker(latest_date, repo_root))
+
+
+def ensure_weekly_full_test_suite_ticket(role="coordinator", force=False):
+    """
+    REQ-PRO-136.2 / ATT-9567:
+    Ensures one open Weekly Full Test Suite, Static Analysis & Finding Remediation ticket
+    exists under Epic ATT-232 when overdue (>= 6 days with develop commits), ranked at
+    rank-top. Evaluates local overdue status before querying Jira.
+    """
+    if not force and not is_weekly_full_test_suite_overdue():
+        print("Weekly Full Test Suite is not overdue (< 6 days or no new develop commits).")
+        return None
+
+    config = get_config()
+    jql = (
+        'project = ATT AND parent = ATT-232 AND status != "Erledigt" '
+        'AND (labels = "weekly-test-suite" OR summary ~ "Weekly Full Test Suite") '
+        'ORDER BY created DESC'
+    )
+    existing = paged_jql_search(jql, ["summary", "status", "labels"], role=role, config=config)
+    for issue in existing:
+        fields = issue.get("fields", {}) or {}
+        summary = fields.get("summary", "")
+        labels = [str(lbl).lower() for lbl in (fields.get("labels") or [])]
+        if "weekly-test-suite" in labels or (
+            "weekly" in summary.lower() and "full test suite" in summary.lower()
+        ):
+            status = fields.get("status", {}).get("name", "Unknown")
+            print(f"Weekly Full Test Suite ticket already open: {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    iso_year, iso_week, _ = datetime.now().isocalendar()
+    week_label = f"{iso_year}-KW{iso_week:02d}"
+    evidence_target = f"weekly_{iso_year}_KW{iso_week:02d}"
+    summary = f"Weekly Full Test Suite, Static Analysis & Finding Remediation ({week_label})"
+    desc = (
+        f"h2. Weekly Full Test Suite Execution & Finding Remediation ({week_label})\n"
+        f"*Cadence*: Weekly full-suite verification per ASPICE Governance Rule 7.5 & Rule 3.5 (REQ-PRO-136 / ATT-9567).\n\n"
+        "h3. Scope & Execution Steps\n"
+        "1. *Full Android Unit Test Suite*: Run `./gradlew :app:testDebugUnitTest --rerun --max-workers=2` on current `develop` (do NOT use `--rerun-tasks`).\n"
+        "2. *Static Analysis & Hygiene*: Run `./gradlew :app:lintDebug :app:detekt --max-workers=2` and check against configured baselines (`python3 tools/check_static_analysis_baselines.py`).\n"
+        "3. *Coverage Snapshot (Scenario-Gap Diagnostic)*: Run `./gradlew :app:koverXmlReportDebug --max-workers=2` (use strictly to identify untested real-world edge cases; never add trivial coverage-padding tests).\n"
+        "4. *Governance, Tooling & Safety Checks*: Run `python3 tools/verify_requirement_governance.py`, Python tool test suite (`python3 -m unittest discover -s tools -p 'test_*.py'`), and safety linters (`lint_cursor_safety.py`, `lint_lifecycle_safety.py`, `lint_safe_enum.py`, `check_secrets_hygiene.py`).\n"
+        f"5. *Archive Evidence (Before Any Targeted Re-Runs)*: Preserve/archive the full unmodified test & Kover evidence snapshot (`python3 tools/generate_test_evidence.py --target {evidence_target}`) *before* any targeted re-runs overwrite `app/build/test-results/testDebugUnitTest/`.\n"
+        "6. *Fix & Triage Findings*:\n"
+        "   - Fix small, localized regressions, failing tests, or new lint/detekt findings directly in this ticket (with clean root-cause verification — no silent test weakening or ignored flakes).\n"
+        "   - File separate structured Jira Bug tickets (under the appropriate domain Epic) for any large/out-of-scope defects or systemic flaky tests that should not block closing this weekly verification.\n"
+        "7. *Rollup*: Post a concise summary of results, fixes, and filed follow-up bugs to the rolling `Wochen Review & Retro` ticket.\n\n"
+        "h3. Acceptance Criteria\n"
+        "* Full `:app:testDebugUnitTest`, `:app:lintDebug`, `:app:detekt`, `:app:koverXmlReportDebug`, `verify_requirement_governance.py`, and `tools/test_*.py` executed cleanly on `develop`.\n"
+        f"* Authentic full-suite + Kover test evidence archived under `docs/engineering/test_evidence/{evidence_target}.md` & `.json` without truncation from targeted re-runs.\n"
+        "* All discovered test failures, flaky tests, and new static-analysis findings are either fixed and verified or tracked as separate prioritized Jira Bug tickets, with summary posted to `Wochen Review & Retro`.\n"
+    )
+    new_key = create_issue(
+        summary=summary,
+        description=desc,
+        issuetype_id="Verbesserung",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        priority="High",
+        labels=["process", "verification", "weekly-test-suite", "weekly-review", "tier-c"],
+        rank_top=True,
+        points=3.0,
+    )
+    print(f"Created Weekly Full Test Suite ticket {new_key} ({week_label}) ranked at top of backlog.")
+    return new_key
+
+
 def ensure_weekly_reviews(role="coordinator", force=False):
     """
-    REQ-PRO-095.3 / REQ-PRO-096.3 / REQ-PRO-135.4:
-    Coordinates all weekly governance & verification pillars:
+    REQ-PRO-095.3 / REQ-PRO-096.3 / REQ-PRO-135.4 / REQ-PRO-136.2:
+    Coordinates all 4 weekly governance & verification pillars:
     1. Weekly Dual-Vendor Code Review ticket (ATT-8213)
     2. Weekly Dual-Vendor ASPICE 4.0 Audit ticket (ATT-8212)
     3. Weekly Multi-OS & 9-Language Emulator UI Verification Sweep ticket (ATT-8222)
+    4. Weekly Full Test Suite, Static Analysis & Finding Remediation ticket (ATT-9567)
     """
     code_review_key = ensure_weekly_review_ticket(role=role, force=force)
     aspice_audit_key = ensure_weekly_aspice_audit_ticket(role=role, force=force)
     emulator_sweep_key = ensure_weekly_emulator_sweep_ticket(role=role, force=force)
+    full_test_suite_key = ensure_weekly_full_test_suite_ticket(role=role, force=force)
     return {
         "code_review": code_review_key,
         "aspice_audit": aspice_audit_key,
         "emulator_sweep": emulator_sweep_key,
+        "full_test_suite": full_test_suite_key,
     }
 
 
@@ -6341,7 +6511,7 @@ USAGE_TEXT = (
     "  ensure-weekly-retro                                   Check/create rolling 'Wochen Review & Retro' ticket under ATT-232\n"
     "  post-weekly-rollup [--sprint <ID|NAME>] [--retro-file <FILE>] [--note <TEXT>]\n"
     "                                                        Idempotently post Schicht Retro insights, proposals & QA findings to rolling Wochen Review & Retro\n"
-    "  ensure-weekly-reviews [--force]                       Check/create mandatory Weekly Dual-Vendor Code Review ticket\n"
+    "  ensure-weekly-reviews [--force]                       Check/create mandatory 4-pillar Weekly Review, Audit, Emulator Sweep & Full Test Suite tickets\n"
     "  add-label KEY LABEL[,LABEL2]                          Append label(s) to an issue idempotently\n"
     "  link-issue FROM_KEY TO_KEY [LINK_TYPE]                Create Jira issueLink (default: Relates; NEVER link unrelated Beifang)\n"
     "  pack-sprint TARGET_SPRINT_ID [--lanes N] [--max-sp-per-lane SP]\n"

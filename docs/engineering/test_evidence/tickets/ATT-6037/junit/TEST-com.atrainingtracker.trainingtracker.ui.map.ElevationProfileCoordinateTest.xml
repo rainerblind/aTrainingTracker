@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileCoordinateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:30.280Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testCanvasXToDistance_withNonZeroStartDist" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileCoordinateTest" time="0.0"/>
+  <testcase name="testDistanceToCanvasX_withNonZeroStartDist" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileCoordinateTest" time="0.0"/>
+  <testcase name="testCanvasXToDistance_clampingInvariants" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileCoordinateTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

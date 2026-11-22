@@ -18,7 +18,6 @@ package com.atrainingtracker.trainingtracker.ui.map
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
@@ -145,9 +144,13 @@ interface MapContentScope {
 
     /**
      * Internal implementation of the rendering loop. Called by [ATrainingTrackerMap].
+     *
+     * @param contentRevision Monotonic revision returned by [MapContentScopeImpl.collect] so
+     *   Compose Strong Skipping always recomposes layer updates even at constant [currentZoom]
+     *   and constant scope instance identity (`REQ-UI-2793`).
      */
     @Composable
-    fun Render(currentZoom: Float)
+    fun Render(currentZoom: Float, contentRevision: Long = 0L)
 }
 
 /**
@@ -213,11 +216,11 @@ internal class MapContentScopeImpl(
 
     private data class PathData(val path: MappablePath, val alpha: Float, val onClick: (Long) -> Unit)
     
-    // Internal containers with rich metadata
-    private val trackData = mutableStateListOf<PathData>()
-    private val segmentData = mutableStateListOf<PathData>()
-    private val routeData = mutableStateListOf<PathData>()
-    private val clusterData = mutableStateListOf<PathData>()
+    // Internal containers with rich metadata (plain MutableList per Rule 66: mutated synchronously in collect() during composition)
+    private val trackData = mutableListOf<PathData>()
+    private val segmentData = mutableListOf<PathData>()
+    private val routeData = mutableListOf<PathData>()
+    private val clusterData = mutableListOf<PathData>()
 
     // Exposed for Bounds Controller
     val tracks: List<MapTrack> get() = trackData.map { it.path as MapTrack }
@@ -225,8 +228,8 @@ internal class MapContentScopeImpl(
     val routes: List<MapRoute> get() = routeData.map { it.path as MapRoute }
     val clusters: List<MapCluster> get() = clusterData.map { it.path as MapCluster }
     
-    val markers = mutableStateListOf<LocationMarker>()
-    val currentTracks = mutableStateListOf<List<LatLng>>()
+    val markers = mutableListOf<LocationMarker>()
+    val currentTracks = mutableListOf<List<LatLng>>()
 
     internal data class HeatmapData(
         val allPaths: List<List<LatLng>>, 
@@ -240,16 +243,16 @@ internal class MapContentScopeImpl(
         val normalizeCorridors: Boolean = false,
         val useClassicStepIntensity: Boolean = false
     )
-    internal val heatmaps = mutableStateListOf<HeatmapData>()
+    internal val heatmaps = mutableListOf<HeatmapData>()
 
     private data class ContextualPathData(val path: MappablePath, val alpha: Float)
-    private val contextualPaths = mutableStateListOf<ContextualPathData>()
+    private val contextualPaths = mutableListOf<ContextualPathData>()
 
     private data class LocationData(val location: KnownLocationItem, val onClick: (Long) -> Unit)
-    private val locationData = mutableStateListOf<LocationData>()
+    private val locationData = mutableListOf<LocationData>()
 
     private data class LapHighlightData(val path: List<LatLng>, val color: Color?)
-    private val lapHighlights = mutableStateListOf<LapHighlightData>()
+    private val lapHighlights = mutableListOf<LapHighlightData>()
 
     internal data class ClimbHighlightData(
         val path: List<LatLng>,
@@ -259,9 +262,14 @@ internal class MapContentScopeImpl(
         val climbId: Long? = null,
         val onClick: ((Long) -> Unit)? = null
     )
-    internal val climbHighlights = mutableStateListOf<ClimbHighlightData>()
+    internal val climbHighlights = mutableListOf<ClimbHighlightData>()
 
-    fun collect(block: MapContentScope.() -> Unit) {
+    private var contentRevision: Long = 0L
+
+    @VisibleForTesting
+    internal var onRenderPass: ((Long) -> Unit)? = null
+
+    fun collect(block: MapContentScope.() -> Unit): Long {
         trackData.clear()
         segmentData.clear()
         routeData.clear()
@@ -274,10 +282,16 @@ internal class MapContentScopeImpl(
         lapHighlights.clear()
         climbHighlights.clear()
         this.apply(block)
+        contentRevision += 1L
+        return contentRevision
     }
 
     @Composable
-    override fun Render(currentZoom: Float) {
+    override fun Render(currentZoom: Float, contentRevision: Long) {
+        // Explicit read of primitive contentRevision guarantees Compose Strong Skipping includes it
+        // in $dirty so layer toggles & live track updates render immediately at constant zoom.
+        if (contentRevision < 0L) return
+        onRenderPass?.invoke(contentRevision)
         val steppedZoom = remember(currentZoom) { currentZoom.toInt().toFloat() }
 
         // ATT-500 Refinement: Calibrated zoom-dependent weights and intervals.

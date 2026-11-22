@@ -23,6 +23,7 @@ import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRetrySyncCoordinator
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
@@ -123,6 +124,7 @@ class EditWorkoutViewModelTest {
 
     @After
     fun tearDown() {
+        PolarRetrySyncCoordinator.resetForTesting()
         WorkoutRepository.resetForTesting(null)
         EquipmentRepository.resetForTesting(null)
         SportTypesRepository.resetForTesting(null)
@@ -669,5 +671,86 @@ class EditWorkoutViewModelTest {
         assertEquals("River Loop", merged.clusterName)
         assertEquals(7, merged.rpe)
         assertEquals("Windy loop", merged.description)
+    }
+
+    @Test
+    fun testDismissPolarSyncPending_clearsStatePersistsAndSurvivesStaleRefresh_tstSet129_2() {
+        // REQ-SET-127.2 / TST-SET-129.2 (ATT-9174)
+        val workoutsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<WorkoutData>>(emptyList())
+        every { mockWorkoutRepository.allWorkouts } returns workoutsFlow
+
+        val initial = createTestWorkout().copy(
+            id = 2417L,
+            polarSyncPending = true,
+            polarExerciseId = "verity:/U/0/HR.BPB",
+            polarDeviceId = "24825632"
+        )
+        val viewModel = createViewModel(initial)
+        assertTrue(viewModel.workoutData.value?.polarSyncPending == true)
+
+        viewModel.dismissPolarSyncPending()
+
+        assertFalse("polarSyncPending must clear immediately on dismiss", viewModel.workoutData.value?.polarSyncPending == true)
+        verify(exactly = 1) { mockWorkoutRepository.dismissPolarSyncPending(2417L) }
+
+        // Stale allWorkouts emission before DB update commits must not re-open dismissed banner
+        workoutsFlow.value = listOf(initial.copy(polarSyncPending = true, totalDistance = 10150.0))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val merged = viewModel.workoutData.value!!
+        assertFalse("Dismissed polarSyncPending must stay false across stale refresh", merged.polarSyncPending)
+        assertEquals(10150.0, merged.totalDistance, 0.001)
+    }
+
+    @Test
+    fun testPolarRetrySyncCompletion_refreshesMatchingWorkoutAndPreservesUserEdits_tstSet129_3() {
+        // REQ-SET-127.3 / TST-SET-129.3 (ATT-9174)
+        PolarRetrySyncCoordinator.resetForTesting()
+        PolarRetrySyncCoordinator.dispatcher = Dispatchers.Unconfined
+        PolarRetrySyncCoordinator.syncExecutorOverride = { _, _, _ -> true }
+
+        val workoutsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<WorkoutData>>(emptyList())
+        every { mockWorkoutRepository.allWorkouts } returns workoutsFlow
+
+        val initial = createTestWorkout().copy(
+            id = 2417L,
+            workoutName = "Auto Run",
+            polarSyncPending = true,
+            polarExerciseId = "verity:/U/0/HR.BPB",
+            polarDeviceId = "24825632",
+            totalDistance = 5000.0
+        )
+        val viewModel = createViewModel(initial)
+        viewModel.updateWorkoutName("Edited Morning Run")
+        viewModel.updateDescription("Felt strong")
+
+        // Unrelated workout completion must NOT refresh workout 2417
+        PolarRetrySyncCoordinator.startSync(mockApplication, 9999L, "verity:", "failed")
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 0) { mockWorkoutRepository.refreshWorkout(2417L) }
+
+        // Matching workout completion triggers refreshWorkout(2417L)
+        PolarRetrySyncCoordinator.startSync(mockApplication, 2417L, "verity:/U/0/HR.BPB", "failed")
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 1) { mockWorkoutRepository.refreshWorkout(2417L) }
+
+        // Repository emits refreshed workout with polarSyncPending=false and updated telemetry
+        workoutsFlow.value = listOf(
+            initial.copy(
+                workoutName = "Auto Run",
+                description = "",
+                polarSyncPending = false,
+                totalDistance = 5320.0,
+                ascentMeters = 88L
+            )
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val merged = viewModel.workoutData.value!!
+        assertFalse(merged.polarSyncPending)
+        assertEquals(5320.0, merged.totalDistance, 0.001)
+        assertEquals(88L, merged.ascentMeters)
+        assertEquals("Edited Morning Run", merged.workoutName)
+        assertEquals("Felt strong", merged.description)
     }
 }

@@ -51,6 +51,8 @@ object PolarOfflineCapabilityStore {
     private const val KEY_MODEL_PREFIX = "model_num_"
     private const val KEY_POLAR_ID_PREFIX = "polar_id_"
     private const val KEY_TYPE_PREFIX = "polar_type_"
+    private const val KEY_LEGACY_TYPE_PREFIX = "legacy_polar_type_"
+    private const val KEY_SUPPRESS_NAME_PREFIX = "suppress_name_heur_"
     private val CANONICAL_POLAR_ID_REGEX = Regex("^[0-9A-Fa-f]{8}$")
     private val H10_TOKEN_REGEX = Regex("""\bh10\b""")
     private val OH1_TOKEN_REGEX = Regex("""\boh1\b""")
@@ -61,6 +63,8 @@ object PolarOfflineCapabilityStore {
     private val modelNumberCache = ConcurrentHashMap<String, String>()
     private val polarIdCache = ConcurrentHashMap<String, String>()
     private val deviceTypeCache = ConcurrentHashMap<String, PolarDeviceType>()
+    private val legacyTypeCache = ConcurrentHashMap<String, PolarDeviceType>()
+    private val suppressNameCache = ConcurrentHashMap<String, Boolean>()
 
     /**
      * Legacy marker indicating [macAddress] confirmed Polar optical offline recording (`ATT-7923`).
@@ -83,6 +87,10 @@ object PolarOfflineCapabilityStore {
 
     /**
      * Records observed Polar GATT service UUID presence (`PMD` / `PFTP`) independently of `offline_rec_`.
+     *
+     * Recording positive Polar services (`hasPmdService || hasPftpService`) clears any legacy name
+     * suppression flag and re-evaluates previously stored DIS `0x2A24` model strings (such as exact
+     * `"Sense"`) with Polar service confirmation (`REQ-CON-049.1`, `.2`).
      */
     @JvmStatic
     fun recordGattServiceCapabilities(
@@ -94,10 +102,24 @@ object PolarOfflineCapabilityStore {
         val normalized = normalizeMac(macAddress) ?: return
         pmdCache[normalized] = hasPmdService
         pftpCache[normalized] = hasPftpService
-        getPrefs(context)?.edit()
+        val editor = getPrefs(context)?.edit()
             ?.putBoolean(KEY_PMD_PREFIX + normalized, hasPmdService)
             ?.putBoolean(KEY_PFTP_PREFIX + normalized, hasPftpService)
-            ?.apply()
+        if (hasPmdService || hasPftpService) {
+            suppressNameCache[normalized] = false
+            editor?.remove(KEY_SUPPRESS_NAME_PREFIX + normalized)
+            if (deviceTypeCache[normalized] == null &&
+                getPrefs(context)?.getString(KEY_TYPE_PREFIX + normalized, null).isNullOrBlank()
+            ) {
+                val existingModel = getModelNumber(context, normalized)
+                val derived = classifyModelNumber(existingModel, hasPolarServices = true)
+                if (derived != PolarDeviceType.UNKNOWN) {
+                    deviceTypeCache[normalized] = derived
+                    editor?.putString(KEY_TYPE_PREFIX + normalized, derived.name)
+                }
+            }
+        }
+        editor?.apply()
     }
 
     /**
@@ -160,6 +182,8 @@ object PolarOfflineCapabilityStore {
      * for [macAddress] and derives [PolarDeviceType] when [modelNumber] identifies H10 or Verity Sense/OH1.
      *
      * Non-8-hex DIS serial strings are rejected and never overwrite an already-confirmed canonical 8-hex ID.
+     * When [confirmedPolarService] is `true` or Polar PMD/PFTP GATT capability is already recorded for
+     * [macAddress], exact `"Sense"` DIS model strings classify as [PolarDeviceType.VERITY_SENSE] (`REQ-CON-049.2`).
      */
     @JvmStatic
     @JvmOverloads
@@ -167,7 +191,8 @@ object PolarOfflineCapabilityStore {
         context: Context?,
         macAddress: String?,
         modelNumber: String? = null,
-        serialNumber: String? = null
+        serialNumber: String? = null,
+        confirmedPolarService: Boolean = false
     ) {
         val normalized = normalizeMac(macAddress) ?: return
         val trimmedModel = modelNumber?.trim()?.takeIf { it.isNotEmpty() }
@@ -175,14 +200,17 @@ object PolarOfflineCapabilityStore {
             ?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
         if (trimmedModel == null && canonicalSerial == null) return
 
+        val hasPolarServices = confirmedPolarService || hasPolarServiceCapability(context, normalized)
         val editor = getPrefs(context)?.edit()
         if (trimmedModel != null) {
             modelNumberCache[normalized] = trimmedModel
             editor?.putString(KEY_MODEL_PREFIX + normalized, trimmedModel)
-            val derived = classifyModelNumber(trimmedModel)
+            val derived = classifyModelNumber(trimmedModel, hasPolarServices = hasPolarServices)
             if (derived != PolarDeviceType.UNKNOWN) {
                 deviceTypeCache[normalized] = derived
                 editor?.putString(KEY_TYPE_PREFIX + normalized, derived.name)
+                suppressNameCache[normalized] = false
+                editor?.remove(KEY_SUPPRESS_NAME_PREFIX + normalized)
             }
         }
         if (canonicalSerial != null) {
@@ -210,6 +238,8 @@ object PolarOfflineCapabilityStore {
         if (deviceType != PolarDeviceType.UNKNOWN) {
             deviceTypeCache[normalized] = deviceType
             editor?.putString(KEY_TYPE_PREFIX + normalized, deviceType.name)
+            suppressNameCache[normalized] = false
+            editor?.remove(KEY_SUPPRESS_NAME_PREFIX + normalized)
             if (deviceType == PolarDeviceType.VERITY_SENSE) {
                 memoryCache[normalized] = true
                 editor?.putBoolean(KEY_PREFIX + normalized, true)
@@ -223,6 +253,87 @@ object PolarOfflineCapabilityStore {
             PolarOfflineGattCoordinator.registerDeviceAliases(normalizedPolarId, normalized)
         }
         editor?.apply()
+    }
+
+    /**
+     * Seeds a hardware-overridable legacy [PolarDeviceType] (and optional canonical 8-hex [polarDeviceId])
+     * for pre-`ATT-8717` paired Polar BLE HRMs lacking GATT/DIS metadata so renaming them prior to
+     * first reconnect preserves Polar capabilities (`REQ-CON-049.3`).
+     *
+     * Never overwrites hardware-confirmed types, confirmed non-Polar GATT records, or suppressed entries.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun seedLegacyDeviceTypeIfUnknown(
+        context: Context?,
+        macAddress: String?,
+        deviceType: PolarDeviceType,
+        polarDeviceId: String? = null
+    ) {
+        if (deviceType == PolarDeviceType.UNKNOWN) return
+        val normalized = normalizeMac(macAddress) ?: return
+        if (isConfirmedNonPolarGatt(context, normalized) ||
+            hasHardwareDeviceType(context, normalized) ||
+            isLegacyNameHeuristicSuppressed(context, normalized)
+        ) {
+            return
+        }
+        val editor = getPrefs(context)?.edit()
+        if (readLegacyDeviceType(context, normalized) == PolarDeviceType.UNKNOWN) {
+            legacyTypeCache[normalized] = deviceType
+            editor?.putString(KEY_LEGACY_TYPE_PREFIX + normalized, deviceType.name)
+        }
+        val normalizedPolarId = polarDeviceId?.trim()?.uppercase(Locale.ROOT)
+            ?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
+        if (normalizedPolarId != null && getPolarDeviceId(context, normalized) == null) {
+            polarIdCache[normalized] = normalizedPolarId
+            editor?.putString(KEY_POLAR_ID_PREFIX + normalized, normalizedPolarId)
+            PolarOfflineGattCoordinator.registerDeviceAliases(normalizedPolarId, normalized)
+        }
+        editor?.apply()
+    }
+
+    /**
+     * Records a hardware-overridable suppression flag preventing legacy name heuristics from matching
+     * [macAddress] after an un-reconnected non-Polar BLE HRM is renamed (`REQ-CON-049.3`, `.4`).
+     *
+     * Automatically cleared if real BLE GATT/DIS/SDK discovery subsequently confirms Polar capabilities.
+     */
+    @JvmStatic
+    fun suppressLegacyNameHeuristicIfUnknown(context: Context?, macAddress: String?) {
+        val normalized = normalizeMac(macAddress) ?: return
+        if (hasHardwareDeviceType(context, normalized) ||
+            hasPolarServiceCapability(context, normalized) ||
+            hasOfflineRecordingCapability(context, normalized)
+        ) {
+            return
+        }
+        legacyTypeCache.remove(normalized)
+        suppressNameCache[normalized] = true
+        getPrefs(context)?.edit()
+            ?.remove(KEY_LEGACY_TYPE_PREFIX + normalized)
+            ?.putBoolean(KEY_SUPPRESS_NAME_PREFIX + normalized, true)
+            ?.apply()
+    }
+
+    /**
+     * Returns true when legacy display-name heuristic fallback is suppressed for [macAddress].
+     */
+    @JvmStatic
+    fun isLegacyNameHeuristicSuppressed(context: Context?, macAddress: String?): Boolean {
+        val normalized = normalizeMac(macAddress) ?: return false
+        suppressNameCache[normalized]?.let { return it }
+        return readStoredBoolean(context, KEY_SUPPRESS_NAME_PREFIX, normalized, suppressNameCache)
+    }
+
+    /**
+     * Returns true when [macAddress] has a hardware-confirmed (DIS `0x2A24` or Polar SDK) [PolarDeviceType].
+     */
+    @JvmStatic
+    fun hasHardwareDeviceType(context: Context?, macAddress: String?): Boolean {
+        val normalized = normalizeMac(macAddress) ?: return false
+        if (isConfirmedNonPolarGatt(context, normalized)) return false
+        return getHardwareDeviceType(context, normalized) != PolarDeviceType.UNKNOWN
     }
 
     /**
@@ -257,8 +368,9 @@ object PolarOfflineCapabilityStore {
     }
 
     /**
-     * Returns the hardware-confirmed [PolarDeviceType] for [macAddress], deriving from persisted
-     * `0x2A24` model number when explicit type has not yet been written, or [PolarDeviceType.UNKNOWN].
+     * Returns the persisted [PolarDeviceType] for [macAddress] following strict precedence:
+     * confirmed non-Polar GATT -> hardware DIS/SDK type -> backfilled legacy type (unless suppressed)
+     * -> [PolarDeviceType.UNKNOWN] (`REQ-CON-049.2`, `.3`, `.4`).
      */
     @JvmStatic
     fun getDeviceType(context: Context?, macAddress: String?): PolarDeviceType {
@@ -266,6 +378,17 @@ object PolarOfflineCapabilityStore {
         if (isConfirmedNonPolarGatt(context, normalized)) {
             return PolarDeviceType.UNKNOWN
         }
+        val hardware = getHardwareDeviceType(context, normalized)
+        if (hardware != PolarDeviceType.UNKNOWN) {
+            return hardware
+        }
+        if (isLegacyNameHeuristicSuppressed(context, normalized)) {
+            return PolarDeviceType.UNKNOWN
+        }
+        return readLegacyDeviceType(context, normalized)
+    }
+
+    private fun getHardwareDeviceType(context: Context?, normalized: String): PolarDeviceType {
         deviceTypeCache[normalized]?.let { return it }
         val storedTypeName = getPrefs(context)?.getString(KEY_TYPE_PREFIX + normalized, null)
         if (!storedTypeName.isNullOrBlank()) {
@@ -281,10 +404,27 @@ object PolarOfflineCapabilityStore {
         }
         val model = getModelNumber(context, normalized)
         if (model != null) {
-            val derived = classifyModelNumber(model)
+            val derived = classifyModelNumber(model, hasPolarServices = hasPolarServiceCapability(context, normalized))
             if (derived != PolarDeviceType.UNKNOWN) {
                 deviceTypeCache[normalized] = derived
                 return derived
+            }
+        }
+        return PolarDeviceType.UNKNOWN
+    }
+
+    private fun readLegacyDeviceType(context: Context?, normalized: String): PolarDeviceType {
+        legacyTypeCache[normalized]?.let { return it }
+        val storedTypeName = getPrefs(context)?.getString(KEY_LEGACY_TYPE_PREFIX + normalized, null)
+        if (!storedTypeName.isNullOrBlank()) {
+            val parsed = try {
+                PolarDeviceType.valueOf(storedTypeName)
+            } catch (_: IllegalArgumentException) {
+                PolarDeviceType.UNKNOWN
+            }
+            if (parsed != PolarDeviceType.UNKNOWN) {
+                legacyTypeCache[normalized] = parsed
+                return parsed
             }
         }
         return PolarDeviceType.UNKNOWN
@@ -294,16 +434,20 @@ object PolarOfflineCapabilityStore {
      * Classifies a DIS `0x2A24` Model Number string into [PolarDeviceType].
      *
      * Requires explicit Polar or unambiguous model tokens (`"polar h10"` / `"h10"`,
-     * `"verity"` / `"polar sense"` / `"oh1"`) and never matches bare `"sense"` (e.g., `"CardioSense"`).
+     * `"verity"` / `"polar sense"` / `"oh1"`), classifying exact `"sense"` as
+     * [PolarDeviceType.VERITY_SENSE] strictly when [hasPolarServices] confirms Polar PMD/PFTP GATT
+     * services, and never matching compound non-Polar names such as `"CardioSense"` (`REQ-CON-049.2`).
      */
     @JvmStatic
-    fun classifyModelNumber(modelNumber: String?): PolarDeviceType {
+    @JvmOverloads
+    fun classifyModelNumber(modelNumber: String?, hasPolarServices: Boolean = false): PolarDeviceType {
         val lower = modelNumber?.trim()?.lowercase(Locale.ROOT) ?: return PolarDeviceType.UNKNOWN
         if (lower.isEmpty()) return PolarDeviceType.UNKNOWN
         return when {
             lower.contains("polar h10") || H10_TOKEN_REGEX.containsMatchIn(lower) -> PolarDeviceType.H10
             lower.contains("verity") ||
                 lower.contains("polar sense") ||
+                (hasPolarServices && lower == "sense") ||
                 OH1_TOKEN_REGEX.containsMatchIn(lower) -> PolarDeviceType.VERITY_SENSE
             else -> PolarDeviceType.UNKNOWN
         }
@@ -335,6 +479,8 @@ object PolarOfflineCapabilityStore {
         modelNumberCache.clear()
         polarIdCache.clear()
         deviceTypeCache.clear()
+        legacyTypeCache.clear()
+        suppressNameCache.clear()
     }
 
     private fun normalizeMac(macAddress: String?): String? {

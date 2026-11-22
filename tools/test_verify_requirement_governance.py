@@ -240,7 +240,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"csv", "os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
+        std_lib_modules = {"csv", "hashlib", "os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math", "xml", "zipfile"}
         for mod in imported_modules:
             self.assertIn(
                 mod,

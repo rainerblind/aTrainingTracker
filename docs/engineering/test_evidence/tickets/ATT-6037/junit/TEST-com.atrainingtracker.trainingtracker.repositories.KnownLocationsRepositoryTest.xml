@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:41.293Z" hostname="rainer-HP-EliteBook-850-G5" time="2.409">
+  <properties/>
+  <testcase name="testLoadLocations_populatesFlow" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.822"/>
+  <testcase name="testDeleteLocation_invokesDbAndRefreshesFlow" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.17"/>
+  <testcase name="testConcurrency_fiftyConcurrentUpdates_executesCleanlyWithoutDeadlock" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.25"/>
+  <testcase name="testUpdateLocation_demSource_unlocksRecord" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.187"/>
+  <testcase name="testLoadLocations_explicitHome_overridesStartCountHierarchy" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.18"/>
+  <testcase name="testRefreshDem_success_persistsDemElevationAndSource" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.267"/>
+  <testcase name="testUpdateLocation_withCustomRadius_persistsRadiusAndRefreshesFlow" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.186"/>
+  <testcase name="testUpdateLocation_manualSource_automaticallyLocksRecord" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.178"/>
+  <testcase name="testLoadLocations_resolvesEffectiveHomeId_whenNoExplicitHomeSet" classname="com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositoryTest" time="0.168"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

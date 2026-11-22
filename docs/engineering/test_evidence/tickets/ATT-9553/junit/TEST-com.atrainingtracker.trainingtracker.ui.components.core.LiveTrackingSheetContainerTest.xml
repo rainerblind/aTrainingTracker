@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T01:12:34.447Z" hostname="rainer-HP-EliteBook-850-G5" time="0.038">
+  <properties/>
+  <testcase name="testLiveTrackingEntitySheet_sourceStructureAndTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest" time="0.008"/>
+  <testcase name="testLiveTrackingSheetContainer_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest" time="0.004"/>
+  <testcase name="testLiveTrackingSheetContainer_designTokensConformToRefinedSpecs" classname="com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest" time="0.02"/>
+  <testcase name="testLiveTrackingEntitySheet_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest" time="0.004"/>
+  <testcase name="testLiveTrackingSheetContainer_sourceStructureAndTokens" classname="com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

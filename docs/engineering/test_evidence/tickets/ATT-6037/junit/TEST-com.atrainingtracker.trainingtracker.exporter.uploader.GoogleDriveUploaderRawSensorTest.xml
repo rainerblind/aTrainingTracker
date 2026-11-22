@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderRawSensorTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:12.160Z" hostname="rainer-HP-EliteBook-850-G5" time="2.163">
+  <properties/>
+  <testcase name="testDoExport_whenStandardFormatMissing_fails" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderRawSensorTest" time="0.223"/>
+  <testcase name="testDoExport_multiFileRawSensorAndPartialFailure_TST_EXP_045_3" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderRawSensorTest" time="1.733"/>
+  <testcase name="testDoExport_whenRawSensorMissing_gracefulSkip" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderRawSensorTest" time="0.111"/>
+  <testcase name="testGoogleDriveSupportsRawSensor" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderRawSensorTest" time="0.096"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

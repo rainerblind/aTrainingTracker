@@ -20,9 +20,12 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 
+import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -174,5 +177,15 @@ class PolarRawTelemetryPrunerTest {
         assertTrue(PolarRawTelemetryPruner.deleteSidecar(context, recentBase))
         assertFalse(recentPhone.exists())
         assertFalse(PolarRawTelemetryPruner.hasSidecar(context, recentBase))
+    }
+
+    @Test
+    fun pruneExpiredSidecarsAsync_relaxedMockApplication_doesNotLeakUncaughtException() {
+        val mockApp = mockk<Application>(relaxed = true)
+        PolarRawTelemetryPruner.pruneExpiredSidecarsAsync(mockApp)
+        Thread.sleep(50L)
+        runTest {
+            assertEquals(0, PolarRawTelemetryPruner.pruneExpiredSidecars(mockApp))
+        }
     }
 }

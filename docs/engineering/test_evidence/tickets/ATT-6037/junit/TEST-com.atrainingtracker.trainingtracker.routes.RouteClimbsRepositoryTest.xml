@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.RouteClimbsRepositoryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:12.241Z" hostname="rainer-HP-EliteBook-850-G5" time="2.05">
+  <properties/>
+  <testcase name="testRoutesRepository_enrichesRouteFromClimbsDatabase" classname="com.atrainingtracker.trainingtracker.routes.RouteClimbsRepositoryTest" time="0.511"/>
+  <testcase name="testRouteWithPath_defaultClimbsIsEmpty" classname="com.atrainingtracker.trainingtracker.routes.RouteClimbsRepositoryTest" time="0.485"/>
+  <testcase name="testToMapRoute_propagatesClimbsToMapRoute" classname="com.atrainingtracker.trainingtracker.routes.RouteClimbsRepositoryTest" time="0.516"/>
+  <testcase name="testRoutesRepository_fallbackOnTheFlyDetectionWhenDatabaseReturnsEmpty" classname="com.atrainingtracker.trainingtracker.routes.RouteClimbsRepositoryTest" time="0.537"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

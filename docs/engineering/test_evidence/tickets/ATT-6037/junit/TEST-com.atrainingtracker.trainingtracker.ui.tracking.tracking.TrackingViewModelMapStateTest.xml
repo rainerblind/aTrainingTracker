@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:30:35.859Z" hostname="rainer-HP-EliteBook-850-G5" time="7.819">
+  <properties/>
+  <testcase name="testObserveMapState_reactsImmediatelyToCurrentSpeedAndCurrentBearingWithoutCurrentTrackEmission" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" time="1.666"/>
+  <testcase name="testCurrentPathPoints_decoupledFromSensorFieldsCombine" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" time="1.222"/>
+  <testcase name="testObserveMapState_suspendsEmissionsWhenUiIsInactive" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" time="1.253"/>
+  <testcase name="testCockpitMap_neverQueriesOrComputesClustersEvenWhenLayerEnabled_ATT5197" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" time="1.223"/>
+  <testcase name="testSourceContract_noStaticValueReadsInObserveMapStateAndConvergenceLoopPresent" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" time="1.245"/>
+  <testcase name="testStepFollowMeSmoothing_convergesToTargetZoomAndBearingUnderSteadyInputs" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest" time="1.21"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

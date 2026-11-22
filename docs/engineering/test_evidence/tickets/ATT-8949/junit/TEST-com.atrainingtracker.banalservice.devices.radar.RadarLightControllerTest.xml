@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" tests="39" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:22:51.881Z" hostname="rainer-HP-EliteBook-850-G5" time="10.808">
+  <properties/>
+  <testcase name="testRadarLightController_onWorkoutResumed_preservesNonCyclingSessionState" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.534"/>
+  <testcase name="testRadarLightController_workoutStoppedFromPausedState_turnsOffTailLight" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.231"/>
+  <testcase name="testRadarLightController_setManualLightMode_updatesModeAndSetsManualOverride" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.223"/>
+  <testcase name="testRadarLightController_sequentialWorkouts_hardwareBrakeAutoBypassPersists" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.222"/>
+  <testcase name="testRadarLightMode_stvzoCapabilityPruning" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.204"/>
+  <testcase name="testRadarLightController_triggerBrakeLight_underStvzo_strictlyClampedToSolid" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.202"/>
+  <testcase name="testRadarLightController_workoutLifecycleHooks_safeWithNullFilesDir" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.204"/>
+  <testcase name="testRadarLightController_fixedWorkoutMode_dispatchesOnStartAndOffOnStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.212"/>
+  <testcase name="testRadarLightController_onWorkoutPaused_withLightOffPreBrake_restoresOffMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.208"/>
+  <testcase name="testRadarLightController_onWorkoutStopped_cleansUpBrakeHoldAndPreventsResuscitation" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.195"/>
+  <testcase name="testRadarLightController_manualMode_skipsAutoDispatchOnStartAndStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.219"/>
+  <testcase name="testRadarLightController_offlineManualMode_updatesPreferredModeWithoutOffHighlight" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.2"/>
+  <testcase name="testRadarLightMode_commandByteMappingAndResolution" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.208"/>
+  <testcase name="testRadarLightController_outsideWorkoutSelection_persistsAcrossLifecycleAndWorkoutStart" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.222"/>
+  <testcase name="testRadarLightController_setManualLightMode_stvzoSynchronizesRepositoryState" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.216"/>
+  <testcase name="testRadarLightController_stvzoAutoPruning_fallsBackToSolid" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.215"/>
+  <testcase name="testRadarLightController_synchronousAutoSwitch_startAndStop" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.212"/>
+  <testcase name="testRadarLightController_triggerBrakeLight_underNightConditions_clampedToSolid" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.212"/>
+  <testcase name="testRadarLightController_onHardwareLightModeWriteFailed_reconcilesCleanly" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.209"/>
+  <testcase name="testRadarLightController_registerAndSetMode_dispatchesToDevice" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.212"/>
+  <testcase name="testRadarLightController_hydrateFromPreferences_loadsPersistedSelectionBeforeWorkoutStart" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="2.231"/>
+  <testcase name="testRadarLightController_radarLightDeviceClientInterface_supportsAntPlusClient" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.229"/>
+  <testcase name="testRadarLightController_triggerBrakeLight_dispatchesBrakeModeAndRestoresPreBrakeModeAfterHold" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.223"/>
+  <testcase name="testRadarLightController_smartAutomationMode_startsSmartEngineWithoutPreDispatchingDefaultMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.225"/>
+  <testcase name="testRadarLightController_registerRadarDevice_withoutLightSupport_doesNotStartListening" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.207"/>
+  <testcase name="testRadarLightController_debouncedCycleNextMode_andStvzo" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.23"/>
+  <testcase name="testRadarLightController_unregisterRadarDevice_resetsIsStvzo" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.213"/>
+  <testcase name="testRadarLightController_setManualLightMode_stvzoPruning" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.235"/>
+  <testcase name="testRadarLightController_updateHardwareLightMode_reflectsGattRead" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.227"/>
+  <testcase name="testRadarLightController_onWorkoutPaused_and_onWorkoutResumed" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.238"/>
+  <testcase name="testRadarLightController_gatedStateMutation_whenDispatchFails_stateNotMutated" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.217"/>
+  <testcase name="testRadarLightController_onWorkoutStarted_withoutLightAvailable_doesNotStartListening" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.209"/>
+  <testcase name="testRadarLightController_trafficSimulatorIntegration" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.228"/>
+  <testcase name="testRadarLightController_manualOverrideSurvivesIncomingFramesUntilSetAutoMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.212"/>
+  <testcase name="testRadarLightController_workoutStartStop_persistsAcrossRides" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.215"/>
+  <testcase name="testRadarLightController_setManualLightMode_withoutLightSupport_failsGracefully" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.213"/>
+  <testcase name="testRadarLightController_onWorkoutStarted_nonCyclingWorkout_doesNotStartListening" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.242"/>
+  <testcase name="testRadarLightController_hardwareAutoBypass_rearVue820" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.228"/>
+  <testcase name="testRadarLightController_isRearVue820Model" classname="com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest" time="0.219"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

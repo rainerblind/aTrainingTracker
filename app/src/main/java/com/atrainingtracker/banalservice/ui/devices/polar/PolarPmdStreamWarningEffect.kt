@@ -22,7 +22,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinator
 import kotlinx.coroutines.flow.collectLatest
@@ -34,11 +34,11 @@ import kotlinx.coroutines.flow.collectLatest
  */
 @Composable
 fun PolarPmdStreamWarningEffect(snackbarHostState: SnackbarHostState) {
-    val context = LocalContext.current
+    val resources = LocalResources.current
     LaunchedEffect(snackbarHostState) {
         PolarPmdStreamCoordinator.streamWarning.collectLatest { warning ->
             if (warning == null) return@collectLatest
-            val message = context.getString(
+            val message = resources.getString(
                 R.string.polar_live_imu_stream_blocked_warning,
                 warning.deviceName,
                 warning.measurementType.name

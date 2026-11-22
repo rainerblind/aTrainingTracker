@@ -3913,4 +3913,52 @@ class PolarOnlineStreamingBridgeTest {
             bridge.shutDown()
         }
     }
+
+    @Test
+    fun testDisInformationReceived_matchesActiveSdkStreamIdAndClassifiesBareSenseAsVerity_TST_CON_049_3() = runTest {
+        // REQ-CON-049.2 / REQ-CON-049.3 / TST-CON-049.3
+        val verityMac = "AA:BB:CC:DD:EE:F9"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val devId = db.insertNewBluetoothDeviceIntoDB(DeviceType.HRM, verityMac, "Armband", "", 90, true)
+
+        val mockApi = mockk<PolarBleApi>(relaxed = true)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = sensorManager,
+            deviceId = devId,
+            macAddress = verityMac,
+            dispatcher = testDispatcher,
+            sdkIntProvider = { 34 },
+            sportTypeProvider = { BSportType.RUN },
+            apiFactory = { _, _ -> mockApi }
+        )
+
+        try {
+            bridge.startSearching()
+            val cb = bridge.getSdkCallbackForTesting()
+            // Bare DIS 0x2A24 = "Sense" delivered via Polar SDK callback must classify as VERITY_SENSE
+            cb.disInformationReceived(
+                verityMac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER,
+                "Sense"
+            )
+            cb.disInformationReceived(
+                verityMac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER,
+                "A1B2C3D4"
+            )
+            testScheduler.runCurrent()
+
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+                PolarOfflineCapabilityStore.getDeviceType(context, verityMac)
+            )
+            assertTrue("Bare 'Sense' DIS on Polar SDK bridge must classify as Verity Sense", bridge.isVeritySense)
+            assertEquals(com.atrainingtracker.banalservice.sensor.HrModality.OPTICAL_PPG, bridge.getHrModality())
+            assertEquals("A1B2C3D4", bridge.polarId)
+        } finally {
+            bridge.shutDown()
+        }
+    }
 }

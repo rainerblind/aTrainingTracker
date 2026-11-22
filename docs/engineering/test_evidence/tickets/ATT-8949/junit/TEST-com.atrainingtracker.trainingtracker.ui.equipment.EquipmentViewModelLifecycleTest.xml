@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:24:02.050Z" hostname="rainer-HP-EliteBook-850-G5" time="3.189">
+  <properties/>
+  <testcase name="testInit_automaticallyLoadsEquipmentOnCreation" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="2.137"/>
+  <testcase name="testLoadEquipment_cancelsPreviousPendingJob" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.275"/>
+  <testcase name="testEquipmentViewModel_preservesReflectionConstructor" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.249"/>
+  <testcase name="testObserveSyncStatus_reloadsOnFallingEdge" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.276"/>
+  <testcase name="testObserveSyncStatus_suppressesColdStartRedundancy" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest" time="0.251"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

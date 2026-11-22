@@ -84,7 +84,8 @@ object PolarRawTelemetryPruner {
         if (policy == RawSensorRetentionPolicy.KEEP_ALL) {
             return 0
         }
-        val dir = PolarRawTelemetryRecorder.getRawSensorDir(context)
+        val safeContext = resolveSafeStorageContext(context) ?: return 0
+        val dir = PolarRawTelemetryRecorder.getRawSensorDir(safeContext)
         val files = dir.listFiles() ?: emptyArray()
 
         var deletedCount = 0
@@ -121,13 +122,32 @@ object PolarRawTelemetryPruner {
     }
 
     /**
+     * Resolves a storage-capable [Context] whose `filesDir` has a non-blank path, or `null` for
+     * uninitialized / relaxed MockK contexts (where Objenesis instantiates `File` with `path == null`).
+     */
+    private fun resolveSafeStorageContext(context: Context): Context? {
+        val safeContext = try {
+            context.applicationContext ?: context
+        } catch (_: Throwable) {
+            context
+        }
+        val filesDirPath: String? = try {
+            safeContext.filesDir?.path
+        } catch (_: Throwable) {
+            null
+        }
+        return if (filesDirPath.isNullOrBlank()) null else safeContext
+    }
+
+    /**
      * Executes retention pruning off the main thread on [Dispatchers.IO].
      */
     @JvmStatic
     fun pruneExpiredSidecarsAsync(context: Context) {
+        val safeContext = resolveSafeStorageContext(context) ?: return
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                pruneExpiredSidecars(context)
+                pruneExpiredSidecars(safeContext)
             } catch (e: SecurityException) {
                 Log.w(TAG, "SecurityException during raw telemetry pruning: ${e.message}")
             }

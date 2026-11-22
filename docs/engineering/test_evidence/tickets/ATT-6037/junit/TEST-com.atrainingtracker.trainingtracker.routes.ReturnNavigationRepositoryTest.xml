@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepositoryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:56.741Z" hostname="rainer-HP-EliteBook-850-G5" time="1.555">
+  <properties/>
+  <testcase name="testRegularRouteNavigation_doesNotActivateReturnNavigationState" classname="com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepositoryTest" time="0.641"/>
+  <testcase name="testStartTakeMeHome_activatesReturnMetricsWithHomeDestination" classname="com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepositoryTest" time="0.311"/>
+  <testcase name="testRouteDeselection_resetsReverseReturn" classname="com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepositoryTest" time="0.305"/>
+  <testcase name="testStopTakeMeHome_resetsLifecycleStateToInactive" classname="com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepositoryTest" time="0.298"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

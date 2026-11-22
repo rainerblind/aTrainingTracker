@@ -22,6 +22,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.BikePowerFeatures
@@ -93,6 +94,10 @@ class EditDeviceViewModel internal constructor(
     private val _deviceSnapshot = MutableStateFlow<DeviceUiData?>(null)
     val deviceSnapshot: StateFlow<DeviceUiData?> = _deviceSnapshot.asStateFlow()
 
+    // Stable persisted pre-edit device identity used for Polar capability evaluation (REQ-CON-049.4)
+    private val _persistedDeviceIdentity = MutableStateFlow<DeviceUiData?>(null)
+    val persistedDeviceIdentity: StateFlow<DeviceUiData?> = _persistedDeviceIdentity.asStateFlow()
+
     // Longitudinal wheel circumference history scoped to this sensor's linked bikes & positions (REQ-SEN-033.2)
     private val _wheelCircumferenceHistory = MutableStateFlow<List<WheelCircumferenceRecord>>(emptyList())
     val wheelCircumferenceHistory: StateFlow<List<WheelCircumferenceRecord>> = _wheelCircumferenceHistory.asStateFlow()
@@ -109,11 +114,16 @@ class EditDeviceViewModel internal constructor(
         _wheelCircumferenceHistory.value = emptyList()
         val snapshot = devicesRepository.getDeviceSnapshotById(deviceId)
         if (snapshot == null) {
+            _persistedDeviceIdentity.value = null
             _deviceNotFound.value = true
         } else {
             _deviceNotFound.value = false
+            _persistedDeviceIdentity.value = snapshot
             _deviceSnapshot.value = snapshot
             _editingId.value = deviceId
+            if (snapshot.protocol == Protocol.BLUETOOTH_LE && snapshot.deviceType == DeviceType.HRM) {
+                runCatching { devicesRepository.backfillLegacyPolarIdentityIfNeeded(snapshot) }
+            }
             if (supportsWheelCircumference(snapshot)) {
                 loadWheelCircumferenceHistory(deviceId)
             }

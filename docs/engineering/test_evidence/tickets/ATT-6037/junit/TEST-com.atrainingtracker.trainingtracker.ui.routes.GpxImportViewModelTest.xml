@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:30:19.541Z" hostname="rainer-HP-EliteBook-850-G5" time="0.327">
+  <properties/>
+  <testcase name="testHandleBatchUris_withSportTypeOverride_TST_MAP_056_2" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.178"/>
+  <testcase name="testHandleIntent_parseFailure_emitsError" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.01"/>
+  <testcase name="testSaveRoute_delegatesToRepository_andEmitsSuccess" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.013"/>
+  <testcase name="testHandleIntent_validGpx_emitsEditingState" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.011"/>
+  <testcase name="testHandleBatchUris_multipleValidUris_insertsAllAndEmitsBatchSuccess" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.022"/>
+  <testcase name="testInitialState_isLoading" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.004"/>
+  <testcase name="testHandleBatchUris_emptyList_emitsError" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.003"/>
+  <testcase name="testHandleIntent_nullUri_emitsError" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.003"/>
+  <testcase name="testHandleBatchUris_singleUri_delegatesToHandleIntent" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.008"/>
+  <testcase name="testStartIndividualImport_sequentialReviewFlow_TST_MAP_056_3" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.037"/>
+  <testcase name="testHandleBatchUris_partialFailure_insertsSuccessfulAndReportsFailed" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.021"/>
+  <testcase name="testSaveRoute_withWaypoints_delegatesToRepository_andEmitsSuccess" classname="com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.PressureSensorRegistrationAndIconTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:20:11.378Z" hostname="rainer-HP-EliteBook-850-G5" time="2.048">
+  <properties/>
+  <testcase name="testPressureSensor_pairingToggleStopsAndRestartsSensorUpdates_TST_BUG_009" classname="com.atrainingtracker.banalservice.devices.PressureSensorRegistrationAndIconTest" time="1.125"/>
+  <testcase name="testPressureSensor_deletedDbRowSelfHealsAndInstantiatesOnStartup_TST_BUG_008_TST_BUG_011" classname="com.atrainingtracker.banalservice.devices.PressureSensorRegistrationAndIconTest" time="0.47"/>
+  <testcase name="testPressureSensor_usesAltitudeIconResource_TST_BUG_010" classname="com.atrainingtracker.banalservice.devices.PressureSensorRegistrationAndIconTest" time="0.453"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

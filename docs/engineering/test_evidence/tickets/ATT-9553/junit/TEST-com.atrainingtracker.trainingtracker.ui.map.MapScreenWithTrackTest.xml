@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-22T01:13:04.722Z" hostname="rainer-HP-EliteBook-850-G5" time="0.337">
+  <properties/>
+  <testcase name="testMapScreenWithTrack_climbsLayerAndClimbDetailSheetIntegration_TST_MAP_066_4" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.055"/>
+  <testcase name="testMapScreenWithTrack_definesTopStartNavigationButton" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.0"/>
+  <testcase name="testMapContentScope_usesCenteredHeartGlyphMarkerWithConcentricAnchor_TST_MAP_065_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.0"/>
+  <testcase name="testCrossSurfaceMarkerParity_thumbnailAndEditAndGlobalMap_TST_MAP_065_3" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.145"/>
+  <testcase name="testLegacyHeartPinMarker_isAnnotatedDeprecated_TST_MAP_065_4" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.019"/>
+  <testcase name="testATrainingTrackerMap_declaresAndForwardsContentPadding" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.018"/>
+  <testcase name="testATrainingTrackerApp_wiresMapNavigationCallbacks" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.094"/>
+  <testcase name="testMapScreenWithTrack_forwardsNavigationBarInsetsToATrainingTrackerMap" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.001"/>
+  <testcase name="testEditKnownLocationDialog_usesCenteredHeartGlyphMarkerWithConcentricAnchor_TST_MAP_065_1" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.0"/>
+  <testcase name="testATrainingTrackerMap_initializesCameraWithFallbackResolverAtZoom14" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.004"/>
+  <testcase name="testATrainingTrackerMap_forwardsInitialLocationToMapBoundsController_TST_MAP_062_4" classname="com.atrainingtracker.trainingtracker.ui.map.MapScreenWithTrackTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

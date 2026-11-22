@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:28.488Z" hostname="rainer-HP-EliteBook-850-G5" time="0.24">
+  <properties/>
+  <testcase name="testTrackingTabHeaders_renderSportContext_TST_UI_471_5" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" time="0.126"/>
+  <testcase name="testSensorFieldView_enforcesSingleLineAndScalingContracts_TST_UI_471_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" time="0.0"/>
+  <testcase name="testEditSensorFieldDialog_polishContracts_TST_UI_471_3" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" time="0.113"/>
+  <testcase name="testSensorGridScreen_elevationProfileBottomClearance_TST_UI_471_4" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" time="0.0"/>
+  <testcase name="testLocalization_stringsAnd9LocaleParity_TST_UI_471_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsPolishContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

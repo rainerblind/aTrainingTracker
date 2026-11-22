@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButtonTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:16:30.313Z" hostname="rainer-HP-EliteBook-850-G5" time="0.581">
+  <properties/>
+  <testcase name="testTrackingTabsScreen_passesIsDimmedToRouteSelectionButton" classname="com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButtonTest" time="0.561"/>
+  <testcase name="testRouteSelectionButton_declaresEmptySubtitleResAndWiresInTrackingTabs" classname="com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButtonTest" time="0.005"/>
+  <testcase name="testRouteSelectionButton_declaresIsDimmedParameterAndAlphaModifier" classname="com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButtonTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

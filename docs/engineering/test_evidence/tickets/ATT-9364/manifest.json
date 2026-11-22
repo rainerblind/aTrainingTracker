@@ -1,0 +1,17 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "d186addd4bd0dc968d7bb830776ccc477d8ab309",
+  "files": {
+    "evidence_summary.json": "16418de16cc64870c466e8f8e508fd9c399e192488e18118f6f1accc5608307f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest.xml": "1593ec1c177dfa77926e5306b7d39ebc9a34094d672b7591d5781a85fd246243",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButtonTest.xml": "6196bbdeb5e3a88d5f71c2ca19595c181b3838db0f37fbc5ccdaad0e56b47377",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteBoundsUiTest.xml": "2920db59a84e775dbe3adddbddad91ca22b3966b3f7d9b687e971b6bda792f15",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest.xml": "b84bccb6ccd25c1903228bf7f920ded1f78f8fed18f4a8217b8ec5c886b3916a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenRouteIntegrationTest.xml": "ddb87ca330cf54cb6db375c79c7f3563e292131f2797bb8d2d9bc06d87015429",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest.xml": "c24b6483093679ef35dc680cbda60540d22671d1d69e92043e46e092d868cfab",
+    "screenshots/att9364_after.png": "d77dc1c7597d5e11dfc8b62161c42b9d58eafc8f738b9aa3cdf119d4f850e811"
+  },
+  "run_started_utc": "2026-11-22T03:16:21.758003+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9364"
+}

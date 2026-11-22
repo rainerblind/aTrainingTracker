@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:25.985Z" hostname="rainer-HP-EliteBook-850-G5" time="11.626">
+  <properties/>
+  <testcase name="testDoWorkWhenExceptionThrownReturnsRetry" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.382"/>
+  <testcase name="testDoWorkWhenConnectedRunsSyncThreadAndReturnsSuccess" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.056"/>
+  <testcase name="testScheduleWhenAutomatedSyncDisabledCancelsWork" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="0.988"/>
+  <testcase name="testDoWorkWhenStravaDisconnectedReturnsSuccessWithoutSync" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.02"/>
+  <testcase name="testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSync" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.01"/>
+  <testcase name="testScheduleWhenWorkManagerUnavailableReturnsSafely" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.032"/>
+  <testcase name="testDoWorkWhenSyncFailsReturnsRetry" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.029"/>
+  <testcase name="testScheduleRespectsCustomIntervalDays" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.026"/>
+  <testcase name="testScheduleWhenConnectedEnqueuesPeriodicWorkWith1DayInterval" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.026"/>
+  <testcase name="testScheduleWhenStravaDisconnectedCancelsWork" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.04"/>
+  <testcase name="testDoWorkWhenTokenRefreshReturnsNullReturnsSuccessWithoutSync" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorkerTest" time="1.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

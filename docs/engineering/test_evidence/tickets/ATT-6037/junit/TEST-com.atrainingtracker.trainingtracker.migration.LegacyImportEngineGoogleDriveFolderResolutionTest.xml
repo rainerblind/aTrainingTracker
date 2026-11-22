@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:26:19.912Z" hostname="rainer-HP-EliteBook-850-G5" time="3.278">
+  <properties/>
+  <testcase name="testCandidateFolderHierarchies_formatTcx_prioritizesTcxThenLegacyWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="1.059"/>
+  <testcase name="testCrossFolderDeduplication_duplicateInWorkoutsAndFormat_deduplicatesByBaseName" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.541"/>
+  <testcase name="testCandidateFolderHierarchies_formatGpx_prioritizesGpxThenLegacyWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.577"/>
+  <testcase name="testCandidateFolderHierarchies_formatAll_scansAllFormatFoldersThenWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.556"/>
+  <testcase name="testCandidateFolderHierarchies_formatFit_prioritizesFitThenLegacyWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.545"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getDatabase(KnownLocationsDatabaseManager.java:107)
+	at com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.reconcileHitCountsWithWorkoutSummaries(KnownLocationsDatabaseManager.java:496)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository$reconcileHitCounts$2.invokeSuspend(KnownLocationsRepository.kt:126)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository$reconcileHitCounts$2.invoke(KnownLocationsRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository$reconcileHitCounts$2.invoke(KnownLocationsRepository.kt)
+	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatched(Undispatched.kt:66)
+	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
+	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:497)
+	at kotlinx.coroutines.BuildersKt.withContext(Unknown Source)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.reconcileHitCounts$suspendImpl(KnownLocationsRepository.kt:120)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.reconcileHitCounts(KnownLocationsRepository.kt)
+	at com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository$2.invokeSuspend(KnownLocationsRepository.kt:107)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

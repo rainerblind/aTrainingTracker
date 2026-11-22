@@ -277,6 +277,10 @@ class BottomSheetVisualContractTest {
             mapScreen.contains("BottomSheetDesign.PeekHeightKnownLocation")
         )
         assertTrue(
+            "MapScreenWithTrack must consume BottomSheetDesign.PeekHeightClimb",
+            mapScreen.contains("BottomSheetDesign.PeekHeightClimb")
+        )
+        assertTrue(
             "MapScreenWithTrack must not contain hardcoded 185.dp peek height",
             !mapScreen.contains("185.dp + navBarHeight")
         )
@@ -349,20 +353,22 @@ class BottomSheetVisualContractTest {
 
         val mapWithTrack = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapScreenWithTrack.kt").readText()
         assertTrue(
-            "MapScreenWithTrack must remember measuredSegmentHeaderHeight",
-            mapWithTrack.contains("measuredSegmentHeaderHeight")
-        )
-        assertTrue(
-            "MapScreenWithTrack must remember measuredRouteHeaderHeight",
-            mapWithTrack.contains("measuredRouteHeaderHeight")
+            "MapScreenWithTrack must remember measuredHeaderHeight",
+            mapWithTrack.contains("measuredHeaderHeight")
         )
         assertTrue(
             "MapScreenWithTrack must pass onHeaderHeightMeasured to SegmentOnMapScreen",
-            mapWithTrack.contains("onHeaderHeightMeasured = { measuredSegmentHeaderHeight = it }")
+            mapWithTrack.contains("onHeaderHeightMeasured = { measuredHeaderHeight = it }")
         )
         assertTrue(
             "MapScreenWithTrack must pass onHeaderHeightMeasured to RouteOnMapScreen",
-            mapWithTrack.contains("onHeaderHeightMeasured = { measuredRouteHeaderHeight = it }")
+            mapWithTrack.contains("RouteOnMapScreen(") &&
+                mapWithTrack.contains("onHeaderHeightMeasured = { measuredHeaderHeight = it }")
+        )
+        assertTrue(
+            "MapScreenWithTrack must pass onHeaderHeightMeasured to ClimbOnMapScreen",
+            mapWithTrack.contains("ClimbOnMapScreen(") &&
+                mapWithTrack.contains("onHeaderHeightMeasured = { measuredHeaderHeight = it }")
         )
     }
 

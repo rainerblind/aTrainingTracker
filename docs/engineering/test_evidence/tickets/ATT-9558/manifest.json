@@ -1,0 +1,14 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "a6f3c00036571d96406604e790adc0d47ee52f13",
+  "files": {
+    "evidence_summary.json": "19f1d69170d39bc05a04232353fc89315c05e7dcde1005abfa2ff65af939ab4a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest.xml": "055c36e77829d69678929dafc125896ecae313c0c5b928e66dc8f74056997373",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest.xml": "19c90956f619a5a5f5de870ca7547c17a9e533961425dbb41635a2201a4e6e9a",
+    "screenshots/ATT-9558_after_light_dark.png": "820af7bde89f6837bf2e80d899628a65953265db725da4742e3da931f58c99e0",
+    "screenshots/ATT-9558_before_light_dark.png": "57c444445bd94382dbfbf18601568318d84885cb3d92da2ec1a3b091d5502a90"
+  },
+  "run_started_utc": "2026-11-21T23:00:49.792243+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9558"
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:23:31.077Z" hostname="rainer-HP-EliteBook-850-G5" time="0.14">
+  <properties/>
+  <testcase name="testShouldShowWheelSensorGuidance_trueOnlyForWheelAndFusedSensors" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest" time="0.115"/>
+  <testcase name="testEditDeviceDialog_guidanceCardAndDialogWiringContract" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest" time="0.025"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

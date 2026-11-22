@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.atrainingtracker.trainingtracker.util.AppHttpClient
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -45,7 +46,7 @@ class StravaAuthRepository private constructor() {
     private val _authState = MutableStateFlow<StravaAuthState>(StravaAuthState.Idle)
     val authState = _authState.asStateFlow()
 
-    private val client = OkHttpClient()
+    internal val client: OkHttpClient = AppHttpClient.shared
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun exchangeCodeForTokenAsync(code: String) {

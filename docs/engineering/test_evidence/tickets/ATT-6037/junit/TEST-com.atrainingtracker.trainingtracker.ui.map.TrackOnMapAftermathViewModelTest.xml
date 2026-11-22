@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:00.567Z" hostname="rainer-HP-EliteBook-850-G5" time="13.538">
+  <properties/>
+  <testcase name="loadAftermathData_cancelsPreviousInFlightJob" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="3.17"/>
+  <testcase name="loadAftermathData_populatesIsSmoothedHrvStreamFromWorkoutRepository" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.959"/>
+  <testcase name="loadAftermathData_populatesActivityCarriageTimelineForTracklessAndResetsOnSwitch" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="1.002"/>
+  <testcase name="toggleTrackTypeEnabled_persistsSelectionAcrossViewModelRecreation_TST_UI_056" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="1.007"/>
+  <testcase name="testReloadSameWorkoutAfterDeferredSync_refreshesHrZonesAndTelemetryWithoutDroppingTracks" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.998"/>
+  <testcase name="updateHrZones_persistsHeartRateZonesAndUpdatesUiState" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="1.746"/>
+  <testcase name="updateFtp_persistsPowerZonesAndUpdatesUiState" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="1.738"/>
+  <testcase name="loadAftermathData_sameWorkout_preservesTracksWithoutPhase1Wipe" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.985"/>
+  <testcase name="loadAftermathData_differentWorkout_executesPhase1Wipe" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.979"/>
+  <testcase name="loadAftermathData_populatesLoadedWorkoutId" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.954"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

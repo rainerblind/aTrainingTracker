@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:16:31.723Z" hostname="rainer-HP-EliteBook-850-G5" time="0.094">
+  <properties/>
+  <testcase name="sourceFiles_doNotContainHardcodedMetricTemplateStrings" classname="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" time="0.076"/>
+  <testcase name="metricFormatting_formatsDistanceAndAltitudeProperly" classname="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" time="0.005"/>
+  <testcase name="metricFormatting_largeTotalsUseThousandsGroupingSeparators" classname="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" time="0.002"/>
+  <testcase name="imperialFormatting_formatsDistanceInFeetAndMilesAndElevationInFeet" classname="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" time="0.002"/>
+  <testcase name="returnNavigationState_formatsDistanceAndClimbWithUnits" classname="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" time="0.004"/>
+  <testcase name="headlessNullSafety_formattersDoNotThrowNpeWhenApplicationContextIsNull" classname="com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

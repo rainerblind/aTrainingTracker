@@ -80,6 +80,7 @@ class TuningPreferencesDataStoreRoundTripTest {
                 slopeMinSpeedMps = 1.2f,
                 postWorkoutErtsSmoothingEnabled = true,
                 rawSensorRetentionPolicy = RawSensorRetentionPolicy.DAYS_7,
+                recordSmartphoneRawTelemetryEnabled = true,
                 paceCeilingMinKm = 4.5f,
                 showLiveClimbs = false,
                 climbMinLengthMeters = 800.0f,
@@ -181,7 +182,7 @@ class TuningPreferencesDataStoreRoundTripTest {
                 "radarSmartLightAutomation"
             )
             val fields = TuningConfig::class.java.declaredFields.filter { !Modifier.isStatic(it.modifiers) }
-            assertEquals("Expected all 104 TuningConfig backing fields to be inspected", 104, fields.size)
+            assertEquals("Expected all 105 TuningConfig backing fields to be inspected", 105, fields.size)
             for (field in fields) {
                 field.isAccessible = true
                 if (field.name !in excludedFromDiffCheck) {

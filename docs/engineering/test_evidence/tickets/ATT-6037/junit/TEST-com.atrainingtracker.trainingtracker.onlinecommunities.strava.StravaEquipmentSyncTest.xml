@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:36.640Z" hostname="rainer-HP-EliteBook-850-G5" time="0.872">
+  <properties/>
+  <testcase name="testAuthorizationUrl_ContainsProfileReadAllScope" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncTest" time="0.201"/>
+  <testcase name="testMissingGearDetection_WhenShoesAndBikesOmitted" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncTest" time="0.486"/>
+  <testcase name="testConstants_ProfileReadAllMatchesSpecification" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncTest" time="0.184"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

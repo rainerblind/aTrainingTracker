@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:18.293Z" hostname="rainer-HP-EliteBook-850-G5" time="11.926">
+  <properties/>
+  <testcase name="mapDsl_scopeRegistrationAndThemeProperties_TST_STR_005" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="2.052"/>
+  <testcase name="metricBadge_rendersFormattedBadgeText_TST_STR_006" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="3.834"/>
+  <testcase name="mapContextHierarchy_enforcesPrimarySameSportAndMutedAlphaValues_TST_REG_005" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="0.41"/>
+  <testcase name="mappableListItemAndEmptyStatePlaceholder_renderAndDispatchClick_TST_STR_008" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="0.856"/>
+  <testcase name="settingsNavigationDrawer_allCleanupSettingsItemsMapToValidTargets_TST_INT_008" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="0.139"/>
+  <testcase name="poweredByStrava_rendersAttributionInBothColorVariants_TST_REG_002" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="0.307"/>
+  <testcase name="sensorGridConfig_elevationProfileToggleRevealsScopeChips_TST_INT_004" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="2.346"/>
+  <testcase name="configHeaderAndSensorGrid_toggleAndButtonSequenceAudit_TST_INT_006" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="1.572"/>
+  <testcase name="localMetricFormatter_providesSynchronizedFormattersInComposeTree_TST_STR_007" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="0.135"/>
+  <testcase name="trackingTabConfigHeader_narrowWidth_allButtonsFitAndTrigger_TST_INT_005" classname="com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest" time="0.274"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

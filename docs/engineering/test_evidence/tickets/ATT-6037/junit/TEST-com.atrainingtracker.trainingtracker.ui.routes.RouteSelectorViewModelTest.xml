@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:16.624Z" hostname="rainer-HP-EliteBook-850-G5" time="0.592">
+  <properties/>
+  <testcase name="testSelectRouteDelegatesToRepository" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.156"/>
+  <testcase name="testSelectRoute_bikeRoute_automaticallySynchronizesSportTypeToBike" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.023"/>
+  <testcase name="testActiveSportFiltering_preTracking_filtersBikeAndRunRoutes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.029"/>
+  <testcase name="testDynamicRadiusPreferenceChangeReFiltersRoutes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.018"/>
+  <testcase name="testInitialStateLoadsRoutesAndObservesActiveRoute" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.011"/>
+  <testcase name="testSelectRoute_unknownOrConflictRoute_doesNotAlterSportType" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.049"/>
+  <testcase name="testInRide_evaluatesMatchingCorridorRoutes_andSetsContextEmptyHintRes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.025"/>
+  <testcase name="testInitialStateHasEmptyFilteredRoutesWhenLocationIsNull" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.012"/>
+  <testcase name="testPreTracking_ranksByStartProximity_andSetsContextEmptyHintRes" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.015"/>
+  <testcase name="testStopRoute_and_clearRoute_doesNotAlterSportType" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.032"/>
+  <testcase name="testActivateAutoDetectedCandidateSetsRoute" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.028"/>
+  <testcase name="testActiveSportFiltering_inTracking_evaluatesMatchingRoutesFilteredBySport" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.025"/>
+  <testcase name="testLocationChangeTriggersProximityFiltering" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.018"/>
+  <testcase name="testSelectRoute_runRoute_automaticallySynchronizesSportTypeToRun" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.024"/>
+  <testcase name="testLocationUpdateTriggersAutoDetection" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.019"/>
+  <testcase name="testDismissAutoDetectedCandidateClearsState" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.018"/>
+  <testcase name="testStopRouteClearsActiveNavigation" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.019"/>
+  <testcase name="testMultipleRoutesInRadiusSortedByRecencyDescending" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.015"/>
+  <testcase name="testUiStateExposesTotalRouteCountWithoutFilterTabs" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.01"/>
+  <testcase name="testClearRouteClearsActiveNavigation" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.019"/>
+  <testcase name="testActivateCandidate_bikeRoute_automaticallySynchronizesSportTypeToBike" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModelTest" time="0.023"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

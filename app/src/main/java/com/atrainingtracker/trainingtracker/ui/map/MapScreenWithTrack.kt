@@ -69,23 +69,26 @@ import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterIdentityRow
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMetadataBlock
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
-import com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheet
+import com.atrainingtracker.trainingtracker.ui.climbs.ClimbOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -107,10 +110,9 @@ import com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Type-safe mutually exclusive selection state for map overlays and peek/modal sheets (`REQ-UI-2790.2`).
+ * Type-safe mutually exclusive selection state for map overlays and peek sheets (`REQ-UI-2790.2`, `REQ-UI-2794`).
  */
 sealed interface MapPeekSelection {
     val id: Long
@@ -120,9 +122,7 @@ sealed interface MapPeekSelection {
     data class Route(override val id: Long) : MapPeekSelection
     data class Cluster(override val id: Long) : MapPeekSelection
     data class Location(override val id: Long) : MapPeekSelection
-    data class Climb(override val id: Long) : MapPeekSelection {
-        override val isSheetBacked: Boolean = false
-    }
+    data class Climb(override val id: Long) : MapPeekSelection
 
     companion object {
         private const val TAG_SEGMENT = "segment"
@@ -175,16 +175,36 @@ fun MapScreenWithTrack(
     onMenuClick: (() -> Unit)? = null,
     onNavigateBack: (() -> Unit)? = null
 ) {
+    MapScreenWithTrackContent(
+        viewModel = viewModel,
+        targetLocationId = targetLocationId,
+        modifier = modifier,
+        onMenuClick = onMenuClick,
+        onNavigateBack = onNavigateBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun MapScreenWithTrackContent(
+    viewModel: MapFragmentWithTrackViewModel,
+    targetLocationId: Long? = null,
+    modifier: Modifier = Modifier,
+    onMenuClick: (() -> Unit)? = null,
+    onNavigateBack: (() -> Unit)? = null,
+    initialPeekSelection: MapPeekSelection? = targetLocationId?.takeIf { it > 0 }?.let { MapPeekSelection.Location(it) },
+    scaffoldStateOverride: BottomSheetScaffoldState? = null,
+    onStateObserved: ((peekSelection: MapPeekSelection?, sheetValue: SheetValue, measuredHeaderHeight: Dp?) -> Unit)? = null
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
     val allClusters by viewModel.allClusters.collectAsStateWithLifecycle()
     val enabledLayers by viewModel.enabledLayers.collectAsStateWithLifecycle()
 
-    // Mutually exclusive selection of the segment/route/location/cluster/climb currently being inspected (REQ-UI-2790.2)
+    // Mutually exclusive selection of the segment/route/location/cluster/climb currently being inspected (REQ-UI-2790.2, REQ-UI-2794)
     var peekSelection by rememberSaveable(stateSaver = MapPeekSelection.Saver) {
-        mutableStateOf(targetLocationId?.takeIf { it > 0 }?.let { MapPeekSelection.Location(it) })
+        mutableStateOf(initialPeekSelection)
     }
     var editingLocation by remember { mutableStateOf<KnownLocationItem?>(null) }
     var previewRadius by remember { mutableStateOf<Int?>(null) }
@@ -197,7 +217,7 @@ fun MapScreenWithTrack(
         }
     }
 
-    val scaffoldState = rememberBottomSheetScaffoldState(
+    val scaffoldState = scaffoldStateOverride ?: rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             skipHiddenState = false,
             confirmValueChange = { targetValue ->
@@ -226,6 +246,27 @@ fun MapScreenWithTrack(
                 scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded) {
                 scaffoldState.bottomSheetState.partialExpand()
             }
+        }
+    }
+
+    // Effect: Clear peekSelection when the user manually swipes/hides the bottom sheet to Hidden (REQ-UI-2794)
+    LaunchedEffect(scaffoldState.bottomSheetState) {
+        var previousValue = scaffoldState.bottomSheetState.currentValue
+        snapshotFlow { scaffoldState.bottomSheetState.currentValue }.collect { current ->
+            if (previousValue != SheetValue.Hidden &&
+                current == SheetValue.Hidden &&
+                scaffoldState.bottomSheetState.targetValue == SheetValue.Hidden &&
+                peekSelection != null
+            ) {
+                peekSelection = null
+            }
+            previousValue = current
+        }
+    }
+
+    if (onStateObserved != null) {
+        LaunchedEffect(peekSelection, scaffoldState.bottomSheetState.currentValue, measuredHeaderHeight) {
+            onStateObserved(peekSelection, scaffoldState.bottomSheetState.currentValue, measuredHeaderHeight)
         }
     }
 
@@ -287,7 +328,15 @@ fun MapScreenWithTrack(
                     val base = measuredHeaderHeight ?: BottomSheetDesign.PeekHeightWorkout
                     base + navBarHeight
                 }
-                is MapPeekSelection.Climb, null -> 0.dp
+                is MapPeekSelection.Climb -> {
+                    if (uiState.climbs.any { it.id == selection.id }) {
+                        val base = measuredHeaderHeight ?: BottomSheetDesign.PeekHeightClimb
+                        base + navBarHeight
+                    } else {
+                        0.dp
+                    }
+                }
+                null -> 0.dp
             },
             sheetDragHandle = null,
             sheetContent = {
@@ -353,7 +402,22 @@ fun MapScreenWithTrack(
                                     onHeaderHeightMeasured = { measuredHeaderHeight = it }
                                 )
                             }
-                            is MapPeekSelection.Climb -> Unit
+                            is MapPeekSelection.Climb -> {
+                                val selectedClimb =
+                                    uiState.climbs.find { it.id == selection.id }
+
+                                if (selectedClimb != null) {
+                                    key(selection.id) {
+                                        ClimbOnMapScreen(
+                                            climb = selectedClimb,
+                                            bSportType = uiState.bSportType,
+                                            modifier = Modifier.fillMaxSize(),
+                                            useStatusBarsPadding = false,
+                                            onHeaderHeightMeasured = { measuredHeaderHeight = it }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 } else {
@@ -366,7 +430,7 @@ fun MapScreenWithTrack(
                     zoomFocus = if (initialBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.LOCAL_SEGMENTS,
                     initialBounds = initialBounds,
                     bSportType = uiState.bSportType,
-                    currentLocationFlow = MutableStateFlow(currentLocation),
+                    currentLocationFlow = viewModel.currentLocation,
                     contentPadding = WindowInsets.navigationBars.asPaddingValues(),
                     onMapClick = { peekSelection = null },
                     modifier = Modifier.fillMaxSize()
@@ -547,17 +611,6 @@ fun MapScreenWithTrack(
                 editingLocation = null
             }
         )
-    }
-
-    (peekSelection as? MapPeekSelection.Climb)?.let { climbSelection ->
-        val climb = uiState.climbs.find { it.id == climbSelection.id }
-        if (climb != null) {
-            ClimbDetailSheet(
-                climb = climb,
-                bSportType = uiState.bSportType,
-                onDismiss = { peekSelection = null }
-            )
-        }
     }
 
     // Handle system back button to close the peek

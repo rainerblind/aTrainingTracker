@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileEmptyStateContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:29:44.072Z" hostname="rainer-HP-EliteBook-850-G5" time="0.287">
+  <properties/>
+  <testcase name="SensorGridScreen renders ElevationProfile whenever showElevationProfile is true with showEmptyState enabled" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileEmptyStateContractTest" time="0.105"/>
+  <testcase name="ElevationProfile exposes showEmptyState parameter and delegates to ElevationProfileEmptyState" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileEmptyStateContractTest" time="0.03"/>
+  <testcase name="canonical minimum elevation profile height for zero range is 70dp" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileEmptyStateContractTest" time="0.0"/>
+  <testcase name="elevation_profile_empty_state is defined across all 9 supported locales" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileEmptyStateContractTest" time="0.151"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

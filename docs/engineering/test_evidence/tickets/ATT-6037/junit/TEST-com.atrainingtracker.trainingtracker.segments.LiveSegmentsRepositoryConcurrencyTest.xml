@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryConcurrencyTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:27:01.513Z" hostname="rainer-HP-EliteBook-850-G5" time="0.32">
+  <properties/>
+  <testcase name="testConcurrentReconcileAndUpdate_noLostUpdates" classname="com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryConcurrencyTest" time="0.32"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

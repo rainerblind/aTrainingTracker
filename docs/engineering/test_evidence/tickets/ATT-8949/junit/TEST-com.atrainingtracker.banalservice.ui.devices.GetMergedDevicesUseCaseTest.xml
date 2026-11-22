@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCaseTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:23:02.697Z" hostname="rainer-HP-EliteBook-850-G5" time="0.115">
+  <properties/>
+  <testcase name="testNewlyDiscoveredFlag_withActiveTelemetry_retainsNewlyDiscoveredTrue" classname="com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCaseTest" time="0.067"/>
+  <testcase name="testLiveBatteryMerging_withValidTelemetryBattery_updatesBatteryPercentage" classname="com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCaseTest" time="0.017"/>
+  <testcase name="testLiveBatteryMerging_withNegativeTelemetryBattery_retainsStaticDbBattery" classname="com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCaseTest" time="0.016"/>
+  <testcase name="testNewlyDiscoveredFlag_whenDeviceIdInNewlyFoundList_isSetToTrue" classname="com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCaseTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

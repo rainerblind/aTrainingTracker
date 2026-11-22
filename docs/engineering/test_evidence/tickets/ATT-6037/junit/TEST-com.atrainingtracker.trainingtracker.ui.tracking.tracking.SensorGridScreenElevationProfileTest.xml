@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenElevationProfileTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:30:30.810Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testSensorGridScreen_maintainsCanonicalSurfaceAndModifierInvariants" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenElevationProfileTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_wiresTrackingElevationProfileResolver" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenElevationProfileTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_passesResolvedDataToElevationProfile" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenElevationProfileTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_collectsCurrentLocationFlow" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenElevationProfileTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

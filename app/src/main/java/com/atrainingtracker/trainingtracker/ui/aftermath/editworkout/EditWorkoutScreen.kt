@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -81,12 +82,17 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
+import com.atrainingtracker.trainingtracker.ui.aftermath.PolarPendingRetrySyncSection
 import com.atrainingtracker.trainingtracker.ui.aftermath.RpeFeelEditorControls
 import com.atrainingtracker.trainingtracker.ui.clusters.EditWorkoutClusterDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+
+object EditWorkoutTestTags {
+    const val POLAR_RETRY_SYNC_BANNER = "edit_workout_polar_retry_sync_banner"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -193,6 +199,19 @@ fun EditWorkoutDialog(
                         onDismiss = { showEditDiagnosticSheet = false }
                     )
                 }
+            }
+
+            // 0b. Polar H10 / Polar Verity Sense Pending Retry Sync Banner (REQ-SET-127, ATT-9174)
+            val currentWorkout = workoutData
+            if (currentWorkout != null && currentWorkout.polarSyncPending) {
+                PolarPendingRetrySyncSection(
+                    workoutId = currentWorkout.id,
+                    polarExerciseId = currentWorkout.polarExerciseId,
+                    polarDeviceId = currentWorkout.polarDeviceId,
+                    onDismiss = { viewModel.dismissPolarSyncPending() },
+                    outerPadding = PaddingValues(0.dp),
+                    modifier = Modifier.testTag(EditWorkoutTestTags.POLAR_RETRY_SYNC_BANNER)
+                )
             }
 
             // 1. Workout Name (Mandatory Core Anchor)

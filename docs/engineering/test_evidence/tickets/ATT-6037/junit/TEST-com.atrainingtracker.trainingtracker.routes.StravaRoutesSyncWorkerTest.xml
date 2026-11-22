@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:14.308Z" hostname="rainer-HP-EliteBook-850-G5" time="16.488">
+  <properties/>
+  <testcase name="testDoWorkWhenExceptionThrownReturnsRetry" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.714"/>
+  <testcase name="testDoWorkWhenTokenRefreshReturnsNullReturnsSuccessWithoutSyncing" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.497"/>
+  <testcase name="testScheduleWhenAutomatedSyncDisabledCancelsWork" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.548"/>
+  <testcase name="testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSyncing" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.477"/>
+  <testcase name="testScheduleWhenWorkManagerUnavailableReturnsSafely" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.463"/>
+  <testcase name="testDoWorkWhenSyncReturnsFalseReturnsRetry" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.432"/>
+  <testcase name="testScheduleRespectsCustomIntervalDays" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.452"/>
+  <testcase name="testScheduleWhenConnectedEnqueuesPeriodicWorkWith1DayInterval" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.521"/>
+  <testcase name="testDoWorkWhenStravaDisconnectedPrunesTTLAndReturnsSuccessWithoutSync" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.407"/>
+  <testcase name="testDoWorkWhenConnectedInvokesSyncAndReturnsSuccess" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.389"/>
+  <testcase name="testScheduleWhenStravaDisconnectedCancelsWork" classname="com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorkerTest" time="1.588"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

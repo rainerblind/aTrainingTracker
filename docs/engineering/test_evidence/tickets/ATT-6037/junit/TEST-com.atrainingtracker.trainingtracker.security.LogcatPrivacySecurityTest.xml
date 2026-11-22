@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T23:28:30.827Z" hostname="rainer-HP-EliteBook-850-G5" time="26.687">
+  <properties/>
+  <testcase name="testStravaHelperStoreJsonDataDoesNotLeakTokens" classname="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" time="0.798"/>
+  <testcase name="testStravaSecurityMigrationSecondRunIsIdempotent" classname="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" time="0.952"/>
+  <testcase name="verifyZeroHardcodedDebugTrueInMainSourceSet" classname="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" time="22.632"/>
+  <testcase name="testDiagnosticStatusLoggingPreservesStatusCodeWithoutBody" classname="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" time="0.183"/>
+  <testcase name="testStravaSecurityMigrationFirstRunFlagsReauthAndResetsTokens" classname="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" time="0.873"/>
+  <testcase name="verifyNoSensitiveDataPassedToLogcat" classname="com.atrainingtracker.trainingtracker.security.LogcatPrivacySecurityTest" time="1.248"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

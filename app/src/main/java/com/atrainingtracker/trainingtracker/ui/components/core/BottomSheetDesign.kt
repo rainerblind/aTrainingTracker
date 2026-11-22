@@ -72,6 +72,9 @@ object BottomSheetDesign {
     /** Calibrated baseline for segment detail peeks framing SegmentHeader and full 3-row SegmentDetails without cut-offs. */
     val PeekHeightSegment: Dp = 192.dp
 
+    /** Calibrated baseline for climb detail peeks framing ClimbHeader and full 3-row ClimbDetails without cut-offs (REQ-UI-2794, ATT-9553). */
+    val PeekHeightClimb: Dp = 192.dp
+
     /** Calibrated baseline for favorite location (Lieblingsort) peeks framing KnownLocationOnMapSheet. */
     val PeekHeightKnownLocation: Dp = 108.dp
 

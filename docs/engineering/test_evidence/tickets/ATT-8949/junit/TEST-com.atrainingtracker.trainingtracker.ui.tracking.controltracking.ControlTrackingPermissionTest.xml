@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-22T03:19:00.689Z" hostname="rainer-HP-EliteBook-850-G5" time="30.769">
+  <properties/>
+  <testcase name="testDecoupledCascade_allGrantedDispatchesStart" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="7.181"/>
+  <testcase name="testBatteryOptimization_launchesDirectActionRequestIgnoreBatteryOptimizations" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.718"/>
+  <testcase name="testFailSafeBatteryOptimizationLaunch_doesNotCrashOnActivityNotFoundException" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.991"/>
+  <testcase name="testPreciseLocationRequirement_fineLocationGrantedSatisfiesLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="2.064"/>
+  <testcase name="testPreciseLocationRequirement_coarseOnlyDoesNotSatisfyLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.918"/>
+  <testcase name="testDecoupledCascade_notificationDismissedWithPairedSensorsMissingBtTransitionsToBtRationale" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.868"/>
+  <testcase name="testDecoupledCascade_notificationDismissedNoPairedSensorsBypassesBtRationaleToBgLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.917"/>
+  <testcase name="testDecoupledCascade_missingLocationTransitionsToForeground" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.929"/>
+  <testcase name="testDecoupledCascade_bgLocationGrantedMissingBatteryTransitionsToBatteryRationale" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.899"/>
+  <testcase name="testDecoupledCascade_bluetoothDismissedAdvancesToBgLocation" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.757"/>
+  <testcase name="testDecoupledCascade_locationGrantedMissingNotificationTransitionsToNotificationRationale" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.85"/>
+  <testcase name="testWarningBadgePredicate_logicMatchesPermissionState" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.826"/>
+  <testcase name="testOnStartTracking_dispatchesStartTrackingBroadcast" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest" time="1.846"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "DefaultDispatcher-worker-4" java.lang.IllegalStateException: Dispatchers.Main was accessed when the platform dispatcher was absent and the test dispatcher was unset. Please make sure that Dispatchers.setMain() is called before accessing Dispatchers.Main and that Dispatchers.Main is not accessed after Dispatchers.resetMain().
+	at kotlinx.coroutines.test.internal.TestMainDispatcherJvmKt.reportMissingMainCoroutineDispatcher(TestMainDispatcherJvm.kt:45)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherJvmKt.access$reportMissingMainCoroutineDispatcher(TestMainDispatcherJvm.kt:1)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:20)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at kotlinx.coroutines.test.internal.TestMainDispatcher.getMainDispatcher(TestMainDispatcher.kt:18)
+	at kotlinx.coroutines.test.internal.TestMainDispatcher.getDispatcher(TestMainDispatcher.kt:22)
+	at kotlinx.coroutines.test.internal.TestMainDispatcher.isDispatchNeeded(TestMainDispatcher.kt:32)
+	at kotlinx.coroutines.internal.DispatchedContinuationKt.safeIsDispatchNeeded(DispatchedContinuation.kt:262)
+	at kotlinx.coroutines.internal.DispatchedContinuationKt.resumeCancellableWithInternal(DispatchedContinuation.kt:324)
+	at kotlinx.coroutines.DispatchedCoroutine.afterResume(Builders.common.kt:588)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(23), "coroutine#23":DispatchedCoroutine{Cancelled}@70d84fe9, Dispatchers.IO]
+Caused by: java.lang.IllegalStateException: Module with the Main dispatcher had failed to initialize. For tests Dispatchers.setMain from kotlinx-coroutines-test module can be used
+	at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.missing(MainDispatchers.kt:111)
+	at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.dispatch(MainDispatchers.kt:101)
+	at kotlinx.coroutines.internal.MissingMainCoroutineDispatcher.dispatch(MainDispatchers.kt:84)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:22)
+	... 16 more
+Caused by: java.lang.RuntimeException: Method getMainLooper in android.os.Looper not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.os.Looper.getMainLooper(Looper.java)
+	at kotlinx.coroutines.android.AndroidDispatcherFactory.createDispatcher(HandlerDispatcher.kt:51)
+	at kotlinx.coroutines.internal.MainDispatchersKt.tryCreateDispatcher(MainDispatchers.kt:53)
+	at kotlinx.coroutines.test.internal.TestMainDispatcherFactory.createDispatcher$lambda$2(TestMainDispatcherJvm.kt:15)
+	... 16 more
+]]></system-err>
+</testsuite>

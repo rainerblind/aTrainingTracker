@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.39  
+**Version**: 1.0.40  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 125
+**Total Requirements**: 126
 
 ---
 
@@ -3006,6 +3006,30 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-127: `EditWorkoutScreen` Immediate Polar Pending Retry Sync Banner, Dismiss Persistence & Post-Sync Refresh (`ATT-9174`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-129`
+- **System Requirement(s)**: `SYSREQ-DEX-007`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `PolarH10RetrySyncBanner.kt`
+- **Localization Parity**: `N/A - 0 string changes` (reuses existing 9/9 localized Polar retry sync & unpaired hint strings in `strings_devices.xml`)
+- **Rationale**: After stopping a workout while Polar Verity Sense or Polar H10 is disconnected, stop-time fast-fail (`ATT-8969`) opens `EditWorkoutScreen` directly. Mounting `PolarPendingRetrySyncSection` directly at the top of `EditWorkoutDialog` lets the athlete reconnect and tap **"Sync Now"** (or **"Dismiss"**) immediately without closing Edit Workout and navigating to Workout Details first (refining `REQ-SET-106.2`, `REQ-SET-109.3`, `REQ-SET-119.1`, `REQ-SET-125`).
+- **Description**:
+  1. *Immediate Banner Mounting & Flush Geometry (`REQ-SET-127.1`)*: `EditWorkoutDialog` (`EditWorkoutScreen.kt`) SHALL mount `PolarPendingRetrySyncSection` directly at the top of its content column (below any Diagnostic Warning Card and above the Workout Name field) whenever `workoutData?.polarSyncPending == true`, forwarding `workoutId`, `polarExerciseId`, `polarDeviceId`, `outerPadding = PaddingValues(0.dp)` (aligning flush with the bottom-sheet form controls while preserving the default `16.dp`/`8.dp` outer padding for `TrackOnMapScreen` and `WorkoutDetailTabbedContent`), and `Modifier.testTag(EditWorkoutTestTags.POLAR_RETRY_SYNC_BANNER)`. When `polarSyncPending == false`, the banner SHALL NOT render. Unpaired-sensor detection, disabled **"Sync Now"**, localized unpaired hint, and reactive re-pair recovery (`REQ-SET-125`) SHALL work identically inside `EditWorkoutScreen`.
+  2. *Lifecycle-Safe Sync & Race-Free Dismiss (`REQ-SET-127.2`)*: Tapping **"Sync Now"** SHALL dispatch through the existing non-composition `PolarRetrySyncCoordinator.startSync(...)` (`REQ-SET-119.1`). Tapping **"Dismiss"** SHALL clear coordinator state and invoke `EditWorkoutViewModel.dismissPolarSyncPending()`, which immediately clears `polarSyncPending = false` in editor state, guards against stale `repository.allWorkouts` emissions (`userDismissedPolarSyncPending`), and persists `POLAR_SYNC_PENDING = 0` via `WorkoutRepository.dismissPolarSyncPending(workoutId)`.
+  3. *Post-Sync Summary Refresh & User-Edit / Export Preservation (`REQ-SET-127.3`)*: `EditWorkoutViewModel` SHALL observe `PolarRetrySyncCoordinator.completedWorkoutEvents` and call `repository.refreshWorkout(workoutId)` when `completedWorkoutId == workoutId`. Reactive telemetry refresh (`mergeTelemetryPreservingUserEdits`) SHALL update workout summary stats and hide the banner (`polarSyncPending = false`) upon completion while strictly preserving all 19 user-editable metadata fields and preserving existing `WorkoutPostProcessingCoordinator` / controller export gating and re-export behavior.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with `polarSyncPending == true` (initially or set reactively after stop-time fast-fail), *When* `EditWorkoutScreen` is open, *Then* `PolarPendingRetrySyncSection` renders at the top of the sheet with model-specific H10/Verity/unpaired copy; *When* `polarSyncPending == false`, *Then* the banner is hidden.
+• *Given* the banner is visible with a paired sensor, *When* the user taps **"Sync Now"** and sync completes, *Then* `PolarRetrySyncCoordinator` runs independently of composition, `EditWorkoutViewModel` refreshes workout telemetry via `repository.refreshWorkout(workoutId)`, the banner hides, and unsaved editor fields remain intact.
+• *Given* the banner is visible, *When* the user taps **"Dismiss"**, *Then* the banner hides immediately, `repository.dismissPolarSyncPending(workoutId)` persists `polarSyncPending = 0`, and stale `allWorkouts` snapshots do not resurrect the banner.
+
+**Invariants**: `PolarRetrySyncCoordinator` non-composition scope intact (`REQ-SET-119.1`); `ATT-9509` unpaired hint & reactivity intact (`REQ-SET-125`); `REQ-TRK-091.2` 19-field user-edit preservation intact; `TrackOnMapScreen`/`WorkoutDetailTabbedContent` default outer padding unchanged; `0` monolith files touched; `0` string edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3049,3 +3073,4 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.37` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `REQ-SET-126` to `[Verified]` in Stage 5 reusing Gate 4 (`ATT-9573` @ `36870006`, `Rule 7.5`, `0` `app/` drift): `123/123 PASS` across 11 Tier-1 suites (`0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
 | `1.0.38` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Stage 6 Bounce 1/3 heal: gated `BTLEHeartRateDevice` `0x10` RR parsing on `decision.getAcceptForSensor()`, hardened `PolarOnlineStreamingBridge` (`1,485/1,500` LoC) Verity PPI TOCTOU (`preAcquire` + post-suspend recheck + `processPpiData` workout guard + `forceStopFirmwarePpi` on workout connect & `recoverHrStream`), added active-owner guard to `PolarPmdStreamCoordinator.OneShotTimer` (`599/1,500`), added drift-free `PolarHrStreamHealthMonitor.nextCheckDelayMs()` (`389` LoC) + `resumeAfterOfflineSync`/`evaluateHrStaleness` timer re-arming + `resetRrAndOpticalArtifactState` tier re-sync (`+7` tests, `130/130 PASS`), and set `[Implemented]` pending Gate 4 / Stage 5 Bounce 1 re-verification. |
 | `1.0.39` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Promoted `REQ-SET-126` to `[Verified]` in Stage 5 Bounce 1 reusing Gate 4 Bounce 1 (`ATT-9575` @ `1099f4a9`, `Rule 7.5`, `0` `app/` drift): `130/130 PASS` across 11 Tier-1 suites (`24/24` verbatim new methods verified, `0` new production warnings), `4/4` Python safety linters PASS, `--check-verified-evidence` EXIT `0`, and refreshed `docs/engineering/walkthroughs/ATT-9345_walkthrough.md`. |
+| `1.0.40` | 2026-11-22 | Lane 3 Author (`ATT-9174`, `--as agent1`) | `ATT-9174` | Added and verified `REQ-SET-127` (`EditWorkoutScreen` immediate Polar pending retry sync banner, race-free dismiss persistence, post-sync refresh via `PolarRetrySyncCoordinator.completedWorkoutEvents`, `outerPadding` flush alignment; `65/65 PASS` across 10 Tier-1 suites + Light/Dark Compose PNG + live `emulator-5554` verification). |
