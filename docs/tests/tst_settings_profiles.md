@@ -936,8 +936,8 @@
 - **Requirement(s)**: `REQ-SET-085`
 - **Component**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`, `SupporterScreen.kt`, `AppNavigationDrawer.kt`
 - **Test Description**:
-1. Seed a workout before `2026-11-30 23:59:59`; verify `hasWorkoutBefore()` returns true and `isPioneerEarlyAdopter` is persisted as true.
-2. Seed a workout after `2026-11-30 23:59:59` with no prior workouts; verify `isPioneerEarlyAdopter` is false.
+1. Seed a workout before `2027-01-31 23:59:59`; verify `hasWorkoutBefore()` returns true and `isPioneerEarlyAdopter` is persisted as true.
+2. Seed a workout after `2027-01-31 23:59:59` with no prior workouts; verify `isPioneerEarlyAdopter` is false.
 3. Verify Pioneer status grants `isProActive() == true` and permits pairing $> 2$ devices.
 4. Verify Pioneer badge appears in UI and voluntary supporter upgrade is accessible.
 5. Seed historical workouts across multiple years (e.g. 2018); verify `getEarliestWorkoutYear()` returns 2018; verify `PioneerStatusBanner` and `DrawerHeader` format dynamic string `"★ Pioneer (Seit 2018)"` / `"★ Pioneer (Since 2018)"`. When no workouts exist, verify fallback to `"★ Pioneer"`.

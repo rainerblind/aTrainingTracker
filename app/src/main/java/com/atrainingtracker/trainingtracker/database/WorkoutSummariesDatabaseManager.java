@@ -1186,14 +1186,14 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Stichtag timestamp for Pioneer Early Adopter eligibility: 2026-11-30 23:59:59 (ATT-51 / REQ-SET-085).
+     * Stichtag timestamp for Pioneer Early Adopter eligibility: 2027-01-31 23:59:59 (ATT-51 / ATT-6291 / REQ-SET-085).
      */
-    public static final String PIONEER_CUTOFF_TIMESTAMP = "2026-11-30 23:59:59";
+    public static final String PIONEER_CUTOFF_TIMESTAMP = "2027-01-31 23:59:59";
 
     /**
      * Checks if at least one historical workout exists with start time on or before the specified cutoff timestamp (REQ-SET-085).
      *
-     * @param cutoffTimestamp SQLite-compatible datetime string (e.g. "2026-11-30 23:59:59").
+     * @param cutoffTimestamp SQLite-compatible datetime string (e.g. "2027-01-31 23:59:59").
      * @return true if at least one workout started before or at the cutoff.
      */
     public boolean hasWorkoutBefore(@NonNull String cutoffTimestamp) {

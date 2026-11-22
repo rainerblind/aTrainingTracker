@@ -159,4 +159,9 @@ class ProFeatureManagerTest {
 
         coVerify { mockSettingsDataStore.setPioneerSinceYear(2018) }
     }
+
+    @Test
+    fun testPioneerCutoffTimestampIsExtendedToEndOfJanuary2027() {
+        assertEquals("2027-01-31 23:59:59", WorkoutSummariesDatabaseManager.PIONEER_CUTOFF_TIMESTAMP)
+    }
 }

@@ -1736,7 +1736,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 - **Rationale**: Honor existing loyal athletes who tracked workouts prior to V5.0.0 by granting them permanent, lifetime Pro privileges without payment, and dynamically displaying their authentic joining year.
 - **Description**:
 1. *Cutoff Timestamp Evaluation (`REQ-SET-085.1`)*:
-• The system SHALL define `PIONEER_CUTOFF_TIMESTAMP = "2026-11-30 23:59:59"` (UTC / SQLite standard datetime).
+• The system SHALL define `PIONEER_CUTOFF_TIMESTAMP = "2027-01-31 23:59:59"` (UTC / SQLite standard datetime).
 • `WorkoutSummariesDatabaseManager.hasWorkoutBefore(cutoffTimestamp)` SHALL query `WorkoutSummaries` for `COUNT(*) > 0` with `TIME_START <= PIONEER_CUTOFF_TIMESTAMP`.
 2. *Permanent Lifetime Flag Persistence (`REQ-SET-085.2`)*:
 • If at least one historical workout exists before the cutoff timestamp, `SettingsDataStore` SHALL persist `isPioneerEarlyAdopter = true`. Once true, this flag is permanent and irrevocable.
@@ -1747,7 +1747,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • When no historical workout year exists, the badge SHALL cleanly fall back to `"★ Pioneer"`.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* a database containing a workout recorded on or before `2026-11-30 23:59:59`,
+• *Given* a database containing a workout recorded on or before `2027-01-31 23:59:59`,
 • *When* Pro status is evaluated,
 • *Then* `isPioneerEarlyAdopter` evaluates to `true`, `isProActive()` returns `true`, and unlimited device pairing is enabled.
 • *Given* an athlete recognized as Pioneer with an earliest workout recorded in 2018,
@@ -1756,7 +1756,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* a Pioneer athlete with no recorded workouts,
 • *When* viewing the Navigation Drawer or SupporterScreen banner,
 • *Then* `"★ Pioneer"` is displayed without a year suffix.
-• *Given* a new user whose first workout is recorded on `2026-12-01 00:00:00` or later,
+• *Given* a new user whose first workout is recorded on `2027-02-01 00:00:00` or later,
 • *When* Pro status is evaluated,
 • *Then* `isPioneerEarlyAdopter` evaluates to `false` and Free tier limits apply unless an active subscription exists.
 
