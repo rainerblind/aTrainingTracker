@@ -5386,7 +5386,8 @@ def export_gates(sprint_arg=None, out_path=None, role="coordinator", as_role=Non
 
 def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out_dir=None,
                          test_results_dir=None, archive_path=None, kover_xml_path=None,
-                         skip_kover=False, role="coordinator", as_role=None):
+                         skip_kover=False, role="coordinator", as_role=None,
+                         merge_results_dirs=None, min_tests=None, allow_failure=False):
     """
     REQ-PRO-100.4 / TST-PRO-100.1:
     Exports persistent, version-controlled test and coverage evidence to
@@ -5470,6 +5471,9 @@ def export_test_evidence(sprint_arg=None, release_arg=None, target_arg=None, out
         kover_xml_path=kover_xml_path,
         out_dir=out_dir,
         skip_kover=skip_kover,
+        merge_results_dirs=merge_results_dirs,
+        min_tests=min_tests,
+        allow_failure=allow_failure,
     )
     return md_path, json_path, payload
 
@@ -7083,6 +7087,9 @@ if __name__ == "__main__":
         release_arg = None
         out_arg = None
         no_kover_arg = False
+        merge_dirs_arg = []
+        min_tests_arg = None
+        allow_failure_arg = False
         idx = 1
         while idx < len(remaining_argv):
             a = remaining_argv[idx]
@@ -7101,12 +7108,38 @@ if __name__ == "__main__":
             elif a == "--out-dir" and idx + 1 < len(remaining_argv):
                 out_arg = remaining_argv[idx + 1]
                 idx += 1
+            elif a.startswith("--merge-results-dir="):
+                merge_dirs_arg.append(a.split("=", 1)[1])
+            elif a == "--merge-results-dir" and idx + 1 < len(remaining_argv):
+                merge_dirs_arg.append(remaining_argv[idx + 1])
+                idx += 1
+            elif a.startswith("--min-tests="):
+                min_tests_arg = int(a.split("=", 1)[1])
+            elif a == "--min-tests" and idx + 1 < len(remaining_argv):
+                min_tests_arg = int(remaining_argv[idx + 1])
+                idx += 1
+            elif a == "--allow-failure":
+                allow_failure_arg = True
             elif a == "--no-kover":
                 no_kover_arg = True
             elif not a.startswith("--") and not sprint_arg and not release_arg:
                 sprint_arg = a
             idx += 1
-        export_test_evidence(sprint_arg=sprint_arg, release_arg=release_arg, out_dir=out_arg, skip_kover=no_kover_arg, role=active_role)
+        effective_min_tests = 100 if min_tests_arg is None else min_tests_arg
+        try:
+            export_test_evidence(
+                sprint_arg=sprint_arg,
+                release_arg=release_arg,
+                out_dir=out_arg,
+                skip_kover=no_kover_arg,
+                role=active_role,
+                merge_results_dirs=merge_dirs_arg or None,
+                min_tests=effective_min_tests,
+                allow_failure=allow_failure_arg,
+            )
+        except ValueError as err:
+            print(f"Error: {err}", file=sys.stderr)
+            sys.exit(1)
     elif cmd in ("qa-audit", "qa_audit"):
         sprint_arg = None
         sample_arg = None

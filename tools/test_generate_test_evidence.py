@@ -467,6 +467,103 @@ class TestGenerateTestEvidence(unittest.TestCase):
             self.assertIn("nfr_verification", disk_payload)
             self.assertEqual(disk_payload["nfr_verification"]["measurements"][0]["measured_value"], 4.25)
 
+    def test_snapshot_merge_and_guardrails_reject_truncated_or_failing_evidence(self):
+        """ATT-9497 / Finding K3: Merge full Tier-2 snapshot with targeted re-run and enforce min_tests/allow_failure."""
+        try:
+            from tools.generate_test_evidence import main as gte_main, snapshot_junit_results
+        except ImportError:
+            from generate_test_evidence import main as gte_main, snapshot_junit_results
+
+        with tempfile.TemporaryDirectory() as tmp_root:
+            tier2_dir = os.path.join(tmp_root, "tier2_results")
+            snap_dir = os.path.join(tmp_root, "tier2_snapshot")
+            rerun_dir = os.path.join(tmp_root, "rerun_results")
+            out_dir = os.path.join(tmp_root, "out")
+            os.makedirs(tier2_dir, exist_ok=True)
+            os.makedirs(rerun_dir, exist_ok=True)
+
+            # Full Tier-2 suite A (2 tests, passing) + flaky suite B (1 failing)
+            with open(os.path.join(tier2_dir, "TEST-SuiteA.xml"), "w", encoding="utf-8") as f:
+                f.write('<testsuite name="SuiteA" tests="2" failures="0" errors="0" skipped="0" time="0.2">'
+                        '<testcase name="t1" classname="SuiteA" time="0.1"/>'
+                        '<testcase name="t2" classname="SuiteA" time="0.1"/></testsuite>')
+            with open(os.path.join(tier2_dir, "TEST-SuiteB.xml"), "w", encoding="utf-8") as f:
+                f.write('<testsuite name="SuiteB" tests="1" failures="1" errors="0" skipped="0" time="0.1">'
+                        '<testcase name="t3" classname="SuiteB" time="0.1"><failure message="flaky"/></testcase></testsuite>')
+
+            copied = snapshot_junit_results(tier2_dir, snap_dir)
+            self.assertEqual(copied, 2)
+
+            # Targeted re-run only has SuiteB (now passing)
+            with open(os.path.join(rerun_dir, "TEST-SuiteB.xml"), "w", encoding="utf-8") as f:
+                f.write('<testsuite name="SuiteB" tests="1" failures="0" errors="0" skipped="0" time="0.1">'
+                        '<testcase name="t3" classname="SuiteB" time="0.1"/></testsuite>')
+
+            # 1. Refuses failing evidence without allow_failure=True
+            with self.assertRaises(ValueError):
+                generate_test_evidence(
+                    target_id="sprint_2026-47.9",
+                    target_type="sprint",
+                    repo_root=tmp_root,
+                    results_dir=tier2_dir,
+                    out_dir=out_dir,
+                    commit_sha="deadbeef",
+                    skip_kover=True,
+                )
+
+            # 2. Explicit allow_failure=True permits archiving failing evidence
+            _, _, fail_payload = generate_test_evidence(
+                target_id="sprint_2026-47.9_fail",
+                target_type="sprint",
+                repo_root=tmp_root,
+                results_dir=tier2_dir,
+                out_dir=out_dir,
+                commit_sha="deadbeef",
+                skip_kover=True,
+                allow_failure=True,
+            )
+            self.assertEqual(fail_payload["unit_tests"]["failures"], 1)
+
+            # 3. Refuses truncated test count below min_tests threshold
+            with self.assertRaises(ValueError):
+                generate_test_evidence(
+                    target_id="sprint_2026-47.9_trunc",
+                    target_type="sprint",
+                    repo_root=tmp_root,
+                    results_dir=rerun_dir,
+                    out_dir=out_dir,
+                    commit_sha="deadbeef",
+                    skip_kover=True,
+                    min_tests=3,
+                )
+
+            # 4. Merging snapshot + targeted re-run preserves SuiteA and updates SuiteB -> 3 passing tests!
+            md_path, _, merged_payload = generate_test_evidence(
+                target_id="sprint_2026-47.9_merged",
+                target_type="sprint",
+                repo_root=tmp_root,
+                results_dir=rerun_dir,
+                merge_results_dirs=[snap_dir],
+                out_dir=out_dir,
+                commit_sha="deadbeef",
+                skip_kover=True,
+                min_tests=3,
+            )
+            self.assertTrue(os.path.isfile(md_path))
+            self.assertEqual(merged_payload["unit_tests"]["total"], 3)
+            self.assertEqual(merged_payload["unit_tests"]["failures"], 0)
+
+            # 5. CLI exits non-zero when default min-tests threshold (100) is not met
+            rc = gte_main([
+                "--sprint", "2026-47.9_cli",
+                "--repo-root", tmp_root,
+                "--test-results-dir", rerun_dir,
+                "--out-dir", out_dir,
+                "--commit", "deadbeef",
+                "--no-kover",
+            ])
+            self.assertEqual(rc, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

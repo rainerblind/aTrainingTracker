@@ -20,10 +20,14 @@ import datetime
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional, Tuple
+
+DEFAULT_MIN_TIER2_TESTS = 100
 
 try:
     from tools.verify_requirement_governance import (
@@ -546,6 +550,44 @@ def should_skip_kover(
     return False
 
 
+def snapshot_junit_results(source_dir: str, snapshot_dir: str) -> int:
+    """Copies all JUnit TEST-*.xml files from source_dir into snapshot_dir before targeted re-runs (ATT-9497)."""
+    if not source_dir or not os.path.isdir(source_dir):
+        raise ValueError(f"JUnit source directory does not exist: {source_dir}")
+    os.makedirs(snapshot_dir, exist_ok=True)
+    copied = 0
+    for dirpath, _, filenames in os.walk(source_dir):
+        for fname in filenames:
+            if fname.startswith("TEST-") and fname.endswith(".xml"):
+                src = os.path.join(dirpath, fname)
+                rel = os.path.relpath(src, source_dir)
+                dst = os.path.join(snapshot_dir, rel)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
+                copied += 1
+    return copied
+
+
+def merge_junit_xml_directories(source_dirs: List[str], staging_dir: str) -> int:
+    """
+    Merges JUnit TEST-*.xml files across multiple directories in chronological order into staging_dir (ATT-9497).
+    Later directories (e.g. targeted re-runs) update only matching suite filenames while preserving all other
+    suites from earlier full Tier-2 snapshots.
+    """
+    os.makedirs(staging_dir, exist_ok=True)
+    merged_by_name: Dict[str, str] = {}
+    for sdir in source_dirs:
+        if not sdir or not os.path.isdir(sdir):
+            continue
+        for dirpath, _, filenames in os.walk(sdir):
+            for fname in sorted(filenames):
+                if fname.startswith("TEST-") and fname.endswith(".xml"):
+                    merged_by_name[fname] = os.path.join(dirpath, fname)
+    for fname, src_path in sorted(merged_by_name.items()):
+        shutil.copy2(src_path, os.path.join(staging_dir, fname))
+    return len(merged_by_name)
+
+
 def generate_test_evidence(
     target_id: str,
     target_type: str = "sprint",
@@ -558,13 +600,17 @@ def generate_test_evidence(
     timestamp: Optional[str] = None,
     skip_kover: bool = False,
     nfr_json_path: Optional[str] = None,
+    merge_results_dirs: Optional[List[str]] = None,
+    min_tests: Optional[int] = None,
+    allow_failure: bool = False,
 ) -> Tuple[str, str, Dict[str, Any]]:
     """
-    Main test evidence generator function (REQ-PRO-100).
+    Main test evidence generator function (REQ-PRO-100 / ATT-9497).
     Produces:
       docs/engineering/test_evidence/<target_id>.md
       docs/engineering/test_evidence/<target_id>.json
     Returns (md_path, json_path, payload_dict).
+    Raises ValueError if total tests < min_tests or failures/errors > 0 without allow_failure=True.
     """
     root = repo_root or os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     commit = commit_sha or get_git_commit(root)
@@ -572,14 +618,29 @@ def generate_test_evidence(
     output_directory = out_dir or os.path.join(root, "docs", "engineering", "test_evidence")
     os.makedirs(output_directory, exist_ok=True)
 
-    # 1. Parse JUnit XML Results
+    # 1. Parse JUnit XML Results (optionally merging preserved full Tier-2 snapshots + targeted re-runs)
     parsed_junit: Dict[str, Any] = {"summary": {}, "by_tst": {}}
-    if parse_junit_xml_results:
-        parsed_junit = parse_junit_xml_results(
-            results_dir=results_dir,
-            archive_path=archive_path,
-            repo_root=root,
-        )
+    temp_merge_dir: Optional[str] = None
+    effective_results_dir = results_dir
+    try:
+        if merge_results_dirs:
+            ordered_dirs: List[str] = list(merge_results_dirs)
+            default_dir = results_dir or os.path.join(root, "app", "build", "test-results")
+            if default_dir and os.path.isdir(default_dir) and default_dir not in ordered_dirs:
+                ordered_dirs.append(default_dir)
+            temp_merge_dir = tempfile.mkdtemp(prefix="att_junit_merge_")
+            merge_junit_xml_directories(ordered_dirs, temp_merge_dir)
+            effective_results_dir = temp_merge_dir
+
+        if parse_junit_xml_results:
+            parsed_junit = parse_junit_xml_results(
+                results_dir=effective_results_dir,
+                archive_path=archive_path,
+                repo_root=root,
+            )
+    finally:
+        if temp_merge_dir and os.path.isdir(temp_merge_dir):
+            shutil.rmtree(temp_merge_dir, ignore_errors=True)
 
     # Correlate with TST code tags if available
     code_tags = extract_test_code_tags(repo_root=root) if extract_test_code_tags else None
@@ -590,6 +651,25 @@ def generate_test_evidence(
         "total": 0, "passed": 0, "failures": 0, "errors": 0, "skipped": 0, "time": 0.0
     })
     tst_results = parsed_junit.get("by_tst", {})
+
+    # ATT-9497 / Finding K3 Guardrails: Refuse truncated/overwritten or failing evidence unless overridden
+    total_tests = int(test_summary.get("total", 0) or 0)
+    total_failures = int(test_summary.get("failures", 0) or 0)
+    total_errors = int(test_summary.get("errors", 0) or 0)
+
+    if min_tests is not None and min_tests > 0 and total_tests < min_tests:
+        raise ValueError(
+            f"Refusing to archive test evidence for '{target_id}': executed only {total_tests} test(s), "
+            f"below minimum Tier-2 threshold ({min_tests}) (ATT-9497 / Finding K3). "
+            "Preserve full Tier-2 XMLs with --snapshot-to / --merge-results-dir before targeted re-runs, "
+            "or pass --min-tests 0 only for intentional synthetic runs."
+        )
+    if (total_failures > 0 or total_errors > 0) and not allow_failure:
+        raise ValueError(
+            f"Refusing to archive failing test evidence for '{target_id}': "
+            f"{total_failures} failure(s), {total_errors} error(s) (ATT-9497 / Finding K3). "
+            "Fix failing tests first or pass --allow-failure to record an explicit deviation."
+        )
 
     # 2. Parse Kover XML Report (skipped on regular Schichten; run in weekly reviews/audits & releases)
     if should_skip_kover(target_id=target_id, target_type=target_type, kover_xml_path=kover_xml_path, skip_kover=skip_kover):
@@ -731,11 +811,45 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help="Path to measured NFR benchmark JSON (default: app/build/reports/nfr/nfr_measurements.json).",
     )
+    parser.add_argument(
+        "--snapshot-to",
+        type=str,
+        default=None,
+        help="Snapshot current JUnit TEST-*.xml files into this directory before targeted re-runs and exit (ATT-9497).",
+    )
+    parser.add_argument(
+        "--merge-results-dir",
+        action="append",
+        default=None,
+        help="Additional JUnit XML snapshot directory to merge chronologically before current results (repeatable, ATT-9497).",
+    )
+    parser.add_argument(
+        "--min-tests",
+        type=int,
+        default=None,
+        help=f"Minimum executed test count required to archive sprint/release evidence (default: {DEFAULT_MIN_TIER2_TESTS} for sprint/release, 0 disables).",
+    )
+    parser.add_argument(
+        "--allow-failure",
+        action="store_true",
+        help="Explicit deviation flag allowing archival when test failures or errors > 0 (ATT-9497).",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
+
+    if args.snapshot_to:
+        root = args.repo_root or os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        src_dir = args.test_results_dir or os.path.join(root, "app", "build", "test-results")
+        try:
+            count = snapshot_junit_results(src_dir, args.snapshot_to)
+            print(f"Snapshotted {count} JUnit XML suite file(s) from {src_dir} to {args.snapshot_to}.")
+            return 0
+        except ValueError as err:
+            print(f"Error: {err}", file=sys.stderr)
+            return 1
 
     target_id = args.sprint or args.release or args.target
     if not target_id:
@@ -746,18 +860,29 @@ def main(argv: Optional[List[str]] = None) -> int:
     if target_type == "sprint" and not target_id.startswith("sprint_"):
         target_id = f"sprint_{target_id}"
 
-    generate_test_evidence(
-        target_id=target_id,
-        target_type=target_type,
-        repo_root=args.repo_root,
-        results_dir=args.test_results_dir,
-        archive_path=args.test_archive_path,
-        kover_xml_path=args.kover_xml,
-        out_dir=args.out_dir,
-        commit_sha=args.commit,
-        skip_kover=args.no_kover,
-        nfr_json_path=args.nfr_json,
-    )
+    effective_min_tests = args.min_tests
+    if effective_min_tests is None and target_type in ("sprint", "release"):
+        effective_min_tests = DEFAULT_MIN_TIER2_TESTS
+
+    try:
+        generate_test_evidence(
+            target_id=target_id,
+            target_type=target_type,
+            repo_root=args.repo_root,
+            results_dir=args.test_results_dir,
+            archive_path=args.test_archive_path,
+            kover_xml_path=args.kover_xml,
+            out_dir=args.out_dir,
+            commit_sha=args.commit,
+            skip_kover=args.no_kover,
+            nfr_json_path=args.nfr_json,
+            merge_results_dirs=args.merge_results_dir,
+            min_tests=effective_min_tests,
+            allow_failure=args.allow_failure,
+        )
+    except ValueError as err:
+        print(f"Error: {err}", file=sys.stderr)
+        return 1
     return 0
 
 
