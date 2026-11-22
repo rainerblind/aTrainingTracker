@@ -85,7 +85,7 @@ data class SupporterBasePlan(
         const val PRODUCT_ID = "att_supporter_sub"
 
         val PLANS = listOf(
-            SupporterBasePlan("bronze-monthly", SupporterTier.BRONZE, "1 €", "month"),
+            SupporterBasePlan("bronze-monthly", SupporterTier.BRONZE, "2 €", "month"),
             SupporterBasePlan("bronze-yearly", SupporterTier.BRONZE, "10 €", "year"),
             SupporterBasePlan("silver-yearly", SupporterTier.SILVER, "25 €", "year", isRecommended = true),
             SupporterBasePlan("gold-yearly", SupporterTier.GOLD, "50 €", "year"),

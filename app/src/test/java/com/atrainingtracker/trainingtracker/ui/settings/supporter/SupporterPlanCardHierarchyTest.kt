@@ -178,7 +178,7 @@ class SupporterPlanCardHierarchyTest {
             plans.map { it.basePlanId }
         )
         assertEquals(
-            listOf("1 €", "10 €", "25 €", "50 €", "100 €"),
+            listOf("2 €", "10 €", "25 €", "50 €", "100 €"),
             plans.map { it.priceFormatted }
         )
         assertEquals(R.string.supporter_plan_subtitle_bronze_monthly, plans[0].subtitleRes())

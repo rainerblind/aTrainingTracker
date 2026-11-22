@@ -1772,7 +1772,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 - **Description**:
 1. *Subscription Product & 5 Base Plans (`REQ-SET-086.1`)*:
 • The system SHALL integrate Google Play Billing with product ID `att_supporter_sub` across 5 base plans:
-  - `bronze-monthly` (1 € / month) — Bronze Supporter
+  - `bronze-monthly` (2 € / month) — Bronze Supporter
   - `bronze-yearly` (10 € / year) — Bronze Supporter
   - `silver-yearly` (25 € / year, Recommended) — Silver Supporter
   - `gold-yearly` (50 € / year) — Gold Supporter
