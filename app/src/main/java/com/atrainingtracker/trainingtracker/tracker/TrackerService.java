@@ -337,6 +337,28 @@ public class TrackerService extends Service {
         }
     }
 
+    private void submitOrInsertRrBatch(List<WorkoutRrInterval> batch, long workoutId, String mode) {
+        if (!mRrFlushExecutor.isShutdown()) {
+            try {
+                mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
+                    try {
+                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error " + mode + " flushing live RR intervals for workout " + workoutId, t);
+                    }
+                });
+                return;
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                Log.w(TAG, "mRrFlushExecutor shut down concurrently; flushing live RR inline for workout " + workoutId);
+            }
+        }
+        try {
+            getWorkoutRrRepository().insertIntervalsBlocking(batch);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
+        }
+    }
+
     @VisibleForTesting
     void flushLiveRrQueueAsync() {
         if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0) {
@@ -351,21 +373,7 @@ public class TrackerService extends Service {
                 batch.add(item);
             }
             if (!batch.isEmpty()) {
-                if (!mRrFlushExecutor.isShutdown()) {
-                    mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
-                        try {
-                            getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                        } catch (Throwable t) {
-                            Log.e(TAG, "Error asynchronously flushing live RR intervals for workout " + workoutId, t);
-                        }
-                    });
-                } else {
-                    try {
-                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
-                    }
-                }
+                submitOrInsertRrBatch(batch, workoutId, "asynchronously");
             }
         }
     }
@@ -380,21 +388,7 @@ public class TrackerService extends Service {
                 batch.add(item);
             }
             if (!batch.isEmpty()) {
-                if (!mRrFlushExecutor.isShutdown()) {
-                    mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
-                        try {
-                            getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                        } catch (Throwable t) {
-                            Log.e(TAG, "Error synchronously flushing live RR intervals for workout " + workoutId, t);
-                        }
-                    });
-                } else {
-                    try {
-                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
-                    }
-                }
+                submitOrInsertRrBatch(batch, workoutId, "synchronously");
             }
             pending = mPendingRrFlushFuture;
         }
@@ -1097,11 +1091,16 @@ public class TrackerService extends Service {
         }
     }
 
-    private void releaseWakeLock() {
-        if (wakeLock != null && wakeLock.isHeld()) {
-            wakeLock.release();
+    protected synchronized void releaseWakeLock() {
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) {
+                wakeLock.release();
+                if (DEBUG) Log.d(TAG, "WakeLock released");
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Error releasing WakeLock", t);
+        } finally {
             wakeLock = null;
-            if (DEBUG) Log.d(TAG, "WakeLock released");
         }
     }
 
@@ -1426,7 +1425,11 @@ public class TrackerService extends Service {
     protected synchronized void safeUnbindBanalService() {
         try {
             if (mBanalService != null) {
-                mBanalService.removeRrBeatListener(mRrBeatListener);
+                try {
+                    mBanalService.removeRrBeatListener(mRrBeatListener);
+                } catch (Throwable t) {
+                    Log.w(TAG, "Error removing RR beat listener during unbind", t);
+                }
             }
             if (mBanalBound || mBanalService != null) {
                 unbindService(mBanalConnection);
@@ -1435,6 +1438,24 @@ public class TrackerService extends Service {
             Log.w(TAG, "Error unbinding BANALService", t);
         } finally {
             mBanalBound = false;
+        }
+    }
+
+    private void performIdempotentMainThreadTeardown(boolean stopSelf) {
+        safeUnbindBanalService();
+        mBanalService = null;
+        releaseWakeLock();
+        try {
+            performStopForeground();
+        } catch (Throwable t) {
+            Log.w(TAG, "Error stopping foreground state during teardown", t);
+        }
+        if (stopSelf) {
+            try {
+                performStopSelf();
+            } catch (Throwable t) {
+                Log.w(TAG, "Error calling stopSelf during teardown", t);
+            }
         }
     }
 
@@ -1513,17 +1534,11 @@ public class TrackerService extends Service {
                 runOnMainThread(() -> {
                     try {
                         if (mSessionGeneration.get() == stoppingGeneration && mIsStopping) {
-                            mBanalService = null;
-                            releaseWakeLock();
-                            safeUnbindBanalService();
-                            performStopForeground();
-                            performStopSelf();
-                        } else {
-                            if (DEBUG) {
-                                Log.d(TAG, "handleActionStop: New session started (generation="
-                                        + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
-                                        + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
-                            }
+                            performIdempotentMainThreadTeardown(true);
+                        } else if (DEBUG) {
+                            Log.d(TAG, "handleActionStop: New session started (generation="
+                                    + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
+                                    + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
                         }
                     } finally {
                         finalizationFuture.complete(null);
@@ -1712,17 +1727,18 @@ public class TrackerService extends Service {
         unregisterTransientReceivers();
 
         if (mIsStopping) {
-            CompletableFuture<Void> future = mFinalizationFuture;
-            if (future != null && !future.isDone()) {
-                try {
-                    future.get(2, java.util.concurrent.TimeUnit.SECONDS);
-                } catch (Throwable ignored) {
-                }
-            }
+            // ATT-6178 (REQ-TRK-034.4, REQ-TRK-033.2, REQ-TRK-076.1): Shut down executors without
+            // blocking the Main Thread on mFinalizationFuture.get(...) or unbinding BANALService
+            // while endWorkout() is still executing; the posted Main-Thread cleanup Runnable owns
+            // idempotent teardown once endWorkout() finishes.
             mRrFlushExecutor.shutdown();
             mDbExecutor.shutdown();
-            safeUnbindBanalService();
-            performStopForeground();
+            CompletableFuture<Void> future = mFinalizationFuture;
+            if (future == null || future.isDone()) {
+                safeUnbindBanalService();
+                mBanalService = null;
+                releaseWakeLock();
+            }
             return;
         }
 
@@ -1745,12 +1761,9 @@ public class TrackerService extends Service {
                 Log.e(TAG, "Unexpected error during async workout finalization in onDestroy", t);
             } finally {
                 mRrFlushExecutor.shutdown();
-                mBanalService = null;
-                releaseWakeLock();
                 runOnMainThread(() -> {
                     try {
-                        safeUnbindBanalService();
-                        performStopForeground();
+                        performIdempotentMainThreadTeardown(false);
                     } finally {
                         finalizationFuture.complete(null);
                     }

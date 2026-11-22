@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T08:50:28.174Z" hostname="rainer-HP-EliteBook-850-G5" time="7.883">
+  <properties/>
+  <testcase name="testTrackingAbort_resetsApplicationStateInvariants" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="2.428"/>
+  <testcase name="testRecreateValuesWhenResuming_missingRecord_completesExceptionally" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.036"/>
+  <testcase name="testApplyResumedState_invalidBaseFileName_failsDefensively" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="0.775"/>
+  <testcase name="testEndToEndMonotonicContinuityAcrossCrashRecovery" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="0.88"/>
+  <testcase name="testStartTypeInvariants_acrossStartupTiers" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="0.802"/>
+  <testcase name="testApplyResumedState_validRecord_populatesStateAndInitializes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="0.798"/>
+  <testcase name="testApplyResumedState_reanchorsBarometerAndResumesPolarSidecarForCrashAndUserResume_TST_STB_025_1" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest" time="1.163"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Intent = Intent { act=com.atrainingtracker.banalservice.RESET_ACCUMULATORS_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>
