@@ -811,7 +811,7 @@ def list_versions(role="agent1"):
         status = "RELEASED" if v.get("released") else ("ARCHIVED" if v.get("archived") else "ACTIVE/UNRELEASED")
         print(f"- {v.get('name')} (id: {v.get('id')}) [{status}]")
 
-def set_fix_version(issue_key, version_name, role="agent1"):
+def set_fix_version(issue_key, version_name, role="agent1", comment=None, require_comment=False):
     config = get_config()
     if version_name.lower() in ("none", "clear", "remove", "null", ""):
         url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
@@ -823,6 +823,16 @@ def set_fix_version(issue_key, version_name, role="agent1"):
         jira_request(url, method="PUT", payload=payload, role=role)
         print(f"Lösungsversion (Fix Version) cleared on {issue_key}.")
         return
+
+    clean_comment = (comment or "").strip()
+    if require_comment and not clean_comment:
+        print(
+            f"Error: Setting Lösungsversion (Fix Version) '{version_name}' on {issue_key} requires the PO review comment (Rule 3.1).\n"
+            f"Pass --comment \"<PO feedback & verdict>\" (or a 3rd positional comment argument) so the PO's review comment is recorded atomically.\n"
+            f"(Pass --no-comment ONLY for non-review batch release tagging.)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # Validate against project ATT versions
     url_versions = f"{config['JIRA_URL']}/rest/api/2/project/ATT/versions"
@@ -858,6 +868,14 @@ def set_fix_version(issue_key, version_name, role="agent1"):
     }
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Lösungsversion (Fix Version) '{version_name}' successfully set on {issue_key}.")
+    if clean_comment:
+        if clean_comment.lower().startswith("po review"):
+            formatted_comment = clean_comment
+        else:
+            import datetime as _dt
+            today_s = _dt.date.today().isoformat()
+            formatted_comment = f"PO Review ({today_s}, FixVersion {version_name}): {clean_comment}"
+        add_comment(issue_key, formatted_comment, role=role)
 
 
 def print_status(issue_key, role="agent1"):
@@ -6543,7 +6561,8 @@ USAGE_TEXT = (
     "  download URL FILENAME                                 Download single attachment URL\n"
     "  download-all KEY                                      Download all attachments for issue\n"
     "  versions                                              List project versions\n"
-    "  set-fixversion KEY VERSION                            Set Lösungsversion on parent issue\n"
+    "  set-fixversion KEY VERSION --comment \"TEXT\" [--no-comment]\n"
+    "                                                        Set Lösungsversion on parent issue AND record PO review comment atomically (Rule 3.1)\n"
     "  clear-fixversion KEY                                  Clear Lösungsversion on issue\n"
     "  rank-top KEY                                          Rank issue at the very top of the backlog\n"
     "  create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint]\n"
@@ -6828,8 +6847,25 @@ if __name__ == "__main__":
         )
     elif cmd == "versions":
         list_versions(role=active_role)
-    elif cmd in ("set-fixversion", "set-fix-version") and len(remaining_argv) == 3:
-        set_fix_version(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd in ("set-fixversion", "set-fix-version") and len(remaining_argv) >= 3:
+        fv_key = remaining_argv[1]
+        fv_ver = remaining_argv[2]
+        fv_comment = None
+        fv_no_comment = False
+        idx = 3
+        while idx < len(remaining_argv):
+            arg = remaining_argv[idx]
+            if arg == "--no-comment":
+                fv_no_comment = True
+            elif arg.startswith("--comment="):
+                fv_comment = arg.split("=", 1)[1]
+            elif arg == "--comment" and idx + 1 < len(remaining_argv):
+                fv_comment = remaining_argv[idx + 1]
+                idx += 1
+            elif fv_comment is None and not arg.startswith("--"):
+                fv_comment = arg
+            idx += 1
+        set_fix_version(fv_key, fv_ver, role=active_role, comment=fv_comment, require_comment=(not fv_no_comment))
     elif cmd == "update" and len(remaining_argv) == 4 and remaining_argv[2] in ("--fix-version", "--fixversion"):
         set_fix_version(remaining_argv[1], remaining_argv[3], role=active_role)
     elif cmd == "update" and len(remaining_argv) == 3 and (remaining_argv[2].startswith("--fix-version=") or remaining_argv[2].startswith("--fixversion=")):

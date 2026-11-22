@@ -170,15 +170,12 @@ Jointly review all completed sprint tickets with the human user against expectat
      1. Your explicit verdict recommendation (e.g., **Accept as `i.O.`**, **Accept with Follow-Up Ticket**, or **Deferred Field Test**) and the technical rationale why.
      2. Whether the ticket has an **on-device UI/behavioral touchpoint** (giving the exact screen/navigation path on the phone if the user wants to test it) or is a **pure backend/unit-test ticket** already 100% verified by the automated test suite.
    * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>` and deployed to real physical hardware per Two-Tier Device Policy `ATT-6506` / `REQ-TST-004`: `ANDROID_SERIAL=<physical_serial> ./gradlew installDebug -PstampGitHash=true`) and inspects the code review and recommendation.
-   * **Evaluation Decision (Mandatory PO Comment Persistence — `Rule 3.1`)**:
-     * **Always Record PO Review Comment on the Reviewed Ticket**: For **every** evaluation decision below (`i.O.`, `i.O. + follow-up`, `Deferred Field Test`, or `n.i.O.`), whenever the human PO gives a review comment or remark to the agent, immediately post it verbatim/faithfully as a Jira comment on `<KEY>` before advancing to the next ticket:
-       ```bash
-       python3 tools/jira_util.py --as coordinator comment <KEY> "PO Review (<YYYY-MM-DD>): <PO comment & verdict>"
-       ```
+   * **Evaluation Decision (Mandatory PO Comment Persistence — Atomic with `set-fixversion`, `Rule 3.1`)**:
+     * **Always Record PO Review Comment on the Reviewed Ticket**: Whenever setting `FixVersion` on acceptance (`i.O.` or `i.O. + follow-up`), pass `--comment "<PO comment & verdict>"` directly to `set-fixversion` (hard-enforced by `tools/jira_util.py` so `Lösungsversion` and `PO Review (<YYYY-MM-DD>, FixVersion <VERSION>): ...` are recorded atomically in one call). For Deferred Field Test or `n.i.O.` decisions without `set-fixversion`, post via `python3 tools/jira_util.py --as coordinator comment <KEY> "PO Review (<YYYY-MM-DD>): <PO comment & verdict>"`.
      * **In Ordnung (i.O. / Accepted)**:
-       1. Set the active unreleased Fix Version (`Lösungsversion`) on the parent ticket (Rule 14):
+       1. Set the active unreleased Fix Version (`Lösungsversion`) AND record the PO review comment atomically (Rule 3.1 / Rule 14):
           ```bash
-          python3 tools/jira_util.py set-fixversion <KEY> <VERSION>
+          python3 tools/jira_util.py --as coordinator set-fixversion <KEY> <VERSION> --comment "<PO comment & verdict>"
           ```
        2. Human user transitions ticket from `Final Review (Human)` to `Erledigt` in Jira.
      * **User Feedback / Refinements ("No Code Changes During Review & Lean Defect Recording")**:
@@ -194,7 +191,7 @@ Jointly review all completed sprint tickets with the human user against expectat
          # Upload on-device screenshot or log evidence:
          python3 tools/jira_util.py upload <NEW_KEY> <SCREENSHOT_PATH>
          ```
-       * Set Fix Version on the current sprint ticket (`python3 tools/jira_util.py set-fixversion <KEY> <VERSION>`), have the human user transition the current sprint ticket to `Erledigt`, and proceed strictly to the next ticket.
+       * Set Fix Version AND record the PO review comment atomically on the current ticket (`python3 tools/jira_util.py --as coordinator set-fixversion <KEY> <VERSION> --comment "<PO comment & linked follow-up key>"`), have the human user transition the current ticket to `Erledigt`, and proceed strictly to the next ticket.
      * **Deferred Review State for Field-Tested Features**:
        * When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts requiring outdoor rides or real-world physical activities to evaluate, move it into the dedicated human field-verification queue **`Bereit für PO Systemtest`** (ID `454`) with label `human-execution` via `python3 tools/jira_util.py --as coordinator defer-systemtest <KEY>` (keeping status `Final Review (Human)` / assigned to `human` across sprint close while `sprint/<SPRINT_NAME>` is merged to `develop`).
      * **Nicht in Ordnung (n.i.O. / Rejection of Core Scope)**:

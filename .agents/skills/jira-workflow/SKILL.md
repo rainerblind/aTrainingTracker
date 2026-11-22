@@ -65,7 +65,7 @@ python3 tools/jira_util.py upload <KEY> <FILE_PATH>
 python3 tools/jira_util.py rank-top <KEY>
 
 # Set or clear Fix Version (Lösungsversion) on a finished parent ticket (NEVER on subtasks or unfinished tickets)
-python3 tools/jira_util.py set-fixversion <PARENT_KEY> <VERSION>
+python3 tools/jira_util.py --as coordinator set-fixversion <PARENT_KEY> <VERSION> --comment "<PO review comment & verdict>"
 python3 tools/jira_util.py clear-fixversion <KEY>
 
 # Post a role-attributed comment or update description

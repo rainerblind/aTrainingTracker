@@ -577,6 +577,40 @@ class TestSecondVendorStage6(unittest.TestCase):
         self.assertNotIn("po-review-followup", mock_req.call_args_list[0][1]["payload"]["fields"].get("labels", []))
         mock_comment.assert_not_called()
 
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_set_fix_version_requires_and_posts_po_review_comment_atomically(self, mock_cfg, mock_req, mock_comment):
+        """Rule 3.1 tripwire: CLI set-fixversion requires --comment and posts PO Review comment atomically."""
+        mock_cfg.return_value = self.mock_config
+        # 1. Missing comment rejected when require_comment=True
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.set_fix_version("ATT-9500", "V5.0.0", role="coordinator", comment=None, require_comment=True)
+            self.assertEqual(cm.exception.code, 1)
+        self.assertIn("requires the PO review comment", stderr_capture.getvalue())
+
+        # 2. Valid comment sets fixVersions AND posts formatted PO Review comment
+        mock_req.side_effect = [
+            [{"name": "V5.0.0", "released": False, "archived": False}],
+            {"fields": {"status": {"name": "Final Review (Human)"}, "issuetype": {"subtask": False}}},
+            {},
+        ]
+        jira_util.set_fix_version(
+            "ATT-9500", "V5.0.0", role="coordinator", comment="i.O. tested on Pixel 10", require_comment=True
+        )
+        mock_comment.assert_called_once()
+        self.assertEqual(mock_comment.call_args[0][0], "ATT-9500")
+        self.assertIn("FixVersion V5.0.0): i.O. tested on Pixel 10", mock_comment.call_args[0][1])
+
+        # 3. Clearing FixVersion ("none") works without comment even when require_comment=True
+        mock_req.reset_mock()
+        mock_comment.reset_mock()
+        mock_req.side_effect = [{}]
+        jira_util.set_fix_version("ATT-9500", "none", role="coordinator", comment=None, require_comment=True)
+        mock_comment.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
