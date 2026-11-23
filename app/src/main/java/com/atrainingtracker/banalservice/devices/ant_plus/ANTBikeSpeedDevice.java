@@ -110,10 +110,14 @@ public class ANTBikeSpeedDevice extends MyANTDevice {
             bikeSpeedDistancePcc.subscribeCalculatedSpeedEvent(new CalculatedSpeedReceiver(new BigDecimal(mCalibrationFactor)) {
                 @Override
                 public void onNewCalculatedSpeed(long estTimestamp, EnumSet<EventFlag> eventFlags, BigDecimal calculatedSpeed) {
-                    myLog("onNewCalculatedSpeed:timeStamp=" + estTimestamp + ": " + calculatedSpeed.doubleValue());
+                    if (calculatedSpeed == null) {
+                        return;
+                    }
+                    double speed = calculatedSpeed.doubleValue();
+                    myLog("onNewCalculatedSpeed:timeStamp=" + estTimestamp + ": " + speed);
 
-                    mSpeedSensor.newValue(calculatedSpeed.doubleValue());
-                    mPaceSensor.newValue(1 / calculatedSpeed.doubleValue());   // TODO: correct?
+                    mSpeedSensor.newValue(speed);
+                    mPaceSensor.newValue(speed > 0.0 ? 1.0 / speed : null);
                 }
             });
 

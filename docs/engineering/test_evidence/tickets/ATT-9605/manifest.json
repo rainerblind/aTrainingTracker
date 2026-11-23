@@ -1,0 +1,13 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "101e8a01fd1da5148ccc08d02c90bf2d123b656a",
+  "files": {
+    "evidence_summary.json": "c7ed87fb79b6b5c2b584c0ef88fe6bd37315e09d621fa46b4d11ca64fcdb0b01",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest.xml": "ece545c0a2e3cd9cfed9fd5ad85a0a423a95a3ac977b3202f14dacb2f22d9d4e",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedDeviceTest.xml": "e644d775d89f259401a2137c7a4b4f8e0f3bb19ce6199cd05f427f6e989f9854",
+    "screenshots/ATT-9605_emulator_smoke.png": "52aa096338c3c01d270565b874a20bea6cc5ccd9ccf12c4e70f1394bae67ba8e"
+  },
+  "run_started_utc": "2026-11-23T22:35:26.302280+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9605"
+}

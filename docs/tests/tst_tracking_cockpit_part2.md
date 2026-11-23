@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.21  
+**Version**: 1.0.23  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 97
+**Total Tests**: 98
 
 ---
 
@@ -2097,6 +2097,25 @@
 
 ---
 
+### TST-CON-058: **`ANTBikeSpeedDevice` & `ANTBikeSpeedAndCadenceDevice` Null Speed Guard & Standstill Pace Verification (`ATT-9605`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-058` (`REQ-CON-058.1`, `REQ-CON-058.2`)
+- **Component**: `ANTBikeSpeedDevice.java`, `ANTBikeSpeedAndCadenceDevice.java`
+- **Jira**: `ATT-9605` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `ANTBikeSpeedDeviceTest#testANTBikeSpeed_nullCalculatedSpeed_initialRemainsNullWithoutNpe_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_nullCalculatedSpeed_afterMotionPreservesValuesWithoutNpe_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_initialZeroSpeed_setsZeroSpeedAndNullPace_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_positiveSpeed_publishesMetersPerSecondAndFinitePace_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_zeroSpeedAfterMotion_decaysPaceToNullAtThreshold_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_negativeSpeed_emitsNullPace_tstCon058_1`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_nullCalculatedSpeed_initialRemainsNullWithoutNpe_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_nullCalculatedSpeed_afterMotionPreservesValuesWithoutNpe_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_initialZeroSpeed_setsZeroSpeedAndNullPace_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_positiveSpeed_publishesMetersPerSecondAndFinitePace_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_zeroSpeedAfterMotion_decaysPaceToNullAtThreshold_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_negativeSpeed_emitsNullPace_tstCon058_2`
+- **Test Description**:
+  1. *`ANTBikeSpeedDevice.onNewCalculatedSpeed` Null Guard, Units & Standstill Decay (`TST-CON-058.1` — `ANTBikeSpeedDeviceTest.kt`)*:
+     • Capture `CalculatedSpeedReceiver` via `mockPcc.subscribeCalculatedSpeedEvent(...)`; invoke `onNewCalculatedSpeed(..., null)` both initially and after a valid reading; verify zero NPE (including `myLog` path) and undisturbed `mSpeedSensor` / `mPaceSensor` values.
+     • Invoke `onNewCalculatedSpeed(..., BigDecimal.ZERO)` initially; verify `mSpeedSensor.value == 0.0` and `mPaceSensor.value == null` (never `Double.POSITIVE_INFINITY`).
+     • Invoke `onNewCalculatedSpeed(..., BigDecimal("10.0"))` (`m/s`); verify `mSpeedSensor.value == 10.0` and `mPaceSensor.value == 0.1` (`1.0 / 10.0` finite `s/m`, no `/ 3.6` scaling).
+     • Deliver `8` (`SPEED_THRESHOLD`) consecutive `BigDecimal.ZERO` standstill ticks after motion; verify ticks `1..7` hold `0.1`, tick `8` decays `mPaceSensor.value` cleanly to `null`, and negative speed feeds `null` pace.
+  2. *`ANTBikeSpeedAndCadenceDevice.onNewCalculatedSpeed` Null Guard, Units & Standstill Decay (`TST-CON-058.2` — `ANTBikeSpeedAndCadenceDeviceTest.kt`)*:
+     • Capture `CalculatedSpeedReceiver` via `mockSpeedPcc.subscribeCalculatedSpeedEvent(...)` alongside existing `TST-CON-025.1`/`.2` release-handle tests; verify identical `null` (initial & post-motion), initial `0.0` (`pace == null`), positive `10.0 m/s -> 0.1 s/m`, `8`-tick `SPEED_THRESHOLD` standstill decay to `null`, and negative speed (`pace == null`) assertions.
+  3. *Architecture Contract & Regression Parity (`TST-CON-058.3` — `ArchitectureConformanceContractTest.kt`)*:
+     • Run incremental `--rerun` targeted unit & contract tests (`ANTBikeSpeedDeviceTest`, `ANTBikeSpeedAndCadenceDeviceTest`, `ArchitectureConformanceContractTest`); confirm `ANTBikeSpeedDevice.java <= 1,500` LoC, `ANTBikeSpeedAndCadenceDevice.java <= 1,500` LoC, and `0` string edits (`Localization Parity: N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2240,3 +2259,5 @@
 | `1.0.19` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `TST-CON-056` (`.1`–`.4`) to `[Verified]` with verbatim method citations (`569/569` in-scope tests PASS across 18 suites incl. `RadarBrakeLightConcurrencyStressTest 5/5`, `TuningPreferencesDataStoreRadarLightControlModeTest 10/10`, `RadarLightControllerTest`, `RadarSnoozeControllerTest`, `RadarStateRepositoryTest`, `RadarTrafficSimulatorTest`, `ANTBikeRadarDeviceTest`, `BTLERadarDeviceTest`, `ArchitectureConformanceContractTest`, live `emulator-5554` smoke `0` crashes, `Rule 8.5` PNG verified). |
 | `1.0.20` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Added `[Planned]` `TST-CON-057` (`.1`–`.4`, strictly symmetric `REQ-CON-057`) covering `DeviceType.getDeviceTypeList()` HRM/BIKE_POWER updates, `HrmSensorCapabilityHelper` matrix (BLE H10 vs Verity Sense vs ANT+ H10 vs non-Polar/spoofed HRMs vs HR/HRV), `DevicesDatabaseManager.getDeviceIdAndNameLists()` & `SensorSourceDialog` Compose verification, and monolith/governance contracts (`N/A - 0 string changes`). |
 | `1.0.21` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Promoted `TST-CON-057` (`.1`–`.4`) to `[Verified]` with 8 verbatim `TestClass#testMethod` citations (`127/127` PASS across 15 suites: `HrmSensorCapabilityHelperTest 4/4`, `DeviceTypeSensorMappingTest 3/3`, `DevicesDatabaseManagerTest 17/17`, `SensorTypeHrvTest 5/5`, `MySensorManagerPriorityTest 8/8`, `AltitudeSlopePriorityTest 3/3`, `PrimaryHrSensorArbitratorTest 9/9`, `SensorSourceDialogPriorityTest 7/7`, `SensorSourceDialogContractTest 13/13`, `EditSensorFieldViewModelTest 28/28`, 5 contract suites `30/30`; `4/4` safety linters PASS; live `emulator-5554` `CADENCE` smoke `0` crashes + `Rule 8.5` PNG verified). |
+| `1.0.22` | 2026-11-23 | Lane 2 Author (`ATT-9605`, `--as agent1`) | `ATT-9605` | Added `[Planned]` `TST-CON-058` (`.1`–`.3`, strictly symmetric `REQ-CON-058`) covering `ANTBikeSpeedDevice` & `ANTBikeSpeedAndCadenceDevice` `onNewCalculatedSpeed` null early-return (initial & post-motion), direct `m/s` scaling, standstill `null` pace + `8`-tick `SPEED_THRESHOLD` decay, negative speed guard, and `ArchitectureConformanceContractTest` parity (`N/A - 0 string changes`). |
+| `1.0.23` | 2026-11-23 | Lane 2 Author (`ATT-9605`, `--as agent1`) | `ATT-9605` | Promoted `TST-CON-058` (`.1`–`.3`) to `[Verified]` with `12` verbatim `TestClass#testMethod` citations (`36/36` PASS across 4 targeted suites: `ANTBikeSpeedDeviceTest 6/6`, `ANTBikeSpeedAndCadenceDeviceTest 9/9`, `ANTBikePowerDeviceTest 10/10`, `ArchitectureConformanceContractTest 11/11`; `3/3` safety linters PASS; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9605/`). |
