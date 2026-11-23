@@ -52,7 +52,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.toWorkoutDetailSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
@@ -92,6 +94,7 @@ fun WorkoutClustersScreen(
     var inspectedWorkout by remember { mutableStateOf<WorkoutData?>(null) }
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
     var autoShareSnapshotOnOpen by remember { mutableStateOf(false) }
+    var initialDetailSection by rememberSaveable { mutableStateOf<WorkoutDetailSectionType?>(null) }
 
     val allWorkouts by summariesViewModel.workouts.collectAsStateWithLifecycle()
 
@@ -156,6 +159,7 @@ fun WorkoutClustersScreen(
                 viewModel.clearPeekSelection()
                 inspectedWorkout = null
                 autoShareSnapshotOnOpen = false
+                initialDetailSection = null
             }
 
             val initialTrack = remember(workout) { workout.toMapTrack() }
@@ -176,11 +180,13 @@ fun WorkoutClustersScreen(
                         viewModel.clearPeekSelection()
                         inspectedWorkout = null
                         autoShareSnapshotOnOpen = false
+                        initialDetailSection = null
                     }
                 },
                 onClusterClick = { clusterId ->
                     viewModel.selectClusterById(clusterId)
                     inspectedWorkout = null
+                    initialDetailSection = null
                 },
                 onChangeCluster = { workoutToCluster = workout },
                 onEditWorkout = { id -> editedWorkoutId = id },
@@ -195,7 +201,9 @@ fun WorkoutClustersScreen(
                 onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                 telemetryPath = aftermathUIState.telemetryPath,
                 multiSensorOverlays = aftermathUIState.multiSensorOverlays,
-                activityCarriageTimeline = aftermathUIState.activityCarriageTimeline
+                activityCarriageTimeline = aftermathUIState.activityCarriageTimeline,
+                initialSection = initialDetailSection,
+                isAftermathLoading = aftermathUIState.isLoading
             )
 
             if (workoutToCluster != null) {
@@ -281,10 +289,17 @@ fun WorkoutClustersScreen(
                         onEditWorkout = { id -> editedWorkoutId = id },
                         onMapClick = { data ->
                             inspectedWorkout = data
+                            initialDetailSection = null
+                            autoShareSnapshotOnOpen = false
+                        },
+                        onSectionClick = { data, sectionType ->
+                            inspectedWorkout = data
+                            initialDetailSection = sectionType.toWorkoutDetailSectionType()
                             autoShareSnapshotOnOpen = false
                         },
                         onShareMapSnapshot = { data ->
                             inspectedWorkout = data
+                            initialDetailSection = null
                             autoShareSnapshotOnOpen = true
                         },
                         isCompactView = isCompactView,

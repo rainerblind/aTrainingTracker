@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsBehaviorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T22:50:39.992Z" hostname="rainer-HP-EliteBook-850-G5" time="1.096">
+  <properties/>
+  <testcase name="TST-UI-2787_4 detailZoneSelectorFollowsDetailTabsRegardlessOfLegacyShowZoneAnalysis" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsBehaviorTest" time="1.096"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

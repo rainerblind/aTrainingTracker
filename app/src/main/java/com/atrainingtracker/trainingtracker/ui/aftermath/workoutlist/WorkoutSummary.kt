@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
@@ -119,6 +120,7 @@ fun WorkoutSummary(
     onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
+    onSectionClick: ((WorkoutSectionType) -> Unit)? = null,
     onShareMapSnapshot: ((WorkoutData) -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClusterClick: ((Long) -> Unit)? = null,
@@ -249,13 +251,23 @@ fun WorkoutSummary(
         }
     }
 
-    // Shared modifier for the clickable body sections (navigates to map view, ATT-850)
-    val mapClickModifier = Modifier.clickable {
-        if (workoutData.headerData.finished) {
+    // Shared helpers for clickable body sections (opens matching Workout Details tab, REQ-UI-2805)
+    val triggerSectionClick: (WorkoutSectionType) -> Unit = { sectionType ->
+        if (onSectionClick != null) {
+            onSectionClick(sectionType)
+        } else {
             onMapClick()
         }
     }
-    // TODO: Add functionality to show more detailed stats when clicking on the WorkoutDetails or Extrema Values.
+    val sectionClickModifier: (WorkoutSectionType) -> Modifier = { sectionType ->
+        Modifier
+            .testTag("workout_summary_section_${sectionType.name}")
+            .clickable {
+                if (workoutData.headerData.finished) {
+                    triggerSectionClick(sectionType)
+                }
+            }
+    }
 
     MappableListItem(
         alpha = contentAlpha,
@@ -314,6 +326,7 @@ fun WorkoutSummary(
                             activeTimeSec = displayWorkoutData.activeTimeSec,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .then(sectionClickModifier(WorkoutSectionType.RPE_AND_FEEL))
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                         renderedAnySection = true
@@ -330,7 +343,7 @@ fun WorkoutSummary(
                         }
                         WorkoutDetails(
                             data = displayWorkoutData.detailsData,
-                            modifier = mapClickModifier,
+                            modifier = sectionClickModifier(WorkoutSectionType.DETAILS),
                             enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
                             showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
                             enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
@@ -347,7 +360,7 @@ fun WorkoutSummary(
                     if (preferences.showDescription) {
                         WorkoutDescription(
                             data = displayWorkoutData.descriptionData,
-                            modifier = mapClickModifier
+                            modifier = sectionClickModifier(WorkoutSectionType.DESCRIPTION)
                         )
                         renderedAnySection = true
                     }
@@ -356,7 +369,7 @@ fun WorkoutSummary(
                     if (preferences.showExtrema && displayWorkoutData.extremaData.dataRows.isNotEmpty()) {
                         WorkoutExtrema(
                             data = displayWorkoutData.extremaData,
-                            modifier = mapClickModifier
+                            modifier = sectionClickModifier(WorkoutSectionType.EXTREMA)
                         )
                         renderedAnySection = true
                     }
@@ -377,7 +390,13 @@ fun WorkoutSummary(
                             onMoveBoundaryClick = { boundaryLapNr ->
                                 moveBoundaryLapNr = boundaryLapNr
                                 showMoveBoundarySheet = true
-                            }
+                            },
+                            onHeaderClick = {
+                                if (workoutData.headerData.finished) {
+                                    triggerSectionClick(WorkoutSectionType.LAPS)
+                                }
+                            },
+                            headerModifier = Modifier.testTag("workout_summary_section_${WorkoutSectionType.LAPS.name}")
                         )
                         renderedAnySection = true
                     }
@@ -411,7 +430,7 @@ fun WorkoutSummary(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp),
-                            onMapClick = { onMapClick() }
+                            onMapClick = { triggerSectionClick(WorkoutSectionType.MAP) }
                         )
                         renderedAnySection = true
                     }
@@ -428,7 +447,8 @@ fun WorkoutSummary(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(100.dp)
-                                .clickable { onMapClick() }
+                                .testTag("workout_summary_section_${WorkoutSectionType.ELEVATION.name}")
+                                .clickable { triggerSectionClick(WorkoutSectionType.ELEVATION) }
                         )
                         renderedAnySection = true
                     }
@@ -436,6 +456,7 @@ fun WorkoutSummary(
                 WorkoutSectionType.CHARTS -> {
                     // 8. Telemetry Metric Graphs
                     if (preferences.showTelemetryCharts && telemetryPoints.isNotEmpty()) {
+                        val chartsClickModifier = sectionClickModifier(WorkoutSectionType.CHARTS)
                         if (TelemetryMetricUtils.hasSpeedData(telemetryPoints)) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -446,7 +467,7 @@ fun WorkoutSummary(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .then(mapClickModifier)
+                                    .then(chartsClickModifier)
                             ) {
                                 Text(
                                     text = stringResource(if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed),
@@ -475,7 +496,7 @@ fun WorkoutSummary(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .then(mapClickModifier)
+                                    .then(chartsClickModifier)
                             ) {
                                 Text(
                                     text = stringResource(R.string.graph_heading_heart_rate),
@@ -506,7 +527,7 @@ fun WorkoutSummary(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .then(mapClickModifier)
+                                    .then(chartsClickModifier)
                             ) {
                                 Text(
                                     text = stringResource(R.string.graph_heading_power),
@@ -537,7 +558,7 @@ fun WorkoutSummary(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .then(mapClickModifier)
+                                    .then(chartsClickModifier)
                             ) {
                                 Text(
                                     text = stringResource(R.string.w_prime_bal),
@@ -562,6 +583,7 @@ fun WorkoutSummary(
                 WorkoutSectionType.ZONES -> {
                     // 9. Zone Distribution Cards
                     if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null)) {
+                        val zonesClickModifier = sectionClickModifier(WorkoutSectionType.ZONES)
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             thickness = 0.5.dp,
@@ -576,7 +598,7 @@ fun WorkoutSummary(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .then(mapClickModifier)
+                                    .then(zonesClickModifier)
                             )
                         }
                         powerZoneDistribution?.let { distribution ->
@@ -588,7 +610,7 @@ fun WorkoutSummary(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .then(mapClickModifier)
+                                    .then(zonesClickModifier)
                             )
                         }
                     }
@@ -609,7 +631,7 @@ fun WorkoutSummary(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .then(mapClickModifier)
+                                    .then(sectionClickModifier(WorkoutSectionType.GRADE_DISTRIBUTION))
                             )
                         }
                     }

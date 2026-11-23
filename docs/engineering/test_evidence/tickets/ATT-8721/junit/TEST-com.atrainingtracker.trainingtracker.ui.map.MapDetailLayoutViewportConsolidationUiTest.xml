@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutViewportConsolidationUiTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T22:50:46.144Z" hostname="rainer-HP-EliteBook-850-G5" time="1.099">
+  <properties/>
+  <testcase name="testGroupedMapDetailLayout_landscapeOverlayZoomToolbarAndChartsRenderCleanly_tstUi2803_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutViewportConsolidationUiTest" time="0.284"/>
+  <testcase name="testTelemetryChartStack_resolvesConsistentDomainWhenTimestampsZero_tstUi2803_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutViewportConsolidationUiTest" time="0.125"/>
+  <testcase name="testGroupedMapDetailLayout_portraitZoomToolbarAndChartSectionsRenderCleanly_tstUi2803_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutViewportConsolidationUiTest" time="0.209"/>
+  <testcase name="testCaptureUnifiedTelemetryChartsLightAndDarkPng_tstUi2803_2" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutViewportConsolidationUiTest" time="0.48"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

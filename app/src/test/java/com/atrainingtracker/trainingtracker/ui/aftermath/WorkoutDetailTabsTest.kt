@@ -813,4 +813,69 @@ class WorkoutDetailTabsTest {
             WorkoutDetailTabConfig.hasAnyZoneOrGradeSection(withoutZones)
         )
     }
+
+    /**
+     * TST-UI-2805.1: Dynamic section-to-tab resolution resilient to renamed, reordered,
+     * deleted tabs and unavailable workout sections (REQ-UI-2805.2).
+     */
+    @Test
+    fun `TST-UI-2805_1 resolveTabIndexForSection handles renamed reordered deleted and unavailable tabs`() {
+        val customizedTabs = listOf(
+            WorkoutDetailTabConfig(
+                id = "tab_laps_custom",
+                preset = WorkoutDetailTabPreset.CUSTOM,
+                customTitle = "Intervals & Splits",
+                sections = listOf(WorkoutDetailSectionType.LAPS)
+            ),
+            WorkoutDetailTabConfig(
+                id = "tab_zones_renamed",
+                preset = WorkoutDetailTabPreset.ZONES,
+                customTitle = "Power & HR Effort",
+                sections = listOf(WorkoutDetailSectionType.ZONES, WorkoutDetailSectionType.GRADE_DISTRIBUTION)
+            ),
+            WorkoutDetailTabConfig(
+                id = "tab_overview_renamed",
+                preset = WorkoutDetailTabPreset.OVERVIEW,
+                customTitle = "Summary Renamed",
+                sections = listOf(
+                    WorkoutDetailSectionType.RPE_AND_FEEL,
+                    WorkoutDetailSectionType.DETAILS,
+                    WorkoutDetailSectionType.DESCRIPTION,
+                    WorkoutDetailSectionType.EXTREMA
+                )
+            )
+        )
+        val availability = WorkoutDetailSectionAvailability(
+            hasRpeAndFeel = true,
+            hasDetails = true,
+            hasDescription = true,
+            hasExtrema = true,
+            hasZones = true,
+            hasGradeDistribution = true,
+            hasLaps = true,
+            hasHrv = false
+        )
+        val visible = WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(customizedTabs, availability)
+
+        // Renamed & reordered tabs resolve strictly by section membership
+        assertEquals(0, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.LAPS, availability))
+        assertEquals(1, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.ZONES, availability))
+        assertEquals(1, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.GRADE_DISTRIBUTION, availability))
+        assertEquals(2, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.EXTREMA, availability))
+        assertEquals(2, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.RPE_AND_FEEL, availability))
+
+        // Deleted tab (MAP / CHARTS / ELEVATION / HRV deleted from customizedTabs) falls back safely to 0
+        assertNull(WorkoutDetailTabConfig.resolveTabIndexForSectionOrNull(visible, WorkoutDetailSectionType.MAP, availability))
+        assertEquals(0, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.MAP, availability))
+        assertEquals(0, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.CHARTS, availability))
+
+        // Section present in tab config but unavailable for this workout falls back safely to 0
+        val noExtremaAvailability = availability.copy(hasExtrema = false)
+        assertNull(WorkoutDetailTabConfig.resolveTabIndexForSectionOrNull(visible, WorkoutDetailSectionType.EXTREMA, noExtremaAvailability))
+        assertEquals(0, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, WorkoutDetailSectionType.EXTREMA, noExtremaAvailability))
+
+        // Null target or empty tab list falls back safely to 0
+        assertEquals(0, WorkoutDetailTabConfig.resolveTabIndexForSection(visible, null, availability))
+        assertEquals(0, WorkoutDetailTabConfig.resolveTabIndexForSection(emptyList(), WorkoutDetailSectionType.ZONES, availability))
+    }
 }

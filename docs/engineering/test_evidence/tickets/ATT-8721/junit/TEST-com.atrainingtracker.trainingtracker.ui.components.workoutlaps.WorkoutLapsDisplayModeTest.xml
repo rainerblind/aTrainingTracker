@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsDisplayModeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T22:50:17.112Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="testShouldShowVisualizer_acrossAllDisplayModes" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsDisplayModeTest" time="0.004"/>
+  <testcase name="testLapClickContract_retainsLapDataAcrossModes" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsDisplayModeTest" time="0.001"/>
+  <testcase name="testShouldShowTable_acrossAllDisplayModes" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsDisplayModeTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

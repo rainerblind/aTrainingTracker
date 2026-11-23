@@ -75,7 +75,8 @@ data class AftermathMapUIState(
     val recentSessions: List<HrvSessionThreshold> = emptyList(),
     val isSmoothedHrvStream: Boolean = false,
     val loadedWorkoutId: Long? = null,
-    val activityCarriageTimeline: ActivityCarriageTimeline? = null
+    val activityCarriageTimeline: ActivityCarriageTimeline? = null,
+    val isLoading: Boolean = false
 )
 
 class TrackOnMapAftermathViewModel @JvmOverloads constructor(
@@ -138,16 +139,19 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 bSportType = bSportType,
                 tracks = emptyList(),
                 markers = emptyList(),
-                loadedWorkoutId = workoutId
+                loadedWorkoutId = workoutId,
+                isLoading = true
             )
         } else {
             _uiState.value = _uiState.value.copy(
                 bSportType = bSportType,
-                loadedWorkoutId = workoutId
+                loadedWorkoutId = workoutId,
+                isLoading = true
             )
         }
 
         loadJob = viewModelScope.launch(ioDispatcher) {
+            try {
             // --- PHASE 2: Fast Track (From WorkoutData Polyline & Streams) ---
             // Decodes the thinned data already present in workoutData for instant UI feedback.
             // When updating the same workout and tracks are already present, bypass fast-track polyline overwrite
@@ -320,13 +324,22 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     hrThresholds = hrThresholds,
                     powerThresholds = powerThresholds,
                     recentSessions = recentHrvSessions,
-                    isSmoothedHrvStream = isSmoothedHrv
+                    isSmoothedHrvStream = isSmoothedHrv,
+                    isLoading = false
                 )
             }
 
             // --- PHASE 8: Lazy Cardio-Power Dynamics Resolution (REQ-REV-009 / ATT-6722) ---
             if (workoutData.cardioPowerDynamics == null && workoutData.activeTimeSec >= PowerHrDynamicsCalculator.MIN_QUALIFYING_DURATION_SEC) {
                 workoutRepository.getOrComputeCardioPowerDynamics(workoutId)
+            }
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                withContext(Dispatchers.Main) {
+                    if (_uiState.value.loadedWorkoutId == workoutId) {
+                        _uiState.value = _uiState.value.copy(isLoading = false)
+                    }
+                }
             }
         }
     }

@@ -23,6 +23,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import kotlin.math.abs
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
@@ -188,7 +190,8 @@ data class MapDetailInteractionCallbacks(
     val onCreateLapClick: ((Double) -> Unit)? = null,
     val onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null,
     val onSnapshotComplete: (() -> Unit)? = null,
-    val onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null
+    val onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
+    val onLowerScrollViewportPositioned: ((Float) -> Unit)? = null
 )
 
 private data class MapDetailZoomState(
@@ -236,9 +239,12 @@ private fun MapDetailLowerViewport(
     zoomToolbarTouchModifier: Modifier,
     lowerColumn: @Composable (Modifier) -> Unit,
     scrubbingOverlay: @Composable BoxScope.() -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lowerScrollState: ScrollState? = null,
+    onLowerScrollViewportPositioned: ((Float) -> Unit)? = null
 ) {
     if (scrollable) {
+        val resolvedScrollState = lowerScrollState ?: rememberScrollState()
         Box(modifier = modifier) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (hasZoomToolbar && !isLandscape) {
@@ -252,7 +258,14 @@ private fun MapDetailLowerViewport(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .then(
+                            if (onLowerScrollViewportPositioned != null) {
+                                Modifier.onGloballyPositioned { coords ->
+                                    onLowerScrollViewportPositioned(coords.positionInRoot().y)
+                                }
+                            } else Modifier
+                        )
+                        .verticalScroll(resolvedScrollState)
                 )
             }
             if (hasZoomToolbar && isLandscape) {
@@ -348,7 +361,9 @@ fun MapDetailLayout(
     onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
     customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null,
     activityCarriageTimeline: ActivityCarriageTimeline? = null,
-    showActivityCarriageBar: Boolean = false
+    showActivityCarriageBar: Boolean = false,
+    lowerScrollState: ScrollState? = null,
+    onLowerScrollViewportPositioned: ((Float) -> Unit)? = null
 ) {
     MapDetailLayout(
         bSportType = bSportType,
@@ -393,13 +408,15 @@ fun MapDetailLayout(
             onCreateLapClick = onCreateLapClick,
             onInteractiveCanvasTouch = onInteractiveCanvasTouch,
             onSnapshotComplete = onSnapshotComplete,
-            onToggleChartVisibility = onToggleChartVisibility
+            onToggleChartVisibility = onToggleChartVisibility,
+            onLowerScrollViewportPositioned = onLowerScrollViewportPositioned
         ),
         analyticsContent = analyticsContent,
         metadataContent = metadataContent,
         topEndActions = topEndActions,
         externalSnapshotTrigger = externalSnapshotTrigger,
-        customLowerContent = customLowerContent
+        customLowerContent = customLowerContent,
+        lowerScrollState = lowerScrollState
     )
 }
 
@@ -423,7 +440,8 @@ fun MapDetailLayout(
     metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
     topEndActions: (@Composable ColumnScope.() -> Unit)? = null,
     externalSnapshotTrigger: Boolean = false,
-    customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null
+    customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null,
+    lowerScrollState: ScrollState? = null
 ) {
     val useStatusBarsPadding = displayOptions.useStatusBarsPadding
     val isBottomSheet = displayOptions.isBottomSheet
@@ -458,6 +476,7 @@ fun MapDetailLayout(
     val onInteractiveCanvasTouch = callbacks.onInteractiveCanvasTouch
     val onSnapshotComplete = callbacks.onSnapshotComplete
     val onToggleChartVisibility = callbacks.onToggleChartVisibility
+    val onLowerScrollViewportPositioned = callbacks.onLowerScrollViewportPositioned
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1265,7 +1284,9 @@ fun MapDetailLayout(
                                 scrubbingOverlay = scrubbingOverlay,
                                 modifier = Modifier
                                     .weight(1f - splitFraction)
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                lowerScrollState = lowerScrollState,
+                                onLowerScrollViewportPositioned = onLowerScrollViewportPositioned
                             )
                         }
                     }
@@ -1306,7 +1327,9 @@ fun MapDetailLayout(
                     zoomToolbarTouchModifier = zoomToolbarTouchModifier,
                     lowerColumn = lowerColumn,
                     scrubbingOverlay = scrubbingOverlay,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    lowerScrollState = lowerScrollState,
+                    onLowerScrollViewportPositioned = onLowerScrollViewportPositioned
                 )
             } else if (hasLowerSection) {
                 MapDetailLowerViewport(

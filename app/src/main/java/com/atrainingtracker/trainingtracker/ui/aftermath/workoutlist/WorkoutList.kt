@@ -65,6 +65,7 @@ fun WorkoutList(
     onDeleteRequest: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (WorkoutData) -> Unit,
+    onSectionClick: ((WorkoutData, WorkoutSectionType) -> Unit)? = null,
     onShareMapSnapshot: ((WorkoutData) -> Unit)? = null,
     isCompactView: Boolean,
     appBarOffsetPx: Int,
@@ -128,6 +129,9 @@ fun WorkoutList(
                             onDeleteRequest = { onDeleteRequest(workoutData.id) },
                             onEditWorkout = { onEditWorkout(workoutData.id) },
                             onMapClick = { onMapClick(workoutData) },
+                            onSectionClick = onSectionClick?.let { callback ->
+                                { sectionType -> callback(workoutData, sectionType) }
+                            },
                             onShareMapSnapshot = onShareMapSnapshot,
                             onClusterClick = onClusterClick,
                             onMarkFinished = { onMarkFinished(workoutData.id) },

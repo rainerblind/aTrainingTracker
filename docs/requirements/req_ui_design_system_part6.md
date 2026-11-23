@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 6 of 6)
 
 **Document ID**: `DOC-REQ-UI-P6`  
-**Version**: 1.0.33  
+**Version**: 1.0.35  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part6`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 48
+**Total Requirements**: 49
 
 ---
 
@@ -1828,6 +1828,28 @@
   3. *Root Reason for Existing Formulation*: Prior to `ATT-9345`, all HRMs were treated with uniform rank `0` under `DeviceType.HRM`.
   4. *Preservation of Core Invariants*: Non-HR sensor sorting (`REQ-UI-268.5`), conditional dividers (`REQ-UI-2781`), truthful connection status (`REQ-UI-268`), `PolarOfflineCapabilityStore` rename-suppression / non-Polar GATT rules (`REQ-CON-049.4`), and pinned `BANALServiceRepository` JVM signatures remain 100% preserved.
 
+### REQ-UI-2805: Summary-Section-to-Detail-Tab Dynamic Navigation Resilient to Tab Customization (`ATT-8721`) [Verified]
+- **Tests**: `TST-UI-2805`
+- **Tickets**: `ATT-8721`
+- **System Requirement(s)**: Derived (SW UI navigation refining `REQ-UI-408` and `REQ-UI-499`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutLaps.kt`, `WorkoutSummary.kt`, `WorkoutList.kt`, `WorkoutTabsScreen.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutClustersScreen.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: Tapping any summary section inside `WorkoutSummary` previously invoked parameterless `onMapClick()`, and `WorkoutDetailTabbedContent` unconditionally initialized `HorizontalPager` at tab index `0`. Because athletes can rename, reorder, and delete Workout Details tabs (`REQ-UI-408`), navigation must resolve the target tab dynamically by `WorkoutDetailSectionType` membership rather than hardcoded indices or titles.
+- **Description**:
+  1. *Section Identity Propagation (`REQ-UI-2805.1`)*: `WorkoutSummary`, `WorkoutList`, and `WorkoutTabsScreen` SHALL propagate tapped `WorkoutSectionType` via optional `onSectionClick: ((WorkoutSectionType) -> Unit)? = null` across summary sections (`RPE_AND_FEEL`, `DETAILS`, `DESCRIPTION`, `EXTREMA`, `LAPS`, `MAP`, `ELEVATION`, `CHARTS`, `ZONES`, `GRADE_DISTRIBUTION`), mapped via `WorkoutSectionType.toWorkoutDetailSectionType()` into `initialSection: WorkoutDetailSectionType? = null` on `TrackOnMapScreen` and `WorkoutDetailTabbedContent`.
+  2. *Membership-Based Tab Resolution & Safe Fallbacks (`REQ-UI-2805.2`)*: `WorkoutDetailTabConfig.resolveTabIndexForSectionOrNull` and `resolveTabIndexForSection` SHALL locate the first active tab in `visibleTabs` whose `normalizedSections` contains `initialSection` (when `availability.isSectionActive(initialSection)` is `true`), ignoring tab titles, presets, and original default indices, and falling back safely to tab `0` if the section's tab was deleted or the section is unavailable for the workout.
+  3. *Async Hydration & Intra-Tab / Single-Page Section Scrolling (`REQ-UI-2805.3`)*: `TrackOnMapScreen` and `WorkoutDetailTabbedContent` SHALL await persisted DataStore tab configuration (`workoutDetailTabsOrderFlow` collected with `initial = null`) and `TrackOnMapAftermathViewModel` loading (`AftermathMapUIState.isLoading`) before finalizing/discarding `initialSection`, jump to the resolved tab, and scroll to the target section inside multi-section tabs or single-page mode (`visibleTabs.size == 1`) across both pure `Column` and `MapDetailLayout` (`lowerScrollState`).
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a workout summary card and customized Workout Details tabs (renamed, reordered, or custom-grouped), *When* the athlete taps a summary section (e.g. `ZONES`, `EXTREMA`, `ELEVATION`, `CHARTS`, `LAPS`, `MAP`), *Then* Workout Details opens directly on the visible tab whose `normalizedSections` contains that `WorkoutDetailSectionType`.
+  • *Given* a workout where the tab containing `initialSection` was deleted or the section is unavailable, *When* Workout Details opens, *Then* it falls back safely to tab `0` without crashing or out-of-bounds pager errors.
+  • *Given* single-page mode (`visibleTabs.size == 1`) or a multi-section tab, *When* Workout Details opens for a tapped `initialSection`, *Then* the page scrolls smoothly to bring that section into view.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-408` (*Multi-Tab Workout Details*, `ATT-3920`) and `REQ-UI-499` (*Reorderable WorkoutSummary*, `ATT-6213`).
+  2. *Preservation of Core Invariants*: `WorkoutHeader` click (`initialSection = null` -> tab `0`), `WorkoutSummaryCompact` click, `pendingAutoShare` snapshot capture, `WorkoutLaps` per-row/split/move actions, `StravaHelper.openActivity`, `ExportStatus` inline toggle, `WorkoutPhotoStrip` preview/add, `HorizontalPager` gesture isolation (`REQ-UI-408.4`), and pinned `InterfaceSignatureDriftContractTest` signatures remain 100% preserved.
+
 ---
 
 ## Change History
@@ -1866,3 +1888,5 @@
 | `1.0.31` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Added and verified `REQ-UI-2803` (`[Verified]`, `.1`–`.3`) for unified `Modifier.telemetryChartGestures` + O(log N) search + `Modifier.drawWithCache` viewport-downsampled curves + single-pass speed/pace formatting, `MapDetailLayout`/`TelemetryChartStack` viewport & toolbar deduplication with consistent `ProfileDomainMath.isEffectiveTimeDomain`, and 4-tab isolated `AthleteProfileViewModel` flows with reactive `_hrMaxBpm` and single-write `onSelectTimeRange` (`332/332` targeted tests PASS + `auto_gate.py` dependent suite PASS, `0` new compiler warnings, 4 PNGs visually verified via `read_file`, live `emulator-5554` `0` crashes, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8134/`). |
 | `1.0.32` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Added `REQ-UI-2804` (`[Planned]`, `.1`–`.3`) for health- and modality-aware HR ordering in `SensorSourceDialog` (`Active Backups`: `(healthTier, modalityTier, deviceName, deviceId)`; `Not Connected`: `(modalityTier, deviceName, deviceId)` via shared `PrimaryHrSensorArbitrator`, keeping non-HR sorting unchanged). |
 | `1.0.33` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Promoted `REQ-UI-2804` to `[Verified]` (`214/214` targeted/dependent tests PASS across `34` suites incl. `PrimaryHrSensorArbitratorTest` `9/9`, `SensorSourceDialogPriorityTest` `6/6`, `SensorSourceDialogContractTest` `12/12`, `ControlTracking*` `48/48`, `DeviceDataRepository*` `17/17`, `DeviceListViewModel*` `24/24`, `EditDevice*` `46/46`, `BANALServiceRepository*` `13/13`, `MySensorManagerPriorityTest` `8/8`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` PNG `ATT-9610_sensor_source_dialog.png` visually inspected via `read_file` with `0` crashes in `logcat -b crash -d`; pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3). |
+| `1.0.34` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Added `REQ-UI-2805` (`[Planned]`, `.1`–`.3`) for resilient summary-section-to-detail-tab navigation (`WorkoutSummary` -> `TrackOnMapScreen` -> `WorkoutDetailTabbedContent` + `MapDetailLayout` intra-tab/single-page scrolling). |
+| `1.0.35` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Promoted `REQ-UI-2805` to `[Verified]` (`79/79` targeted tests PASS across `13` suites incl. `WorkoutDetailTabsTest` `21/21`, `WorkoutDetailSectionNavigationUiTest` `5/5`, `WorkoutDetailTabbedContentTest` `7/7`, `WorkoutDetailSectionOrderUiTest` `5/5`, `WorkoutDetailSummaryDecouplingTest` `2/2`, `WorkoutSummary*` `9/9`, `TrackOnMap*` `12/12`, `MapDetailLayoutViewportConsolidationUiTest` `4/4`, `InterfaceSignatureDriftContractTest` `3/3`, `ArchitectureConformanceContractTest` `11/11`; live `emulator-5554` PNGs `ATT-8721_emulator_smoke.png` & `ATT-8721_emulator_map_tab.png` inspected via `read_file` with `0` crashes in `logcat -b crash -d`). |

@@ -67,6 +67,8 @@ import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.toWorkoutDetailSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
@@ -256,6 +258,7 @@ fun WorkoutSummariesTabbedScreen(
     var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
     var autoShareSnapshotOnOpen by rememberSaveable { mutableStateOf(false) }
+    var initialDetailSection by rememberSaveable { mutableStateOf<WorkoutDetailSectionType?>(null) }
 
     // Observe the event stream
     LaunchedEffect(Unit) {
@@ -349,11 +352,14 @@ fun WorkoutSummariesTabbedScreen(
                     telemetryPath = aftermathUIState.telemetryPath,
                     multiSensorOverlays = aftermathUIState.multiSensorOverlays,
                     activityCarriageTimeline = aftermathUIState.activityCarriageTimeline,
+                    initialSection = initialDetailSection,
+                    isAftermathLoading = aftermathUIState.isLoading,
                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                     onSnapshotComplete = {
                         if (autoShareSnapshotOnOpen) {
                             selectedWorkoutIdForDetails = null
                             autoShareSnapshotOnOpen = false
+                            initialDetailSection = null
                         }
                     },
                     modifier = Modifier
@@ -363,6 +369,7 @@ fun WorkoutSummariesTabbedScreen(
                 BackHandler {
                     selectedWorkoutIdForDetails = null
                     autoShareSnapshotOnOpen = false
+                    initialDetailSection = null
                 }
             } else {
                 if (isPushed && onBackClick != null && selectedWorkoutIdForEdit == null) {
@@ -394,11 +401,19 @@ fun WorkoutSummariesTabbedScreen(
                     },
                     onMapClick = { workoutData ->
                         selectedWorkoutIdForDetails = workoutData.id
+                        initialDetailSection = null
+                        autoShareSnapshotOnOpen = false
+                        trackOnMapViewModel.loadAftermathData(workoutData)
+                    },
+                    onSectionClick = { workoutData, sectionType ->
+                        selectedWorkoutIdForDetails = workoutData.id
+                        initialDetailSection = sectionType.toWorkoutDetailSectionType()
                         autoShareSnapshotOnOpen = false
                         trackOnMapViewModel.loadAftermathData(workoutData)
                     },
                     onShareMapSnapshot = { workoutData ->
                         selectedWorkoutIdForDetails = workoutData.id
+                        initialDetailSection = null
                         autoShareSnapshotOnOpen = true
                         trackOnMapViewModel.loadAftermathData(workoutData)
                     },

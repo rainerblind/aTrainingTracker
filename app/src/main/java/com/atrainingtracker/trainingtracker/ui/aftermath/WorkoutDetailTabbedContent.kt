@@ -42,6 +42,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import com.atrainingtracker.trainingtracker.ui.util.CollapsingAppBarNestedScrollConnection
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
@@ -148,7 +150,10 @@ fun WorkoutDetailTabbedContent(
     hiddenCharts: Set<TelemetryChartKind> = emptySet(),
     onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
     modifier: Modifier = Modifier,
-    activityCarriageTimeline: ActivityCarriageTimeline? = null
+    activityCarriageTimeline: ActivityCarriageTimeline? = null,
+    initialSection: WorkoutDetailSectionType? = null,
+    isTabsConfigReady: Boolean = true,
+    isSectionDataLoading: Boolean = false
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
         WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(
@@ -158,10 +163,61 @@ fun WorkoutDetailTabbedContent(
         )
     }
 
+    val initialResolvedPage = remember(workoutData.id, initialSection) {
+        if (isTabsConfigReady) {
+            WorkoutDetailTabConfig.resolveTabIndexForSection(
+                visibleTabs = visibleTabs,
+                targetSection = initialSection,
+                availability = availability,
+                detailPreferences = detailPreferences
+            ).coerceIn(0, (visibleTabs.size - 1).coerceAtLeast(0))
+        } else {
+            0
+        }
+    }
+
     val pagerState = rememberPagerState(
-        initialPage = 0,
+        initialPage = initialResolvedPage,
         pageCount = { visibleTabs.size }
     )
+    var pendingTargetTabSection by remember(workoutData.id, initialSection) {
+        mutableStateOf(initialSection)
+    }
+    var pendingScrollSection by remember(workoutData.id, initialSection) {
+        mutableStateOf(initialSection?.takeIf { it != WorkoutDetailSectionType.MAP })
+    }
+
+    LaunchedEffect(
+        workoutData.id,
+        pendingTargetTabSection,
+        visibleTabs,
+        availability,
+        detailPreferences,
+        isTabsConfigReady,
+        isSectionDataLoading
+    ) {
+        val targetSection = pendingTargetTabSection ?: return@LaunchedEffect
+        if (!isTabsConfigReady) return@LaunchedEffect
+
+        val resolvedIndex = WorkoutDetailTabConfig.resolveTabIndexForSectionOrNull(
+            visibleTabs = visibleTabs,
+            targetSection = targetSection,
+            availability = availability,
+            detailPreferences = detailPreferences
+        )
+        if (resolvedIndex != null) {
+            if (pagerState.currentPage != resolvedIndex) {
+                pagerState.scrollToPage(resolvedIndex)
+            }
+            pendingTargetTabSection = null
+        } else if (!isSectionDataLoading) {
+            if (pagerState.currentPage != 0 && visibleTabs.isNotEmpty()) {
+                pagerState.scrollToPage(0)
+            }
+            pendingTargetTabSection = null
+            pendingScrollSection = null
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
@@ -331,6 +387,54 @@ fun WorkoutDetailTabbedContent(
                 val usesCustomOrderedLowerPane = orderedLowerSections.isNotEmpty() &&
                     !(orderedLowerSections.size == 1 && orderedLowerSections[0] == WorkoutDetailSectionType.ELEVATION)
 
+                val pageScrollState = rememberScrollState()
+                var scrollViewportRootY by remember(pageIndex, workoutData.id) { mutableStateOf<Float?>(null) }
+                val sectionRootYMap = remember(pageIndex, workoutData.id) {
+                    mutableStateMapOf<WorkoutDetailSectionType, Float>()
+                }
+
+                val targetScroll = pendingScrollSection
+                val targetSectionY = if (targetScroll != null) sectionRootYMap[targetScroll] else null
+                LaunchedEffect(
+                    pageIndex,
+                    pagerState.currentPage,
+                    pendingTargetTabSection,
+                    targetScroll,
+                    targetSectionY,
+                    scrollViewportRootY,
+                    isTabsConfigReady,
+                    isSectionDataLoading
+                ) {
+                    if (targetScroll == null ||
+                        pendingTargetTabSection != null ||
+                        pagerState.currentPage != pageIndex ||
+                        !isTabsConfigReady
+                    ) {
+                        return@LaunchedEffect
+                    }
+                    if (targetScroll !in orderedLowerSections) {
+                        if (!isSectionDataLoading) {
+                            pendingScrollSection = null
+                        }
+                        return@LaunchedEffect
+                    }
+                    if (orderedLowerSections.indexOf(targetScroll) == 0) {
+                        pendingScrollSection = null
+                        return@LaunchedEffect
+                    }
+                    val viewportY = scrollViewportRootY ?: return@LaunchedEffect
+                    val sectionY = targetSectionY ?: return@LaunchedEffect
+                    withFrameNanos { }
+                    val finalViewportY = scrollViewportRootY ?: viewportY
+                    val finalSectionY = sectionRootYMap[targetScroll] ?: sectionY
+                    val delta = (finalSectionY - finalViewportY).roundToInt()
+                    val targetOffset = (pageScrollState.value + delta).coerceIn(0, pageScrollState.maxValue)
+                    if (targetOffset != pageScrollState.value) {
+                        pageScrollState.animateScrollTo(targetOffset)
+                    }
+                    pendingScrollSection = null
+                }
+
                 val renderOrderedSections: @Composable (MapDetailLowerContentScope?) -> Unit = { lowerScope ->
                     RenderWorkoutDetailCardSections(
                         sections = orderedLowerSections,
@@ -373,7 +477,12 @@ fun WorkoutDetailTabbedContent(
                                 photosRefreshKey++
                             }
                         },
-                        lowerContentScope = lowerScope
+                        lowerContentScope = lowerScope,
+                        onSectionPositioned = { section, rootY ->
+                            if (sectionRootYMap[section] != rootY) {
+                                sectionRootYMap[section] = rootY
+                            }
+                        }
                     )
                 }
 
@@ -455,6 +564,12 @@ fun WorkoutDetailTabbedContent(
                             } else {
                                 null
                             },
+                            lowerScrollState = pageScrollState,
+                            onLowerScrollViewportPositioned = { rootY ->
+                                if (scrollViewportRootY != rootY) {
+                                    scrollViewportRootY = rootY
+                                }
+                            },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -499,12 +614,24 @@ fun WorkoutDetailTabbedContent(
                                 } else {
                                     null
                                 },
+                                lowerScrollState = pageScrollState,
+                                onLowerScrollViewportPositioned = { rootY ->
+                                    if (scrollViewportRootY != rootY) {
+                                        scrollViewportRootY = rootY
+                                    }
+                                },
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .onGloballyPositioned { coords ->
+                                        val rootY = coords.positionInRoot().y
+                                        if (scrollViewportRootY != rootY) {
+                                            scrollViewportRootY = rootY
+                                        }
+                                    }
                                     .pointerInput(Unit) {
                                         awaitPointerEventScope {
                                             while (true) {
@@ -513,7 +640,7 @@ fun WorkoutDetailTabbedContent(
                                             }
                                         }
                                     }
-                                    .verticalScroll(rememberScrollState())
+                                    .verticalScroll(pageScrollState)
                                     .navigationBarsPadding()
                                     .padding(vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -659,6 +786,8 @@ fun WorkoutDetailTabbedContent(
                             Tab(
                                 selected = selected,
                                 onClick = {
+                                    pendingTargetTabSection = null
+                                    pendingScrollSection = null
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(index)
                                     }
@@ -770,244 +899,307 @@ private fun RenderWorkoutDetailCardSections(
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     onLapClick: ((LapData) -> Unit)? = null,
     activityCarriageTimeline: ActivityCarriageTimeline? = null,
-    lowerContentScope: MapDetailLowerContentScope? = null
+    lowerContentScope: MapDetailLowerContentScope? = null,
+    onSectionPositioned: ((WorkoutDetailSectionType, Float) -> Unit)? = null
 ) {
+    val sectionWrapperModifier: (WorkoutDetailSectionType) -> Modifier = { sec ->
+        Modifier
+            .fillMaxWidth()
+            .testTag("workout_detail_section_${sec.name}")
+            .then(
+                if (onSectionPositioned != null) {
+                    Modifier.onGloballyPositioned { coords ->
+                        onSectionPositioned(sec, coords.positionInRoot().y)
+                    }
+                } else Modifier
+            )
+    }
+    val lowerScopePositionModifier: (WorkoutDetailSectionType) -> Modifier = { sec ->
+        if (onSectionPositioned != null) {
+            Modifier.onGloballyPositioned { coords ->
+                onSectionPositioned(sec, coords.positionInRoot().y)
+            }
+        } else Modifier
+    }
     sections.forEachIndexed { index, section ->
         when (section) {
             WorkoutDetailSectionType.RPE_AND_FEEL -> {
                 if (workoutData.rpe != null || workoutData.feel != null) {
-                    WorkoutRpeFeelSection(
-                        rpe = workoutData.rpe,
-                        feel = workoutData.feel,
-                        activeTimeSec = workoutData.activeTimeSec,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        WorkoutRpeFeelSection(
+                            rpe = workoutData.rpe,
+                            feel = workoutData.feel,
+                            activeTimeSec = workoutData.activeTimeSec,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.DETAILS -> {
-                WorkoutDetails(
-                    data = workoutData.detailsData,
-                    enableCogganPowerMetrics = tuningConfig.enableCogganPowerMetrics,
-                    showCogganPowerInWorkoutSummary = true,
-                    enableAerobicEfficiencyModel = tuningConfig.enableAerobicEfficiencyModel,
-                    showAerobicEfficiencyInWorkoutSummary = true,
-                    enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
-                    showCriticalPowerInWorkoutSummary = true,
-                    enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                    showCardioPowerInWorkoutSummary = false,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                val isSwim = workoutData.sportName.contains("swim", ignoreCase = true) ||
-                    workoutData.sportName.contains("schwimm", ignoreCase = true) ||
-                    workoutData.sportName.contains("natat", ignoreCase = true) ||
-                    workoutData.sportName.contains("nuot", ignoreCase = true) ||
-                    workoutData.sportName.contains("zwem", ignoreCase = true) ||
-                    workoutData.sportName.contains("pływ", ignoreCase = true) ||
-                    workoutData.sportName.contains("nataç", ignoreCase = true) ||
-                    workoutData.sportName.contains("水泳", ignoreCase = true) ||
-                    workoutData.stravaSportName?.contains("swim", ignoreCase = true) == true
-                if (isSwim) {
-                    val currentContext = LocalContext.current
-                    val repo = remember(currentContext) { WorkoutRepository.getInstance(currentContext) }
-                    val laps = remember(workoutData.id, workoutData.totalDistance) {
-                        if (workoutData.laps.isNotEmpty()) workoutData.laps else repo.getLaps(workoutData.id)
+                Column(
+                    modifier = sectionWrapperModifier(section),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    WorkoutDetails(
+                        data = workoutData.detailsData,
+                        enableCogganPowerMetrics = tuningConfig.enableCogganPowerMetrics,
+                        showCogganPowerInWorkoutSummary = true,
+                        enableAerobicEfficiencyModel = tuningConfig.enableAerobicEfficiencyModel,
+                        showAerobicEfficiencyInWorkoutSummary = true,
+                        enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
+                        showCriticalPowerInWorkoutSummary = true,
+                        enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
+                        showCardioPowerInWorkoutSummary = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    val isSwim = workoutData.sportName.contains("swim", ignoreCase = true) ||
+                        workoutData.sportName.contains("schwimm", ignoreCase = true) ||
+                        workoutData.sportName.contains("natat", ignoreCase = true) ||
+                        workoutData.sportName.contains("nuot", ignoreCase = true) ||
+                        workoutData.sportName.contains("zwem", ignoreCase = true) ||
+                        workoutData.sportName.contains("pływ", ignoreCase = true) ||
+                        workoutData.sportName.contains("nataç", ignoreCase = true) ||
+                        workoutData.sportName.contains("水泳", ignoreCase = true) ||
+                        workoutData.stravaSportName?.contains("swim", ignoreCase = true) == true
+                    if (isSwim) {
+                        val currentContext = LocalContext.current
+                        val repo = remember(currentContext) { WorkoutRepository.getInstance(currentContext) }
+                        val laps = remember(workoutData.id, workoutData.totalDistance) {
+                            if (workoutData.laps.isNotEmpty()) workoutData.laps else repo.getLaps(workoutData.id)
+                        }
+                        val lapCount = if (laps.isNotEmpty()) laps.size else Math.max(1, (workoutData.totalDistance / 25.0).toInt())
+                        val currentPoolLengthM = if (lapCount > 0 && workoutData.totalDistance > 0) {
+                            workoutData.totalDistance / lapCount
+                        } else {
+                            tuningConfig.defaultPoolLengthMeters.toDouble()
+                        }
+                        SwimWorkoutAdjustCard(
+                            workoutId = workoutData.id,
+                            currentPoolLengthM = currentPoolLengthM,
+                            currentLengthCount = lapCount,
+                            onAdjust = { newPoolLength, newCount ->
+                                repo.recalculateSwimWorkout(workoutData.id, newPoolLength, newCount)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
-                    val lapCount = if (laps.isNotEmpty()) laps.size else Math.max(1, (workoutData.totalDistance / 25.0).toInt())
-                    val currentPoolLengthM = if (lapCount > 0 && workoutData.totalDistance > 0) {
-                        workoutData.totalDistance / lapCount
-                    } else {
-                        tuningConfig.defaultPoolLengthMeters.toDouble()
+                    if (tuningConfig.enableCardioPowerDynamics && workoutData.cardioPowerDynamics != null) {
+                        CardioPowerDynamicsCard(
+                            record = workoutData.cardioPowerDynamics,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
-                    SwimWorkoutAdjustCard(
-                        workoutId = workoutData.id,
-                        currentPoolLengthM = currentPoolLengthM,
-                        currentLengthCount = lapCount,
-                        onAdjust = { newPoolLength, newCount ->
-                            repo.recalculateSwimWorkout(workoutData.id, newPoolLength, newCount)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                if (tuningConfig.enableCardioPowerDynamics && workoutData.cardioPowerDynamics != null) {
-                    CardioPowerDynamicsCard(
-                        record = workoutData.cardioPowerDynamics,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                if (workoutData.radarTrafficSummary != null) {
-                    RadarTrafficSummaryCard(
-                        summary = workoutData.radarTrafficSummary,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                if (activityCarriageTimeline != null && activityCarriageTimeline.segments.isNotEmpty()) {
-                    ActivityCarriageTimelineCard(
-                        timeline = activityCarriageTimeline,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    if (workoutData.radarTrafficSummary != null) {
+                        RadarTrafficSummaryCard(
+                            summary = workoutData.radarTrafficSummary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                    if (activityCarriageTimeline != null && activityCarriageTimeline.segments.isNotEmpty()) {
+                        ActivityCarriageTimelineCard(
+                            timeline = activityCarriageTimeline,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.DESCRIPTION -> {
-                WorkoutDescription(
-                    data = workoutData.descriptionData,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                )
+                val desc = workoutData.descriptionData
+                if (!desc.description.isNullOrBlank() || !desc.goal.isNullOrBlank() || !desc.method.isNullOrBlank()) {
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        WorkoutDescription(
+                            data = desc,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
             }
             WorkoutDetailSectionType.EXTREMA -> {
                 if (workoutData.extremaData.dataRows.isNotEmpty()) {
-                    WorkoutExtrema(
-                        data = workoutData.extremaData,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        WorkoutExtrema(
+                            data = workoutData.extremaData,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.ZONES -> {
-                hrZoneDistribution?.let { distribution ->
-                    HeartRateZoneDistributionCard(
-                        distribution = distribution,
-                        displayMode = effectiveHrZoneDisplayMode,
-                        onDisplayModeChange = onHrZoneDisplayModeChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                powerZoneDistribution?.let { distribution ->
-                    PowerZoneDistributionCard(
-                        distribution = distribution,
-                        displayMode = effectivePowerZoneDisplayMode,
-                        onDisplayModeChange = onPowerZoneDisplayModeChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                if (hrZoneDistribution != null || powerZoneDistribution != null) {
+                    Column(
+                        modifier = sectionWrapperModifier(section),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        hrZoneDistribution?.let { distribution ->
+                            HeartRateZoneDistributionCard(
+                                distribution = distribution,
+                                displayMode = effectiveHrZoneDisplayMode,
+                                onDisplayModeChange = onHrZoneDisplayModeChange,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+                        powerZoneDistribution?.let { distribution ->
+                            PowerZoneDistributionCard(
+                                distribution = distribution,
+                                displayMode = effectivePowerZoneDisplayMode,
+                                onDisplayModeChange = onPowerZoneDisplayModeChange,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
             }
             WorkoutDetailSectionType.GRADE_DISTRIBUTION -> {
                 gradeZoneDistribution?.let { distribution ->
-                    GradeZoneDistributionCard(
-                        distribution = distribution,
-                        displayMode = effectiveGradeZoneDisplayMode,
-                        onDisplayModeChange = onGradeZoneDisplayModeChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        GradeZoneDistributionCard(
+                            distribution = distribution,
+                            displayMode = effectiveGradeZoneDisplayMode,
+                            onDisplayModeChange = onGradeZoneDisplayModeChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.HRV -> {
                 if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
-                    HrvAlpha1ScatterCard(
-                        points = activeScrubPath ?: emptyList(),
-                        isSmoothedStream = isSmoothedStream,
-                        dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
-                        dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                    val resolvedFtp = configuredFtp ?: powerZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.75).toInt() }
-                    val resolvedHrMax = configuredHrMax ?: hrZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.69).toInt() }
-                    HrvThresholdSummaryCard(
-                        points = activeScrubPath ?: emptyList(),
-                        protocolType = workoutData.protocolType,
-                        dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
-                        dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
-                        configuredFtp = resolvedFtp,
-                        configuredHrMax = resolvedHrMax,
-                        hrZoneThresholds = hrZoneThresholds,
-                        recentSessions = recentSessions,
-                        onUpdateFtp = onUpdateFtp,
-                        onUpdateHrZones = onUpdateHrZones,
-                        onCalibrateMader = onCalibrateMader,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                    HrvDurabilityCard(
-                        points = activeScrubPath ?: emptyList(),
-                        freshBaseline = workoutData.dfaA1FreshBaseline,
-                        lateMean = workoutData.dfaA1LateMean,
-                        durabilityDriftPct = workoutData.dfaA1DurabilityDriftPct,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Column(
+                        modifier = sectionWrapperModifier(section),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HrvAlpha1ScatterCard(
+                            points = activeScrubPath ?: emptyList(),
+                            isSmoothedStream = isSmoothedStream,
+                            dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                            dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                        val resolvedFtp = configuredFtp ?: powerZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.75).toInt() }
+                        val resolvedHrMax = configuredHrMax ?: hrZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.69).toInt() }
+                        HrvThresholdSummaryCard(
+                            points = activeScrubPath ?: emptyList(),
+                            protocolType = workoutData.protocolType,
+                            dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                            dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
+                            configuredFtp = resolvedFtp,
+                            configuredHrMax = resolvedHrMax,
+                            hrZoneThresholds = hrZoneThresholds,
+                            recentSessions = recentSessions,
+                            onUpdateFtp = onUpdateFtp,
+                            onUpdateHrZones = onUpdateHrZones,
+                            onCalibrateMader = onCalibrateMader,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                        HrvDurabilityCard(
+                            points = activeScrubPath ?: emptyList(),
+                            freshBaseline = workoutData.dfaA1FreshBaseline,
+                            lateMean = workoutData.dfaA1LateMean,
+                            durabilityDriftPct = workoutData.dfaA1DurabilityDriftPct,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.LAPS -> {
                 if (workoutData.laps.isNotEmpty()) {
-                    WorkoutLaps(
-                        laps = workoutData.laps,
-                        bSportType = workoutData.bSportType,
-                        lapDisplayMode = if (workoutData.laps.size > 1) LapDisplayMode.VISUALIZER_ONLY else LapDisplayMode.TABLE_ONLY,
-                        onLapClick = { lap ->
-                            onSelectLapNr(if (selectedLapNr == lap.lapNr) null else lap.lapNr)
-                            onLapClick?.invoke(lap)
-                        },
-                        onSplitLapClick = onSplitLapClick,
-                        onMoveBoundaryClick = onMoveBoundaryClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        WorkoutLaps(
+                            laps = workoutData.laps,
+                            bSportType = workoutData.bSportType,
+                            lapDisplayMode = if (workoutData.laps.size > 1) LapDisplayMode.VISUALIZER_ONLY else LapDisplayMode.TABLE_ONLY,
+                            onLapClick = { lap ->
+                                onSelectLapNr(if (selectedLapNr == lap.lapNr) null else lap.lapNr)
+                                onLapClick?.invoke(lap)
+                            },
+                            onSplitLapClick = onSplitLapClick,
+                            onMoveBoundaryClick = onMoveBoundaryClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.STRAVA -> {
                 if (!workoutData.stravaActivityData.isNullOrBlank()) {
-                    StravaActivitySection(
-                        rawActivityJson = workoutData.stravaActivityData,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        StravaActivitySection(
+                            rawActivityJson = workoutData.stravaActivityData,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.EXPORT_STATUS -> {
-                ExportStatus(
-                    exportStatuses = workoutData.exportStatuses
-                )
+                if (workoutData.exportStatuses.any { it.hasContent }) {
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        ExportStatus(
+                            exportStatuses = workoutData.exportStatuses
+                        )
+                    }
+                }
             }
             WorkoutDetailSectionType.PHOTOS -> {
-                if (onPhotoClick != null && onAddPhotos != null) {
-                    val startMs = workoutData.startTimeS * 1000L
-                    val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
-                    WorkoutPhotoStrip(
-                        photos = photos,
-                        onPhotoClick = onPhotoClick,
-                        onAddPhotos = onAddPhotos,
-                        showAddButton = detailPreferences.showPhotoAddButton,
-                        thumbnailSize = detailPreferences.photoThumbnailSize,
-                        startTimeMs = startMs,
-                        endTimeMs = endMs
-                    )
+                if (onPhotoClick != null && onAddPhotos != null && (photos.isNotEmpty() || detailPreferences.showPhotoAddButton)) {
+                    Column(modifier = sectionWrapperModifier(section)) {
+                        val startMs = workoutData.startTimeS * 1000L
+                        val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
+                        WorkoutPhotoStrip(
+                            photos = photos,
+                            onPhotoClick = onPhotoClick,
+                            onAddPhotos = onAddPhotos,
+                            showAddButton = detailPreferences.showPhotoAddButton,
+                            thumbnailSize = detailPreferences.photoThumbnailSize,
+                            startTimeMs = startMs,
+                            endTimeMs = endMs
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.MAP -> {
                 // Pinned in MapDetailLayout top split pane in MODE_B_SPLIT_MAP / MODE_C_FULL_MAP (REQ-UI-408.3)
             }
             WorkoutDetailSectionType.ACTIVITY_CARRIAGE_BAR -> {
-                lowerContentScope?.ActivityCarriageBarSection()
+                lowerContentScope?.ActivityCarriageBarSection(
+                    modifier = lowerScopePositionModifier(section)
+                )
             }
             WorkoutDetailSectionType.ELEVATION -> {
-                lowerContentScope?.ElevationProfileSection()
+                lowerContentScope?.ElevationProfileSection(
+                    modifier = lowerScopePositionModifier(section)
+                )
             }
             WorkoutDetailSectionType.CHARTS -> {
                 lowerContentScope?.TelemetryChartsSection(
+                    modifier = lowerScopePositionModifier(section),
                     applyLandscapeToolbarTopPadding = (index == 0)
                 )
             }

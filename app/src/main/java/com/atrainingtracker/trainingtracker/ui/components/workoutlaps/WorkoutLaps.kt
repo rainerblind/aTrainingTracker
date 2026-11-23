@@ -65,7 +65,9 @@ fun WorkoutLaps(
     splitChartData: LapSplitChartData? = null,
     onVisualizerLapClick: ((Long) -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
-    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
+    onHeaderClick: (() -> Unit)? = null,
+    headerModifier: Modifier = Modifier
 ) {
     if (lapRows.isEmpty()) return
 
@@ -90,6 +92,8 @@ fun WorkoutLaps(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(headerModifier)
+                .then(if (onHeaderClick != null) Modifier.clickable(onClick = onHeaderClick) else Modifier)
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -209,7 +213,9 @@ fun WorkoutLaps(
     modifier: Modifier = Modifier,
     onLapClick: ((LapData) -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
-    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
+    onHeaderClick: (() -> Unit)? = null,
+    headerModifier: Modifier = Modifier
 ) {
     if (laps.isEmpty()) return
 
@@ -249,7 +255,9 @@ fun WorkoutLaps(
             { lapNr -> laps.find { it.lapNr == lapNr }?.let { callback(it) } }
         },
         onSplitLapClick = onSplitLapClick,
-        onMoveBoundaryClick = onMoveBoundaryClick
+        onMoveBoundaryClick = onMoveBoundaryClick,
+        onHeaderClick = onHeaderClick,
+        headerModifier = headerModifier
     )
 }
 

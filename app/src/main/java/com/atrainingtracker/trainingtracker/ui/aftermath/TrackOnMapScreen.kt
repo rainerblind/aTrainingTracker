@@ -101,7 +101,9 @@ fun TrackOnMapScreen(
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
-    activityCarriageTimeline: ActivityCarriageTimeline? = null
+    activityCarriageTimeline: ActivityCarriageTimeline? = null,
+    initialSection: WorkoutDetailSectionType? = null,
+    isAftermathLoading: Boolean = false
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -110,8 +112,9 @@ fun TrackOnMapScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
     val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
-    val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
-    val activeTabsConfig = tabsConfig ?: persistedTabsConfig
+    val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = null)
+    val isTabsConfigReady = tabsConfig != null || persistedTabsConfig != null
+    val activeTabsConfig = tabsConfig ?: persistedTabsConfig ?: WorkoutDetailTabConfig.DEFAULT_TABS
     val persistedHiddenCharts by preferenceManager.hiddenTelemetryChartsFlow.collectAsState(initial = emptySet())
     val handleToggleChartVisibility: (TelemetryChartKind) -> Unit = { chartKind ->
         val nextVisible = chartKind in persistedHiddenCharts
@@ -370,6 +373,9 @@ fun TrackOnMapScreen(
         isSmoothedStream = isSmoothedStream,
         multiSensorOverlays = multiSensorOverlays,
         activityCarriageTimeline = activityCarriageTimeline,
+        initialSection = initialSection,
+        isTabsConfigReady = isTabsConfigReady,
+        isSectionDataLoading = isAftermathLoading,
         hiddenCharts = persistedHiddenCharts,
         onToggleChartVisibility = handleToggleChartVisibility,
         onUpdateFtp = effectiveOnUpdateFtp,
