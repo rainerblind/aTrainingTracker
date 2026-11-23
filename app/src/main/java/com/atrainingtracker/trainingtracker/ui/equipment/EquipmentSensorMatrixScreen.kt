@@ -56,7 +56,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
-import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollableBox
 
 @VisibleForTesting
 internal val STICKY_COLUMN_WIDTH = 184.dp

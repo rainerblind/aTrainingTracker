@@ -157,7 +157,7 @@ class HrvRampTestScreenTest {
         assertFalse("AthleteProfileScreen must not contain btn_guided_hrv_test", profileContent.contains("btn_guided_hrv_test"))
         assertFalse("AthleteProfileScreen must not contain onNavigateToHrvTest", profileContent.contains("onNavigateToHrvTest"))
 
-        val zonesSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        val zonesSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones/HrvDfaA1SettingsSection.kt")
         assertTrue("ZonesSettingsActivity source file must exist", zonesSource.exists())
         val zonesContent = zonesSource.readText()
         assertTrue("ZonesSettingsActivity must use TrendingUp icon for ramp test", zonesContent.contains("Icons.AutoMirrored.Filled.TrendingUp"))

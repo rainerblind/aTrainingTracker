@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:01.952Z" hostname="rainer-HP-EliteBook-850-G5" time="0.027">
+  <properties/>
+  <testcase name="testFormatCyclingRadarSubtitle_idleState_fullScreen" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.008"/>
+  <testcase name="testStringResourceTuningCatCyclingRadarExists" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.0"/>
+  <testcase name="testFormatCyclingRadarSubtitle_withTuningConfig" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.005"/>
+  <testcase name="testTuningSection_containsCyclingRadar" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.001"/>
+  <testcase name="testFormatCyclingRadarSubtitle_runningSimulationState_displaysActiveScenario" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.003"/>
+  <testcase name="testFormatCyclingRadarSubtitle_idleState_displaysEdgeAlertAndLight" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.005"/>
+  <testcase name="testFormatCyclingRadarSubtitle_idleState_leftEdgeMutedSolid" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

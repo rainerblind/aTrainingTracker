@@ -23,7 +23,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel
-import com.atrainingtracker.trainingtracker.activities.ZonesSettingsViewModel
+import com.atrainingtracker.trainingtracker.ui.settings.zones.ZonesSettingsViewModel
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel

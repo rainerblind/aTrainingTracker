@@ -74,9 +74,9 @@ class ProGuardRulesContractTest {
             "Must keep ANT+ SDK classes (REQ-BLD-001.4)",
             content.contains("-keep class com.dsi.ant.**")
         )
-        assertTrue(
-            "Must keep PebbleKit classes (REQ-BLD-001.4)",
-            content.contains("-keep class com.getpebble.android.kit.**")
+        assertFalse(
+            "Decommissioned PebbleKit keep rule must be removed (REQ-UI-2802 / ATT-8130)",
+            content.contains("com.getpebble.android.kit")
         )
         assertTrue(
             "Must keep Dropbox SDK classes (REQ-BLD-001.4)",

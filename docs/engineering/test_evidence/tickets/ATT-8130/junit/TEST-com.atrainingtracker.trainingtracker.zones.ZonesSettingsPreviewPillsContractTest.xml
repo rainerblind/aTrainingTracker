@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZonesSettingsPreviewPillsContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:10.377Z" hostname="rainer-HP-EliteBook-850-G5" time="0.028">
+  <properties/>
+  <testcase name="test7ZonePillWidthBudgetUnder130PercentFontScaleAndWcagContrast" classname="com.atrainingtracker.trainingtracker.zones.ZonesSettingsPreviewPillsContractTest" time="0.005"/>
+  <testcase name="testPreviewZoneSelectorUsesCompactZonePreviewPillsWithoutFilterChip" classname="com.atrainingtracker.trainingtracker.zones.ZonesSettingsPreviewPillsContractTest" time="0.021"/>
+  <testcase name="testZonePreviewPillAppliesZoneTintedFillBorderSelectableSemanticsAndSingleLineText" classname="com.atrainingtracker.trainingtracker.zones.ZonesSettingsPreviewPillsContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

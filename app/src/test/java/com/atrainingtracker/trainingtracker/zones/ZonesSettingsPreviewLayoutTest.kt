@@ -21,7 +21,7 @@ package com.atrainingtracker.trainingtracker.zones
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
-import com.atrainingtracker.trainingtracker.activities.resolveZonePreviewContainerModifier
+import com.atrainingtracker.trainingtracker.ui.settings.zones.resolveZonePreviewContainerModifier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode

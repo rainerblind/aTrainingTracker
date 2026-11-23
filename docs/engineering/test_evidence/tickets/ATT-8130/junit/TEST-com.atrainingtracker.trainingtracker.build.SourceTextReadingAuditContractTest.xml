@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:46:09.336Z" hostname="rainer-HP-EliteBook-850-G5" time="131.035">
+  <properties/>
+  <testcase name="testGovernanceGuards_allExplicitlyAllowed" classname="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" time="0.003"/>
+  <testcase name="testBaseline_containsOnlyExpectedLegacyCount" classname="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" time="65.354"/>
+  <testcase name="testRatchetingTripwire_detectsUnallowlistedReader" classname="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" time="0.001"/>
+  <testcase name="testEvasionTripwires_zeroFalsePositivesOnDocsWalkAndTempFileTests" classname="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" time="0.006"/>
+  <testcase name="testEvasionTripwires_detectsConcatenationTemplatesJoinsPathsAndExpandedReadApis" classname="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" time="0.01"/>
+  <testcase name="testSourceReadingAudit_noUnallowlistedSourceReaders" classname="com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" time="65.661"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

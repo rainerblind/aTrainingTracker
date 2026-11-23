@@ -30,35 +30,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
-import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
-import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
-import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
-import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
-import androidx.compose.runtime.saveable.rememberSaveable
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculator
-import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.map.*
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.firstOrNull
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
-import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
-import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
-import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
-import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import android.app.Application
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -75,12 +64,8 @@ import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheet
-import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
-import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import kotlinx.coroutines.launch
 
 @Composable
 fun TrackOnMapScreen(
@@ -105,18 +90,14 @@ fun TrackOnMapScreen(
     gradeZoneDistribution: ZoneDistributionData? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
-    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
-    metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
     telemetryPath: List<PathPoint> = emptyList(),
     detailPreferences: WorkoutDetailPreferences? = null,
-    sectionsOrder: List<WorkoutSectionType>? = null,
     tabsConfig: List<WorkoutDetailTabConfig>? = null,
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
     onUpdateFtp: ((Int) -> Unit)? = null,
     onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
-    useTabbedLayout: Boolean = true,
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
@@ -128,10 +109,7 @@ fun TrackOnMapScreen(
     val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
-    val persistedCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())
     val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
-    val persistedSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = WorkoutSectionType.DEFAULT_ORDER)
-    val activeSectionsOrder = sectionsOrder ?: persistedSectionsOrder
     val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
     val activeTabsConfig = tabsConfig ?: persistedTabsConfig
     val persistedHiddenCharts by preferenceManager.hiddenTelemetryChartsFlow.collectAsState(initial = emptySet())
@@ -173,14 +151,6 @@ fun TrackOnMapScreen(
     }
     val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
     val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
-
-    val mapIndex = activeSectionsOrder.indexOf(WorkoutSectionType.MAP)
-    val preMapSections = remember(activeSectionsOrder, mapIndex) {
-        if (mapIndex >= 0) activeSectionsOrder.subList(0, mapIndex) else activeSectionsOrder
-    }
-    val postMapSections = remember(activeSectionsOrder, mapIndex) {
-        if (mapIndex >= 0) activeSectionsOrder.subList(mapIndex + 1, activeSectionsOrder.size) else emptyList()
-    }
 
     // PERFORMANCE: Memoize the filtered tracks list
     val filteredTracks = remember(tracks, enabledTrackTypes) {
@@ -245,9 +215,6 @@ fun TrackOnMapScreen(
     val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
     val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
     val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
-
-    val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
-    val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
 
     val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != null } == true)
     val hasAltitudeData = workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != null } == true)
@@ -377,148 +344,44 @@ fun TrackOnMapScreen(
         }
     }
 
-    if (useTabbedLayout && metadataContent == null && analyticsContent == null) {
-        WorkoutDetailTabbedContent(
-            workoutData = effectiveWorkoutData,
-            tabs = visibleTabs,
-            availability = sectionAvailability,
-            detailPreferences = activeDetailPrefs,
-            tuningConfig = tuningConfig,
-            activeScrubPath = activeScrubPath,
-            hasAltitudeData = hasAltitudeData,
-            splitChartData = splitChartData,
-            selectedLapNr = selectedLapNr,
-            onSelectLapNr = { selectedLapNr = it },
-            hrZoneDistribution = hrZoneDistribution,
-            powerZoneDistribution = powerZoneDistribution,
-            gradeZoneDistribution = gradeZoneDistribution,
-            effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
-            effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
-            effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
-            onHrZoneDisplayModeChange = { hrZoneDisplayMode = it },
-            onPowerZoneDisplayModeChange = { powerZoneDisplayMode = it },
-            onGradeZoneDisplayModeChange = { gradeZoneDisplayMode = it },
-            hrZoneThresholds = hrZoneThresholds,
-            powerZoneThresholds = powerZoneThresholds,
-            recentSessions = recentSessions,
-            isSmoothedStream = isSmoothedStream,
-            multiSensorOverlays = multiSensorOverlays,
-            activityCarriageTimeline = activityCarriageTimeline,
-            hiddenCharts = persistedHiddenCharts,
-            onToggleChartVisibility = handleToggleChartVisibility,
-            onUpdateFtp = effectiveOnUpdateFtp,
-            onUpdateHrZones = effectiveOnUpdateHrZones,
-            useStatusBarsPadding = useStatusBarsPadding,
-            onClusterClick = onClusterClick,
-            onEditWorkout = onEditWorkout,
-            onChangeCluster = effectiveOnChangeCluster,
-            headerActions = headerActions,
-            onOpenTabsConfig = { showTabsConfigSheet = true },
-            initialAutoShareSnapshot = initialAutoShareSnapshot,
-            onSnapshotComplete = onSnapshotComplete,
-            mapContent = {
-                tracks(filteredTracks)
-                contextualPaths(segments)
-                contextualPaths(routes)
-                if (lapSegment.isNotEmpty()) {
-                    val lapMarkers = mutableListOf<LocationMarker>()
-                    lapSegment.firstOrNull()?.let { startPoint ->
-                        lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = lapStartMarkerTitle))
-                    }
-                    lapSegment.lastOrNull()?.let { endPoint ->
-                        lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = lapEndMarkerTitle))
-                    }
-                    markers(markers + lapMarkers)
-                    lapHighlight(lapSegment)
-                } else {
-                    markers(markers)
-                }
-            },
-            mapOverlay = {},
-            mapTopEndActions = {
-                if (showTechnicalTracks) {
-                    TrackLayersMenuButton(
-                        availableTrackTypes = availableTrackTypes,
-                        enabledTrackTypes = enabledTrackTypes,
-                        onToggleTrackType = onToggleTrackType
-                    )
-                }
-            },
-            onSplitLapClick = {
-                candidateSplitIndex = null
-                showCreateLapSheet = true
-            },
-            onCreateLapClick = { scrubDist ->
-                candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
-                showCreateLapSheet = true
-            },
-            onMoveBoundaryClick = { boundaryLapNr ->
-                moveBoundaryLapNr = boundaryLapNr
-                showMoveBoundarySheet = true
-            },
-            onLapClick = { lap ->
-                activeEditingLap = lap
-                selectedLapNr = lap.lapNr
-            },
-            modifier = modifier
-        )
-    } else {
-    MapDetailLayout(
-        bSportType = workoutData.bSportType,
-        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+    WorkoutDetailTabbedContent(
+        workoutData = effectiveWorkoutData,
+        tabs = visibleTabs,
+        availability = sectionAvailability,
+        detailPreferences = activeDetailPrefs,
+        tuningConfig = tuningConfig,
         activeScrubPath = activeScrubPath,
-        minAltitudeOverride = workoutData.minAltitude,
-        maxAltitudeOverride = workoutData.maxAltitude,
-        useStatusBarsPadding = useStatusBarsPadding,
-        isBottomSheet = false,
-        showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap,
-        showElevationProfile = (hasGpsTrack || hasTracklessAltitude) && activeDetailPrefs.showElevationProfile && isElevationPostMap && hasAltitudeData,
-        showTelemetryCharts = activeDetailPrefs.showTelemetryCharts && isChartsPostMap,
+        hasAltitudeData = hasAltitudeData,
+        splitChartData = splitChartData,
+        selectedLapNr = selectedLapNr,
+        onSelectLapNr = { selectedLapNr = it },
         hrZoneDistribution = hrZoneDistribution,
         powerZoneDistribution = powerZoneDistribution,
-        hrZoneDisplayMode = effectiveHrZoneDisplayMode,
-        powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+        gradeZoneDistribution = gradeZoneDistribution,
+        effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
+        effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+        effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
+        onHrZoneDisplayModeChange = { hrZoneDisplayMode = it },
+        onPowerZoneDisplayModeChange = { powerZoneDisplayMode = it },
+        onGradeZoneDisplayModeChange = { gradeZoneDisplayMode = it },
         hrZoneThresholds = hrZoneThresholds,
         powerZoneThresholds = powerZoneThresholds,
-        workoutData = workoutData,
+        recentSessions = recentSessions,
+        isSmoothedStream = isSmoothedStream,
         multiSensorOverlays = multiSensorOverlays,
+        activityCarriageTimeline = activityCarriageTimeline,
         hiddenCharts = persistedHiddenCharts,
         onToggleChartVisibility = handleToggleChartVisibility,
-        activityCarriageTimeline = activityCarriageTimeline,
-        showActivityCarriageBar = hasActivityCarriageBar,
-        onCreateLapClick = { scrubDist ->
-            candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
-            showCreateLapSheet = true
-        },
-        header = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                WorkoutHeader(
-                    modifier = Modifier.fillMaxWidth(),
-                    data = effectiveWorkoutData.headerData,
-                    menuEnabled = false,
-                    canDelete = false,
-                    onClicked = onEditWorkout?.let { edit -> { edit(effectiveWorkoutData.id) } },
-                    onExport = { },
-                    onSaveAsRoute = { },
-                    onDeleteRequest = { },
-                    onClusterClick = onClusterClick,
-                    onEditWorkout = onEditWorkout?.let { edit -> { edit(effectiveWorkoutData.id) } },
-                    onOpenTabsConfig = { showTabsConfigSheet = true },
-                    onChangeCluster = effectiveOnChangeCluster,
-                    actions = headerActions
-                )
-                if (workoutData.polarSyncPending) {
-                    PolarPendingRetrySyncSection(
-                        workoutId = workoutData.id,
-                        polarExerciseId = workoutData.polarExerciseId,
-                        polarDeviceId = workoutData.polarDeviceId,
-                        onDismiss = {
-                            repository.dismissPolarSyncPending(workoutData.id)
-                        }
-                    )
-                }
-            }
-        },
+        onUpdateFtp = effectiveOnUpdateFtp,
+        onUpdateHrZones = effectiveOnUpdateHrZones,
+        useStatusBarsPadding = useStatusBarsPadding,
+        onClusterClick = onClusterClick,
+        onEditWorkout = onEditWorkout,
+        onChangeCluster = effectiveOnChangeCluster,
+        headerActions = headerActions,
+        onOpenTabsConfig = { showTabsConfigSheet = true },
+        initialAutoShareSnapshot = initialAutoShareSnapshot,
+        onSnapshotComplete = onSnapshotComplete,
         mapContent = {
             tracks(filteredTracks)
             contextualPaths(segments)
@@ -537,9 +400,8 @@ fun TrackOnMapScreen(
                 markers(markers)
             }
         },
-        modifier = modifier,
-        overlay = {},
-        topEndActions = {
+        mapOverlay = {},
+        mapTopEndActions = {
             if (showTechnicalTracks) {
                 TrackLayersMenuButton(
                     availableTrackTypes = availableTrackTypes,
@@ -548,280 +410,24 @@ fun TrackOnMapScreen(
                 )
             }
         },
-        metadataContent = {
-            if (metadataContent != null) {
-                metadataContent()
-            } else {
-                preMapSections.forEach { section ->
-                    when (section) {
-                        WorkoutSectionType.DESCRIPTION -> {
-                            if (activeDetailPrefs.showDescription) {
-                                WorkoutDescription(
-                                    data = workoutData.descriptionData,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.EXTREMA -> {
-                            if (activeDetailPrefs.showExtrema && workoutData.extremaData.dataRows.isNotEmpty()) {
-                                WorkoutExtrema(
-                                    data = workoutData.extremaData,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.LAPS -> {
-                            if (activeDetailPrefs.showLaps) {
-                                splitChartData?.let { splits ->
-                                    LapSplitVisualizerCard(
-                                        splitData = splits,
-                                        selectedLapNr = selectedLapNr,
-                                        onLapClick = { tappedLapNr ->
-                                            selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
-                                            activeEditingLap = workoutData.laps.firstOrNull { it.lapNr == tappedLapNr }
-                                        },
-                                        onSplitLapClick = {
-                                            candidateSplitIndex = null
-                                            showCreateLapSheet = true
-                                        },
-                                        onMoveBoundaryClick = { boundaryLapNr ->
-                                            moveBoundaryLapNr = boundaryLapNr
-                                            showMoveBoundarySheet = true
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.STRAVA -> {
-                            if (activeDetailPrefs.showStrava && !workoutData.stravaActivityData.isNullOrBlank()) {
-                                StravaActivitySection(
-                                    rawActivityJson = workoutData.stravaActivityData,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.MAP -> {
-                            // Rendered as central MapDetailLayout viewport
-                        }
-                        WorkoutSectionType.ELEVATION -> {
-                            if (activeDetailPrefs.showElevationProfile && !activeScrubPath.isNullOrEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.graph_heading_elevation),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                                )
-                                ElevationProfile(
-                                    pathPoints = activeScrubPath,
-                                    currentDistance = null,
-                                    minAltitudeOverride = workoutData.minAltitude,
-                                    maxAltitudeOverride = workoutData.maxAltitude,
-                                    onDistanceSelected = {},
-                                    showZoomControls = false,
-                                    bSportType = workoutData.bSportType,
-                                    alignWithTelemetryCharts = activeDetailPrefs.showTelemetryCharts,
-                                    fixedHeight = 120.dp,
-                                    overlaySeries = multiSensorOverlays[TelemetryMetricType.ALTITUDE].orEmpty(),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
-                        WorkoutSectionType.CHARTS -> {
-                            if (activeDetailPrefs.showTelemetryCharts && !activeScrubPath.isNullOrEmpty()) {
-                                val fallbackDomain = if (ProfileDomainMath.isTracklessWorkout(activeScrubPath)) {
-                                    com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain.TIME
-                                } else {
-                                    tuningConfig.telemetryXAxisDomain
-                                }
-                                TelemetryChartStack(
-                                    path = activeScrubPath,
-                                    bSportType = workoutData.bSportType,
-                                    tuningConfig = tuningConfig,
-                                    selectedDistance = null,
-                                    onDistanceSelected = {},
-                                    activeTelemetryDomain = fallbackDomain,
-                                    isTrackless = ProfileDomainMath.isTracklessWorkout(activeScrubPath),
-                                    zoomScale = 1.0f,
-                                    startDist = 0.0,
-                                    isPanMode = false,
-                                    onZoomChanged = { _, _ -> },
-                                    chartModifier = Modifier.fillMaxWidth(),
-                                    enableGestures = false,
-                                    hiddenCharts = persistedHiddenCharts,
-                                    onToggleChartVisibility = handleToggleChartVisibility,
-                                    hrThresholds = hrZoneThresholds,
-                                    powerThresholds = powerZoneThresholds,
-                                    hrZoneDistribution = hrZoneDistribution,
-                                    powerZoneDistribution = powerZoneDistribution,
-                                    hrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                    powerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                    cardioPowerDynamics = workoutData.cardioPowerDynamics,
-                                    multiSensorOverlays = multiSensorOverlays
-                                )
-                            }
-                        }
-                        WorkoutSectionType.ZONES -> {
-                            if (activeDetailPrefs.showZoneAnalysis) {
-                                hrZoneDistribution?.let { distribution ->
-                                    HeartRateZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectiveHrZoneDisplayMode,
-                                        onDisplayModeChange = { hrZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                                powerZoneDistribution?.let { distribution ->
-                                    PowerZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectivePowerZoneDisplayMode,
-                                        onDisplayModeChange = { powerZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.GRADE_DISTRIBUTION -> {
-                            if (activeDetailPrefs.showGradeDistribution) {
-                                gradeZoneDistribution?.let { distribution ->
-                                    GradeZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectiveGradeZoneDisplayMode,
-                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.EXPORT_STATUS -> {
-                            if (activeDetailPrefs.showExportStatus) {
-                                ExportStatus(
-                                    exportStatuses = workoutData.exportStatuses
-                                )
-                            }
-                        }
-                        WorkoutSectionType.RPE_AND_FEEL -> {
-                            if (workoutData.rpe != null || workoutData.feel != null) {
-                                WorkoutRpeFeelSection(
-                                    rpe = workoutData.rpe,
-                                    feel = workoutData.feel,
-                                    activeTimeSec = workoutData.activeTimeSec,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                        WorkoutSectionType.DETAILS,
-                        WorkoutSectionType.PHOTOS,
-                        WorkoutSectionType.HRV,
-                        WorkoutSectionType.MAP -> {
-                            // Handled in Tabbed content / MapDetailLayout
-                        }
-                    }
-                }
-            }
+        onSplitLapClick = {
+            candidateSplitIndex = null
+            showCreateLapSheet = true
         },
-        analyticsContent = {
-            if (analyticsContent != null) {
-                analyticsContent()
-            } else {
-                postMapSections.forEach { section ->
-                    when (section) {
-                        WorkoutSectionType.ZONES -> {
-                            if (activeDetailPrefs.showZoneAnalysis) {
-                                hrZoneDistribution?.let { distribution ->
-                                    HeartRateZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectiveHrZoneDisplayMode,
-                                        onDisplayModeChange = { hrZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                                powerZoneDistribution?.let { distribution ->
-                                    PowerZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectivePowerZoneDisplayMode,
-                                        onDisplayModeChange = { powerZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.GRADE_DISTRIBUTION -> {
-                            if (activeDetailPrefs.showGradeDistribution) {
-                                gradeZoneDistribution?.let { distribution ->
-                                    GradeZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectiveGradeZoneDisplayMode,
-                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.LAPS -> {
-                            if (activeDetailPrefs.showLaps) {
-                                splitChartData?.let { splits ->
-                                    LapSplitVisualizerCard(
-                                        splitData = splits,
-                                        selectedLapNr = selectedLapNr,
-                                        onLapClick = { tappedLapNr ->
-                                            selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
-                                            activeEditingLap = workoutData.laps.firstOrNull { it.lapNr == tappedLapNr }
-                                        },
-                                        onSplitLapClick = {
-                                            candidateSplitIndex = null
-                                            showCreateLapSheet = true
-                                        },
-                                        onMoveBoundaryClick = { boundaryLapNr ->
-                                            moveBoundaryLapNr = boundaryLapNr
-                                            showMoveBoundarySheet = true
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-                        WorkoutSectionType.EXPORT_STATUS -> {
-                            if (activeDetailPrefs.showExportStatus) {
-                                ExportStatus(
-                                    exportStatuses = workoutData.exportStatuses
-                                )
-                            }
-                        }
-                        else -> {
-                            // DESCRIPTION, EXTREMA, MAP, ELEVATION, CHARTS, STRAVA, PHOTOS are rendered in metadataContent or MapDetailLayout
-                        }
-                    }
-                }
-            }
-        }
+        onCreateLapClick = { scrubDist ->
+            candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
+            showCreateLapSheet = true
+        },
+        onMoveBoundaryClick = { boundaryLapNr ->
+            moveBoundaryLapNr = boundaryLapNr
+            showMoveBoundarySheet = true
+        },
+        onLapClick = { lap ->
+            activeEditingLap = lap
+            selectedLapNr = lap.lapNr
+        },
+        modifier = modifier
     )
-    }
 
     if (showClusterSelectionDialog) {
         val targetWorkout = effectiveWorkoutData

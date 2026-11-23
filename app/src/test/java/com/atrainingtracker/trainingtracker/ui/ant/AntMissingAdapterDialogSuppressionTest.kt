@@ -191,27 +191,6 @@ class AntMissingAdapterDialogSuppressionTest {
 
     @Test
     fun testAdvancedTuningHosts_structuralBindingWiring() {
-        val dialogFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val dialogContent = dialogFile.readText()
-
-        assertTrue(
-            "AdvancedTuningDialog must hold showAntMissingAdapterWarnings state",
-            dialogContent.contains("var showAntMissingAdapterWarnings by remember")
-        )
-        assertTrue(
-            "AdvancedTuningDialog must load showAntMissingAdapterWarnings from tuningConfig",
-            dialogContent.contains("config.showAntMissingAdapterWarnings")
-        )
-        assertTrue(
-            "AdvancedTuningDialog must save inverted value to suppressAntMissingAdapterDialog",
-            dialogContent.contains("suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings")
-        )
-        assertTrue(
-            "AdvancedTuningDialog must route showAntMissingAdapterWarnings to SensorSearchTuningSection",
-            dialogContent.contains("SensorSearchTuningSection(") &&
-                dialogContent.contains("showAntMissingAdapterWarnings = showAntMissingAdapterWarnings")
-        )
-
         val screenFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt")
         val screenContent = screenFile.readText()
 

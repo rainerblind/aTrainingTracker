@@ -69,14 +69,10 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleService;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleServiceBuildIn;
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.Watchapp;
 import com.atrainingtracker.trainingtracker.tracker.TrackerService;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
-import com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper;
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents;
 import com.dropbox.core.json.JsonReadException;
 import com.dropbox.core.oauth.DbxCredential;
@@ -197,13 +193,6 @@ public class TrainingApplication extends Application {
     public static final String SENSOR_NAMES = "sensorNames";
     public static final String GC_SENSORS = "GCSensors";
 
-
-    public static final String PEBBLE_SCREEN = "pebbleScreen";
-    public static final String SP_PEBBLE_SUPPORT = "PebbleSupport";
-    public static final String SP_PEBBLE_WATCHAPP = "listPebbleWatchapps";
-    public static final String SP_SHOW_PEBBLE_INSTALL_DIALOG = "showPebbleInstallDialog";
-    public static final String SP_CONFIGURE_PEBBLE_DISPLAY = "configurePebbleDisplays";
-
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
     public static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
@@ -254,7 +243,6 @@ public class TrainingApplication extends Application {
     private static SharedPreferences cSharedPreferences;
     private final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
-    public TrackOnMapHelper trackOnMapHelper;
     private long mWorkoutID = -1;
     private static volatile long sActiveWorkoutId = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
@@ -344,60 +332,6 @@ public class TrainingApplication extends Application {
 
         if (DEBUG) Log.i(TAG, uri + "is NOT installed");
         return false;
-    }
-
-    /* Pebble support */
-    @Nullable
-    private Watchapp startedWatchapp = null;
-    public static boolean pebbleSupport() {
-        return cSharedPreferences.getBoolean(SP_PEBBLE_SUPPORT, false);
-    }
-
-    @NonNull
-    public static Watchapp getPebbleWatchapp() {
-        return EnumUtils.safeValueOf(Watchapp.class, cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()), Watchapp.BUILD_IN, TAG);
-    }
-
-    public static boolean showPebbleInstallDialog() {
-        return cSharedPreferences.getBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, true);
-    }
-
-    public static void setShowPebbleInstallDialog(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_SHOW_PEBBLE_INSTALL_DIALOG, value).apply();
-    }
-
-    public void startPebbleWatchapp() {
-        if (DEBUG) Log.d(TAG, "startPebbleWatchapp()");
-        if (pebbleSupport() && startedWatchapp == null) {
-            switch (getPebbleWatchapp()) {
-                case BUILD_IN:
-                    if (DEBUG) Log.d(TAG, "starting build in Pebble Watchapp Service");
-                    LifecycleUtils.safeStartService(this, new Intent(this, PebbleServiceBuildIn.class), TAG);
-                    break;
-
-                case TRAINING_TRACKER:
-                    if (DEBUG) Log.d(TAG, "starting Training Tracker Pebble Watchapp Service");
-                    LifecycleUtils.safeStartService(this, new Intent(this, PebbleService.class), TAG);
-                    break;
-            }
-            startedWatchapp = getPebbleWatchapp();
-        }
-    }
-
-    public void stopPebbleWatchapp() {
-        if (DEBUG) Log.d(TAG, "stopPebbleWatchapp()");
-        if (startedWatchapp != null) {
-            switch (startedWatchapp) {
-                case BUILD_IN:
-                    stopService(new Intent(this, PebbleServiceBuildIn.class));
-                    break;
-
-                case TRAINING_TRACKER:
-                    stopService(new Intent(this, PebbleService.class));
-                    break;
-            }
-        }
-        startedWatchapp = null;
     }
 
     public static Context getAppContext() {
@@ -1580,8 +1514,6 @@ public class TrainingApplication extends Application {
             Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
         }
 
-        trackOnMapHelper = new TrackOnMapHelper();
-
         mNotificationSummary = getString(R.string.searching);
         // cSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferencesChangeListener);
         // setPowerSmoothing(0.5);
@@ -1805,7 +1737,6 @@ public class TrainingApplication extends Application {
         try {
             ContextCompat.startForegroundService(this, intent);
             TrackerService.markForegroundStartRequested();
-            startPebbleWatchapp();
 
             AutoPauseConfig autoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
             BANALServiceRepository banalRepo = BANALServiceRepository.Companion.getInstance(this);
@@ -1931,8 +1862,6 @@ public class TrainingApplication extends Application {
     protected void stopTracking() {
         resetPauseLocks(this);
 
-        stopPebbleWatchapp();
-
         com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
         com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController.reset();
 
@@ -1973,8 +1902,6 @@ public class TrainingApplication extends Application {
     public void onTrackingAborted() {
         if (DEBUG) Log.w(TAG, "onTrackingAborted: resetting tracking state to READY");
         resetPauseLocks(this);
-
-        stopPebbleWatchapp();
 
         mWorkoutID = -1;
 

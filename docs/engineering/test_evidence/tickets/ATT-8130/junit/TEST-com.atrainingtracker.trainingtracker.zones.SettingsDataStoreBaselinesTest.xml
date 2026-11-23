@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:49:08.784Z" hostname="rainer-HP-EliteBook-850-G5" time="0.975">
+  <properties/>
+  <testcase name="getDefaultValueAndResetToDefaults_matchCanonicalBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.885"/>
+  <testcase name="saveCalculatedHeartRateZones_atomicBatchCommit_updatesAllFields" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.025"/>
+  <testcase name="saveCalculatedPowerZones_atomicBatchCommit_updatesAllFields" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.021"/>
+  <testcase name="saveCalculatedPowerZones_invalidFtpOrCutoffs_abortsWithoutMutation" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.012"/>
+  <testcase name="resetToDefaults_resetsCustomizedFlagToFalse" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.01"/>
+  <testcase name="defaultConstantsAndSnapshot_matchCanonicalBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.003"/>
+  <testcase name="unconfiguredState_returnsNullBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.006"/>
+  <testcase name="manualCutoffEdit_flipsCustomizedFlagToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

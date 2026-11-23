@@ -82,7 +82,6 @@ class PhysiologyTuningSectionContractTest {
         val classes = listOf(
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
         )
         for (className in classes) {

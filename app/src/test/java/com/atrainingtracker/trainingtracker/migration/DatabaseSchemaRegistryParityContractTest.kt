@@ -42,7 +42,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
-import com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -93,7 +92,6 @@ class DatabaseSchemaRegistryParityContractTest {
         DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = true)
         OpenDatabaseTracker.clearForTesting()
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
-        PebbleDatabaseManager.resetInstanceForTesting()
         ExportStatusDatabaseManager.resetForTesting(null)
         resetStaticField(ExportStatusDatabaseManager.ExportStatusDbHelper::class.java, "sInstance")
         PeriodSummariesDatabaseManager.setInstanceForTesting(null)
@@ -179,8 +177,8 @@ class DatabaseSchemaRegistryParityContractTest {
         // TST-MIG-057.1
         val helpers = discoverProductionSqliteOpenHelpers()
         assertTrue(
-            "Expected at least 22 concrete SQLiteOpenHelper subclasses, found ${helpers.size}: ${helpers.map { it.name }}",
-            helpers.size >= 22
+            "Expected at least 21 concrete SQLiteOpenHelper subclasses, found ${helpers.size}: ${helpers.map { it.name }}",
+            helpers.size >= 21
         )
 
         val discoveredDbNames = mutableSetOf<String>()
@@ -230,8 +228,12 @@ class DatabaseSchemaRegistryParityContractTest {
             DatabaseSchemaRegistry.getSupportedDatabases().contains("KnownLocations.db")
         )
         assertFalse(
-            "Typo filename 'Pebble.db' must not remain in DatabaseSchemaRegistry (real file is PebbleView.db)",
+            "Typo filename 'Pebble.db' must not remain in DatabaseSchemaRegistry",
             DatabaseSchemaRegistry.getSupportedDatabases().contains("Pebble.db")
+        )
+        assertFalse(
+            "Decommissioned 'PebbleView.db' must not remain in DatabaseSchemaRegistry (ATT-8130)",
+            DatabaseSchemaRegistry.getSupportedDatabases().contains("PebbleView.db")
         )
         assertEquals(
             "Legacy alias 'TrackingViews.db' must track TrackingViewsDbHelper.DB_VERSION",
@@ -263,7 +265,6 @@ class DatabaseSchemaRegistryParityContractTest {
             DatabaseConnectionManager.getActiveDatabases(context).isEmpty()
         )
         for (dbName in unopenedFiles + listOf(
-            PebbleDatabaseManager.PebbleDbHelper.DB_NAME,
             PeriodSummariesDatabaseManager.DATABASE_NAME,
             ElevationCacheDbHelper.DB_NAME,
             AthleteMetricsDbHelper.DB_NAME
@@ -273,7 +274,6 @@ class DatabaseSchemaRegistryParityContractTest {
 
         // 2. Open a representative subset across BaseDatabaseManager, direct mDbHelper (ExportStatus), and Kotlin managers
         WorkoutSummariesDatabaseManager.getInstance(context).database
-        PebbleDatabaseManager.getInstance(context).database
         ExportStatusDatabaseManager.getInstance(context).getExportRows("sample_workout")
         PeriodSummariesDatabaseManager.getInstance(context).getDatabase()
         ElevationCacheDatabaseManager.getInstance(context).database
@@ -283,7 +283,6 @@ class DatabaseSchemaRegistryParityContractTest {
 
         val expectedOpen = setOf(
             WorkoutSummariesDbHelper.DB_NAME,
-            PebbleDatabaseManager.PebbleDbHelper.DB_NAME,
             ExportStatusDatabaseManager.ExportStatusDbHelper.DB_NAME,
             PeriodSummariesDatabaseManager.DATABASE_NAME,
             ElevationCacheDbHelper.DB_NAME,

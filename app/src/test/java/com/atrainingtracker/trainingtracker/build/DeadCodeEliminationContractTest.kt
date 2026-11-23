@@ -276,12 +276,9 @@ class DeadCodeEliminationContractTest {
             "export_notification__expanded.xml",
             "export_notification__group.xml",
             "main_activity_with_navigation.xml",
-            "main_activity_without_navigation.xml",
-            "pebble_config_list_5.xml",
             "preference_category.xml",
-            "preference_slim.xml",
-            "tabbed_config_views.xml"
+            "preference_slim.xml"
         ).sorted()
-        assertEquals("res/layout must contain only the 9 active layouts", expectedActiveLayouts, actualLayouts)
+        assertEquals("res/layout must contain only the 6 active layouts (ATT-8130)", expectedActiveLayouts, actualLayouts)
     }
 }

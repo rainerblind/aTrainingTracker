@@ -51,7 +51,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * ViewModel orchestrating the guided DFA a1 progressive step and continuous ramp test protocols (`REQ-TRK-072`).
  *
  * Implements:
- * 1. Protocol lifecycle: CONFIG -> PRE_FLIGHT -> WARMUP -> TESTING -> EARLY_COMPLETION -> COOLDOWN -> FINISHED.
+ * 1. Protocol lifecycle: CONFIG -> WARMUP -> TESTING -> EARLY_COMPLETION -> COOLDOWN -> FINISHED.
  * 2. Pre-flight sensor check evaluating RR artifact rate against strict HIGH (<= 3.0%), MODERATE (3.0-5.0%),
  *    and UNSUITABLE (> 5.0% or missing RR stream) quality tiers (`REQ-TRK-072.3`).
  * 3. Exact per-step pacing target increments and countdown timer (`REQ-TRK-072.1`, `REQ-TRK-072.4`).
@@ -86,7 +86,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
         if (bufferedBeats.size > 180) {
             bufferedBeats.removeAt(0)
         }
-        if (_uiState.value.phase == HrvTestPhase.CONFIG || _uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
+        if (_uiState.value.phase == HrvTestPhase.CONFIG) {
             val rate = _uiState.value.currentArtifactRate ?: calculateBufferedArtifactRate()
             evaluatePreFlightQuality(
                 artifactRate = rate,
@@ -153,7 +153,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                     )
                 }
 
-                if (_uiState.value.phase == HrvTestPhase.CONFIG || _uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
+                if (_uiState.value.phase == HrvTestPhase.CONFIG) {
                     val hasRr = bufferedBeats.isNotEmpty() || artifactRate != null
                     val rate = artifactRate ?: calculateBufferedArtifactRate()
                     evaluatePreFlightQuality(
@@ -237,23 +237,8 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     }
 
     // ------------------------------------------------------------------------
-    // Pre-Flight Sensor Assessment (PRE_FLIGHT Phase)
+    // Pre-Flight Sensor Assessment (Inline in CONFIG Phase)
     // ------------------------------------------------------------------------
-
-    fun startPreFlight() {
-        if (_uiState.value.phase != HrvTestPhase.CONFIG) return
-        banalServiceRepository.bindToBANALService()
-        banalServiceRepository.startSearchingForPairedDevices()
-        banalServiceRepository.addRrBeatListener(rrBeatListener)
-
-        _uiState.update {
-            it.copy(
-                phase = HrvTestPhase.PRE_FLIGHT,
-                preFlightMessageResId = R.string.hrv_test_preflight_checking,
-                canStartTest = false
-            )
-        }
-    }
 
     /**
      * Grades pre-flight sensor quality according to REQ-TRK-072.3:
@@ -500,7 +485,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                         sendStopTrackingBroadcast()
                     }
                 }
-                HrvTestPhase.FINISHED, HrvTestPhase.CONFIG, HrvTestPhase.PRE_FLIGHT -> {
+                HrvTestPhase.FINISHED, HrvTestPhase.CONFIG -> {
                     /* No timer progression */
                 }
             }

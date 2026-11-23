@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:47:34.760Z" hostname="rainer-HP-EliteBook-850-G5" time="20.965">
+  <properties/>
+  <testcase name="testActiveMeasurement_keepsHrvLayoutEvenIfStartToggleFalse_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="15.632"/>
+  <testcase name="testEnabledHrvMode_keepsFullHrvAndWellnessLayout_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.529"/>
+  <testcase name="testForceFullHrvWithWellnessDisabled_showsFullHrvWithoutWellnessCard_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.33"/>
+  <testcase name="testCaptureForceFullHrvLightAndDarkScreenshot_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="1.217"/>
+  <testcase name="testForceFullHrvWithWellnessEnabled_preservesFullHrvUiAndOpensInfoSheet_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="1.666"/>
+  <testcase name="testCapturePureWellnessModeLightAndDarkScreenshot_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.648"/>
+  <testcase name="testDirectProfileFallback_keepsHrvLayoutWhenBothTogglesFalse_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.196"/>
+  <testcase name="testPureWellnessMode_savedStateAndEmptyHint_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.166"/>
+  <testcase name="testStartScreenEntry_forceFullHrvFalseRetainsPureWellnessMode_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.275"/>
+  <testcase name="testPureWellnessMode_hidesHrvCardsAndPromotesSaveWellness_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.305"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

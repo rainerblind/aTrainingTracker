@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZoneNumberParserTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:10.313Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="parseIntOrNull_decimalSeparators_truncatesToInteger" classname="com.atrainingtracker.trainingtracker.zones.ZoneNumberParserTest" time="0.0"/>
+  <testcase name="parseIntOrNull_standardDigits_parsesCorrectly" classname="com.atrainingtracker.trainingtracker.zones.ZoneNumberParserTest" time="0.0"/>
+  <testcase name="parseIntOrNull_invalidStrings_returnsNullSafely" classname="com.atrainingtracker.trainingtracker.zones.ZoneNumberParserTest" time="0.0"/>
+  <testcase name="parseIntOrNull_whitespaceAndNbsp_cleansAndParses" classname="com.atrainingtracker.trainingtracker.zones.ZoneNumberParserTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -104,7 +104,7 @@ class SecondaryTabbedHeadersContractTest {
 
     @Test
     fun testZoneSettingsScreen_contextAwareNavigationContract() {
-        val file = findProjectFile("src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        val file = findProjectFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones/ZoneSettingsScreen.kt")
         val content = file.readText()
 
         assertTrue("ZoneSettingsScreen must support onOpenDrawer", content.contains("onOpenDrawer: (() -> Unit)? = null"))

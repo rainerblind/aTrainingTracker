@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorLocalizationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:49:09.775Z" hostname="rainer-HP-EliteBook-850-G5" time="3.488">
+  <properties/>
+  <testcase name="testZoneCalculationStrings_formatSpecifierParityAcrossLocales" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorLocalizationTest" time="1.763"/>
+  <testcase name="testZoneCalculationStrings_existInAllNineLocales" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculatorLocalizationTest" time="1.725"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

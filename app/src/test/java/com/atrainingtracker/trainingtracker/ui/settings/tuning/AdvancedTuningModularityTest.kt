@@ -33,7 +33,6 @@ class AdvancedTuningModularityTest {
     fun testModularClassesExist() {
         val expectedClasses = listOf(
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningPaceCeilingFormatter",

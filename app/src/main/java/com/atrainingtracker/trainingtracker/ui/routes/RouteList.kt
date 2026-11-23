@@ -37,7 +37,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
-import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollableBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.ui.platform.LocalContext

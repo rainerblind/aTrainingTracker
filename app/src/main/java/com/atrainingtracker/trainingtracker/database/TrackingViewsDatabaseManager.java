@@ -1480,8 +1480,7 @@ public class TrackingViewsDatabaseManager extends BaseDatabaseManager<TrackingVi
                 + SENSOR_TYPE + " text, "
                 + TEXT_SIZE + " int, "
                 + SOURCE_DEVICE_ID + " int)";
-        // TODO: same as for PebbleDbHelper: switch to next/previous id structure?
-        // NO! when inserting a new view, we just have to add 1 to all following layout_nrs, similar for deleting.
+        // Layout ordering uses monotonic layout_nr shifts when inserting/deleting views.
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V6 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "

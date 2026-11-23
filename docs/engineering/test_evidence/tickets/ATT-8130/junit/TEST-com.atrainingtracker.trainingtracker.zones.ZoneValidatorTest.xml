@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:49:13.272Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="validatePowerZoneStack_equalAdjacentValues_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validateHeartRateZoneStack_validMonotonicStack_succeeds" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validateHeartRateZoneStack_outOfBounds_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.001"/>
+  <testcase name="validateHrBaselines_validKarvonen_returnsValid" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validateHrBaselines_hrReserveTooLow_returnsSpecificError" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validateFtp_validRange_returnsValid" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validateHrBaselines_hrMaxLessOrEqualHrRest_returnsSpecificError" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validatePowerZoneStack_exceedsPhysicalCeiling2500W_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validatePowerZoneStack_validMonotonicStack_succeeds" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validatePowerZoneStack_wrongSize_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validatePowerZoneStack_invertedValues_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <testcase name="validateHeartRateZoneStack_equalAdjacent_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.001"/>
+  <testcase name="validateFtp_outOfRange_returnsInvalid" classname="com.atrainingtracker.trainingtracker.zones.ZoneValidatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -52,8 +52,6 @@ object DatabaseSchemaRegistry {
                 com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_NAME to
                 com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_VERSION,
-        com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager.PebbleDbHelper.DB_NAME to
-                com.atrainingtracker.trainingtracker.smartwatch.pebble.PebbleDatabaseManager.PebbleDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_NAME to
                 com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.DB_NAME to

@@ -61,7 +61,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * Target athletic zone profiles that support configurable [ZoneDisplayOptions]
- * across `ZonesSettingsActivity`, sensor tile configuration, and tracking tabs configuration
+ * across `ZoneSettingsScreen`, sensor tile configuration, and tracking tabs configuration
  * (`REQ-UI-2783`, `ATT-8498`).
  */
 enum class ZoneProfileTarget(@param:StringRes val labelResId: Int) {
@@ -190,7 +190,7 @@ data class ZoneDisplayOptionsDraft(
 
 /**
  * Shared [ZoneDisplayOptions] toggle list supporting host-specific row styling via [toggleRow]
- * (`ZoneDisplayToggleRow` in `ZonesSettingsActivity`, `ZoneDisplaySwitchRow` in tile/tab editors)
+ * (`ZoneDisplayToggleRow` in `ZoneSettingsScreen`, `ZoneDisplaySwitchRow` in tile/tab editors)
  * (`REQ-UI-2783`).
  */
 @Composable

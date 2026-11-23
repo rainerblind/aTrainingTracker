@@ -39,7 +39,6 @@ enum class HrvTestProtocolType {
  */
 enum class HrvTestPhase {
     CONFIG,
-    PRE_FLIGHT,
     WARMUP,
     TESTING,
     EARLY_COMPLETION,

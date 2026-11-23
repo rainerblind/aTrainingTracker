@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:45:33.383Z" hostname="rainer-HP-EliteBook-850-G5" time="34.851">
+  <properties/>
+  <testcase name="testStartTracking_whenStartInAutoPauseEnabled_andSpeedSourcePresent_startsInAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="7.917"/>
+  <testcase name="testOnTrackingAborted_resetsWasAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.106"/>
+  <testcase name="testStartTracking_whenSecurityExceptionThrown_recoversGracefully" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.053"/>
+  <testcase name="testTrackingStopped_preservesUntouchedSemantics_doesNotResetModeOrPauseLocks" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.277"/>
+  <testcase name="testSetTracking_callsNotifyTrackingStateChanged" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.011"/>
+  <testcase name="testUpdateTimeAndDistanceToNotification_whenNotTracking_suppressesNotification" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.033"/>
+  <testcase name="testStopTracking_whenTrackerServiceNotRunning_fallsBackToStopService" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.16"/>
+  <testcase name="testStopTracking_whenTrackerServiceIsRunning_dispatchesActionStopViaStartService" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.78"/>
+  <testcase name="testStartTracking_normal_delegatesToStartForegroundService" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.349"/>
+  <testcase name="testResumeFromPaused_whenManualPaused_setsWasAutoPausedFalse" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.312"/>
+  <testcase name="testStartTracking_whenIllegalStateExceptionThrown_recoversGracefully" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.346"/>
+  <testcase name="testStartTracking_whenStartInAutoPauseEnabled_butNoSpeedSource_startsInTracking" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.328"/>
+  <testcase name="testStopTracking_whenFgsStartPendingAndServiceNotYetRunning_suppressesStopService_TST_TRK_095_1" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.242"/>
+  <testcase name="testResetTrackingStateOnAbort_nullAndNonNullContextParity" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.286"/>
+  <testcase name="testStravaSyncPreferences_all18MethodsDistinctKeysNeverStringsAndNullSafety" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.539"/>
+  <testcase name="testStartTracking_afterDeferredPreStartStop_clearsPendingStopForNewStart_TST_TRK_095_1" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.35"/>
+  <testcase name="testOnTrackingAborted_resetsAllStateCancelsNotificationAndBroadcastsReset" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.3"/>
+  <testcase name="testStopTracking_resetsPauseLocksBeforeDispatchAndActiveStateAfterDispatch" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.296"/>
+  <testcase name="testResetTrackingStateOnAbort_resetsWasAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.291"/>
+  <testcase name="testResumeFromPaused_whenAutoPaused_setsWasAutoPausedTrue" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.328"/>
+  <testcase name="testStopTracking_resetsWasAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.268"/>
+  <testcase name="testStartTracking_resumeFromCrash_passesResumeByUser" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.278"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

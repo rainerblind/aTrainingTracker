@@ -24,7 +24,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle
-import com.atrainingtracker.trainingtracker.activities.ZonesSettingsViewModel
+import com.atrainingtracker.trainingtracker.ui.settings.zones.ZonesSettingsViewModel
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

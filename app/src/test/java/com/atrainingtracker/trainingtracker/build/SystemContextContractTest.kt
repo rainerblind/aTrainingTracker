@@ -191,8 +191,7 @@ class SystemContextContractTest {
         assertTrue("Must ground Dropbox Core SDK version", content.contains("dropbox-core-sdk:8.0.2"))
         assertTrue("build.gradle must contain Dropbox SDK 8.0.2", buildGradleContent.contains("com.dropbox.core:dropbox-core-sdk:8.0.2"))
 
-        assertTrue("Must ground PebbleKit SDK version", content.contains("pebblekit:4.0.1"))
-        assertTrue("build.gradle must contain PebbleKit 4.0.1", buildGradleContent.contains("com.getpebble:pebblekit:4.0.1"))
+        assertFalse("build.gradle must NOT contain decommissioned PebbleKit dependency (ATT-8130)", buildGradleContent.contains("com.getpebble:pebblekit"))
 
         assertTrue("Must ground Health Connect client version", content.contains("connect-client:1.1.0"))
         assertTrue("build.gradle must contain Health Connect 1.1.0", buildGradleContent.contains("androidx.health.connect:connect-client:1.1.0"))
@@ -224,6 +223,7 @@ class SystemContextContractTest {
         // 8. Decommissioned Legacy Interfaces
         assertTrue("Must demarcate Runkeeper as PERMANENTLY DECOMMISSIONED", content.contains("Runkeeper") && content.contains("PERMANENTLY DECOMMISSIONED"))
         assertTrue("Must demarcate TrainingPeaks as PERMANENTLY DECOMMISSIONED", content.contains("TrainingPeaks") && content.contains("PERMANENTLY DECOMMISSIONED"))
+        assertTrue("Must demarcate PebbleKit as PERMANENTLY DECOMMISSIONED (ATT-8130)", content.contains("PebbleKit") && content.contains("PERMANENTLY DECOMMISSIONED"))
     }
 
     /**

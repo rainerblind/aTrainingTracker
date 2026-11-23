@@ -124,7 +124,6 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt" to 1975,
             "com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt" to 1965,
             "com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt" to 1953,
-            "com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt" to 1898,
             "com/atrainingtracker/banalservice/devices/DeviceManager.java" to 1708,
             "com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java" to 1671,
             "com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt" to 1635

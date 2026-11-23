@@ -165,7 +165,7 @@ class ZoneOnboardingBannerContractTest {
 
     @Test
     fun testZonesSettingsActivity_bannerMountAndDismissContract() {
-        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones/ZoneSettingsScreen.kt")
         val content = file.readText()
 
         // 1. Must accept promptReason in ZoneSettingsScreen

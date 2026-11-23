@@ -1,7 +1,7 @@
 # Software Architecture: aTrainingTracker (ASPICE 4.0 SWE.2)
 
 **Document ID**: `DOC-ARC-MAIN`  
-**Version**: 1.0.25  
+**Version**: 1.0.26  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -22,7 +22,7 @@ graph TD
     end
 
     subgraph Domain_Layer["2. Domain & Scientific Calculators (SWE.3)"]
-        Physiology["PowerPhysiologyCalculator, DynamicalPowerHrEngine & SlidingWindowPowerAccumulator (FTP, NP, TSS, IF, MMP, Power-HR OE Dynamics)"]
+        Physiology["PowerPhysiologyCalculator, PowerHrDynamicsCalculator & SlidingWindowPowerAccumulator (FTP, NP, TSS, IF, MMP, Power-HR OE Dynamics)"]
         Climbs["ClimbDetector & PolylineProgressTracker"]
         Clusters["WorkoutClusterEngine & SpatialRegionEngine"]
         AutoPause["AutoPauseManager (Debounce & State Machine)"]
@@ -351,7 +351,7 @@ For comprehensive operation signatures, payload schemas, concurrency rules, and 
 To mitigate ASPICE evaluation finding F9, boundaries between legacy Java core services and Kotlin presentation/domain layers are fortified against platform type (`T!`) nullability hazards. All public Java methods consumed by Kotlin callers enforce explicit `@NonNull` / `@Nullable` annotations (`androidx.annotation.*`), and all Java callers consuming Kotlin declarations interface via `@JvmStatic` / `@JvmOverloads` conventions.
 
 ### 5.3 Java Core Services Migration Strategy (ADR-001)
-In accordance with **ADR-001** ([`docs/architecture/adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md)), the 149-class baseline across 12 architectural subsystems (**120 remaining `.java` classes + 29 migrated `.kt` classes**) is governed by a bounded migration strategy under Epic `ATT-431` (*Clean Code*). Per Product Owner architecture decision (2026-11-14, ATT-8115), active Kotlin migration was strictly bounded to and completed across leaf sensor formatters (`ATT-7903`, 15 classes), pure signal filters (`ATT-7905`, 11 classes), and streaming file writers (`ATT-7906`, 3 classes: `FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt`). Remaining subsystems (`TrackerService`, `BANALService`, BLE/ANT+ peripheral drivers, SQLite database managers, legacy Pebble) deliberately remain in Java (`Keep`) or encapsulated behind clean Kotlin repositories (`WorkoutRepository`, `REQ-ARC-004`/`REQ-ARC-009`) to safeguard runtime telemetry and endurance tracking stability. Migration is bounded by mandatory quality safeguards: pre-existing characterisation test harnesses, strict refactoring invariance (zero functional changes), nullability shielding, and atomic child tickets ($\le 3$ Story Points).
+In accordance with **ADR-001** ([`docs/architecture/adr_001_java_core_services_migration.md`](architecture/adr_001_java_core_services_migration.md)), the 149-class baseline across 12 architectural subsystems (**120 remaining `.java` classes + 29 migrated `.kt` classes**) is governed by a bounded migration strategy under Epic `ATT-431` (*Clean Code*). Per Product Owner architecture decision (2026-11-14, ATT-8115), active Kotlin migration was strictly bounded to and completed across leaf sensor formatters (`ATT-7903`, 15 classes), pure signal filters (`ATT-7905`, 11 classes), and streaming file writers (`ATT-7906`, 3 classes: `FitFileWriter.kt`, `TCXFileWriter.kt`, `BaseFileWriter.kt`). Remaining subsystems (`TrackerService`, `BANALService`, BLE/ANT+ peripheral drivers, SQLite database managers) deliberately remain in Java (`Keep`) or encapsulated behind clean Kotlin repositories (`WorkoutRepository`, `REQ-ARC-004`/`REQ-ARC-009`) to safeguard runtime telemetry and endurance tracking stability (legacy Pebble smartwatch subsystem decommissioned in `ATT-8130`). Migration is bounded by mandatory quality safeguards: pre-existing characterisation test harnesses, strict refactoring invariance (zero functional changes), nullability shielding, and atomic child tickets ($\le 3$ Story Points).
 
 ### 5.4 Canonical SensorType Storage, Display & Export Unit Data Dictionary (`REQ-TRK-083`)
 All 68 telemetry metrics declared in `SensorType` (`SensorType.java`) follow a strict separation between internal SQLite/sensor-bus storage units (`SensorType.getInternalUnit()`), UI display formatting (`MyFormatter`, `MyHelper.getUnitsId()`), and file export conversions (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter`, `CSVFileWriter`, `GCFileWriter`). The authoritative 68-entry unit, sentinel, and export data dictionary is maintained in [`docs/architecture/sensor_units.md`](architecture/sensor_units.md) and enforced by JVM contract test `SensorTypeUnitsContractTest`.
@@ -443,3 +443,4 @@ In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SW
 | `1.0.23` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Registered `PostWorkoutFinalizer`, `LapTelemetryExtractor`, and `StravaSyncScheduler` in §2 for deduplicated `TrackerService`/`TrainingApplication` shutdown sequences, type-safe lap extraction, extracted 7-stage post-workout finalization, and shared periodic Strava sync scheduling (`REQ-TRK-094`). |
 | `1.0.24` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Removed excised `WorkoutSummariesListFragment` reference in §3.4 after legacy UI Fragment decommissioning (`REQ-UI-2801`). |
 | `1.0.25` | 2026-11-22 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Updated §3.3.4 smartphone raw sidecar channel specification to 9 channels (`GNSS` raw GPS + `GNSS_FUSED` Google Fused) with instance-scoped per-channel GNSS deduplication (`REQ-EXP-047`). |
+| `1.0.26` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Replaced removed `DynamicalPowerHrEngine` alias with `PowerHrDynamicsCalculator` in §1 and noted Pebble subsystem decommissioning in §5.3 (`REQ-UI-2802`). |

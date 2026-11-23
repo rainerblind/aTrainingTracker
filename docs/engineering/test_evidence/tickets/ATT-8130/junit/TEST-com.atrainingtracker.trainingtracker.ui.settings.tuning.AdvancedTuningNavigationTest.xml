@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningNavigationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:43.846Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testDrawerItemIdMapsToAdvancedSettingsRoute" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningNavigationTest" time="0.0"/>
+  <testcase name="testAdvancedTuningDrawerItemReturnsNullForBottomSheet" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningNavigationTest" time="0.0"/>
+  <testcase name="testAdvancedSettingsRouteMapsToDrawerItemId" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningNavigationTest" time="0.001"/>
+  <testcase name="testAdvancedSettingsRoute_withPushedContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningNavigationTest" time="0.0"/>
+  <testcase name="testAdvancedSettingsRouteConstant" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningNavigationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

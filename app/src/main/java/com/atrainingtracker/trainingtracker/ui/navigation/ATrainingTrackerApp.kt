@@ -89,7 +89,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedView
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreen
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
-import com.atrainingtracker.trainingtracker.activities.ZoneSettingsScreen
+import com.atrainingtracker.trainingtracker.ui.settings.zones.ZoneSettingsScreen
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledAlertDialog
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeAlertDialog
 import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper
@@ -123,7 +123,6 @@ import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveS
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.ui.help.TipsGuideScreen
 import com.atrainingtracker.trainingtracker.ui.settings.developer.DeveloperMenuScreen
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreen
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialog
@@ -815,9 +814,6 @@ fun ATrainingTrackerApp(
                         drawerController.activeBottomSheet = null
                         navController.navigate(NavRoutes.advancedSettings(pushed = true))
                     }
-                )
-                SettingsBottomSheetType.ADVANCED_TUNING -> AdvancedTuningDialog(
-                    onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.SEARCH -> SearchSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }

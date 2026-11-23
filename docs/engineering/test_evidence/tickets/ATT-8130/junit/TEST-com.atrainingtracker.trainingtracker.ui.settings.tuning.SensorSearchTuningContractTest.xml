@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:57.037Z" hostname="rainer-HP-EliteBook-850-G5" time="1.448">
+  <properties/>
+  <testcase name="testSavePreferences_persistsToSharedPreferences" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" time="0.468"/>
+  <testcase name="testLoadPreferences_readsFromSharedPreferences" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" time="0.244"/>
+  <testcase name="testTuningSection_containsSensorSearch" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" time="0.185"/>
+  <testcase name="testDefaultPreferences_matchFactoryDefaults" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" time="0.173"/>
+  <testcase name="testResetPreferences_restoresDefaults" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" time="0.208"/>
+  <testcase name="testLoadPreferences_clampsToMinMax" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest" time="0.169"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZoneOnboardingLocalizationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:10.318Z" hostname="rainer-HP-EliteBook-850-G5" time="0.049">
+  <properties/>
+  <testcase name="testZoneOnboardingStrings_formatSpecifierParityAcrossLocales" classname="com.atrainingtracker.trainingtracker.zones.ZoneOnboardingLocalizationTest" time="0.022"/>
+  <testcase name="testZoneOnboardingStrings_existInAllNineLocales" classname="com.atrainingtracker.trainingtracker.zones.ZoneOnboardingLocalizationTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

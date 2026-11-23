@@ -25,8 +25,7 @@ class TryWithResourcesCursorAuditTest {
         "app/src/main/java/com/atrainingtracker/banalservice/database",
         "app/src/main/java/com/atrainingtracker/trainingtracker/database",
         "app/src/main/java/com/atrainingtracker/trainingtracker/exporter",
-        "app/src/main/java/com/atrainingtracker/trainingtracker/segments",
-        "app/src/main/java/com/atrainingtracker/trainingtracker/smartwatch/pebble"
+        "app/src/main/java/com/atrainingtracker/trainingtracker/segments"
     )
 
     private val queryPattern = Pattern.compile("""(?:db|database|getDatabase\(\)|getReadableDatabase\(\)|getWritableDatabase\(\))\s*\.\s*(?:rawQuery|query)\s*\(""")

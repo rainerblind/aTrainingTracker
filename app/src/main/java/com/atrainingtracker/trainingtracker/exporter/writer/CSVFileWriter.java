@@ -44,8 +44,6 @@ import java.util.concurrent.CancellationException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import au.com.bytecode.opencsv.CSVWriter;
-
 public class CSVFileWriter extends BaseFileWriter {
     private static final String TAG = "CSVFileExporter";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -113,7 +111,7 @@ public class CSVFileWriter extends BaseFileWriter {
             sortedNames.addAll(unsortedNames);
 
             // now, we are ready to write to CSV
-            try (CSVWriter csvWrite = new CSVWriter(getBufferedWriter(exportInfo.getShortPath()))) {
+            try (Rfc4180CsvWriter csvWrite = new Rfc4180CsvWriter(getBufferedWriter(exportInfo.getShortPath()))) {
                 // first of all: header with column names
                 csvWrite.writeNext(sortedNames.toArray(new String[sortedNames.size()]));
 

@@ -73,13 +73,21 @@ class ManifestAndBuildConfigContractTest {
             }
         }
 
-        assertNotNull("ConfigPebbleViewsActivity must be declared in AndroidManifest.xml (REQ-BLD-003.1)", pebbleActivity)
-        val exported = pebbleActivity!!.getAttribute("android:exported")
         assertEquals(
-            "ConfigPebbleViewsActivity must be android:exported=\"false\" to eliminate external attack surface (REQ-BLD-003.1)",
-            "false",
-            exported
+            "Decommissioned ConfigPebbleViewsActivity must be removed from AndroidManifest.xml (REQ-UI-2802 / ATT-8130)",
+            null,
+            pebbleActivity
         )
+
+        val services: NodeList = doc.getElementsByTagName("service")
+        for (i in 0 until services.length) {
+            val element = services.item(i) as Element
+            val name = element.getAttribute("android:name")
+            assertFalse(
+                "Decommissioned Pebble service must be removed from AndroidManifest.xml: $name",
+                name.contains("PebbleService")
+            )
+        }
     }
 
     @Test

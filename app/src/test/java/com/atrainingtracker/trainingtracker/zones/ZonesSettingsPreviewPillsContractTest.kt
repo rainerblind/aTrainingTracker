@@ -35,13 +35,14 @@ import kotlin.math.pow
 class ZonesSettingsPreviewPillsContractTest {
 
     private fun resolveZonesSettingsSource(): String {
-        val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        val dirCandidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones")
         )
-        val file = candidates.firstOrNull { it.exists() }
-            ?: error("Could not locate ZonesSettingsActivity.kt")
-        return file.readText()
+        val dir = dirCandidates.firstOrNull { it.isDirectory }
+            ?: error("Could not locate ui/settings/zones directory")
+        return listOf("ZoneSettingsScreen.kt", "ZonePreviewComponents.kt")
+            .joinToString("\n") { File(dir, it).readText() }
     }
 
     /**

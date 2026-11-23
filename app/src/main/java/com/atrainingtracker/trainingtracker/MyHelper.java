@@ -28,7 +28,6 @@ import androidx.annotation.NonNull;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
-import org.jetbrains.annotations.Contract;
 
 import java.text.NumberFormat;
 import java.util.Locale;
@@ -174,22 +173,5 @@ public class MyHelper {
             case ALTITUDE, ASCENT, DESCENT -> getShortAltitudeUnitNameId();
             default -> sensorType.getUnitId();  // TODO: also short version?
         };
-    }
-
-    @NonNull
-    @Contract(pure = true)
-    public static String formatRank(int i) {
-        int j = i % 10,
-                k = i % 100;
-        if (j == 1 && k != 11) {
-            return i + "st";
-        }
-        if (j == 2 && k != 12) {
-            return i + "nd";
-        }
-        if (j == 3 && k != 13) {
-            return i + "rd";
-        }
-        return i + "th";
     }
 }

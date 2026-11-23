@@ -35,18 +35,28 @@ import java.lang.reflect.Modifier
  */
 class HrvDfaA1SettingsContractTest {
 
-    private fun resolveActivityFile(): File {
+    private fun resolveZonesDir(): File {
         var current: File? = File(".").canonicalFile
         while (current != null && !File(current, "settings.gradle").exists() && !File(current, "settings.gradle.kts").exists()) {
             current = current.parentFile
         }
         val root = current ?: File(".")
-        return File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        return File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones")
     }
+
+    private fun resolveActivityFile(): File = File(resolveZonesDir(), "HrvDfaA1SettingsSection.kt")
+
+    private fun resolveZoneSettingsScreenFile(): File = File(resolveZonesDir(), "ZoneSettingsScreen.kt")
+
+    private fun resolveCombinedZonesSource(): String = listOf(
+        "ZoneSettingsScreen.kt",
+        "HrvDfaA1SettingsSection.kt",
+        "ZonePreviewComponents.kt"
+    ).joinToString("\n") { File(resolveZonesDir(), it).readText() }
 
     @Test
     fun testHrvDfaA1SettingsContent_composableExistsViaReflection() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.activities.ZonesSettingsActivityKt")
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.zones.HrvDfaA1SettingsSectionKt")
         val methods = clazz.declaredMethods
 
         val hrvContentMethod = methods.find { it.name.startsWith("HrvDfaA1SettingsContent") && Modifier.isPublic(it.modifiers) }
@@ -64,9 +74,9 @@ class HrvDfaA1SettingsContractTest {
 
     @Test
     fun testZoneSettingsScreen_includes4thTabForHrvDfaA1() {
-        val activityFile = resolveActivityFile()
-        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
-        val content = activityFile.readText()
+        val screenFile = resolveZoneSettingsScreenFile()
+        assertTrue("ZoneSettingsScreen.kt must exist", screenFile.exists())
+        val content = screenFile.readText()
 
         assertTrue(
             "ZoneSettingsScreen profileNameResIds must include R.string.tab_hrv_dfa_a1 (REQ-TRK-061.4)",
@@ -80,8 +90,8 @@ class HrvDfaA1SettingsContractTest {
 
     @Test
     fun testHeaderActionIcons_hiddenOnHrvTab() {
-        val activityFile = resolveActivityFile()
-        val content = activityFile.readText()
+        val screenFile = resolveZoneSettingsScreenFile()
+        val content = screenFile.readText()
 
         assertTrue(
             "Calculator and History header icons must be guarded to hide on tab 3",
@@ -91,8 +101,7 @@ class HrvDfaA1SettingsContractTest {
 
     @Test
     fun testHrvThresholds_invariantAndPrecisionContracts() {
-        val activityFile = resolveActivityFile()
-        val content = activityFile.readText()
+        val content = resolveCombinedZonesSource()
 
         assertTrue(
             "HrvDfaA1SettingsContent must enforce MIN_DFA_A1_THRESHOLD_GAP invariant",
@@ -107,8 +116,8 @@ class HrvDfaA1SettingsContractTest {
             content.contains("HrvInfoBottomSheet(")
         )
         assertTrue(
-            "HrvDfaA1SettingsContent must render live SensorFieldView preview",
-            content.contains("SensorFieldView(")
+            "HrvDfaA1SettingsContent must render live SensorFieldView preview via shared ZoneLivePreviewTileCard",
+            content.contains("ZoneLivePreviewTileCard(") && content.contains("SensorFieldView(")
         )
         assertTrue(
             "HrvDfaA1SettingsContent must use semantic TTColor tokens (Rule 71)",

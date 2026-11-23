@@ -43,7 +43,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
-import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollableBox
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusCard

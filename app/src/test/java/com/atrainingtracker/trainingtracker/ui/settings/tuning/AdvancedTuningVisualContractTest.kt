@@ -80,14 +80,14 @@ class AdvancedTuningVisualContractTest {
 
     @Test
     fun testAdvancedTuningDialog_initiallyCollapsesAllSections() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt")
-        assertNotNull("AdvancedTuningDialogKt must exist", clazz)
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt")
+        assertNotNull("AdvancedTuningScreenKt must exist", clazz)
     }
 
     @Test
     fun testAdvancedTuningDialog_workoutCardPrefsFlowGating() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt")
-        assertNotNull("AdvancedTuningDialogKt must exist", clazz)
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt")
+        assertNotNull("AdvancedTuningScreenKt must exist", clazz)
     }
 
     @Test

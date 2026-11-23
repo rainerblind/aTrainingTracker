@@ -1,9 +1,9 @@
 # ADR-006: Incremental Single-Activity Compose Navigation (`MainActivityWithNavigation`)
 
 - **Document ID**: `DOC-ARC-ADR006`
-- **Version**: 1.0.0
-- **Status**: Approved
-- **Approver**: Rainer Blind (PO)
+- **Version**: 1.0.1
+- **Status**: Reviewed
+- **Approver**: Pending PO Sign-Off
 - **Deciders**: Architecture Board, Product Owner (Pending Sign-Off)
 - **Date**: 2026-11-17
 - **Target Release**: `5.1.0` (Active Sprint: `2026-11-17_01_Früh`)
@@ -27,11 +27,11 @@ Key selection criteria: (1) continuous sprint shippability without multi-month U
 - **Evaluation**: **Rejected**. Multi-activity navigation duplicates drawer/toolbar scaffolding, complicates shared tracking state observation, and perpetuates `FragmentTransaction` `IllegalStateException` after `onSaveInstanceState`.
 
 ### Alternative 2: Big-Bang Rewrite of Every Legacy Activity/Fragment Before Shipping
-- **Description**: Halt feature delivery until every remaining XML/Fragment screen (`ConfigViewsActivityClassic`, `ConfigViewsFragment`, `TrackOnMapHelper`) is deleted and rewritten.
+- **Description**: Halt feature delivery until every remaining XML/Fragment screen is deleted and rewritten in a single big-bang cutover.
 - **Evaluation**: **Rejected**. High schedule risk and unnecessary churn on stable secondary utilities while core tracking, aftermath, device, and settings screens already benefit from Compose.
 
 ### Alternative 3: Single-Activity Compose `NavHost` (`MainActivityWithNavigation` -> `ATrainingTrackerApp`) with Incremental Migration (Selected)
-- **Description**: Host `ATrainingTrackerApp` inside `MainActivityWithNavigation` using `androidx.navigation:navigation-compose` (`NavHost`) and `AppNavigationDrawer`, routing primary destinations to declarative Compose screens backed by `AndroidViewModel` `StateFlow`s (`TrackingViewModel`, `ControlTrackingViewModel`, `TrackOnMapAftermathViewModel`), while coexisting cleanly with remaining legacy Java UI helpers (`ConfigViewsActivityClassic`, `ConfigViewsFragment`, `TrackOnMapHelper`) until replaced atomically.
+- **Description**: Host `ATrainingTrackerApp` inside `MainActivityWithNavigation` using `androidx.navigation:navigation-compose` (`NavHost`) and `AppNavigationDrawer`, routing primary destinations to declarative Compose screens (`ZoneSettingsScreen`, `AdvancedTuningScreen`, etc.) backed by `AndroidViewModel` `StateFlow`s (`TrackingViewModel`, `ControlTrackingViewModel`, `TrackOnMapAftermathViewModel`, `ZonesSettingsViewModel`), allowing legacy Java XML/Fragment utilities to be retired atomically screen-by-screen (final Pebble/classic `ConfigViews*`, `TrackOnMapHelper`, and `ZonesSettingsActivity` wrappers retired in `ATT-8129` / `ATT-8130`).
 - **Evaluation**: **Selected**. Delivers unified Material 3 navigation, clean MVI boundaries (`IF-SWE-01`), and zero-downtime incremental modernization.
 
 ## 3. Decision Outcome
@@ -42,7 +42,7 @@ Key selection criteria: (1) continuous sprint shippability without multi-month U
 
 ### Positive Consequences
 - **Unified MVI State Flow**: Single-activity `NavHost` eliminates Fragment back-stack desynchronization and keeps tracking/map state reactive.
-- **Incremental Velocity**: Legacy XML/Fragment components (`ConfigViewsActivityClassic`, `ConfigViewsFragment`, `TrackOnMapHelper`) can be retired screen-by-screen without blocking releases.
+- **Incremental Velocity**: Legacy XML/Fragment components could be retired screen-by-screen (`ATT-8129`, `ATT-8130`) without blocking releases.
 
 ### Negative / Mitigated Consequences
 - **Dual UI Boundary Maintenance**: `MainActivityWithNavigation` temporarily bridges Compose `NavHostController` with legacy preference/activity hooks; mitigated by `UiPresentationIntegrationTest` and `ArchitectureConformanceContractTest`.
@@ -54,3 +54,4 @@ Key selection criteria: (1) continuous sprint shippability without multi-month U
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-17 | AI Agent (`ATT-8161`, `ATT-8164`) | `ATT-8161`, `ATT-8164` | Retrospective ADR baseline with standardized `DOC-ARC-ADR006` control header. |
+| `1.0.1` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Updated code-grounded active Compose screen citations (`ZoneSettingsScreen`, `AdvancedTuningScreen`) following retirement of `ConfigViews*`, `TrackOnMapHelper`, and `ZonesSettingsActivity`; reset `Status` to `Reviewed` (`Pending PO Sign-Off`) per `REQ-PRO-120.2`. |

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.DisplayAndExpertSettingsLocalizationContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:44.107Z" hostname="rainer-HP-EliteBook-850-G5" time="0.127">
+  <properties/>
+  <testcase name="testAdvancedTuningWarningTitle_deduplicatedFromScreenTitle" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.DisplayAndExpertSettingsLocalizationContractTest" time="0.126"/>
+  <testcase name="testAll9Locales_containNewSubtitleKeys" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.DisplayAndExpertSettingsLocalizationContractTest" time="0.0"/>
+  <testcase name="testCockpitThemeDescription_doesNotContainControlTrackingInAnyLocale" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.DisplayAndExpertSettingsLocalizationContractTest" time="0.001"/>
+  <testcase name="testTuningWarningNotice_preservesBinding" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.DisplayAndExpertSettingsLocalizationContractTest" time="0.0"/>
+  <testcase name="testGermanStrings_properlyLocalized" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.DisplayAndExpertSettingsLocalizationContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
