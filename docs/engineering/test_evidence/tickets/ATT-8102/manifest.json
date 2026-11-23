@@ -1,0 +1,13 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "b12cf3cc35f895f44d8c23efde5e88eb14335c36",
+  "files": {
+    "evidence_summary.json": "a761e85ad5e36f7f1054551b1cded9ea4b19f22a83033894959b97a06106342b",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.AutoImportLocalizationTest.xml": "0d37015d5fc407d68af38a70ed52a665127bf4df9c2336ba3c7b1946b2dca0b6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest.xml": "b53046e3257c95567bbef255b5fc4110c76cdde570ad45e1f4b727df3fee3601",
+    "screenshots/ATT-8102_auto_import_after.png": "1a65f047f435f72170c720b30c6b769458a5ac1a090d5c8f5f53198a6fab1703"
+  },
+  "run_started_utc": "2026-11-23T07:45:37.610588+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8102"
+}

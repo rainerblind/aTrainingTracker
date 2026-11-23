@@ -94,6 +94,31 @@ class AutoImportLocalizationTest {
         }
     }
 
+    @Test
+    fun testAutoImportFormatSegmentLabels_areConciseSingleWordAcrossAllLocales() {
+        val exactFormatLabels = mapOf(
+            "auto_import_format_fit" to "FIT",
+            "auto_import_format_tcx" to "TCX",
+            "auto_import_format_gpx" to "GPX"
+        )
+        for (locale in LocalizationTestCache.LOCALES) {
+            val localeStrings = LocalizationTestCache.getStrings(locale, "strings_auto_import.xml")
+            for ((key, expected) in exactFormatLabels) {
+                assertEquals(
+                    "Locale '$locale' key '$key' must stay concise for 4-way SegmentedButtonRow",
+                    expected,
+                    localeStrings[key]?.trim()
+                )
+            }
+            val allLabel = localeStrings["auto_import_format_all"]?.trim().orEmpty()
+            assertTrue("Locale '$locale' auto_import_format_all must be non-empty", allLabel.isNotEmpty())
+            assertFalse(
+                "Locale '$locale' auto_import_format_all ('$allLabel') must be a single word without whitespace to prevent wrapping",
+                allLabel.any { it.isWhitespace() }
+            )
+        }
+    }
+
     private fun extractSpecifiers(text: String): List<String> {
         val matcher = formatSpecifierRegex.matcher(text)
         val result = mutableListOf<String>()

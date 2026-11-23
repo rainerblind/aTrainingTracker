@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.AutoImportLocalizationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:46:09.062Z" hostname="rainer-HP-EliteBook-850-G5" time="0.512">
+  <properties/>
+  <testcase name="testAutoImportFormatSegmentLabels_areConciseSingleWordAcrossAllLocales" classname="com.atrainingtracker.trainingtracker.migration.AutoImportLocalizationTest" time="0.493"/>
+  <testcase name="test9LocaleAutoImportStringsParity_TST_MIG_050_4" classname="com.atrainingtracker.trainingtracker.migration.AutoImportLocalizationTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

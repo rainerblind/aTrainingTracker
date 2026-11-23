@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.migration
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,11 +34,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import java.text.DateFormat
 import java.util.Date
 
@@ -264,7 +269,9 @@ internal fun AutoImportTabContentLayout(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("auto_import_format_row")
                 ) {
                     formats.forEachIndexed { index, (formatKey, label) ->
                         val selected = autoImportFormat.lowercase() == formatKey.lowercase()
@@ -272,11 +279,18 @@ internal fun AutoImportTabContentLayout(
                             shape = SegmentedButtonDefaults.itemShape(index = index, count = formats.size),
                             onClick = { onUpdateAutoImportFormat(formatKey) },
                             selected = selected,
-                            enabled = autoImportEnabled && !isBusy && !isSyncing
+                            enabled = autoImportEnabled && !isBusy && !isSyncing,
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            modifier = Modifier.testTag("auto_import_format_$formatKey")
                         ) {
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.labelMedium
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -419,6 +433,42 @@ internal fun AutoImportTabContentLayout(
                     }
                 }
             }
+        }
+    }
+}
+
+@Preview(name = "AutoImportTabContent - Light", showBackground = true, widthDp = 360)
+@Preview(
+    name = "AutoImportTabContent - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true,
+    widthDp = 360
+)
+@Composable
+private fun AutoImportTabContentLayoutPreview() {
+    ATrainingTrackerTheme {
+        Surface {
+            AutoImportTabContentLayout(
+                isBusy = false,
+                isDropboxConnected = true,
+                isGoogleDriveConnected = true,
+                autoImportEnabled = true,
+                autoImportDropbox = true,
+                autoImportGoogleDrive = false,
+                autoImportFormat = "fit",
+                syncImportedToHealthConnect = false,
+                uploadToStravaOnImport = false,
+                lastSyncTimestamp = 0L,
+                lastSyncResult = "",
+                isSyncing = false,
+                onUpdateAutoImportEnabled = {},
+                onUpdateAutoImportDropbox = {},
+                onUpdateAutoImportGoogleDrive = {},
+                onUpdateAutoImportFormat = {},
+                onUpdateSyncImportedToHealthConnect = {},
+                onUpdateUploadToStravaOnImport = {},
+                onSyncNowClick = {}
+            )
         }
     }
 }

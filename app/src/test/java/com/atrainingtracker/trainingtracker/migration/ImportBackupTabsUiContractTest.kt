@@ -20,7 +20,14 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
@@ -28,9 +35,12 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.testing.LocalizationTestCache
@@ -42,7 +52,9 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlin.math.abs
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -51,6 +63,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Behavioral Compose UI and localization contract tests for [ImportBackupTabsScreen],
@@ -280,5 +293,148 @@ class ImportBackupTabsUiContractTest {
                 )
             }
         }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    fun testAutoImportFormatSegmentedButtons_renderSingleLineWithUniformHeightOnPhoneWidths() {
+        verifyAutoImportFormatSegmentedButtonsSingleLine(
+            expectedLabels = mapOf(
+                "fit" to "FIT",
+                "tcx" to "TCX",
+                "gpx" to "GPX",
+                "all" to "All"
+            )
+        )
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "de-w411dp-h891dp-xxhdpi")
+    fun testAutoImportFormatSegmentedButtons_germanLocaleSingleLineOnPhoneWidths() {
+        verifyAutoImportFormatSegmentedButtonsSingleLine(
+            expectedLabels = mapOf(
+                "fit" to "FIT",
+                "tcx" to "TCX",
+                "gpx" to "GPX",
+                "all" to "Alle"
+            )
+        )
+    }
+
+    private fun verifyAutoImportFormatSegmentedButtonsSingleLine(expectedLabels: Map<String, String>) {
+        var selectedFormat by mutableStateOf("fit")
+        var containerWidthDp by mutableStateOf(360)
+        val clickedFormats = mutableListOf<String>()
+
+        composeRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(containerWidthDp.dp)) {
+                    AutoImportTabContentLayout(
+                        isBusy = false,
+                        isDropboxConnected = true,
+                        isGoogleDriveConnected = true,
+                        autoImportEnabled = true,
+                        autoImportDropbox = true,
+                        autoImportGoogleDrive = false,
+                        autoImportFormat = selectedFormat,
+                        syncImportedToHealthConnect = false,
+                        uploadToStravaOnImport = false,
+                        lastSyncTimestamp = 0L,
+                        lastSyncResult = "",
+                        isSyncing = false,
+                        onUpdateAutoImportEnabled = {},
+                        onUpdateAutoImportDropbox = {},
+                        onUpdateAutoImportGoogleDrive = {},
+                        onUpdateAutoImportFormat = {
+                            clickedFormats.add(it)
+                            selectedFormat = it
+                        },
+                        onUpdateSyncImportedToHealthConnect = {},
+                        onUpdateUploadToStravaOnImport = {},
+                        onSyncNowClick = {}
+                    )
+                }
+            }
+        }
+
+        val formatKeys = listOf("fit", "tcx", "gpx", "all")
+
+        for (widthDp in listOf(360, 411)) {
+            containerWidthDp = widthDp
+            composeRule.waitForIdle()
+
+            for (activeKey in formatKeys) {
+                composeRule.onNodeWithTag("auto_import_format_$activeKey")
+                    .performScrollTo()
+                    .performClick()
+                composeRule.waitForIdle()
+                assertEquals("Selected format should update on tap", activeKey, selectedFormat)
+
+                val heights = mutableListOf<Float>()
+                for (key in formatKeys) {
+                    val nodeInteraction = composeRule.onNodeWithTag("auto_import_format_$key")
+                        .assertIsDisplayed()
+                    if (key == activeKey) {
+                        nodeInteraction.assertIsSelected()
+                    }
+                    val node = nodeInteraction.fetchSemanticsNode()
+                    heights.add(node.boundsInRoot.height)
+
+                    val layoutResults = mutableListOf<TextLayoutResult>()
+                    val getTextLayoutAction = node.config[SemanticsActions.GetTextLayoutResult].action
+                    assertTrue(
+                        "Segment '$key' at ${widthDp}dp must expose GetTextLayoutResult",
+                        getTextLayoutAction?.invoke(layoutResults) == true
+                    )
+                    assertTrue(
+                        "Segment '$key' at ${widthDp}dp must produce a TextLayoutResult",
+                        layoutResults.isNotEmpty()
+                    )
+                    val layout = layoutResults.first()
+                    val expectedLabel = expectedLabels.getValue(key)
+                    assertEquals(
+                        "Segment '$key' must render expected concise label",
+                        expectedLabel,
+                        layout.layoutInput.text.text
+                    )
+                    assertEquals(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp must stay strictly single-line",
+                        1,
+                        layout.lineCount
+                    )
+                    assertFalse(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp must not ellipsize",
+                        layout.isLineEllipsized(0)
+                    )
+                    assertFalse(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp must not overflow vertically",
+                        layout.didOverflowHeight
+                    )
+                    val lineWidth = layout.getLineRight(0) - layout.getLineLeft(0)
+                    assertTrue(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp rendered width ($lineWidth px) " +
+                            "must fit within maxWidth (${layout.layoutInput.constraints.maxWidth} px)",
+                        lineWidth <= layout.layoutInput.constraints.maxWidth + 1f
+                    )
+                    assertEquals(
+                        "All characters of '$expectedLabel' must be visibly rendered",
+                        expectedLabel.length,
+                        layout.getLineEnd(0, visibleEnd = true)
+                    )
+                }
+
+                val baselineHeight = heights.first()
+                heights.forEachIndexed { idx, h ->
+                    assertTrue(
+                        "All 4 segments at ${widthDp}dp (active='$activeKey') must share identical height: $heights (idx=$idx)",
+                        abs(h - baselineHeight) <= 1f
+                    )
+                }
+            }
+        }
+
+        assertEquals(formatKeys + formatKeys, clickedFormats)
     }
 }

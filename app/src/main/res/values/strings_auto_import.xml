@@ -24,8 +24,8 @@
     <string name="auto_import_status_error">Sync failed: %1$s</string>
     <string name="auto_import_cloud_not_connected">Not connected</string>
     <string name="auto_import_cloud_connected">Connected (%1$s)</string>
-    <string name="auto_import_format_fit">FIT (.fit)</string>
-    <string name="auto_import_format_tcx">TCX (.tcx)</string>
-    <string name="auto_import_format_gpx">GPX (.gpx)</string>
-    <string name="auto_import_format_all">All formats</string>
+    <string name="auto_import_format_fit">FIT</string>
+    <string name="auto_import_format_tcx">TCX</string>
+    <string name="auto_import_format_gpx">GPX</string>
+    <string name="auto_import_format_all">All</string>
 </resources>
