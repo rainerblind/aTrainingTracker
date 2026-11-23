@@ -1,0 +1,13 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "c8a128021420affeccdf1d517521821b05b9eeec",
+  "files": {
+    "evidence_summary.json": "6869d94bc43921ec901faf51b1ec767184b9a86b5bbab8f8f5cbfbd597ef4ef6",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.SensorTypeUnitsContractTest.xml": "85c8f23ec37c9f429f305be24f336838135bd0b484446ab2bf304be2e5e35788",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest.xml": "9e1611207370232aceda7b442a68afd09197ca8d023525aeb1d93d4814565365",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest.xml": "3a833ada9d8d0b40595751727ac7106ec2693bc5f67524e4d6e6a74e2b2beb69"
+  },
+  "run_started_utc": "2026-11-23T06:09:36.980481+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9245"
+}

@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.42  
+**Version**: 1.0.43  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 135
+**Total Tests**: 136
 
 ---
 
@@ -2574,10 +2574,29 @@
 
 ---
 
+### TST-EXP-049: `CSVFileWriter` Metadata Short-Circuit and Nested-Parentheses `SensorType` Parsing Verification (`ATT-9245`) [Verified]
+- **Requirement(s)**: `REQ-EXP-049`
+- **Component**: `CSVFileWriter.java`
+- **Jira**: `ATT-9245`
+- **Test Code**:
+  - `CSVFileWriterTest.kt`: `testCSVFileWriter_metadataAndNestedParenthesesDeviceNames_noEnumWarnings_TST_EXP_049`, `testCSVFileWriter_extractSourcedSensorTypeName_handlesNestedParensAndSuffixes` (`6/6` PASS)
+  - `TrackerServiceDeviceNameQuotingTest.kt` (`3/3` PASS)
+- **Verification Evidence**: Verified (`ATT-9245`, `tier-b`; `9/9` targeted Tier-1 unit tests PASS across 2 suites via `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" --tests "com.atrainingtracker.trainingtracker.tracker.TrackerServiceDeviceNameQuotingTest"`, `0` fail, `0` err, `0` skip, `0` new compiler warnings).
+- **Test Description**:
+  1. *Metadata Columns & Nested-Parentheses Resolution (`TST-EXP-049.1` — `CSVFileWriterTest.kt`)*:
+     • Supply a mocked `WorkoutSamples.db` cursor containing `_id`, `time`, `TIME_TOTAL`, `ALTITUDE (Topografische Höhe (DEM))`, `HR (Polar H10 (BLE) (Chest))`, `ALTITUDE (Device_gps)`, `LATITUDE_gps`, `LONGITUDE_network`, `BEARING_google_fused`, and `SPEED_mps_att_fused`.
+     • Execute `CSVFileWriter.doExport()` and verify: (a) unsourced/metadata columns (`_id`, `time`, `TIME_TOTAL`) appear first in cursor encounter order, (b) sourced columns appear alphabetically afterward, (c) `DOUBLE` (`ALTITUDE (Topografische Höhe (DEM))`, `SPEED_mps_att_fused`, `LATITUDE_gps`) and `INTEGER` (`HR (Polar H10 (BLE) (Chest))`) columns use exact `Double.toString` / `Integer.toString` formatting rather than falling back to `STRING`, and (d) `Log.w(any(), any(), any())` and `Log.w(any(), any())` receive **0** invocations (`verify(exactly = 0)`), confirming zero `IllegalArgumentException` stack traces.
+  2. *Existing CSV Export Regression Suite (`TST-EXP-049.2` — `CSVFileWriterTest.kt`, `TrackerServiceDeviceNameQuotingTest.kt`)*:
+     • Verify existing header/sorting, null-handling, cancellation, and empty-cursor tests plus `TrackerServiceDeviceNameQuotingTest` pass without regression.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `TST-EXP-049` to `[Verified]` (`9/9` targeted Tier-1 unit tests PASS across 2 suites: `CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`; `0` fail/err/skip, `0` new warnings). |
+| `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Added `[Planned]` `TST-EXP-049` (`TST-EXP-049.1`–`TST-EXP-049.2`, symmetric with `REQ-EXP-049`) verifying `_id`/`time` metadata export, `ALTITUDE (Topografische Höhe (DEM))` & nested-parentheses `INTEGER`/`DOUBLE` resolution, location suffixes, and zero `Log.w` `IllegalArgumentException` stack traces in `CSVFileWriterTest.kt`. |
 | `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `TST-EXP-048` to `[Verified]` (`45/45` targeted Tier-1 unit & contract tests PASS across 8 suites incl. `ExportManagerTest` `4/4`, `RawSensorFileExporterTest` `6/6`, `ExportManagerFitTest` `8/8`, `ExportManagerGoogleDriveTest` `2/2`, `ExportManagerDropboxGatingTest` `3/3`, `BaseExporterDownloadsTest` `5/5`, `PolarRawTelemetryPrunerTest` `6/6`, `ArchitectureConformanceContractTest` `11/11`; `0` new warnings; SHA-256 evidence bundle). |
 | `1.0.41` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Added `[Planned]` `TST-EXP-048` (`TST-EXP-048.1`–`TST-EXP-048.2`, strictly symmetric with `REQ-EXP-048`) verifying `FileFormat.isDerivedExportFile()`, selective derived-cache purge with byte-identical preservation of `.polar_raw.csv.gz`/`.phone_raw.csv.gz`/`.tmp` sidecars in `ExportManagerTest.kt`, and post-invalidation multi-sidecar export in `RawSensorFileExporterTest.kt`. |
 | `1.0.40` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `TST-EXP-047` to `[Verified]` (`88/88` targeted unit & contract tests PASS across 8 suites incl. `PhoneRawTelemetryReaderTest` `3/3`, `PhoneRawSidecarRecoveryTest` `4/4`, `SmartphoneRawTelemetryRecorderTest` `11/11`, `SpeedAndLocationDevice_ATTFusedTest` `37/37`, `SpeedAndLocationDeviceGoogleFusedTest` `7/7`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`; live `:app:replayRawTelemetry` PASS; SHA-256 evidence bundle). |

@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.42  
+**Version**: 1.0.43  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 34
+**Total Requirements**: 35
 
 ---
 
@@ -1173,10 +1173,33 @@
 
 ---
 
+### REQ-EXP-049: Metadata Column Short-Circuit and Nested-Parentheses `SensorType` Parsing in `CSVFileWriter` (`ATT-9245`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-049`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal `CSVFileWriter.doExport()` column-name classification refining `SYSREQ-DEX-001` tabular CSV export without altering external file schemas, SQLite tables, or cloud APIs.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `CSVFileWriter.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: `CSVFileWriter.doExport()` passed SQLite metadata columns (`_id`, `time`) to `EnumUtils.safeValueOfOrNull(SensorType.class, ...)` and used a greedy `(.*)( \(.*\)|...)` regex that matched up to the last `" ("` on device names with nested parentheses such as `ALTITUDE (Topografische Höhe (DEM))` (`"ALTITUDE (Topografische Höhe"`), emitting 3 full `IllegalArgumentException` stack traces per CSV export and defaulting nested-parentheses sensor columns to `SensorValueType.STRING`.
+- **Description**:
+  1. *Metadata Column Short-Circuit (`REQ-EXP-049.1`)*: `CSVFileWriter.doExport()` SHALL recognize `WorkoutSamplesDbHelper.C_ID` (`"_id"`) and `WorkoutSamplesDbHelper.TIME` (`"time"`) directly as unsourced `SensorValueType.STRING` metadata columns before any source stripping or `EnumUtils.safeValueOfOrNull(SensorType.class, ...)` lookup, preserving cursor encounter order at the start of the CSV header and emitting zero `IllegalArgumentException` warnings.
+  2. *First-Delimiter `SensorType` Extraction (`REQ-EXP-049.2`)*: For device-attributed column names (`<SensorType> (<DeviceName>)`), `CSVFileWriter` SHALL extract the canonical `SensorType` name as the substring before the **first** `" ("` (`indexOf(" (") > 0`) before checking location source suffixes (`_gps`, `_network`, `_google_fused`, `_att_fused`), so nested parentheses such as `ALTITUDE (Topografische Höhe (DEM))` resolve to `SensorType.ALTITUDE` (`SensorValueType.DOUBLE`) while preserving alphabetical sorting of sourced columns and RFC-4180 CSV serialization.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `WorkoutSamples.db` cursor containing `_id`, `time`, `ALTITUDE (Topografische Höhe (DEM))`, and standard/location-suffixed columns, *When* `CSVFileWriter.doExport()` exports the workout, *Then* `_id` and `time` are exported directly in unsourced order, `ALTITUDE (Topografische Höhe (DEM))` resolves cleanly to `SensorType.ALTITUDE` (`SensorValueType.DOUBLE`), sourced columns sort alphabetically after unsourced columns, and zero `IllegalArgumentException` stack traces or `Log.w` warnings are emitted.
+
+**Invariants**: CSV column ordering (unsourced/metadata columns in cursor order followed by alphabetically sorted sourced columns), `SensorValueType` serialization, RFC-4180 escaping, cooperative `isCancelled()` abort/cleanup, and Java retention (`adr_001_java_core_services_migration.md`) preserved; `0` SQLite/UI/`strings*.xml` edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `REQ-EXP-049` to `[Verified]` after implementing `CSVFileWriter.isMetadataColumn` / `extractSourcedSensorTypeName` (`_id`/`time` short-circuit + first-`" ("` prefix extraction), `9/9` targeted Tier-1 unit tests PASS (`CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`, `0` fail/err/skip, `0` new warnings). |
+| `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Added `[Planned]` `REQ-EXP-049` (`Derived (SW-only)`, `.1`–`.2`) for `_id`/`time` metadata column short-circuiting and first-`" ("` `SensorType` prefix extraction on nested-parentheses device names (`ALTITUDE (Topografische Höhe (DEM))`) in `CSVFileWriter` (`N/A - 0 string changes`). |
 | `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `REQ-EXP-048` to `[Verified]` after Gate 3 (`ATT-9658`) PASS implementation (`FileFormat.isDerivedExportFile()`, null-safe `basePath` & derived-only deletion guard in `ExportManager.invalidateWorkoutExport`), `45/45` targeted Tier-1 unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and `tools/auto_gate.py` SHA-256 evidence bundle. |
 | `1.0.41` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Added `[Planned]` `REQ-EXP-048` (`Derived (SW-only)`, `.1`–`.2`) classifying derived vs. irreplaceable export formats via `FileFormat.isDerivedExportFile()` and protecting `files/raw_sensor/*` sidecars (`.polar_raw.csv.gz`, `.phone_raw.csv.gz`, `.tmp`) during `ExportManager.invalidateWorkoutExport` (`N/A - 0 string changes`). |
 | `1.0.39` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `REQ-EXP-047` to `[Verified]` after Gate 3 (`ATT-9649`) PASS implementation incorporating all 5 guardrails (`PhoneRawChannel.GNSS_FUSED`, 4-slot `filledCount`-guarded `LocationDedupRingBuffer`, authoritative `DeviceType` tagging, `SpeedAndLocationDevice_ATTFused.kt` `1,495/1,500` LoC, `ReplayGnssSource` + v1 dedup + `--gnss-provider` CLI), `88/88` targeted unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and live `:app:replayRawTelemetry` smoke PASS. |
