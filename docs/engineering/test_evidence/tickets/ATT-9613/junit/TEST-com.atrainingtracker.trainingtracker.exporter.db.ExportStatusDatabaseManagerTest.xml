@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:18:11.192Z" hostname="rainer-HP-EliteBook-850-G5" time="4.508">
+  <properties/>
+  <testcase name="testStaleProcessingRecovery_longRunningWithHeartbeat_doesNotTimeout_TST_DAT_024_12" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.757"/>
+  <testcase name="testUpdateExportStatus_nullExportType_whenRowsExist_updatesWithoutNpe" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.351"/>
+  <testcase name="testUpdateExportStatus_nullExportType_whenNoRowsExist_insertsForSupportedExportTypes" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.343"/>
+  <testcase name="testUpdateExportStatus_whenRowExists_performsUpdateOnly" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.333"/>
+  <testcase name="testStaleProcessingRecovery_abortsIfHeartbeatUpdatedDuringCheck_TST_DAT_024_14" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.353"/>
+  <testcase name="testMarkDependentUploadsFailed_transactionalAtomicUpdate_TST_DAT_024_5" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.361"/>
+  <testcase name="testInputSanitization_rejectsInvalidFileBaseName" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.336"/>
+  <testcase name="testUpdateExportStatus_whenRowDoesNotExist_performsSafeInsert" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.347"/>
+  <testcase name="testStaleProcessingRecovery_healsStaleRows_TST_DAT_024_11" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.358"/>
+  <testcase name="testRecoverStuckCredentialExports_updatesMatchingRowsToWaiting" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.369"/>
+  <testcase name="testUpdateExportStatus_delegatesFromExportInfo" classname="com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManagerTest" time="0.597"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

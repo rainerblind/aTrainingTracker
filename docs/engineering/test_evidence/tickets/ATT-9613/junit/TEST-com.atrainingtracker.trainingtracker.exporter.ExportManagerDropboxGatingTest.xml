@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.ExportManagerDropboxGatingTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:18:41.036Z" hostname="rainer-HP-EliteBook-850-G5" time="4.016">
+  <properties/>
+  <testcase name="testCreateWorkRequest_enforcesWifiConstraint_forDropbox" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerDropboxGatingTest" time="1.737"/>
+  <testcase name="testExportCompleted_whenDropboxUploadWorkoutsDisabled_doesNotScheduleDropboxUpload" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerDropboxGatingTest" time="1.163"/>
+  <testcase name="testExportCompleted_whenDropboxUploadWorkoutsEnabled_schedulesDropboxUpload" classname="com.atrainingtracker.trainingtracker.exporter.ExportManagerDropboxGatingTest" time="1.116"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

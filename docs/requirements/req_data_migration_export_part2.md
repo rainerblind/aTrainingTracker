@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.40  
+**Version**: 1.0.42  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 33
+**Total Requirements**: 34
 
 ---
 
@@ -1142,10 +1142,43 @@
 
 ---
 
+### REQ-EXP-048: Preserve Irreplaceable Raw Sensor Sidecars During `ExportManager.invalidateWorkoutExport` (`ATT-9613`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-048`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal `FileFormat` derived-cache classification and `ExportManager.invalidateWorkoutExport` file-cleanup filter refining `REQ-DAT-029.4` and protecting `REQ-EXP-044.1` / `REQ-EXP-045.3`–`.4` raw sidecars without altering external hardware sensors, HALs, cloud REST APIs, or SQLite schemas.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `FileFormat.java`, `ExportManager.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: `ExportManager.invalidateWorkoutExport` (created in `ATT-3274` before `FileFormat.RAW_SENSOR` existed) iterated over all `FileFormat.values()` and deleted `files/<dirName>/<fileBaseName><fileEnding>`, permanently destroying live-recorded, irreplaceable `files/raw_sensor/<fileBaseName>.polar_raw.csv.gz` archives whenever Polar deferred backfill, workout cropping, or swim metric recalculation invalidated cached exports.
+- **Description**:
+  1. *Derived Export Cache Classification (`REQ-EXP-048.1`)*:
+     - `FileFormat` SHALL declare an explicit per-constant boolean property `isDerivedExportFile()` returning `true` strictly for SQLite-regenerable derived export formats (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) and `false` for irreplaceable primary-capture sidecars (`RAW_SENSOR`) and non-file sync targets (`HEALTH_CONNECT`), while preserving all existing enum names, `getDirName()`, `getFileEnding()`, `getUiNameId()`, `getMimeType()`, `STANDARD_FILE_FORMATS`, and `ONLINE_COMMUNITIES`.
+  2. *Sidecar-Safe Cache Invalidation (`REQ-EXP-048.2`)*:
+     - `ExportManager.invalidateWorkoutExport(fileBaseName)` SHALL delete local cached export files strictly for formats where `format.isDerivedExportFile() && !format.getFileEnding().isEmpty()` (when `baseDir != null && !baseDir.getPath().isEmpty()`), and MUST NEVER delete any file inside `files/raw_sensor/` (`.polar_raw.csv.gz`, `.phone_raw.csv.gz`, or `.tmp` crash-recovery streams).
+     - `ExportManager.invalidateWorkoutExport(fileBaseName)` SHALL preserve deletion of all 6 derived export caches (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`), WorkManager task cancellation, `ExportStatus.WAITING` database reset, and status broadcast (`REQ-DAT-029.4`). Authorized raw sidecar deletion SHALL remain restricted strictly to explicit workout deletion (`WorkoutRepository.deleteWorkoutCascade`, `WorkoutSummariesDatabaseManager.deleteWorkout`) and retention pruning (`PolarRawTelemetryPruner`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-DAT-029.4` file-cleanup scope (`ExportManager.invalidateWorkoutExport`) in `req_data_migration_export_part1.md`, protecting `REQ-EXP-044.1` and `REQ-EXP-045.3`–`.4`.
+2. *Historical Origin & Commit Trace*: `ATT-3274` (`6ac6e7aa`) & `ATT-3995`, authored before `FileFormat.RAW_SENSOR` (`ATT-8020`, `ATT-9348`).
+3. *Root Reason for Existing Formulation*: Every local file under `FileFormat.values()` in `ATT-3274` was a disposable SQLite-derived cache that had to be purged prior to post-crop/post-backfill re-export.
+4. *Preservation of Core Invariants*: All 6 derived export caches (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) remain purged on invalidation; WorkManager cancellation, `WAITING` status reset, cascade deletion, and retention pruning stay 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with derived export files (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) and raw sensor sidecars (`files/raw_sensor/<fileBaseName>.polar_raw.csv.gz`, `*.phone_raw.csv.gz`, and `.tmp` files), *When* `ExportManager.invalidateWorkoutExport(fileBaseName)` runs, *Then* all 6 derived files are deleted, WorkManager tasks are cancelled, DB status resets to `WAITING`, and all `raw_sensor/*` sidecars remain untouched with identical bytes.
+• *Given* `ExportManager.invalidateWorkoutExport(fileBaseName)` has completed on a workout with Polar and Phone raw sidecars, *When* `RawSensorFileExporter.export(...)` executes during subsequent re-export, *Then* both sidecars are found intact and exported successfully.
+
+**Invariants**: `FileFormat.RAW_SENSOR` constants (`"raw_sensor"`, `".polar_raw.csv.gz"`, `"application/gzip"`) and `STANDARD_FILE_FORMATS` unchanged; `REQ-DAT-029.4` WorkManager cancellation & `WAITING` reset preserved; explicit deletion (`WorkoutRepository.deleteWorkoutCascade`, `WorkoutSummariesDatabaseManager.deleteWorkout`) & `PolarRawTelemetryPruner` retention unchanged; `0` SQLite/UI/`strings*.xml` edits; `ANT-Android-SDKs` untouched at `160000`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `REQ-EXP-048` to `[Verified]` after Gate 3 (`ATT-9658`) PASS implementation (`FileFormat.isDerivedExportFile()`, null-safe `basePath` & derived-only deletion guard in `ExportManager.invalidateWorkoutExport`), `45/45` targeted Tier-1 unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and `tools/auto_gate.py` SHA-256 evidence bundle. |
+| `1.0.41` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Added `[Planned]` `REQ-EXP-048` (`Derived (SW-only)`, `.1`–`.2`) classifying derived vs. irreplaceable export formats via `FileFormat.isDerivedExportFile()` and protecting `files/raw_sensor/*` sidecars (`.polar_raw.csv.gz`, `.phone_raw.csv.gz`, `.tmp`) during `ExportManager.invalidateWorkoutExport` (`N/A - 0 string changes`). |
 | `1.0.39` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `REQ-EXP-047` to `[Verified]` after Gate 3 (`ATT-9649`) PASS implementation incorporating all 5 guardrails (`PhoneRawChannel.GNSS_FUSED`, 4-slot `filledCount`-guarded `LocationDedupRingBuffer`, authoritative `DeviceType` tagging, `SpeedAndLocationDevice_ATTFused.kt` `1,495/1,500` LoC, `ReplayGnssSource` + v1 dedup + `--gnss-provider` CLI), `88/88` targeted unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and live `:app:replayRawTelemetry` smoke PASS. |
 | `1.0.38` | 2026-11-22 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Added `[Planned]` `REQ-EXP-047` (`Derived (SW-only)`, `.1`–`.3`) for per-channel GNSS row deduplication, `GNSS` vs `GNSS_FUSED` provider channel tagging, and backwards-compatible v1/provider-selectable offline replay (`N/A - 0 string changes`). |
 | `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Stage 6 Bounce 1/5 heal: delegated `SensorQuotaReconciliationManager.parseLastSeenTimestamp` to `LastActiveDateFormatter` (fixing non-UTC ranking inversion), guarded `WorkoutRepository.reloadWorkoutDataInternal` `finally` with `released` flag, and added `SensorType`-first matching/population in `LiveWorkoutCardStateStore.upsertLiveExtremaAvgRow` (`163/163` targeted Bounce 1/5 tests PASS across 30 suites, `0` new warnings). |

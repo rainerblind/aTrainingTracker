@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:21:07.449Z" hostname="rainer-HP-EliteBook-850-G5" time="0.367">
+  <properties/>
+  <testcase name="testCreateGroupData_whenNoRowsForExportType_returnsHasContentFalse" classname="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" time="0.269"/>
+  <testcase name="testCreateGroupData_whenLegacyRowsMissingFit_synthesizesFitWithUnwantedStatus" classname="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" time="0.027"/>
+  <testcase name="testCreateGroupDataFromRows_preloadedRows_matchesCreateGroupDataWithoutDbCall_TST_DAT_041_1" classname="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" time="0.025"/>
+  <testcase name="testCreateGroupData_whenCommunityBothStravaAndHealthConnectSuccess_formatsPluralCommunityLine" classname="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" time="0.015"/>
+  <testcase name="testCreateGroupData_whenFitRowPresent_usesActualDatabaseStatus" classname="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" time="0.015"/>
+  <testcase name="testCreateGroupData_whenCommunityRowsMissingHealthConnect_synthesizesHealthConnectWithUnwantedStatus" classname="com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProviderTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

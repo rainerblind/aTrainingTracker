@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:18:38.904Z" hostname="rainer-HP-EliteBook-850-G5" time="2.118">
+  <properties/>
+  <testcase name="testCopyFileToDownloads_usesCorrectMimeTypeInContentValues" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" time="0.935"/>
+  <testcase name="testBaseFileWriter_onFinished_skipsDownloadsForStravaAndCommunity" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" time="0.369"/>
+  <testcase name="testCopyFileToDownloads_handlesNullTargetUriGracefully" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" time="0.268"/>
+  <testcase name="testFileFormat_getMimeType_returnsExpectedStandards" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" time="0.28"/>
+  <testcase name="testBaseFileWriter_onFinished_skipsDownloadsWhenNotSupported" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" time="0.266"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

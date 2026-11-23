@@ -19,7 +19,9 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -45,8 +47,10 @@ class RawSensorFileExporterTest {
 
     @After
     fun tearDown() {
-        val rawDir = File(context.filesDir, "raw_sensor")
-        if (rawDir.exists()) rawDir.deleteRecursively()
+        for (format in FileFormat.values()) {
+            val dir = File(context.filesDir, format.dirName)
+            if (dir.exists()) dir.deleteRecursively()
+        }
     }
 
     @Test
@@ -159,5 +163,38 @@ class RawSensorFileExporterTest {
         assertTrue("Salvaged .phone_raw.csv.gz must exist on disk", finalPhone.exists())
         val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(finalPhone)
         assertTrue("Must salvage pre-crash smartphone rows (got ${parsed.rows.size})", parsed.rows.size >= 15)
+    }
+
+    // REQ-EXP-048.2 / TST-EXP-048.2: invalidateWorkoutExport preserves both Polar + Phone sidecars for post-invalidation re-export
+    @Test
+    fun testInvalidateWorkoutExport_followedByRawSensorExport_preservesAndExportsBothSidecars_TST_EXP_048_2() {
+        val fileBaseName = "2026-11-22_105503"
+        val rawDir = File(context.filesDir, FileFormat.RAW_SENSOR.dirName).apply { mkdirs() }
+        val polarBytes = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x01, 0x02, 0x03, 0x04)
+        val phoneBytes = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x05, 0x06, 0x07, 0x08)
+
+        val polarFile = File(rawDir, "$fileBaseName.polar_raw.csv.gz").apply { writeBytes(polarBytes) }
+        val phoneFile = File(rawDir, "$fileBaseName.phone_raw.csv.gz").apply { writeBytes(phoneBytes) }
+
+        val fitDir = File(context.filesDir, FileFormat.FIT.dirName).apply { mkdirs() }
+        val fitFile = File(fitDir, "$fileBaseName.fit").apply { writeText("stale-fit") }
+        val tcxDir = File(context.filesDir, FileFormat.TCX.dirName).apply { mkdirs() }
+        val tcxFile = File(tcxDir, "$fileBaseName.tcx").apply { writeText("stale-tcx") }
+
+        // Simulate Polar deferred retry sync / crop / swim-recalc export invalidation
+        ExportManager(context).invalidateWorkoutExport(fileBaseName)
+
+        // Derived export files MUST be purged while raw sidecars survive byte-for-byte
+        assertFalse("Derived FIT cache must be deleted on invalidation", fitFile.exists())
+        assertFalse("Derived TCX cache must be deleted on invalidation", tcxFile.exists())
+        assertTrue("Polar raw sidecar must remain on disk after invalidation", polarFile.exists())
+        assertTrue("Phone raw sidecar must remain on disk after invalidation", phoneFile.exists())
+        assertArrayEquals(polarBytes, polarFile.readBytes())
+        assertArrayEquals(phoneBytes, phoneFile.readBytes())
+
+        // Subsequent RAW_SENSOR re-export MUST find and export both intact sidecars
+        val result = exporter.export(ExportInfo(fileBaseName, FileFormat.RAW_SENSOR, ExportType.FILE))
+        assertTrue("RawSensorFileExporter must succeed after invalidation", result.success())
+        assertEquals("Successfully exported 2 raw sensor sidecars", result.answer())
     }
 }

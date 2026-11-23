@@ -1,0 +1,36 @@
+# Stage 3 Implementation Plan — ATT-9613: Preserve Raw Sensor Sidecars in `ExportManager.invalidateWorkoutExport`
+
+- **Ticket**: `ATT-9613` (`2 SP`, `Bug`, `severity-major`, `tier-a`, Epic `ATT-281`) | **Target Release**: `V5.0.0` | **Risk Rating**: `HIGH`
+- **Traceability**: `REQ-EXP-048` (`REQ-EXP-048.1`–`.2`) <-> `TST-EXP-048` (`TST-EXP-048.1`–`.2`) | `Derived (SW-only)` (refines `REQ-DAT-029.4`, protects `REQ-EXP-044.1`, `REQ-EXP-045.3`–`.4`)
+- **Database / UI / Monolith Impact**: `0` SQLite schema changes; `0` UI or `strings*.xml` edits (`Localization Parity: N/A - 0 string changes`); no new subsystem/service/DB/repository/prefix (`docs/architecture.md` SWE.2 structure unchanged; optional 1-line note in §3.3.4 not required unless helpful); `FileFormat.java` `~105` LoC, `ExportManager.java` `~518` LoC.
+
+## 1. SWE.2 Architectural Decomposition & Threading Model
+
+- **Format-Level Mutability Classification (`FileFormat.java`)**:
+  - Extend `FileFormat`'s private constructor with a mandatory `boolean isDerivedExportFile` parameter stored in `private final boolean mIsDerivedExportFile`, exposed via `public boolean isDerivedExportFile()`.
+  - Classify every enum constant explicitly:
+    - Derived regenerable caches (`true`): `CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`.
+    - Non-regenerable / non-file formats (`false`): `RAW_SENSOR` (live-recorded primary sidecars `files/raw_sensor/*.polar_raw.csv.gz` & `*.phone_raw.csv.gz`), `HEALTH_CONNECT` (API-only sync, `fileEnding = ""`).
+  - Preserves 100% of existing enum names, `dirName`, `fileEnding`, `uiNameId`, `getMimeType()`, `STANDARD_FILE_FORMATS`, and `ONLINE_COMMUNITIES` (`ProGuardRulesContractTest`, `BaseExporterDownloadsTest`, `RawSensorFileExporterTest` unaffected).
+- **Selective Cache Purge (`ExportManager.java`)**:
+  - In `invalidateWorkoutExport(@NonNull String fileBaseName)` Step 2 (`:320-332`), guard `if (baseDir != null && !baseDir.getPath().isEmpty())` (preventing CWD-relative deletion under relaxed JVM mocks) and skip any format where `!format.isDerivedExportFile() || format.getFileEnding().isEmpty()`.
+  - Keep Step 1 (WorkManager cancellation across `fileBaseName` tag, `"export_" + fileBaseName`, and `getUniqueWorkName(fileBaseName, format)` for all formats) and Step 3 (`ExportStatus.WAITING` reset + `broadcastExportStatusChanged`) unchanged (`REQ-DAT-029.4`), so callers (`PolarH10OfflineController:716`, `PolarVeritySenseOfflineController:1321`, `WorkoutRepository:1705,3451`) safely invalidate and re-export derived formats while `RawSensorFileExporter` / `DropboxUploader` / `GoogleDriveUploader` still find and export the intact raw sidecars.
+  - Update `invalidateWorkoutExport` Javadoc to state the derived-cache-only deletion contract and authorized sidecar deletion paths (`WorkoutRepository.deleteWorkoutCascade`, `WorkoutSummariesDatabaseManager.deleteWorkout`, `PolarRawTelemetryPruner`).
+- **Threading & Concurrency**: `invalidateWorkoutExport` remains synchronous on its caller's background/IO thread (all 4 production callers invoke it off the main thread); zero new locks, coroutines, or background infrastructure introduced (`docs/coding_standards.md` §5.5 safe).
+
+## 2. Atomic Implementation Steps
+
+| Step | Target File(s) | Atomic Change | Req / Test |
+|---|---|---|---|
+| **1** | `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/FileFormat.java` | Add `private final boolean mIsDerivedExportFile` constructor parameter and `public boolean isDerivedExportFile()` getter (`true` for `CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`; `false` for `RAW_SENSOR`, `HEALTH_CONNECT`) with clear Javadoc. | `REQ-EXP-048.1` / `TST-EXP-048.1` |
+| **2** | `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/ExportManager.java` | In `invalidateWorkoutExport(fileBaseName)` Step 2, guard `baseDir != null && !baseDir.getPath().isEmpty()` and `if (!format.isDerivedExportFile() || format.getFileEnding().isEmpty()) continue;`, plus update method Javadoc documenting raw sidecar preservation. | `REQ-EXP-048.2` / `TST-EXP-048.1`, `.2` |
+| **3** | `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/ExportManagerTest.kt` | Add regression test `testInvalidateWorkoutExport_deletesDerivedCachesOnlyAndPreservesRawSensorSidecars_TST_EXP_048_1`: assert `FileFormat.isDerivedExportFile()` for every constant; create real temp `filesDir` with all 6 derived files + `.polar_raw.csv.gz`, `.phone_raw.csv.gz`, `.polar_raw.csv.gz.tmp`, `.phone_raw.csv.gz.tmp`, and `HealthConnect/<base>`; call `invalidateWorkoutExport(fileBaseName)` and verify derived files are deleted, all `raw_sensor/*` files + `HealthConnect` sentinel survive byte-for-byte, and WorkManager cancellation + DB `WAITING` reset + broadcast occur. | `TST-EXP-048.1` |
+| **4** | `app/src/test/java/com/atrainingtracker/trainingtracker/exporter/RawSensorFileExporterTest.kt` | Add Robolectric integration regression test `testInvalidateWorkoutExport_followedByRawSensorExport_preservesAndExportsBothSidecars_TST_EXP_048_2`: seed both `.polar_raw.csv.gz` and `.phone_raw.csv.gz` + derived `FIT`/`TCX` files in `context.filesDir`, execute `ExportManager(context).invalidateWorkoutExport(fileBaseName)`, assert derived files are deleted while both sidecars remain byte-identical, then execute `RawSensorFileExporter(context).export(...)` and assert `result.success() == true` with `"Successfully exported 2 raw sensor sidecars"`. | `TST-EXP-048.2` |
+| **5** | Living Docs & Evidence (`Stage 4/5`) | Execute Tier-1 targeted Gradle suites + `verify_requirement_governance.py` + `tools/auto_gate.py --ticket ATT-9613 --tier tier-a --write-bundle`, promote `REQ-EXP-048` & `TST-EXP-048` `[Planned] -> [Implemented] -> [Verified]`, sync master indexes, and author `docs/engineering/walkthroughs/ATT-9613_walkthrough.md`. | `REQ-EXP-048` / `TST-EXP-048` |
+
+## 3. UI Consistency, Invariants & Verification Command
+
+- **UI Consistency (`docs/design_guidelines.md`)**: `N/A` — zero UI composables, XML layouts, or `strings*.xml` edits.
+- **Invariants**: All 6 derived export formats (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) remain invalidated cleanly; WorkManager cancellation and `ExportStatus.WAITING` DB reset (`REQ-DAT-029.4`) unchanged; explicit workout cascade deletion (`WorkoutRepository.deleteWorkoutCascade`, `WorkoutSummariesDatabaseManager.deleteWorkout`) and retention pruning (`PolarRawTelemetryPruner`) remain intact; `FileFormat.RAW_SENSOR` constants (`dirName`, `fileEnding`, `mimeType`) unchanged; zero SQLite/UI/`strings*.xml` edits; `ANT-Android-SDKs` untouched (`160000`).
+- **Stage 4 Verification Command**:
+  `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.exporter.ExportManagerTest" --tests "com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" --tests "com.atrainingtracker.trainingtracker.exporter.ExportManagerFitTest" --tests "com.atrainingtracker.trainingtracker.exporter.ExportManagerGoogleDriveTest" --tests "com.atrainingtracker.trainingtracker.exporter.ExportManagerDropboxGatingTest" --tests "com.atrainingtracker.trainingtracker.exporter.BaseExporterDownloadsTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`

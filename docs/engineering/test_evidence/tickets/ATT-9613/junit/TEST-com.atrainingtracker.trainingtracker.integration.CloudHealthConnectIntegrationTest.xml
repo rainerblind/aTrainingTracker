@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.CloudHealthConnectIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:24:56.135Z" hostname="rainer-HP-EliteBook-850-G5" time="5.367">
+  <properties/>
+  <testcase name="testHealthConnectHrvImporter_ingestsIntoRealHrvReadinessRepository" classname="com.atrainingtracker.trainingtracker.integration.CloudHealthConnectIntegrationTest" time="4.013"/>
+  <testcase name="testHealthConnectManager_syncWorkout_updatesExportStatusDatabase" classname="com.atrainingtracker.trainingtracker.integration.CloudHealthConnectIntegrationTest" time="0.473"/>
+  <testcase name="testStravaAndDropboxUploaders_okHttpInterceptor_persistsStravaIdsAndClassifiesRetry" classname="com.atrainingtracker.trainingtracker.integration.CloudHealthConnectIntegrationTest" time="0.88"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+]]></system-err>
+</testsuite>

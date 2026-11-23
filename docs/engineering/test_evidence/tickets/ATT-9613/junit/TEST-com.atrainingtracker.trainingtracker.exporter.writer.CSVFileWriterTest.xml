@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:19:19.357Z" hostname="rainer-HP-EliteBook-850-G5" time="3.749">
+  <properties/>
+  <testcase name="testCSVFileWriter_emptyCursor_writesHeaderOnly" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="1.118"/>
+  <testcase name="testCSVFileWriter_cooperativeCancellation_abortsAndDeletesOutputFile" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="0.869"/>
+  <testcase name="testCSVFileWriter_headerAndSourceSuffixSorting" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="0.876"/>
+  <testcase name="testCSVFileWriter_handlesNullValuesAsEmptyStrings" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="0.885"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

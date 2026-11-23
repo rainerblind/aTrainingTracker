@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:18:10.338Z" hostname="rainer-HP-EliteBook-850-G5" time="0.785">
+  <properties/>
+  <testcase name="testDoExport_whenAbandonedTmpExists_salvagesToFinalSidecarAndExports_TST_STB_025_2" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.276"/>
+  <testcase name="testMimeTypeAndFormatProperties" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.079"/>
+  <testcase name="testDoExport_whenSidecarExists_exportsSuccessfully" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.087"/>
+  <testcase name="testDoExport_whenSidecarDoesNotExist_gracefulSkip" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.082"/>
+  <testcase name="testInvalidateWorkoutExport_followedByRawSensorExport_preservesAndExportsBothSidecars_TST_EXP_048_2" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.092"/>
+  <testcase name="testDoExport_phoneOnlyAndBothSidecarsAndPhoneTmpSalvage_TST_EXP_045_3" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.167"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+]]></system-err>
+</testsuite>

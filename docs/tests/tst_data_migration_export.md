@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.40  
+**Version**: 1.0.42  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 134
+**Total Tests**: 135
 
 ---
 
@@ -2556,10 +2556,30 @@
 
 ---
 
+### TST-EXP-048: Raw Sensor Sidecar Preservation During `ExportManager.invalidateWorkoutExport` & Post-Invalidation Re-Export Verification (`ATT-9613`) [Verified]
+- **Requirement(s)**: `REQ-EXP-048`
+- **Component**: `FileFormat.java`, `ExportManager.java`, `RawSensorFileExporter.kt`
+- **Jira**: `ATT-9613`
+- **Test Code**:
+  - `ExportManagerTest.kt`: `testInvalidateWorkoutExport_deletesDerivedCachesOnlyAndPreservesRawSensorSidecars_TST_EXP_048_1` (`4/4` PASS)
+  - `RawSensorFileExporterTest.kt`: `testInvalidateWorkoutExport_followedByRawSensorExport_preservesAndExportsBothSidecars_TST_EXP_048_2` (`6/6` PASS)
+  - `ExportManagerFitTest.kt` (`8/8` PASS), `ExportManagerGoogleDriveTest.kt` (`2/2` PASS), `ExportManagerDropboxGatingTest.kt` (`3/3` PASS), `BaseExporterDownloadsTest.kt` (`5/5` PASS), `PolarRawTelemetryPrunerTest.kt` (`6/6` PASS), `ArchitectureConformanceContractTest.kt` (`11/11` PASS)
+- **Verification Evidence**: Verified (`ATT-9613`, Gate 3 `ATT-9658` PASSED; `45/45` targeted Tier-1 unit & contract tests PASS across 8 suites via `./gradlew :app:testDebugUnitTest --rerun`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; SHA-256 machine evidence bundle at `docs/engineering/test_evidence/tickets/ATT-9613/manifest.json`).
+- **Test Description**:
+  1. *Format Classification & Selective Derived-Cache Deletion (`TST-EXP-048.1` — `ExportManagerTest.kt`)*:
+     • Verify `FileFormat.isDerivedExportFile()` returns `true` for `CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA` and `false` for `RAW_SENSOR` and `HEALTH_CONNECT`.
+     • Populate a real temporary `filesDir` with all 6 derived export cache files (`CSV/.csv`, `GC/.json`, `TCX/.tcx`, `GPX/.gpx`, `FIT/.fit`, `Strava/.tcx`), all raw sensor sidecar variants (`raw_sensor/<base>.polar_raw.csv.gz`, `<base>.phone_raw.csv.gz`, `<base>.polar_raw.csv.gz.tmp`, `<base>.phone_raw.csv.gz.tmp`), and a `HealthConnect/<base>` sentinel; invoke `ExportManager.invalidateWorkoutExport(fileBaseName)` and verify all 6 derived files are deleted, all `raw_sensor/*` files and the `HealthConnect` sentinel survive intact with identical byte contents, and WorkManager cancellation + `ExportStatus.WAITING` DB reset + status broadcast execute cleanly.
+  2. *End-to-End Post-Invalidation Raw Sensor Re-Export (`TST-EXP-048.2` — `RawSensorFileExporterTest.kt`)*:
+     • Seed both `<fileBaseName>.polar_raw.csv.gz` and `<fileBaseName>.phone_raw.csv.gz` alongside derived `FIT`/`TCX` files in Robolectric `context.filesDir`, invoke `ExportManager(context).invalidateWorkoutExport(fileBaseName)` (reproducing Polar deferred retry sync / crop / swim recalculation), assert derived files are purged while both sidecars remain intact, then invoke `RawSensorFileExporter(context).export(ExportInfo(fileBaseName, FileFormat.RAW_SENSOR, ExportType.FILE))` and assert `result.success() == true` with `"Successfully exported 2 raw sensor sidecars"`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `TST-EXP-048` to `[Verified]` (`45/45` targeted Tier-1 unit & contract tests PASS across 8 suites incl. `ExportManagerTest` `4/4`, `RawSensorFileExporterTest` `6/6`, `ExportManagerFitTest` `8/8`, `ExportManagerGoogleDriveTest` `2/2`, `ExportManagerDropboxGatingTest` `3/3`, `BaseExporterDownloadsTest` `5/5`, `PolarRawTelemetryPrunerTest` `6/6`, `ArchitectureConformanceContractTest` `11/11`; `0` new warnings; SHA-256 evidence bundle). |
+| `1.0.41` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Added `[Planned]` `TST-EXP-048` (`TST-EXP-048.1`–`TST-EXP-048.2`, strictly symmetric with `REQ-EXP-048`) verifying `FileFormat.isDerivedExportFile()`, selective derived-cache purge with byte-identical preservation of `.polar_raw.csv.gz`/`.phone_raw.csv.gz`/`.tmp` sidecars in `ExportManagerTest.kt`, and post-invalidation multi-sidecar export in `RawSensorFileExporterTest.kt`. |
 | `1.0.40` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `TST-EXP-047` to `[Verified]` (`88/88` targeted unit & contract tests PASS across 8 suites incl. `PhoneRawTelemetryReaderTest` `3/3`, `PhoneRawSidecarRecoveryTest` `4/4`, `SmartphoneRawTelemetryRecorderTest` `11/11`, `SpeedAndLocationDevice_ATTFusedTest` `37/37`, `SpeedAndLocationDeviceGoogleFusedTest` `7/7`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`; live `:app:replayRawTelemetry` PASS; SHA-256 evidence bundle). |
 | `1.0.39` | 2026-11-22 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Added `[Planned]` `TST-EXP-047` (`TST-EXP-047.1`–`TST-EXP-047.3`, strictly symmetric with `REQ-EXP-047`) covering 9-channel `GNSS`/`GNSS_FUSED` round-trip & salvage, concurrent GPS+ATTFused per-channel deduplication with interleaved Google Fused fixes, and backwards-compatible v1/provider-selectable offline replay + CLI tests. |
 | `1.0.38` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Stage 6 Bounce 1/5 heal: added non-UTC timezone ranking test in `SensorQuotaReconciliationManagerTest` (`13/13`), guarded `finally` cleanup test in `WorkoutRepositoryExtremaAndClusterTest` (`5/5`), and cross-locale `SensorType` test in `LiveWorkoutCardStateStoreTest` (`6/6`); `163/163` targeted tests PASS across 30 suites (`0` new warnings) + refreshed SHA-256 evidence bundle. |
