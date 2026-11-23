@@ -1,14 +1,14 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-TRK`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,207 LOC)  
+**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,184 LOC)  
 **Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `LiveWorkoutBroadcastTracker` (`LiveWorkoutBroadcastTracker.kt`), `DebugHeapWatchdog` (`DebugHeapWatchdog.kt`), `MultisportLapCoordinator` (`MultisportLapCoordinator.kt`), `LapTelemetryExtractor` (`LapTelemetryExtractor.kt`), `PostWorkoutFinalizer` (`PostWorkoutFinalizer.kt`), `PostWorkoutPhysiologyRecomputer` (`PostWorkoutPhysiologyRecomputer.kt`), `WorkoutPostProcessingCoordinator` (`WorkoutPostProcessingCoordinator.kt`), `WorkoutPostProcessingService` (`WorkoutPostProcessingService.kt`), `WorkoutPostProcessingNotificationManager` (`WorkoutPostProcessingNotificationManager.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-STB-025.1`, `REQ-STB-025.2`, `REQ-STB-025.3`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`, `REQ-TRK-093`, `REQ-TRK-094`, `REQ-TRK-095`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-CON-056.2`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-STB-025.1`, `REQ-STB-025.2`, `REQ-STB-025.3`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`, `REQ-TRK-093`, `REQ-TRK-094`, `REQ-TRK-095`
 
 ---
 
@@ -145,3 +145,4 @@ stateDiagram-v2
 | `1.0.9` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Added `PostWorkoutPhysiologyRecomputer`, captured a single `h10Armed` snapshot in `endWorkout()` to defer pre-backfill EF/Decoupling/Dynamics in `finalizeLiveSession()` via `mDeferHrPhysiologyToPostProcessing` (preserving NP/IF/TSS and 1-/2-/4-arg signatures), forwarded `PolarH10OfflineController.getEffectiveAnchorStartTimeMs()` & `workoutEndMs` into `WorkoutPostProcessingCoordinator`, and eliminated duplicate HRV recomputation (`TrackerService.java` `3,555 / 3,559 LOC`, `REQ-TRK-093`, `TST-TRK-093`). |
 | `1.0.10` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Deduplicated `handleActionStop()` and `onDestroy()` via parameterized `stopTrackingControllersAndTransientState(boolean)` & `enqueueAsyncFinalization(boolean, Integer)` (preserving `ATT-6178` non-blocking `onDestroy` and radar simulator split), extracted `LapTelemetryExtractor.kt` (type-safe finite `Number` extraction across `TrackerService` & `BANALService`), and extracted 7-stage `PostWorkoutFinalizer.kt` with lazy `knownLocationsRepository`/`activeSessionDeviceIds` (`ConcurrentHashMap.newKeySet()`)/`sportTypeId` providers (`TrackerService.java` `3,180 / 3,220 LOC`, `-375 LOC`, `REQ-TRK-094`, `TST-TRK-094`). |
 | `1.0.11` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `sFgsStartPending`/`sPendingStopBeforeStart`/`mIsForegroundPromoted` handshake (`markForegroundStartRequested`, `requestStopIfForegroundStartPending`, early `promoteForegroundForStart()` before `mDbExecutor.submit()`, stale-teardown `!sFgsStartPending` guard, FIFO `mWorkoutID` resolution in `enqueueAsyncFinalization()`) and generation-guarded `WorkoutPostProcessingService` FGS lifecycle (`TrackerService.java` `3,207 / 3,220 LOC`, `REQ-TRK-095`, `TST-TRK-095`). |
+| `1.0.12` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Removed stale `mCachedAutoPauseConfig` 5-s cache & `invalidateAutoPauseCache()` so `getAutoPauseConfig()` reads directly from in-memory `TuningPreferencesDataStore` `StateFlow` via `SettingsDataStoreJavaHelper.getAutoPauseConfig(this)` (`TrackerService.java` `3,184 / 3,220 LOC`, `REQ-CON-056.2`). |

@@ -337,7 +337,7 @@ fun TrackingTabsScreen(
 
     val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
     val returnNavState by returnNavRepo.navigationState.collectAsState()
-    val radarState by RadarStateRepository.radarState.collectAsState()
+    val radarState by remember { RadarStateRepository.observeCombinedState() }.collectAsState(initial = RadarStateRepository.getState())
     var showRadarLightQuickSwitch by remember { mutableStateOf(false) }
 
     // REQ-UI-2800.4: Collect 1-Hz GPS location inside LaunchedEffect instead of root collectAsState()

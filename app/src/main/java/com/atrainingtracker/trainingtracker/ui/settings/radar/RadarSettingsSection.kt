@@ -85,7 +85,7 @@ fun RadarSettingsSection(
     val coroutineScope = rememberCoroutineScope()
 
     var selectedScenario by remember { mutableStateOf(RadarScenario.SINGLE_CAR) }
-    val radarState by RadarStateRepository.radarState.collectAsState()
+    val radarState by remember { RadarStateRepository.observeCombinedState() }.collectAsState(initial = RadarStateRepository.getState())
     val isRunning by RadarTrafficSimulator.isSimulatingFlow.collectAsState()
 
     DisposableEffect(Unit) {

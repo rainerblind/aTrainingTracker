@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculatorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:00:10.009Z" hostname="rainer-HP-EliteBook-850-G5" time="0.373">
+  <properties/>
+  <testcase name="computeBiasFreeRmssd_enforcesCallerThresholds_TST_MIG_061_2" classname="com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculatorTest" time="0.358"/>
+  <testcase name="computeBiasFreeRmssd_excludesArtifactAdjacentPairsAndGuardsZeroMinPairs_TST_MIG_061_2" classname="com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculatorTest" time="0.0"/>
+  <testcase name="computeRawRmssd_computesExpectedRootMeanSquareDifference_TST_MIG_061_2" classname="com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculatorTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

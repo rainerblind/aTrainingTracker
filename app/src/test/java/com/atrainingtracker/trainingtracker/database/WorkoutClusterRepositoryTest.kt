@@ -387,11 +387,19 @@ class WorkoutClusterRepositoryTest {
             every { mockClusterDb.getAllClusters() } returns listOf(cluster10)
 
             val repo = WorkoutClusterRepository.getInstance(mockContext)
+            verify(timeout = 1000, atLeast = 1) { mockClusterDb.getAllClusters() }
+            repo.loadAllClustersLightweight()
+            clearMocks(mockClusterDb, mockSummariesManager, answers = false)
+            every { mockClusterDb.getClusterById(10L) } returns cluster10
+
             val routeRenameEvent = async(start = CoroutineStart.UNDISPATCHED) { repo.clusterMutationEvents.first() }
             repo.onRouteSyncedClusterRename(10L)
             assertEquals(ClusterMutationEvent.Renamed(10L, "Route Synced"), routeRenameEvent.await())
+            assertEquals("Route Synced", repo.allClusters.value.first { it.id == 10L }.name)
             verify(exactly = 1) { mockWorkoutRepo.onClusterRenamed(10L, "Route Synced") }
             coVerify(exactly = 0) { mockRoutesRepo.syncClusterNameChange(any(), any()) }
+            verify(exactly = 0) { mockClusterDb.getAllClusters() }
+            verify(exactly = 0) { mockSummariesManager.getWorkoutClusterStatsForAllClusters() }
         } finally {
             RoutesRepository.resetForTesting(null)
             WorkoutRepository.resetForTesting(null)

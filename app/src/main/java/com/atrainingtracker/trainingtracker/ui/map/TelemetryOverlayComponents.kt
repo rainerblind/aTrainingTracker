@@ -47,11 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -105,14 +101,6 @@ internal fun overlayStrokeColor(
     }
 }
 
-internal data class OverlayXViewport(
-    val isTimeDomain: Boolean,
-    val startDist: Double,
-    val visibleSpan: Double,
-    val startPaddingPx: Float,
-    val chartWidthPx: Float
-)
-
 /**
  * Converts a raw repository [TelemetrySourceSeries] sample value (`SPEED_mps` in m/s, `ALTITUDE`
  * in meters, `SLOPE` in %) into the active chart's Y-axis domain value.
@@ -132,61 +120,6 @@ internal fun resolveOverlayValueForChart(
             paceCeilingMinKm = paceCeilingMinKm
         )
         else -> rawValue
-    }
-}
-
-internal fun DrawScope.drawMultiSensorOverlayCurves(
-    overlaySeries: List<TelemetrySourceSeries>,
-    allOverlaySeries: List<TelemetrySourceSeries>,
-    viewport: OverlayXViewport,
-    metricType: TelemetryMetricType,
-    unit: MyUnits,
-    paceCeilingMinKm: Float,
-    valueToY: (Double) -> Float,
-    isDarkSurface: Boolean = false,
-    avoidZoneColors: Boolean = false
-) {
-    for (series in overlaySeries) {
-        val colorIdx = allOverlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
-        val color = overlayStrokeColor(colorIdx, isDarkSurface = isDarkSurface, avoidZoneColors = avoidZoneColors)
-        val dashLength = if (colorIdx % 2 == 0) 6.dp.toPx() else 3.dp.toPx()
-        val gapLength = 3.dp.toPx()
-        val path = Path()
-        var started = false
-        for (pt in series.points) {
-            val chartValue = resolveOverlayValueForChart(pt.value, metricType, unit, paceCeilingMinKm)
-            if (chartValue == null) {
-                if (metricType == TelemetryMetricType.PACE) {
-                    started = false
-                }
-                continue
-            }
-            val xSpan = if (viewport.isTimeDomain) pt.timeSec.toDouble() else pt.distance
-            val x = viewport.startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(
-                xSpan,
-                viewport.startDist,
-                viewport.visibleSpan,
-                viewport.chartWidthPx
-            )
-            val y = valueToY(chartValue)
-            if (!started) {
-                path.moveTo(x, y)
-                started = true
-            } else {
-                path.lineTo(x, y)
-            }
-        }
-        if (started) {
-            drawPath(
-                path = path,
-                color = color,
-                style = Stroke(
-                    width = 1.8.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength), 0f),
-                    cap = StrokeCap.Round
-                )
-            )
-        }
     }
 }
 
@@ -545,8 +478,6 @@ internal fun formatPrimaryActiveValueText(
         unit = unit,
         paceCeilingMinKm = paceCeilingMinKm
     ) ?: return null
-    val usesGlobalDefaultLocaleAndUnit = locale == Locale.getDefault() &&
-        runCatching { TrainingApplication.getUnit() == unit }.getOrDefault(false)
     return when (metricType) {
         TelemetryMetricType.HEART_RATE -> {
             val base = "${extracted.toInt()} bpm"
@@ -564,21 +495,10 @@ internal fun formatPrimaryActiveValueText(
         }
         TelemetryMetricType.CADENCE -> "${extracted.toInt()} rpm"
         TelemetryMetricType.SPEED -> {
-            val rawMps = activePoint.speedMps ?: return null
-            if (speedFormatter != null && usesGlobalDefaultLocaleAndUnit) {
-                speedFormatter.format_with_units(rawMps)
-            } else {
-                formatOverlayScalarWithUnit(rawMps, TelemetryMetricType.SPEED, unit, paceCeilingMinKm, locale = locale)
-            }
+            (speedFormatter ?: SpeedFormatter()).formatUserUnitWithUnits(extracted, unit, locale)
         }
         TelemetryMetricType.PACE -> {
-            val rawMps = activePoint.speedMps ?: return null
-            if (paceFormatter != null && usesGlobalDefaultLocaleAndUnit) {
-                val spm = (extracted * 60.0) / if (unit == MyUnits.IMPERIAL) BANALService.METER_PER_MILE else 1000.0
-                paceFormatter.format_with_units(spm)
-            } else {
-                formatOverlayScalarWithUnit(rawMps, TelemetryMetricType.PACE, unit, paceCeilingMinKm, locale = locale)
-            }
+            (paceFormatter ?: PaceFormatter()).formatPaceMinutesWithUnits(extracted, unit)
         }
         TelemetryMetricType.SLOPE -> String.format(locale, "%.1f%%", extracted)
         TelemetryMetricType.ALTITUDE -> formatOverlayScalarWithUnit(

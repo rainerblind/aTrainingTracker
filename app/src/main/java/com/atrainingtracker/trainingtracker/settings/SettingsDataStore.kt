@@ -88,7 +88,12 @@ data class SettingsSnapshot(
 }
 
 // Create a single instance of DataStore for the entire app context
-private val Context.backingDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
+private val Context.backingDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "user_settings",
+    produceMigrations = { context ->
+        listOf(TuningPreferencesDataStore.createPreferencesMigration(context))
+    }
+)
 
 val Context.dataStore: DataStore<Preferences>
     get() = resolveDataStore(this)

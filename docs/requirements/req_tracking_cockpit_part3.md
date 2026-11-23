@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.15  
+**Version**: 1.0.17  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 45
+**Total Requirements**: 46
 
 ---
 
@@ -1574,6 +1574,35 @@
 
 ---
 
+### REQ-CON-056: Radar Subsystem & State-Cache Consolidation, 3-StateFlow Repository Split & AB-BA Deadlock Elimination (`ATT-8132`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-056`
+- **System Requirement(s)**: `SYSREQ-TRK-006`, `SYSREQ-TRK-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TuningPreferencesDataStore.kt`, `SettingsDataStore.kt`, `TrainingApplication.java`, `TrackerService.java`, `RadarState.kt`, `RadarAudioSnoozeState.kt`, `RadarStateRepository.kt`, `RadarSnoozeController.kt`, `RadarLightController.kt`, `SmartBrakeLightDetector.kt`, `SmartRadarLightEngine.kt`, `RadarAlertManager.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `ANTBikeLightDevice.kt`, `RadarTrafficSimulator.kt`, `TrackingTabsScreen.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Stacked radar/tuning increments left four structural defects (`ATT-8132`, Epic `ATT-8120`): (1) 5 overlapping radar-light DataStore keys producing contradictory fresh-install defaults (`resolveRadarLightAutoMode == true` vs `resolveRadarLightControlMode == FIXED_WORKOUT_MODE`) and partial updates, plus per-startup `LEGACY_MAP_CAMERA_KEYS` purges and `TrainingApplication.setClusterTol*` mirrors; (2) stale intermediate caches (`RadarLightController.cached*` / dead `updateCachedPreferences` / per-tap `CoroutineScope(Dispatchers.IO)` and `TrackerService.mCachedAutoPauseConfig` missing invalidation in 4 mutators); (3) monolithic `RadarState` combined with a 1-Hz `RadarSnoozeController` background ticker waking `SmartRadarLightEngine` (extending `threatCooldownUntilRealtimeMs`) and `RadarAlertManager` every second; and (4) an AB-BA `synchronized` deadlock cycle between `RadarLightController` and `SmartBrakeLightDetector`.
+- **Description**:
+  1. *Canonical Radar-Light Preference Model & One-Time Migration (`REQ-CON-056.1`)*: `TuningPreferencesDataStore` SHALL persist radar tail-light preferences strictly under `KEY_RADAR_LIGHT_CONTROL_MODE` (unified default `RadarLightControlMode.SMART_AUTOMATION`) and `KEY_RADAR_LIGHT_DEFAULT_MODE` (default `RadarLightMode.DAY_FLASH`). A one-time `DataMigration<Preferences>` wired into `user_settings` DataStore SHALL migrate legacy keys (`KEY_RADAR_LIGHT_AUTO_MODE`, `KEY_RADAR_AUTO_LIGHT_CONTROL`, `KEY_RADAR_SMART_LIGHT_AUTOMATION`) preserving prior user behavior, remove those legacy keys and `LEGACY_MAP_CAMERA_KEYS`, and migrate legacy SharedPreferences cluster tolerances into DataStore. `TuningConfig` boolean projections (`radarLightAutoMode`, `radarAutoLightControl`, `radarSmartLightAutomation`) SHALL be pure derived properties of `radarLightControlMode`; per-startup map-camera purges and `TrainingApplication.setClusterTol*` dual-write mirrors SHALL be deleted while `TrainingApplication.getClusterTol*` delegates to DataStore when initialized.
+  2. *Elimination of Stale Intermediate Caches (`REQ-CON-056.2`)*: `RadarLightController` SHALL delete `cached*` fields, `hasLoadedInitialPreferences`, and dead `updateCachedPreferences` overloads, read live preferences directly from `TuningPreferencesDataStore`'s in-memory `StateFlow` (zero `runBlocking`), and execute `persistSelectionAsync` on a single long-lived controller `CoroutineScope(SupervisorJob() + Dispatchers.IO)`. `TrackerService` SHALL delete `mCachedAutoPauseConfig` / `invalidateAutoPauseCache()` and read directly from `SettingsDataStoreJavaHelper.getAutoPauseConfig(this)` (`StateFlow.value`, zero `runBlocking`) while keeping `TrackerService.java <= 3,220` LoC and `TrainingApplication.java <= 2,050` LoC.
+  3. *Three Orthogonal Radar StateFlows & Zero 1-Hz Snooze Wakeups (`REQ-CON-056.3`)*: `RadarStateRepository` SHALL split monolithic `RadarState` into `threatState: StateFlow<RadarThreatState>` (arbitrating `BLE > ANT_PLUS > SIMULATOR`, `CONNECTED > CONNECTING`, `sourceStates <= 4`), `lightState: StateFlow<RadarLightState>`, and `snoozeState: StateFlow<RadarAudioSnoozeState>` carrying monotonic `snoozeUntilElapsedRealtimeMs: Long?`, with atomic `MutableStateFlow.update { ... }`. `RadarSnoozeController` SHALL replace its 1-Hz polling loop with a single one-shot expiry timer. `SmartRadarLightEngine` SHALL observe ONLY `threatState` and `RadarAlertManager` SHALL observe `threatState` and `lightState.map { it.lightMode }.distinctUntilChanged()` (zero `snoozeState` wakeups), while UI/ViewModel layers combine slices on demand (`RadarEdgeOverlay` derives badge minutes locally from `snoozeUntilElapsedRealtimeMs`).
+  4. *Deadlock-Free Brake-Light Concurrency (`REQ-CON-056.4`)*: `SmartBrakeLightDetector.isEnabled` and `isAutoBypassed` MUST use lock-free `AtomicBoolean`, and neither `RadarLightController` nor `SmartBrakeLightDetector` SHALL invoke any method on the other class, `RadarLightDeviceClient`, `SmartRadarLightEngine`, or `RadarStateRepository` while holding its own monitor ($E(L_A \to L_B) = E(L_B \to L_A) = \emptyset$).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh install or existing profile with legacy radar-light/map-camera/cluster keys, *When* DataStore initializes and radar or Auto-Pause toggles are changed, *Then* migration runs once preserving prior behavior, all queries agree on one canonical model, and changes take immediate effect in `RadarLightController` and `TrackerService` without manual cache invalidation.
+• *Given* an active timed audio snooze running concurrently with 8-Hz vehicle telemetry, *When* time advances and radar frames arrive, *Then* snooze never overwrites vehicle targets, `lightState`/`snoozeState` update atomically via `MutableStateFlow.update`, `SmartRadarLightEngine`/`RadarAlertManager` receive **0** 1-Hz countdown wakeups, and snooze expires cleanly at `snoozeUntilElapsedRealtimeMs`.
+• *Given* concurrent mode/device registration mutations in `RadarLightController` and IMU deceleration/stop events in `SmartBrakeLightDetector` across parallel threads, *When* both execute under stress, *Then* zero opposite-order nested `synchronized` locks are ever held (`findDeadlockedThreads() == null`).
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Refines `REQ-CON-031.5`, `REQ-CON-034`, `REQ-CON-035`, `REQ-CON-041`, `REQ-CON-046`, `REQ-CON-048`, `REQ-TRK-064`, `REQ-MAP-050`.
+2. *Historical Origin & Commit Trace*: `b645651f` (`ATT-7538`), `88ed2667` (`ATT-5104`), `1a6606d5` (`ATT-5121`), `302dbd16` (`ATT-8455`), `3376bb3f` (`ATT-8450`), `908a1431` (`ATT-5119`), `07046807` (`ATT-3581`).
+3. *Root Reason for Existing Formulation*: Incremental sprints layered new preference keys, local caches, and monolithic `RadarState` fields without consolidating earlier mechanisms.
+4. *Preservation of Core Invariants*: `REQ-CON-041` arbitration (`BLE > ANT_PLUS > SIMULATOR`, `CONNECTED > CONNECTING`), `REQ-PRO-130.1` `sourceStates <= 4`, `REQ-CON-035` StVZO/night anti-glare & RearVue 820 auto-bypass, `REQ-CON-048` offline hydration, `REQ-TRK-064` monotonic snooze & UI badge formatting, `TrainingApplication.java <= 2,050` & `TrackerService.java <= 3,220` LoC, zero `runBlocking`, zero `strings*.xml` edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1698,3 +1727,5 @@
 | `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Added `[Planned]` `REQ-FIL-042` (`Derived (SW-only)`, `.1`–`.3`) for unified monotonic `elapsedRealtime` GNSS/IMU/wheel timestamp normalization (`AttFusedTimestampNormalizer`), OEM `> 5 s` `uptimeMillis`/epoch-ns re-anchoring, UTC boundary preservation (`MultisportTelemetryAnchor` / sidecar), out-of-order `PhoneCarriageClassifier` / `UnicycleOdometryEkf` guards, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`N/A - no UI strings`). |
 | `1.0.14` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `REQ-FIL-042` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9654`) PASS, Stage 4 construction (`AttFusedTimestampNormalizer.kt` `278` LoC, `SpeedAndLocationDevice_ATTFused.kt` shrunk `1,498 -> 1,472/1,500` LoC, `PhoneCarriageClassifier.kt` `1,175/1,500` LoC, `UnicycleOdometryEkf.kt` `888/1,500` LoC, `docs/architecture.md` `v1.0.29`), `160/160` targeted tests PASS across 13 suites (incl. Robolectric), `0` new warnings, and `docs/engineering/walkthroughs/ATT-9600_walkthrough.md`. |
 | `1.0.15` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 traceability reconciliation: linked `REQ-FIL-040` to `SYSREQ-TRK-008` and `REQ-FIL-041`/`REQ-FIL-042` to `SYSREQ-TRK-010` (`TST-PRO-102.3` / `TST-PRO-103.2`). |
+| `1.0.16` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Added `[Planned]` `REQ-CON-056` (`.1`–`.4`, linked to `SYSREQ-TRK-006`, `SYSREQ-TRK-007`) for canonical 2-key radar-light DataStore consolidation + one-time migration, removal of `RadarLightController.cached*`/`TrackerService.mCachedAutoPauseConfig`, 3-`StateFlow` `RadarStateRepository` split without 1-Hz snooze wakeups, and `RadarLightController` <-> `SmartBrakeLightDetector` AB-BA deadlock elimination (`N/A - no UI strings`). |
+| `1.0.17` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `REQ-CON-056` (`.1`–`.4`) to `[Verified]` following Gate 3 (`ATT-9653`) PASS, full Stage 4 construction (`TrainingApplication.java` `1,969/2,050` LoC, `TrackerService.java` `3,184/3,220` LoC, `docs/architecture.md` `v1.0.30`, `tracker_service.md` `v1.0.12`), `569/569` in-scope unit/contract tests PASS (`:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` PASS), live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8132_walkthrough.md`. |

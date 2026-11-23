@@ -24,11 +24,41 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 /**
+ * Streaming callback interface for [GpxTrackpointParser.parseStreaming], enabling single-pass
+ * GPX ingestion without materializing intermediate [RawTrackpoint] trees (`REQ-MIG-061.1`).
+ */
+interface GpxStreamListener {
+    fun onLapStart(lapNr: Long) {}
+    fun onTrackpoint(
+        lapNr: Long,
+        lat: Double,
+        lng: Double,
+        altitude: Double?,
+        time: String?,
+        speedMps: Double?,
+        hr: Int?,
+        cadence: Int?,
+        temperature: Double?,
+        power: Int?
+    ) {}
+    fun onLapEnd(lapNr: Long) {}
+    fun onWaypoint(waypoint: RawCoursePoint) {}
+    fun onDocumentMetadata(
+        name: String?,
+        description: String?,
+        trackName: String?,
+        trackDesc: String?,
+        sport: String?
+    ) {}
+}
+
+/**
  * Unified streaming XML pull parser for GPX files (Workouts, Tracks, Routes, and Waypoints).
  *
  * Traceability:
  * - REQ-MIG-037: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine (Rule 36).
- * - TST-MIG-034: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification.
+ * - REQ-MIG-061.1: Zero-intermediate-tree direct streaming callbacks via [parseStreaming].
+ * - TST-MIG-034 / TST-MIG-061.1: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification.
  */
 object GpxTrackpointParser {
 
@@ -37,6 +67,74 @@ object GpxTrackpointParser {
     }
 
     fun parse(inputStream: InputStream): Result<ParsedGpxData> {
+        val data = ParsedGpxData()
+        var currentLap: RawLap? = null
+
+        val result = parseStreaming(inputStream, object : GpxStreamListener {
+            override fun onLapStart(lapNr: Long) {
+                val lap = RawLap(lapNr = lapNr)
+                data.laps.add(lap)
+                currentLap = lap
+            }
+
+            override fun onTrackpoint(
+                lapNr: Long,
+                lat: Double,
+                lng: Double,
+                altitude: Double?,
+                time: String?,
+                speedMps: Double?,
+                hr: Int?,
+                cadence: Int?,
+                temperature: Double?,
+                power: Int?
+            ) {
+                currentLap?.trackpoints?.add(
+                    RawTrackpoint(
+                        lat = lat,
+                        lng = lng,
+                        altitude = altitude,
+                        time = time,
+                        speedMps = speedMps,
+                        hr = hr,
+                        cadence = cadence,
+                        temperature = temperature,
+                        power = power
+                    )
+                )
+            }
+
+            override fun onLapEnd(lapNr: Long) {
+                currentLap = null
+            }
+
+            override fun onWaypoint(waypoint: RawCoursePoint) {
+                data.waypoints.add(waypoint)
+            }
+
+            override fun onDocumentMetadata(
+                name: String?,
+                description: String?,
+                trackName: String?,
+                trackDesc: String?,
+                sport: String?
+            ) {
+                data.name = name
+                data.description = description
+                data.trackName = trackName
+                data.trackDesc = trackDesc
+                data.sport = sport
+            }
+        })
+
+        return result.map { data }
+    }
+
+    fun parseStreaming(xmlContent: String, listener: GpxStreamListener): Result<Unit> {
+        return parseStreaming(ByteArrayInputStream(xmlContent.toByteArray(Charsets.UTF_8)), listener)
+    }
+
+    fun parseStreaming(inputStream: InputStream, listener: GpxStreamListener): Result<Unit> {
         return try {
             val safeStream = stripBom(inputStream)
             val factory = XmlPullParserFactory.newInstance().apply {
@@ -45,12 +143,16 @@ object GpxTrackpointParser {
             val parser = factory.newPullParser()
             parser.setInput(safeStream, "UTF-8")
 
-            val data = ParsedGpxData()
-            var currentLap: RawLap? = null
+            var docName: String? = null
+            var docDescription: String? = null
+            var trackName: String? = null
+            var trackDesc: String? = null
+            var sport: String? = null
 
-            var inMetadata = false
+            var nextLapNr = 0L
+            var activeLapNr: Long? = null
+
             var inTrk = false
-            var inRte = false
             var inTrackpoint = false
             var inWaypoint = false
 
@@ -84,20 +186,18 @@ object GpxTrackpointParser {
                     XmlPullParser.START_TAG -> {
                         currentTag = tag
                         when (tag) {
-                            "metadata" -> inMetadata = true
                             "trk" -> inTrk = true
-                            "rte" -> inRte = true
                             "trkseg" -> {
-                                val lap = RawLap(lapNr = data.laps.size.toLong())
-                                data.laps.add(lap)
-                                currentLap = lap
+                                val lapNr = nextLapNr++
+                                activeLapNr = lapNr
+                                listener.onLapStart(lapNr)
                             }
                             "trkpt", "rtept" -> {
                                 inTrackpoint = true
-                                if (currentLap == null) {
-                                    val lap = RawLap(lapNr = data.laps.size.toLong())
-                                    data.laps.add(lap)
-                                    currentLap = lap
+                                if (activeLapNr == null) {
+                                    val lapNr = nextLapNr++
+                                    activeLapNr = lapNr
+                                    listener.onLapStart(lapNr)
                                 }
 
                                 currentLat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull()
@@ -186,39 +286,15 @@ object GpxTrackpointParser {
                                 }
                             } else if (inTrk) {
                                 when (currentTag) {
-                                    "name" -> {
-                                        if (data.trackName.isNullOrBlank()) {
-                                            data.trackName = text
-                                        }
-                                    }
-                                    "desc", "description" -> {
-                                        if (data.trackDesc.isNullOrBlank()) {
-                                            data.trackDesc = text
-                                        }
-                                    }
-                                    "type", "activity", "sport" -> {
-                                        if (data.sport.isNullOrBlank()) {
-                                            data.sport = text
-                                        }
-                                    }
+                                    "name" -> if (trackName.isNullOrBlank()) trackName = text
+                                    "desc", "description" -> if (trackDesc.isNullOrBlank()) trackDesc = text
+                                    "type", "activity", "sport" -> if (sport.isNullOrBlank()) sport = text
                                 }
                             } else {
                                 when (currentTag) {
-                                    "name" -> {
-                                        if (data.name.isNullOrBlank()) {
-                                            data.name = text
-                                        }
-                                    }
-                                    "desc", "description" -> {
-                                        if (data.description.isNullOrBlank()) {
-                                            data.description = text
-                                        }
-                                    }
-                                    "type", "activity", "sport" -> {
-                                        if (data.sport.isNullOrBlank()) {
-                                            data.sport = text
-                                        }
-                                    }
+                                    "name" -> if (docName.isNullOrBlank()) docName = text
+                                    "desc", "description" -> if (docDescription.isNullOrBlank()) docDescription = text
+                                    "type", "activity", "sport" -> if (sport.isNullOrBlank()) sport = text
                                 }
                             }
                         }
@@ -229,10 +305,14 @@ object GpxTrackpointParser {
                         when (tag) {
                             "trkpt", "rtept" -> {
                                 if (inTrackpoint) {
-                                    if (currentLat != null && currentLng != null) {
-                                        val pt = RawTrackpoint(
-                                            lat = currentLat,
-                                            lng = currentLng,
+                                    val lat = currentLat
+                                    val lng = currentLng
+                                    val lapNr = activeLapNr
+                                    if (lat != null && lng != null && lapNr != null) {
+                                        listener.onTrackpoint(
+                                            lapNr = lapNr,
+                                            lat = lat,
+                                            lng = lng,
                                             altitude = currentAlt,
                                             time = currentTime,
                                             speedMps = currentSpeed,
@@ -241,19 +321,20 @@ object GpxTrackpointParser {
                                             temperature = currentTemp,
                                             power = currentPower
                                         )
-                                        currentLap?.trackpoints?.add(pt)
                                     }
                                     inTrackpoint = false
                                 }
                             }
                             "wpt" -> {
                                 if (inWaypoint) {
-                                    if (wptLat != null && wptLng != null) {
-                                        data.waypoints.add(
+                                    val lat = wptLat
+                                    val lng = wptLng
+                                    if (lat != null && lng != null) {
+                                        listener.onWaypoint(
                                             RawCoursePoint(
                                                 name = wptName ?: "",
-                                                lat = wptLat,
-                                                lng = wptLng,
+                                                lat = lat,
+                                                lng = lng,
                                                 altitude = wptAlt,
                                                 notes = wptDesc,
                                                 sym = wptSym,
@@ -266,18 +347,25 @@ object GpxTrackpointParser {
                                 }
                             }
                             "trkseg" -> {
-                                currentLap = null
+                                activeLapNr?.let { listener.onLapEnd(it) }
+                                activeLapNr = null
                             }
                             "trk" -> inTrk = false
-                            "rte" -> inRte = false
-                            "metadata" -> inMetadata = false
                         }
                     }
                 }
                 eventType = parser.next()
             }
 
-            Result.success(data)
+            activeLapNr?.let { listener.onLapEnd(it) }
+            listener.onDocumentMetadata(
+                name = docName,
+                description = docDescription,
+                trackName = trackName,
+                trackDesc = trackDesc,
+                sport = sport
+            )
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

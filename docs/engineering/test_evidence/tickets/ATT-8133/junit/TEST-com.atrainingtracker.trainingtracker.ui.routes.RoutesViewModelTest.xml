@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:15.151Z" hostname="rainer-HP-EliteBook-850-G5" time="4.468">
+  <properties/>
+  <testcase name="testBatchImport_allValidFiles_TST_MAP_055_1" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="1.585"/>
+  <testcase name="testBatchImport_allFilesFailed_TST_MAP_055_3" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.52"/>
+  <testcase name="testBatchImport_emptyUriList_TST_MAP_055_4" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.5"/>
+  <testcase name="testBatchImport_clearBatchImportResult_TST_MAP_055_5" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.461"/>
+  <testcase name="testBatchImport_partialFailure_TST_MAP_055_2" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.467"/>
+  <testcase name="testUpdateRoute_updatesSummaryWithoutTriggeringRefreshRoutes_TST_GEO_003" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.458"/>
+  <testcase name="testBatchImport_withSportTypeOverride_TST_MAP_056_1" classname="com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest" time="0.475"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

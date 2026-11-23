@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" tests="64" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:37:12.536Z" hostname="rainer-HP-EliteBook-850-G5" time="84.927">
+  <properties/>
+  <testcase name="testParseV1ThreatPacket_realHardwareRearVue820Sequences" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="2.738"/>
+  <testcase name="testWatchdog_resetsSensorsToClearOnStarvation" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.324"/>
+  <testcase name="testV2SilenceWatchdog_fallsBackToV1AfterTimeout" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.658"/>
+  <testcase name="testDisconnectFromGatt_resetsV2FallbackState" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.314"/>
+  <testcase name="testAllSixEmissionSites_preserveManualIsAutoModeAndRestoreOnSetAutoMode" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.768"/>
+  <testcase name="testRearVueProtocol_modeTypeDecoding" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.328"/>
+  <testcase name="testOnCharacteristicWriteCompleted_authFailureRequestsBondAndRollsBackMode" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.327"/>
+  <testcase name="testParseV2ThreatPacket_decodesAuthenticRearVue820CaptureFrame" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.3"/>
+  <testcase name="testProcessTargets_propagatesNullDistanceWhenRoadClears" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.303"/>
+  <testcase name="testOnOtherCharacteristicUpdate_rearVueControlIndicationConfirmsMode" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.314"/>
+  <testcase name="testCompleteLightControlRegistration_concurrentDisconnectDuringClampedSetLightMode_doesNotResurrectSolid_TST_CON_055_4" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.355"/>
+  <testcase name="testParseV2ThreatPacket_demuxesDeviceStatusFrames" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.342"/>
+  <testcase name="testParseV2ThreatPacket_demuxesIdleHeartbeats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.329"/>
+  <testcase name="testFallbackToV1_subscribesToV1WhenV2CharacteristicMissing" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.31"/>
+  <testcase name="testStartSearching_transitionsRadarStateToConnecting" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.343"/>
+  <testcase name="testIsMeasurementCharacteristic_acceptsBothV1AndV2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.315"/>
+  <testcase name="testRearVueProtocol_modeTypeEncoding" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.367"/>
+  <testcase name="testNotifyStopSearching_failure_transitionsToDisconnected" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.278"/>
+  <testcase name="testConfigureServices_radarV1OnlyOverrideDisabled_initiatesV2Handshake" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.505"/>
+  <testcase name="testParseV1ThreatPacket_demuxesNonThreatPackets" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.316"/>
+  <testcase name="testWatchdog_transitionsToDisconnectedErrorOnStarvation" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.321"/>
+  <testcase name="testConfigureServices_unbondedWithV2_fallsBackToV1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.351"/>
+  <testcase name="testParseV1ThreatPacket_statefulSpeedAndThreatCalculation" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.277"/>
+  <testcase name="testParseV2ThreatPacket_demuxesNonThreatPackets" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.289"/>
+  <testcase name="testOnOtherCharacteristicUpdate_rearVueSlotNotificationUpdatesController" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.334"/>
+  <testcase name="testParseV1ThreatPacket_filtersInvalidTracks" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.316"/>
+  <testcase name="testParseV1ThreatPacket_decodesMultiTargetFrame" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.38"/>
+  <testcase name="testSetLightMode_enqueuesWriteCharacteristicWhenSupported" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.35"/>
+  <testcase name="testConfigureServices_legacyStvzoModel_defersRegistrationAndClampsActiveDayFlashToSolid_TST_CON_055_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.282"/>
+  <testcase name="testConfigureServices_enqueuesBatteryCccdBeforeV2MtuAndCccd" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.319"/>
+  <testcase name="testOnOtherCharacteristicUpdate_rearVueEchoGuardSuppressesNotificationWithinWindow" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.35"/>
+  <testcase name="testProcessV1Notification_heartbeatAndSectorLinkAlive" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.324"/>
+  <testcase name="testProcessTargets_preservesAudioSnoozeAndLightMode" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.325"/>
+  <testcase name="testSetLightMode_rearVueNightFlashConfirmsWriteAndPreventsOffReversion" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.376"/>
+  <testcase name="testBTLERadarDevice_oneHzDriverGating_limitsScalarSensorUpdates" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.314"/>
+  <testcase name="testOnAccumulatorsReset_clearsVehicleCountSensorsAndSession" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.367"/>
+  <testcase name="testDisconnectFromGatt_cleansUpRearVueControlCharacteristics" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.334"/>
+  <testcase name="testDisconnectFromGatt_dropsLateQueuedMeasurementRunnable" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.347"/>
+  <testcase name="testStartSearching_whenDisconnected_transitionsToConnecting" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.361"/>
+  <testcase name="testConfigureServices_radarV1OnlyOverrideForcesV1Fallback" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.528"/>
+  <testcase name="testConfigureServices_fallsBackToLegacyLightControlWhenControlServiceMissing" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.364"/>
+  <testcase name="testNotifyStopSearching_failure_preservesDisconnectedError" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.271"/>
+  <testcase name="testMultiInstanceBleRadar_disconnectedDeviceReturnsFalse" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.214"/>
+  <testcase name="testParseV1ThreatPacket_trackReuseAfterTimeoutResetsSpeedHistory" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.217"/>
+  <testcase name="testConfigureServices_nonStvzoModel_registersWithStvzoFalseAndPreservesDayFlash_TST_CON_055_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.305"/>
+  <testcase name="testOnDescriptorWriteCompleted_v2CccdFailure_fallsBackToV1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.23"/>
+  <testcase name="testOnOtherCharacteristicUpdate_lightControlUpdatesController" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.163"/>
+  <testcase name="testConfigureServices_bondedWithV2_enqueuesMtuAndCccd" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.257"/>
+  <testcase name="testParseV2ThreatPacket_decodesMultiTargetFrameWithLateralOffsetAndSize" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.22"/>
+  <testcase name="testProcessTargets_haltsActiveRadarTrafficSimulator" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.265"/>
+  <testcase name="testConfigureServices_discoversRearVueControlServiceAndSubscribes6a4e2f11CccdFirst" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.234"/>
+  <testcase name="testConfigureServices_rearVueStvzoModel_defersRegistrationSetsHardwareBrakeAndClampsToSolid_TST_CON_055_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.2"/>
+  <testcase name="testOnOtherCharacteristicUpdate_modelNumberDetectsStvzo" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.135"/>
+  <testcase name="testConfigureServices_modelNumberReadFailureNull_fallsBackImmediatelyOnce_TST_CON_055_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.197"/>
+  <testcase name="testRearVueProtocol_isControlSlotNotification" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.251"/>
+  <testcase name="testIsStvzoModel_patternMatching" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.205"/>
+  <testcase name="testConfigureServices_transitionsRadarStateToConnectedAndArmsWatchdog" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.198"/>
+  <testcase name="testComputeOverallThreatLevel_prioritizesHighestThreat" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.164"/>
+  <testcase name="testSetLightMode_returnsFalseWhenLightControlNotDiscovered" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.148"/>
+  <testcase name="testStartSearching_whenDisconnectedError_preservesDisconnectedError" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.199"/>
+  <testcase name="testIsReceivingData_returnsFalseOnWatchdogTimeoutEvenIfGattConnected" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.186"/>
+  <testcase name="testDisconnectAndShutdown_clearsStvzoStateAndDropsLateModelReadOrTimeout_TST_CON_055_4" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.223"/>
+  <testcase name="testSetLightMode_rearVue4ByteCommandDispatchWithWriteTypeDefault" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.189"/>
+  <testcase name="testConfigureServices_timeoutFallbackAndLateStvzoSelfHeal_plusIdempotentLateTimeout_TST_CON_055_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" time="1.208"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

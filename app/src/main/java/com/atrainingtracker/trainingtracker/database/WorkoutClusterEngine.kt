@@ -989,6 +989,88 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     /**
+     * Silently seeds a genuinely new [WorkoutCluster] during workout import without falling back
+     * to [learnFromWorkout]'s name-based merge lookup (`REQ-MIG-060`).
+     *
+     * Strips any `#N` hit-count suffix from [workoutName], resolves collisions via
+     * [findUniqueClusterName], falls back to [KnownLocationsRepository] / date only when untitled,
+     * preserves [ensureStartingLocationAnchor], and assigns with `forceIdentity = false` so
+     * existing imported workout titles remain untouched.
+     */
+    @JvmOverloads
+    fun createAutoClusterFromImport(
+        context: Context,
+        workoutId: Long,
+        start: LatLng,
+        end: LatLng,
+        apex: LatLng,
+        distance: Double,
+        sportId: Long,
+        workoutName: String?,
+        baseFileName: String,
+        firstTime: String? = null,
+        minLat: Double? = null,
+        minLng: Double? = null,
+        maxLat: Double? = null,
+        maxLng: Double? = null,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
+    ): Long {
+        synchronized(clusterLock) {
+            val rawTitle = workoutName?.trim()?.takeIf { it.isNotEmpty() && it != baseFileName }
+            val strippedTitle = if (rawTitle != null) stripHitCount(rawTitle).trim() else ""
+            val baseClusterName = if (strippedTitle.isNotEmpty()) {
+                strippedTitle
+            } else {
+                val seedName = try {
+                    val startLoc = KnownLocationsRepository.getInstance(context).getMyLocation(start)
+                    WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
+                } catch (_: Exception) {
+                    null
+                }
+                val dateFallback = firstTime?.take(10)?.takeIf { it.isNotBlank() }
+                    ?: baseFileName.take(10).ifEmpty { "Workout" }
+                seedName ?: context.getString(R.string.cluster_default_name_format, dateFallback)
+            }
+
+            val uniqueName = findUniqueClusterName(baseClusterName)
+                .ifEmpty { context.getString(R.string.cluster_default_name_format, "Workout") }
+
+            val resolvedSportType = SportTypesRepository.getInstance(appContext).getBSportType(sportId)
+            val newCluster = WorkoutCluster(
+                name = uniqueName,
+                probableSportId = sportId,
+                startLat = start.latitude,
+                startLng = start.longitude,
+                endLat = end.latitude,
+                endLng = end.longitude,
+                maxDispLat = apex.latitude,
+                maxDispLng = apex.longitude,
+                refDistance = distance,
+                hitCount = 0,
+                bSportType = resolvedSportType,
+                minLat = minLat,
+                minLng = minLng,
+                maxLat = maxLat,
+                maxLng = maxLng,
+                minAltLat = minAltPos?.latitude,
+                minAltLng = minAltPos?.longitude,
+                maxAltLat = maxAltPos?.latitude,
+                maxAltLng = maxAltPos?.longitude
+            )
+            val newClusterId = dbManager.insertCluster(newCluster)
+            ensureStartingLocationAnchor(start)
+            assignClusterToWorkout(
+                context = context,
+                workoutId = workoutId,
+                clusterId = newClusterId,
+                forceIdentity = false
+            )
+            return newClusterId
+        }
+    }
+
+    /**
      * Calculates similarity between a spatial signature and a WorkoutCluster,
      * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064).
      */
@@ -1112,12 +1194,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val clusters = dbManager.getAllClusters().map { cluster ->
             val realCount = actualCounts[cluster.id] ?: 0
             if (cluster.hitCount != realCount) {
-                val healed = cluster.copy(
+                // Read-only scoring projection: reflect authoritative counts in-memory without
+                // performing hidden SQLite writes during read queries (REQ-GEO-003, ATT-8133).
+                cluster.copy(
                     hitCount = realCount,
                     previewPaths = if (realCount == 0) emptyList() else cluster.previewPaths
                 )
-                dbManager.updateCluster(healed)
-                healed
             } else {
                 cluster
             }

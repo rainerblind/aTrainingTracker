@@ -144,6 +144,7 @@ class SingleActivityNavigationTest {
         assertEquals(NavRoutes.SPORT_TYPES, NavRoutes.fromDrawerItemId(R.id.drawer_sport_types))
         assertEquals(NavRoutes.TRAINING_ZONES, NavRoutes.fromDrawerItemId(R.id.drawer_training_zones))
         assertEquals(NavRoutes.BACKUP_RESTORE, NavRoutes.fromDrawerItemId(R.id.drawer_backup_restore))
+        assertEquals(NavRoutes.BACKUP_RESTORE, NavRoutes.fromDrawerItemId(R.id.drawer_export))
         assertEquals(NavRoutes.ADVANCED_SETTINGS, NavRoutes.fromDrawerItemId(R.id.drawer_advanced_tuning))
         assertEquals(NavRoutes.TIPS_GUIDE, NavRoutes.fromDrawerItemId(R.id.drawer_tips_guide))
         assertEquals(NavRoutes.SUPPORTER, NavRoutes.fromDrawerItemId(R.id.drawer_supporter))
@@ -151,7 +152,6 @@ class SingleActivityNavigationTest {
         // Non-route items must return null
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_strava))
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_dropbox))
-        assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_export))
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_tracking_layouts))
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_units))
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_display_settings))
@@ -188,7 +188,7 @@ class SingleActivityNavigationTest {
     fun testSettingsBottomSheetTypeMapping() {
         assertEquals(SettingsBottomSheetType.STRAVA, NavRoutes.toSettingsBottomSheetType(R.id.drawer_strava))
         assertEquals(SettingsBottomSheetType.DROPBOX, NavRoutes.toSettingsBottomSheetType(R.id.drawer_dropbox))
-        assertEquals(SettingsBottomSheetType.EXPORT, NavRoutes.toSettingsBottomSheetType(R.id.drawer_export))
+        assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_export))
         assertEquals(SettingsBottomSheetType.ACTIVITY_TYPE, NavRoutes.toSettingsBottomSheetType(R.id.drawer_tracking_layouts))
         assertEquals(SettingsBottomSheetType.UNITS, NavRoutes.toSettingsBottomSheetType(R.id.drawer_units))
         assertEquals(SettingsBottomSheetType.DISPLAY, NavRoutes.toSettingsBottomSheetType(R.id.drawer_display_settings))

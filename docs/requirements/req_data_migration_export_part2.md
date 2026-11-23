@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.40  
+**Version**: 1.0.51  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 33
+**Total Requirements**: 38
 
 ---
 
@@ -1116,7 +1116,7 @@
 ### REQ-EXP-047: Per-Channel GNSS Row Deduplication, Location Provider Tagging (`GNSS` vs `GNSS_FUSED`) & Backwards-Compatible Offline Replay Selection (`ATT-9604`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-EXP-047`
-- **System Requirement(s)**: `Derived (SW-only)` — Internal software-only sidecar row deduplication and provider channel disambiguation extending `REQ-EXP-045` / `REQ-EXP-046` without modifying external hardware sensors, Android HALs, SQLite schemas, or cloud APIs.
+- **System Requirement(s)**: `SYSREQ-TRK-010`, `SYSREQ-DEX-001` — Per-channel GNSS row deduplication and provider channel disambiguation (`GNSS` vs `GNSS_FUSED`) extending `REQ-EXP-045` / `REQ-EXP-046` for smartphone raw telemetry sidecar capture and offline replay.
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1142,10 +1142,151 @@
 
 ---
 
+### REQ-EXP-048: Preserve Irreplaceable Raw Sensor Sidecars During `ExportManager.invalidateWorkoutExport` (`ATT-9613`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-048`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-004` — Derived export cache classification in `FileFormat` and `ExportManager.invalidateWorkoutExport` cleanup filtering refining `REQ-DAT-029.4` and protecting `REQ-EXP-044.1` / `REQ-EXP-045.3`–`.4` irreplaceable raw sensor sidecars during re-export and cloud sync.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `FileFormat.java`, `ExportManager.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: `ExportManager.invalidateWorkoutExport` (created in `ATT-3274` before `FileFormat.RAW_SENSOR` existed) iterated over all `FileFormat.values()` and deleted `files/<dirName>/<fileBaseName><fileEnding>`, permanently destroying live-recorded, irreplaceable `files/raw_sensor/<fileBaseName>.polar_raw.csv.gz` archives whenever Polar deferred backfill, workout cropping, or swim metric recalculation invalidated cached exports.
+- **Description**:
+  1. *Derived Export Cache Classification (`REQ-EXP-048.1`)*:
+     - `FileFormat` SHALL declare an explicit per-constant boolean property `isDerivedExportFile()` returning `true` strictly for SQLite-regenerable derived export formats (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) and `false` for irreplaceable primary-capture sidecars (`RAW_SENSOR`) and non-file sync targets (`HEALTH_CONNECT`), while preserving all existing enum names, `getDirName()`, `getFileEnding()`, `getUiNameId()`, `getMimeType()`, `STANDARD_FILE_FORMATS`, and `ONLINE_COMMUNITIES`.
+  2. *Sidecar-Safe Cache Invalidation (`REQ-EXP-048.2`)*:
+     - `ExportManager.invalidateWorkoutExport(fileBaseName)` SHALL delete local cached export files strictly for formats where `format.isDerivedExportFile() && !format.getFileEnding().isEmpty()` (when `baseDir != null && !baseDir.getPath().isEmpty()`), and MUST NEVER delete any file inside `files/raw_sensor/` (`.polar_raw.csv.gz`, `.phone_raw.csv.gz`, or `.tmp` crash-recovery streams).
+     - `ExportManager.invalidateWorkoutExport(fileBaseName)` SHALL preserve deletion of all 6 derived export caches (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`), WorkManager task cancellation, `ExportStatus.WAITING` database reset, and status broadcast (`REQ-DAT-029.4`). Authorized raw sidecar deletion SHALL remain restricted strictly to explicit workout deletion (`WorkoutRepository.deleteWorkoutCascade`, `WorkoutSummariesDatabaseManager.deleteWorkout`) and retention pruning (`PolarRawTelemetryPruner`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-DAT-029.4` file-cleanup scope (`ExportManager.invalidateWorkoutExport`) in `req_data_migration_export_part1.md`, protecting `REQ-EXP-044.1` and `REQ-EXP-045.3`–`.4`.
+2. *Historical Origin & Commit Trace*: `ATT-3274` (`6ac6e7aa`) & `ATT-3995`, authored before `FileFormat.RAW_SENSOR` (`ATT-8020`, `ATT-9348`).
+3. *Root Reason for Existing Formulation*: Every local file under `FileFormat.values()` in `ATT-3274` was a disposable SQLite-derived cache that had to be purged prior to post-crop/post-backfill re-export.
+4. *Preservation of Core Invariants*: All 6 derived export caches (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) remain purged on invalidation; WorkManager cancellation, `WAITING` status reset, cascade deletion, and retention pruning stay 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with derived export files (`CSV`, `GC`, `TCX`, `GPX`, `FIT`, `STRAVA`) and raw sensor sidecars (`files/raw_sensor/<fileBaseName>.polar_raw.csv.gz`, `*.phone_raw.csv.gz`, and `.tmp` files), *When* `ExportManager.invalidateWorkoutExport(fileBaseName)` runs, *Then* all 6 derived files are deleted, WorkManager tasks are cancelled, DB status resets to `WAITING`, and all `raw_sensor/*` sidecars remain untouched with identical bytes.
+• *Given* `ExportManager.invalidateWorkoutExport(fileBaseName)` has completed on a workout with Polar and Phone raw sidecars, *When* `RawSensorFileExporter.export(...)` executes during subsequent re-export, *Then* both sidecars are found intact and exported successfully.
+
+**Invariants**: `FileFormat.RAW_SENSOR` constants (`"raw_sensor"`, `".polar_raw.csv.gz"`, `"application/gzip"`) and `STANDARD_FILE_FORMATS` unchanged; `REQ-DAT-029.4` WorkManager cancellation & `WAITING` reset preserved; explicit deletion (`WorkoutRepository.deleteWorkoutCascade`, `WorkoutSummariesDatabaseManager.deleteWorkout`) & `PolarRawTelemetryPruner` retention unchanged; `0` SQLite/UI/`strings*.xml` edits; `ANT-Android-SDKs` untouched at `160000`.
+
+---
+
+### REQ-EXP-049: Metadata Column Short-Circuit and Nested-Parentheses `SensorType` Parsing in `CSVFileWriter` (`ATT-9245`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-049`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal `CSVFileWriter.doExport()` column-name classification refining `SYSREQ-DEX-001` tabular CSV export without altering external file schemas, SQLite tables, or cloud APIs.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `CSVFileWriter.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: `CSVFileWriter.doExport()` passed SQLite metadata columns (`_id`, `time`) to `EnumUtils.safeValueOfOrNull(SensorType.class, ...)` and used a greedy `(.*)( \(.*\)|...)` regex that matched up to the last `" ("` on device names with nested parentheses such as `ALTITUDE (Topografische Höhe (DEM))` (`"ALTITUDE (Topografische Höhe"`), emitting 3 full `IllegalArgumentException` stack traces per CSV export and defaulting nested-parentheses sensor columns to `SensorValueType.STRING`.
+- **Description**:
+  1. *Metadata Column Short-Circuit (`REQ-EXP-049.1`)*: `CSVFileWriter.doExport()` SHALL recognize `WorkoutSamplesDbHelper.C_ID` (`"_id"`) and `WorkoutSamplesDbHelper.TIME` (`"time"`) directly as unsourced `SensorValueType.STRING` metadata columns before any source stripping or `EnumUtils.safeValueOfOrNull(SensorType.class, ...)` lookup, preserving cursor encounter order at the start of the CSV header and emitting zero `IllegalArgumentException` warnings.
+  2. *First-Delimiter `SensorType` Extraction (`REQ-EXP-049.2`)*: For device-attributed column names (`<SensorType> (<DeviceName>)`), `CSVFileWriter` SHALL extract the canonical `SensorType` name as the substring before the **first** `" ("` (`indexOf(" (") > 0`) before checking location source suffixes (`_gps`, `_network`, `_google_fused`, `_att_fused`), so nested parentheses such as `ALTITUDE (Topografische Höhe (DEM))` resolve to `SensorType.ALTITUDE` (`SensorValueType.DOUBLE`) while preserving alphabetical sorting of sourced columns and RFC-4180 CSV serialization.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `WorkoutSamples.db` cursor containing `_id`, `time`, `ALTITUDE (Topografische Höhe (DEM))`, and standard/location-suffixed columns, *When* `CSVFileWriter.doExport()` exports the workout, *Then* `_id` and `time` are exported directly in unsourced order, `ALTITUDE (Topografische Höhe (DEM))` resolves cleanly to `SensorType.ALTITUDE` (`SensorValueType.DOUBLE`), sourced columns sort alphabetically after unsourced columns, and zero `IllegalArgumentException` stack traces or `Log.w` warnings are emitted.
+
+**Invariants**: CSV column ordering (unsourced/metadata columns in cursor order followed by alphabetically sorted sourced columns), `SensorValueType` serialization, RFC-4180 escaping, cooperative `isCancelled()` abort/cleanup, and Java retention (`adr_001_java_core_services_migration.md`) preserved; `0` SQLite/UI/`strings*.xml` edits.
+
+---
+
+### REQ-MIG-059: Integrated Export Tab 0 in `ImportBackupTabsScreen` & Consolidated Drawer Entry (`ATT-8103`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-059`
+- **System Requirement(s)**: `Derived (SW-only)` — UI navigation and settings consolidation integrating local workout export format toggles into `ImportBackupTabsScreen` Tab 0 and removing the standalone Export drawer item while preserving `SYSREQ-DEX-001` export formats and `SYSREQ-DEX-005` backup/restore semantics unchanged.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `ExportTabContent.kt`, `ImportBackupTabsScreen.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `TrainingApplication.java`, `res/values*/strings.xml` (9 locales)
+- **Localization Parity**: Updated `import_backup`, `import_backup_summary`, and added `tab_export` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+- **Rationale**: Consolidates all local data transfer and archival features (Export, Import, Auto-Import, Backup, Restore) under a single tabbed hub and eliminates the duplicate standalone Export bottom-sheet entry from the Navigation Drawer (refining `REQ-MIG-011`, `REQ-MIG-052`, `REQ-UI-463`, `REQ-SET-054`).
+- **Description**:
+  1. *5-Tab `ImportBackupTabsScreen` with Export at Index 0 (`REQ-MIG-059.1`)*: `ImportBackupTabsScreen` SHALL expose 5 ordered tabs (`ImportBackupTabIndex`: `0 = Export`, `1 = Import`, `2 = Auto-Import`, `3 = Backup`, `4 = Restore`) in a `PrimaryScrollableTabRow` with single-line non-wrapping labels and optional `initialTab` parameter (defaulting to `0`). `ExportTabContent` SHALL render all 6 file export toggles (TCX, GPX, Golden Cheetah JSON, CSV, FIT, Raw Sensor Data) in an `ElevatedCard` with `navigationBarsPadding()` and immediate persistence via null-safe `TrainingApplication.setExportTo*()`.
+  2. *Navigation Drawer Cleanup, Deep-Link Alias & Zero Dead Islands (`REQ-MIG-059.2`)*: `AppNavigationDrawer.createDrawerGroups()` SHALL omit the separate `R.id.drawer_export` item from `prefsOnlineCommunities` (leaving 5 items ending with `R.id.drawer_backup_restore`). `NavRoutes.fromDrawerItemId(R.id.drawer_export)` SHALL alias to `NavRoutes.BACKUP_RESTORE`, `NavRoutes.toBottomSheetType(R.id.drawer_export)` SHALL return `null`, `isDrawerItemSelected(R.id.drawer_backup_restore, R.id.drawer_export)` SHALL return `true`, and obsolete `SettingsBottomSheetType.EXPORT` / `ExportSettingsDialog.kt` SHALL be removed.
+  3. *9-Language Localization Parity (`REQ-MIG-059.3`)*: `import_backup` (drawer & top bar title), `import_backup_summary`, and `tab_export` SHALL be localized consistently across all 9 locales without inline emojis (`TranslationParityTest`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Navigation Drawer opened and *Synchronization* expanded, *When* inspecting menu items, *Then* no separate *Export* entry exists and a single renamed entry (*Export, Import & Backup* in EN/DE, localized across all 9 locales) navigates to `ImportBackupTabsScreen` at Tab 0 (*Export*).
+• *Given* `ImportBackupTabsScreen` opened at Tab 0, *When* toggling any of the 6 export formats (TCX, GPX, Golden Cheetah JSON, CSV, FIT, Raw Sensor Data) and switching across all 5 tabs (`Export | Import | Auto-Import | Backup | Restore`), *Then* each toggle persists immediately to `TrainingApplication` preferences and all 5 tabs render their respective screens cleanly without wrapping or clipping.
+
+**Invariants**: Existing `SharedPreferences` keys (`SP_EXPORT_*`) and defaults (`TCX = true`, others `false`) remain untouched; `ImportBackupTabsScreen.kt` stays `<= 1,500` LoC; zero dead/unmounted Composable islands remain.
+
+---
+
+### REQ-MIG-060: Silent Default Route Cluster Creation Named After First Workout & Opt-In Import Prompting (`ATT-9013`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-060`
+- **System Requirement(s)**: `SYSREQ-DEX-002`, `SYSREQ-DEX-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `TuningPreferencesDataStore.kt`, `TrainingApplication.java`, `ClusterTuningContent.kt`, `ClusterTuningSection.kt`, `AdvancedTuningScreen.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `res/values*/strings_auto_import.xml` (9 locales)
+- **Localization Parity**: Added `cluster_tuning_ask_on_new_import_label` and `cluster_tuning_ask_on_new_import_summary` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+- **Rationale**: Prompting via `ClusterNamingDialog` for every unmatched spatial track during bulk Strava/FIT/TCX/GPX imports stalls ingestion behind `Semaphore(3)` while `AutoImportManager` (`listener = null`) left all novel routes unclustered (`ATT-9013`, refining `REQ-MIG-025`, `REQ-MIG-027`, `REQ-MIG-048`, `REQ-MIG-052`, `REQ-SET-075`, `REQ-UI-186`).
+- **Description**:
+  1. *Global Preference & Default (`REQ-MIG-060.1`)*: `TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT` SHALL default to `false` (`TuningConfig.askOnNewClusterDuringImport`, `KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT` in `ALL_KEYS`, null-safe `TrainingApplication.askOnNewClusterDuringImport()`).
+  2. *Shared 9-Locale Opt-In Toggle (`REQ-MIG-060.2`)*: `ClusterTuningContent` SHALL expose a `TuningToggleItem` controlling `askOnNewClusterDuringImport`, wired across `PreImportTuningBottomSheet` (`BackupRestoreViewModel.saveClusteringTolerances()`) and `ClusterTuningSection` (`AdvancedTuningScreen`), localized across all 9 locales without inline emojis.
+  3. *Silent Auto-Creation & Collision-Safe Naming (`REQ-MIG-060.3`)*: When `suggestCluster(...)` returns `null` during `LegacyImportEngine.recalculateStats()` and `!TrainingApplication.askOnNewClusterDuringImport()`, ingestion SHALL bypass `listener?.onNewClusterCandidate(...)` and invoke `WorkoutClusterEngine.createAutoClusterFromImport(...)` to insert a genuinely new `WorkoutCluster` (never falling back to `learnFromWorkout`'s name-merge lookup), stripping `#N` via `stripHitCount`, resolving collisions via `findUniqueClusterName` (`REQ-PER-041`), falling back to `KnownLocationsRepository`/`WorkoutAutoNamingHelper.generateClusterSeedName` or `R.string.cluster_default_name_format` only when untitled (`workoutName.isNullOrBlank() || workoutName == baseFileName`), preserving `ensureStartingLocationAnchor(start)` (`REQ-UI-186`), and assigning with `forceIdentity = false` so imported workout titles remain intact.
+  4. *Auto-Import & Opt-In Parity (`REQ-MIG-060.4`)*: Background `AutoImportManager` SHALL silently create clusters when `!askOnNewClusterDuringImport` and remain non-blocking (`listener == null` skips prompting) when `askOnNewClusterDuringImport == true`; manual/archive imports with `askOnNewClusterDuringImport == true` SHALL present `ClusterNamingDialog` per `REQ-MIG-025`; `BulkImportBatchContext` SHALL continue deferring `refreshClusters()` until post-batch reconciliation (`REQ-STB-021.3`) while SQLite cluster lookups remain immediately visible within the batch.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* default settings (`askOnNewClusterDuringImport == false`), *When* importing a Strava archive, FIT/TCX/GPX batch, cloud recovery, or Auto-Import with novel and matching routes, *Then* no `ClusterNamingDialog` appears, distinct routes create collision-safe clusters named after their first workout (or `Lieblingsort`/date fallback if untitled), matching workouts join and preserve custom titles, and `ensureStartingLocationAnchor` seeds missing start locations.
+• *Given* the user enables `askOnNewClusterDuringImport = true` in `PreImportTuningBottomSheet` or `ClusterTuningSection`, *When* a manual/archive import encounters a novel route, *Then* `ClusterNamingDialog` is presented per `REQ-MIG-025`, while `AutoImportManager` stays non-blocking.
+
+**Invariants**: `REQ-MIG-025` interactive "Leave Unclustered" (`clusterId = -1L`), `REQ-SET-047` `learnFromWorkout` manual name-merge, `REQ-PER-041` `findUniqueClusterName` suffixing, `REQ-MIG-054` `UPLOAD_TO_STRAVA = 0` guard, and `ImportBackupTabsScreen.kt <= 1,500` LoC remain intact.
+
+---
+
+### REQ-MIG-061: Consolidated Streaming TCX/GPX/FIT Parsers, Shared HRV rMSSD Utility, Zip-Slip-Hardened Cloud/ZIP Auto-Import & Single-Unzip `.attbackup` Staging (`ATT-8135`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-061`
+- **System Requirement(s)**: `SYSREQ-DEX-002`, `SYSREQ-DEX-004`, `SYSREQ-DEX-005`, `SYSREQ-DEX-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `TcxParser.kt`, `GpxTrackpointParser.kt`, `TrackpointModels.kt`, `TCXFileWriter.kt`, `WorkoutParser.kt`, `FitWorkoutParser.kt`, `TcxWorkoutParser.kt`, `GpxWorkoutParser.kt`, `TcxCourseParser.kt`, `GpxRouteImporter.kt`, `StravaBulkExportImporter.kt`, `HrvRmssdCalculator.kt`, `HrvRollingEngine.kt`, `HrvPostWorkoutRecomputer.kt`, `MorningHrvCheckViewModel.kt`, `HrvSignalQualityAnalyzer.kt`, `SecureZipExtractor.kt`, `CloudWorkoutSourceScanner.kt`, `AutoImportManager.kt`, `LegacyImportEngine.kt`, `BackupOrchestrator.kt`, `BackupWorker.kt`, `ImportEngine.kt`, `BackupRestoreViewModel.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Parallel implementations across `migration/`, `routes/parsers/`, `exporter/`, and `hrv/` created redundant intermediate trackpoint lists (`TcxTrackpointParser.kt`), dead writer code (`TCXFileWriter.buildLap`), 4 duplicated HRV rMSSD loops with undocumented threshold differences (`10` vs `3` vs `1`), a path-traversal / Zip-Slip gap and missing retry/backoff in `AutoImportManager`, duplicated Dropbox/Drive bulk recovery channels in `LegacyImportEngine` & `BackupRestoreViewModel`, duplicated backup orchestration between `BackupWorker` & `BackupRestoreViewModel`, and double copying/unzipping of `.attbackup` archives across `analyzeImport` -> `performIncrementalImport` (`ATT-8135`, refining `REQ-MIG-036`, `REQ-MIG-037`, `REQ-MIG-038`, `REQ-MIG-040`, `REQ-MIG-043`, `REQ-DAT-040`, `REQ-MIG-052`, `REQ-MIG-056`).
+- **Description**:
+  1. *Direct Streaming TCX/GPX Parsing, Dead Code Removal & `WorkoutParser` Interface (`REQ-MIG-061.1`)*: `TcxTrackpointParser.kt` (along with unused `ParsedTcxData` in `TrackpointModels.kt`) and dead `TCXFileWriter.buildLap(...)` SHALL be removed. `TcxParser` and `GpxTrackpointParser` SHALL expose single-pass streaming pull APIs (`parseStreaming(...)`) consumed directly by `TcxWorkoutParser`, `TcxCourseParser`, `GpxWorkoutParser`, and `GpxRouteImporter` without materializing intermediate `RawTrackpoint`/`TcxTrackpoint` lists, while preserving `TcxParser.parse(): Result<TcxDocument>` (`REQ-DAT-040`) and `GpxTrackpointParser.parse()` fidelity. A unified `WorkoutParser` interface (`formatExtension`, `workoutSource`, `parse(File, Context)`, `parse(InputStream, Context)`, `forFormat(...)`) SHALL be implemented by `FitWorkoutParser`, `TcxWorkoutParser`, and `GpxWorkoutParser` and used by `LegacyImportEngine` (retaining existing public/internal `importFrom*` facade shims per `REQ-MIG-038`) and `StravaBulkExportImporter`.
+  2. *Canonical `HrvRmssdCalculator` Utility (`REQ-MIG-061.2`)*: Bias-free and raw rMSSD computation SHALL be consolidated into pure-JVM `HrvRmssdCalculator` (`banalservice/devices/hrv/`) with explicit documented `minValidPairs` constants (`LIVE_ROLLING_MIN_VALID_PAIRS = 10` for `HrvRollingEngine`, `POST_WORKOUT_MIN_VALID_PAIRS = 3` for `HrvPostWorkoutRecomputer`, `RESTING_CHECK_MIN_VALID_PAIRS = 1` for `MorningHrvCheckViewModel`, and `computeRawRmssd` for `HrvSignalQualityAnalyzer`).
+  3. *Zip-Slip-Hardened Shared Cloud/ZIP Pipeline (`REQ-MIG-061.3`)*: `SecureZipExtractor` SHALL expose `extractWorkoutArchive(zipFile, destDir)` enforcing Zip-Slip normalized prefix bounds, null-byte rejection, symlink rejection, atomic temp writes, `toRealPath` post-checks, and zip-bomb caps (`MAX_ENTRY_COUNT`, `MAX_SINGLE_FILE_BYTES`, `MAX_TOTAL_UNCOMPRESSED_BYTES`) for workout `.zip` archives. `CloudWorkoutSourceScanner` SHALL centralize Dropbox/Google Drive listing, retry with `RateLimitException` backoff, `SecureZipExtractor.sanitizeDriveFileName` (`ATT-6174`), and hardened `.zip` extraction. `AutoImportManager` and `LegacyImportEngine` MUST route all remote downloads and `.zip` entries through this shared hardened pipeline, rejecting traversal/symlink/zip-bomb payloads with zero files escaping staging.
+  4. *Consolidated Bulk Cloud Recovery (`REQ-MIG-061.4`)*: `LegacyImportEngine` SHALL consolidate `bulkRecoverFromDropbox` and `bulkRecoverFromGoogleDrive` onto a single `executeBulkCloudRecovery(...)` 3-worker `Channel` pipeline with `ExistingWorkoutsSnapshot` pre-download deduplication, deterministic ascending filename sort (`REQ-MIG-049.4`), sanitized per-job temp directories, `WorkoutParser` dispatch, and cooperative `CancellationException` propagation. `BackupRestoreViewModel` SHALL consolidate `bulkRecoverLegacyData` and `bulkRecoverGoogleDriveData` onto a shared helper preserving Dropbox credential check, Google Drive token refresh precheck, `totalScanned == 0` diagnostic (`R.string.google_drive_scan_empty_diagnostic`), and `BulkImportBatchContext` reconciliation.
+  5. *Single-Unzip `.attbackup` Staging Reuse & Shared `BackupOrchestrator` (`REQ-MIG-061.5`)*: `ImportEngine` SHALL expose `analyzeBackupToStaging(...)` and `performIncrementalImportFromStaging(...)` reusing the already-unpacked staging directory without copying or unzipping `.attbackup` a second time, preserving `BackupManager.acquireLock` and atomic SQLite `ATTACH` transactions (`REQ-MIG-043`). `BackupRestoreViewModel` SHALL track `StagedBackupSession` (URI + SHA-256 fingerprint), delete the temporary copied `.attbackup` immediately after extraction, reuse the validated staging directory on matching `performIncrementalImport` (falling back safely on mismatch/eviction), and unconditionally delete staging in `finally`, `clearState()`, and `onCleared()`. `BackupOrchestrator` SHALL unify lock acquisition, `BackupManager.createBackup`, multi-cloud upload dispatch, and `last_backup_*` prefs persistence across `BackupWorker` and `BackupRestoreViewModel.uploadToCloud`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-MIG-036`, `REQ-MIG-037`, `REQ-MIG-038`, `REQ-MIG-040`, `REQ-MIG-043`, `REQ-DAT-040`, `REQ-MIG-052`, and `REQ-MIG-056`.
+2. *Historical Origin & Commit Trace*: `TcxTrackpointParser` (`ATT-3362`, `REQ-MIG-037`) pre-dated `TcxParser` (`REQ-DAT-040`); `AutoImportManager` (`ATT-7748`, `REQ-MIG-052`) was implemented independently of `LegacyImportEngine` and omitted `ATT-6174` (`a55af6ac`, `REQ-MIG-056`) sanitization; `ImportEngine` (`ATT-3982`/`ATT-3983`) deleted `import_analysis` in `finally` to prevent stale staging residue.
+3. *Root Reason for Existing Formulation*: Independent sprint additions prioritized local isolation and eager temp deletion over shared pipelines and cross-step staging reuse.
+4. *Preservation of Core Invariants*: `TcxParser.parse(): Result<TcxDocument>`, `LegacyImportEngine` public/internal facade API (`REQ-MIG-038`), `SecureZipExtractor.sanitizeDriveFileName` signature (`REQ-MIG-056`), `REQ-MIG-043` SQLite `ATTACH` atomicity, `REQ-MIG-060` silent default clustering (`ATT-9013`), `REQ-STB-021.3` `BulkImportBatchContext`, and `BackupWorker`/`BackupRestoreViewModel` prefs parity remain 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a manipulated `.zip` archive with `../` entries or traversal remote filenames in an Auto-Import or Bulk Recovery cloud folder, *When* `AutoImportManager.syncIncremental` or `LegacyImportEngine.bulkRecoverFrom*` executes, *Then* all downloads and `.zip` extractions pass through `CloudWorkoutSourceScanner` and `SecureZipExtractor`, traversal/symlink/zip-bomb payloads are rejected with zero escaped files, `RateLimitException` triggers backoff retry, and valid sibling files import cleanly with accurate counts and cancellation cleanup.
+• *Given* a `.attbackup` archive previewed via `BackupRestoreViewModel.analyzeImport` and then imported via `performIncrementalImport` (or cancelled via `clearState()` / `onCleared()`), *When* both steps run, *Then* `SecureZipExtractor.extractBackupArchive` executes **exactly once**, temp `.attbackup` is deleted immediately, and the staging directory is unconditionally purged on completion, error, or cancellation.
+• *Given* TCX/GPX/FIT workouts/courses and HRV RR beat lists across live/post-workout/resting callers, *When* parsed or computed, *Then* `TcxTrackpointParser.kt` and `TCXFileWriter.buildLap` are removed, all 3 formats implement `WorkoutParser`, TCX/GPX stream directly without intermediate trackpoint lists, and all 4 HRV callers delegate to `HrvRmssdCalculator`.
+
+**Invariants**: Zero SQLite schema changes; `0` UI/Compose or `strings*.xml` edits; `TcxParser.parse()` & `LegacyImportEngine` facade signatures preserved; `ArchitectureConformanceContractTest` LoC ceilings preserved (`LegacyImportEngine.kt` & `BackupRestoreViewModel.kt` net-reduced); `ATT-6040` Compose UI `sealed interface` work untouched.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.50` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Promoted `REQ-MIG-061` to `[Verified]` after Gate 3 (`ATT-9660`) PASS implementation incorporating all 6 guardrails (direct streaming `TcxParser`/`GpxTrackpointParser`, deleted `TcxTrackpointParser.kt`/`ParsedTcxData`/`TCXFileWriter.buildLap`, `WorkoutParser`, `HrvRmssdCalculator` NaN guard, Windows-backslash/root-entry-hardened `SecureZipExtractor.extractWorkoutArchive`, `CloudWorkoutSourceScanner` in `AutoImportManager` & `LegacyImportEngine.executeBulkCloudRecovery` `-280` LoC, `BackupOrchestrator`, and SHA-256 single-unzip `StagedBackupSession` reuse in `ImportEngine`/`BackupRestoreViewModel`), `386/386` focused Tier-1 tests PASS across 70 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`ATT-8135_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-8135/`). |
+| `1.0.49` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Added `[Planned]` `REQ-MIG-061` (`SYSREQ-DEX-002`, `SYSREQ-DEX-004`, `SYSREQ-DEX-005`, `SYSREQ-DEX-006`, `.1`–`.5`) for direct streaming TCX/GPX parsing + `TcxTrackpointParser`/`TCXFileWriter.buildLap` removal + `WorkoutParser`, canonical `HrvRmssdCalculator`, Zip-Slip-hardened `CloudWorkoutSourceScanner`/`SecureZipExtractor.extractWorkoutArchive` in `AutoImportManager` & `LegacyImportEngine`, consolidated bulk cloud recovery, and single-unzip `.attbackup` staging reuse + shared `BackupOrchestrator` (`N/A - 0 string changes`). |
+| `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Promoted `REQ-MIG-060` to `[Verified]` after implementing silent default import cluster creation + 9-locale `askOnNewClusterDuringImport` opt-in toggle across `ClusterTuningContent`, `ClusterTuningSection`, `AdvancedTuningScreen`, `PreImportTuningBottomSheet`, `WorkoutClusterEngine`, and `LegacyImportEngine`, passing `132/132` targeted Tier-1 tests across 27 suites (`SilentImportClusterCreationTest` `4/4`, `TranslationParityTest` `11/11`, `TuningPreferencesDataStoreRoundTripTest` `3/3`, `0` fail/err/skip), `3/3` safety linters PASS, live `emulator-5554` verification (`ATT-9013_cluster_tuning.png`, `ATT-9013_cluster_tuning_enabled.png`, `0` crash logcat), and `auto_gate.py` SHA-256 bundle (`docs/engineering/test_evidence/tickets/ATT-9013/`). |
+| `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Added `[Planned]` `REQ-MIG-060` (`SYSREQ-DEX-002`, `SYSREQ-DEX-004`, `.1`–`.4`) for default silent route cluster creation named after first workout, collision-safe `findUniqueClusterName` & `KnownLocations`/date fallback, `forceIdentity = false` title preservation, `AutoImportManager` parity, and 9-locale opt-in toggle in `ClusterTuningContent`. |
+| `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Promoted `REQ-MIG-059` to `[Verified]` after implementing `ExportTabContent.kt` at Tab 0 of `ImportBackupTabsScreen`, removing separate `drawer_export` / `ExportSettingsDialog` island with deep-link aliasing, updating 9 locales, passing `124/124` targeted Tier-1 tests across 16 suites (`TranslationParityTest` `11/11`, `ExportTabContentTest` `4/4`), `:app:compileDebugAndroidTestKotlin`, and live `emulator-5554` verification (`ATT-8103_drawer.png`, `ATT-8103_export_tab.png`, `CRASH_LOGCAT_CLEAN`). |
+| `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Added `[Planned]` `REQ-MIG-059` (`Derived (SW-only)`, `.1`–`.3`) integrating `ExportTabContent` as Tab 0 of `ImportBackupTabsScreen`, removing separate `drawer_export` / `ExportSettingsDialog` island with deep-link aliasing, and renaming `import_backup` + adding `tab_export` across all 9 locales. |
+| `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `REQ-EXP-049` to `[Verified]` after implementing `CSVFileWriter.isMetadataColumn` / `extractSourcedSensorTypeName` (`_id`/`time` short-circuit + first-`" ("` prefix extraction), `9/9` targeted Tier-1 unit tests PASS (`CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`, `0` fail/err/skip, `0` new warnings). |
+| `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Added `[Planned]` `REQ-EXP-049` (`Derived (SW-only)`, `.1`–`.2`) for `_id`/`time` metadata column short-circuiting and first-`" ("` `SensorType` prefix extraction on nested-parentheses device names (`ALTITUDE (Topografische Höhe (DEM))`) in `CSVFileWriter` (`N/A - 0 string changes`). |
+| `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `REQ-EXP-048` to `[Verified]` after Gate 3 (`ATT-9658`) PASS implementation (`FileFormat.isDerivedExportFile()`, null-safe `basePath` & derived-only deletion guard in `ExportManager.invalidateWorkoutExport`), `45/45` targeted Tier-1 unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and `tools/auto_gate.py` SHA-256 evidence bundle. |
+| `1.0.41` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Added `[Planned]` `REQ-EXP-048` (`Derived (SW-only)`, `.1`–`.2`) classifying derived vs. irreplaceable export formats via `FileFormat.isDerivedExportFile()` and protecting `files/raw_sensor/*` sidecars (`.polar_raw.csv.gz`, `.phone_raw.csv.gz`, `.tmp`) during `ExportManager.invalidateWorkoutExport` (`N/A - 0 string changes`). |
 | `1.0.39` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `REQ-EXP-047` to `[Verified]` after Gate 3 (`ATT-9649`) PASS implementation incorporating all 5 guardrails (`PhoneRawChannel.GNSS_FUSED`, 4-slot `filledCount`-guarded `LocationDedupRingBuffer`, authoritative `DeviceType` tagging, `SpeedAndLocationDevice_ATTFused.kt` `1,495/1,500` LoC, `ReplayGnssSource` + v1 dedup + `--gnss-provider` CLI), `88/88` targeted unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and live `:app:replayRawTelemetry` smoke PASS. |
 | `1.0.38` | 2026-11-22 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Added `[Planned]` `REQ-EXP-047` (`Derived (SW-only)`, `.1`–`.3`) for per-channel GNSS row deduplication, `GNSS` vs `GNSS_FUSED` provider channel tagging, and backwards-compatible v1/provider-selectable offline replay (`N/A - 0 string changes`). |
 | `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Stage 6 Bounce 1/5 heal: delegated `SensorQuotaReconciliationManager.parseLastSeenTimestamp` to `LastActiveDateFormatter` (fixing non-UTC ranking inversion), guarded `WorkoutRepository.reloadWorkoutDataInternal` `finally` with `released` flag, and added `SensorType`-first matching/population in `LiveWorkoutCardStateStore.upsertLiveExtremaAvgRow` (`163/163` targeted Bounce 1/5 tests PASS across 30 suites, `0` new warnings). |

@@ -572,25 +572,14 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         const val DURATION_EXTENDED_SEC = 120
 
         /**
-         * Computes bias-free rMSSD by excluding successive pairs adjacent to artifacts (`REQ-PER-032.4`).
+         * Computes bias-free rMSSD by excluding successive pairs adjacent to artifacts (`REQ-PER-032.4`, `REQ-MIG-061.2`).
          */
         @JvmStatic
         fun calculateRmssd(beats: List<FilteredRrBeat>): Double {
-            if (beats.size < 2) return 0.0
-            var sumSquaredDiffs = 0.0
-            var validPairCount = 0
-
-            for (i in 0 until beats.size - 1) {
-                val b1 = beats[i]
-                val b2 = beats[i + 1]
-                if (!b1.isArtifact && !b2.isArtifact) {
-                    val diff = b2.rawRrMs - b1.rawRrMs
-                    sumSquaredDiffs += diff * diff
-                    validPairCount++
-                }
-            }
-
-            return if (validPairCount > 0) sqrt(sumSquaredDiffs / validPairCount.toDouble()) else 0.0
+            return com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculator.computeBiasFreeRmssd(
+                beats = beats,
+                minValidPairs = com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculator.RESTING_CHECK_MIN_VALID_PAIRS
+            ) ?: 0.0
         }
 
         /**

@@ -441,6 +441,7 @@ class LegacyImportEngineWorkoutNameTest {
 
     @Test
     fun testImportClusterDecision_persistsCustomWorkoutName_whenClustered() = runBlocking {
+        every { TrainingApplication.askOnNewClusterDuringImport() } returns true
         val tcx = generateTcx(
             activityNotes = null,
             activityExtensionName = null,
@@ -491,6 +492,7 @@ class LegacyImportEngineWorkoutNameTest {
 
     @Test
     fun testImportClusterDecision_persistsCustomWorkoutName_whenUnclustered() = runBlocking {
+        every { TrainingApplication.askOnNewClusterDuringImport() } returns true
         val tcx = generateTcx(
             activityNotes = null,
             activityExtensionName = null,

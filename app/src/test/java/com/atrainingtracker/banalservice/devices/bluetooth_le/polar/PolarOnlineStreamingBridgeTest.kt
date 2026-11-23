@@ -3961,4 +3961,93 @@ class PolarOnlineStreamingBridgeTest {
             bridge.shutDown()
         }
     }
+
+    // REQ-SET-129.1 / TST-SET-131.1
+    @Test
+    fun testPauseForOfflineSync_quiescesInFlightSearchTimeoutAndPreventsPostYieldTeardown_TST_SET_131_1() {
+        val verityMac = "24:AC:AC:24:82:56"
+        val verityId = "24825632"
+        val db = DevicesDatabaseManager.getInstance(context)
+        val deviceId = db.insertNewBluetoothDeviceIntoDB(
+            DeviceType.HRM,
+            verityMac,
+            "Polar Sense $verityId",
+            "Polar Electro",
+            95,
+            true
+        )
+
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.deviceManagerProvider = { null }
+
+        val teardownEntered = java.util.concurrent.CountDownLatch(1)
+        val releaseTeardown = java.util.concurrent.CountDownLatch(1)
+        val teardownFinished = java.util.concurrent.atomic.AtomicBoolean(false)
+        val yieldBlockSawTeardownFinished = java.util.concurrent.atomic.AtomicBoolean(false)
+        val disconnectCallsDuringYield = java.util.concurrent.atomic.AtomicInteger(0)
+
+        every { sharedApi.disconnectFromDevice(any()) } answers {
+            if (PolarOfflineGattCoordinator.isOfflineGattYieldActive(verityId, verityMac)) {
+                disconnectCallsDuringYield.incrementAndGet()
+            } else {
+                teardownEntered.countDown()
+                releaseTeardown.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                teardownFinished.set(true)
+            }
+        }
+
+        val bridge = PolarOnlineStreamingBridge(
+            context = context,
+            mySensorManager = null,
+            deviceId = deviceId,
+            macAddress = verityMac,
+            dispatcher = kotlinx.coroutines.Dispatchers.IO,
+            sdkIntProvider = { android.os.Build.VERSION_CODES.TIRAMISU },
+            searchTimeoutMsProvider = { 50L }
+        )
+
+        try {
+            bridge.connectingHandshakeTimeoutMs = 50L
+            bridge.startSearching()
+            val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+            mux.deviceConnecting(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+            // Wait for onSearchTimeout() to enter disconnectFromDevice() holding gattActionLock
+            assertTrue("Expected in-flight onSearchTimeout to enter disconnectFromDevice", teardownEntered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+
+            val yieldBlockEntered = java.util.concurrent.CountDownLatch(1)
+            val yieldThread = Thread {
+                kotlinx.coroutines.runBlocking {
+                    PolarOfflineGattCoordinator.withGattYieldAndPolarApi(
+                        context = context,
+                        macAddress = verityMac,
+                        polarId = verityId,
+                        features = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+                        timeoutMs = 5_000L
+                    ) {
+                        yieldBlockSawTeardownFinished.set(teardownFinished.get())
+                        yieldBlockEntered.countDown()
+                        true
+                    }
+                }
+            }
+            yieldThread.start()
+
+            // While teardown holds gattActionLock, pauseForOfflineSync() must NOT let yield block begin
+            assertFalse(
+                "withGattYieldAndPolarApi block must not start while in-flight bridge teardown holds gattActionLock",
+                yieldBlockEntered.await(100, java.util.concurrent.TimeUnit.MILLISECONDS)
+            )
+            releaseTeardown.countDown()
+            assertTrue("yield block must start once in-flight teardown completes", yieldBlockEntered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            yieldThread.join(5_000L)
+
+            assertTrue("pauseForOfflineSync quiescence barrier must wait for teardown completion", yieldBlockSawTeardownFinished.get())
+            assertEquals("Zero bridge disconnectFromDevice calls may occur during offline yield", 0, disconnectCallsDuringYield.get())
+            assertFalse("onSearchTimeout must clear connectingDeviceIds via clearConnectingState", PolarOfflineGattCoordinator.isDeviceConnecting(verityId))
+        } finally {
+            releaseTeardown.countDown()
+            bridge.shutDown()
+        }
+    }
 }

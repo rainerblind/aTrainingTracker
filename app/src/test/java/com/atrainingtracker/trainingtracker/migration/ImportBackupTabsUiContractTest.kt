@@ -20,12 +20,27 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.testing.LocalizationTestCache
@@ -37,7 +52,9 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlin.math.abs
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -46,6 +63,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Behavioral Compose UI and localization contract tests for [ImportBackupTabsScreen],
@@ -86,28 +104,40 @@ class ImportBackupTabsUiContractTest {
             }
         }
 
-        // Top app bar title: "Import & Backup"
+        // Top app bar title: "Export, Import & Backup"
         composeRule.onNodeWithText(context.getString(R.string.import_backup)).assertIsDisplayed()
 
-        // All 4 tabs exist in HorizontalPager header
+        // All 5 tabs exist in HorizontalPager header in order: Export | Import | Auto-Import | Backup | Restore
+        val exportTab = context.getString(R.string.tab_export)
         val importTab = context.getString(R.string.tab_import)
         val autoImportTab = context.getString(R.string.tab_auto_import)
         val backupTab = context.getString(R.string.tab_backup)
         val restoreTab = context.getString(R.string.tab_restore)
 
-        composeRule.onNodeWithText(importTab).assertExists()
-        composeRule.onNodeWithText(autoImportTab).assertExists()
-        composeRule.onNodeWithText(backupTab).assertExists()
-        composeRule.onNodeWithText(restoreTab).assertExists()
+        val isTab = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+        composeRule.onNode(isTab and hasText(exportTab)).assertExists().assertIsSelected()
+        composeRule.onNode(isTab and hasText(importTab)).assertExists()
+        composeRule.onNode(isTab and hasText(autoImportTab)).assertExists()
+        composeRule.onNode(isTab and hasText(backupTab)).assertExists()
+        composeRule.onNode(isTab and hasText(restoreTab)).assertExists()
+
+        // Default Tab 0 is Export
+        composeRule.onNodeWithText("TCX").assertIsDisplayed()
+
+        // Switch to Import tab and verify Import card content appears
+        composeRule.onNode(isTab and hasText(importTab)).performClick()
+        composeRule.mainClock.advanceTimeBy(1000)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(context.getString(R.string.import_fit_title)).assertExists()
 
         // Switch to Backup tab and verify Backup card content appears
-        composeRule.onNodeWithText(backupTab).performClick()
+        composeRule.onNode(isTab and hasText(backupTab)).performClick()
         composeRule.mainClock.advanceTimeBy(1000)
         composeRule.waitForIdle()
         composeRule.onNodeWithText(context.getString(R.string.backup_now)).assertIsDisplayed()
 
         // Switch to Restore tab and verify Restore card content appears
-        composeRule.onNodeWithText(restoreTab).performClick()
+        composeRule.onNode(isTab and hasText(restoreTab)).performClick()
         composeRule.mainClock.advanceTimeBy(1000)
         composeRule.waitForIdle()
         composeRule.onNodeWithText(context.getString(R.string.restore_from_dropbox)).performScrollTo().assertIsDisplayed()
@@ -227,13 +257,18 @@ class ImportBackupTabsUiContractTest {
             }
         }
 
-        // Import tab cards render positive "Import" titles
+        // Switch to Tab 1 (Import) and verify Import tab cards render positive "Import" titles
+        composeRule.onNodeWithText(context.getString(R.string.tab_import)).performClick()
+        composeRule.mainClock.advanceTimeBy(1000)
+        composeRule.waitForIdle()
+
         composeRule.onNodeWithText(context.getString(R.string.import_fit_title)).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.import_tcx_title)).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.import_gpx_title)).assertExists()
 
         val importKeys = listOf(
             "import_backup",
+            "tab_export",
             "tab_import",
             "import_fit_title",
             "import_fit_description",
@@ -258,5 +293,148 @@ class ImportBackupTabsUiContractTest {
                 )
             }
         }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    fun testAutoImportFormatSegmentedButtons_renderSingleLineWithUniformHeightOnPhoneWidths() {
+        verifyAutoImportFormatSegmentedButtonsSingleLine(
+            expectedLabels = mapOf(
+                "fit" to "FIT",
+                "tcx" to "TCX",
+                "gpx" to "GPX",
+                "all" to "All"
+            )
+        )
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "de-w411dp-h891dp-xxhdpi")
+    fun testAutoImportFormatSegmentedButtons_germanLocaleSingleLineOnPhoneWidths() {
+        verifyAutoImportFormatSegmentedButtonsSingleLine(
+            expectedLabels = mapOf(
+                "fit" to "FIT",
+                "tcx" to "TCX",
+                "gpx" to "GPX",
+                "all" to "Alle"
+            )
+        )
+    }
+
+    private fun verifyAutoImportFormatSegmentedButtonsSingleLine(expectedLabels: Map<String, String>) {
+        var selectedFormat by mutableStateOf("fit")
+        var containerWidthDp by mutableStateOf(360)
+        val clickedFormats = mutableListOf<String>()
+
+        composeRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(containerWidthDp.dp)) {
+                    AutoImportTabContentLayout(
+                        isBusy = false,
+                        isDropboxConnected = true,
+                        isGoogleDriveConnected = true,
+                        autoImportEnabled = true,
+                        autoImportDropbox = true,
+                        autoImportGoogleDrive = false,
+                        autoImportFormat = selectedFormat,
+                        syncImportedToHealthConnect = false,
+                        uploadToStravaOnImport = false,
+                        lastSyncTimestamp = 0L,
+                        lastSyncResult = "",
+                        isSyncing = false,
+                        onUpdateAutoImportEnabled = {},
+                        onUpdateAutoImportDropbox = {},
+                        onUpdateAutoImportGoogleDrive = {},
+                        onUpdateAutoImportFormat = {
+                            clickedFormats.add(it)
+                            selectedFormat = it
+                        },
+                        onUpdateSyncImportedToHealthConnect = {},
+                        onUpdateUploadToStravaOnImport = {},
+                        onSyncNowClick = {}
+                    )
+                }
+            }
+        }
+
+        val formatKeys = listOf("fit", "tcx", "gpx", "all")
+
+        for (widthDp in listOf(360, 411)) {
+            containerWidthDp = widthDp
+            composeRule.waitForIdle()
+
+            for (activeKey in formatKeys) {
+                composeRule.onNodeWithTag("auto_import_format_$activeKey")
+                    .performScrollTo()
+                    .performClick()
+                composeRule.waitForIdle()
+                assertEquals("Selected format should update on tap", activeKey, selectedFormat)
+
+                val heights = mutableListOf<Float>()
+                for (key in formatKeys) {
+                    val nodeInteraction = composeRule.onNodeWithTag("auto_import_format_$key")
+                        .assertIsDisplayed()
+                    if (key == activeKey) {
+                        nodeInteraction.assertIsSelected()
+                    }
+                    val node = nodeInteraction.fetchSemanticsNode()
+                    heights.add(node.boundsInRoot.height)
+
+                    val layoutResults = mutableListOf<TextLayoutResult>()
+                    val getTextLayoutAction = node.config[SemanticsActions.GetTextLayoutResult].action
+                    assertTrue(
+                        "Segment '$key' at ${widthDp}dp must expose GetTextLayoutResult",
+                        getTextLayoutAction?.invoke(layoutResults) == true
+                    )
+                    assertTrue(
+                        "Segment '$key' at ${widthDp}dp must produce a TextLayoutResult",
+                        layoutResults.isNotEmpty()
+                    )
+                    val layout = layoutResults.first()
+                    val expectedLabel = expectedLabels.getValue(key)
+                    assertEquals(
+                        "Segment '$key' must render expected concise label",
+                        expectedLabel,
+                        layout.layoutInput.text.text
+                    )
+                    assertEquals(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp must stay strictly single-line",
+                        1,
+                        layout.lineCount
+                    )
+                    assertFalse(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp must not ellipsize",
+                        layout.isLineEllipsized(0)
+                    )
+                    assertFalse(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp must not overflow vertically",
+                        layout.didOverflowHeight
+                    )
+                    val lineWidth = layout.getLineRight(0) - layout.getLineLeft(0)
+                    assertTrue(
+                        "Segment '$key' (active='$activeKey') at ${widthDp}dp rendered width ($lineWidth px) " +
+                            "must fit within maxWidth (${layout.layoutInput.constraints.maxWidth} px)",
+                        lineWidth <= layout.layoutInput.constraints.maxWidth + 1f
+                    )
+                    assertEquals(
+                        "All characters of '$expectedLabel' must be visibly rendered",
+                        expectedLabel.length,
+                        layout.getLineEnd(0, visibleEnd = true)
+                    )
+                }
+
+                val baselineHeight = heights.first()
+                heights.forEachIndexed { idx, h ->
+                    assertTrue(
+                        "All 4 segments at ${widthDp}dp (active='$activeKey') must share identical height: $heights (idx=$idx)",
+                        abs(h - baselineHeight) <= 1f
+                    )
+                }
+            }
+        }
+
+        assertEquals(formatKeys + formatKeys, clickedFormats)
     }
 }

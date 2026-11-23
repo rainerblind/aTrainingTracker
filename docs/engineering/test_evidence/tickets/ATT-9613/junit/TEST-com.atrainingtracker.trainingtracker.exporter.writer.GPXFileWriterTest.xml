@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:24:44.813Z" hostname="rainer-HP-EliteBook-850-G5" time="8.772">
+  <properties/>
+  <testcase name="testGpxExport_escapesXmlSpecialCharsInCreatorNameAndDescAndSkipsLapsDb_TST_MIG_058_4" classname="com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest" time="1.823"/>
+  <testcase name="testGpxExportWithZeroSamples_noOrphanClosingTag" classname="com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest" time="1.737"/>
+  <testcase name="testGpxExport_blankWorkoutNameFallsBackToStartTimeAndOmitsBlankDesc_TST_MIG_058_4" classname="com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest" time="1.759"/>
+  <testcase name="testGpxExportWithMultipleLaps_matchingOpenAndCloseTags" classname="com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest" time="1.721"/>
+  <testcase name="testGpxExportWithCroppedLap0_startsAtLap1_noOrphanClosingTag" classname="com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriterTest" time="1.732"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T11:31:57.180Z" hostname="rainer-HP-EliteBook-850-G5" time="21.243">
+  <properties/>
+  <testcase name="testPairingChangedUnpair_whenAbsentFromRemoteDevices_forceDisconnectsPolarSession_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="11.194"/>
+  <testcase name="testPolarLiveImuChanged_belowApi33KeepsBtleHeartRateFallback" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="1.98"/>
+  <testcase name="testCreatePairedRemoteDevices_delegatesToRepository" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="1.807"/>
+  <testcase name="testRemoveAndStopRemoteDevice_safeWhenDeviceNotRegistered" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="1.795"/>
+  <testcase name="testPolarLiveImuChanged_rapidToggleWaitsForActiveTeardownAndUsesLatestState" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.069"/>
+  <testcase name="testPolarLiveImuChanged_waitsForGattTeardownCompletionBeforeCreatingReplacement" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.388"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

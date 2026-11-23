@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:38:43.501Z" hostname="rainer-HP-EliteBook-850-G5" time="0.004">
+  <properties/>
+  <testcase name="testSeamlessFailoverOnPrimaryDisconnect" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.001"/>
+  <testcase name="testPreemptionAndFailoverWithDefaultSnapshots_preserveControlStateAcrossAllSources" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.001"/>
+  <testcase name="testMultiSourceFailover_preservesIsAutoModeAndAudioSnooze_andResetIsolatesCleanly" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.001"/>
+  <testcase name="testConnectedSourceNotPreemptedByConnectingSource" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.0"/>
+  <testcase name="testSecondaryDisconnectionAndTimeoutIsolation" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.0"/>
+  <testcase name="testPriorityBasedActiveStreamArbitration" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.001"/>
+  <testcase name="testResetInvariant" classname="com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

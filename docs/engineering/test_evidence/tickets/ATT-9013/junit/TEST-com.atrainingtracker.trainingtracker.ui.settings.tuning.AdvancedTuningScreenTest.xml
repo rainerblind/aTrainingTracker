@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:27:31.253Z" hostname="rainer-HP-EliteBook-850-G5" time="0.146">
+  <properties/>
+  <testcase name="testAdvancedTuningScreen_doesNotContainSupporterDebugSection" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" time="0.119"/>
+  <testcase name="testInitialCollapseState_allSectionsCollapsed" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" time="0.0"/>
+  <testcase name="testAccordionSections_canonicalLifecycleSequence" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" time="0.007"/>
+  <testcase name="testScreenArchitecture_scaffoldAndTopAppBar" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" time="0.018"/>
+  <testcase name="testZeroDismissalScroll_decoupledFromBottomSheet" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" time="0.0"/>
+  <testcase name="testTuningPreferencesDataStore_singletonContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

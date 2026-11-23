@@ -10,6 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.routes.parsers
 
+import com.atrainingtracker.trainingtracker.tcx.parser.TcxParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -61,7 +62,7 @@ class TcxLeadingWhitespaceSanitizationTest {
     }
 
     @Test
-    fun testTcxTrackpointParser_withLeadingWhitespace() {
+    fun testTcxParser_withLeadingWhitespace() {
         val leadingSpaces = "          "
         val tcxContent = """
             $leadingSpaces<?xml version="1.0" encoding="UTF-8"?>
@@ -89,12 +90,12 @@ class TcxLeadingWhitespaceSanitizationTest {
         """.trimIndent()
 
         val stream = ByteArrayInputStream(tcxContent.toByteArray(Charsets.UTF_8))
-        val parseResult = TcxTrackpointParser.parse(stream)
+        val parseResult = TcxParser.parse(stream)
         assertTrue("Parser should succeed despite leading whitespace", parseResult.isSuccess)
-        val parsed = parseResult.getOrThrow()
-        assertEquals("Biking", parsed.sport)
-        assertEquals(1, parsed.laps.size)
-        assertEquals(1, parsed.laps[0].trackpoints.size)
-        assertEquals(48.137154, parsed.laps[0].trackpoints[0].lat!!, 1e-6)
+        val activity = parseResult.getOrThrow().activities.single()
+        assertEquals("Biking", activity.sport)
+        assertEquals(1, activity.laps.size)
+        assertEquals(1, activity.laps[0].trackpoints.size)
+        assertEquals(48.137154, activity.laps[0].trackpoints[0].position!!.latitudeDegrees, 1e-6)
     }
 }

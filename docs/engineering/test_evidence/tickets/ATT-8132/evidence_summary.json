@@ -1,0 +1,92 @@
+{
+  "android_test_summary": {
+    "details": "475/475 targeted in-scope Android unit tests passed (38 JUnit XML suites, 0 failures, 0 errors, 0 skipped). Note: unbatched auto_gate.py dependency expansion selected 395 Android test classes (via TrainingApplication/TrackerService/TuningPreferencesDataStore) which timed out twice at 1800s under the 768m Kover CodeCache ceiling; executed targeted in-scope Radar/RadarLight/SmartBrakeLight/TuningPreferences/AutoPause/Cluster/TrackerService/Contract suites directly via ./gradlew :app:testDebugUnitTest --rerun --tests ...",
+    "errors": 0,
+    "failing_tests": [],
+    "failures": 0,
+    "passed": true,
+    "ran": 475,
+    "skipped": 0,
+    "xml_count": 38
+  },
+  "checks": [
+    {
+      "details": "Android: 475/475 targeted in-scope Android unit tests passed (38 JUnit XML suites, 0 failures, 0 errors, 0 skipped). Note: unbatched auto_gate.py dependency expansion selected 395 Android test classes (via TrainingApplication/TrackerService/TuningPreferencesDataStore) which timed out twice at 1800s under the 768m Kover CodeCache ceiling; executed targeted in-scope Radar/RadarLight/SmartBrakeLight/TuningPreferences/AutoPause/Cluster/TrackerService/Contract suites directly via ./gradlew :app:testDebugUnitTest --rerun --tests ... | Python: No Python tests selected (0 tools/*.py files modified).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10676 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "b061d9c9e1b17cd102d6cd0b214d7814c27ed693",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.AltitudeAwareClusterMatchingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.MapCameraTuningPreferencesTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningConfigTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreClusterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceResilienceTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceStateMachineCharacterisationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.RadarAccordionSectionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.RadarLightButtonContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected (0 tools/*.py files modified).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-23T05:42:01.577472+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att_8132_radar_settings.png"
+  ],
+  "ticket_key": "ATT-8132",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

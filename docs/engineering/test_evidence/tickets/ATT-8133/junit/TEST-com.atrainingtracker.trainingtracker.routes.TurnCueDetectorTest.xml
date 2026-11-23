@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:11.718Z" hostname="rainer-HP-EliteBook-850-G5" time="0.278">
+  <properties/>
+  <testcase name="testTST_MAP_045_18_thresholdOscillationHysteresisBuffer" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.005"/>
+  <testcase name="testTST_MAP_045_2_sweeping90DegreeCurveOver45Meters" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testTST_MAP_045_4_constantCurvatureArcMidpointTieBreaking" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testTST_MAP_045_3_windingRoadGentleBendsSuppressed" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testTST_MAP_045_11_straightRouteContinuousLateralJitterZeroCues" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.002"/>
+  <testcase name="testTST_MAP_045_5_hairpinSwitchbackConsolidatedToSingleUTurn" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testTST_MAP_045_1_sharp90DegreeIntersectionTurn" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testTST_MAP_045_15_closedLoopRouteStartFinishBoundaryProtection" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testDetectGeometricCues_rightAndLeftTurns" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testTurnCueDetector_deadCodeAndBuffersRetirementContract" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.005"/>
+  <testcase name="testTST_MAP_045_13_thresholdOscillationSuppressesDuplicateCues" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testTST_MAP_045_9_chicaneSeparationPreservesBothCues" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testTST_MAP_045_14_highFrequencyLateralNoiseZeroCues" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testDetectGeometricCues_sparseVertexInboundSegment_interpolatesExactBoundary" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testClassifyTurn_angles" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testDetectGeometricCues_performanceBenchmark5000Points" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.183"/>
+  <testcase name="testDetectGeometricCues_sparseVertexOutboundSegment_interpolatesExactBoundary" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testSignedAngleDelta_cardinalDirections" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <testcase name="testTST_MAP_045_10_boundaryConditionAtExactly20Meters" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testTST_MAP_045_7_shortRouteSafelyReturnsEmptyList" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testExtractOrDetectCues_prefersExplicitWaypoints" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.002"/>
+  <testcase name="testTST_MAP_045_8_fiveThousandPointBenchmarkUnder100Ms" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.059"/>
+  <testcase name="testTST_MAP_045_12_zeroLengthDuplicateSegmentsSanitizeCleanly" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.01"/>
+  <testcase name="testTST_MAP_045_6_highFrequencyGpsJitterFiltered" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.0"/>
+  <testcase name="testTST_MAP_045_17_immediateStartOfRouteTurnClampedToZero" classname="com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

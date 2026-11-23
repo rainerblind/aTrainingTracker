@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:10.246Z" hostname="rainer-HP-EliteBook-850-G5" time="0.014">
+  <properties/>
+  <testcase name="findCandidates_sportTypePreFiltering_filtersIncompatibleSport" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.01"/>
+  <testcase name="findCandidates_insufficientSharedPrefix_returnsEmpty" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.0"/>
+  <testcase name="findCandidates_spatialBoundingBoxRejection_discardsDistantRouteInO1" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.0"/>
+  <testcase name="findCandidates_divergedOrReverseRoute_filtersOutRoute" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.001"/>
+  <testcase name="findCandidates_sharedDepartureCorridor_returnsMatchingRoutes" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.0"/>
+  <testcase name="findCandidates_requireSelected_filtersOutUnselectedRoutes" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.001"/>
+  <testcase name="projectOntoPolyline_calculatesAccurateDistanceAndCrossTrack" classname="com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

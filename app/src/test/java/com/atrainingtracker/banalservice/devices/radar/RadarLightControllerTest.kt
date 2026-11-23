@@ -190,7 +190,12 @@ class RadarLightControllerTest {
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
 
-        RadarLightController.updateCachedPreferences(autoMode = false, defaultMode = RadarLightMode.DAY_FLASH)
+        RadarLightController.onPreferencesUpdated(
+            TuningConfig(
+                radarLightControlMode = RadarLightControlMode.FIXED_WORKOUT_MODE,
+                radarLightDefaultMode = RadarLightMode.DAY_FLASH
+            )
+        )
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext)
@@ -208,7 +213,12 @@ class RadarLightControllerTest {
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
 
-        RadarLightController.updateCachedPreferences(RadarLightControlMode.MANUAL, RadarLightMode.DAY_FLASH)
+        RadarLightController.onPreferencesUpdated(
+            TuningConfig(
+                radarLightControlMode = RadarLightControlMode.MANUAL,
+                radarLightDefaultMode = RadarLightMode.DAY_FLASH
+            )
+        )
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext)
@@ -228,7 +238,12 @@ class RadarLightControllerTest {
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
 
-        RadarLightController.updateCachedPreferences(RadarLightControlMode.FIXED_WORKOUT_MODE, RadarLightMode.DAY_FLASH)
+        RadarLightController.onPreferencesUpdated(
+            TuningConfig(
+                radarLightControlMode = RadarLightControlMode.FIXED_WORKOUT_MODE,
+                radarLightDefaultMode = RadarLightMode.DAY_FLASH
+            )
+        )
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext)
@@ -247,7 +262,12 @@ class RadarLightControllerTest {
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
 
-        RadarLightController.updateCachedPreferences(RadarLightControlMode.SMART_AUTOMATION, RadarLightMode.DAY_FLASH)
+        RadarLightController.onPreferencesUpdated(
+            TuningConfig(
+                radarLightControlMode = RadarLightControlMode.SMART_AUTOMATION,
+                radarLightDefaultMode = RadarLightMode.DAY_FLASH
+            )
+        )
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext)
@@ -445,7 +465,12 @@ class RadarLightControllerTest {
         val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
         every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
-        RadarLightController.updateCachedPreferences(autoMode = false, defaultMode = RadarLightMode.DAY_FLASH)
+        RadarLightController.onPreferencesUpdated(
+            TuningConfig(
+                radarLightControlMode = RadarLightControlMode.FIXED_WORKOUT_MODE,
+                radarLightDefaultMode = RadarLightMode.DAY_FLASH
+            )
+        )
 
         val mockContext = mockk<Context>(relaxed = true)
         RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
@@ -617,7 +642,7 @@ class RadarLightControllerTest {
         RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
         assertTrue("Auto-bypass must still be active for sequential workout", SmartBrakeLightDetector.isAutoBypassed)
         assertFalse("Sequential workout must NOT register IMU listeners when auto-bypassed", SmartBrakeLightDetector.isListening)
-        verify(exactly = 0) { mockSensorManager.registerListener(any(), any<Sensor>(), any()) }
+        verify(exactly = 0) { mockSensorManager.registerListener(SmartBrakeLightDetector, any<Sensor>(), any()) }
 
         RadarLightController.onWorkoutStopped(mockContext)
     }
@@ -904,7 +929,7 @@ class RadarLightControllerTest {
     fun testRadarLightController_hydrateFromPreferences_loadsPersistedSelectionBeforeWorkoutStart() {
         val mockDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
         every { mockDataStore.getTuningConfig() } returns TuningConfig(
-            radarLightAutoMode = false,
+            radarLightControlMode = RadarLightControlMode.FIXED_WORKOUT_MODE,
             radarLightDefaultMode = RadarLightMode.NIGHT_FLASH
         )
         TuningPreferencesDataStore.setInstanceForTesting(mockDataStore)

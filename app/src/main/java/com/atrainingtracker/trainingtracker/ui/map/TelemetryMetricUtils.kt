@@ -437,17 +437,10 @@ object TelemetryMetricUtils {
                 }
             }
             TelemetryMetricType.SPEED -> {
-                val mps = MyHelper.UserUnit2mps(value, unit)
-                speedFormatter.format_with_units(mps)
+                speedFormatter.formatUserUnitWithUnits(value, unit, locale)
             }
             TelemetryMetricType.PACE -> {
-                val secPerUnit = value * 60.0
-                val spm = if (unit == MyUnits.METRIC) {
-                    secPerUnit / 1000.0
-                } else {
-                    secPerUnit / BANALService.METER_PER_MILE
-                }
-                paceFormatter.format_with_units(spm)
+                paceFormatter.formatPaceMinutesWithUnits(value, unit)
             }
             TelemetryMetricType.POWER -> {
                 val base = "${value.toInt()} W"

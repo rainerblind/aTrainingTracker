@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:27:35.463Z" hostname="rainer-HP-EliteBook-850-G5" time="23.544">
+  <properties/>
+  <testcase name="testImportExtractsBracketNotationFromNotes" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="3.85"/>
+  <testcase name="testImportClusterDecision_persistsCustomWorkoutName_whenClustered" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.903"/>
+  <testcase name="testImportExtractsStructuredActivityExtension" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.454"/>
+  <testcase name="testImportFromTcx_preservesOriginalFilenameWithoutCounter_TST_MIG_019" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.388"/>
+  <testcase name="testImportUnescapesXmlEntities" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.415"/>
+  <testcase name="testImportClusterDecision_persistsCustomWorkoutName_whenUnclustered" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.371"/>
+  <testcase name="testImportDoesNotPolluteWorkoutNameFromCreatorOrAuthor" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.341"/>
+  <testcase name="testImportExtractsNameOnlyFromBracketNotes" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.365"/>
+  <testcase name="testImportExtractsGarminTrainingPlanName" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest" time="2.457"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -336,13 +336,13 @@ class EditWorkoutClusterTest {
 
         assertEquals(1, scores.size)
         val candidate = scores.first().first
-        // Verify candidate hit count is healed to 1
+        // Verify candidate hit count is projected to authoritative 1 in-memory
         assertEquals(1, candidate.hitCount)
 
-        // Verify cluster database is updated with healed hit count
-        verify {
-            mockClusterDb.updateCluster(match { it.id == staleClusterId && it.hitCount == 1 })
-        }
+        // Verify getClusterScores is strictly read-only and performs zero SQLite writes (REQ-GEO-003, ATT-8133)
+        verify(exactly = 0) { mockClusterDb.updateCluster(any()) }
+        verify(exactly = 0) { mockClusterDb.insertCluster(any()) }
+        verify(exactly = 0) { mockClusterDb.deleteCluster(any()) }
     }
 
     @Test

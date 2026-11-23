@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -481,32 +482,69 @@ class WorkoutClusterRepository internal constructor(
     }
 
     /**
-     * Updates a [WorkoutCluster] in SQLite after trimming its name, syncs linked route name if needed,
-     * updates cached [WorkoutRepository] workouts, and emits [ClusterMutationEvent.Renamed]
-     * (REQ-PER-040.1, REQ-PER-040.2, REQ-PER-041.1).
+     * Unified lightweight rename propagation: updates [_allClusters] in-place, optionally syncs
+     * the linked route's metadata without reloading `route_points`, updates [WorkoutRepository]
+     * in-memory, and emits [ClusterMutationEvent.Renamed] without triggering full SQLite cluster
+     * scans or recursive sync loops (REQ-PER-040, REQ-GEO-003, ATT-8133).
+     */
+    private suspend fun propagateClusterRename(
+        clusterId: Long,
+        newName: String,
+        updatedCluster: WorkoutCluster? = null,
+        syncLinkedRoute: Boolean
+    ) {
+        _allClusters.update { current ->
+            var found = false
+            val updated = current.map { existing ->
+                if (existing.id == clusterId) {
+                    found = true
+                    updatedCluster ?: existing.copy(name = newName)
+                } else {
+                    existing
+                }
+            }
+            if (found) updated.sortedByDescending { it.hitCount } else current
+        }
+        if (syncLinkedRoute) {
+            notifyRoutesRepository { it.syncClusterNameChange(clusterId, newName) }
+        }
+        notifyWorkoutRepository { it.onClusterRenamed(clusterId, newName) }
+        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(clusterId, newName))
+    }
+
+    /**
+     * Updates a [WorkoutCluster] in SQLite after trimming its name, patches [_allClusters] in-place,
+     * syncs linked route metadata without reloading `route_points`, updates cached [WorkoutRepository]
+     * workouts, and emits [ClusterMutationEvent.Renamed] (REQ-PER-040.1, REQ-PER-040.4, REQ-PER-041.1, REQ-GEO-003).
      */
     suspend fun updateCluster(cluster: WorkoutCluster) = withContext(Dispatchers.IO) {
         val trimmedName = cluster.name.trim()
         if (trimmedName.isEmpty()) return@withContext
         val sanitized = cluster.copy(name = trimmedName)
         clusterDb.updateCluster(sanitized)
-        refreshClusters()
-        notifyRoutesRepository { it.syncClusterNameChange(sanitized.id, sanitized.name) }
-        notifyWorkoutRepository { it.onClusterRenamed(sanitized.id, sanitized.name) }
-        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(sanitized.id, sanitized.name))
+        propagateClusterRename(
+            clusterId = sanitized.id,
+            newName = sanitized.name,
+            updatedCluster = sanitized,
+            syncLinkedRoute = true
+        )
     }
 
     /**
      * Propagates a cluster rename that originated from a linked route rename in [RoutesRepository],
-     * refreshing [_allClusters], updating [WorkoutRepository], and emitting [ClusterMutationEvent.Renamed]
-     * without re-invoking [RoutesRepository] to prevent recursion (REQ-PER-040.2).
+     * patching [_allClusters] in-place, updating [WorkoutRepository], and emitting
+     * [ClusterMutationEvent.Renamed] without re-invoking [RoutesRepository] or running full
+     * cluster SQLite reloads (REQ-PER-040.4, REQ-GEO-003).
      */
     suspend fun onRouteSyncedClusterRename(clusterId: Long) = withContext(Dispatchers.IO) {
         if (clusterId == -1L) return@withContext
         val updatedCluster = clusterDb.getClusterById(clusterId) ?: return@withContext
-        refreshClusters()
-        notifyWorkoutRepository { it.onClusterRenamed(clusterId, updatedCluster.name) }
-        _clusterMutationEvents.emit(ClusterMutationEvent.Renamed(clusterId, updatedCluster.name))
+        propagateClusterRename(
+            clusterId = clusterId,
+            newName = updatedCluster.name,
+            updatedCluster = updatedCluster,
+            syncLinkedRoute = false
+        )
     }
 
     private suspend fun repairClusterMetadata() = withContext(Dispatchers.Default) {
@@ -590,13 +628,21 @@ class WorkoutClusterRepository internal constructor(
         }
         repositoryScope.launch {
             try {
-                endpointTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolEndpoints(it) }
-                apexTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolApex(it) }
-                distTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolDistance(it) }
-                altPosTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolAltitudePos(it) }
-                useSport?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseSportTypeForClustering(it) }
-                useAlt?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseAltitudePosForClustering(it) }
-                scoreThreshold?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterScoreThreshold(it) }
+                if (endpointTol != null || apexTol != null || distTol != null || altPosTol != null ||
+                    useSport != null || useAlt != null || scoreThreshold != null
+                ) {
+                    com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+                        .getInstance(context)
+                        .updateClusterTuning(
+                            endpointTol = endpointTol,
+                            apexTol = apexTol,
+                            distTol = distTol,
+                            altPosTol = altPosTol,
+                            useSport = useSport,
+                            useAlt = useAlt,
+                            scoreThreshold = scoreThreshold
+                        )
+                }
                 recalculateClustersWithProgress()
             } catch (t: Throwable) {
                 android.util.Log.e("WorkoutClusterRepo", "Error during cluster recalculation", t)

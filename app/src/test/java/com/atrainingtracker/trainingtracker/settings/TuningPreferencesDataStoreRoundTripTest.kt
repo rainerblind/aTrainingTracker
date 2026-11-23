@@ -107,6 +107,7 @@ class TuningPreferencesDataStoreRoundTripTest {
                 clusterUseSportType = false,
                 clusterUseAltitudePos = false,
                 clusterScoreThreshold = 1.9f,
+                askOnNewClusterDuringImport = true,
                 autoPauseBikeEnabled = false,
                 autoPauseRunEnabled = true,
                 autoPauseOtherEnabled = true,
@@ -150,11 +151,7 @@ class TuningPreferencesDataStoreRoundTripTest {
                 radarAudioRoute = RadarAudioRoute.FORCE_SPEAKER,
                 radarHapticAlert = false,
                 radarLightDefaultMode = RadarLightMode.PELOTON,
-                radarLightAutoMode = false,
                 radarLightControlMode = RadarLightControlMode.MANUAL,
-                // Derived from radarLightControlMode == MANUAL
-                radarAutoLightControl = false,
-                radarSmartLightAutomation = false,
                 radarBrakeLightEnabled = false,
                 radarPelotonAudioSync = false,
                 radarSmartUrbanMute = true,
@@ -177,12 +174,10 @@ class TuningPreferencesDataStoreRoundTripTest {
                 "mapFollowMeSpeedSmoothingAlpha",
                 "mapFollowMeBearingSmoothingAlpha",
                 "autoPauseSpeedThresholdKmh",
-                "autoPauseDebounceSec",
-                "radarAutoLightControl",
-                "radarSmartLightAutomation"
+                "autoPauseDebounceSec"
             )
             val fields = TuningConfig::class.java.declaredFields.filter { !Modifier.isStatic(it.modifiers) }
-            assertEquals("Expected all 105 TuningConfig backing fields to be inspected", 105, fields.size)
+            assertEquals("Expected all 103 TuningConfig backing fields to be inspected", 103, fields.size)
             for (field in fields) {
                 field.isAccessible = true
                 if (field.name !in excludedFromDiffCheck) {

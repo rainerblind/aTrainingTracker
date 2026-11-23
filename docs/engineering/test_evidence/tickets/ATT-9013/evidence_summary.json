@@ -1,0 +1,78 @@
+{
+  "android_test_summary": {
+    "details": "132 Android unit tests passed (27 focused JUnit XML suites; select_dependent_tests=332 > 80 threshold, ran scoped Tier-1 subset cleanly with --rerun; Bounce 1/5 healed).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 132
+  },
+  "checks": [
+    {
+      "details": "Android: 132 Android unit tests passed (27 focused JUnit XML suites; select_dependent_tests=332 > 80 threshold, ran scoped Tier-1 subset cleanly with --rerun; Bounce 1/5 healed). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10867 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "f57c2abbc027511e01eea7a47037ec2093ff07d1",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.SilentImportClusterCreationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineWorkoutNameTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineResultTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.TcxHighFidelityImportTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.AutoImportContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.PreImportTuningBottomSheetTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineLearningTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineLocationSeedTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterImportIntegrityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreClusterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterImperialAndLocaleUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningUiBehaviorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningModularityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-23T09:28:44.679578+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9013_cluster_tuning.png",
+    "screenshots/ATT-9013_cluster_tuning_enabled.png"
+  ],
+  "ticket_key": "ATT-9013",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

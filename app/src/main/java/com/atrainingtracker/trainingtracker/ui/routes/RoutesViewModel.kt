@@ -216,7 +216,6 @@ class RoutesViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             routesRepository.updateRouteSummary(summary)
             stopEditing()
-            refresh() // Reload the list
         }
     }
 

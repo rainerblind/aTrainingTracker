@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,8 @@ fun ClusterTuningContent(
     onUseAltitudePosChange: (Boolean) -> Unit = {},
     clusterScoreThreshold: Float = TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD,
     onClusterScoreThresholdChange: (Float) -> Unit = {},
+    askOnNewClusterDuringImport: Boolean = TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT,
+    onAskOnNewClusterDuringImportChange: (Boolean) -> Unit = {},
     onValueChangeFinished: () -> Unit = {},
     isDialog: Boolean = false,
     enabled: Boolean = true
@@ -117,12 +120,23 @@ fun ClusterTuningContent(
             }
         }
 
-        // 2. Details Toggle
+        // 2. Import Route Prompting Toggle (ATT-9013 / REQ-MIG-060)
+        TuningToggleItem(
+            title = stringResource(R.string.cluster_tuning_ask_on_new_import_label),
+            summary = stringResource(R.string.cluster_tuning_ask_on_new_import_summary),
+            isChecked = askOnNewClusterDuringImport,
+            onCheckedChange = onAskOnNewClusterDuringImportChange,
+            enabled = enabled,
+            modifier = Modifier.testTag("cluster_tuning_ask_on_new_import_toggle")
+        )
+
+        // 3. Details Toggle
         TuningToggleItem(
             title = stringResource(R.string.cluster_tuning_show_details),
             isChecked = showDetails,
             onCheckedChange = { showDetails = it },
-            enabled = enabled
+            enabled = enabled,
+            modifier = Modifier.testTag("cluster_tuning_show_details_toggle")
         )
 
         // 3. Detailed Parameters (Optional)

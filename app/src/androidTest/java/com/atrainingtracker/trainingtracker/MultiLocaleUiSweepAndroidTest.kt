@@ -81,7 +81,7 @@ class MultiLocaleUiSweepAndroidTest {
             R.id.drawer_start_locations,
             R.id.drawer_units,
             R.id.drawer_display_settings,
-            R.id.drawer_export,
+            R.id.drawer_backup_restore,
             R.id.drawer_start_tracking
         )
 

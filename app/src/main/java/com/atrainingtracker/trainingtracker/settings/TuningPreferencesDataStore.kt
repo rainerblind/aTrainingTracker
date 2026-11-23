@@ -19,7 +19,9 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -28,12 +30,15 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.preference.PreferenceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -43,7 +48,6 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
-import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
@@ -129,10 +133,10 @@ object TuningPreferencesDefaults {
     val RADAR_AUDIO_ROUTE = RadarAudioRoute.SYSTEM_DEFAULT
     const val RADAR_HAPTIC_ALERT = true
     val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
+    val RADAR_LIGHT_CONTROL_MODE = RadarLightControlMode.SMART_AUTOMATION
     const val RADAR_LIGHT_AUTO_MODE = true
-    val RADAR_LIGHT_CONTROL_MODE = RadarLightControlMode.FIXED_WORKOUT_MODE
-    const val RADAR_AUTO_LIGHT_CONTROL = true
-    const val RADAR_SMART_LIGHT_AUTOMATION = false
+    const val RADAR_AUTO_LIGHT_CONTROL = false
+    const val RADAR_SMART_LIGHT_AUTOMATION = true
     const val RADAR_BRAKE_LIGHT_ENABLED = true
     const val RADAR_PELOTON_AUDIO_SYNC = true
     const val RADAR_SMART_URBAN_MUTE = false
@@ -288,6 +292,8 @@ object TuningPreferencesDefaults {
     const val MAX_CLUSTER_SCORE_THRESHOLD = 2.5f
     const val STEP_CLUSTER_SCORE_THRESHOLD = 0.1f
 
+    const val CLUSTER_ASK_ON_NEW_DURING_IMPORT = false
+
     /** First-time stop tracking coachmark banner acknowledgement default (REQ-UI-367 / ATT-3387). */
     const val DEFAULT_HAS_SEEN_STOP_TRACKING_HINT = false
 
@@ -434,6 +440,7 @@ data class TuningConfig(
     val clusterUseSportType: Boolean = TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
     val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS,
     val clusterScoreThreshold: Float = TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD,
+    val askOnNewClusterDuringImport: Boolean = TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT,
     val autoPauseBikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val autoPauseRunEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val autoPauseOtherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
@@ -476,10 +483,7 @@ data class TuningConfig(
     val radarAudioRoute: RadarAudioRoute = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
     val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
-    val radarLightAutoMode: Boolean = TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE,
-    val radarLightControlMode: RadarLightControlMode = if (radarLightAutoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE,
-    val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
-    val radarSmartLightAutomation: Boolean = TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION,
+    val radarLightControlMode: RadarLightControlMode = TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE,
     val radarBrakeLightEnabled: Boolean = TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED,
     val radarPelotonAudioSync: Boolean = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
     val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
@@ -493,6 +497,18 @@ data class TuningConfig(
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
+
+    /** Derived from canonical [radarLightControlMode] (REQ-CON-056.1). */
+    val radarLightAutoMode: Boolean
+        get() = radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION
+
+    /** Derived from canonical [radarLightControlMode] (REQ-CON-056.1). */
+    val radarAutoLightControl: Boolean
+        get() = radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE
+
+    /** Derived from canonical [radarLightControlMode] (REQ-CON-056.1). */
+    val radarSmartLightAutomation: Boolean
+        get() = radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION
 
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -634,6 +650,7 @@ class TuningPreferencesDataStore private constructor(
         val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
         val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
         val KEY_CLUSTER_SCORE_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_score_threshold")
+        val KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_ask_on_new_during_import")
         val KEY_HAS_SEEN_STOP_TRACKING_HINT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_seen_stop_tracking_hint")
         val KEY_HAS_COMPLETED_PERMISSION_ONBOARDING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_completed_permission_onboarding")
         val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
@@ -678,10 +695,20 @@ class TuningPreferencesDataStore private constructor(
         val KEY_RADAR_AUDIO_ROUTE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_route")
         val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
         val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
-        val KEY_RADAR_LIGHT_AUTO_MODE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_light_auto_mode")
         val KEY_RADAR_LIGHT_CONTROL_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_control_mode")
+        @Deprecated("Consolidated into KEY_RADAR_LIGHT_CONTROL_MODE (REQ-CON-056.1)")
+        val KEY_RADAR_LIGHT_AUTO_MODE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_light_auto_mode")
+        @Deprecated("Consolidated into KEY_RADAR_LIGHT_CONTROL_MODE (REQ-CON-056.1)")
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
+        @Deprecated("Consolidated into KEY_RADAR_LIGHT_CONTROL_MODE (REQ-CON-056.1)")
         val KEY_RADAR_SMART_LIGHT_AUTOMATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_light_automation")
+
+        @Suppress("DEPRECATION")
+        val LEGACY_RADAR_LIGHT_KEYS: List<Preferences.Key<*>> = listOf(
+            KEY_RADAR_LIGHT_AUTO_MODE,
+            KEY_RADAR_AUTO_LIGHT_CONTROL,
+            KEY_RADAR_SMART_LIGHT_AUTOMATION
+        )
         val KEY_RADAR_BRAKE_LIGHT_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_brake_light_enabled")
         val KEY_RADAR_PELOTON_AUDIO_SYNC: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_peloton_audio_sync")
         val KEY_RADAR_SMART_URBAN_MUTE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_urban_mute")
@@ -810,6 +837,7 @@ class TuningPreferencesDataStore private constructor(
             KEY_CLUSTER_USE_SPORT_TYPE,
             KEY_CLUSTER_USE_ALTITUDE_POS,
             KEY_CLUSTER_SCORE_THRESHOLD,
+            KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT,
             KEY_HAS_SEEN_STOP_TRACKING_HINT,
             KEY_HAS_COMPLETED_PERMISSION_ONBOARDING,
             KEY_AUTO_PAUSE_BIKE_ENABLED,
@@ -853,10 +881,7 @@ class TuningPreferencesDataStore private constructor(
             KEY_RADAR_AUDIO_ROUTE,
             KEY_RADAR_HAPTIC_ALERT,
             KEY_RADAR_LIGHT_DEFAULT_MODE,
-            KEY_RADAR_LIGHT_AUTO_MODE,
             KEY_RADAR_LIGHT_CONTROL_MODE,
-            KEY_RADAR_AUTO_LIGHT_CONTROL,
-            KEY_RADAR_SMART_LIGHT_AUTOMATION,
             KEY_RADAR_BRAKE_LIGHT_ENABLED,
             KEY_RADAR_PELOTON_AUDIO_SYNC,
             KEY_RADAR_SMART_URBAN_MUTE,
@@ -870,32 +895,28 @@ class TuningPreferencesDataStore private constructor(
         )
 
         /**
-         * Resolves and migrates unified radar tail light auto mode with legacy fallback (REQ-CON-031.5).
+         * Resolves canonical radar tail-light control mode from [KEY_RADAR_LIGHT_CONTROL_MODE] (REQ-CON-056.1).
          */
         @VisibleForTesting
-        fun resolveRadarLightAutoMode(prefs: Preferences): Boolean {
-            val autoMode = prefs[KEY_RADAR_LIGHT_AUTO_MODE]
-            if (autoMode != null) {
-                return autoMode
-            }
+        fun resolveRadarLightControlMode(prefs: Preferences): RadarLightControlMode {
             val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
-            if (rawControlModeStr != null) {
-                val controlMode = safeEnumValueOf(rawControlModeStr, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
-                return controlMode == RadarLightControlMode.SMART_AUTOMATION
+            return if (rawControlModeStr != null) {
+                safeEnumValueOf(rawControlModeStr, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+            } else {
+                TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE
             }
-            val legacySmart = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION]
-            if (legacySmart == true) {
-                return true
-            }
-            val legacyAuto = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL]
-            if (legacyAuto != null) {
-                return false
-            }
-            return TuningPreferencesDefaults.RADAR_LIGHT_AUTO_MODE
         }
 
         /**
-         * Resolves and migrates radar tail light default physical mode with legacy fallback (REQ-CON-031.5).
+         * Resolves derived auto-mode flag strictly from canonical [resolveRadarLightControlMode] (REQ-CON-056.1).
+         */
+        @VisibleForTesting
+        fun resolveRadarLightAutoMode(prefs: Preferences): Boolean {
+            return resolveRadarLightControlMode(prefs) == RadarLightControlMode.SMART_AUTOMATION
+        }
+
+        /**
+         * Resolves canonical physical tail-light mode from [KEY_RADAR_LIGHT_DEFAULT_MODE] (REQ-CON-056.1).
          */
         @VisibleForTesting
         fun resolveRadarLightDefaultMode(prefs: Preferences): RadarLightMode {
@@ -903,34 +924,132 @@ class TuningPreferencesDataStore private constructor(
             if (raw != null) {
                 return safeEnumValueOf(raw, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
             }
-            val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
-            if (rawControl == RadarLightControlMode.MANUAL.name) {
+            if (resolveRadarLightControlMode(prefs) == RadarLightControlMode.MANUAL) {
                 return RadarLightMode.OFF
             }
             return TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
         }
 
         /**
-         * Resolves and migrates 3-way radar tail light control mode with legacy fallback (REQ-CON-031.5b).
+         * Migrates legacy 5-key radar-light preferences in-place onto the canonical 2-key model
+         * while preserving the user's prior effective behavior (REQ-CON-056.1, Coding Standards §5.6).
          */
+        @Suppress("DEPRECATION")
         @VisibleForTesting
-        fun resolveRadarLightControlMode(prefs: Preferences): RadarLightControlMode {
-            val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
-            if (rawControlModeStr != null) {
-                return safeEnumValueOf(rawControlModeStr, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+        internal fun migrateLegacyRadarLightPreferences(prefs: MutablePreferences) {
+            val hasAnyLegacy = LEGACY_RADAR_LIGHT_KEYS.any { prefs.contains(it) }
+            if (!hasAnyLegacy) return
+
+            val resolvedControlMode = run {
+                val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+                if (rawControl != null) {
+                    safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+                } else {
+                    val legacyAutoMode = prefs[KEY_RADAR_LIGHT_AUTO_MODE]
+                    if (legacyAutoMode != null) {
+                        if (legacyAutoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
+                    } else {
+                        val legacySmart = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION]
+                        val legacyAuto = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL]
+                        if (legacySmart == true) {
+                            RadarLightControlMode.SMART_AUTOMATION
+                        } else if (legacyAuto == false) {
+                            RadarLightControlMode.MANUAL
+                        } else {
+                            // Fallthrough when legacySmart == false/null and legacyAuto == true/null
+                            // preserves historical RADAR_AUTO_LIGHT_CONTROL = true (FIXED_WORKOUT_MODE)
+                            RadarLightControlMode.FIXED_WORKOUT_MODE
+                        }
+                    }
+                }
             }
-            val autoMode = prefs[KEY_RADAR_LIGHT_AUTO_MODE]
-            if (autoMode != null) {
-                return if (autoMode) RadarLightControlMode.SMART_AUTOMATION else RadarLightControlMode.FIXED_WORKOUT_MODE
+
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = resolvedControlMode.name
+            if (prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] == null && resolvedControlMode == RadarLightControlMode.MANUAL) {
+                prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = RadarLightMode.OFF.name
             }
-            val legacySmart = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION]
-            val legacyAuto = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL]
-            return if (legacySmart == true) {
-                RadarLightControlMode.SMART_AUTOMATION
-            } else if (legacyAuto == true || (legacyAuto == null && TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL)) {
-                RadarLightControlMode.FIXED_WORKOUT_MODE
-            } else {
-                RadarLightControlMode.MANUAL
+            for (legacyKey in LEGACY_RADAR_LIGHT_KEYS) {
+                prefs.remove(legacyKey)
+            }
+        }
+
+        private val LEGACY_CLUSTER_SP_KEYS = listOf(
+            TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS,
+            TrainingApplication.SP_CLUSTER_TOL_APEX,
+            TrainingApplication.SP_CLUSTER_TOL_DISTANCE,
+            TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS,
+            TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE,
+            TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS,
+            TrainingApplication.SP_CLUSTER_SCORE_THRESHOLD
+        )
+
+        /**
+         * One-time [DataMigration] consolidating legacy radar-light keys, purging [LEGACY_MAP_CAMERA_KEYS],
+         * and migrating legacy SharedPreferences cluster tolerances into DataStore (REQ-CON-056.1).
+         */
+        @Suppress("DEPRECATION")
+        @VisibleForTesting
+        fun createPreferencesMigration(
+            context: Context? = null,
+            sharedPreferencesProvider: (() -> SharedPreferences?)? = null
+        ): DataMigration<Preferences> {
+            val resolveSp: () -> SharedPreferences? = {
+                try {
+                    sharedPreferencesProvider?.invoke()
+                        ?: context?.let { PreferenceManager.getDefaultSharedPreferences(it.applicationContext ?: it) }
+                } catch (_: Throwable) {
+                    null
+                }
+            }
+            return object : DataMigration<Preferences> {
+                override suspend fun shouldMigrate(currentData: Preferences): Boolean {
+                    if (LEGACY_RADAR_LIGHT_KEYS.any { currentData.contains(it) }) return true
+                    if (LEGACY_MAP_CAMERA_KEYS.any { currentData.contains(it) }) return true
+                    val sp = resolveSp() ?: return false
+                    return LEGACY_CLUSTER_SP_KEYS.any { sp.contains(it) }
+                }
+
+                override suspend fun migrate(currentData: Preferences): Preferences {
+                    val mutable = currentData.toMutablePreferences()
+                    migrateLegacyRadarLightPreferences(mutable)
+                    purgeLegacyMapCameraKeys(mutable)
+                    val sp = resolveSp()
+                    if (sp != null) {
+                        if (!mutable.contains(KEY_CLUSTER_TOL_ENDPOINTS) && sp.contains(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS)) {
+                            PREF_CLUSTER_TOL_ENDPOINTS.write(mutable, sp.getFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS))
+                        }
+                        if (!mutable.contains(KEY_CLUSTER_TOL_APEX) && sp.contains(TrainingApplication.SP_CLUSTER_TOL_APEX)) {
+                            PREF_CLUSTER_TOL_APEX.write(mutable, sp.getFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, TuningPreferencesDefaults.CLUSTER_TOL_APEX))
+                        }
+                        if (!mutable.contains(KEY_CLUSTER_TOL_DISTANCE) && sp.contains(TrainingApplication.SP_CLUSTER_TOL_DISTANCE)) {
+                            PREF_CLUSTER_TOL_DISTANCE.write(mutable, sp.getFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE))
+                        }
+                        if (!mutable.contains(KEY_CLUSTER_TOL_ALTITUDE_POS) && sp.contains(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS)) {
+                            PREF_CLUSTER_TOL_ALTITUDE_POS.write(mutable, sp.getFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS))
+                        }
+                        if (!mutable.contains(KEY_CLUSTER_USE_SPORT_TYPE) && sp.contains(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE)) {
+                            mutable[KEY_CLUSTER_USE_SPORT_TYPE] = sp.getBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
+                        }
+                        if (!mutable.contains(KEY_CLUSTER_USE_ALTITUDE_POS) && sp.contains(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS)) {
+                            mutable[KEY_CLUSTER_USE_ALTITUDE_POS] = sp.getBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
+                        }
+                        if (!mutable.contains(KEY_CLUSTER_SCORE_THRESHOLD) && sp.contains(TrainingApplication.SP_CLUSTER_SCORE_THRESHOLD)) {
+                            PREF_CLUSTER_SCORE_THRESHOLD.write(mutable, sp.getFloat(TrainingApplication.SP_CLUSTER_SCORE_THRESHOLD, TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD))
+                        }
+                    }
+                    return mutable.toPreferences()
+                }
+
+                override suspend fun cleanUp() {
+                    val sp = resolveSp() ?: return
+                    val hasAny = LEGACY_CLUSTER_SP_KEYS.any { sp.contains(it) }
+                    if (!hasAny) return
+                    val editor = sp.edit()
+                    for (spKey in LEGACY_CLUSTER_SP_KEYS) {
+                        editor.remove(spKey)
+                    }
+                    editor.apply()
+                }
             }
         }
 
@@ -1029,18 +1148,24 @@ class TuningPreferencesDataStore private constructor(
             }
         }
 
-        internal fun hasInitializedInstance(): Boolean = INSTANCE != null
+        @JvmStatic
+        fun hasInitializedInstance(): Boolean = INSTANCE != null
     }
 
-    val tuningConfigStateFlow: StateFlow<TuningConfig> by lazy {
-        tuningConfigFlow.stateIn(
-            scope = appScope,
-            started = SharingStarted.Eagerly,
-            initialValue = TuningConfig()
-        )
-    }
+    private val _tuningConfigStateFlow = MutableStateFlow(TuningConfig())
+    val tuningConfigStateFlow: StateFlow<TuningConfig> = _tuningConfigStateFlow.asStateFlow()
 
     fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
+
+    private suspend inline fun editAndSync(crossinline transform: (MutablePreferences) -> Unit) {
+        val updated = dataStore.edit { prefs ->
+            transform(prefs)
+        }
+        val cfg = mapPreferencesToConfig(updated)
+        _tuningConfigStateFlow.value = cfg
+        com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onPreferencesUpdated(cfg)
+    }
 
 /**
  * Resolved follow-me camera preferences slice (REQ-MAP-050).
@@ -1110,20 +1235,8 @@ data class AutoPausePreferences(
         val radarAudioRoute = safeEnumValueOf(rawAudioRouteStr, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
 
         val radarHapticAlert = prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
-        val radarLightAutoMode = resolveRadarLightAutoMode(prefs)
-        val radarLightDefaultMode = resolveRadarLightDefaultMode(prefs)
-        val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
         val radarLightControlMode = resolveRadarLightControlMode(prefs)
-        val radarAutoLightControl = if (rawControlModeStr != null) {
-            radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE
-        } else {
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
-        }
-        val radarSmartLightAutomation = if (rawControlModeStr != null) {
-            radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION
-        } else {
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
-        }
+        val radarLightDefaultMode = resolveRadarLightDefaultMode(prefs)
         val radarBrakeLightEnabled = prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] ?: TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED
         val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
         val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
@@ -1216,13 +1329,14 @@ data class AutoPausePreferences(
             mapFollowMeBearingSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
             suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
             autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
-            clusterTolEndpoints = PREF_CLUSTER_TOL_ENDPOINTS.read(prefs, TrainingApplication.getClusterTolEndpoints()),
-            clusterTolApex = PREF_CLUSTER_TOL_APEX.read(prefs, TrainingApplication.getClusterTolApex()),
-            clusterTolDistance = PREF_CLUSTER_TOL_DISTANCE.read(prefs, TrainingApplication.getClusterTolDistance()),
-            clusterTolAltitudePos = PREF_CLUSTER_TOL_ALTITUDE_POS.read(prefs, TrainingApplication.getClusterTolAltitudePos()),
-            clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
-            clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering(),
-            clusterScoreThreshold = PREF_CLUSTER_SCORE_THRESHOLD.read(prefs, TrainingApplication.getClusterScoreThreshold()),
+            clusterTolEndpoints = PREF_CLUSTER_TOL_ENDPOINTS.read(prefs, TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS),
+            clusterTolApex = PREF_CLUSTER_TOL_APEX.read(prefs, TuningPreferencesDefaults.CLUSTER_TOL_APEX),
+            clusterTolDistance = PREF_CLUSTER_TOL_DISTANCE.read(prefs, TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE),
+            clusterTolAltitudePos = PREF_CLUSTER_TOL_ALTITUDE_POS.read(prefs, TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS),
+            clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
+            clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS,
+            clusterScoreThreshold = PREF_CLUSTER_SCORE_THRESHOLD.read(prefs, TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD),
+            askOnNewClusterDuringImport = prefs[KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT] ?: TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT,
             autoPauseBikeEnabled = autoPausePrefs.bikeEnabled,
             autoPauseRunEnabled = autoPausePrefs.runEnabled,
             autoPauseOtherEnabled = autoPausePrefs.otherEnabled,
@@ -1265,10 +1379,7 @@ data class AutoPausePreferences(
             radarAudioRoute = radarAudioRoute,
             radarHapticAlert = radarHapticAlert,
             radarLightDefaultMode = radarLightDefaultMode,
-            radarLightAutoMode = radarLightAutoMode,
             radarLightControlMode = radarLightControlMode,
-            radarAutoLightControl = radarAutoLightControl,
-            radarSmartLightAutomation = radarSmartLightAutomation,
             radarBrakeLightEnabled = radarBrakeLightEnabled,
             radarPelotonAudioSync = radarPelotonAudioSync,
             radarSmartUrbanMute = radarSmartUrbanMute,
@@ -1283,16 +1394,11 @@ data class AutoPausePreferences(
     }
 
     init {
-        appScope.launch(Dispatchers.IO) {
-            try {
-                purgeLegacyMapCameraPreferences()
-            } catch (_: Exception) {
-                // Best-effort legacy key purge on startup
-            }
-        }
         appScope.launch {
             tuningConfigFlow.collect { cfg ->
+                _tuningConfigStateFlow.value = cfg
                 com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+                com.atrainingtracker.banalservice.devices.radar.RadarLightController.onPreferencesUpdated(cfg)
             }
         }
     }
@@ -1431,7 +1537,7 @@ data class AutoPausePreferences(
         val clampedClusterScoreThreshold = PREF_CLUSTER_SCORE_THRESHOLD.clamp(config.clusterScoreThreshold)
         val (clampedDfaA1T1, clampedDfaA1T2) = clampDfaA1Pair(config.dfaA1ThresholdT1, config.dfaA1ThresholdT2)
 
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
             prefs[KEY_TELEMETRY_X_AXIS_DOMAIN] = config.telemetryXAxisDomain.name
             prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -1466,10 +1572,6 @@ data class AutoPausePreferences(
             PREF_NAVIGATION_CUE_TRANSPARENCY.write(prefs, config.navigationCueTransparency)
             prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = clampNavCueDismiss(config.navigationCueDismissDurationSec)
             PREF_ELEVATION_SMOOTHING_SIGMA_METERS.write(prefs, config.elevationSmoothingSigmaMeters)
-            // ATT-3581: Actively purge any legacy camera preferences to prevent stale override interference
-            for (legacyKey in LEGACY_MAP_CAMERA_KEYS) {
-                prefs.remove(legacyKey)
-            }
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
             prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = config.autoFollowUniqueRouteEnabled
             prefs[KEY_CLUSTER_TOL_ENDPOINTS] = clampedClusterTolEndpoints
@@ -1479,6 +1581,7 @@ data class AutoPausePreferences(
             prefs[KEY_CLUSTER_USE_SPORT_TYPE] = config.clusterUseSportType
             prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = config.clusterUseAltitudePos
             prefs[KEY_CLUSTER_SCORE_THRESHOLD] = clampedClusterScoreThreshold
+            prefs[KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT] = config.askOnNewClusterDuringImport
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
@@ -1519,10 +1622,7 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
-            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = config.radarLightAutoMode
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = config.radarLightControlMode.name
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = (config.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE)
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = (config.radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION)
             prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] = config.radarBrakeLightEnabled
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
@@ -1534,15 +1634,32 @@ data class AutoPausePreferences(
             PREF_DEFAULT_POOL_LENGTH_METERS.write(prefs, config.defaultPoolLengthMeters)
             prefs[KEY_DEFAULT_POOL_LENGTH_UNIT] = config.defaultPoolLengthUnit.name
         }
+    }
 
-        TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
-        TrainingApplication.setClusterTolApex(clampedClusterTolApex)
-        TrainingApplication.setClusterTolDistance(clampedClusterTolDistance)
-        TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
-        TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
-        TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
-        TrainingApplication.setClusterScoreThreshold(clampedClusterScoreThreshold)
-        TrackerService.invalidateAutoPauseCache()
+    /**
+     * Atomically updates cluster matching tolerances in DataStore (single source of truth, REQ-CON-056.1)
+     * and synchronizes the in-memory [tuningConfigStateFlow] before returning.
+     */
+    suspend fun updateClusterTuning(
+        endpointTol: Float? = null,
+        apexTol: Float? = null,
+        distTol: Float? = null,
+        altPosTol: Float? = null,
+        useSport: Boolean? = null,
+        useAlt: Boolean? = null,
+        scoreThreshold: Float? = null,
+        askOnNewDuringImport: Boolean? = null
+    ) {
+        editAndSync { prefs ->
+            endpointTol?.let { PREF_CLUSTER_TOL_ENDPOINTS.write(prefs, it) }
+            apexTol?.let { PREF_CLUSTER_TOL_APEX.write(prefs, it) }
+            distTol?.let { PREF_CLUSTER_TOL_DISTANCE.write(prefs, it) }
+            altPosTol?.let { PREF_CLUSTER_TOL_ALTITUDE_POS.write(prefs, it) }
+            useSport?.let { prefs[KEY_CLUSTER_USE_SPORT_TYPE] = it }
+            useAlt?.let { prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = it }
+            scoreThreshold?.let { PREF_CLUSTER_SCORE_THRESHOLD.write(prefs, it) }
+            askOnNewDuringImport?.let { prefs[KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT] = it }
+        }
     }
 
 
@@ -1586,16 +1703,6 @@ data class AutoPausePreferences(
     suspend fun updateElevationSmoothingSigmaMeters(sigma: Float) {
         dataStore.edit { prefs ->
             PREF_ELEVATION_SMOOTHING_SIGMA_METERS.write(prefs, sigma)
-        }
-    }
-
-    /**
-     * Purges legacy map camera tuning keys from Preferences DataStore so old stored values
-     * cannot persist or interfere with calibrated defaults (REQ-MAP-050 / ATT-3581).
-     */
-    suspend fun purgeLegacyMapCameraPreferences() {
-        dataStore.edit { prefs ->
-            purgeLegacyMapCameraKeys(prefs)
         }
     }
 
@@ -1785,36 +1892,31 @@ data class AutoPausePreferences(
     }
 
     val radarAutoLightControlFlow: Flow<Boolean> = dataStore.data.map { prefs ->
-        val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
-        if (rawControl != null) {
-            safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE) == RadarLightControlMode.FIXED_WORKOUT_MODE
-        } else {
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
-        }
+        resolveRadarLightControlMode(prefs) == RadarLightControlMode.FIXED_WORKOUT_MODE
+    }
+
+    val radarSmartLightAutomationFlow: Flow<Boolean> = dataStore.data.map { prefs ->
+        resolveRadarLightControlMode(prefs) == RadarLightControlMode.SMART_AUTOMATION
     }
 
     suspend fun updateRadarLightDefaultMode(mode: RadarLightMode) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
         }
     }
 
     suspend fun updateRadarLightAutoMode(autoMode: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = autoMode
+        editAndSync { prefs ->
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (autoMode) {
                 RadarLightControlMode.SMART_AUTOMATION.name
             } else {
                 RadarLightControlMode.FIXED_WORKOUT_MODE.name
             }
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = !autoMode
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = autoMode
         }
     }
 
     suspend fun updateRadarLightSelection(isAuto: Boolean, mode: RadarLightMode? = null) {
-        dataStore.edit { prefs ->
-            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = isAuto
+        editAndSync { prefs ->
             if (mode != null) {
                 prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
             }
@@ -1823,24 +1925,17 @@ data class AutoPausePreferences(
             } else {
                 RadarLightControlMode.FIXED_WORKOUT_MODE.name
             }
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = !isAuto
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = isAuto
         }
     }
 
     suspend fun updateRadarLightControlMode(mode: RadarLightControlMode) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = mode.name
-            val isAuto = (mode == RadarLightControlMode.SMART_AUTOMATION)
-            prefs[KEY_RADAR_LIGHT_AUTO_MODE] = isAuto
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = (mode == RadarLightControlMode.FIXED_WORKOUT_MODE)
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = isAuto
         }
     }
 
     suspend fun updateRadarAutoLightControl(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = enabled
+        editAndSync { prefs ->
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (enabled) {
                 RadarLightControlMode.FIXED_WORKOUT_MODE.name
             } else {
@@ -1849,22 +1944,13 @@ data class AutoPausePreferences(
         }
     }
 
-    val radarSmartLightAutomationFlow: Flow<Boolean> = dataStore.data.map { prefs ->
-        val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
-        if (rawControl != null) {
-            safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE) == RadarLightControlMode.SMART_AUTOMATION
-        } else {
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
-        }
-    }
-
     suspend fun updateRadarSmartLightAutomation(enabled: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = enabled
+        editAndSync { prefs ->
             prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (enabled) {
                 RadarLightControlMode.SMART_AUTOMATION.name
             } else {
-                if (prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] == true) {
+                val current = resolveRadarLightControlMode(prefs)
+                if (current == RadarLightControlMode.FIXED_WORKOUT_MODE) {
                     RadarLightControlMode.FIXED_WORKOUT_MODE.name
                 } else {
                     RadarLightControlMode.MANUAL.name
@@ -1878,10 +1964,9 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateRadarBrakeLightEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] = enabled
         }
-        com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = enabled
     }
 
     val radarPelotonAudioSyncFlow: Flow<Boolean> = dataStore.data.map { prefs ->
@@ -2003,113 +2088,101 @@ data class AutoPausePreferences(
     }
 
     suspend fun updateStartInAutoPauseEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_START_IN_AUTO_PAUSE_ENABLED] = enabled
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = enabled
         }
     }
 
     suspend fun updateAutoPauseRunEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = enabled
         }
     }
 
     suspend fun updateAutoPauseOtherEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = enabled
         }
     }
 
     suspend fun updateAutoPauseSpeedThresholdKmh(thresholdKmh: Float) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_SPEED_THRESHOLD_KMH.write(prefs, thresholdKmh)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseDebounceSec(debounceSec: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeSpeedThreshold(threshold: Int) {
         val clamped = PREF_AUTO_PAUSE_BIKE_SPEED_THRESHOLD.clamp(threshold)
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clamped
             prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped.toFloat()
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeDebounceSec(debounceSec: Int) {
         val clamped = PREF_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.clamp(debounceSec)
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clamped
             prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeResumeDebounceSec(debounceSec: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunSpeedThreshold(threshold: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_RUN_SPEED_THRESHOLD.write(prefs, threshold)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunDebounceSec(debounceSec: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_RUN_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunResumeDebounceSec(debounceSec: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherSpeedThreshold(threshold: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_OTHER_SPEED_THRESHOLD.write(prefs, threshold)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherDebounceSec(debounceSec: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_OTHER_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherResumeDebounceSec(debounceSec: Int) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             PREF_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC.write(prefs, debounceSec)
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun resetAutoPausePreferences(sportType: BSportType? = null) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             when (sportType) {
                 BSportType.BIKE -> {
                     prefs.remove(KEY_AUTO_PAUSE_BIKE_ENABLED)
@@ -2150,21 +2223,17 @@ data class AutoPausePreferences(
                 }
             }
         }
-        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun resetToDefaults() {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             for (key in ALL_KEYS) {
                 prefs.remove(key)
             }
+            for (legacyKey in LEGACY_RADAR_LIGHT_KEYS) {
+                prefs.remove(legacyKey)
+            }
+            purgeLegacyMapCameraKeys(prefs)
         }
-        TrainingApplication.setClusterTolEndpoints(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS)
-        TrainingApplication.setClusterTolApex(TuningPreferencesDefaults.CLUSTER_TOL_APEX)
-        TrainingApplication.setClusterTolDistance(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE)
-        TrainingApplication.setClusterTolAltitudePos(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS)
-        TrainingApplication.setUseSportTypeForClustering(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
-        TrainingApplication.setUseAltitudePosForClustering(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
-        TrainingApplication.setClusterScoreThreshold(TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD)
     }
 }

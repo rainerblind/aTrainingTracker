@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
+import com.atrainingtracker.banalservice.devices.radar.RadarThreatState
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
@@ -53,6 +54,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -241,6 +244,7 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     private var observationJob: Job? = null
+    private var lightObservationJob: Job? = null
 
     // State tracking
     private var lastThreatLevel: ThreatLevel = ThreatLevel.NONE
@@ -277,16 +281,25 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     /**
-     * Starts observing [RadarStateRepository.radarState] telemetry stream.
+     * Starts observing orthogonal [RadarStateRepository.threatState] and [RadarStateRepository.lightState]
+     * streams (zero [RadarStateRepository.snoozeState] wakeups, REQ-CON-056.3).
      */
     fun start() {
         synchronized(lock) {
             if (isReleased || observationJob?.isActive == true) return
             activeInstance = this
             observationJob = coroutineScope.launch {
-                RadarStateRepository.radarState.collectLatest { state ->
-                    onRadarStateUpdated(state)
+                RadarStateRepository.threatState.collectLatest { state ->
+                    onThreatStateUpdated(state)
                 }
+            }
+            lightObservationJob = coroutineScope.launch {
+                RadarStateRepository.lightState
+                    .map { it.lightMode }
+                    .distinctUntilChanged()
+                    .collectLatest { mode ->
+                        onLightModeUpdated(mode)
+                    }
             }
         }
     }
@@ -299,6 +312,8 @@ class RadarAlertManager @JvmOverloads constructor(
             if (activeInstance === this) activeInstance = null
             observationJob?.cancel()
             observationJob = null
+            lightObservationJob?.cancel()
+            lightObservationJob = null
             handler?.removeCallbacks(restoreRunnable)
             restoreSpeakerVolumeLocked()
             abandonAudioFocusLocked()
@@ -375,148 +390,192 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     /**
+     * Handles distinct tail-light mode changes from [RadarStateRepository.lightState] (REQ-CON-056.3, REQ-TRK-064.4).
+     */
+    fun onLightModeUpdated(lightMode: RadarLightMode) {
+        synchronized(lock) {
+            if (isReleased) return
+            val config = getCurrentConfig()
+            val isPelotonLight = RadarLightController.currentMode.value == RadarLightMode.PELOTON || lightMode == RadarLightMode.PELOTON
+            RadarSnoozeController.setPelotonSyncActive(config.pelotonAudioSync && isPelotonLight)
+            RadarSnoozeController.onLightModeChanged(lightMode)
+        }
+    }
+
+    /**
+     * Evaluates orthogonal [RadarThreatState] transitions without subscribing to snooze ticks (REQ-CON-056.3).
+     */
+    fun onThreatStateUpdated(state: RadarThreatState) {
+        evaluateThreatAndLightLocked(
+            currentThreat = state.overallThreatLevel,
+            currentConn = state.connectionState,
+            targets = state.targets,
+            lightMode = RadarStateRepository.lightState.value.lightMode,
+            notifyCombinedState = null
+        )
+    }
+
+    /**
      * Evaluates state transitions and fires debounced alerts.
      */
     fun onRadarStateUpdated(state: RadarState) {
+        evaluateThreatAndLightLocked(
+            currentThreat = state.overallThreatLevel,
+            currentConn = state.connectionState,
+            targets = state.targets,
+            lightMode = state.lightMode,
+            notifyCombinedState = state
+        )
+    }
+
+    private fun evaluateThreatAndLightLocked(
+        currentThreat: ThreatLevel,
+        currentConn: RadarConnectionState,
+        targets: List<RadarTarget>,
+        lightMode: RadarLightMode,
+        notifyCombinedState: RadarState?
+    ) {
         synchronized(lock) {
             if (isReleased) return
 
             try {
-                val currentThreat = state.overallThreatLevel
-                val currentConn = state.connectionState
                 val now = timeProvider()
                 val config = getCurrentConfig()
 
                 // 0a. Update Peloton Light Mode Audio Sync (REQ-TRK-064.4)
-                val isPelotonLight = RadarLightController.currentMode.value == RadarLightMode.PELOTON || state.lightMode == RadarLightMode.PELOTON
+                val isPelotonLight = RadarLightController.currentMode.value == RadarLightMode.PELOTON || lightMode == RadarLightMode.PELOTON
                 val pelotonSuppressed = config.pelotonAudioSync && isPelotonLight
                 RadarSnoozeController.setPelotonSyncActive(pelotonSuppressed)
 
                 // 0b. Update Smart Urban Congestion Filter (REQ-TRK-064.5)
-            if (config.smartUrbanMute) {
-                val slowTargetCount = state.targets.count { it.approachSpeedMps < URBAN_SPEED_THRESHOLD_MPS }
-                val totalTargetCount = state.targets.size
-                if (slowTargetCount >= 3) {
-                    urbanClearStartTimeMs = null
-                    if (urbanCongestionStartTimeMs == null) {
-                        urbanCongestionStartTimeMs = now
-                    } else if (now - urbanCongestionStartTimeMs!! >= URBAN_CONGESTION_DURATION_MS && !isUrbanSuppressionActive) {
-                        isUrbanSuppressionActive = true
-                        RadarSnoozeController.setUrbanMuteActive(true)
+                if (config.smartUrbanMute) {
+                    val slowTargetCount = targets.count { it.approachSpeedMps < URBAN_SPEED_THRESHOLD_MPS }
+                    val totalTargetCount = targets.size
+                    if (slowTargetCount >= 3) {
+                        urbanClearStartTimeMs = null
+                        if (urbanCongestionStartTimeMs == null) {
+                            urbanCongestionStartTimeMs = now
+                        } else if (now - urbanCongestionStartTimeMs!! >= URBAN_CONGESTION_DURATION_MS && !isUrbanSuppressionActive) {
+                            isUrbanSuppressionActive = true
+                            RadarSnoozeController.setUrbanMuteActive(true)
+                        }
+                    } else if (totalTargetCount >= 3 && slowTargetCount >= 2 && urbanCongestionStartTimeMs != null) {
+                        urbanClearStartTimeMs = null
+                        if (now - urbanCongestionStartTimeMs!! >= URBAN_CONGESTION_DURATION_MS && !isUrbanSuppressionActive) {
+                            isUrbanSuppressionActive = true
+                            RadarSnoozeController.setUrbanMuteActive(true)
+                        }
+                    } else {
+                        urbanCongestionStartTimeMs = null
+                        if (isUrbanSuppressionActive) {
+                            if (urbanClearStartTimeMs == null) {
+                                urbanClearStartTimeMs = now
+                            } else if (now - urbanClearStartTimeMs!! >= URBAN_CLEAR_DURATION_MS) {
+                                isUrbanSuppressionActive = false
+                                urbanClearStartTimeMs = null
+                                RadarSnoozeController.setUrbanMuteActive(false)
+                            }
+                        }
                     }
-                } else if (totalTargetCount >= 3 && slowTargetCount >= 2 && urbanCongestionStartTimeMs != null) {
+                } else if (isUrbanSuppressionActive) {
+                    isUrbanSuppressionActive = false
+                    urbanCongestionStartTimeMs = null
                     urbanClearStartTimeMs = null
-                    if (now - urbanCongestionStartTimeMs!! >= URBAN_CONGESTION_DURATION_MS && !isUrbanSuppressionActive) {
-                        isUrbanSuppressionActive = true
-                        RadarSnoozeController.setUrbanMuteActive(true)
+                    RadarSnoozeController.setUrbanMuteActive(false)
+                }
+
+                // Find primary threatening target (closest target with approach speed > 0 or highest threat)
+                val primaryTarget = targets
+                    .filter { it.threatLevel != ThreatLevel.NONE }
+                    .minByOrNull { it.rangeMeters }
+                    ?: targets.minByOrNull { it.rangeMeters }
+
+                // Check lane-change transition for spatial tick cue (REQ-TRK-065.3)
+                val activeTargetIds = targets.map { it.targetId }.toSet()
+                laneTrackStates.keys.retainAll(activeTargetIds)
+
+                if (config.laneChangeTickEnabled && !isRoutineAlertSuppressed() && config.alertMode != RadarAudioAlertMode.MUTED) {
+                    for (target in targets) {
+                        val offset = target.lateralOffsetMeters ?: continue
+                        val trackState = laneTrackStates.getOrPut(target.targetId) {
+                            LaneTrackState(previousOffsetMeters = offset)
+                        }
+                        if (!trackState.hasTriggeredTick && (now - trackState.lastTickTimestampMs >= LANE_CHANGE_COOLDOWN_MS)) {
+                            if (RadarSpatialAudioMath.isLaneChangeToSafePassing(trackState.previousOffsetMeters, offset, config.trafficOrientation)) {
+                                trackState.hasTriggeredTick = true
+                                trackState.lastTickTimestampMs = now
+                                triggerLaneChangeTick(offset, config)
+                            }
+                        } else if (kotlin.math.abs(offset) < RadarSpatialAudioMath.IN_LANE_THRESHOLD_METERS) {
+                            trackState.hasTriggeredTick = false
+                        }
+                        trackState.previousOffsetMeters = offset
                     }
                 } else {
-                    urbanCongestionStartTimeMs = null
-                    if (isUrbanSuppressionActive) {
-                        if (urbanClearStartTimeMs == null) {
-                            urbanClearStartTimeMs = now
-                        } else if (now - urbanClearStartTimeMs!! >= URBAN_CLEAR_DURATION_MS) {
-                            isUrbanSuppressionActive = false
-                            urbanClearStartTimeMs = null
-                            RadarSnoozeController.setUrbanMuteActive(false)
+                    for (target in targets) {
+                        target.lateralOffsetMeters?.let { offset ->
+                            laneTrackStates.getOrPut(target.targetId) { LaneTrackState(previousOffsetMeters = offset) }
+                                .previousOffsetMeters = offset
                         }
                     }
                 }
-            } else if (isUrbanSuppressionActive) {
-                isUrbanSuppressionActive = false
-                urbanCongestionStartTimeMs = null
-                urbanClearStartTimeMs = null
-                RadarSnoozeController.setUrbanMuteActive(false)
-            }
 
-            // Find primary threatening target (closest target with approach speed > 0 or highest threat)
-            val primaryTarget = state.targets
-                .filter { it.threatLevel != ThreatLevel.NONE }
-                .minByOrNull { it.rangeMeters }
-                ?: state.targets.minByOrNull { it.rangeMeters }
-
-            // Check lane-change transition for spatial tick cue (REQ-TRK-065.3)
-            val activeTargetIds = state.targets.map { it.targetId }.toSet()
-            laneTrackStates.keys.retainAll(activeTargetIds)
-
-            if (config.laneChangeTickEnabled && !isRoutineAlertSuppressed() && config.alertMode != RadarAudioAlertMode.MUTED) {
-                for (target in state.targets) {
-                    val offset = target.lateralOffsetMeters ?: continue
-                    val trackState = laneTrackStates.getOrPut(target.targetId) {
-                        LaneTrackState(previousOffsetMeters = offset)
-                    }
-                    if (!trackState.hasTriggeredTick && (now - trackState.lastTickTimestampMs >= LANE_CHANGE_COOLDOWN_MS)) {
-                        if (RadarSpatialAudioMath.isLaneChangeToSafePassing(trackState.previousOffsetMeters, offset, config.trafficOrientation)) {
-                            trackState.hasTriggeredTick = true
-                            trackState.lastTickTimestampMs = now
-                            triggerLaneChangeTick(offset, config)
-                        }
-                    } else if (kotlin.math.abs(offset) < RadarSpatialAudioMath.IN_LANE_THRESHOLD_METERS) {
-                        trackState.hasTriggeredTick = false
-                    }
-                    trackState.previousOffsetMeters = offset
+                // 1. Disconnect warning transition (CONNECTED -> DISCONNECTED_ERROR)
+                if (lastConnectionState == RadarConnectionState.CONNECTED && currentConn == RadarConnectionState.DISCONNECTED_ERROR) {
+                    lastConnectionState = currentConn
+                    lastThreatLevel = currentThreat
+                    lastAlertTimestampMs = now
+                    triggerDisconnectAlert()
+                    return
                 }
-            } else {
-                for (target in state.targets) {
-                    target.lateralOffsetMeters?.let { offset ->
-                        laneTrackStates.getOrPut(target.targetId) { LaneTrackState(previousOffsetMeters = offset) }
-                            .previousOffsetMeters = offset
-                    }
-                }
-            }
-
-            // 1. Disconnect warning transition (CONNECTED -> DISCONNECTED_ERROR)
-            if (lastConnectionState == RadarConnectionState.CONNECTED && currentConn == RadarConnectionState.DISCONNECTED_ERROR) {
                 lastConnectionState = currentConn
+
+                if (currentThreat == lastThreatLevel) {
+                    return
+                }
+
+                // 2. High-speed escalation alert (ANY -> FAST_APPROACHING)
+                // Safety-critical high-speed escalation bypasses routine debouncing (REQ-TRK-063.1, ATT-6705)
+                if (currentThreat == ThreatLevel.FAST_APPROACHING && lastThreatLevel != ThreatLevel.FAST_APPROACHING) {
+                    lastAlertTimestampMs = now
+                    lastThreatLevel = currentThreat
+                    val fastTarget = targets
+                        .filter { it.threatLevel == ThreatLevel.FAST_APPROACHING }
+                        .maxByOrNull { it.approachSpeedMps }
+                        ?: primaryTarget
+                    triggerFastThreatAlert(fastTarget, config)
+                    return
+                }
+
+                // Hysteresis / debouncing: prevent alert flutter on rapid oscillations
+                // Suppressed frames must NEVER advance lastThreatLevel without emitting transition alert (REQ-TRK-063.1, ATT-6705)
+                if (now - lastAlertTimestampMs < DEBOUNCE_COOLDOWN_MS) {
+                    return
+                }
+
+                // 3. Initial approach alert (NONE -> APPROACHING)
+                if (lastThreatLevel == ThreatLevel.NONE && currentThreat == ThreatLevel.APPROACHING) {
+                    lastAlertTimestampMs = now
+                    lastThreatLevel = currentThreat
+                    triggerApproachAlert(primaryTarget, config)
+                    return
+                }
+
+                // 4. All-clear transition (APPROACHING/FAST -> NONE)
+                if ((lastThreatLevel == ThreatLevel.APPROACHING || lastThreatLevel == ThreatLevel.FAST_APPROACHING) && currentThreat == ThreatLevel.NONE) {
+                    lastAlertTimestampMs = now
+                    lastThreatLevel = currentThreat
+                    triggerAllClearAlert()
+                    return
+                }
+
                 lastThreatLevel = currentThreat
-                lastAlertTimestampMs = now
-                triggerDisconnectAlert()
-                return
-            }
-            lastConnectionState = currentConn
-
-            if (currentThreat == lastThreatLevel) {
-                return
-            }
-
-            // 2. High-speed escalation alert (ANY -> FAST_APPROACHING)
-            // Safety-critical high-speed escalation bypasses routine debouncing (REQ-TRK-063.1, ATT-6705)
-            if (currentThreat == ThreatLevel.FAST_APPROACHING && lastThreatLevel != ThreatLevel.FAST_APPROACHING) {
-                lastAlertTimestampMs = now
-                lastThreatLevel = currentThreat
-                val fastTarget = state.targets
-                    .filter { it.threatLevel == ThreatLevel.FAST_APPROACHING }
-                    .maxByOrNull { it.approachSpeedMps }
-                    ?: primaryTarget
-                triggerFastThreatAlert(fastTarget, config)
-                return
-            }
-
-            // Hysteresis / debouncing: prevent alert flutter on rapid oscillations
-            // Suppressed frames must NEVER advance lastThreatLevel without emitting transition alert (REQ-TRK-063.1, ATT-6705)
-            if (now - lastAlertTimestampMs < DEBOUNCE_COOLDOWN_MS) {
-                return
-            }
-
-            // 3. Initial approach alert (NONE -> APPROACHING)
-            if (lastThreatLevel == ThreatLevel.NONE && currentThreat == ThreatLevel.APPROACHING) {
-                lastAlertTimestampMs = now
-                lastThreatLevel = currentThreat
-                triggerApproachAlert(primaryTarget, config)
-                return
-            }
-
-            // 4. All-clear transition (APPROACHING/FAST -> NONE)
-            if ((lastThreatLevel == ThreatLevel.APPROACHING || lastThreatLevel == ThreatLevel.FAST_APPROACHING) && currentThreat == ThreatLevel.NONE) {
-                lastAlertTimestampMs = now
-                lastThreatLevel = currentThreat
-                triggerAllClearAlert()
-                return
-            }
-
-            lastThreatLevel = currentThreat
             } finally {
-                RadarSnoozeController.onRadarStateUpdated(state)
+                if (notifyCombinedState != null) {
+                    RadarSnoozeController.onRadarStateUpdated(notifyCombinedState)
+                } else {
+                    RadarSnoozeController.onThreatLevelChanged(currentThreat)
+                }
             }
         }
     }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.parsers.TcxLeadingWhitespaceSanitizationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:50.128Z" hostname="rainer-HP-EliteBook-850-G5" time="0.017">
+  <properties/>
+  <testcase name="testStripBomAndLeadingWhitespace_cleanStream" classname="com.atrainingtracker.trainingtracker.routes.parsers.TcxLeadingWhitespaceSanitizationTest" time="0.001"/>
+  <testcase name="testTcxParser_withLeadingWhitespace" classname="com.atrainingtracker.trainingtracker.routes.parsers.TcxLeadingWhitespaceSanitizationTest" time="0.015"/>
+  <testcase name="testStripBomAndLeadingWhitespace_withLeadingSpaces" classname="com.atrainingtracker.trainingtracker.routes.parsers.TcxLeadingWhitespaceSanitizationTest" time="0.0"/>
+  <testcase name="testStripBomAndLeadingWhitespace_withBom" classname="com.atrainingtracker.trainingtracker.routes.parsers.TcxLeadingWhitespaceSanitizationTest" time="0.001"/>
+  <testcase name="testStripBomAndLeadingWhitespace_withBomAndMixedWhitespace" classname="com.atrainingtracker.trainingtracker.routes.parsers.TcxLeadingWhitespaceSanitizationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -16,8 +16,9 @@ import java.util.zip.ZipInputStream
 
 /**
  * Secure zip extraction utility hardened against Zip-Slip path traversal (CWE-22),
- * symbolic link TOCTOU traversal, unauthorized top-level sandbox escapes,
- * and Zip Bomb resource exhaustion (REQ-MIG-040, ATT-3982).
+ * Windows backslash traversal, root-path entry escapes, symbolic link TOCTOU traversal,
+ * unauthorized top-level sandbox escapes, and Zip Bomb resource exhaustion
+ * (`REQ-MIG-040`, `REQ-MIG-056`, `REQ-MIG-061.3`, `ATT-3982`, `ATT-6174`, `ATT-8135`).
  */
 object SecureZipExtractor {
 
@@ -55,9 +56,9 @@ object SecureZipExtractor {
     }
 
     /**
-     * Safely unpacks a backup archive into [destDir] with strict boundary assertions,
-     * real path validation, symlink rejection, streaming size tracking, atomic writes,
-     * and fail-safe cleanup.
+     * Safely unpacks a `.attbackup` archive into [destDir] with strict boundary assertions,
+     * real path validation, symlink rejection, top-level directory whitelisting, streaming size
+     * tracking, atomic writes, and fail-safe cleanup.
      *
      * @param backupFile The zip archive file to extract.
      * @param destDir The target destination directory.
@@ -69,49 +70,104 @@ object SecureZipExtractor {
         destDir: File,
         allowedTopLevelDirs: Set<String> = DEFAULT_ALLOWED_TOP_LEVEL_DIRS
     ) {
+        extractArchiveInternal(
+            archiveFile = backupFile,
+            destDir = destDir,
+            allowedTopLevelDirs = allowedTopLevelDirs,
+            maxEntryCount = MAX_ENTRY_COUNT,
+            maxSingleFileBytes = MAX_SINGLE_FILE_BYTES,
+            maxTotalUncompressedBytes = MAX_TOTAL_UNCOMPRESSED_BYTES
+        )
+    }
+
+    /**
+     * Safely unpacks a workout `.zip` archive (e.g. from cloud Auto-Import or Bulk Recovery)
+     * into [destDir], enforcing Zip-Slip prefix bounds, backslash normalization, root-entry rejection,
+     * symlink rejection, atomic temp writes, post-write `toRealPath` validation, and zip-bomb caps
+     * (`REQ-MIG-061.3`).
+     *
+     * @return Sorted list of extracted regular files residing strictly inside [destDir].
+     * @throws SecurityException if any path traversal, symlink, null byte, or zip-bomb violation occurs.
+     */
+    fun extractWorkoutArchive(
+        zipFile: File,
+        destDir: File,
+        maxEntryCount: Int = MAX_ENTRY_COUNT,
+        maxSingleFileBytes: Long = MAX_SINGLE_FILE_BYTES,
+        maxTotalUncompressedBytes: Long = MAX_TOTAL_UNCOMPRESSED_BYTES
+    ): List<File> {
+        return extractArchiveInternal(
+            archiveFile = zipFile,
+            destDir = destDir,
+            allowedTopLevelDirs = null,
+            maxEntryCount = maxEntryCount,
+            maxSingleFileBytes = maxSingleFileBytes,
+            maxTotalUncompressedBytes = maxTotalUncompressedBytes
+        )
+    }
+
+    private fun extractArchiveInternal(
+        archiveFile: File,
+        destDir: File,
+        allowedTopLevelDirs: Set<String>?,
+        maxEntryCount: Int,
+        maxSingleFileBytes: Long,
+        maxTotalUncompressedBytes: Long
+    ): List<File> {
         val destPath = destDir.toPath().toAbsolutePath().normalize()
         Files.createDirectories(destPath)
         val realDestPath = destPath.toRealPath()
 
         var entryCount = 0
         var totalBytesRead = 0L
+        val extractedFiles = mutableListOf<File>()
 
         try {
-            ZipInputStream(BufferedInputStream(FileInputStream(backupFile))).use { zis ->
+            ZipInputStream(BufferedInputStream(FileInputStream(archiveFile))).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
                     entryCount++
-                    if (entryCount > MAX_ENTRY_COUNT) {
-                        throw SecurityException("Archive entry limit exceeded (max $MAX_ENTRY_COUNT): $entryCount")
+                    if (entryCount > maxEntryCount) {
+                        throw SecurityException("Archive entry limit exceeded (max $maxEntryCount): $entryCount")
                     }
 
-                    val entryName = entry.name
-                    if (entryName.contains('\u0000')) {
-                        throw SecurityException("Null byte in archive entry name: $entryName")
+                    val rawEntryName = entry.name
+                    if (rawEntryName.contains('\u0000')) {
+                        throw SecurityException("Null byte in archive entry name: $rawEntryName")
                     }
 
-                    val entryPath = realDestPath.resolve(entryName).normalize()
+                    // Normalize Windows backslashes so ..\..\evil.fit is caught on Linux/Android (REQ-MIG-061.3)
+                    val normalizedEntryName = rawEntryName.replace('\\', '/')
+                    if (normalizedEntryName.startsWith("/") ||
+                        (normalizedEntryName.length >= 2 && normalizedEntryName[1] == ':')
+                    ) {
+                        throw SecurityException("Zip-slip absolute path attempt detected: $rawEntryName")
+                    }
+
+                    val entryPath = realDestPath.resolve(normalizedEntryName).normalize()
 
                     // 1. Normalized prefix boundary check (pre-I/O defense)
                     if (!entryPath.startsWith(realDestPath)) {
-                        throw SecurityException("Zip-slip path traversal attempt detected: $entryName")
+                        throw SecurityException("Zip-slip path traversal attempt detected: $rawEntryName")
                     }
 
                     // 2. Symbolic link rejection check on target and all path ancestors within realDestPath
                     var ancestor: Path? = entryPath
                     while (ancestor != null && ancestor != realDestPath) {
                         if (Files.exists(ancestor, LinkOption.NOFOLLOW_LINKS) && Files.isSymbolicLink(ancestor)) {
-                            throw SecurityException("Symbolic links are strictly prohibited in backup archives: $entryName")
+                            throw SecurityException("Symbolic links are strictly prohibited in backup archives: $rawEntryName")
                         }
                         ancestor = ancestor.parent
                     }
 
-                    // 3. Top-level directory whitelist check
-                    val relativePath = realDestPath.relativize(entryPath).toString().replace('\\', '/')
-                    if (relativePath.isNotEmpty() && relativePath != ".") {
-                        val topLevelDir = relativePath.substringBefore('/')
-                        if (topLevelDir !in allowedTopLevelDirs) {
-                            throw SecurityException("Invalid backup entry outside whitelisted directories: $entryName")
+                    // 3. Optional top-level directory whitelist check (enforced for .attbackup archives)
+                    if (allowedTopLevelDirs != null) {
+                        val relativePath = realDestPath.relativize(entryPath).toString().replace('\\', '/')
+                        if (relativePath.isNotEmpty() && relativePath != ".") {
+                            val topLevelDir = relativePath.substringBefore('/')
+                            if (topLevelDir !in allowedTopLevelDirs) {
+                                throw SecurityException("Invalid backup entry outside whitelisted directories: $rawEntryName")
+                            }
                         }
                     }
 
@@ -120,16 +176,19 @@ object SecureZipExtractor {
                         // Post-creation real-path validation
                         val realDirPath = entryPath.toRealPath(LinkOption.NOFOLLOW_LINKS)
                         if (!realDirPath.startsWith(realDestPath)) {
-                            throw SecurityException("Directory real path escapes destination boundary: $entryName")
+                            throw SecurityException("Directory real path escapes destination boundary: $rawEntryName")
                         }
                     } else {
+                        // Reject non-directory entries resolving to destDir root itself ("", ".", "sub/..")
                         val parent = entryPath.parent
-                        if (parent != null) {
-                            Files.createDirectories(parent)
-                            val realParent = parent.toRealPath(LinkOption.NOFOLLOW_LINKS)
-                            if (!realParent.startsWith(realDestPath)) {
-                                throw SecurityException("Parent real path escapes destination boundary: $entryName")
-                            }
+                        if (entryPath == realDestPath || parent == null || !parent.startsWith(realDestPath)) {
+                            throw SecurityException("Invalid archive file entry resolving to destination root: $rawEntryName")
+                        }
+
+                        Files.createDirectories(parent)
+                        val realParent = parent.toRealPath(LinkOption.NOFOLLOW_LINKS)
+                        if (!realParent.startsWith(realDestPath)) {
+                            throw SecurityException("Parent real path escapes destination boundary: $rawEntryName")
                         }
 
                         // Atomic write via temporary staging file with NOFOLLOW_LINKS
@@ -149,14 +208,14 @@ object SecureZipExtractor {
                                     singleFileBytes += bytesRead
                                     totalBytesRead += bytesRead
 
-                                    if (singleFileBytes > MAX_SINGLE_FILE_BYTES) {
+                                    if (singleFileBytes > maxSingleFileBytes) {
                                         throw SecurityException(
-                                            "Single file size limit exceeded ($singleFileBytes > $MAX_SINGLE_FILE_BYTES): $entryName"
+                                            "Single file size limit exceeded ($singleFileBytes > $maxSingleFileBytes): $rawEntryName"
                                         )
                                     }
-                                    if (totalBytesRead > MAX_TOTAL_UNCOMPRESSED_BYTES) {
+                                    if (totalBytesRead > maxTotalUncompressedBytes) {
                                         throw SecurityException(
-                                            "Total uncompressed archive size limit exceeded ($totalBytesRead > $MAX_TOTAL_UNCOMPRESSED_BYTES)"
+                                            "Total uncompressed archive size limit exceeded ($totalBytesRead > $maxTotalUncompressedBytes)"
                                         )
                                     }
 
@@ -166,7 +225,7 @@ object SecureZipExtractor {
 
                             // Reject destination if it currently exists as a symbolic link
                             if (Files.exists(entryPath, LinkOption.NOFOLLOW_LINKS) && Files.isSymbolicLink(entryPath)) {
-                                throw SecurityException("Target file is a symbolic link: $entryName")
+                                throw SecurityException("Target file is a symbolic link: $rawEntryName")
                             }
 
                             // Atomic move with cross-device / non-atomic fallback
@@ -177,9 +236,9 @@ object SecureZipExtractor {
                                     StandardCopyOption.ATOMIC_MOVE,
                                     StandardCopyOption.REPLACE_EXISTING
                                 )
-                            } catch (e: AtomicMoveNotSupportedException) {
+                            } catch (_: AtomicMoveNotSupportedException) {
                                 Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING)
-                            } catch (e: IOException) {
+                            } catch (_: IOException) {
                                 Files.copy(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING)
                                 Files.deleteIfExists(tempFile)
                             }
@@ -188,14 +247,16 @@ object SecureZipExtractor {
                             val realFilePath = entryPath.toRealPath(LinkOption.NOFOLLOW_LINKS)
                             if (!realFilePath.startsWith(realDestPath)) {
                                 Files.deleteIfExists(entryPath)
-                                throw SecurityException("File real path escapes destination boundary: $entryName")
+                                throw SecurityException("File real path escapes destination boundary: $rawEntryName")
                             }
 
                             // Final symlink assertion
                             if (Files.isSymbolicLink(entryPath)) {
                                 Files.deleteIfExists(entryPath)
-                                throw SecurityException("Symbolic links are strictly prohibited in backup archives: $entryName")
+                                throw SecurityException("Symbolic links are strictly prohibited in backup archives: $rawEntryName")
                             }
+
+                            extractedFiles.add(entryPath.toFile())
                         } finally {
                             Files.deleteIfExists(tempFile)
                         }
@@ -209,15 +270,20 @@ object SecureZipExtractor {
             destDir.deleteRecursively()
             try {
                 realDestPath.toFile().deleteRecursively()
-            } catch (ignored: Exception) {
+            } catch (_: Exception) {
             }
             throw e
+        }
+
+        return extractedFiles.sortedWith { a, b ->
+            String.CASE_INSENSITIVE_ORDER.compare(a.name, b.name)
         }
     }
 
     /**
-     * Sanitizes a remote Google Drive filename, ensuring it does not contain path separators
-     * or relative traversal elements, and guarantees the returned [File] resides strictly within [workerDir].
+     * Sanitizes a remote cloud filename (Google Drive or Dropbox), ensuring it does not contain
+     * path separators or relative traversal elements, and guarantees the returned [File] resides
+     * strictly within [workerDir] (`REQ-MIG-040`, `REQ-MIG-056`, `REQ-MIG-061.3`).
      */
     fun sanitizeDriveFileName(fileName: String, workerDir: File): File {
         if ('\u0000' in fileName || fileName.contains('/') || fileName.contains('\\') || fileName.contains("..")) {

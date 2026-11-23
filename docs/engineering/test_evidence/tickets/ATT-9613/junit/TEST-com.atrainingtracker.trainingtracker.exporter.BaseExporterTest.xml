@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.BaseExporterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:18:00.459Z" hostname="rainer-HP-EliteBook-850-G5" time="2.133">
+  <properties/>
+  <testcase name="testExport_transientIOException_shallRetry_TST_DAT_024_2" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterTest" time="1.172"/>
+  <testcase name="testExport_success" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterTest" time="0.155"/>
+  <testcase name="testCooperativeCancellation_abortsExportAndReturnsFailureWithoutRetry_TST_DAT_024_6" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterTest" time="0.172"/>
+  <testcase name="testExport_deterministicErrors_shallNotRetry_TST_DAT_024_1" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterTest" time="0.191"/>
+  <testcase name="testCursorHelpers_allowColumnIndexZeroAndRejectNegative_TST_MIG_055_3" classname="com.atrainingtracker.trainingtracker.exporter.BaseExporterTest" time="0.44"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -346,7 +346,7 @@ class ANTBikeLightDevice(
             isAssociated = true
             if (!previouslyAssociated) {
                 RadarLightController.registerRadarDevice(this, true, false)
-                RadarStateRepository.updateControlState { current ->
+                RadarStateRepository.updateLightState { current ->
                     current.copy(isLightControlSupported = true, lightMode = decodedMode)
                 }
             }

@@ -292,8 +292,13 @@ public class ExportManager {
     }
 
     /**
-     * Defensive pre-crop cache invalidation: cancels running export tasks and deletes cached export files.
-     * Marks export status as WAITING so that post-crop export refreshes cleanly.
+     * Defensive pre-crop / pre-re-export cache invalidation: cancels running export tasks and deletes
+     * ONLY regenerable derived export cache files ({@link FileFormat#isDerivedExportFile()}).
+     * Irreplaceable live-recorded raw sensor sidecars ({@link FileFormat#RAW_SENSOR}, i.e.
+     * {@code files/raw_sensor/*.polar_raw.csv.gz}, {@code *.phone_raw.csv.gz}, and {@code *.tmp})
+     * are strictly preserved and may only be deleted via explicit workout deletion cascade or
+     * {@code PolarRawTelemetryPruner} retention pruning (REQ-EXP-048.2).
+     * Marks export status as WAITING so that subsequent export refreshes cleanly (REQ-DAT-029.4).
      *
      * @param fileBaseName The unique workout base name.
      */
@@ -317,17 +322,23 @@ public class ExportManager {
             Log.w(TAG, "Could not cancel WorkManager tasks for " + fileBaseName, t);
         }
 
-        // 2. Delete cached files defensively
+        // 2. Delete cached derived export files defensively (never delete irreplaceable raw sensor sidecars; REQ-EXP-048.2)
         File baseDir = BaseExporter.getBaseDirFile(mContext);
-        for (FileFormat format : FileFormat.values()) {
-            try {
-                File targetFile = new File(baseDir, format.getDirName() + File.separator + fileBaseName + format.getFileEnding());
-                if (targetFile.exists()) {
-                    boolean deleted = targetFile.delete();
-                    if (DEBUG) Log.d(TAG, "Deleted export file: " + targetFile.getAbsolutePath() + " (success=" + deleted + ")");
+        String basePath = baseDir != null ? baseDir.getPath() : null;
+        if (basePath != null && !basePath.isEmpty()) {
+            for (FileFormat format : FileFormat.values()) {
+                if (!format.isDerivedExportFile() || format.getFileEnding().isEmpty()) {
+                    continue;
                 }
-            } catch (Throwable t) {
-                Log.w(TAG, "Failed deleting cached export file for " + format + ": " + fileBaseName, t);
+                try {
+                    File targetFile = new File(baseDir, format.getDirName() + File.separator + fileBaseName + format.getFileEnding());
+                    if (targetFile.exists()) {
+                        boolean deleted = targetFile.delete();
+                        if (DEBUG) Log.d(TAG, "Deleted export file: " + targetFile.getAbsolutePath() + " (success=" + deleted + ")");
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "Failed deleting cached export file for " + format + ": " + fileBaseName, t);
+                }
             }
         }
 

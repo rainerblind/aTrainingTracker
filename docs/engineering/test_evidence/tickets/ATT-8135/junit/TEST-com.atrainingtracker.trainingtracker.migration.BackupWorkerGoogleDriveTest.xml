@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupWorkerGoogleDriveTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:00:50.278Z" hostname="rainer-HP-EliteBook-850-G5" time="0.863">
+  <properties/>
+  <testcase name="testDoWork_whenNeitherCloudConnected_createsLocalBackupAndSavesStatus" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerGoogleDriveTest" time="0.427"/>
+  <testcase name="testDoWork_whenGoogleDriveConnected_triggersUpload" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerGoogleDriveTest" time="0.436"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

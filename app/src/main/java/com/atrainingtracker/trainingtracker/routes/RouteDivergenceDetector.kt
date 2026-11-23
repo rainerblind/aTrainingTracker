@@ -105,7 +105,8 @@ object RouteDivergenceDetector {
 
         val refRoute = validCandidates[0]
         val refProj = ForkRouteMatcher.projectOntoPolyline(currentPos, refRoute.path)
-        val d0 = refProj.distanceAlongRouteMeters
+        val refOrigin = refRoute.path.first().distance
+        val d0 = refOrigin + refProj.alongTrackDistance
         val maxDist = (d0 + LOOKAHEAD_METERS).coerceAtMost(refRoute.path.last().distance)
 
         var firstDivergenceDist = -1.0
@@ -150,7 +151,7 @@ object RouteDivergenceDetector {
         }
 
         // Approach bearing: vector along shared corridor approaching the fork point
-        val approachPtBefore = pointAtDistance(refRoute.path, (junctionDist - 30.0).coerceAtLeast(0.0))
+        val approachPtBefore = pointAtDistance(refRoute.path, (junctionDist - 30.0).coerceAtLeast(refOrigin))
         val approachBearing = if (GeoUtils.haversineDistanceMeters(
                 approachPtBefore.latitude, approachPtBefore.longitude,
                 divergencePoint.latitude, divergencePoint.longitude
@@ -169,7 +170,8 @@ object RouteDivergenceDetector {
 
         val branchOptions = validCandidates.map { route ->
             val routeProj = ForkRouteMatcher.projectOntoPolyline(divergencePoint, route.path)
-            val branchLookaheadDist = (routeProj.distanceAlongRouteMeters + 40.0).coerceAtMost(route.path.last().distance)
+            val routeOrigin = route.path.first().distance
+            val branchLookaheadDist = (routeOrigin + routeProj.alongTrackDistance + 40.0).coerceAtMost(route.path.last().distance)
             val branchPtAfter = pointAtDistance(route.path, branchLookaheadDist)
 
             val branchBearing = GeoUtils.calculateInitialBearing(

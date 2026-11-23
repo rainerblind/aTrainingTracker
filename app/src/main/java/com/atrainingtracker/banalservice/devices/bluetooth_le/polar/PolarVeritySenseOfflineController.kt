@@ -552,8 +552,12 @@ object PolarVeritySenseOfflineController {
                 timeoutMs = FETCH_TIMEOUT_MS,
                 apiOverride = apiOverride
             ) { api ->
-                api.connectToDevice(polarId)
-                api.waitForConnection(polarId)
+                if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, polarId, FETCH_TIMEOUT_MS)) {
+                    return@withGattYieldAndPolarApi VerityOfflineHrFetchResult(
+                        null, null, stoppedSuccessfully = false,
+                        errorMessage = "Timed out connecting to $polarId"
+                    )
+                }
                 val ready = PolarOfflineGattCoordinator.awaitFeaturesReady(
                     api, polarId, REQUIRED_OFFLINE_FEATURES, featureTimeoutMs
                 )
@@ -607,8 +611,9 @@ object PolarVeritySenseOfflineController {
                 timeoutMs = FETCH_TIMEOUT_MS,
                 apiOverride = apiOverride
             ) { api ->
-                api.connectToDevice(polarId)
-                api.waitForConnection(polarId)
+                if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, polarId, FETCH_TIMEOUT_MS)) {
+                    return@withGattYieldAndPolarApi false
+                }
                 val ready = PolarOfflineGattCoordinator.awaitFeaturesReady(
                     api, polarId, REQUIRED_OFFLINE_FEATURES, featureTimeoutMs
                 )
@@ -632,8 +637,12 @@ object PolarVeritySenseOfflineController {
         macAddress: String,
         polarId: String
     ): Boolean {
-        api.connectToDevice(polarId)
-        api.waitForConnection(polarId)
+        if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, polarId, ARMING_TIMEOUT_MS)) {
+            isArmed.set(false)
+            lastArmingOutcome = ArmingOutcome.ERROR_FAILED
+            lastArmingError = "Connection timed out after $ARMING_TIMEOUT_MS ms"
+            return false
+        }
 
         val featuresReady = PolarOfflineGattCoordinator.awaitFeaturesReady(
             api, polarId, REQUIRED_ARMING_FEATURES, featureTimeoutMs

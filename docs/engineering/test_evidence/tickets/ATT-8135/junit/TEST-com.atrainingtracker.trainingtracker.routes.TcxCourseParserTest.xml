@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:51.761Z" hostname="rainer-HP-EliteBook-850-G5" time="0.652">
+  <properties/>
+  <testcase name="testParseTcxCourse_withSummaryOnlyLapAndSiblingTrack_extractsSiblingTrackpoints_TST_MIG_061_1" classname="com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest" time="0.145"/>
+  <testcase name="testParseTcxCourse_invalidXml_returnsFailure" classname="com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest" time="0.123"/>
+  <testcase name="testParseTcxCourse_whenNoCoursePointsPresent_returnsRouteWithZeroWaypoints" classname="com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest" time="0.127"/>
+  <testcase name="testParseTcxCourse_extractsTrackpointsAndCoursePoints" classname="com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest" time="0.128"/>
+  <testcase name="testParseTcxCourse_filtersPositionlessTrackpoints" classname="com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest" time="0.128"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

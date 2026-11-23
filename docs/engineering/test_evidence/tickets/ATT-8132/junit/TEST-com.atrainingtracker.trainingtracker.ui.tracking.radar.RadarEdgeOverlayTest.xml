@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" tests="37" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:39:36.920Z" hostname="rainer-HP-EliteBook-850-G5" time="7.509">
+  <properties/>
+  <testcase name="isFailSafeDisconnect_identifiesDisconnectErrorStrictly" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.247"/>
+  <testcase name="radarEdgeSide_containsFullScreenAndDeserializesBackwardCompatibly" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.186"/>
+  <testcase name="failSafeDisconnect_neverIndicatesGreenClearRoad" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.188"/>
+  <testcase name="normalizeRadarRange_computesAccurateNormalizedPositions" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.203"/>
+  <testcase name="resolveThreatColor_mapsSemanticTokensCorrectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.165"/>
+  <testcase name="activeThreats_unsnoozedAndSnoozed_displayBadgeAndInvokeOnBadgeClick" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.857"/>
+  <testcase name="normalizeRadarRange_clampsBoundaryValuesSafely" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.212"/>
+  <testcase name="clearConnectedState_leftAndRight_suppressesStatusBadgeAndGuardsRailSpacers" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.214"/>
+  <testcase name="fullScreenMarkers_v2VehicleCategories_scaleDistinctlyAndUseLocalizedSemantics" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.228"/>
+  <testcase name="disconnectedError_displaysAmberBadge_andRoutesClickToReconnect" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.267"/>
+  <testcase name="formatSnoozeBadgeText_fastOnlyReturnsExclamation" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.16"/>
+  <testcase name="fullScreenMarkers_preserveTouchPassThrough_upwardKinematics_andEdgeRailGeometry" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.229"/>
+  <testcase name="captureLightAndDarkOverlayPreviewPng" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.373"/>
+  <testcase name="formatSnoozeBadgeText_pelotonSyncReturnsP" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.186"/>
+  <testcase name="resolveRailMaxRange_returnsExpectedBoundaries" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.133"/>
+  <testcase name="badgeClick_inDisconnectedError_routesToReconnectWhenAvailable" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.12"/>
+  <testcase name="calculateHorizontalOffsetDp_respectsOrientationAndOffsets" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.114"/>
+  <testcase name="formatSnoozeBadgeText_returnsNullWhenNotSnoozed" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.11"/>
+  <testcase name="fullScreenMarkers_pulseOnlyWhenFastApproaching" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.525"/>
+  <testcase name="fullScreenMarkers_singlePassLayout_clampsOnFirstFrameAndDynamicWidthGrowth" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.181"/>
+  <testcase name="isRadarOverlayVisible_suppressesOverlayDuringSearchAndDisconnected" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.246"/>
+  <testcase name="defaultPreferences_conformToSpecification" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.113"/>
+  <testcase name="formatSnoozeBadgeText_restOfRideReturnsM" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.108"/>
+  <testcase name="buildThreatDescription_formatsStandardThreatCount" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.156"/>
+  <testcase name="buildThreatDescription_formatsFastThreatCountWithSnoozeSuffix" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.121"/>
+  <testcase name="isRadarOverlayVisible_suppressedWhenNotInTrackingScreenMode" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.107"/>
+  <testcase name="formatSnoozeBadgeText_timedSnoozeFormatsCeiledMinutes" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.159"/>
+  <testcase name="calculateFullScreenHorizontalFraction_mapsLanesAndOffsetsCorrectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.128"/>
+  <testcase name="fullScreenMarkers_15m128m160m_renderUnclippedAndWithinContainerBounds" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.2"/>
+  <testcase name="isRadarOverlayVisible_rendersOnConnectedDisconnectedErrorAndSimulation" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.119"/>
+  <testcase name="clearSnoozedState_suppressesStatusBadgeAcrossAllEdgeSides" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.145"/>
+  <testcase name="captureFullScreenMarkersPreviewPng" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.398"/>
+  <testcase name="clearConnectedState_fullScreen_suppressesStatusBadgeAndRail" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.112"/>
+  <testcase name="startAndLiveTrackingTabs_clearOverlayHasZeroBadge_andAutoHideFadesRail" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.167"/>
+  <testcase name="buildThreatDescription_formatsWithLocalizedTemplate" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.097"/>
+  <testcase name="formatSnoozeBadgeText_urbanMuteReturnsU" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.089"/>
+  <testcase name="fullScreenMarkers_passThroughTapAndSwipeDirectlyOverMarkerBoundsToUnderlyingSibling" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest" time="0.14"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tcx.parser.TcxParserTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:52.462Z" hostname="rainer-HP-EliteBook-850-G5" time="0.008">
+  <properties/>
+  <testcase name="testParseBracketFallbackAndLeadingWhitespace" classname="com.atrainingtracker.trainingtracker.tcx.parser.TcxParserTest" time="0.001"/>
+  <testcase name="testParseStandardTcxWithExtensions" classname="com.atrainingtracker.trainingtracker.tcx.parser.TcxParserTest" time="0.006"/>
+  <testcase name="testParseCoursesAndCoursePoints" classname="com.atrainingtracker.trainingtracker.tcx.parser.TcxParserTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

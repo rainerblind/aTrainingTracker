@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:52.418Z" hostname="rainer-HP-EliteBook-850-G5" time="0.04">
+  <properties/>
+  <testcase name="testGpxWithUtf8BomIsHandledGracefully" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.01"/>
+  <testcase name="testWorkoutParserRegistryResolvesFormats_TST_MIG_061_1" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.0"/>
+  <testcase name="testObsoleteTcxTrackpointParserAndDeadBuildLapRemoved_TST_MIG_061_1" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.005"/>
+  <testcase name="testTcxActivityParsingWithTelemetryAndStreamingParity_TST_MIG_061_1" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.014"/>
+  <testcase name="testTcxWithUtf8BomIsHandledGracefully" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.001"/>
+  <testcase name="testMalformedXmlGracefulHandling" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.001"/>
+  <testcase name="testTcxCourseParsingWithCoursePoints" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.005"/>
+  <testcase name="testGpxTrackParsingWithGarminTpxExtensionsAndStreamingParity_TST_MIG_061_1" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.003"/>
+  <testcase name="testEmptyXmlGracefulHandling" classname="com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParserTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

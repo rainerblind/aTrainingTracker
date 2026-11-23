@@ -24,6 +24,7 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter
 import com.atrainingtracker.trainingtracker.migration.FitSportMapper
 import com.atrainingtracker.trainingtracker.migration.ParsedLap
@@ -51,15 +52,18 @@ import java.util.Locale
 /**
  * Dedicated parser for Garmin FIT binary workout files.
  *
- * Enforces REQ-MIG-038.
+ * Enforces REQ-MIG-038, REQ-MIG-053, REQ-MIG-058.1, REQ-MIG-061.1.
  */
-object FitWorkoutParser {
+object FitWorkoutParser : WorkoutParser {
     private const val TAG = "FitWorkoutParser"
+
+    override val formatExtension: String = "fit"
+    override val workoutSource: WorkoutSource = WorkoutSource.FIT
 
     /**
      * Parses a Garmin FIT binary file into [ParsedWorkoutData].
      */
-    fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
+    override fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
         return try {
             val bytes = file.readBytes()
             parse(bytes, context)
@@ -72,7 +76,7 @@ object FitWorkoutParser {
     /**
      * Parses a Garmin FIT binary stream into [ParsedWorkoutData] (REQ-MIG-048.1).
      */
-    fun parse(stream: java.io.InputStream, context: Context): Result<ParsedWorkoutData> {
+    override fun parse(stream: java.io.InputStream, context: Context): Result<ParsedWorkoutData> {
         return try {
             val bytes = stream.readBytes()
             parse(bytes, context)

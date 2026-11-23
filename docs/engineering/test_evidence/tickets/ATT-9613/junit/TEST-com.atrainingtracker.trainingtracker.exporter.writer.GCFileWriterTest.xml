@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:19:28.429Z" hostname="rainer-HP-EliteBook-850-G5" time="9.584">
+  <properties/>
+  <testcase name="testGCFileWriter_intervalsExport_fromRecordedLaps" classname="com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriterTest" time="1.88"/>
+  <testcase name="testGCFileWriter_validNumericJson_and_localeIndependence" classname="com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriterTest" time="1.822"/>
+  <testcase name="testGCFileWriter_gpsValidation_and_doublePrecision" classname="com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriterTest" time="1.811"/>
+  <testcase name="testGCFileWriter_resourceSafetyOnException" classname="com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriterTest" time="1.995"/>
+  <testcase name="testGCFileWriter_tagsMetadataAlignment" classname="com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriterTest" time="2.076"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

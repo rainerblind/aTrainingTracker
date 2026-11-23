@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterWaypointTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:10.276Z" hostname="rainer-HP-EliteBook-850-G5" time="1.267">
+  <properties/>
+  <testcase name="testImportRoute_withGpxLackingWaypoints_returnsEmptyWaypointsList" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterWaypointTest" time="0.95"/>
+  <testcase name="testImportRoute_withGpxWaypoints_extractsAndClassifiesPoiTypes" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterWaypointTest" time="0.317"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

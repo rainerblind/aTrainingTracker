@@ -29,13 +29,19 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import io.mockk.*
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 /**
  * Unit tests verifying ExportManager unique work enqueueing, dual tagging, invalidation cancellation,
- * and entry input sanitization (REQ-DAT-029.4, REQ-DAT-029.6, TST-DAT-024.7, TST-DAT-024.13).
+ * entry input sanitization, and raw sensor sidecar preservation on export invalidation
+ * (REQ-DAT-029.4, REQ-DAT-029.6, REQ-EXP-048, TST-DAT-024.7, TST-DAT-024.13, TST-EXP-048.1).
  */
 class ExportManagerTest {
 
@@ -148,5 +154,97 @@ class ExportManagerTest {
         verify(exactly = 0) { mockRepo.addExportStatus(any()) }
         verify(exactly = 0) { mockRepo.workoutFinished(any()) }
         verify(exactly = 0) { mockWorkManager.beginUniqueWork(any(), any(), any<OneTimeWorkRequest>()) }
+    }
+
+    // REQ-EXP-048.1 / REQ-EXP-048.2 / TST-EXP-048.1
+    @Test
+    fun testInvalidateWorkoutExport_deletesDerivedCachesOnlyAndPreservesRawSensorSidecars_TST_EXP_048_1() {
+        // 1. Exhaustive partition check over FileFormat.values()
+        val expectedDerived = setOf(
+            FileFormat.CSV,
+            FileFormat.GC,
+            FileFormat.TCX,
+            FileFormat.GPX,
+            FileFormat.FIT,
+            FileFormat.STRAVA
+        )
+        val expectedNonDerived = setOf(
+            FileFormat.RAW_SENSOR,
+            FileFormat.HEALTH_CONNECT
+        )
+        val allFormats = FileFormat.values().toSet()
+        assertEquals(allFormats, expectedDerived + expectedNonDerived)
+        assertTrue(expectedDerived.intersect(expectedNonDerived).isEmpty())
+        for (format in allFormats) {
+            if (format in expectedDerived) {
+                assertTrue("Expected $format to be a derived export file", format.isDerivedExportFile)
+            } else {
+                assertFalse("Expected $format NOT to be a derived export file", format.isDerivedExportFile)
+            }
+        }
+
+        // 2. Populate real temporary filesDir with derived caches, raw sensor sidecars, and HealthConnect sentinel
+        val fileBaseName = "2026-11-22_105503"
+        val tempFilesDir = Files.createTempDirectory("att_9613_export_invalidation").toFile()
+        try {
+            every { mockContext.filesDir } returns tempFilesDir
+
+            val derivedFiles = expectedDerived.associateWith { format ->
+                val dir = File(tempFilesDir, format.dirName).apply { mkdirs() }
+                File(dir, fileBaseName + format.fileEnding).apply {
+                    writeText("derived-${format.name}-$fileBaseName")
+                }
+            }
+
+            val rawDir = File(tempFilesDir, FileFormat.RAW_SENSOR.dirName).apply { mkdirs() }
+            val polarPayload = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x11, 0x22, 0x33)
+            val phonePayload = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x44, 0x55, 0x66)
+            val polarTmpPayload = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x77, 0x88.toByte())
+            val phoneTmpPayload = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x99.toByte(), 0xAA.toByte())
+
+            val polarSidecar = File(rawDir, "$fileBaseName.polar_raw.csv.gz").apply { writeBytes(polarPayload) }
+            val phoneSidecar = File(rawDir, "$fileBaseName.phone_raw.csv.gz").apply { writeBytes(phonePayload) }
+            val polarTmp = File(rawDir, "$fileBaseName.polar_raw.csv.gz.tmp").apply { writeBytes(polarTmpPayload) }
+            val phoneTmp = File(rawDir, "$fileBaseName.phone_raw.csv.gz.tmp").apply { writeBytes(phoneTmpPayload) }
+
+            val hcDir = File(tempFilesDir, FileFormat.HEALTH_CONNECT.dirName).apply { mkdirs() }
+            val hcSentinelPayload = "hc-sentinel".toByteArray()
+            val hcSentinel = File(hcDir, fileBaseName).apply { writeBytes(hcSentinelPayload) }
+
+            // 3. Execute invalidation
+            exportManager.invalidateWorkoutExport(fileBaseName)
+
+            // 4. All 6 derived caches MUST be deleted
+            for ((format, file) in derivedFiles) {
+                assertFalse("Derived cache for $format must be deleted: ${file.absolutePath}", file.exists())
+            }
+
+            // 5. All raw_sensor sidecars & HealthConnect sentinel MUST survive byte-for-byte
+            assertTrue("Polar raw sidecar must NOT be deleted", polarSidecar.exists())
+            assertArrayEquals(polarPayload, polarSidecar.readBytes())
+
+            assertTrue("Phone raw sidecar must NOT be deleted", phoneSidecar.exists())
+            assertArrayEquals(phonePayload, phoneSidecar.readBytes())
+
+            assertTrue("Polar raw .tmp sidecar must NOT be deleted", polarTmp.exists())
+            assertArrayEquals(polarTmpPayload, polarTmp.readBytes())
+
+            assertTrue("Phone raw .tmp sidecar must NOT be deleted", phoneTmp.exists())
+            assertArrayEquals(phoneTmpPayload, phoneTmp.readBytes())
+
+            assertTrue("HealthConnect sentinel must NOT be deleted", hcSentinel.exists())
+            assertArrayEquals(hcSentinelPayload, hcSentinel.readBytes())
+
+            // 6. WorkManager cancellation, DB WAITING reset, and status broadcast MUST still execute (REQ-DAT-029.4)
+            verify { mockWorkManager.cancelAllWorkByTag(fileBaseName) }
+            verify { mockWorkManager.cancelUniqueWork("export_$fileBaseName") }
+            for (format in allFormats) {
+                verify { mockWorkManager.cancelUniqueWork(ExportManager.getUniqueWorkName(fileBaseName, format)) }
+                verify { mockRepo.updateExportStatus(any(), fileBaseName, null, format) }
+            }
+            verify { ExportStatusChangedBroadcaster.broadcastExportStatusChanged(mockContext, fileBaseName) }
+        } finally {
+            tempFilesDir.deleteRecursively()
+        }
     }
 }

@@ -61,4 +61,23 @@ class PaceFormatterTest {
         val formatted = formatter.format_with_units(0.3)
         assert(formatted.endsWith("min/mile"))
     }
+
+    @Test
+    fun formatPaceMinutes_negativeAndExceedingMaxPace_matchFormatParity() {
+        TrainingApplication.setUnitForTesting(MyUnits.METRIC)
+        assertEquals("--", formatter.formatPaceMinutes(null, MyUnits.METRIC))
+        assertEquals("--", formatter.formatPaceMinutes(-1.5, MyUnits.METRIC))
+        assertEquals("-- min/km", formatter.formatPaceMinutesWithUnits(-1.5, MyUnits.METRIC))
+        assertEquals("--", formatter.formatPaceMinutes(Double.NaN, MyUnits.METRIC))
+
+        // BANALService.MAX_PACE = 10.0 s/m -> 166.666... min/km; strictly greater returns "~~"
+        assertEquals("~~", formatter.formatPaceMinutes(166.7, MyUnits.METRIC))
+        assertEquals("~~ min/km", formatter.formatPaceMinutesWithUnits(166.7, MyUnits.METRIC))
+        assertEquals("5:30 min/km", formatter.formatPaceMinutesWithUnits(5.5, MyUnits.METRIC))
+
+        // Imperial MAX_PACE = 10.0 * 1609.344 / 60 = 268.224 min/mile
+        assertEquals("200:00 min/mile", formatter.formatPaceMinutesWithUnits(200.0, MyUnits.IMPERIAL))
+        assertEquals("~~", formatter.formatPaceMinutes(268.3, MyUnits.IMPERIAL))
+        assertEquals("~~ min/mile", formatter.formatPaceMinutesWithUnits(268.3, MyUnits.IMPERIAL))
+    }
 }

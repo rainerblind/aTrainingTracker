@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:37:40.314Z" hostname="rainer-HP-EliteBook-850-G5" time="2.288">
+  <properties/>
+  <testcase name="tuningPreferencesUpdates_propagateImmediatelyToRadarLightControllerAndAutoPauseConfig_tstCon056_2" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.448"/>
+  <testcase name="parallelRadarLightControllerAndSmartBrakeLightDetector_haveZeroAbBaDeadlocks_tstCon056_4" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.673"/>
+  <testcase name="concurrentThreatAndSnoozeMutations_neverOverwriteTargetsOrFailoverControlState_tstCon056_3" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.101"/>
+  <testcase name="deadCachesAndInvalidationHooks_areRemovedFromRadarLightControllerAndTrackerService_tstCon056_2" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.269"/>
+  <testcase name="timedSnooze_producesZeroWakeupsInSmartRadarLightEngineAndRadarAlertManager_tstCon056_3" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.795"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

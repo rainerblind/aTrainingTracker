@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:05:59.494Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testElevationProfile_tracksPathPointsViaRememberUpdatedState" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureTest" time="0.0"/>
+  <testcase name="testElevationProfile_verticalDragDoesNotConsumeAndSuppressesTap" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureTest" time="0.001"/>
+  <testcase name="testElevationProfile_decouplesMutableZoomKeysFromPointerInput" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureTest" time="0.0"/>
+  <testcase name="testElevationProfile_integratesChartGestureDisambiguator" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureTest" time="0.002"/>
+  <testcase name="testElevationProfile_multiTouchPinchZoomPreserved" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGestureTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

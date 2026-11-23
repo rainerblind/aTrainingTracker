@@ -73,6 +73,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -1383,5 +1384,89 @@ class PolarVeritySenseOfflineControllerTest {
         assertFalse(result)
         assertTrue("Stale workout 1 exit must NOT disarm newer workout", PolarVeritySenseOfflineController.isRecordingArmed())
         assertEquals(workout3Token, PolarVeritySenseOfflineController.getArmedSessionToken())
+    }
+
+    // REQ-SET-129.2 / REQ-SET-129.3 / TST-SET-131.3
+    @Test
+    fun testSyncPendingWorkout_recoversFromMidWaitDisconnectAndMidDiscoveryDelayedFeature_TST_SET_131_3() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = null
+        PolarVeritySenseOfflineController.featureTimeoutMs = 5_000L
+        PolarOfflineGattCoordinator.connectRetryBackoffMs = 20L
+
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.registerDeviceAliases(verityPolarId, verityMac)
+
+        val workoutId = 2431L
+        val baseFileName = "2026-11-22_105503"
+        val startMs = 1_700_000_000_000L
+        every { mockSummariesDb.getPolarPendingSyncData(workoutId) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+                verityPolarId,
+                PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX,
+                startMs,
+                startMs + 60_000L,
+                true
+            )
+        every { mockWorkoutRepo.getBaseFileName(workoutId) } returns baseFileName
+        every { mockSamplesDb.patchMissingHeartRateSamples(eq(baseFileName), any(), any()) } returns 2
+        every { mockSamplesDb.calcHeartRateStats(baseFileName) } returns null
+
+        // Pre-seed in-flight bridge session in SESSION_OPENING (deviceConnecting) before Attempt 1
+        val bridgeCb = mockk<com.polar.sdk.api.PolarBleApiCallback>(relaxed = true)
+        PolarOfflineGattCoordinator.acquirePersistentSession(context, verityPolarId, verityMac, bridgeCb)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+        mux.deviceConnecting(com.polar.sdk.api.model.PolarDeviceInfo(verityPolarId, verityMac, -50, "Polar Sense $verityPolarId", true))
+
+        val connectCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        val firstWaitEntered = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val retryConnectIssued = kotlinx.coroutines.CompletableDeferred<Unit>()
+        every { sharedApi.connectToDevice(verityPolarId) } answers {
+            if (connectCalls.incrementAndGet() >= 1) retryConnectIssued.complete(Unit)
+        }
+        coEvery { sharedApi.waitForConnection(verityPolarId) } coAnswers {
+            firstWaitEntered.complete(Unit)
+            kotlinx.coroutines.awaitCancellation()
+        }
+        every { sharedApi.isFeatureReady(any(), any()) } returns false
+        coEvery { sharedApi.getOfflineRecordingStatus(verityPolarId) } returns emptyList()
+        val hrEntry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261122/R/105503/HR.REC",
+            size = 128L,
+            date = java.time.Instant.ofEpochMilli(startMs).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime(),
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        every { sharedApi.listOfflineRecordings(verityPolarId) } returns flowOf(hrEntry)
+        val hrData = PolarOfflineRecordingData.HrOfflineRecording(
+            data = PolarHrData(listOf(createHrSample(hr = 135), createHrSample(hr = 138))),
+            startTime = hrEntry.date
+        )
+        coEvery { sharedApi.getOfflineRecord(verityPolarId, hrEntry, null) } returns hrData
+        coEvery { sharedApi.removeOfflineRecord(verityPolarId, hrEntry) } just Runs
+
+        val syncJob = this.async(kotlinx.coroutines.Dispatchers.Default) {
+            PolarVeritySenseOfflineController.syncPendingWorkout(context, workoutId)
+        }
+
+        // Wait until Attempt 1 awaits the in-flight handshake (0 duplicate connectToDevice calls)
+        kotlinx.coroutines.withTimeout(2_000L) { firstWaitEntered.await() }
+        assertEquals("Initial in-flight handshake must be awaited without duplicate connectToDevice", 0, connectCalls.get())
+
+        // Simulate 10:57:36 mid-wait disconnect teardown -> must trigger automatic retry connectToDevice
+        mux.deviceDisconnected(com.polar.sdk.api.model.PolarDeviceInfo(verityPolarId, verityMac, -50, "Polar Sense $verityPolarId", true))
+        kotlinx.coroutines.withTimeout(2_000L) { retryConnectIssued.await() }
+        assertEquals(1, connectCalls.get())
+
+        // Sensor connects immediately, then offline features arrive asynchronously (mid-discovery)
+        mux.deviceConnected(com.polar.sdk.api.model.PolarDeviceInfo(verityPolarId, verityMac, -50, "Polar Sense $verityPolarId", true))
+        kotlinx.coroutines.delay(50L)
+        mux.bleSdkFeatureReady(verityMac, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING)
+        mux.bleSdkFeatureReady(verityPolarId, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_TRAINING_DATA)
+
+        val synced = kotlinx.coroutines.withTimeout(3_000L) { syncJob.await() }
+        assertTrue("Verity Sense retry sync must succeed on Attempt 1 after mid-wait disconnect + mid-discovery", synced)
+        verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(workoutId) }
+        coVerify(exactly = 1) { sharedApi.removeOfflineRecord(verityPolarId, hrEntry) }
     }
 }

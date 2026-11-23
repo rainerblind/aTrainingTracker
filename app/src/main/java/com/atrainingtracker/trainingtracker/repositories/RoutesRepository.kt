@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -134,12 +135,13 @@ class RoutesRepository internal constructor(
             }
         }
 
-        // Auto-refresh climbs when formula changes (REQ-CLM-010.2)
+        // Auto-refresh climbs when formula changes (REQ-CLM-010.2); drop(1) avoids redundant startup double-load
         repositoryScope.launch {
             try {
                 TuningPreferencesDataStore.getInstance(context).tuningConfigFlow
                     .map { it.climbScoringFormula }
                     .distinctUntilChanged()
+                    .drop(1)
                     .collect {
                         refreshRoutes()
                     }
@@ -292,18 +294,40 @@ class RoutesRepository internal constructor(
     }
 
     /**
-     * Updates the metadata (name, description, sport type) of an existing route.
+     * Updates the metadata (name, description, sport type) of an existing route in SQLite and
+     * updates [_allRoutes] in-place without reloading `route_points` geometries (REQ-GEO-003, ATT-8133).
      *
      * @param summary The updated RouteSummary object.
      */
     suspend fun updateRouteSummary(summary: RouteSummary) {
-        // 1. Update the record in the database
-        routesDb.updateRouteSummary(summary)
+        // 1. Persist route metadata and linked cluster name off the caller/Main thread (REQ-PER-040.4, REQ-GEO-003)
+        withContext(ioDispatcher) {
+            routesDb.updateRouteSummary(summary)
+            if (summary.clusterId != -1L) {
+                WorkoutClusterEngine.getInstance(context)
+                    .syncRouteNameChange(summary.clusterId, summary.name)
+            }
+        }
 
-        // 2. Sync name change with RouteCluster (SCRUM-207 / REQ-PER-040.2)
+        // 2. Patch _allRoutes in-place so existing path/waypoints/climbs are preserved without SQLite reload.
+        // Reset matched flag inside each CAS attempt so retries never observe stale state.
+        var patchedInPlace = false
+        _allRoutes.update { currentRoutes ->
+            var matched = false
+            val updated = currentRoutes.map { route ->
+                if (route.summary.id == summary.id) {
+                    matched = true
+                    route.copy(summary = summary)
+                } else {
+                    route
+                }
+            }
+            patchedInPlace = matched
+            if (matched) updated else currentRoutes
+        }
+
+        // 3. Propagate route-synced cluster rename to WorkoutClusterRepository in-memory observers
         if (summary.clusterId != -1L) {
-            WorkoutClusterEngine.getInstance(context)
-                .syncRouteNameChange(summary.clusterId, summary.name)
             @Suppress("TooGenericExceptionCaught")
             try {
                 WorkoutClusterRepository.getInstance(context)
@@ -313,32 +337,35 @@ class RoutesRepository internal constructor(
             }
         }
 
-        // 3. Trigger a refresh so all collectors (List View, Map View)
-        refreshRoutes()
+        // 4. Reload from DB whenever the updated route was not present in memory
+        if (!patchedInPlace) {
+            refreshRoutes()
+        }
     }
 
     /**
-     * Synchronizes a cluster rename into its linked route in SQLite and refreshes [_allRoutes]
-     * without invoking [WorkoutClusterEngine.syncRouteNameChange] to prevent recursion (REQ-PER-040.2).
+     * Lightweight cluster-to-route rename sync: updates only `routes.name` via
+     * [RoutesDatabaseManager.updateRouteNameByClusterId] and patches [_allRoutes] in-place
+     * without reading `route_points` or invoking [WorkoutClusterEngine.syncRouteNameChange]
+     * (REQ-PER-040.4, REQ-GEO-003, ATT-8133).
      */
     suspend fun syncClusterNameChange(clusterId: Long, newName: String) {
         val trimmedName = newName.trim()
         if (clusterId == -1L || trimmedName.isEmpty()) return
-        val linkedRoute = withContext(Dispatchers.IO) {
-            routesDb.getRouteByClusterId(clusterId)
+        withContext(ioDispatcher) {
+            routesDb.updateRouteNameByClusterId(clusterId, trimmedName)
         }
-        if (linkedRoute != null && linkedRoute.summary.name != trimmedName) {
-            routesDb.updateRouteSummary(linkedRoute.summary.copy(name = trimmedName))
-            _allRoutes.update { currentRoutes ->
-                currentRoutes.map { route ->
-                    if (route.summary.clusterId == clusterId) {
-                        route.copy(summary = route.summary.copy(name = trimmedName))
-                    } else {
-                        route
-                    }
+        _allRoutes.update { currentRoutes ->
+            var changed = false
+            val updated = currentRoutes.map { route ->
+                if (route.summary.clusterId == clusterId && route.summary.name != trimmedName) {
+                    changed = true
+                    route.copy(summary = route.summary.copy(name = trimmedName))
+                } else {
+                    route
                 }
             }
-            refreshRoutes()
+            if (changed) updated else currentRoutes
         }
     }
 

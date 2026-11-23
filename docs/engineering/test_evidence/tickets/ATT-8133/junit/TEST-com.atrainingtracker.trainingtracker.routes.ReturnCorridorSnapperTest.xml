@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:10.462Z" hostname="rainer-HP-EliteBook-850-G5" time="0.693">
+  <properties/>
+  <testcase name="snapCandidateRoute_findsRouteTerminatingAtHome" classname="com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest" time="0.147"/>
+  <testcase name="snapDirectGeodesic_fallbackToHome_whenNoRoutesMatch" classname="com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest" time="0.138"/>
+  <testcase name="snapActiveRoute_reverseReturn_computesReverseDistanceAndClimb" classname="com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest" time="0.132"/>
+  <testcase name="snapToCorridor_emptyReturnsNull_whenNoHomeAndNoRoutes" classname="com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest" time="0.142"/>
+  <testcase name="snapActiveRoute_forwardProgress_computesRemainingDistanceAndClimb" classname="com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest" time="0.134"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

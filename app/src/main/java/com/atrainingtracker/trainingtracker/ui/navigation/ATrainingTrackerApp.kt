@@ -117,7 +117,6 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentListV
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsScreen
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
-import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.healthconnect.HealthConnectSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
 import com.atrainingtracker.BuildConfig
@@ -799,9 +798,6 @@ fun ATrainingTrackerApp(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.GOOGLE_DRIVE -> GoogleDriveSettingsDialog(
-                    onDismiss = { drawerController.activeBottomSheet = null }
-                )
-                SettingsBottomSheetType.EXPORT -> ExportSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
                 SettingsBottomSheetType.UNITS -> UnitsSettingsDialog(

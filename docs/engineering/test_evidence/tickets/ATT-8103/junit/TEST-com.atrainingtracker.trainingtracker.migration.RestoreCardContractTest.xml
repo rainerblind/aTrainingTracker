@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T06:44:53.006Z" hostname="rainer-HP-EliteBook-850-G5" time="0.324">
+  <properties/>
+  <testcase name="test9LocaleRestoreStringsParityAndStandardization_TST_MIG_045_1" classname="com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest" time="0.17"/>
+  <testcase name="testBackupTabContent_contract_headingDeduplication_TST_UI_474_3" classname="com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest" time="0.023"/>
+  <testcase name="testImportBackupTabsScreen_contract_disconnectedGoogleDriveDialogDispatch_TST_MIG_045_3" classname="com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest" time="0.123"/>
+  <testcase name="testImportBackupTabsScreen_contract_stravaTuningAndDropboxBrandIcon_TST_UI_474_4" classname="com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest" time="0.0"/>
+  <testcase name="testRestoreTabContent_contract_iconographyAndUnconditionalGoogleDriveVisibility_TST_MIG_045_2" classname="com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

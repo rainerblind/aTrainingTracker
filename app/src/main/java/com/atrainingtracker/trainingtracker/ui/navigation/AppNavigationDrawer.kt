@@ -72,6 +72,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -168,6 +169,8 @@ fun isDrawerItemSelected(itemId: Int, selectedItemId: Int): Boolean = when (item
     R.id.drawer_equipment -> selectedItemId == R.id.drawer_equipment ||
         selectedItemId == R.id.drawer_bikes ||
         selectedItemId == R.id.drawer_shoes
+    R.id.drawer_backup_restore -> selectedItemId == R.id.drawer_backup_restore ||
+        selectedItemId == R.id.drawer_export
     else -> itemId == selectedItemId
 }
 
@@ -226,7 +229,6 @@ fun createDrawerGroups(
                 DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_google_drive, R.drawable.ic_google_drive, R.string.google_drive, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_health_connect, R.drawable.ic_health_connect, R.string.health_connect_title, tintIcon = false),
-                DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup)
             )
         ),
@@ -517,7 +519,9 @@ fun DrawerItemView(
             text = stringResource(id = item.titleRes),
             fontSize = 14.sp,
             color = contentColor,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

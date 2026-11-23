@@ -455,7 +455,8 @@ class ProcessStabilityComposeUiTest {
     fun settingsNavigationDrawer_allCleanupSettingsItemsMapToValidTargets_TST_INT_008() {
         assertEquals(SettingsBottomSheetType.UNITS, NavRoutes.toBottomSheetType(R.id.drawer_units))
         assertEquals(SettingsBottomSheetType.DISPLAY, NavRoutes.toBottomSheetType(R.id.drawer_display_settings))
-        assertEquals(SettingsBottomSheetType.EXPORT, NavRoutes.toBottomSheetType(R.id.drawer_export))
+        assertNull(NavRoutes.toBottomSheetType(R.id.drawer_export))
+        assertEquals(NavRoutes.BACKUP_RESTORE, NavRoutes.fromDrawerItemId(R.id.drawer_export))
         assertEquals(SettingsBottomSheetType.STRAVA, NavRoutes.toBottomSheetType(R.id.drawer_strava))
         assertEquals(SettingsBottomSheetType.DROPBOX, NavRoutes.toBottomSheetType(R.id.drawer_dropbox))
         assertEquals(SettingsBottomSheetType.GOOGLE_DRIVE, NavRoutes.toBottomSheetType(R.id.drawer_google_drive))

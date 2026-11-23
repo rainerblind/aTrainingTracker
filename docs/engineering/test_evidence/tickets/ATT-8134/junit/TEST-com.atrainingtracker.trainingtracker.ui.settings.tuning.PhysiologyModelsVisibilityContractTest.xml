@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:50:29.375Z" hostname="rainer-HP-EliteBook-850-G5" time="0.018">
+  <properties/>
+  <testcase name="TST-UI-366_3_5_6 WorkoutDetails and MapDetailLayout source contract gates physiology metrics" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyModelsVisibilityContractTest" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

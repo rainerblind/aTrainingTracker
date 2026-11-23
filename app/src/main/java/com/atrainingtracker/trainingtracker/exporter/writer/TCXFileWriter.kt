@@ -30,7 +30,6 @@ import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions
 import com.atrainingtracker.trainingtracker.tcx.model.TcxAuthor
 import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator
-import com.atrainingtracker.trainingtracker.tcx.model.TcxLap
 import com.atrainingtracker.trainingtracker.tcx.model.TcxLapExtensions
 import com.atrainingtracker.trainingtracker.tcx.model.TcxPosition
 import com.atrainingtracker.trainingtracker.tcx.model.TcxTrackpoint
@@ -378,65 +377,5 @@ class TCXFileWriter(context: Context) : BaseFileWriter(context) {
         }
 
         return ExportResult(true, false, "Successfully exported to TCX File")
-    }
-
-    private fun buildLap(
-        lapNr: Long,
-        startTime: String?,
-        totalTime: String?,
-        totalDistance: String?,
-        trackpoints: List<TcxTrackpoint>,
-        lapDataMap: Map<Long, LapData>
-    ): TcxLap {
-        var lapNotes: String? = null
-        var lapExt: TcxLapExtensions? = null
-
-        val lapData = lapDataMap[lapNr]
-        if (lapData != null) {
-            val name = lapData.name
-            val desc = lapData.description
-            val hasName = !name.isNullOrBlank()
-            val hasDesc = !desc.isNullOrBlank()
-
-            if (hasName || hasDesc) {
-                lapNotes = when {
-                    hasName && hasDesc -> "[${name!!.trim()}] ${desc!!.trim()}"
-                    hasName -> "[${name!!.trim()}]"
-                    else -> desc!!.trim()
-                }
-                lapExt = TcxLapExtensions(
-                    if (hasName) name!!.trim() else null,
-                    if (hasDesc) desc!!.trim() else null
-                )
-            }
-        }
-
-        var totalTimeSec = 0.0
-        try {
-            totalTimeSec = totalTime?.toDouble() ?: 0.0
-        } catch (_: Exception) {
-        }
-
-        var totalDistM = 0.0
-        try {
-            totalDistM = totalDistance?.toDouble() ?: 0.0
-        } catch (_: Exception) {
-        }
-
-        return TcxLap(
-            startTime ?: "",
-            totalTimeSec,
-            totalDistM,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            trackpoints,
-            lapNotes,
-            lapExt
-        )
     }
 }

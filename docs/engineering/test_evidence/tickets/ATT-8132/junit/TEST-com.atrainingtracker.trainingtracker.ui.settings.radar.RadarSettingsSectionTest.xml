@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:39:11.877Z" hostname="rainer-HP-EliteBook-850-G5" time="24.793">
+  <properties/>
+  <testcase name="testRadarSettingsStrings_deAndNlLightTitlesDisambiguated" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="6.258"/>
+  <testcase name="testTrafficSimulator_startAndStop_invokesSimulatorAndCallback" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="8.668"/>
+  <testcase name="testSpatialAudio_conditionalSubControls_andToggleCallback" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="2.248"/>
+  <testcase name="testRadarSettingsStrings_closePassLabelsFitBudget" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="1.566"/>
+  <testcase name="testRadarClearMode_conditionalVisibility_andEdgeSideClickUpdatesDataStore" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="1.666"/>
+  <testcase name="testRadarSettingsSection_retires3WayControlMode_retainsInteractiveBrakeLight" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="1.813"/>
+  <testcase name="testRadarSettingsStrings_alertModeDescriptionsExist" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="1.289"/>
+  <testcase name="testRadarSettingsStrings_alertModeLabelsFitBudget" classname="com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest" time="1.285"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

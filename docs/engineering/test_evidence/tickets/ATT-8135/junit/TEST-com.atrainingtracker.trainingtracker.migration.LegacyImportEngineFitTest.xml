@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:12.729Z" hostname="rainer-HP-EliteBook-850-G5" time="8.05">
+  <properties/>
+  <testcase name="importFromFit_handlesCorruptedFileGracefully" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest" time="1.954"/>
+  <testcase name="importFromFit_skipsDuplicateWhenAlreadyExisting" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest" time="1.973"/>
+  <testcase name="importFromFit_parsesTrackpointsElevationAndTimestamps" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest" time="2.043"/>
+  <testcase name="importFromFit_handlesIndoorWorkoutWithoutGpsCoordinates" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest" time="2.08"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

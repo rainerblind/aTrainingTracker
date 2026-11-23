@@ -327,6 +327,24 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Lightweight metadata-only rename for any route linked to [clusterId] (REQ-GEO-003, ATT-8133).
+     * Updates only `routes.name` without loading or rewriting `route_points` or `route_waypoints`.
+     */
+    fun updateRouteNameByClusterId(clusterId: Long, newName: String): Int {
+        if (clusterId == -1L || newName.isBlank()) return 0
+        val db = getDatabase()
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_NAME, newName)
+        }
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_CLUSTER_ID} = ? AND ${RouteContract.COLUMN_NAME} != ?",
+            arrayOf(clusterId.toString(), newName)
+        )
+    }
+
+    /**
      * Retrieves all route summaries without loading heavy path points or waypoint geometries (REQ-DAT-034, ATT-4008).
      * Eliminates N+1 query amplification for metadata-only consumers.
      */

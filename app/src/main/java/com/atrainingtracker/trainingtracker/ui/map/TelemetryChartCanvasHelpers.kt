@@ -439,20 +439,23 @@ internal fun DrawScope.drawAverageReferenceLine(
     plotStartX: Float,
     plotWidth: Float,
     color: Color,
-    alpha: Float = AVERAGE_LINE_ALPHA
+    alpha: Float = AVERAGE_LINE_ALPHA,
+    pathEffect: PathEffect? = null
 ) {
     if (plotWidth <= 0f || !plotWidth.isFinite() || !plotStartX.isFinite() || !avgY.isFinite()) {
         return
     }
     val strokeWidthPx = 1.5.dp.toPx()
-    val dotOnPx = 0.5.dp.toPx()
-    val dotOffPx = 5.dp.toPx()
+    val effectivePathEffect = pathEffect ?: PathEffect.dashPathEffect(
+        floatArrayOf(0.5.dp.toPx(), 5.dp.toPx()),
+        0f
+    )
     drawLine(
         color = color.copy(alpha = alpha),
         start = Offset(plotStartX, avgY),
         end = Offset(plotStartX + plotWidth, avgY),
         strokeWidth = strokeWidthPx,
         cap = StrokeCap.Round,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(dotOnPx, dotOffPx), 0f)
+        pathEffect = effectivePathEffect
     )
 }

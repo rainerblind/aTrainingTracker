@@ -1,0 +1,36 @@
+# Stage 5 Verification Walkthrough: ATT-8132
+
+- **Ticket**: `ATT-8132` (`3 SP`, `Bug`, `tier-a`) — *Radar-Subsystem & State-Caches entflechten: 5 DataStore-Licht-Keys konsolidieren, RadarState in 3 StateFlows teilen und AB-BA-Deadlock auflösen*
+- **Target Release**: `V5.0.0`
+- **Branch / Base**: `feature/ATT-8132` (rebased/merged with `sprint/2026-11-23_01_Früh` @ `b061d9c9`)
+- **Requirements / Tests**: `REQ-CON-056` (`REQ-CON-056.1`–`.4`), `TST-CON-056` (`TST-CON-056.1`–`.4`) — `[Verified]`
+- **Localization Parity**: `N/A - no UI strings` (`0` edits to `values*/strings*.xml`)
+
+## 1. Implementation Summary
+1. **Consolidated Radar-Light DataStore & One-Time Migration (`REQ-CON-056.1`)**:
+   - Reduced the 5 overlapping radar-light preference keys in `TuningPreferencesDataStore.kt` to 2 canonical keys (`KEY_RADAR_LIGHT_CONTROL_MODE`, `KEY_RADAR_LIGHT_DEFAULT_MODE`), keeping derived `TuningConfig` boolean getters (`radarLightAutoMode`, `radarAutoLightControl`, `radarSmartLightAutomation`).
+   - Added idempotent one-time `TuningPreferencesDataStore.createPreferencesMigration(context)` wired into `SettingsDataStore.kt`, migrating legacy radar-light keys (preserving `false` fallthrough per Coding Standards §5.6), purging `LEGACY_MAP_CAMERA_KEYS`, and migrating + cleaning up `SP_CLUSTER_*` `SharedPreferences` in `cleanUp()` so `resetToDefaults()` never resurrects legacy values.
+   - Removed `TrainingApplication.setClusterTol*` mirrors, `purgeLegacyMapCameraPreferences()` (incl. `AdvancedTuningScreen.kt:156`), and circular `mapPreferencesToConfig -> TrainingApplication.getClusterTol*()` fallbacks (`TrainingApplication.java`: `1,969 <= 2,050` LoC).
+2. **Stale State-Cache Removal (`REQ-CON-056.2`)**:
+   - Deleted `RadarLightController.cached*`, `hasLoadedInitialPreferences`, and `updateCachedPreferences(...)`; replaced per-call `CoroutineScope(Dispatchers.IO)` leaks with a single long-lived `persistenceScope` guarded against mocked plain-JVM contexts (Coding Standards §5.5).
+   - Deleted `TrackerService.mCachedAutoPauseConfig`, `mLastAutoPauseConfigFetchMs`, `invalidateAutoPauseCache()`, and all 14 invalidation hooks (`TrackerService.java`: `3,184 <= 3,220` LoC); `getAutoPauseConfig()` reads O(1) directly from `SettingsDataStoreJavaHelper.getAutoPauseConfig(this)` with zero `runBlocking`.
+3. **3-`StateFlow` `RadarStateRepository` Split & One-Shot Snooze Timer (`REQ-CON-056.3`)**:
+   - Split monolithic `RadarStateRepository` into orthogonal `threatState`, `lightState`, and `snoozeState` (`snoozeUntilElapsedRealtimeMs`) with lock-free CAS `MutableStateFlow.update` and cold UI `observeCombinedState()`.
+   - Replaced `RadarSnoozeController`'s 1-Hz background ticker with a single cancel-and-reschedule one-shot expiry timer (with Doze/test-clock wakeup guard); UI (`RadarEdgeOverlay.kt`) derives countdown badges locally.
+   - Decoupled `SmartRadarLightEngine` (`threatState` only) and `RadarAlertManager` (`threatState` + `lightState.map { it.lightMode }.distinctUntilChanged()`) from snooze ticks; routed `isLightControlSupported` updates in `RadarTrafficSimulator`, `ANTBikeRadarDevice`, and `BTLERadarDevice` through `updateLightState`.
+4. **AB-BA `synchronized` Deadlock Elimination (`REQ-CON-056.4`)**:
+   - Replaced cross-locked `synchronized(this)` monitors in `RadarLightController` ($L_A$) and `SmartBrakeLightDetector` ($L_B$) with private locks + `AtomicBoolean` flags (`enabledFlag`, `autoBypassedFlag`), executing all cross-object calls (`triggerBrakeLight`, `stopListening`, `setLightMode`, `SmartRadarLightEngine`) strictly outside held monitors ($E(L_A \to L_B) = E(L_B \to L_A) = \emptyset$) with monotonic `brakeEpoch` cancellation guard.
+   - Synchronized `docs/architecture.md` (`v1.0.29`) and `docs/architecture/detailed_design/tracker_service.md` (`v1.0.12`).
+
+## 2. Automated Verification Evidence
+- **Build & Compilation**: `:app:assembleDebug` **PASS**; `:app:compileDebugAndroidTestKotlin` **PASS**; `TrainingApplication.java` `1,969 <= 2,050` LoC; `TrackerService.java` `3,184 <= 3,220` LoC.
+- **Targeted Unit & Contract Suites (`475/475` PASS across 38 JUnit XML suites, 0 failures/errors/skipped)**:
+  - `RadarBrakeLightConcurrencyStressTest` (`5/5 PASS`: `TST-CON-056.2` cache/hook removal & immediate preference propagation, `TST-CON-056.3` zero snooze wakeups & lock-free concurrency, `TST-CON-056.4` 4-thread × 5,000-iteration AB-BA deadlock watchdog).
+  - Radar / Light / Brake / Device / UI suites (`ANTBikeLightDeviceTest`, `ANTBikeRadarDeviceTest`, `BTLERadarDeviceTest`, `RadarLightControllerTest`, `RadarSnoozeControllerTest`, `RadarStateRepositoryTest`, `RadarTrafficSimulatorTest`, `SmartBrakeLightDetectorTest`, `SmartRadarLightEngineTest`, `RadarAlertManagerTest`, `RadarSettingsSectionTest`, `RadarAccordionSectionTest`, `RadarEdgeOverlayTest`, `RadarLightQuickSwitchSheetTest`, `RadarLightButtonContractTest`, `EditDeviceViewModelTest`, `EditDeviceDialogRadarLightTest`, `EditDeviceDialogDraftLocaleRotationTest`, `HardwareHalIngestionIntegrationTest`) — **all PASS**.
+  - DataStore / AutoPause / Cluster / Service / Contract suites (`TuningConfigTest`, `TuningPreferencesDataStoreRadarLightControlModeTest`, `TuningPreferencesDataStoreRoundTripTest`, `TuningPreferencesDataStoreAutoPauseTest`, `TuningPreferencesDataStoreClusterTest`, `TuningPreferencesDataStoreLifecycleTest`, `MapCameraTuningPreferencesTest`, `AutoPauseManagerTest`, `AltitudeAwareClusterMatchingTest`, `WorkoutClusterEngineScoreThresholdTest`, `WorkoutClusterRepositoryTest`, `WorkoutClustersViewModelTest`, `TrackerServiceStateMachineCharacterisationTest`, `TrackerServiceResilienceTest`, `TrainingApplicationTrackingTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, `InterfaceSignatureDriftContractTest`) — **all PASS**.
+  - **Tooling Limitation Note**: Unbatched `tools/auto_gate.py` expanded `TrainingApplication`/`TrackerService`/`TuningPreferencesDataStore` to 395 Android test classes in a single `./gradlew` call and timed out twice at 1800s (768m Kover CodeCache ceiling); the 38 in-scope suites above were executed directly via `./gradlew :app:testDebugUnitTest --rerun --tests ...` and bundled via `auto_gate.py`'s `parse_junit_xml_files` + `build_evidence_bundle`.
+  - **Static Linters & Governance**: `lint_cursor_safety.py`, `lint_lifecycle_safety.py`, `lint_safe_enum.py`, and `verify_requirement_governance.py` — **all PASS**.
+- **Live `emulator-5554` Verification (`Rule 7.6`, `Rule 8.5`)**:
+  - Installed `app-debug.apk` on `emulator-5554`, launched `MainActivityWithNavigation`, navigated `Drawer -> Settings -> Expert Settings`, verified **Cycling Radar** (`Right Edge · All · Day Flash`) and **Route & Workout Clustering** (`End: 200 m · Apex: 400 m · Dist: 20% · Alt: 400 m`) hydrated cleanly from consolidated DataStore with **0** entries in `logcat -d -b crash`.
+  - Visually inspected via `read_file`: [att_8132_radar_settings.png](../test_evidence/tickets/ATT-8132/screenshots/att_8132_radar_settings.png).
+- **Machine-Generated Evidence Bundle (`ATT-9544`)**: [evidence_summary.json](../test_evidence/tickets/ATT-8132/evidence_summary.json) | [manifest.json](../test_evidence/tickets/ATT-8132/manifest.json) (`38` JUnit XMLs + `1` screenshot, `40` SHA-256 hashed files).

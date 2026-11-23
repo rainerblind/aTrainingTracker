@@ -45,17 +45,30 @@ class WorkoutShareBottomSheetContractTest {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutKt")
         assertNotNull("MapDetailLayoutKt must exist", clazz)
 
-        val method = clazz.declaredMethods.find {
+        val methods = clazz.declaredMethods.filter {
             it.name.startsWith("MapDetailLayout") && Modifier.isPublic(it.modifiers)
         }
-        assertNotNull("MapDetailLayout function must exist", method)
+        assertTrue("MapDetailLayout public overloads must exist", methods.isNotEmpty())
 
         val workoutDataClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData")
-        val hasWorkoutDataParam = method!!.parameterTypes.any { it == workoutDataClass }
-
+        val hasLegacyWorkoutDataParam = methods.any { m ->
+            m.parameterTypes.any { it == workoutDataClass }
+        }
         assertTrue(
-            "MapDetailLayout must accept WorkoutData parameter for share mode selection",
-            hasWorkoutDataParam
+            "Legacy MapDetailLayout overload must accept WorkoutData parameter for share mode selection",
+            hasLegacyWorkoutDataParam
+        )
+
+        val analyticsOptionsClass = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapDetailAnalyticsOptions")
+        val hasGroupedAnalyticsParam = methods.any { m ->
+            m.parameterTypes.any { it == analyticsOptionsClass }
+        }
+        val analyticsExposesWorkoutData = analyticsOptionsClass.declaredMethods.any {
+            it.name == "getWorkoutData" && it.returnType == workoutDataClass
+        }
+        assertTrue(
+            "Grouped MapDetailLayout overload must accept MapDetailAnalyticsOptions exposing WorkoutData",
+            hasGroupedAnalyticsParam && analyticsExposesWorkoutData
         )
     }
 
@@ -90,18 +103,36 @@ class WorkoutShareBottomSheetContractTest {
     @Test
     fun testMapDetailLayout_exposesExternalSnapshotTriggerAndCompleteCallback() {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutKt")
-        val method = clazz.declaredMethods.find {
+        val methods = clazz.declaredMethods.filter {
             it.name.startsWith("MapDetailLayout") && Modifier.isPublic(it.modifiers)
         }
-        assertNotNull("MapDetailLayout function must exist", method)
+        assertTrue("MapDetailLayout public overloads must exist", methods.isNotEmpty())
 
-        val paramTypes = method!!.parameterTypes
-        val booleanTypeCount = paramTypes.count { it == Boolean::class.javaPrimitiveType || it == Boolean::class.javaObjectType }
-        val functionTypeCount = paramTypes.count { it.name.startsWith("kotlin.jvm.functions.Function") }
+        fun isBooleanType(type: Class<*>): Boolean =
+            type == Boolean::class.javaPrimitiveType || type == Boolean::class.javaObjectType
 
-        assertTrue(
-            "MapDetailLayout must accept externalSnapshotTrigger and onSnapshotComplete parameters (REQ-PER-029.1)",
+        val hasLegacySnapshotParams = methods.any { m ->
+            val paramTypes = m.parameterTypes
+            val booleanTypeCount = paramTypes.count(::isBooleanType)
+            val functionTypeCount = paramTypes.count { it.name.startsWith("kotlin.jvm.functions.Function") }
             booleanTypeCount >= 5 && functionTypeCount >= 4
+        }
+        assertTrue(
+            "Legacy MapDetailLayout overload must accept externalSnapshotTrigger and onSnapshotComplete parameters (REQ-PER-029.1)",
+            hasLegacySnapshotParams
+        )
+
+        val callbacksClass = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapDetailInteractionCallbacks")
+        val hasGroupedSnapshotParams = methods.any { m ->
+            val paramTypes = m.parameterTypes
+            paramTypes.any { it == callbacksClass } && paramTypes.any(::isBooleanType)
+        }
+        val callbacksExposeOnSnapshotComplete = callbacksClass.declaredMethods.any {
+            it.name == "getOnSnapshotComplete" && it.returnType.name.startsWith("kotlin.jvm.functions.Function")
+        }
+        assertTrue(
+            "Grouped MapDetailLayout overload must accept externalSnapshotTrigger and MapDetailInteractionCallbacks.onSnapshotComplete (REQ-PER-029.1)",
+            hasGroupedSnapshotParams && callbacksExposeOnSnapshotComplete
         )
     }
 

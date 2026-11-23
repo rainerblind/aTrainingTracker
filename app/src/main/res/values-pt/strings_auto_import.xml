@@ -24,8 +24,10 @@
     <string name="auto_import_status_error">Falha na sincronização: %1$s</string>
     <string name="auto_import_cloud_not_connected">Não conectado</string>
     <string name="auto_import_cloud_connected">Conectado (%1$s)</string>
-    <string name="auto_import_format_fit">FIT (.fit)</string>
-    <string name="auto_import_format_tcx">TCX (.tcx)</string>
-    <string name="auto_import_format_gpx">GPX (.gpx)</string>
-    <string name="auto_import_format_all">Todos os formatos</string>
+    <string name="auto_import_format_fit">FIT</string>
+    <string name="auto_import_format_tcx">TCX</string>
+    <string name="auto_import_format_gpx">GPX</string>
+    <string name="auto_import_format_all">Todos</string>
+    <string name="cluster_tuning_ask_on_new_import_label">Perguntar nome de novas rotas ao importar</string>
+    <string name="cluster_tuning_ask_on_new_import_summary">Quando desativado, novas rotas são criadas silenciosamente com o nome do primeiro treino.</string>
 </resources>

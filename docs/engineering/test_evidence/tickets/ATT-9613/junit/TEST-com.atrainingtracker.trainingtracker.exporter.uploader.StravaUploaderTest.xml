@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:24:09.207Z" hostname="rainer-HP-EliteBook-850-G5" time="2.27">
+  <properties/>
+  <testcase name="testPollingExhaustsMaxRequestsReturnsTimeoutRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.43"/>
+  <testcase name="testUploadToStravaClientError400ReturnsRetryFalse" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.256"/>
+  <testcase name="testUploaderMethodsAbortImmediatelyWhenTokenIsNull" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.256"/>
+  <testcase name="testUploadToStravaRateLimit429ReturnsRetryTrueAndLogsHeaders" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.263"/>
+  <testcase name="testUploadToStravaServerError503ReturnsRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.277"/>
+  <testcase name="testUploaderMethodsAbortImmediatelyWhenTokenIsBlank" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.271"/>
+  <testcase name="testUploaderSetsValidAuthorizationHeaderWhenTokenPresent" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.254"/>
+  <testcase name="testPollingRecoversFromTransientNullGlitch" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.263"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

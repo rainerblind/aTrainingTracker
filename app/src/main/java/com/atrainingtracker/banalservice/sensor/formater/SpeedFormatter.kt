@@ -30,17 +30,42 @@ class SpeedFormatter : MyFormatter<Number> {
         }
 
         val speed = MyHelper.mps2userUnit(value.toDouble())
-        return String.format(Locale.getDefault(), "%.1f", speed)
+        return formatUserUnit(speed)
+    }
+
+    /**
+     * Formats a speed value already converted to display user units (`km/h` or `mile/h`)
+     * without round-tripping through m/s (`REQ-UI-2803.1`).
+     */
+    fun formatUserUnit(speedUserUnit: Double?, locale: Locale = Locale.getDefault()): String {
+        if (speedUserUnit == null || !speedUserUnit.isFinite()) {
+            return "--"
+        }
+        return String.format(locale, "%.1f", speedUserUnit)
+    }
+
+    /**
+     * Formats a speed value already converted to display user units with its canonical unit suffix
+     * (`km/h` or `mile/h`) in a single pass (`REQ-UI-2803.1`).
+     */
+    fun formatUserUnitWithUnits(
+        speedUserUnit: Double?,
+        unit: MyUnits = TrainingApplication.getUnit(),
+        locale: Locale = Locale.getDefault()
+    ): String {
+        val units = unitLabel(unit)
+        return "${formatUserUnit(speedUserUnit, locale)} $units"
     }
 
     @Suppress("FunctionNaming")
     fun format_with_units(value: Number?): String {
-        val units = when (TrainingApplication.getUnit()) {
-            MyUnits.METRIC -> "km/h"
-            MyUnits.IMPERIAL -> "mile/h"
-            null -> ""
-        }
-
+        val units = unitLabel(TrainingApplication.getUnit())
         return "${format(value)} $units"
+    }
+
+    private fun unitLabel(unit: MyUnits?): String = when (unit) {
+        MyUnits.METRIC -> "km/h"
+        MyUnits.IMPERIAL -> "mile/h"
+        null -> ""
     }
 }

@@ -11,6 +11,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -45,6 +46,12 @@ class TuningPreferencesDataStoreClusterTest {
 
         assertTrue(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
         assertTrue(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
+        assertFalse(TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT)
+        assertTrue(
+            TuningPreferencesDataStore.ALL_KEYS.contains(
+                TuningPreferencesDataStore.KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT
+            )
+        )
     }
 
     @Test
@@ -57,6 +64,7 @@ class TuningPreferencesDataStoreClusterTest {
         assertEquals(1.2f, config.clusterScoreThreshold, 0.001f)
         assertTrue(config.clusterUseSportType)
         assertTrue(config.clusterUseAltitudePos)
+        assertFalse(config.askOnNewClusterDuringImport)
     }
 
     @Test
@@ -68,7 +76,8 @@ class TuningPreferencesDataStoreClusterTest {
             clusterTolAltitudePos = 300f,
             clusterUseSportType = false,
             clusterUseAltitudePos = false,
-            clusterScoreThreshold = 1.8f
+            clusterScoreThreshold = 1.8f,
+            askOnNewClusterDuringImport = true
         )
         assertEquals(150.0f, config.clusterTolEndpoints, 0.001f)
         assertEquals(350.0f, config.clusterTolApex, 0.001f)
@@ -77,6 +86,7 @@ class TuningPreferencesDataStoreClusterTest {
         assertEquals(1.8f, config.clusterScoreThreshold, 0.001f)
         assertEquals(false, config.clusterUseSportType)
         assertEquals(false, config.clusterUseAltitudePos)
+        assertTrue(config.askOnNewClusterDuringImport)
     }
 
     @Test

@@ -143,7 +143,7 @@ class ForkNavigationRepository internal constructor(
             val chosenRoute = candidates.firstOrNull { route ->
                 val proj = ForkRouteMatcher.projectOntoPolyline(currentPos, route.path)
                 val forkProj = ForkRouteMatcher.projectOntoPolyline(activeState.divergenceCoordinate, route.path)
-                val distancePastFork = proj.distanceAlongRouteMeters - forkProj.distanceAlongRouteMeters
+                val distancePastFork = proj.alongTrackDistance - forkProj.alongTrackDistance
 
                 distancePastFork >= AUTO_BIND_MIN_DISTANCE_PAST_FORK_METERS &&
                         proj.crossTrackDistanceMeters < AUTO_BIND_MAX_CROSS_TRACK_CHOSEN_METERS

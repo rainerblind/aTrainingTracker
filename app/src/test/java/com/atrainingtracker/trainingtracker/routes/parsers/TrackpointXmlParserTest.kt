@@ -1,25 +1,74 @@
 package com.atrainingtracker.trainingtracker.routes.parsers
 
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriter
+import com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParser
+import com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParser
+import com.atrainingtracker.trainingtracker.migration.parsers.TcxWorkoutParser
+import com.atrainingtracker.trainingtracker.migration.parsers.WorkoutParser
+import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCoursePoint
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator
+import com.atrainingtracker.trainingtracker.tcx.model.TcxLapExtensions
+import com.atrainingtracker.trainingtracker.tcx.parser.TcxParser
+import com.atrainingtracker.trainingtracker.tcx.parser.TcxStreamListener
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 
 /**
- * Unit tests for [TcxTrackpointParser] and [GpxTrackpointParser] verifying REQ-MIG-037 / TST-MIG-034.
+ * Unit tests for [TcxParser] streaming & DTO parsing, [GpxTrackpointParser] streaming & DTO parsing,
+ * [WorkoutParser] registry, and excision of obsolete `TcxTrackpointParser` and `TCXFileWriter.buildLap`
+ * verifying `REQ-MIG-037`, `TST-MIG-034`, `REQ-MIG-061.1`, `TST-MIG-061.1`.
  */
 class TrackpointXmlParserTest {
 
     @Test
-    fun testTcxActivityParsingWithTelemetry() {
+    fun testObsoleteTcxTrackpointParserAndDeadBuildLapRemoved_TST_MIG_061_1() {
+        var foundRemovedClass = false
+        try {
+            Class.forName("com.atrainingtracker.trainingtracker.routes.parsers.TcxTrackpointParser")
+            foundRemovedClass = true
+        } catch (_: ClassNotFoundException) {
+            foundRemovedClass = false
+        }
+        assertFalse("TcxTrackpointParser must be deleted (REQ-MIG-061.1)", foundRemovedClass)
+
+        val hasBuildLap = TCXFileWriter::class.java.declaredMethods.any { it.name == "buildLap" }
+        assertFalse("Dead TCXFileWriter.buildLap method must be removed (REQ-MIG-061.1)", hasBuildLap)
+    }
+
+    @Test
+    fun testWorkoutParserRegistryResolvesFormats_TST_MIG_061_1() {
+        assertSame(FitWorkoutParser, WorkoutParser.forFormat("fit"))
+        assertSame(FitWorkoutParser, WorkoutParser.forFormat(".FIT"))
+        assertSame(FitWorkoutParser, WorkoutParser.forFormat("activities/123.fit.gz"))
+        assertSame(TcxWorkoutParser, WorkoutParser.forFormat("tcx"))
+        assertSame(TcxWorkoutParser, WorkoutParser.forFormat("ride.tcx.gz"))
+        assertSame(GpxWorkoutParser, WorkoutParser.forFormat("gpx"))
+        assertSame(GpxWorkoutParser, WorkoutParser.forFormat("track.GPX.gz"))
+        assertNull(WorkoutParser.forFormat("csv"))
+        assertNull(WorkoutParser.forFormat(""))
+        assertNull(WorkoutParser.forFormat(null))
+
+        assertEquals(WorkoutSource.FIT, FitWorkoutParser.workoutSource)
+        assertEquals(WorkoutSource.TCX, TcxWorkoutParser.workoutSource)
+        assertEquals(WorkoutSource.GPX, GpxWorkoutParser.workoutSource)
+    }
+
+    @Test
+    fun testTcxActivityParsingWithTelemetryAndStreamingParity_TST_MIG_061_1() {
         val tcx = """
             <?xml version="1.0" encoding="UTF-8"?>
             <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
                 <Activities>
                     <Activity Sport="Biking">
                         <Id>2026-10-14T10:00:00Z</Id>
-                        <Notes>Test Ride</Notes>
                         <Lap StartTime="2026-10-14T10:00:00Z">
                             <TotalTimeSeconds>1200.0</TotalTimeSeconds>
                             <DistanceMeters>10000.0</DistanceMeters>
@@ -69,36 +118,64 @@ class TrackpointXmlParserTest {
                                 </Trackpoint>
                             </Track>
                         </Lap>
+                        <Notes>Test Ride After Lap</Notes>
                     </Activity>
                 </Activities>
             </TrainingCenterDatabase>
         """.trimIndent()
 
-        val result = TcxTrackpointParser.parse(ByteArrayInputStream(tcx.toByteArray()))
+        // 1. DTO parsing
+        val result = TcxParser.parse(ByteArrayInputStream(tcx.toByteArray()))
         assertTrue("Expected TCX parse success", result.isSuccess)
-        val data = result.getOrThrow()
-
-        assertEquals("Biking", data.sport)
-        assertEquals("Test Ride", data.notes)
-        assertEquals(1, data.laps.size)
-
-        val lap = data.laps[0]
-        assertEquals(1200.0, lap.totalTimeSeconds!!, 0.001)
-        assertEquals(10000.0, lap.distanceMeters!!, 0.001)
-        assertEquals(12.5, lap.maxSpeed!!, 0.001)
+        val activity = result.getOrThrow().activities.single()
+        assertEquals("Biking", activity.sport)
+        assertEquals("Test Ride After Lap", activity.notes)
+        assertEquals(1, activity.laps.size)
+        val lap = activity.laps[0]
+        assertEquals(1200.0, lap.totalTimeSeconds, 0.001)
+        assertEquals(10000.0, lap.distanceMeters, 0.001)
+        assertEquals(12.5, lap.maximumSpeed!!, 0.001)
         assertEquals(350, lap.calories)
-        assertEquals(145, lap.avgHeartRate)
+        assertEquals(145, lap.averageHeartRateBpm)
         assertEquals(2, lap.trackpoints.size)
 
-        val pt1 = lap.trackpoints[0]
-        assertEquals(48.137154, pt1.lat!!, 0.00001)
-        assertEquals(11.576124, pt1.lng!!, 0.00001)
-        assertEquals(520.5, pt1.altitude!!, 0.01)
-        assertEquals(0.0, pt1.distanceMeters!!, 0.01)
-        assertEquals(130, pt1.hr)
-        assertEquals(85, pt1.cadence)
-        assertEquals(210, pt1.power)
-        assertEquals(6.2, pt1.speedMps!!, 0.01)
+        // 2. Direct single-pass streaming callbacks (including post-Lap <Notes> onActivityEnd)
+        var streamedTpCount = 0
+        var streamedNotes: String? = null
+        var streamedLapEndCount = 0
+        val streamResult = TcxParser.parseStreaming(tcx, object : TcxStreamListener {
+            override fun onTrackpoint(
+                inCourse: Boolean, ownerIndex: Int, inLap: Boolean, lapIndex: Int,
+                time: String, lat: Double?, lng: Double?, altitudeMeters: Double?,
+                distanceMeters: Double?, heartRateBpm: Int?, cadence: Int?,
+                speed: Double?, watts: Int?, runCadence: Int?
+            ) {
+                streamedTpCount++
+            }
+
+            override fun onLapEnd(
+                inCourse: Boolean, ownerIndex: Int, lapIndex: Int, startTime: String,
+                totalTimeSeconds: Double, distanceMeters: Double, maximumSpeed: Double?,
+                calories: Int?, averageHeartRateBpm: Int?, maximumHeartRateBpm: Int?,
+                intensity: String?, cadence: Int?, triggerMethod: String?,
+                notes: String?, extensions: TcxLapExtensions?
+            ) {
+                streamedLapEndCount++
+                assertEquals(1200.0, totalTimeSeconds, 0.001)
+                assertEquals(145, averageHeartRateBpm)
+            }
+
+            override fun onActivityEnd(
+                activityIndex: Int, sport: String, id: String, notes: String?,
+                creator: TcxCreator?, extensions: TcxActivityExtensions?
+            ) {
+                streamedNotes = notes
+            }
+        })
+        assertTrue(streamResult.isSuccess)
+        assertEquals(2, streamedTpCount)
+        assertEquals(1, streamedLapEndCount)
+        assertEquals("Test Ride After Lap", streamedNotes)
     }
 
     @Test
@@ -145,26 +222,35 @@ class TrackpointXmlParserTest {
             </TrainingCenterDatabase>
         """.trimIndent()
 
-        val result = TcxTrackpointParser.parse(ByteArrayInputStream(tcx.toByteArray()))
+        val result = TcxParser.parse(ByteArrayInputStream(tcx.toByteArray()))
         assertTrue(result.isSuccess)
-        val data = result.getOrThrow()
+        val course = result.getOrThrow().courses.single()
 
-        assertEquals("Alpine Climb", data.name)
-        assertEquals(1, data.laps.size)
-        assertEquals(2, data.laps[0].trackpoints.size)
-        assertEquals(1, data.coursePoints.size)
+        assertEquals("Alpine Climb", course.name)
+        assertEquals(2, course.trackpoints.size)
+        assertEquals(1, course.coursePoints.size)
 
-        val cp = data.coursePoints[0]
+        val cp = course.coursePoints[0]
         assertEquals("Summit Summit", cp.name)
-        assertEquals("Summit", cp.type)
+        assertEquals("Summit", cp.pointType)
         assertEquals("Watch for wind", cp.notes)
-        assertEquals(47.510, cp.lat, 0.0001)
-        assertEquals(11.010, cp.lng, 0.0001)
-        assertEquals(850.0, cp.altitude!!, 0.01)
+        assertEquals(47.510, cp.position.latitudeDegrees, 0.0001)
+        assertEquals(11.010, cp.position.longitudeDegrees, 0.0001)
+        assertEquals(850.0, cp.altitudeMeters!!, 0.01)
+
+        // Streaming callback emits course point directly
+        val streamedCoursePoints = mutableListOf<TcxCoursePoint>()
+        assertTrue(TcxParser.parseStreaming(tcx, object : TcxStreamListener {
+            override fun onCoursePoint(courseIndex: Int, coursePoint: TcxCoursePoint) {
+                streamedCoursePoints.add(coursePoint)
+            }
+        }).isSuccess)
+        assertEquals(1, streamedCoursePoints.size)
+        assertEquals("Summit Summit", streamedCoursePoints[0].name)
     }
 
     @Test
-    fun testGpxTrackParsingWithGarminTpxExtensions() {
+    fun testGpxTrackParsingWithGarminTpxExtensionsAndStreamingParity_TST_MIG_061_1() {
         val gpx = """
             <?xml version="1.0" encoding="UTF-8"?>
             <gpx version="1.1" creator="Garmin Connect"
@@ -249,7 +335,7 @@ class TrackpointXmlParserTest {
     @Test
     fun testMalformedXmlGracefulHandling() {
         val badXml = "<TrainingCenterDatabase><Activities><Activity></TrainingCenterDatabase>"
-        val result = TcxTrackpointParser.parse(ByteArrayInputStream(badXml.toByteArray()))
+        val result = TcxParser.parse(ByteArrayInputStream(badXml.toByteArray()))
         assertTrue("Malformed XML should return Failure Result", result.isFailure)
         assertNotNull(result.exceptionOrNull())
     }
@@ -270,12 +356,12 @@ class TrackpointXmlParserTest {
     fun testTcxWithUtf8BomIsHandledGracefully() {
         val tcxWithBom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) +
             """<?xml version="1.0" encoding="UTF-8"?><TrainingCenterDatabase><Activities><Activity Sport="Running"><Lap><Track><Trackpoint><Position><LatitudeDegrees>48.0</LatitudeDegrees><LongitudeDegrees>11.0</LongitudeDegrees></Position></Trackpoint></Track></Lap></Activity></Activities></TrainingCenterDatabase>""".toByteArray(Charsets.UTF_8)
-        val result = TcxTrackpointParser.parse(ByteArrayInputStream(tcxWithBom))
+        val result = TcxParser.parse(ByteArrayInputStream(tcxWithBom))
         assertTrue("TCX with UTF-8 BOM should parse successfully", result.isSuccess)
-        val data = result.getOrThrow()
-        assertEquals(1, data.laps.size)
-        assertEquals(1, data.laps[0].trackpoints.size)
-        assertEquals(48.0, data.laps[0].trackpoints[0].lat!!, 0.001)
+        val activity = result.getOrThrow().activities.single()
+        assertEquals(1, activity.laps.size)
+        assertEquals(1, activity.laps[0].trackpoints.size)
+        assertEquals(48.0, activity.laps[0].trackpoints[0].position!!.latitudeDegrees, 0.001)
     }
 
     @Test

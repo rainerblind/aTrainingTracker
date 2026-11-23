@@ -118,7 +118,7 @@ fun AdvancedTuningScreen(
     var climbScoringFormula by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA) }
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
-    var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }; var clusterScoreThreshold by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD) }
+    var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }; var clusterScoreThreshold by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD) }; var askOnNewClusterDuringImport by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT) }
     var enableCogganPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS) }; var showCogganPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY) }; var enablePmcModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL) }
     var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var showAerobicEfficiencyInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY) }
     var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
@@ -153,7 +153,6 @@ fun AdvancedTuningScreen(
     LaunchedEffect(persistedWorkoutCardPrefs) { persistedWorkoutCardPrefs?.let { if (!isAftermathPrefsInitialized) { workoutCardPrefs = it; isAftermathPrefsInitialized = true } } }
     LaunchedEffect(persistedWorkoutDetailPrefs) { persistedWorkoutDetailPrefs?.let { if (!isDetailPrefsInitialized) { workoutDetailPrefs = it; isDetailPrefsInitialized = true } } }
     LaunchedEffect(persistedWorkoutSectionsOrder) { persistedWorkoutSectionsOrder?.let { if (!isSectionsOrderInitialized) { workoutSectionsOrder = it; isSectionsOrderInitialized = true } } }
-    LaunchedEffect(Unit) { tuningDataStore.purgeLegacyMapCameraPreferences() }
 
     fun applyConfig(config: TuningConfig) {
         elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
@@ -172,7 +171,7 @@ fun AdvancedTuningScreen(
         climbScoringFormula = config.climbScoringFormula
         clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
-        clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos; clusterScoreThreshold = config.clusterScoreThreshold
+        clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos; clusterScoreThreshold = config.clusterScoreThreshold; askOnNewClusterDuringImport = config.askOnNewClusterDuringImport
         enablePmcModel = config.enablePmcModel
         enableCogganPowerMetrics = config.enableCogganPowerMetrics; showCogganPowerInWorkoutSummary = config.showCogganPowerInWorkoutSummary
         enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; showAerobicEfficiencyInWorkoutSummary = config.showAerobicEfficiencyInWorkoutSummary
@@ -234,7 +233,7 @@ fun AdvancedTuningScreen(
             climbScoringFormula = climbScoringFormula,
             clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
             clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
-            clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos, clusterScoreThreshold = clusterScoreThreshold,
+            clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos, clusterScoreThreshold = clusterScoreThreshold, askOnNewClusterDuringImport = askOnNewClusterDuringImport,
             enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
             enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
             enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
@@ -556,7 +555,8 @@ fun AdvancedTuningScreen(
                     altitudePositionTolerance = clusterTolAltitudePos, onAltitudePositionToleranceChange = { clusterTolAltitudePos = it },
                     useSportTypeForClustering = clusterUseSportType, onUseSportTypeChange = { clusterUseSportType = it },
                     useAltitudePosForClustering = clusterUseAltitudePos, onUseAltitudePosChange = { clusterUseAltitudePos = it },
-                    clusterScoreThreshold = clusterScoreThreshold, onClusterScoreThresholdChange = { clusterScoreThreshold = it }
+                    clusterScoreThreshold = clusterScoreThreshold, onClusterScoreThresholdChange = { clusterScoreThreshold = it },
+                    askOnNewClusterDuringImport = askOnNewClusterDuringImport, onAskOnNewClusterDuringImportChange = { askOnNewClusterDuringImport = it }
                 )
             }
 

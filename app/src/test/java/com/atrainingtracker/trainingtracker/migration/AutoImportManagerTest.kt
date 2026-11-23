@@ -30,10 +30,14 @@ import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 /**
  * Unit tests for [AutoImportManager] verifying zero-I/O pre-download deduplication,
@@ -215,5 +219,144 @@ class AutoImportManagerTest {
         } finally {
             com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository.resetForTesting(null)
         }
+    }
+
+    @Test
+    fun testSyncIncremental_rejectsTraversalFilenamesBeforeDownloadAndImportsValidSibling_TST_MIG_061_3() = runBlocking {
+        AutoImportManager.snapshotProvider = { ExistingWorkoutsSnapshot(initialBaseNames = emptySet()) }
+
+        val unsafeEntries = listOf(
+            AutoImportManager.CloudFileItem("u1", "../../evil_1.fit", "/FIT/evil_1.fit"),
+            AutoImportManager.CloudFileItem("u2", "sub/evil_2.tcx", "/TCX/evil_2.tcx"),
+            AutoImportManager.CloudFileItem("u3", "sub\\evil_3.fit", "/FIT/evil_3.fit"),
+            AutoImportManager.CloudFileItem("u4", "ride..fit", "/FIT/ride..fit"),
+            AutoImportManager.CloudFileItem("u5", "bad\u0000.fit", "/FIT/bad.fit"),
+            AutoImportManager.CloudFileItem("u6", ".", "/FIT/dot")
+        )
+        val validEntry = AutoImportManager.CloudFileItem("ok1", "valid_ride.fit", "/FIT/valid_ride.fit")
+
+        AutoImportManager.dropboxLister = { _, _, _ -> unsafeEntries + validEntry }
+        val downloadedNames = mutableListOf<String>()
+        AutoImportManager.dropboxDownloader = { _, item, targetFile ->
+            downloadedNames.add(item.name)
+            targetFile.writeText("fit-payload")
+            true
+        }
+
+        coEvery {
+            LegacyImportEngine.importFromFitResult(any(), any(), null, false)
+        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 42L)
+
+        val result = AutoImportManager.syncIncremental(mockContext)
+
+        assertEquals(listOf("valid_ride.fit"), downloadedNames)
+        assertEquals(1, result.importedCount)
+        assertEquals(0, result.skippedCount)
+        assertEquals(unsafeEntries.size, result.failedCount)
+        assertFalse("Temp dir must be purged after sync", File(tempCacheDir, "auto_import_temp").exists())
+        assertTrue("Zero escaped files in cacheDir", tempCacheDir.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun testSyncIncremental_rejectsZipSlipArchiveAndImportsValidZipSibling_TST_MIG_061_3() = runBlocking {
+        val snapshot = ExistingWorkoutsSnapshot(initialBaseNames = setOf("existing_in_zip"))
+        AutoImportManager.snapshotProvider = { snapshot }
+
+        val evilZipItem = AutoImportManager.CloudFileItem("z1", "malicious_bundle.zip", "/FIT/malicious_bundle.zip")
+        val validZipItem = AutoImportManager.CloudFileItem("z2", "valid_bundle.zip", "/FIT/valid_bundle.zip")
+        AutoImportManager.dropboxLister = { _, _, _ -> listOf(evilZipItem, validZipItem) }
+
+        AutoImportManager.dropboxDownloader = { _, item, targetFile ->
+            ZipOutputStream(FileOutputStream(targetFile)).use { zos ->
+                if (item.id == "z1") {
+                    zos.putNextEntry(ZipEntry("../../escaped_from_zip.fit"))
+                    zos.write("pwned".toByteArray())
+                    zos.closeEntry()
+                } else {
+                    zos.putNextEntry(ZipEntry("existing_in_zip.fit"))
+                    zos.write("dup".toByteArray())
+                    zos.closeEntry()
+                    zos.putNextEntry(ZipEntry("new_from_zip.fit"))
+                    zos.write("valid-fit".toByteArray())
+                    zos.closeEntry()
+                }
+            }
+            true
+        }
+
+        val importedFileNames = mutableListOf<String>()
+        coEvery {
+            LegacyImportEngine.importFromFitResult(any(), any(), null, false)
+        } coAnswers {
+            importedFileNames.add(secondArg<File>().name)
+            LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 77L)
+        }
+
+        val result = AutoImportManager.syncIncremental(mockContext)
+
+        assertEquals(listOf("new_from_zip.fit"), importedFileNames)
+        assertEquals(1, result.importedCount)
+        assertEquals(1, result.skippedCount)
+        assertEquals(1, result.failedCount)
+        assertFalse("Escaped zip-slip file must never exist", File(tempCacheDir.parentFile, "escaped_from_zip.fit").exists())
+        assertFalse("Temp dir must be purged after sync", File(tempCacheDir, "auto_import_temp").exists())
+    }
+
+    @Test
+    fun testDownloadDropboxWithRetry_backsOffOnRateLimitExceptionAndSucceeds_TST_MIG_061_3() = runBlocking {
+        val mockDbxClient = mockk<com.dropbox.core.v2.DbxClientV2>(relaxed = true)
+        val mockFiles = mockk<com.dropbox.core.v2.files.DbxUserFilesRequests>(relaxed = true)
+        val mockDownloader = mockk<com.dropbox.core.DbxDownloader<com.dropbox.core.v2.files.FileMetadata>>(relaxed = true)
+        every { mockDbxClient.files() } returns mockFiles
+
+        var attempts = 0
+        every { mockFiles.download("/FIT/rate_limited.fit") } answers {
+            attempts++
+            if (attempts == 1) {
+                throw com.dropbox.core.RateLimitException("req-1", "rate limited", 2L, java.util.concurrent.TimeUnit.SECONDS)
+            }
+            mockDownloader
+        }
+        every { mockDownloader.download(any<java.io.OutputStream>()) } returns mockk(relaxed = true)
+
+        val delays = mutableListOf<Long>()
+        val target = File(tempCacheDir, "rate_limited.fit")
+        val ok = CloudWorkoutSourceScanner.downloadDropboxWithRetry(
+            dbxClient = mockDbxClient,
+            pathLower = "/FIT/rate_limited.fit",
+            targetFile = target,
+            delayFn = { ms -> delays.add(ms) }
+        )
+
+        assertTrue("Download must succeed after rate-limit retry", ok)
+        assertEquals(2, attempts)
+        assertEquals(listOf(2500L), delays)
+    }
+
+    @Test
+    fun testDownloadDropboxWithRetry_exhaustedRateLimitRetriesSkipsFinalTailSleep_TST_MIG_061_3() = runBlocking {
+        val mockDbxClient = mockk<com.dropbox.core.v2.DbxClientV2>(relaxed = true)
+        val mockFiles = mockk<com.dropbox.core.v2.files.DbxUserFilesRequests>(relaxed = true)
+        every { mockDbxClient.files() } returns mockFiles
+
+        var attempts = 0
+        every { mockFiles.download("/FIT/always_limited.fit") } answers {
+            attempts++
+            throw com.dropbox.core.RateLimitException("req-$attempts", "rate limited", 3L, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        val delays = mutableListOf<Long>()
+        val target = File(tempCacheDir, "always_limited.fit")
+        val ok = CloudWorkoutSourceScanner.downloadDropboxWithRetry(
+            dbxClient = mockDbxClient,
+            pathLower = "/FIT/always_limited.fit",
+            targetFile = target,
+            maxRetries = 3,
+            delayFn = { ms -> delays.add(ms) }
+        )
+
+        assertFalse("Download must return false once maxRetries exhausted", ok)
+        assertEquals(3, attempts)
+        assertEquals("Must sleep only between retries (maxRetries - 1), never after the final attempt", listOf(3500L, 3500L), delays)
     }
 }

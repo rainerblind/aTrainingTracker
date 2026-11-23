@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:12:38.579Z" hostname="rainer-HP-EliteBook-850-G5" time="5.132">
+  <properties/>
+  <testcase name="testRefreshClimbs_freeRideSharesStoredReferenceAndSkipsUnchangedCopies" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.987"/>
+  <testcase name="testRouteContext_providesRouteClimbIndexAndTotal" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.218"/>
+  <testcase name="testOnClimb_retainsTrackingDuringMidClimbPauseWithNullBearing" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.219"/>
+  <testcase name="testLiveClimb_lastSegmentIndex_propagatesAndAdvancesOnClimb" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.237"/>
+  <testcase name="testOnClimb_calculatesProgressAndRemainingElevationCorrectly" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.227"/>
+  <testcase name="testOffRoute_clearsActiveClimbWhenRiderDeviatesBeyond100Meters" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.221"/>
+  <testcase name="testAllStoredClimbs_deduplicatesOverlappingClimbsOnRefresh" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.23"/>
+  <testcase name="testProcessLocation_sparsePath_interpolatesProgressAndAltitudeContinuously" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.226"/>
+  <testcase name="testLiveClimb_summitReached_resetsLastSegmentIndexToNull" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.213"/>
+  <testcase name="testProcessLocation_trueOffRoute_dismissesClimb" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.219"/>
+  <testcase name="testRefreshClimbs_serializesConcurrentCallsWithMutex" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.232"/>
+  <testcase name="testApproachingClimb_rejectedWhenBearingIsNull" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.215"/>
+  <testcase name="testApproachingClimb_ignoresWhenHeadingDivergesBeyond45Degrees" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.205"/>
+  <testcase name="testStartGate_transitionsToOnClimbWhenWithin30Meters" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.214"/>
+  <testcase name="testSummitGate_transitionsToFinished" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.209"/>
+  <testcase name="testProcessLocation_midSegmentSparseTrack_preventsFalseOffRoute" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.211"/>
+  <testcase name="testApproachingClimb_detectsClimbWithinThresholdAndAlignedHeading" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.211"/>
+  <testcase name="testProcessLocation_singlePointPath_safeFallback" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.212"/>
+  <testcase name="testRefreshClimbs_clearsActiveLiveClimbIfDeletedFromDatabase" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.212"/>
+  <testcase name="testAllStoredClimbs_emitsStoredClimbs_andUpdatesOnRefresh" classname="com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest" time="0.211"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

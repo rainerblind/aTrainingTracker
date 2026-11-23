@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.42  
+**Version**: 1.0.45  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 116
+**Total Tests**: 117
 
 ---
 
@@ -1739,6 +1739,25 @@
 
 ---
 
+### TST-SET-131: **Polar Retry Sync Linearizable Yield Quiescence, Mid-Wait Disconnect Recovery & Mid-Discovery Parity Suite (`ATT-9612`)** [Verified]
+- **Requirement(s)**: `REQ-SET-129` (`REQ-SET-129.1`..`REQ-SET-129.4`)
+- **Component**: `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOnlineStreamingBridgeTest.kt`, `PolarOfflineGattCoordinatorCoexistenceTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `PolarH10OfflineControllerTest.kt`
+- **Jira**: `ATT-9612`
+- **Priority**: Critical | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Linearizable `PolarOnlineStreamingBridge` Yield Quiescence (`TST-SET-131.1`, `PolarOnlineStreamingBridgeTest#testPauseForOfflineSync_quiescesInFlightSearchTimeoutAndPreventsPostYieldTeardown_TST_SET_131_1`)*:
+     • Verify via latch-synchronized concurrency test that when `onSearchTimeout()` races with `withGattYieldAndPolarApi()` / `pauseForOfflineSync()`, `gattActionLock` quiesces any in-flight teardown before `block(api)` begins, blocks late bridge `disconnectFromDevice()` while yielded, and clears `connectingDeviceIds` via `clearConnectingState()`.
+  2. *Managed `connectWithinTimeout()` Mid-Wait Disconnect Recovery & In-Flight Reuse (`TST-SET-131.2`, `PolarOfflineGattCoordinatorCoexistenceTest#testConnectWithinTimeout_recoversFromMidWaitDisconnectAndIsolatesSiblingDisconnect_TST_SET_131_2`, `PolarOfflineGattCoordinatorCoexistenceTest#testConnectWithinTimeout_reusesConnectedAndInFlightConnectingSessionsAndClearsStateOnRelease_TST_SET_131_2`, `PolarOfflineGattCoordinatorCoexistenceTest#testConnectWithinTimeout_coalescesConnectedThenDisconnectedBurstBeforeSelectAndDuringBackoff_TST_SET_131_2`)*:
+     • Verify sibling H10 `deviceDisconnected` does not cancel Verity Sense's wait, while target `deviceDisconnected` cancels wedged `waitForConnection()`, delays `connectRetryBackoffMs`, re-issues `api.connectToDevice(polarId)`, and completes on Attempt 1, and `[CONNECTED, DISCONNECTED]` bursts before `select` or during retry backoff coalesce to `DISCONNECTED` and trigger retry instead of falsely returning `true`.
+     • Verify fast-path `true` with `0` duplicate `connectToDevice()` calls when `isDeviceConnected(polarId)`, awaiting without duplicate `connectToDevice()` when `isDeviceConnecting(polarId)`, blank `polarId` guard, and leak-proof `connectingDeviceIds` clear on `deviceConnected`, `deviceDisconnected`, `clearConnectingState`, and `releasePolarApi` `1->0`.
+  3. *Alias-Aware `20 s` `awaitFeaturesReady()` & Verity Sense / H10 Sibling Parity (`TST-SET-131.3`, `PolarOfflineGattCoordinatorCoexistenceTest#testAwaitFeaturesReady_uses20sDefaultAndResolvesMacHexAliases_TST_SET_131_3`, `PolarVeritySenseOfflineControllerTest#testSyncPendingWorkout_recoversFromMidWaitDisconnectAndMidDiscoveryDelayedFeature_TST_SET_131_3`, `PolarH10OfflineControllerTest#testSyncPendingWorkout_managedApiRecoversFromMidWaitDisconnectAndAwaitsFeatureReady_TST_SET_131_3`)*:
+     • Verify `FEATURE_READY_TIMEOUT_MS == 20_000L`, MAC/8-hex alias-aware `isFeatureReady`, and single-attempt Verity Sense & Polar H10 `syncPendingWorkout()` completion across mid-wait disconnect + asynchronous mid-discovery `bleSdkFeatureReady`.
+  4. *Monolith Ceilings, Public Signature Pin & Detailed Design Contracts (`TST-SET-131.4`)*:
+     • Verify `ArchitectureConformanceContractTest` (`11/11`), `InterfaceSignatureDriftContractTest` (`3/3`), `DeadCodeEliminationContractTest` (`6/6`), `DetailedDesignParityContractTest` (`3/3`), `SourceTextReadingAuditContractTest` (`6/6`), `SystemDataExchangeRequirementsContractTest` (`4/4`), and `SystemLiveTrackingRequirementsContractTest` (`4/4`) (`Localization Parity: N/A - 0 string changes`).
+- **Verification Evidence**: Tier-1 targeted run `233/233 PASS` (`0` fail, `0` err, `0` skip) across 24 suites (`PolarOnlineStreamingBridgeTest` `58/58`, `PolarVeritySenseOfflineControllerTest` `30/30`, `PolarH10OfflineControllerTest` `26/26`, `PolarOfflineGattCoordinatorCoexistenceTest` `14/14`, `PolarPmdStreamCoordinatorTest` `11/11`, `PolarRawTelemetryRecorderTest` `9/9`, `PolarHrStreamHealthMonitorTest` `7/7`, `PolarOfflineCapabilityStoreTest` `7/7`, `PolarRawTelemetryPrunerTest` `6/6`, `PolarRawTelemetryReaderTest` `6/6`, `PolarH10RunningDynamicsEstimatorTest` `5/5`, `PolarLiveRunningCadenceEstimatorTest` `5/5`, `PolarPpiStreamProcessorTest` `4/4`, `PolarRetrySyncCoordinatorTest` `3/3`, `BleHrmSilentConnectionWatchdogTest` `3/3`, `PolarDualImuBoundedHeapStressTest` `1/1`, `WorkoutSamplesHrBackfillTest` `1/1`, plus 7 Contract suites `37/37`; `7/7` verbatim `TST-SET-131` methods verified, `0` new production Kotlin warnings); `:app:assembleDebug` PASS; evidence bundle `docs/engineering/test_evidence/tickets/ATT-9612/` and `docs/engineering/walkthroughs/ATT-9612_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1784,3 +1803,6 @@
 | `1.0.39` | 2026-11-22 | Lane 3 Author (`ATT-9174`, `--as agent1`) | `ATT-9174` | Added and verified `TST-SET-129` (`EditWorkoutPolarRetrySyncUiTest` `6/6` + `EditWorkoutViewModelTest` `+2` new methods; `65/65 PASS` across 10 Tier-1 suites, Light/Dark Compose PNG + live `emulator-5554` before/after Dismiss verified via `read_file`). |
 | `1.0.40` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Added `TST-SET-130` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-128`) covering constructor privatization, `applicationContext` normalization, `MyPreferenceManager` shared `SupervisorJob` scope reuse, `InMemoryPreferencesDataStore` -> real-`filesDir` singleton upgrade guard, `ATrainingTrackerMap` dead-collector removal, and migrated test suites. |
 | `1.0.41` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Promoted `TST-SET-130` to `[Verified]` with verbatim `PreferenceSingletonsLifecycleTest` `7/7` method citations, `231/231 PASS` across 34 targeted suites, live `emulator-5554` smoke screenshot (`read_file` verified, `CRASH_LOGCAT_CLEAN`), and evidence bundle `docs/engineering/test_evidence/tickets/ATT-8121/`. |
+| `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Added `TST-SET-131` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-129`) covering `gattActionLock` yield quiescence, managed `connectWithinTimeout()` disconnect recovery & in-flight handshake reuse, alias-aware `20 s` `awaitFeaturesReady()` across Verity Sense & H10, and monolith/signature/detailed-design contracts (`N/A - 0 string changes`). |
+| `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Promoted `TST-SET-131` to `[Verified]` with all `6/6` verbatim `TestClass#testMethod` citations (`232/232 PASS` across 24 Polar/BLE/Contract suites, `:app:assembleDebug` PASS, `0` production Kotlin warnings, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9612/`). |
+| `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Stage 6 Bounce 1/5 heal: added `testConnectWithinTimeout_coalescesConnectedThenDisconnectedBurstBeforeSelectAndDuringBackoff_TST_SET_131_2` (`7/7` verbatim `TST-SET-131` methods, `233/233 PASS` across 24 suites), suppressed `OVERRIDE_DEPRECATION` warning on `PolarOfflineGattCoordinator`, and updated `my_btle_device.md` (`v1.0.13`) lock DAG. |

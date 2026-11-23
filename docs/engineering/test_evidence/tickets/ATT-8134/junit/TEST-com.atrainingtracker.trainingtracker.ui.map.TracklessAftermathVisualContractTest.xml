@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TracklessAftermathVisualContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:50:21.632Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testMapDetailLayout_rendersTelemetryGraphs_evenWhenShowElevationProfileIsFalse" classname="com.atrainingtracker.trainingtracker.ui.map.TracklessAftermathVisualContractTest" time="0.001"/>
+  <testcase name="testMapDetailLayout_suppressesMap_andAppliesVerticalScroll" classname="com.atrainingtracker.trainingtracker.ui.map.TracklessAftermathVisualContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_rendersScrubbingReadoutInHeader" classname="com.atrainingtracker.trainingtracker.ui.map.TracklessAftermathVisualContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_evaluatesHasTelemetryGraphs_fromActiveScrubPath" classname="com.atrainingtracker.trainingtracker.ui.map.TracklessAftermathVisualContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

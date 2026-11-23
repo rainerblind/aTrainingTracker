@@ -24,8 +24,10 @@
     <string name="auto_import_status_error">Synchronisatie mislukt: %1$s</string>
     <string name="auto_import_cloud_not_connected">Niet verbonden</string>
     <string name="auto_import_cloud_connected">Verbonden (%1$s)</string>
-    <string name="auto_import_format_fit">FIT (.fit)</string>
-    <string name="auto_import_format_tcx">TCX (.tcx)</string>
-    <string name="auto_import_format_gpx">GPX (.gpx)</string>
-    <string name="auto_import_format_all">Alle indelingen</string>
+    <string name="auto_import_format_fit">FIT</string>
+    <string name="auto_import_format_tcx">TCX</string>
+    <string name="auto_import_format_gpx">GPX</string>
+    <string name="auto_import_format_all">Alle</string>
+    <string name="cluster_tuning_ask_on_new_import_label">Vraag om naam voor nieuwe routes bij importeren</string>
+    <string name="cluster_tuning_ask_on_new_import_summary">Indien uitgeschakeld worden nieuwe routes stil aangemaakt met de naam van de eerste training.</string>
 </resources>

@@ -1213,11 +1213,12 @@
 
     <string name="workout_periods__migration_title">トレーニング履歴データベースを最適化中…</string>
 
-    <string name="import_backup">インポートとバックアップ</string>
+    <string name="import_backup">エクスポート・インポート・バックアップ</string>
+    <string name="tab_export">エクスポート</string>
     <string name="tab_import">インポート</string>
     <string name="tab_backup">バックアップ</string>
     <string name="tab_restore">復元</string>
-    <string name="import_backup_summary">ワークアウトのインポート、バックアップ、データの復元を管理します</string>
+    <string name="import_backup_summary">ワークアウトのエクスポート、インポート、バックアップ、データの復元を管理します</string>
 
     <string name="create_and_upload_to_dropbox">作成 \u0026 Dropboxへ送る</string>
     <string name="create_and_upload_to_both">作成 \u0026 送信\n(Dropbox \u0026 Google Drive)</string>

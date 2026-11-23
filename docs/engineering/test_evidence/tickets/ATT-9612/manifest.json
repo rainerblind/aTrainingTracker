@@ -1,0 +1,28 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "4b4aa78466474c0e9df0179665a5b56da2c98950",
+  "files": {
+    "evidence_summary.json": "1ee77eb90d104d7dc1d5f392cbf2ca2ee3f943647019dbe12a5a1ea26fbef278",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest.xml": "f2abef7d0583a33e727c7a44639ee377dd87470d6cd5074ce21fa1bfe6f7593c",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest.xml": "df6a78fb162f60656cd5321db3b6841ead6e32110e5d4529a31a80e866d9aec8",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest.xml": "ea86e4c45d27d893aafa42853b02656d00df2a9954f7bbcc0d32237a370cc080",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest.xml": "da5dc9ce17b3297145891845cbae8e2fa0a57e45b7c5799dd03de85dd44f165a",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest.xml": "53b8720dd6eec0deabd9b0a3022c57f237992bc785f5e571d1d24364da57a5c6",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridgeTest.xml": "58bf6f32ab8a229af1c65273e4be2ad5616ee2a22fc6ce3c54136802292be1e6",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest.xml": "85472e956a433ac99145e49c8474a4c064f250e1f34085b0c5eef7a78340387d",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest.xml": "646f61867f2080b743810d45db5ab0c27b9c3a659b773283615d6241dcadba0a",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest.xml": "8812fdfd9a8628e7da108d2c5e820611e21ccdd29b01b11efd0746f87863140e",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.MySensorManagerCadenceArbitrationTest.xml": "8d49c219187e3081e2d2e3c1c3cde266fffc017553cfbe1d76c2567f860c7cc2",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest.xml": "273ad6739ff6a2a1a995ec87e66f3396dab6a5e8e9a10e76c9a2ac6d3f4f9dee",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest.xml": "103426cdfc38c4ef8508f3db9210902d9e3c50ace44839963864d843ee9cd6e8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AdrCompletenessContractTest.xml": "b872a35e09ccac4997d4cd192d47c0a12d102244e4fa92f9246f4a1ccd07d5f1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml": "aa50d5ab05e0f87876741908fe1b514ea4892e376d7538ac99cb9ffc00692ed4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceCrashRecoveryCharacterisationTest.xml": "3b419e6034cf8ce0f3adee402ec125b2ceaf0947b7e480fbdb8fda0ac61da3ff",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceExportGatingTest.xml": "cad6bc3670057552b7d940eca4455c5fb7bb3270ca8f11ba717a1c6ba5b58793",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest.xml": "9c647bc6ac971d0abacfbffb2dced1108406bff7912fa840a3c0b6e17ff5b632",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceStateMachineCharacterisationTest.xml": "2cd797cf1e05c54674cc51e96e16b12c2b6d9bbbecb54804181646fb93b9d41f"
+  },
+  "run_started_utc": "2026-11-23T11:31:48.184631+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9612"
+}

@@ -127,7 +127,7 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
         assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
 
-        // Verify Online Communities ordering: Strava, Dropbox, Google Drive, Health Connect, Export, Backup & Restore (REQ-UI-463.1, REQ-SET-103)
+        // Verify Online Communities ordering: Strava, Dropbox, Google Drive, Health Connect, Export/Import & Backup (REQ-UI-463.1, REQ-SET-103, REQ-MIG-059)
         val onlineIds = onlineGroup.items.map { it.id }
         assertEquals(
             listOf(
@@ -135,7 +135,6 @@ class NavigationDrawerStateTest {
                 R.id.drawer_dropbox,
                 R.id.drawer_google_drive,
                 R.id.drawer_health_connect,
-                R.id.drawer_export,
                 R.id.drawer_backup_restore
             ),
             onlineIds
@@ -197,9 +196,13 @@ class NavigationDrawerStateTest {
         assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        val expectedTotalItems = if (BuildConfig.DEBUG) 28 else 27
-        assertEquals("Navigation drawer item count check (ATT-7659 / REQ-SET-087.2)", expectedTotalItems, allItems.size)
+        val expectedTotalItems = if (BuildConfig.DEBUG) 27 else 26
+        assertEquals("Navigation drawer item count check (ATT-8103 / REQ-MIG-059)", expectedTotalItems, allItems.size)
         assertEquals("All navigation items must have distinct IDs", expectedTotalItems, allItems.toSet().size)
+        org.junit.Assert.assertFalse(
+            "drawer_export must be removed as separate drawer destination (moved to Tab 0 of ImportBackupTabsScreen)",
+            allItems.contains(R.id.drawer_export)
+        )
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)
@@ -238,6 +241,7 @@ class NavigationDrawerStateTest {
         // Active item inside Online Communities, Settings, or Info & Support auto-expands that group
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_strava))
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_backup_restore))
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_export))
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_training_zones))
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_advanced_tuning))
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(infoSupportGroup, R.id.drawer_tips_guide))
@@ -246,11 +250,14 @@ class NavigationDrawerStateTest {
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_sport_types))
         org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_sport_types))
 
-        // Consolidated item selection matching for Equipment and decoupled Profile & Zones (REQ-UI-513.2)
+        // Consolidated item selection matching for Equipment, Backup/Export alias, and decoupled Profile & Zones (REQ-UI-513.2, REQ-MIG-059.2)
         org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_equipment))
         org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_bikes))
         org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_shoes))
         org.junit.Assert.assertFalse(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_workouts))
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_backup_restore, R.id.drawer_backup_restore))
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_backup_restore, R.id.drawer_export))
+        org.junit.Assert.assertFalse(isDrawerItemSelected(R.id.drawer_backup_restore, R.id.drawer_workouts))
 
         org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_athlete_profile, R.id.drawer_athlete_profile))
         org.junit.Assert.assertFalse(isDrawerItemSelected(R.id.drawer_athlete_profile, R.id.drawer_training_zones))

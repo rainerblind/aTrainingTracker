@@ -134,9 +134,9 @@ fun AthleteProfileScreen(
         uiState = uiState,
         onSelectPlotMetric = viewModel::selectPlotMetric,
         onSelectTimeRange = viewModel::selectTimeRange,
-        onSelectPmcTimeRange = viewModel::selectPmcTimeRange,
+        onSelectPmcTimeRange = viewModel::selectTimeRange,
         onSelectCardioMetric = viewModel::selectCardioTrendMetric,
-        onSelectCardioTimeRange = viewModel::selectCardioTimeRange,
+        onSelectCardioTimeRange = viewModel::selectTimeRange,
         onSelectHistoryFilter = viewModel::selectHistoryFilter,
         onAddEntry = viewModel::addEntry,
         onUpdateEntry = viewModel::updateEntry,
@@ -167,9 +167,9 @@ fun AthleteProfileContent(
     uiState: AthleteProfileUiState,
     onSelectPlotMetric: (PlotMetricType) -> Unit,
     onSelectTimeRange: (MetricsTimeRange) -> Unit,
-    onSelectPmcTimeRange: (MetricsTimeRange) -> Unit = {},
+    onSelectPmcTimeRange: (MetricsTimeRange) -> Unit = onSelectTimeRange,
     onSelectCardioMetric: (CardioTrendMetric) -> Unit = {},
-    onSelectCardioTimeRange: (MetricsTimeRange) -> Unit = {},
+    onSelectCardioTimeRange: (MetricsTimeRange) -> Unit = onSelectTimeRange,
     onSelectHistoryFilter: (AthleteMetricType?) -> Unit,
     onAddEntry: (AthleteMetricType, Double, Long) -> Unit,
     onUpdateEntry: (Long, AthleteMetricType, Double, Long) -> Unit,
@@ -305,10 +305,7 @@ fun AthleteProfileContent(
                                     pmcSummary = uiState.pmcSummary,
                                     pmcPlotPoints = uiState.pmcPlotPoints,
                                     selectedPmcTimeRange = uiState.selectedPmcTimeRange,
-                                    onSelectPmcTimeRange = { range ->
-                                        onSelectPmcTimeRange(range)
-                                        onSelectTimeRange(range)
-                                    }
+                                    onSelectPmcTimeRange = onSelectPmcTimeRange
                                 )
                             }
                         }
@@ -723,10 +720,7 @@ fun AthleteProfileContent(
                                     selectedTimeRange = uiState.selectedCardioTimeRange,
                                     yDomain = uiState.cardioTrendYDomain,
                                     onSelectMetric = onSelectCardioMetric,
-                                    onSelectTimeRange = { range ->
-                                        onSelectCardioTimeRange(range)
-                                        onSelectTimeRange(range)
-                                    },
+                                    onSelectTimeRange = onSelectCardioTimeRange,
                                     onInfoClick = { showCardioInfoDialog = true }
                                 )
                             }

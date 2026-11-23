@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.climbs
 
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.google.android.gms.maps.model.LatLng
 import kotlin.math.*
 
@@ -59,28 +60,10 @@ object ClimbDeduplicator {
 
     /**
      * Computes the perpendicular distance in meters from point [p] to segment [[a], [b]]
-     * in local equirectangular coordinate space.
+     * via canonical [GeoMath.distanceToSegmentMeters] (REQ-GEO-003).
      */
     fun distanceToSegmentMeters(p: LatLng, a: LatLng, b: LatLng): Double {
-        val meanLatRad = Math.toRadians((a.latitude + b.latitude) / 2.0)
-        val cosPhi = cos(meanLatRad).coerceAtLeast(1e-6)
-
-        val dX = (b.longitude - a.longitude) * cosPhi
-        val dY = b.latitude - a.latitude
-        val segLenSq = dX * dX + dY * dY
-
-        val t = if (segLenSq > 0.0) {
-            val pX = (p.longitude - a.longitude) * cosPhi
-            val pY = p.latitude - a.latitude
-            val u = (pX * dX + pY * dY) / segLenSq
-            u.coerceIn(0.0, 1.0)
-        } else {
-            0.0
-        }
-
-        val projLat = a.latitude + t * (b.latitude - a.latitude)
-        val projLng = a.longitude + t * (b.longitude - a.longitude)
-        return computeDistanceMeters(p.latitude, p.longitude, projLat, projLng)
+        return GeoMath.distanceToSegmentMeters(p, a, b)
     }
 
     enum class MetadataPreFilterResult {

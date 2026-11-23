@@ -42,21 +42,59 @@ class PaceFormatter : MyFormatter<Number> {
             null -> {}
         }
 
-        val min = floor(pace).toInt()
-        val sec = floor((pace - min) * SECONDS_PER_MINUTE).toInt()
+        return formatPaceMinutes(pace)
+    }
+
+    /**
+     * Formats a pace value already expressed in decimal minutes per user distance unit
+     * (`min/km` or `min/mile`) without round-tripping through seconds-per-meter (`REQ-UI-2803.1`),
+     * enforcing negative-value (`"--"`) and [BANALService.MAX_PACE] (`"~~"`) parity with [format].
+     */
+    @Suppress("ReturnCount")
+    fun formatPaceMinutes(
+        paceMinutes: Double?,
+        unit: MyUnits? = TrainingApplication.getUnit()
+    ): String {
+        if (paceMinutes == null || !paceMinutes.isFinite() || paceMinutes < 0.0) {
+            return "--"
+        }
+        if (paceMinutes > maxPaceMinutesForUnit(unit)) {
+            return "~~"
+        }
+        val min = floor(paceMinutes).toInt()
+        val sec = floor((paceMinutes - min) * SECONDS_PER_MINUTE).toInt()
         val secFormatted = if (sec <= TWO_DIGIT_THRESHOLD) "0$sec" else sec.toString()
         return "$min:$secFormatted"
     }
 
+    /**
+     * Formats a pace value already in decimal minutes per user distance unit with its canonical
+     * unit suffix (`min/km` or `min/mile`) in a single pass (`REQ-UI-2803.1`).
+     */
+    fun formatPaceMinutesWithUnits(
+        paceMinutes: Double?,
+        unit: MyUnits = TrainingApplication.getUnit()
+    ): String {
+        val units = unitLabel(unit)
+        return "${formatPaceMinutes(paceMinutes, unit)} $units"
+    }
+
     @Suppress("FunctionNaming")
     fun format_with_units(value: Number?): String {
-        val units = when (TrainingApplication.getUnit()) {
-            MyUnits.METRIC -> "min/km"
-            MyUnits.IMPERIAL -> "min/mile"
-            null -> ""
-        }
-
+        val units = unitLabel(TrainingApplication.getUnit())
         return "${format(value)} $units"
+    }
+
+    private fun maxPaceMinutesForUnit(unit: MyUnits?): Double = when (unit) {
+        MyUnits.METRIC -> BANALService.MAX_PACE.toDouble() * METERS_PER_KILOMETER / SECONDS_PER_MINUTE
+        MyUnits.IMPERIAL -> BANALService.MAX_PACE.toDouble() * BANALService.METER_PER_MILE / SECONDS_PER_MINUTE
+        null -> BANALService.MAX_PACE.toDouble()
+    }
+
+    private fun unitLabel(unit: MyUnits?): String = when (unit) {
+        MyUnits.METRIC -> "min/km"
+        MyUnits.IMPERIAL -> "min/mile"
+        null -> ""
     }
 
     companion object {

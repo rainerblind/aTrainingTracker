@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:06.509Z" hostname="rainer-HP-EliteBook-850-G5" time="3.947">
+  <properties/>
+  <testcase name="testImportRoute_whenNetworkTimesOut_importsRouteWithZeroGainSafely" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="1.363"/>
+  <testcase name="testImportRoute_whenGpxHasEmbeddedElevations_preservesElevationsAndSkipsApi" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.391"/>
+  <testcase name="testImportRoute_whenGpxLacksAltitude_triggersEnrichmentAndCalculatesGain" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.397"/>
+  <testcase name="testImportRoute_whenCircuitBreakerOpen_gracefullyFallbacksToZero" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.394"/>
+  <testcase name="testImportRoute_continuesEnrichmentOnSingleBatchServerError" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.432"/>
+  <testcase name="testImportRoute_whenPointsExceedBatchSize_chunksQueriesToMax100" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.508"/>
+  <testcase name="testImportRoute_appliesHysteresisFilteringSub2MeterNoise" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.461"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.TrackingSQLiteOpenHelper.getWritableDatabase(TrackingSQLiteOpenHelper.kt:126)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getDatabase(WorkoutClusterDatabaseManager.kt:514)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getAllClusters(WorkoutClusterDatabaseManager.kt:520)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.getAllClustersSync(WorkoutClusterRepository.kt:886)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine$dbManager$1.getAllClusters(WorkoutClusterEngine.kt:50)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.suggestCluster(WorkoutClusterEngine.kt:166)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.suggestCluster(WorkoutClusterEngine.kt:188)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.suggestCluster$default(WorkoutClusterEngine.kt:177)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.learnFromWorkout(WorkoutClusterEngine.kt:210)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.learnFromWorkout$default(WorkoutClusterEngine.kt:195)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.learnFromRoute(WorkoutClusterEngine.kt:610)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineRouteSyncTest.learnFromRoute_andSyncRouteNameChange_createAndRenameLinkedCluster_TST_SET_022(WorkoutClusterEngineRouteSyncTest.kt:111)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

@@ -200,20 +200,21 @@ object SmartRadarLightEngine : SensorEventListener {
     }
 
     /**
-     * Radar target and threat state callback for 3-stage escalation (REQ-CON-034.4, REQ-CON-034.5).
+     * Orthogonal threat-state callback for 3-stage escalation (REQ-CON-034.4, REQ-CON-034.5, REQ-CON-056.3).
+     * Never triggered by audio snooze countdowns or tail-light state changes.
      */
     @JvmStatic
     @JvmOverloads
-    fun onRadarStateChanged(
-        state: RadarState,
+    fun onThreatStateChanged(
+        state: RadarThreatState,
         nowMs: Long = safeElapsedRealtime()
     ) {
         val rawStage = when {
             state.overallThreatLevel == ThreatLevel.FAST_APPROACHING ||
-                    state.targets.any { it.threatLevel == ThreatLevel.FAST_APPROACHING } -> 2
+                state.targets.any { it.threatLevel == ThreatLevel.FAST_APPROACHING } -> 2
 
             state.overallThreatLevel == ThreatLevel.APPROACHING ||
-                    state.targets.any { it.threatLevel == ThreatLevel.APPROACHING } -> 1
+                state.targets.any { it.threatLevel == ThreatLevel.APPROACHING } -> 1
 
             else -> 0
         }
@@ -231,6 +232,27 @@ object SmartRadarLightEngine : SensorEventListener {
         }
 
         evaluateAndDispatch(nowMs)
+    }
+
+    /**
+     * Radar target and threat state callback for 3-stage escalation (REQ-CON-034.4, REQ-CON-034.5).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun onRadarStateChanged(
+        state: RadarState,
+        nowMs: Long = safeElapsedRealtime()
+    ) {
+        onThreatStateChanged(
+            RadarThreatState(
+                connectionState = state.connectionState,
+                overallThreatLevel = state.overallThreatLevel,
+                targets = state.targets,
+                lastUpdateRealtimeMs = state.lastUpdateRealtimeMs,
+                source = state.source
+            ),
+            nowMs
+        )
     }
 
     /**
@@ -334,8 +356,8 @@ object SmartRadarLightEngine : SensorEventListener {
             observationScope = scope
 
             scope.launch {
-                RadarStateRepository.radarState.collectLatest { state ->
-                    onRadarStateChanged(state)
+                RadarStateRepository.threatState.collectLatest { state ->
+                    onThreatStateChanged(state)
                 }
             }
 

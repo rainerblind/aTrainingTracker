@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:38:47.585Z" hostname="rainer-HP-EliteBook-850-G5" time="9.961">
+  <properties/>
+  <testcase name="testSuggestCluster_respectsExplicitScoreThreshold" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="8.431"/>
+  <testcase name="testTrainingApplication_clusterScoreThresholdDefaultsAndPersistence" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.803"/>
+  <testcase name="testSuggestCluster_dynamicallyReadsTrainingApplicationPreference" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.727"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "Thread-33" java.lang.NullPointerException: Cannot invoke "android.content.SharedPreferences.edit()" because "com.atrainingtracker.trainingtracker.TrainingApplication.cSharedPreferences" is null
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(TrainingApplication.java:1551)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+]]></system-err>
+</testsuite>

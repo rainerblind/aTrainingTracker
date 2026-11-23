@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxSyncTimestampTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:18:59.816Z" hostname="rainer-HP-EliteBook-850-G5" time="4.809">
+  <properties/>
+  <testcase name="testDropboxUploader_updatesSyncTimestampOnSuccess" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxSyncTimestampTest" time="2.389"/>
+  <testcase name="testDropboxBackupManager_updatesSyncTimestampOnSuccess" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxSyncTimestampTest" time="0.72"/>
+  <testcase name="testDropboxBackupManager_fetchAccountEmail_success" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxSyncTimestampTest" time="0.918"/>
+  <testcase name="testDropboxBackupManager_fetchAccountEmail_dbxException_returnsNullDefensively" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxSyncTimestampTest" time="0.781"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

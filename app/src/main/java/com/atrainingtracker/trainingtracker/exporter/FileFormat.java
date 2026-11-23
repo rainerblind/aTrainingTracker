@@ -21,17 +21,17 @@ package com.atrainingtracker.trainingtracker.exporter;
 import com.atrainingtracker.R;
 
 public enum FileFormat {
-    //             Dir              ending   UI name                FileExporter                     Uploader
-    CSV("CSV", ".csv", R.string.CSV),//                 new CSVFileExporter(),           null),
-    GC("GC", ".json", R.string.GC),// new GCFileExporter(),            null),
-    TCX("TCX", ".tcx", R.string.TCX),//                 new TCXFileExporter(),           null),
-    GPX("GPX", ".gpx", R.string.GPX),//                 new GPXFileExporter(),           null),
-    FIT("FIT", ".fit", R.string.FIT),
-    RAW_SENSOR("raw_sensor", ".polar_raw.csv.gz", R.string.file_format_raw_sensor),
+    //             Dir              ending                UI name                         derivedCache
+    CSV("CSV", ".csv", R.string.CSV, true),//                 new CSVFileExporter(),           null),
+    GC("GC", ".json", R.string.GC, true),// new GCFileExporter(),            null),
+    TCX("TCX", ".tcx", R.string.TCX, true),//                 new TCXFileExporter(),           null),
+    GPX("GPX", ".gpx", R.string.GPX, true),//                 new GPXFileExporter(),           null),
+    FIT("FIT", ".fit", R.string.FIT, true),
+    RAW_SENSOR("raw_sensor", ".polar_raw.csv.gz", R.string.file_format_raw_sensor, false),
 
     // not the best solution but should work.
-    STRAVA("Strava", ".tcx", R.string.Strava),
-    HEALTH_CONNECT("HealthConnect", "", R.string.health_connect_title);
+    STRAVA("Strava", ".tcx", R.string.Strava, true),
+    HEALTH_CONNECT("HealthConnect", "", R.string.health_connect_title, false);
 
     public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT, RAW_SENSOR};
     public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA, HEALTH_CONNECT};
@@ -39,14 +39,16 @@ public enum FileFormat {
     private final String mDirName;
     private final String mFileEnding;
     private final int mUiNameId;
+    private final boolean mIsDerivedExportFile;
     // private final BaseExporter mFileExporter;
     // private final BaseExporter mUploader;
 
-    FileFormat(String dirName, String fileEnding, int uiNameId)//, BaseExporter fileExporter, BaseExporter uploader)
+    FileFormat(String dirName, String fileEnding, int uiNameId, boolean isDerivedExportFile)//, BaseExporter fileExporter, BaseExporter uploader)
     {
         mDirName = dirName;
         mFileEnding = fileEnding;
         mUiNameId = uiNameId;
+        mIsDerivedExportFile = isDerivedExportFile;
         // mFileExporter = fileExporter;
         // mUploader     = uploader;
     }
@@ -61,6 +63,16 @@ public enum FileFormat {
 
     public int getUiNameId() {
         return mUiNameId;
+    }
+
+    /**
+     * Returns {@code true} if this format writes a disposable local cache file derived from SQLite
+     * that can be safely deleted and regenerated during export invalidation (REQ-EXP-048.1).
+     * Returns {@code false} for irreplaceable primary-capture archives (such as {@link #RAW_SENSOR})
+     * and API-only targets with no local cache file (such as {@link #HEALTH_CONNECT}).
+     */
+    public boolean isDerivedExportFile() {
+        return mIsDerivedExportFile;
     }
 
     /**

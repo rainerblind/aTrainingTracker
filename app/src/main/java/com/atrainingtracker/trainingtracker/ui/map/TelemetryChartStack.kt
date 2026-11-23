@@ -100,6 +100,27 @@ fun hasAnyTelemetryChartSeries(
 ): Boolean = availableTelemetryChartKinds(path, enableCriticalPowerModel).isNotEmpty()
 
 /**
+ * Shared viewport and gesture interaction bundle threaded uniformly across all chart sections
+ * in [TelemetryChartStack] (`REQ-UI-2803.2`).
+ */
+internal data class TelemetryChartViewport(
+    val path: List<PathPoint>,
+    val selectedDistance: Double?,
+    val onDistanceSelected: (Double?) -> Unit,
+    val activeTelemetryDomain: ProfileXAxisDomain,
+    val isTrackless: Boolean,
+    val isEffectiveTimeDomain: Boolean,
+    val bSportType: BSportType,
+    val zoomScale: Float,
+    val startDist: Double,
+    val isPanMode: Boolean,
+    val onZoomChanged: (Float, Double) -> Unit,
+    val enableGestures: Boolean,
+    val chartModifier: Modifier,
+    val showHeader: Boolean
+)
+
+/**
  * Shared vertical stack of telemetry charts (`Speed/Pace`, `Slope`, `Cadence`, `Power`, `HR`,
  * `W'bal`, `DFA a1`, `rMSSD`) with a persisted Material 3 per-chart visibility menu (`REQ-PER-044.4`, `ATT-9355`)
  * and `Rule 64` plot-alignment preservation. Used by both [MapDetailLayout] and [TrackOnMapScreen].
@@ -161,6 +182,26 @@ fun TelemetryChartStack(
     val visibleKinds = remember(availableKinds, effectiveHiddenCharts) {
         availableKinds.filter { it !in effectiveHiddenCharts }
     }
+    val effectiveTimeDomain = remember(activeTelemetryDomain, path) {
+        ProfileDomainMath.isEffectiveTimeDomain(activeTelemetryDomain, path)
+    }
+    val resolvedDomain = if (effectiveTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+    val viewport = TelemetryChartViewport(
+        path = path,
+        selectedDistance = selectedDistance,
+        onDistanceSelected = onDistanceSelected,
+        activeTelemetryDomain = resolvedDomain,
+        isTrackless = isTrackless,
+        isEffectiveTimeDomain = effectiveTimeDomain,
+        bSportType = bSportType,
+        zoomScale = zoomScale,
+        startDist = startDist,
+        isPanMode = isPanMode,
+        onZoomChanged = onZoomChanged,
+        enableGestures = enableGestures,
+        chartModifier = chartModifier,
+        showHeader = showChartHeader
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (showVisibilitySelector) {
@@ -192,187 +233,73 @@ fun TelemetryChartStack(
                     .testTag("telemetry_chart_section_${kind.name}")
             ) {
                 when (kind) {
-                    TelemetryChartKind.SPEED_PACE -> {
-                        val metric = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED
-                        val heading = if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed
-                        OverlayTelemetryChartSection(
-                            path = path,
-                            metricType = metric,
-                            headingRes = heading,
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.SPEED].orEmpty(),
-                            chartModifier = chartModifier,
-                            enableGestures = enableGestures,
-                            paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
-                            unit = unit,
-                            speedFormatter = speedFormatter,
-                            paceFormatter = paceFormatter,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.SLOPE -> {
-                        OverlayTelemetryChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.SLOPE,
-                            headingRes = R.string.graph_heading_slope,
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.SLOPE].orEmpty(),
-                            chartModifier = chartModifier,
-                            enableGestures = enableGestures,
-                            paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
-                            unit = unit,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.CADENCE -> {
-                        OverlayTelemetryChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.CADENCE,
-                            headingRes = R.string.graph_heading_cadence,
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
-                            chartModifier = chartModifier,
-                            enableGestures = enableGestures,
-                            unit = unit,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.POWER -> {
-                        OverlayTelemetryChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.POWER,
-                            headingRes = R.string.graph_heading_power,
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.POWER].orEmpty(),
-                            chartModifier = chartModifier,
-                            powerZoneThresholds = powerThresholds,
-                            zoneDistribution = powerZoneDistribution,
-                            zoneDisplayMode = powerZoneDisplayMode,
-                            enableGestures = enableGestures,
-                            unit = unit,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.HEART_RATE -> {
-                        OverlayTelemetryChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.HEART_RATE,
-                            headingRes = R.string.graph_heading_heart_rate,
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            overlaySeries = multiSensorOverlays[TelemetryMetricType.HEART_RATE].orEmpty(),
-                            chartModifier = chartModifier,
-                            hrZoneThresholds = hrThresholds,
-                            zoneDistribution = hrZoneDistribution,
-                            zoneDisplayMode = hrZoneDisplayMode,
-                            cardioPowerDynamics = cardioPowerDynamics,
-                            enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                            enableGestures = enableGestures,
-                            unit = unit,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.W_PRIME_BAL -> {
-                        StandardScalarChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.W_PRIME_BAL,
-                            heading = stringResource(R.string.w_prime_bal),
-                            valueFormatter = { pt -> pt.wPrimeBalKj?.let { String.format(currentLocale, "%.1f kJ", it) } },
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            enableGestures = enableGestures,
-                            chartModifier = chartModifier,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.HRV_DFA_A1 -> {
-                        StandardScalarChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.HRV_DFA_A1,
-                            heading = stringResource(R.string.hrv_dfa_a1),
-                            valueFormatter = { pt -> pt.hrvDfaA1?.let { String.format(currentLocale, "%.2f", it) } },
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
-                            dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
-                            enableGestures = enableGestures,
-                            chartModifier = chartModifier,
-                            showHeader = showChartHeader
-                        )
-                    }
-                    TelemetryChartKind.HRV_RMSSD -> {
-                        StandardScalarChartSection(
-                            path = path,
-                            metricType = TelemetryMetricType.HRV_RMSSD,
-                            heading = stringResource(R.string.hrv_rmssd),
-                            valueFormatter = { pt -> pt.hrvRmssd?.let { String.format(currentLocale, "%.1f ms", it) } },
-                            selectedDistance = selectedDistance,
-                            onDistanceSelected = onDistanceSelected,
-                            activeTelemetryDomain = activeTelemetryDomain,
-                            isTrackless = isTrackless,
-                            bSportType = bSportType,
-                            zoomScale = zoomScale,
-                            startDist = startDist,
-                            isPanMode = isPanMode,
-                            onZoomChanged = onZoomChanged,
-                            enableGestures = enableGestures,
-                            chartModifier = chartModifier,
-                            showHeader = showChartHeader
-                        )
-                    }
+                    TelemetryChartKind.SPEED_PACE -> OverlayTelemetryChartSection(
+                        viewport = viewport,
+                        metricType = if (isRunning) TelemetryMetricType.PACE else TelemetryMetricType.SPEED,
+                        headingRes = if (isRunning) R.string.graph_heading_pace else R.string.graph_heading_speed,
+                        overlaySeries = multiSensorOverlays[TelemetryMetricType.SPEED].orEmpty(),
+                        paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
+                        unit = unit,
+                        speedFormatter = speedFormatter,
+                        paceFormatter = paceFormatter
+                    )
+                    TelemetryChartKind.SLOPE -> OverlayTelemetryChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.SLOPE,
+                        headingRes = R.string.graph_heading_slope,
+                        overlaySeries = multiSensorOverlays[TelemetryMetricType.SLOPE].orEmpty(),
+                        paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
+                        unit = unit
+                    )
+                    TelemetryChartKind.CADENCE -> OverlayTelemetryChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.CADENCE,
+                        headingRes = R.string.graph_heading_cadence,
+                        overlaySeries = multiSensorOverlays[TelemetryMetricType.CADENCE].orEmpty(),
+                        unit = unit
+                    )
+                    TelemetryChartKind.POWER -> OverlayTelemetryChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.POWER,
+                        headingRes = R.string.graph_heading_power,
+                        overlaySeries = multiSensorOverlays[TelemetryMetricType.POWER].orEmpty(),
+                        powerZoneThresholds = powerThresholds,
+                        zoneDistribution = powerZoneDistribution,
+                        zoneDisplayMode = powerZoneDisplayMode,
+                        unit = unit
+                    )
+                    TelemetryChartKind.HEART_RATE -> OverlayTelemetryChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.HEART_RATE,
+                        headingRes = R.string.graph_heading_heart_rate,
+                        overlaySeries = multiSensorOverlays[TelemetryMetricType.HEART_RATE].orEmpty(),
+                        hrZoneThresholds = hrThresholds,
+                        zoneDistribution = hrZoneDistribution,
+                        zoneDisplayMode = hrZoneDisplayMode,
+                        cardioPowerDynamics = cardioPowerDynamics,
+                        enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
+                        unit = unit
+                    )
+                    TelemetryChartKind.W_PRIME_BAL -> StandardScalarChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.W_PRIME_BAL,
+                        heading = stringResource(R.string.w_prime_bal),
+                        valueFormatter = { pt -> pt.wPrimeBalKj?.let { String.format(currentLocale, "%.1f kJ", it) } }
+                    )
+                    TelemetryChartKind.HRV_DFA_A1 -> StandardScalarChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.HRV_DFA_A1,
+                        heading = stringResource(R.string.hrv_dfa_a1),
+                        valueFormatter = { pt -> pt.hrvDfaA1?.let { String.format(currentLocale, "%.2f", it) } },
+                        dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                        dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2
+                    )
+                    TelemetryChartKind.HRV_RMSSD -> StandardScalarChartSection(
+                        viewport = viewport,
+                        metricType = TelemetryMetricType.HRV_RMSSD,
+                        heading = stringResource(R.string.hrv_rmssd),
+                        valueFormatter = { pt -> pt.hrvRmssd?.let { String.format(currentLocale, "%.1f ms", it) } }
+                    )
                 }
             }
         }
@@ -465,21 +392,10 @@ private fun chartKindLabel(kind: TelemetryChartKind, isRunning: Boolean): String
 
 @Composable
 private fun OverlayTelemetryChartSection(
-    path: List<PathPoint>,
+    viewport: TelemetryChartViewport,
     metricType: TelemetryMetricType,
     headingRes: Int,
-    selectedDistance: Double?,
-    onDistanceSelected: (Double?) -> Unit,
-    activeTelemetryDomain: ProfileXAxisDomain,
-    isTrackless: Boolean,
-    bSportType: BSportType,
-    zoomScale: Float,
-    startDist: Double,
-    isPanMode: Boolean,
-    onZoomChanged: (Float, Double) -> Unit,
     overlaySeries: List<TelemetrySourceSeries>,
-    chartModifier: Modifier,
-    enableGestures: Boolean = true,
     paceCeilingMinKm: Float = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
     unit: MyUnits = MyUnits.METRIC,
     speedFormatter: SpeedFormatter? = null,
@@ -489,16 +405,14 @@ private fun OverlayTelemetryChartSection(
     zoneDistribution: ZoneDistributionData? = null,
     zoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
     cardioPowerDynamics: CardioPowerDynamicsRecord? = null,
-    enableCardioPowerDynamics: Boolean = true,
-    showHeader: Boolean = true
+    enableCardioPowerDynamics: Boolean = true
 ) {
     Spacer(modifier = Modifier.height(8.dp))
     var enabledOverlayIds by rememberSaveable(metricType.name, overlaySeries.map { it.columnName }) {
         mutableStateOf(emptySet<String>())
     }
-    val isTimeDomain = isTrackless || activeTelemetryDomain == ProfileXAxisDomain.TIME
-    val activePoint = selectedDistance?.let {
-        TelemetryMetricUtils.findNearestPoint(path, it, isTimeDomain = isTrackless)
+    val activePoint = viewport.selectedDistance?.let {
+        TelemetryMetricUtils.findNearestPoint(viewport.path, it, isTimeDomain = viewport.isTrackless)
     }
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) {
@@ -529,8 +443,13 @@ private fun OverlayTelemetryChartSection(
         activePrimaryText = activePrimaryText,
         metricType = metricType,
         activeOverlays = activeOverlays,
-        overlayScrubTarget = resolveOverlayScrubTarget(path, selectedDistance, isTimeDomain, isTrackless),
-        isTimeDomain = isTimeDomain,
+        overlayScrubTarget = resolveOverlayScrubTarget(
+            pathPoints = viewport.path,
+            selectedDistance = viewport.selectedDistance,
+            isTimeDomain = viewport.isEffectiveTimeDomain,
+            isTrackless = viewport.isTrackless
+        ),
+        isTimeDomain = viewport.isEffectiveTimeDomain,
         unit = unit,
         paceCeilingMinKm = paceCeilingMinKm,
         locale = currentLocale,
@@ -545,7 +464,7 @@ private fun OverlayTelemetryChartSection(
             }
         }
     )
-    if (showHeader) {
+    if (viewport.showHeader) {
         Text(
             text = headerText,
             style = MaterialTheme.typography.titleSmall,
@@ -555,20 +474,20 @@ private fun OverlayTelemetryChartSection(
         )
     }
     TelemetryMetricGraph(
-        pathPoints = path,
+        pathPoints = viewport.path,
         metricType = metricType,
-        currentDistance = selectedDistance,
-        onDistanceSelected = onDistanceSelected,
-        xAxisDomain = activeTelemetryDomain,
-        bSportType = bSportType,
-        zoomScale = zoomScale,
-        startDist = startDist,
-        isPanMode = isPanMode,
-        onZoomChanged = onZoomChanged,
+        currentDistance = viewport.selectedDistance,
+        onDistanceSelected = viewport.onDistanceSelected,
+        xAxisDomain = viewport.activeTelemetryDomain,
+        bSportType = viewport.bSportType,
+        zoomScale = viewport.zoomScale,
+        startDist = viewport.startDist,
+        isPanMode = viewport.isPanMode,
+        onZoomChanged = viewport.onZoomChanged,
         hrZoneThresholds = hrZoneThresholds,
         powerZoneThresholds = powerZoneThresholds,
         paceCeilingMinKm = paceCeilingMinKm,
-        enableGestures = enableGestures,
+        enableGestures = viewport.enableGestures,
         zoneDistribution = zoneDistribution,
         zoneDisplayMode = zoneDisplayMode,
         cardioPowerDynamics = cardioPowerDynamics,
@@ -578,41 +497,29 @@ private fun OverlayTelemetryChartSection(
         onToggleOverlay = { col ->
             enabledOverlayIds = if (col in enabledOverlayIds) enabledOverlayIds - col else enabledOverlayIds + col
         },
-        modifier = chartModifier
+        modifier = viewport.chartModifier
     )
 }
 
 @Composable
 private fun StandardScalarChartSection(
-    path: List<PathPoint>,
+    viewport: TelemetryChartViewport,
     metricType: TelemetryMetricType,
     heading: String,
     valueFormatter: (PathPoint) -> String?,
-    selectedDistance: Double?,
-    onDistanceSelected: (Double?) -> Unit,
-    activeTelemetryDomain: ProfileXAxisDomain,
-    isTrackless: Boolean,
-    bSportType: BSportType,
-    zoomScale: Float,
-    startDist: Double,
-    isPanMode: Boolean,
-    onZoomChanged: (Float, Double) -> Unit,
-    enableGestures: Boolean,
-    chartModifier: Modifier,
     dfaA1ThresholdT1: Float = 0.75f,
-    dfaA1ThresholdT2: Float = 0.50f,
-    showHeader: Boolean = true
+    dfaA1ThresholdT2: Float = 0.50f
 ) {
     Spacer(modifier = Modifier.height(8.dp))
-    val activePoint = selectedDistance?.let {
+    val activePoint = viewport.selectedDistance?.let {
         TelemetryMetricUtils.findNearestPoint(
-            points = path,
+            points = viewport.path,
             targetValue = it,
-            isTimeDomain = isTrackless
+            isTimeDomain = viewport.isTrackless
         )
     }
     val formattedVal = activePoint?.let(valueFormatter)
-    if (showHeader) {
+    if (viewport.showHeader) {
         Text(
             text = if (formattedVal != null) "$heading: $formattedVal" else heading,
             style = MaterialTheme.typography.titleSmall,
@@ -622,19 +529,19 @@ private fun StandardScalarChartSection(
         )
     }
     TelemetryMetricGraph(
-        pathPoints = path,
+        pathPoints = viewport.path,
         metricType = metricType,
-        currentDistance = selectedDistance,
-        onDistanceSelected = onDistanceSelected,
-        xAxisDomain = activeTelemetryDomain,
-        bSportType = bSportType,
-        zoomScale = zoomScale,
-        startDist = startDist,
-        isPanMode = isPanMode,
-        onZoomChanged = onZoomChanged,
+        currentDistance = viewport.selectedDistance,
+        onDistanceSelected = viewport.onDistanceSelected,
+        xAxisDomain = viewport.activeTelemetryDomain,
+        bSportType = viewport.bSportType,
+        zoomScale = viewport.zoomScale,
+        startDist = viewport.startDist,
+        isPanMode = viewport.isPanMode,
+        onZoomChanged = viewport.onZoomChanged,
         dfaA1ThresholdT1 = dfaA1ThresholdT1,
         dfaA1ThresholdT2 = dfaA1ThresholdT2,
-        enableGestures = enableGestures,
-        modifier = chartModifier
+        enableGestures = viewport.enableGestures,
+        modifier = viewport.chartModifier
     )
 }

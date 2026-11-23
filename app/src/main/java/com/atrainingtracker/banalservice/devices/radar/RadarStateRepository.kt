@@ -18,85 +18,180 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Reactive state repository providing high-frequency (4–8 Hz) radar telemetry stream (REQ-CON-028.4, REQ-CON-041).
+ * Reactive state repository exposing three orthogonal radar state streams (REQ-CON-028.4, REQ-CON-041, REQ-CON-056.3):
+ * - [threatState]: 4–8 Hz vehicle targets and multi-source connection arbitration (`BLE > ANT_PLUS > SIMULATOR`, `CONNECTED > CONNECTING`, `sourceStates <= 4`).
+ * - [lightState]: Tail-light mode, capability, and auto-mode flag (updated atomically via [MutableStateFlow.update]).
+ * - [snoozeState]: Audio snooze mode and monotonic expiration deadline (updated atomically via [MutableStateFlow.update]).
  *
- * Implements deterministic multi-source arbitration across concurrent BLE, ANT+, and simulation streams:
- * BLE (3) > ANT_PLUS (2) > SIMULATOR (1) > NONE (0).
+ * UI/ViewModel layers combine these streams on demand via [observeCombinedState] without coupling
+ * background engines (`SmartRadarLightEngine`, `RadarAlertManager`) to unrelated domains.
  */
 object RadarStateRepository {
 
-    private val lock = Any()
-    private val sourceStates = ConcurrentHashMap<RadarSource, RadarState>()
+    private val threatLock = Any()
+    private val sourceStates = ConcurrentHashMap<RadarSource, RadarThreatState>()
 
     @Volatile
     private var activeSource: RadarSource = RadarSource.NONE
 
-    private val _radarState = MutableStateFlow(RadarState())
-    val radarState: StateFlow<RadarState> = _radarState.asStateFlow()
+    private val _threatState = MutableStateFlow(RadarThreatState())
+    val threatState: StateFlow<RadarThreatState> = _threatState.asStateFlow()
+
+    private val _lightState = MutableStateFlow(RadarLightState())
+    val lightState: StateFlow<RadarLightState> = _lightState.asStateFlow()
+
+    private val _snoozeState = MutableStateFlow(RadarAudioSnoozeState.INACTIVE)
+    val snoozeState: StateFlow<RadarAudioSnoozeState> = _snoozeState.asStateFlow()
 
     /**
-     * Atomically applies an application-level control state transform (e.g. `isAutoMode`, `lightMode`,
-     * `audioSnoozeState`) under [lock] and synchronizes `isAutoMode` and `audioSnoozeState` across
-     * all tracked [sourceStates] entries so multi-source failover cannot revert user overrides.
+     * Cold combined UI stream merging the three orthogonal slices on demand (REQ-CON-056.3).
+     */
+    fun observeCombinedState(): Flow<RadarState> = combine(
+        threatState,
+        lightState,
+        snoozeState
+    ) { threat, light, snooze ->
+        combineSnapshot(threat, light, snooze)
+    }
+
+    /**
+     * Atomically updates [lightState] via lock-free CAS [MutableStateFlow.updateAndGet] (REQ-CON-056.3).
+     */
+    @JvmStatic
+    fun updateLightState(transform: (RadarLightState) -> RadarLightState): RadarLightState {
+        return _lightState.updateAndGet(transform)
+    }
+
+    /**
+     * Atomically updates [snoozeState] via lock-free CAS [MutableStateFlow.updateAndGet] (REQ-CON-056.3).
+     */
+    @JvmStatic
+    fun updateSnoozeState(transform: (RadarAudioSnoozeState) -> RadarAudioSnoozeState): RadarAudioSnoozeState {
+        return _snoozeState.updateAndGet(transform)
+    }
+
+    /**
+     * Atomically publishes a [RadarThreatState] and performs two-level multi-source arbitration (`REQ-CON-041.2`).
+     */
+    @JvmStatic
+    fun updateThreatState(newState: RadarThreatState): RadarThreatState {
+        synchronized(threatLock) {
+            return updateThreatLocked(newState)
+        }
+    }
+
+    /**
+     * Atomically builds and publishes a [RadarThreatState] from the latest active threat snapshot.
+     */
+    @JvmStatic
+    fun updateThreatState(buildState: (RadarThreatState) -> RadarThreatState): RadarThreatState {
+        synchronized(threatLock) {
+            val newState = buildState(_threatState.value)
+            return updateThreatLocked(newState)
+        }
+    }
+
+    /**
+     * Atomically evaluates a conditional [RadarThreatState] update, returning `null` if skipped.
+     */
+    @JvmStatic
+    fun updateThreatStateIf(buildState: (RadarThreatState) -> RadarThreatState?): RadarThreatState? {
+        synchronized(threatLock) {
+            val newState = buildState(_threatState.value) ?: return null
+            return updateThreatLocked(newState)
+        }
+    }
+
+    /**
+     * Compatibility control-state updater routing light and snooze changes to their orthogonal flows.
      */
     @JvmStatic
     fun updateControlState(transform: (RadarState) -> RadarState) {
-        synchronized(lock) {
-            val updated = transform(_radarState.value)
-            _radarState.value = updated
-            if (updated.source != RadarSource.NONE) {
-                sourceStates[updated.source] = updated
+        val before = getState()
+        val after = transform(before)
+        if (after.lightMode != before.lightMode ||
+            after.isLightControlSupported != before.isLightControlSupported ||
+            after.isAutoMode != before.isAutoMode
+        ) {
+            _lightState.update { current ->
+                current.copy(
+                    lightMode = if (after.lightMode != before.lightMode) after.lightMode else current.lightMode,
+                    isLightControlSupported = if (after.isLightControlSupported != before.isLightControlSupported) after.isLightControlSupported else current.isLightControlSupported,
+                    isAutoMode = if (after.isAutoMode != before.isAutoMode) after.isAutoMode else current.isAutoMode
+                )
             }
-            syncControlFieldsAcrossSourcesLocked(updated)
+        }
+        if (after.audioSnoozeState != before.audioSnoozeState) {
+            _snoozeState.update { after.audioSnoozeState }
         }
     }
 
     /**
-     * Atomically builds and publishes a telemetry/lifecycle [RadarState] under [lock] from the
-     * latest repository snapshot, eliminating TOCTOU races with concurrent [updateControlState] calls.
+     * Compatibility telemetry updater routing threat/connection fields strictly to [threatState].
      */
     @JvmStatic
     fun updateTelemetryState(buildState: (RadarState) -> RadarState): RadarState {
-        synchronized(lock) {
-            val newState = buildState(_radarState.value)
-            updateStateLocked(newState)
-            return newState
+        synchronized(threatLock) {
+            val built = buildState(getState())
+            val resolved = updateThreatLocked(built.toThreatState())
+            return combineSnapshot(resolved, _lightState.value, _snoozeState.value)
         }
     }
 
     /**
-     * Atomically evaluates a conditional telemetry/lifecycle [RadarState] under [lock].
-     * Returns `null` without mutating repository state when [buildState] returns `null`.
+     * Compatibility conditional telemetry updater routing threat/connection fields strictly to [threatState].
      */
     @JvmStatic
     fun updateTelemetryStateIf(buildState: (RadarState) -> RadarState?): RadarState? {
-        synchronized(lock) {
-            val newState = buildState(_radarState.value) ?: return null
-            updateStateLocked(newState)
-            return newState
+        synchronized(threatLock) {
+            val built = buildState(getState()) ?: return null
+            val resolved = updateThreatLocked(built.toThreatState())
+            return combineSnapshot(resolved, _lightState.value, _snoozeState.value)
         }
     }
 
+    /**
+     * Compatibility state publisher routing threat/connection fields to [threatState] and forwarding
+     * non-default light/snooze fields to their orthogonal flows without clobbering active slices
+     * when failover callers pass default light/snooze values.
+     */
     @JvmStatic
     fun updateState(newState: RadarState) {
-        synchronized(lock) {
-            updateStateLocked(newState)
+        synchronized(threatLock) {
+            updateThreatLocked(newState.toThreatState())
+        }
+        if (newState.lightMode != RadarLightMode.OFF ||
+            newState.isLightControlSupported ||
+            !newState.isAutoMode
+        ) {
+            _lightState.update {
+                RadarLightState(
+                    lightMode = newState.lightMode,
+                    isLightControlSupported = newState.isLightControlSupported,
+                    isAutoMode = newState.isAutoMode
+                )
+            }
+        }
+        if (newState.audioSnoozeState != RadarAudioSnoozeState.INACTIVE) {
+            _snoozeState.update { newState.audioSnoozeState }
         }
     }
 
-    private fun updateStateLocked(newState: RadarState) {
-        val previousState = _radarState.value
+    private fun updateThreatLocked(newState: RadarThreatState): RadarThreatState {
         val previousActiveSource = activeSource
         sourceStates[newState.source] = newState
 
         // Two-level arbitration: CONNECTED sources strictly take precedence over CONNECTING sources (REQ-CON-041.2).
-        // An active CONNECTED stream (e.g. ANT+) must never be preempted by a CONNECTING source (e.g. BLE scanning).
         val bestActive = sourceStates.values
             .filter { it.connectionState == RadarConnectionState.CONNECTED }
             .maxByOrNull { it.source.priority }
@@ -104,94 +199,32 @@ object RadarStateRepository {
                 .filter { it.connectionState == RadarConnectionState.CONNECTING }
                 .maxByOrNull { it.source.priority }
 
-        val resolvedBest = if (bestActive != null) {
-            preserveControlFieldsAcrossSourcesLocked(bestActive, previousState, previousActiveSource)
-        } else if (previousActiveSource == RadarSource.NONE || previousActiveSource == newState.source) {
-            preserveControlFieldsAcrossSourcesLocked(newState, previousState, previousActiveSource)
-        } else {
-            val bestSource = sourceStates.values.maxByOrNull { it.source.priority }
-            if (bestSource != null) {
-                preserveControlFieldsAcrossSourcesLocked(bestSource, previousState, previousActiveSource)
-            } else {
-                preserveControlFieldsAcrossSourcesLocked(newState, previousState, previousActiveSource)
-            }
+        val resolvedBest = when {
+            bestActive != null -> bestActive
+            previousActiveSource == RadarSource.NONE || previousActiveSource == newState.source -> newState
+            else -> sourceStates.values.maxByOrNull { it.source.priority } ?: newState
         }
 
         activeSource = resolvedBest.source
         sourceStates[resolvedBest.source] = resolvedBest
-        _radarState.value = resolvedBest
-        syncControlFieldsAcrossSourcesLocked(resolvedBest)
-    }
-
-    private fun syncControlFieldsAcrossSourcesLocked(authoritative: RadarState) {
-        for ((source, existing) in sourceStates) {
-            if (source != authoritative.source) {
-                sourceStates[source] = existing.copy(
-                    isAutoMode = authoritative.isAutoMode,
-                    audioSnoozeState = authoritative.audioSnoozeState
-                )
-            }
-        }
-    }
-
-    private fun preserveControlFieldsAcrossSourcesLocked(
-        candidate: RadarState,
-        previousState: RadarState,
-        previousActiveSource: RadarSource
-    ): RadarState {
-        val crossesSourceOrActiveOverride =
-            previousActiveSource != RadarSource.NONE || candidate.source != previousState.source
-        val preservedIsAutoMode = if (!previousState.isAutoMode && candidate.isAutoMode && crossesSourceOrActiveOverride) {
-            false
-        } else {
-            candidate.isAutoMode
-        }
-        val preservedSnooze = if (previousState.audioSnoozeState.isSnoozed &&
-            !candidate.audioSnoozeState.isSnoozed &&
-            crossesSourceOrActiveOverride
-        ) {
-            previousState.audioSnoozeState
-        } else {
-            candidate.audioSnoozeState
-        }
-        val preservedLightMode = if (previousActiveSource == RadarSource.NONE &&
-            candidate.source != previousState.source &&
-            previousState.lightMode != RadarLightMode.OFF &&
-            candidate.lightMode == RadarLightMode.OFF
-        ) {
-            previousState.lightMode
-        } else {
-            candidate.lightMode
-        }
-        val preservedLightSupported = candidate.isLightControlSupported ||
-            (previousActiveSource == RadarSource.NONE &&
-                candidate.source != previousState.source &&
-                previousState.isLightControlSupported)
-
-        return if (preservedIsAutoMode == candidate.isAutoMode &&
-            preservedSnooze == candidate.audioSnoozeState &&
-            preservedLightMode == candidate.lightMode &&
-            preservedLightSupported == candidate.isLightControlSupported
-        ) {
-            candidate
-        } else {
-            candidate.copy(
-                isAutoMode = preservedIsAutoMode,
-                audioSnoozeState = preservedSnooze,
-                lightMode = preservedLightMode,
-                isLightControlSupported = preservedLightSupported
-            )
-        }
+        _threatState.update { resolvedBest }
+        return resolvedBest
     }
 
     @JvmStatic
     fun getState(): RadarState {
-        return _radarState.value
+        return combineSnapshot(_threatState.value, _lightState.value, _snoozeState.value)
     }
 
     @JvmStatic
     fun getState(source: RadarSource): RadarState {
-        return sourceStates[source] ?: RadarState(source = source)
+        val threat = sourceStates[source] ?: return RadarState(source = source)
+        return combineSnapshot(threat, _lightState.value, _snoozeState.value)
+    }
+
+    @JvmStatic
+    fun getThreatState(source: RadarSource): RadarThreatState {
+        return sourceStates[source] ?: RadarThreatState(source = source)
     }
 
     @JvmStatic
@@ -201,10 +234,36 @@ object RadarStateRepository {
 
     @JvmStatic
     fun reset() {
-        synchronized(lock) {
+        synchronized(threatLock) {
             sourceStates.clear()
             activeSource = RadarSource.NONE
-            _radarState.value = RadarState()
+            _threatState.update { RadarThreatState() }
         }
+        _lightState.update { RadarLightState() }
+        _snoozeState.update { RadarAudioSnoozeState.INACTIVE }
     }
+
+    private fun RadarState.toThreatState(): RadarThreatState = RadarThreatState(
+        connectionState = connectionState,
+        overallThreatLevel = overallThreatLevel,
+        targets = targets,
+        lastUpdateRealtimeMs = lastUpdateRealtimeMs,
+        source = source
+    )
+
+    private fun combineSnapshot(
+        threat: RadarThreatState,
+        light: RadarLightState,
+        snooze: RadarAudioSnoozeState
+    ): RadarState = RadarState(
+        connectionState = threat.connectionState,
+        overallThreatLevel = threat.overallThreatLevel,
+        targets = threat.targets,
+        lastUpdateRealtimeMs = threat.lastUpdateRealtimeMs,
+        lightMode = light.lightMode,
+        isLightControlSupported = light.isLightControlSupported,
+        audioSnoozeState = snooze,
+        source = threat.source,
+        isAutoMode = light.isAutoMode
+    )
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:01.467Z" hostname="rainer-HP-EliteBook-850-G5" time="1.319">
+  <properties/>
+  <testcase name="testDeleteRoute_removesRouteAndWaypoints" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" time="0.5"/>
+  <testcase name="testInsertRoute_withWaypoints_persistsWaypointsToDatabase" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" time="0.425"/>
+  <testcase name="testOnUpgrade_fromV9ToV10_createsRouteWaypointsTableAndIndex" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest" time="0.394"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

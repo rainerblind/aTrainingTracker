@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.43  
+**Version**: 1.0.45  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 127
+**Total Requirements**: 128
 
 ---
 
@@ -3054,6 +3054,36 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-129: Polar Retry Sync Linearizable Bridge Yield Quiescence, Mid-Wait Disconnect Recovery & Mid-Discovery Feature Readiness (`ATT-9612`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-131`
+- **System Requirement(s)**: `SYSREQ-DEX-007`, `SYSREQ-TRK-002`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarOnlineStreamingBridge.kt`, `PolarOfflineGattCoordinator.kt`, `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `my_btle_device.md`
+- **Localization Parity**: `N/A - 0 string changes` (`0` edits to `res/values*/strings*.xml`)
+- **Rationale**: On Pixel 10 (`ATT-9612`, Workout `2431`, Polar Verity Sense `24825632`), tapping Aftermath *Sync Now* raced with an in-flight `PolarOnlineStreamingBridge` reconnect (`10:57:06.331` `extending handshake timeout to 15000ms`), resulting in a mid-sync `BluetoothGatt.disconnect()/refresh()/close()` teardown (`10:57:36.337`) followed by a `45,000 ms` hang in single-shot `connectWithinTimeout()` (`10:58:06.672`, reconnecting `31 ms` later on yield release) and an Attempt 2 failure during `10–15 s` 8-feature GATT discovery (`10:58:11`).
+- **Description**:
+  1. *Linearizable `PolarOnlineStreamingBridge` Yield Quiescence (`REQ-SET-129.1`)*: `PolarOnlineStreamingBridge` SHALL serialize its GATT-mutating lifecycle actions (`onSearchTimeout()` `disconnectFromDevice()`, `connectPersistentSession()` `connectToDevice()`, and `onSilentHrWatchdogTimeout()` `DISCONNECT_AND_RECONNECT` `forceDisconnectDevice()`) under `gattActionLock`, re-checking `!isShutDown.get() && !isOfflineGattYielded()` before touching `polarApi`. `pauseForOfflineSync()` SHALL cancel `reconnectJob`, `searchTimeoutJob`, `silentHrWatchdog`, `hrStalenessTimer`, and `streamCoordinator` renegotiations and traverse `synchronized(gattActionLock)` as a quiescence barrier before returning to `withGattYieldAndPolarApi()` so zero late bridge teardowns or competing connects can fire during an active offline sync.
+  2. *Disconnect-Recovering & In-Flight-Reusing `connectWithinTimeout()` (`REQ-SET-129.2`)*: `PolarOfflineGattCoordinator.multiplexerCallback` SHALL track alias-aware `connectingDeviceIds` (`isDeviceConnecting()`, cleared on `deviceConnected`, `deviceDisconnected`, `blePowerStateChanged(false)`, `forceDisconnectDevice`, and `resetForTesting()`). On managed APIs (`isManagedApi(api)`), `connectWithinTimeout(api, polarId, timeoutMs)` SHALL return `true` immediately when `isDeviceConnected(polarId)`, register a `finally`-cleaned transient multiplexer listener for `deviceConnected`/`deviceDisconnected`, await an already in-flight handshake without duplicate `connectToDevice()` when `isDeviceConnecting(polarId)` on initial entry, and immediately cancel any wedged `waitForConnection()`, wait `connectRetryBackoffMs` (`250 ms` default, `@VisibleForTesting`), and re-issue `api.connectToDevice(polarId)` within the remaining `timeoutMs` budget whenever `deviceDisconnected` or a transient non-cancellation disconnect error occurs mid-wait while strictly rethrowing `CancellationException`. Unmanaged `apiOverride` mocks MUST preserve legacy single-shot behavior.
+  3. *Alias-Aware `20 s` `awaitFeaturesReady()` & H10/Verity Sibling Parity (`REQ-SET-129.3`)*: `PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS` SHALL be `20_000L` ms and `awaitFeaturesReady()` SHALL check `api.isFeatureReady(alias, feature)` across all registered MAC/8-hex aliases (`collectAliasClosure(polarId)`). Both `PolarH10OfflineController` (`syncPendingWorkout`, `stopAndBackfillWorkout`, `executeArming`) and `PolarVeritySenseOfflineController` (`connectAndMatchSession`, `performArmingSequence`, `stopAndFetchOfflineHr`, `removeOfflineRecord`) SHALL connect through `connectWithinTimeout()`, and `PolarH10OfflineController` SHALL await required offline features via `awaitFeaturesReady()` on managed APIs (`isManagedApi(api)`), preserving unmanaged `apiOverride` mocks.
+  4. *Monolith Ceilings, Public Signature Pin & Detailed Design (`REQ-SET-129.4`)*: Keep `PolarOfflineGattCoordinator.kt <= 1,500`, `PolarOnlineStreamingBridge.kt <= 1,500` (unchanged constructor & public JVM signatures), `PolarVeritySenseOfflineController.kt <= 1,500`, `PolarH10OfflineController.kt <= 1,500`; keep `BACKFILL_TIMEOUT_MS` (`30_000L` H10 / `45_000L` Verity) and `STOP_CONNECTION_TIMEOUT_MS` (`5_000L`) unchanged; update `docs/architecture/detailed_design/my_btle_device.md` (`REQ-PRO-114`); `0` edits to `DeviceManager.java`, `TrackerService.java`, `DevicesDatabaseManager.java`, and `strings*.xml`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-120` (`ATT-9175`), `REQ-SET-119` (`ATT-8969`), `REQ-SET-118` (`ATT-8690`), `REQ-CON-050`, `REQ-CON-054` across `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`.
+  2. *Historical Origin & Commit Trace*: `ATT-8690` (`34b78941`), `ATT-8969` (`8e44039d`), `ATT-9155` (`f7ed7d94`), `ATT-9175` (`ed05d679`).
+  3. *Root Reason for Existing Formulation*: `ATT-9175` cancelled timers without a quiescence barrier; `ATT-8969` assumed a single `connectToDevice()` call would remain uncontested until `waitForConnection()` returned; `10 s` `FEATURE_READY_TIMEOUT_MS` predated 8-feature GATT discovery durations.
+  4. *Preservation of Core Invariants*: Preserves `5 s` absent-sensor timeout (`REQ-CON-045.1`), `5 s` stop-time connection cap (`REQ-SET-119.3`), `30 s`/`45 s` backfill timeouts (`SYSREQ-DEX-007`), sibling Polar isolation (`REQ-SET-118.3`), `CancellationException` rethrow (`REQ-SET-119.2`), unmanaged `apiOverride` mocks, and pinned JVM signatures (`InterfaceSignatureDriftContractTest`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an in-flight `PolarOnlineStreamingBridge` search timeout, reconnect wake-up, or silent-HR disconnect racing with `withGattYieldAndPolarApi()`, *When* `pauseForOfflineSync()` completes, *Then* zero bridge `disconnectFromDevice()` / `connectToDevice()` / `forceDisconnectDevice()` calls execute while the offline yield lease is held.
+• *Given* a managed `PolarBleApi` whose stale pre-yield handshake fires `deviceDisconnected` mid-`connectWithinTimeout()` while `waitForConnection()` stays blocked, *When* `deviceDisconnected` arrives, *Then* `connectWithinTimeout()` cancels the wedged wait, re-invokes `api.connectToDevice(polarId)` after `connectRetryBackoffMs`, and connects on Attempt 1 instead of stalling until `45 s`.
+• *Given* a Polar Verity Sense or Polar H10 already connected or mid-discovery (`isDeviceConnected` / `isDeviceConnecting`, `bleSdkFeatureReady` arriving between `10 s` and `20 s` or keyed by alias), *When* `syncPendingWorkout()` runs, *Then* `connectWithinTimeout()` avoids conflicting duplicate `connectToDevice()` calls and `awaitFeaturesReady()` completes backfill on Attempt 1.
+
+**Invariants**: `H10 BACKFILL_TIMEOUT_MS = 30_000L`, `Verity BACKFILL_TIMEOUT_MS = 45_000L`, `STOP_CONNECTION_TIMEOUT_MS = 5_000L`; `5 s` absent-sensor timeout (`REQ-CON-045.1`); sibling isolation (`REQ-SET-118.3`); `CancellationException` propagation (`REQ-SET-119.2`); unmanaged `apiOverride` compatibility; all 4 Polar files `<= 1,500` LoC with unchanged public JVM signatures; `0` UI/string/DB edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3100,3 +3130,5 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.40` | 2026-11-22 | Lane 3 Author (`ATT-9174`, `--as agent1`) | `ATT-9174` | Added and verified `REQ-SET-127` (`EditWorkoutScreen` immediate Polar pending retry sync banner, race-free dismiss persistence, post-sync refresh via `PolarRetrySyncCoordinator.completedWorkoutEvents`, `outerPadding` flush alignment; `65/65 PASS` across 10 Tier-1 suites + Light/Dark Compose PNG + live `emulator-5554` verification). |
 | `1.0.41` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Added `REQ-SET-128` (`[Planned]`, `.1`–`.4`) for privatizing `SettingsDataStore`, `MyPreferenceManager`, and `ProFeatureManager` constructors, normalizing `applicationContext`, reusing a shared `SupervisorJob` scope in `MyPreferenceManager`, migrating all 24 production callers to `getInstance`, removing the dead `tuningConfig` collector in `ATrainingTrackerMap.kt`, and preserving JVM/Robolectric `InMemoryPreferencesDataStore` singleton isolation (`N/A - 0 string changes`). |
 | `1.0.42` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Promoted `REQ-SET-128` to `[Verified]` following Stage 4/5 construction & verification (`231/231 PASS` across 34 targeted suites incl. `PreferenceSingletonsLifecycleTest` `7/7`, `ArchitectureConformanceContractTest` `11/11`, `0` new Kotlin warnings, live `emulator-5554` smoke install & `read_file` PNG verified, `CRASH_LOGCAT_CLEAN`). |
+| `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Added `REQ-SET-129` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-DEX-007`/`SYSREQ-TRK-002`) for linearizable `PolarOnlineStreamingBridge` yield quiescence (`gattActionLock`), disconnect-recovering & in-flight-reusing `connectWithinTimeout()`, alias-aware `20 s` `awaitFeaturesReady()`, and H10/Verity Sense sibling parity (`N/A - 0 string changes`). |
+| `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Promoted `REQ-SET-129` to `[Verified]` following Stage 4/5 construction & verification (`232/232 PASS` across 24 Polar/BLE/Contract suites, `0` production Kotlin warnings, all 4 Polar files `<= 1,500` LoC, `my_btle_device.md` `v1.0.12`, and `docs/engineering/walkthroughs/ATT-9612_walkthrough.md`). |

@@ -164,6 +164,7 @@ public class TrainingApplication extends Application {
     public static final String SP_CLUSTER_USE_ALTITUDE_POS = "clusterUseAltitudePos";
     public static final String SP_CLUSTER_TOL_ALTITUDE_POS = "clusterTolAltitudePos";
     public static final String SP_CLUSTER_SCORE_THRESHOLD = "cluster_score_threshold";
+    public static final String SP_CLUSTER_ASK_ON_NEW_DURING_IMPORT = "cluster_ask_on_new_during_import";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
@@ -1133,21 +1134,19 @@ public class TrainingApplication extends Application {
         }
     }
 
-    public static float getClusterTolEndpoints() { return cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f) : 200f; }
-    public static float getClusterTolApex() { return cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_APEX, 400f) : 400f; }
-    public static float getClusterTolDistance() { return cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_DISTANCE, 0.20f) : 0.20f; }
-    public static boolean useSportTypeForClustering() { return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_CLUSTER_USE_SPORT_TYPE, true) : true; }
-    public static boolean useAltitudePosForClustering() { return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_CLUSTER_USE_ALTITUDE_POS, true) : true; }
-    public static float getClusterTolAltitudePos() { return cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_ALTITUDE_POS, 400f) : 400f; }
-    public static float getClusterScoreThreshold() { return cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_SCORE_THRESHOLD, 1.2f) : 1.2f; }
+    private static com.atrainingtracker.trainingtracker.settings.TuningConfig getTuningConfigOrNull() {
+        return (com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.hasInitializedInstance() && cAppContext != null)
+                ? com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.getInstance(cAppContext).getTuningConfig() : null;
+    }
 
-    public static void setClusterTolEndpoints(float val) { if (cSharedPreferences != null) cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ENDPOINTS, val).apply(); }
-    public static void setClusterTolApex(float val) { if (cSharedPreferences != null) cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_APEX, val).apply(); }
-    public static void setClusterTolDistance(float val) { if (cSharedPreferences != null) cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_DISTANCE, val).apply(); }
-    public static void setUseSportTypeForClustering(boolean val) { if (cSharedPreferences != null) cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_SPORT_TYPE, val).apply(); }
-    public static void setUseAltitudePosForClustering(boolean val) { if (cSharedPreferences != null) cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_ALTITUDE_POS, val).apply(); }
-    public static void setClusterTolAltitudePos(float val) { if (cSharedPreferences != null) cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ALTITUDE_POS, val).apply(); }
-    public static void setClusterScoreThreshold(float val) { if (cSharedPreferences != null) cSharedPreferences.edit().putFloat(SP_CLUSTER_SCORE_THRESHOLD, val).apply(); }
+    public static float getClusterTolEndpoints() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterTolEndpoints() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f) : 200f); }
+    public static float getClusterTolApex() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterTolApex() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_APEX, 400f) : 400f); }
+    public static float getClusterTolDistance() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterTolDistance() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_DISTANCE, 0.20f) : 0.20f); }
+    public static boolean useSportTypeForClustering() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterUseSportType() : (cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_CLUSTER_USE_SPORT_TYPE, true) : true); }
+    public static boolean useAltitudePosForClustering() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterUseAltitudePos() : (cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_CLUSTER_USE_ALTITUDE_POS, true) : true); }
+    public static float getClusterTolAltitudePos() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterTolAltitudePos() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_ALTITUDE_POS, 400f) : 400f); }
+    public static float getClusterScoreThreshold() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterScoreThreshold() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_SCORE_THRESHOLD, 1.2f) : 1.2f); }
+    public static boolean askOnNewClusterDuringImport() { var c = getTuningConfigOrNull(); return c != null ? c.getAskOnNewClusterDuringImport() : (cSharedPreferences != null && cSharedPreferences.getBoolean(SP_CLUSTER_ASK_ON_NEW_DURING_IMPORT, false)); }
 
     private enum StravaSyncPref {
         EQUIPMENT(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, R.string.lastUpdateOfEquipmentNever, SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC, SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS),
@@ -1292,50 +1291,56 @@ public class TrainingApplication extends Application {
 
     // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TCX, true); // by default, we export to TCX.
+        return cSharedPreferences == null || cSharedPreferences.getBoolean(SP_EXPORT_TCX, true); // by default, we export to TCX.
     }
 
     public static void setExportToTCX(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_TCX, value).apply();
     }
 
     public static boolean exportToGPX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_GPX, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_GPX, false);
     }
 
     public static void setExportToGPX(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_GPX, value).apply();
     }
 
     public static boolean exportToCSV() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_CSV, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_CSV, false);
     }
 
     public static void setExportToCSV(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_CSV, value).apply();
     }
 
     public static boolean exportToGCJson() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_GC_JSON, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_GC_JSON, false);
     }
 
     public static void setExportToGCJson(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_GC_JSON, value).apply();
     }
 
     public static boolean exportToFIT() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_FIT, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_FIT, false);
     }
 
     public static void setExportToFIT(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_FIT, value).apply();
     }
 
     public static boolean exportToRawSensor() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_RAW_SENSOR, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_RAW_SENSOR, false);
     }
 
     public static void setExportToRawSensor(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_RAW_SENSOR, value).apply();
     }
 

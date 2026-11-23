@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:12:44.995Z" hostname="rainer-HP-EliteBook-850-G5" time="2.166">
+  <properties/>
+  <testcase name="testDuplicateRouteAsLocal_createsLocalGpxRouteDecoupledFromStrava" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.404"/>
+  <testcase name="testPruneExpiredStravaRoutes_whenNoExpiredRoutes_returnsZero" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.337"/>
+  <testcase name="testOnUpgradeFromVersion4_callsOnCreateAndReturnsWithoutRedundantAlterTable_TST_DAT_044_4" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.367"/>
+  <testcase name="testPruneOrphanStravaRoutes_deletesRoutesNotPresentInRemoteSet" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.346"/>
+  <testcase name="testPruneExpiredStravaRoutes_deletesExpiredRecords" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.359"/>
+  <testcase name="testSchemaV9_dbVersionIsNine_andOnUpgradeExecutesAlterTableAndBackfill" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest" time="0.35"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

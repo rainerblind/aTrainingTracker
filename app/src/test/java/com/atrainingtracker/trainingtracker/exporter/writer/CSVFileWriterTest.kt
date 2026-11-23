@@ -17,6 +17,7 @@ import android.util.Log
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.exporter.ExportType
@@ -25,9 +26,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -253,5 +256,90 @@ class CSVFileWriterTest {
         val lines = file.readLines()
         assertEquals("Only header line should be present", 1, lines.size)
         assertEquals("\"TIME_TOTAL\",\"DISTANCE_m\"", lines[0])
+    }
+
+    /**
+     * TST-EXP-049.1: Verifies that metadata columns (`_id`, `time`) are short-circuited without
+     * enum lookup, nested-parentheses device names (such as `ALTITUDE (Topografische Höhe (DEM))`)
+     * and all location provider suffixes resolve to their canonical [SensorType] and
+     * [com.atrainingtracker.banalservice.sensor.SensorValueType], and zero `Log.w` /
+     * `IllegalArgumentException` warnings are emitted.
+     */
+    @Test
+    fun testCSVFileWriter_metadataAndNestedParenthesesDeviceNames_noEnumWarnings_TST_EXP_049() {
+        val columns = arrayOf(
+            WorkoutSamplesDbHelper.C_ID,
+            WorkoutSamplesDbHelper.TIME,
+            SensorType.TIME_TOTAL.name,
+            "ALTITUDE (Topografische Höhe (DEM))",
+            "HR (Polar H10 (BLE) (Chest))",
+            "ALTITUDE (Device_gps)",
+            SensorType.LATITUDE.name + "_gps",
+            SensorType.LONGITUDE.name + "_network",
+            SensorType.BEARING.name + "_google_fused",
+            SensorType.SPEED_mps.name + "_att_fused"
+        )
+        val sampleRows = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.C_ID to 1,
+                WorkoutSamplesDbHelper.TIME to "2026-11-20 06:08:46",
+                SensorType.TIME_TOTAL.name to 42,
+                // Pass Int for DOUBLE column -> Double.toString yields "543.0" only if SensorType.ALTITUDE resolved
+                "ALTITUDE (Topografische Höhe (DEM))" to 543,
+                // Pass Double for INTEGER column -> Integer.toString yields "148" only if SensorType.HR resolved
+                "HR (Polar H10 (BLE) (Chest))" to 148.9,
+                "ALTITUDE (Device_gps)" to 512,
+                SensorType.LATITUDE.name + "_gps" to 48.137,
+                SensorType.LONGITUDE.name + "_network" to 11.576,
+                SensorType.BEARING.name + "_google_fused" to 90.0,
+                SensorType.SPEED_mps.name + "_att_fused" to 7
+            )
+        )
+        val cursor = createMockSamplesCursor(columns, sampleRows)
+        every { mockSqlDb.query(any(), any(), any(), any(), any(), any(), any()) } returns cursor
+
+        val exportInfo = ExportInfo("workout_dem_csv", FileFormat.CSV, ExportType.FILE)
+        val writer = CSVFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        assertTrue("doExport must succeed", result.success())
+        val lines = File(tempDir, exportInfo.shortPath).readLines()
+        assertEquals(2, lines.size)
+
+        val expectedHeader = listOf(
+            WorkoutSamplesDbHelper.C_ID,
+            WorkoutSamplesDbHelper.TIME,
+            SensorType.TIME_TOTAL.name,
+            "ALTITUDE (Device_gps)",
+            "ALTITUDE (Topografische Höhe (DEM))",
+            SensorType.BEARING.name + "_google_fused",
+            "HR (Polar H10 (BLE) (Chest))",
+            SensorType.LATITUDE.name + "_gps",
+            SensorType.LONGITUDE.name + "_network",
+            SensorType.SPEED_mps.name + "_att_fused"
+        ).joinToString(",") { "\"$it\"" }
+        assertEquals(expectedHeader, lines[0])
+
+        val expectedRow = "\"1\",\"2026-11-20 06:08:46\",\"42\",\"512.0\",\"543.0\",\"90.0\",\"148\",\"48.137\",\"11.576\",\"7.0\""
+        assertEquals(expectedRow, lines[1])
+
+        verify(exactly = 0) { Log.w(any<String>(), any<String>()) }
+        verify(exactly = 0) { Log.w(any<String>(), any<String>(), any()) }
+    }
+
+    @Test
+    fun testCSVFileWriter_extractSourcedSensorTypeName_handlesNestedParensAndSuffixes() {
+        assertEquals("ALTITUDE", CSVFileWriter.extractSourcedSensorTypeName("ALTITUDE (Topografische Höhe (DEM))"))
+        assertEquals("HR", CSVFileWriter.extractSourcedSensorTypeName("HR (Polar H10 (BLE) (Chest))"))
+        assertEquals("ALTITUDE", CSVFileWriter.extractSourcedSensorTypeName("ALTITUDE (Device_gps)"))
+        assertEquals("LATITUDE", CSVFileWriter.extractSourcedSensorTypeName("LATITUDE_gps"))
+        assertEquals("LONGITUDE", CSVFileWriter.extractSourcedSensorTypeName("LONGITUDE_network"))
+        assertEquals("BEARING", CSVFileWriter.extractSourcedSensorTypeName("BEARING_google_fused"))
+        assertEquals("SPEED_mps", CSVFileWriter.extractSourcedSensorTypeName("SPEED_mps_att_fused"))
+        assertNull(CSVFileWriter.extractSourcedSensorTypeName("HR"))
+        assertNull(CSVFileWriter.extractSourcedSensorTypeName(WorkoutSamplesDbHelper.C_ID))
+        assertNull(CSVFileWriter.extractSourcedSensorTypeName(WorkoutSamplesDbHelper.TIME))
+        assertNull(CSVFileWriter.extractSourcedSensorTypeName("_gps"))
+        assertNull(CSVFileWriter.extractSourcedSensorTypeName(" (leading)"))
     }
 }

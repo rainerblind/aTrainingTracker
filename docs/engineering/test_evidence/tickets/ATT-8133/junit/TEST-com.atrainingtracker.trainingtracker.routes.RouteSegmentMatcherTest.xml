@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:11.750Z" hostname="rainer-HP-EliteBook-850-G5" time="0.05">
+  <properties/>
+  <testcase name="testMatchSegments_outAndBackRoute_matchesForwardOutboundLeg" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.019"/>
+  <testcase name="testMatchSegments_forwardAlignedSegment_matchesSuccessfully" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.003"/>
+  <testcase name="testFindRoutesContainingSegment_emptyOrSinglePoint_returnsEmpty" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.003"/>
+  <testcase name="testMatchSegments_divergingFinish_isRejected" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.002"/>
+  <testcase name="testMatchSegments_opposingSportType_isRejected" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.002"/>
+  <testcase name="testMatchSegments_multipleSegments_sortedAscendingByStartDistance" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.003"/>
+  <testcase name="testFindRoutesContainingSegment_reverseDirectionRoute_returnsEmpty" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.003"/>
+  <testcase name="testMatchSegments_perpendicularCrossingSegment_isRejected" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.002"/>
+  <testcase name="testMatchSegments_reverseDirectionSegment_isRejected" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.003"/>
+  <testcase name="testFindRoutesContainingSegment_forwardRouteMatches_returnsSegmentMatchedRoute" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.004"/>
+  <testcase name="testMatchSegments_sparseRouteVertices_matchesSegmentBetweenVertices" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.002"/>
+  <testcase name="testMatchSegments_horseshoeDivergingMidpoint_isRejected" classname="com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

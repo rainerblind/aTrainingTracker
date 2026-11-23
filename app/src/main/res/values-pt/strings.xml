@@ -1231,11 +1231,12 @@
 
     <string name="workout_periods__migration_title">Otimizando a base de dados do histórico de treinos…</string>
 
-    <string name="import_backup">Importação e backup</string>
+    <string name="import_backup">Exportar, importar e backup</string>
+    <string name="tab_export">Exportar</string>
     <string name="tab_import">Importar</string>
     <string name="tab_backup">Backup</string>
     <string name="tab_restore">Restaurar</string>
-    <string name="import_backup_summary">Gerir importações de treinos, backups e restauração de dados</string>
+    <string name="import_backup_summary">Gerir exportações e importações de treinos, backups e restauração de dados</string>
 
     <string name="create_and_upload_to_dropbox">Criar \u0026 Enviar p/ Dropbox</string>
     <string name="create_and_upload_to_both">Criar \u0026 Enviar\n(Dropbox \u0026 Google Drive)</string>

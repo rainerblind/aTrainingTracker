@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:37:05.158Z" hostname="rainer-HP-EliteBook-850-G5" time="7.237">
+  <properties/>
+  <testcase name="testChannelConstantsAndConfiguration_tstCon033_1" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="5.908"/>
+  <testcase name="testWildcardSearch_rejectsUnrelatedDeviceNumberOrManufacturer_tstCon033_7" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.106"/>
+  <testcase name="testDecodeBroadcastData_page0x01_associatedLight_registersController_tstCon033_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.098"/>
+  <testcase name="testDisconnectCommand_tstCon033_3" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.088"/>
+  <testcase name="testUnifiedControllerIntegration_tstCon033_4" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.111"/>
+  <testcase name="testStop_releasesResourcesCleanly_tstCon033_5" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.097"/>
+  <testcase name="testModeByteMappingAndAckConfirmation_tstCon033_7" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.092"/>
+  <testcase name="testWildcardFallback_closesChannelBeforeSetChannelId_tstCon033_6" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.118"/>
+  <testcase name="testThreeStepHandshake_connectThenSettings_tstCon033_3" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.087"/>
+  <testcase name="testChannelEventFiltering_nonTimeoutEventsDoNotTriggerFallback_tstCon033_6" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.438"/>
+  <testcase name="testDecodeBroadcastData_page0x01_unassociatedLight_tstCon033_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.083"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

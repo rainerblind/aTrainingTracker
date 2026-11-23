@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:38:57.575Z" hostname="rainer-HP-EliteBook-850-G5" time="3.418">
+  <properties/>
+  <testcase name="testBtleBikePower_gattPacketIngestion_powerBalanceAndCadence" classname="com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest" time="0.55"/>
+  <testcase name="testBtleHeartRate_gattPacketIngestion_multiRrUnpacking" classname="com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest" time="0.432"/>
+  <testcase name="testBtleRadar_gattPacketIngestion_v1AndV2ThreatClassification" classname="com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest" time="0.351"/>
+  <testcase name="testLocationHal_onNewLocation_updatesSpeedAndLocationSensors" classname="com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest" time="0.541"/>
+  <testcase name="testSensorDropout_realWatchdogTimeoutDebounce" classname="com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest" time="1.544"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.GPS_AVAILABLE_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

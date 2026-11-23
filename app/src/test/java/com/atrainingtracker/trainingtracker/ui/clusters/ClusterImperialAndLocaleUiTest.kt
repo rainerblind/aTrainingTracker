@@ -19,6 +19,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -123,7 +125,9 @@ class ClusterImperialAndLocaleUiTest {
             }
         }
 
-        composeTestRule.onNode(isToggleable()).performScrollTo().performClick()
+        composeTestRule.onNode(
+            isToggleable() and hasAnyAncestor(hasTestTag("cluster_tuning_show_details_toggle"))
+        ).performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithText(imperialUnit, substring = true).onFirst().performScrollTo().assertIsDisplayed()
     }

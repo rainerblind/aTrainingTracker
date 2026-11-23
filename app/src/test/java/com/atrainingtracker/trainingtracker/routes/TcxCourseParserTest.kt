@@ -252,4 +252,84 @@ class TcxCourseParserTest {
         assertEquals(47.0, importData.pathPoints[0].latLng.latitude, 0.0001)
         assertEquals(47.01, importData.pathPoints[1].latLng.latitude, 0.0001)
     }
+
+    /**
+     * TST-MIG-061.1: Standard Garmin/Komoot TCX v2 <Course> files include a summary-only <Lap>
+     * (zero nested trackpoints) followed by a sibling <Track><Trackpoint>...</Trackpoint></Track>.
+     */
+    @Test
+    fun testParseTcxCourse_withSummaryOnlyLapAndSiblingTrack_extractsSiblingTrackpoints_TST_MIG_061_1() {
+        val tcxXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                <Courses>
+                    <Course>
+                        <Name>Garmin Komoot Loop</Name>
+                        <Lap>
+                            <TotalTimeSeconds>3600.0</TotalTimeSeconds>
+                            <DistanceMeters>12000.0</DistanceMeters>
+                            <BeginPosition>
+                                <LatitudeDegrees>48.10</LatitudeDegrees>
+                                <LongitudeDegrees>11.50</LongitudeDegrees>
+                            </BeginPosition>
+                            <EndPosition>
+                                <LatitudeDegrees>48.12</LatitudeDegrees>
+                                <LongitudeDegrees>11.52</LongitudeDegrees>
+                            </EndPosition>
+                            <Intensity>Active</Intensity>
+                        </Lap>
+                        <Track>
+                            <Trackpoint>
+                                <Time>2026-11-23T08:00:00Z</Time>
+                                <Position>
+                                    <LatitudeDegrees>48.10</LatitudeDegrees>
+                                    <LongitudeDegrees>11.50</LongitudeDegrees>
+                                </Position>
+                                <AltitudeMeters>520.0</AltitudeMeters>
+                                <DistanceMeters>0.0</DistanceMeters>
+                            </Trackpoint>
+                            <Trackpoint>
+                                <Time>2026-11-23T08:30:00Z</Time>
+                                <Position>
+                                    <LatitudeDegrees>48.11</LatitudeDegrees>
+                                    <LongitudeDegrees>11.51</LongitudeDegrees>
+                                </Position>
+                                <AltitudeMeters>560.0</AltitudeMeters>
+                                <DistanceMeters>6000.0</DistanceMeters>
+                            </Trackpoint>
+                            <Trackpoint>
+                                <Time>2026-11-23T09:00:00Z</Time>
+                                <Position>
+                                    <LatitudeDegrees>48.12</LatitudeDegrees>
+                                    <LongitudeDegrees>11.52</LongitudeDegrees>
+                                </Position>
+                                <AltitudeMeters>540.0</AltitudeMeters>
+                                <DistanceMeters>12000.0</DistanceMeters>
+                            </Trackpoint>
+                        </Track>
+                        <CoursePoint>
+                            <Name>Summit View</Name>
+                            <PointType>Summit</PointType>
+                            <Position>
+                                <LatitudeDegrees>48.11</LatitudeDegrees>
+                                <LongitudeDegrees>11.51</LongitudeDegrees>
+                            </Position>
+                        </CoursePoint>
+                    </Course>
+                </Courses>
+            </TrainingCenterDatabase>
+        """.trimIndent()
+
+        val result = TcxCourseParser.parse(tcxXml)
+
+        assertTrue("Standard Garmin/Komoot TCX Course with summary-only <Lap> must parse cleanly", result.isSuccess)
+        val importData = result.getOrThrow()
+        assertEquals("Garmin Komoot Loop", importData.summary.name)
+        assertEquals(3, importData.pathPoints.size)
+        assertEquals(48.10, importData.pathPoints[0].latLng.latitude, 0.0001)
+        assertEquals(48.12, importData.pathPoints[2].latLng.latitude, 0.0001)
+        assertEquals(12000.0, importData.summary.distance, 0.001)
+        assertEquals(1, importData.waypoints.size)
+        assertEquals("Summit View", importData.waypoints[0].name)
+    }
 }
