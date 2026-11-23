@@ -1560,6 +1560,9 @@ class TrackerServiceFinalizationTest {
 
         mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController::class)
         mockkStatic(com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController::class)
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(any()) } returns false
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getRawSensorRetentionPolicy(any()) } returns com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy.KEEP_ALL
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.isRecordingArmed() } returns true
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getSessionStartTimeMs() } returns 1111L
         every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController.getEffectiveAnchorStartTimeMs() } returns 1111L
@@ -1930,6 +1933,8 @@ class TrackerServiceFinalizationTest {
         mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         mockkObject(EquipmentAndSportTypeDiscoveryManager.Companion)
+        mockkStatic(com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager::class)
+        mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
 
         try {
             mockkConstructor(Intent::class)
@@ -1939,10 +1944,15 @@ class TrackerServiceFinalizationTest {
 
             every { com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.isRecordingArmed() } returns false
             every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(any()) } returns false
+            every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getRawSensorRetentionPolicy(any()) } returns com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy.KEEP_ALL
             every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(any(), any()) } returns 250
             every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(any(), any()) } returns 75.0f
             every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockk(relaxed = true)
             every { EquipmentAndSportTypeDiscoveryManager.getInstance(any()) } returns mockk(relaxed = true)
+            every {
+                com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager.evaluateAndApplyMilestone(any(), any(), any(), any(), any())
+            } returns null
+            every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockk(relaxed = true)
 
             val repoMock = mockk<WorkoutRepository>(relaxed = true)
             every { repoMock.getPowerSpeedHrSamples(any()) } returns com.atrainingtracker.trainingtracker.ui.aftermath.PowerSpeedHrSamples(

@@ -40,8 +40,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMo
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryChartKind
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
-import com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore
-import com.atrainingtracker.trainingtracker.settings.hasRealFilesDir
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,19 +49,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 private val Context.backingUserPreferencesDataStore by preferencesDataStore(name = "user_preferences")
-
-private fun resolveUserPreferencesDataStore(context: Context): DataStore<Preferences> {
-    return try {
-        if (hasRealFilesDir(context)) {
-            val targetContext = context.applicationContext ?: context
-            targetContext.backingUserPreferencesDataStore
-        } else {
-            InMemoryPreferencesDataStore()
-        }
-    } catch (_: Throwable) {
-        InMemoryPreferencesDataStore()
-    }
-}
 
 typealias WorkoutListCardPreferences = WorkoutCardSectionPreferences
 
@@ -150,36 +135,20 @@ data class EditWorkoutFieldPreferences(
 
 class MyPreferenceManager private constructor(
     context: Context,
-    internal val dataStore: DataStore<Preferences> = resolveUserPreferencesDataStore(context),
+    internal val dataStore: DataStore<Preferences> = (context.applicationContext ?: context).backingUserPreferencesDataStore,
     private val appScope: CoroutineScope = sharedAppScope
 ) {
-    private val isInMemoryFallback: Boolean = dataStore is InMemoryPreferencesDataStore
-
     companion object {
         private val sharedAppScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         @Volatile
         private var INSTANCE: MyPreferenceManager? = null
 
-        @Volatile
-        private var isTestOverride: Boolean = false
-
         @JvmStatic
         fun getInstance(context: Context): MyPreferenceManager {
-            val existing = INSTANCE
-            if (existing != null && (isTestOverride || !existing.isInMemoryFallback)) {
-                return existing
-            }
-            return synchronized(this) {
-                val current = INSTANCE
-                if (current != null && (isTestOverride || !current.isInMemoryFallback || !hasRealFilesDir(context))) {
-                    current
-                } else {
-                    val appContext = context.applicationContext ?: context
-                    MyPreferenceManager(appContext).also {
-                        isTestOverride = false
-                        INSTANCE = it
-                    }
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: MyPreferenceManager(context.applicationContext ?: context).also {
+                    INSTANCE = it
                 }
             }
         }
@@ -187,7 +156,7 @@ class MyPreferenceManager private constructor(
         @VisibleForTesting
         internal fun createForTesting(
             context: Context,
-            dataStore: DataStore<Preferences> = resolveUserPreferencesDataStore(context),
+            dataStore: DataStore<Preferences> = (context.applicationContext ?: context).backingUserPreferencesDataStore,
             appScope: CoroutineScope = sharedAppScope
         ): MyPreferenceManager {
             val appContext = context.applicationContext ?: context
@@ -198,7 +167,6 @@ class MyPreferenceManager private constructor(
         fun setInstanceForTesting(instance: MyPreferenceManager?) {
             synchronized(this) {
                 INSTANCE = instance
-                isTestOverride = instance != null
             }
         }
         val IS_COMPACT_VIEW = booleanPreferencesKey("is_compact_view")

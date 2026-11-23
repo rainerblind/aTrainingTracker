@@ -38,7 +38,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
-import com.atrainingtracker.trainingtracker.database.collectIgnoringUnstubbedMock
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import kotlinx.coroutines.flow.Flow
@@ -103,9 +102,9 @@ class WorkoutSummariesViewModel(application: Application) :
             }
         }
         viewModelScope.launch {
-            clusterRepo.clusterMutationEvents.collectIgnoringUnstubbedMock { event ->
+            clusterRepo.clusterMutationEvents.collect { event ->
                 val current = _filterCriteria.value
-                val activeClusterId = current.clusterId ?: return@collectIgnoringUnstubbedMock
+                val activeClusterId = current.clusterId ?: return@collect
                 when (event) {
                     is ClusterMutationEvent.Renamed -> {
                         if (activeClusterId == event.clusterId && current.clusterName != event.newName) {
@@ -129,10 +128,10 @@ class WorkoutSummariesViewModel(application: Application) :
             }
         }
         viewModelScope.launch {
-            clusterRepo.allClusters.collectIgnoringUnstubbedMock { clusters ->
+            clusterRepo.allClusters.collect { clusters ->
                 val current = _filterCriteria.value
-                val activeClusterId = current.clusterId ?: return@collectIgnoringUnstubbedMock
-                val matched = clusters.find { it.id == activeClusterId } ?: return@collectIgnoringUnstubbedMock
+                val activeClusterId = current.clusterId ?: return@collect
+                val matched = clusters.find { it.id == activeClusterId } ?: return@collect
                 if (matched.name != current.clusterName) {
                     setFilterCriteria(current.copy(clusterName = matched.name))
                 }

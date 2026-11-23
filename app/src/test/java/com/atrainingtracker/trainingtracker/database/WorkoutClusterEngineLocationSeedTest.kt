@@ -67,12 +67,14 @@ class WorkoutClusterEngineLocationSeedTest {
 
         WorkoutClusterDatabaseManager.resetForTesting(mockClusterDb)
         WorkoutClusterEngine.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.resetForTesting(null)
 
         clusterEngine = WorkoutClusterEngine.getInstance(mockContext)
     }
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.resetForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)
         unmockkAll()

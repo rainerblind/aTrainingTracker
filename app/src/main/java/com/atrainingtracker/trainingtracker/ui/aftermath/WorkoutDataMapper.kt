@@ -41,7 +41,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime

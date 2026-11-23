@@ -73,6 +73,9 @@ class TrackerServiceWorkoutStartTest {
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.isPaused() } returns false
 
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any()) } returns com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig()
+
         mockBanalComm = mockk(relaxed = true)
         every { mockBanalComm.getBestSensorData(any()) } returns null
         every { mockBanalComm.allSensorData } returns emptyList()

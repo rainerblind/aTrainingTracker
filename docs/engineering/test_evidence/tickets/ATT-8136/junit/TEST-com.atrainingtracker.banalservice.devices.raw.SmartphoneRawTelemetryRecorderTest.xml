@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:33.796Z" hostname="rainer-HP-EliteBook-850-G5" time="5.91">
+  <properties/>
+  <testcase name="inMemoryTuningStore_defaultsOptInFalse_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="4.749"/>
+  <testcase name="rotationVector_threeFloatArray_derivesUnitQuaternionQw_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.098"/>
+  <testcase name="stopBlocking_isTimeoutBoundedWhenWriterStalls_TST_EXP_045_2" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.184"/>
+  <testcase name="boundedDropOldestBackpressure_tracksExactDroppedFrameCountAndKeepsNewest_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.012"/>
+  <testcase name="recordLocation_deduplicatesPerChannelAcrossInterleavedProvidersAndResetsPerSession_TST_EXP_047_2" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.315"/>
+  <testcase name="sensorCapture_whenZeroSensorsRegistered_cleansUpHandlerThreadAndReturnsFalse_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.229"/>
+  <testcase name="sensorCapture_registersAndRecordsWithoutAttFusedPaired_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.182"/>
+  <testcase name="stateLifecycleAndClockDomain_emitsInitialSportSwitchCarriageWithElapsedRealtimeNanos_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.106"/>
+  <testcase name="disabledByDefault_andMockContextWithoutFilesDir_neverThrowsAndCreatesZeroFiles_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.005"/>
+  <testcase name="emptySession_discardsWithoutCreatingArchiveOrTmp_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.003"/>
+  <testcase name="recordLocation_rejectsNonFiniteLatLonAndSanitizesNonFiniteOptionalFloats_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest" time="0.025"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+Exception in thread "Thread-7" java.lang.RuntimeException: Method run in android.os.HandlerThread not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.os.HandlerThread.run(HandlerThread.java)
+]]></system-err>
+</testsuite>

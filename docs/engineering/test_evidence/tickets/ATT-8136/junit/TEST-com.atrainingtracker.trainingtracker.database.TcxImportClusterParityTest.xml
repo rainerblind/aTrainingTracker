@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.TcxImportClusterParityTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:15.223Z" hostname="rainer-HP-EliteBook-850-G5" time="2.384">
+  <properties/>
+  <testcase name="testClusterInteractionParameterPreservation" classname="com.atrainingtracker.trainingtracker.database.TcxImportClusterParityTest" time="0.628"/>
+  <testcase name="testSuggestClusterParityWithScoreClusters" classname="com.atrainingtracker.trainingtracker.database.TcxImportClusterParityTest" time="0.618"/>
+  <testcase name="testSuggestClusterReturnsNullWhenScoreExceedsThreshold" classname="com.atrainingtracker.trainingtracker.database.TcxImportClusterParityTest" time="0.586"/>
+  <testcase name="testSuggestClusterMatchesWhenStartPointDisplacedBeyondEndpointTol" classname="com.atrainingtracker.trainingtracker.database.TcxImportClusterParityTest" time="0.552"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

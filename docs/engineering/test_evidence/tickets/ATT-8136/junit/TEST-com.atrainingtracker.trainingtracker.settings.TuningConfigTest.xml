@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TuningConfigTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:02:43.599Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="defaultsConstants_matchExpectedBounds" classname="com.atrainingtracker.trainingtracker.settings.TuningConfigTest" time="0.0"/>
+  <testcase name="clampingSimulation_enforcesBoundsAndCrossRelations" classname="com.atrainingtracker.trainingtracker.settings.TuningConfigTest" time="0.0"/>
+  <testcase name="defaultValues_conformToEstablishedBehavior" classname="com.atrainingtracker.trainingtracker.settings.TuningConfigTest" time="0.0"/>
+  <testcase name="relationalInvariants_holdForDefaults" classname="com.atrainingtracker.trainingtracker.settings.TuningConfigTest" time="0.001"/>
+  <testcase name="testDefaultPoolLength_defaultsBoundsAndPresetResolution" classname="com.atrainingtracker.trainingtracker.settings.TuningConfigTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

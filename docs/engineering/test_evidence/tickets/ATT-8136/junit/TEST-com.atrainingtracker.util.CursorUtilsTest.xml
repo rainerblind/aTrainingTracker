@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.util.CursorUtilsTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:57:05.584Z" hostname="rainer-HP-EliteBook-850-G5" time="0.231">
+  <properties/>
+  <testcase name="testMapLast_withNullCursor_returnsDefaultValue" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.112"/>
+  <testcase name="testMapList_withEmptyCursor_returnsEmptyList" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.02"/>
+  <testcase name="testMapFirst_withEmptyCursor_returnsDefaultValue" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.009"/>
+  <testcase name="testMapList_withNullCursor_returnsEmptyList" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.007"/>
+  <testcase name="testMapLast_withEmptyCursor_returnsDefaultValue" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.008"/>
+  <testcase name="testMapList_whenExceptionThrown_propagatesCleanly" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.011"/>
+  <testcase name="testMoveToFirstOrNull_successAndFailure" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.008"/>
+  <testcase name="testMoveToLastOrNull_successAndFailure" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.008"/>
+  <testcase name="testMapFirst_withNullCursor_returnsDefaultValue" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.008"/>
+  <testcase name="testMapFirst_withValidRow_returnsMappedValue" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.009"/>
+  <testcase name="testMapList_withMultipleRows_returnsMappedList" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.01"/>
+  <testcase name="testMapLast_withValidRow_returnsMappedValue" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.011"/>
+  <testcase name="testMapFirst_whenExceptionThrown_propagatesCleanly" classname="com.atrainingtracker.util.CursorUtilsTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

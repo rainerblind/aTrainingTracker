@@ -238,7 +238,7 @@ class SystemArchitectureDesignContractTest {
         }
 
         // 3. Verify real backup configuration XML resource file exists
-        val backupXml = findRepoRootFile(listOf("app", "src", "main", "res", "xml", "full_backup_content.xml").joinToString(File.separator))
+        val backupXml = findRepoRootFile("app/src/main/res/xml/full_backup_content.xml")
         assertTrue("full_backup_content.xml must exist in res/xml/", backupXml.exists())
 
         // 4. Verify application process name

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:04:05.076Z" hostname="rainer-HP-EliteBook-850-G5" time="0.698">
+  <properties/>
+  <testcase name="slopeAndAltitudeMetricTypes_mapToSensorColorKeysAndThemeDefault" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.148"/>
+  <testcase name="corruptOrUnknownTokens_safelyFallBackToCanonicalDefault" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.087"/>
+  <testcase name="canonicalDefaultColors_matchSpecificationForAllMetricsAndSensors" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.097"/>
+  <testcase name="cadenceMetricType_mapsToExistingSensorCadenceColorKeyAndDefault" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.109"/>
+  <testcase name="resetAllGraphColors_clearsOnlyTelemetryColorKeys" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.092"/>
+  <testcase name="setGetAndResetGraphColor_persistsAndSharesMetricFamilyKeys" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.089"/>
+  <testcase name="resolveAccentColor_handlesNullPrefsAndThemeAdaptation" classname="com.atrainingtracker.trainingtracker.settings.TelemetryGraphColorPreferencesTest" time="0.076"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

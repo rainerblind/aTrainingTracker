@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelperTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:49:36.581Z" hostname="rainer-HP-EliteBook-850-G5" time="1.117">
+  <properties/>
+  <testcase name="testAddActiveDevice_whenNotExists_insertsRecord" classname="com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelperTest" time="0.483"/>
+  <testcase name="testAddActiveDevice_whenAlreadyExists_skipsInsert" classname="com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelperTest" time="0.312"/>
+  <testcase name="testAddActiveDevice_withInvalidIds_doesNothing" classname="com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelperTest" time="0.322"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

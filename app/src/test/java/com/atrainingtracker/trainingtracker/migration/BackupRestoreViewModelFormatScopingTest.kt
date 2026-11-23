@@ -45,6 +45,9 @@ import java.io.File
 @OptIn(ExperimentalCoroutinesApi::class)
 class BackupRestoreViewModelFormatScopingTest {
 
+    @get:org.junit.Rule
+    val tempFolder = org.junit.rules.TemporaryFolder()
+
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var mockApp: Application
     private lateinit var mockContext: Context
@@ -62,8 +65,26 @@ class BackupRestoreViewModelFormatScopingTest {
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
 
+        val filesDir = tempFolder.newFolder("files")
         mockApp = mockk(relaxed = true)
         mockContext = mockk(relaxed = true)
+        every { mockApp.filesDir } returns filesDir
+        every { mockContext.filesDir } returns filesDir
+        every { mockApp.applicationContext } returns mockApp
+        every { mockContext.applicationContext } returns mockApp
+
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockApp,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockApp,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         mockPrefs = mockk(relaxed = true)
 
         val mockSummaryDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
@@ -103,6 +124,8 @@ class BackupRestoreViewModelFormatScopingTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         runCatching { WorkoutSummariesDatabaseManager.setInstanceForTesting(null) }
         runCatching { StravaUploadDbHelper.resetForTesting(null) }

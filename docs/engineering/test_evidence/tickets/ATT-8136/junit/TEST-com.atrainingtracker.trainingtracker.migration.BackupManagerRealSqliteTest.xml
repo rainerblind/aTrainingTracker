@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupManagerRealSqliteTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:00:43.721Z" hostname="rainer-HP-EliteBook-850-G5" time="0.267">
+  <properties/>
+  <testcase name="testVacuumInto_createsConsistentStandaloneSnapshot" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerRealSqliteTest" time="0.144"/>
+  <testcase name="testVerifySnapshotIntegrity_validatesCleanAndCorruptDatabases" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerRealSqliteTest" time="0.123"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

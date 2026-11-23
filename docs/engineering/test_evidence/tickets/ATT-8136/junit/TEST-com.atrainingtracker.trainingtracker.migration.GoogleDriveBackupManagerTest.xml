@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.GoogleDriveBackupManagerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:01:25.767Z" hostname="rainer-HP-EliteBook-850-G5" time="1.2">
+  <properties/>
+  <testcase name="testUploadBackup_unauthenticated_returnsFalse" classname="com.atrainingtracker.trainingtracker.migration.GoogleDriveBackupManagerTest" time="0.559"/>
+  <testcase name="testDownloadBackup_success_returnsTrue" classname="com.atrainingtracker.trainingtracker.migration.GoogleDriveBackupManagerTest" time="0.272"/>
+  <testcase name="testUploadBackup_success_updatesStatusAndReturnsTrue" classname="com.atrainingtracker.trainingtracker.migration.GoogleDriveBackupManagerTest" time="0.201"/>
+  <testcase name="testUploadBackup_fileDoesNotExist_returnsFalse" classname="com.atrainingtracker.trainingtracker.migration.GoogleDriveBackupManagerTest" time="0.166"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

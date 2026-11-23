@@ -64,6 +64,19 @@ class StravaBulkExportImporterTest {
         every { Log.e(any(), any(), any()) } returns 0
 
         mockContext = mockk(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockContext,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockContext,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         mockEquipmentDb = mockk(relaxed = true)
         mockSportTypeDb = mockk(relaxed = true)
         mockSummaryDb = mockk(relaxed = true)
@@ -88,6 +101,8 @@ class StravaBulkExportImporterTest {
         com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.resetForTesting(null)
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         StravaUploadDbHelper.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
     }
 

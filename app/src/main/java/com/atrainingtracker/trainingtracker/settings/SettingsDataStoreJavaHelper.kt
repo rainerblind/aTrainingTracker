@@ -24,8 +24,6 @@ import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 /**
  * A helper object to allow synchronous, non-blocking access to DataStore values from Java code.
@@ -95,26 +93,9 @@ object SettingsDataStoreJavaHelper {
      * Synchronous bridge for legacy Java sensor drivers to fetch the active tuning configuration.
      * Non-blocking O(1) in-memory lookup from TuningPreferencesDataStore.
      */
-    private fun isRealFilesDir(dir: java.io.File?): Boolean {
-        return dir != null &&
-            dir.javaClass == java.io.File::class.java &&
-            java.io.File(dir, "datastore").path.isNotEmpty()
-    }
-
     @JvmStatic
     fun getTuningConfig(context: Context): TuningConfig {
-        return try {
-            val appCtx = context.applicationContext ?: context
-            val canReadStore = TuningPreferencesDataStore.hasInitializedInstance() ||
-                isRealFilesDir(appCtx.filesDir)
-            if (canReadStore) {
-                TuningPreferencesDataStore.getInstance(context).getTuningConfig()
-            } else {
-                TuningConfig()
-            }
-        } catch (_: Throwable) {
-            TuningConfig()
-        }
+        return TuningPreferencesDataStore.getInstance(context).getTuningConfig()
     }
 
     /**
@@ -366,27 +347,12 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
-     * Synchronous bridge to retrieve whether opt-in smartphone raw sensor sidecar recording is enabled
-     * (REQ-EXP-045.1, ATT-9348). Guards plain-JVM MockK contexts lacking a real `filesDir` and
-     * awaits the first persisted DataStore emission so cold-start / post-crash lifecycle checks
-     * never observe a stale `StateFlow` `initialValue = false`.
+     * Synchronous O(1) bridge to retrieve whether opt-in smartphone raw sensor sidecar recording is enabled
+     * (REQ-EXP-045.1, ATT-9348).
      */
     @JvmStatic
     fun isRecordSmartphoneRawTelemetryEnabled(context: Context): Boolean {
-        return try {
-            val appCtx = context.applicationContext ?: context
-            val canReadStore = TuningPreferencesDataStore.hasInitializedInstance() ||
-                isRealFilesDir(appCtx.filesDir)
-            if (canReadStore) {
-                runBlocking {
-                    TuningPreferencesDataStore.getInstance(context).recordSmartphoneRawTelemetryFlow.first()
-                }
-            } else {
-                TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
-            }
-        } catch (_: Throwable) {
-            TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
-        }
+        return TuningPreferencesDataStore.getInstance(context).recordSmartphoneRawTelemetryEnabled.value
     }
 
     /**

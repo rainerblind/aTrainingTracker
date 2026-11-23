@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" tests="33" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:42.466Z" hostname="rainer-HP-EliteBook-850-G5" time="0.087">
+  <properties/>
+  <testcase name="testBranchBuildWorkflow_runsDetektAndUploadsReport" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testConfigurationManagementPlan_repositoryGroundingAndReleaseContents" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testCiConfiguration_noStaleTravisArtifacts" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.01"/>
+  <testcase name="testReleaseWorkflow_runsLintDetektKoverAndGovernanceBeforeAssembly" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testBranchBuildWorkflow_runsGovernanceVerification" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testLintBaseline_issueCountWithinBound" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.013"/>
+  <testcase name="testReleaseWorkflow_runsUnitTestsBeforeAssembly" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testBuildGradle_androidTestInstrumentationRunnerAndDependencies" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testBranchBuildWorkflow_archivesUnitTestResultsWithAlwaysCondition" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testBranchBuildWorkflow_runsKoverAndUploadsReport" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testBuildGradle_koverPluginAndConfiguration" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.002"/>
+  <testcase name="testCiSafetyLintersBaselineRatchetAndJavaEvaluation_contract" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testDetektBaseline_existsAndIsPopulated" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.034"/>
+  <testcase name="testReleaseSigningHygiene_passwordsDecoupledFromWorkingTree" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testWorkflowYaml_syntaxAndStructure" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.002"/>
+  <testcase name="testLintBaseline_noStaleStravaSegmentsIntentService" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testReleaseWorkflow_packagesAndAttachesUnitTestResults" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testAndroidManifest_noOrphanedStravaSegmentsIntentService" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testRepositoryHygiene_noStaleProcessArtifactsAndGitignoreCovered" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testBaselineImmutabilityManifestAndCmPlanAlignment_contract" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.003"/>
+  <testcase name="testBranchBuildWorkflow_runsEmulatorTestsAndUploadsReport" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testConfigurationManagementPlan_existsAndSubmodulePinned" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testSecretsHygieneCiGateGitignoreAndDocs_contract" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testBranchBuildWorkflow_runsLintAndUploadsReport" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testProjectRiskRegister_existsAndHighExposureMitigated" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.003"/>
+  <testcase name="testBuildGradle_lintReportingAndAbortOnError" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testBuildGradle_composeLintRulesNotDowngraded" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testEngineeringTestResultsSymlink_retiredAndEvidenceDirectoryPresent" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testAndroidTestDirectory_containsSmokeTest" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testBuildGradle_lintConfigurationAndRationales" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testBuildGradle_detektPluginAndConfiguration" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <testcase name="testDetektConfig_complexityRulesActive" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.0"/>
+  <testcase name="testReleaseWorkflow_archivesQualityGateReports" classname="com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

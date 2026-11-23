@@ -71,6 +71,19 @@ class LegacyImportEngineDeduplicationTest {
         every { mockSummariesDb.database } returns mockSqlDb
 
         val mockContext = mockk<Context>(relaxed = true)
+        io.mockk.every { mockContext.applicationContext } returns mockContext
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockContext,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockContext,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
 
@@ -83,6 +96,8 @@ class LegacyImportEngineDeduplicationTest {
     @After
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
     }
 

@@ -93,11 +93,28 @@ class LegacyImportEngineCloudRecoveryTest {
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
 
         cacheDir = tempFolder.newFolder("cache")
+        val filesDir = tempFolder.newFolder("files")
         mockApp = mockk(relaxed = true)
         mockContext = mockk(relaxed = true)
         every { mockContext.applicationContext } returns mockApp
+        every { mockApp.applicationContext } returns mockApp
         every { mockContext.cacheDir } returns cacheDir
         every { mockApp.cacheDir } returns cacheDir
+        every { mockContext.filesDir } returns filesDir
+        every { mockApp.filesDir } returns filesDir
+
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockApp,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockApp,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         every { mockContext.getString(R.string.legacy_import__downloading_dropbox, *anyVararg()) } answers {
             val argsArr = args[1] as Array<*>
             "Downloading ${argsArr[0]} from Dropbox…"
@@ -115,6 +132,8 @@ class LegacyImportEngineCloudRecoveryTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         unmockkAll()
     }
@@ -316,7 +335,8 @@ class LegacyImportEngineCloudRecoveryTest {
         // Ensure zero files escaped workerDir into cacheDir/legacy_recovery or tempFolder.root
         val recoveryRoot = File(cacheDir, "legacy_recovery")
         assertTrue("Expected zero leftover job files or directories", recoveryRoot.listFiles().orEmpty().isEmpty())
-        assertEquals(listOf("cache"), tempFolder.root.listFiles().orEmpty().map { it.name })
+        assertEquals(setOf("cache", "files"), tempFolder.root.listFiles().orEmpty().map { it.name }.toSet())
+        assertTrue("Expected zero files in filesDir", File(tempFolder.root, "files").listFiles().orEmpty().isEmpty())
     }
 
     @Test

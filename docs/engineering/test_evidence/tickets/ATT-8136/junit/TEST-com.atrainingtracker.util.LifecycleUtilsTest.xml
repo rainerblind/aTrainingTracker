@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.util.LifecycleUtilsTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:57:05.823Z" hostname="rainer-HP-EliteBook-850-G5" time="2.098">
+  <properties/>
+  <testcase name="testSafeStartService_nullInputs_returnsNull" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.584"/>
+  <testcase name="testKotlinExtensions_delegateToLifecycleUtils" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.275"/>
+  <testcase name="testSafeUnregisterReceiver_illegalStateException_returnsFalseAndLogsWarning" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.178"/>
+  <testcase name="testSafeUnregisterReceiver_illegalArgumentException_returnsFalseAndLogsWarning" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.179"/>
+  <testcase name="testSafeUnregisterReceiver_success" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.18"/>
+  <testcase name="testSafeStartService_success" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.18"/>
+  <testcase name="testSafeStartService_illegalStateException_returnsNullAndLogsWarning" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.176"/>
+  <testcase name="testSafeUnregisterReceiver_nullInputs_returnsFalse" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.169"/>
+  <testcase name="testSafeStartService_securityException_returnsNullAndLogsWarning" classname="com.atrainingtracker.util.LifecycleUtilsTest" time="0.177"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -110,6 +110,19 @@ class LegacyImportEngineFitAltitudeTest {
         }
 
         mockContext = mockk(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockContext,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockContext,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         mockSqlDb = mockk(relaxed = true)
 
         mockSummariesDb = mockk(relaxed = true)
@@ -224,6 +237,8 @@ class LegacyImportEngineFitAltitudeTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
     }
 

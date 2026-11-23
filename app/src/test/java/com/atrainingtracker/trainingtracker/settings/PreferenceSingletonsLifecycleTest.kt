@@ -34,19 +34,17 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import org.junit.After
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 import java.lang.reflect.Modifier
 
 /**
  * Lifecycle, constructor encapsulation, applicationContext normalization, scope reuse, and
- * fallback-to-real-filesDir singleton isolation tests for [SettingsDataStore],
+ * test-override pinning tests for [SettingsDataStore],
  * [MyPreferenceManager], and [ProFeatureManager] (REQ-SET-128 / TST-SET-130 / ATT-8121).
  */
 // Linked test specs: TST-SET-130
@@ -62,7 +60,7 @@ class PreferenceSingletonsLifecycleTest {
     @Before
     fun setUp() {
         every { mockApplication.applicationContext } returns mockApplication
-        every { mockApplication.filesDir } returns File("")
+        every { mockApplication.filesDir } returns tempFolder.newFolder("app_files_dir")
         every { mockActivity.applicationContext } returns mockApplication
 
         SettingsDataStore.setInstanceForTesting(null)
@@ -179,48 +177,8 @@ class PreferenceSingletonsLifecycleTest {
     }
 
     @Test
-    fun testHasRealFilesDir_rejectsNullEmptyAndThrowingAndAcceptsRealDirectory() {
+    fun testSettingsDataStore_setInstanceForTestingPinsOverrideUntilCleared() {
         // TST-SET-130.3
-        val nullDirContext = mockk<Context>(relaxed = true)
-        every { nullDirContext.applicationContext } returns nullDirContext
-        every { nullDirContext.filesDir } returns null
-        assertFalse(hasRealFilesDir(nullDirContext))
-
-        val emptyPathContext = mockk<Context>(relaxed = true)
-        every { emptyPathContext.applicationContext } returns emptyPathContext
-        every { emptyPathContext.filesDir } returns File("")
-        assertFalse(hasRealFilesDir(emptyPathContext))
-
-        val throwingContext = mockk<Context>(relaxed = true)
-        every { throwingContext.applicationContext } returns throwingContext
-        every { throwingContext.filesDir } throws RuntimeException("Method getFilesDir not mocked")
-        assertFalse(hasRealFilesDir(throwingContext))
-
-        val realContext = mockk<Context>(relaxed = true)
-        every { realContext.applicationContext } returns realContext
-        every { realContext.filesDir } returns tempFolder.newFolder("real_files_dir")
-        assertTrue(hasRealFilesDir(realContext))
-    }
-
-    @Test
-    fun testSettingsDataStore_fallbackSingletonUpgradesOnRealFilesDirCancelsDiscardedScopeAndRespectsOverride() {
-        // TST-SET-130.3
-        val fallbackInstance = SettingsDataStore.getInstance(mockApplication)
-        val fallbackScope = readDeclaredField<CoroutineScope>(fallbackInstance, "appScope")
-        assertTrue(readDeclaredField<Boolean>(fallbackInstance, "isInMemoryFallback"))
-        assertSame(fallbackInstance, SettingsDataStore.getInstance(mockActivity))
-
-        val realContext = mockk<Context>(relaxed = true)
-        every { realContext.applicationContext } returns realContext
-        every { realContext.filesDir } returns tempFolder.newFolder("settings_real_dir")
-
-        val upgradedInstance = SettingsDataStore.getInstance(realContext)
-        assertNotSame(fallbackInstance, upgradedInstance)
-        assertFalse(readDeclaredField<Boolean>(upgradedInstance, "isInMemoryFallback"))
-        assertFalse("Discarded fallback SettingsDataStore scope must be cancelled on upgrade", fallbackScope.isActive)
-        assertSame(upgradedInstance, SettingsDataStore.getInstance(mockActivity))
-
-        // Explicit setInstanceForTesting override must remain pinned even for a real-filesDir context
         val pinnedTestScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         try {
             val pinned = SettingsDataStore.createForTesting(
@@ -229,35 +187,20 @@ class PreferenceSingletonsLifecycleTest {
                 testScope = pinnedTestScope
             )
             SettingsDataStore.setInstanceForTesting(pinned)
-            assertSame(pinned, SettingsDataStore.getInstance(realContext))
+            assertSame(pinned, SettingsDataStore.getInstance(mockActivity))
+            assertSame(pinned, SettingsDataStore.getInstance(mockApplication))
         } finally {
             pinnedTestScope.cancel()
         }
     }
 
     @Test
-    fun testMyPreferenceManager_fallbackSingletonUpgradesOnRealFilesDirWithoutCancellingSharedScope() {
+    fun testMyPreferenceManager_setInstanceForTestingPinsOverrideUntilCleared() {
         // TST-SET-130.3
-        val fallbackInstance = MyPreferenceManager.getInstance(mockApplication)
-        val sharedScope = readDeclaredField<CoroutineScope>(fallbackInstance, "appScope")
-        assertTrue(readDeclaredField<Boolean>(fallbackInstance, "isInMemoryFallback"))
-        assertSame(fallbackInstance, MyPreferenceManager.getInstance(mockActivity))
-
-        val realContext = mockk<Context>(relaxed = true)
-        every { realContext.applicationContext } returns realContext
-        every { realContext.filesDir } returns tempFolder.newFolder("user_prefs_real_dir")
-
-        val upgradedInstance = MyPreferenceManager.getInstance(realContext)
-        assertNotSame(fallbackInstance, upgradedInstance)
-        assertFalse(readDeclaredField<Boolean>(upgradedInstance, "isInMemoryFallback"))
-        assertTrue("Shared MyPreferenceManager process scope must never be cancelled on upgrade", sharedScope.isActive)
-        assertSame(sharedScope, readDeclaredField<CoroutineScope>(upgradedInstance, "appScope"))
-        assertSame(upgradedInstance, MyPreferenceManager.getInstance(mockActivity))
-
-        // Explicit setInstanceForTesting override stays pinned until cleared
         val pinned = MyPreferenceManager.createForTesting(mockApplication, InMemoryPreferencesDataStore())
         MyPreferenceManager.setInstanceForTesting(pinned)
-        assertSame(pinned, MyPreferenceManager.getInstance(realContext))
+        assertSame(pinned, MyPreferenceManager.getInstance(mockActivity))
+        assertSame(pinned, MyPreferenceManager.getInstance(mockApplication))
     }
 
     private fun assertNoPublicNonSyntheticConstructors(clazz: Class<*>) {

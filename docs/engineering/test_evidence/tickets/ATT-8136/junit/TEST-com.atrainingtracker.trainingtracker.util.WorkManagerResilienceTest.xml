@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.util.WorkManagerResilienceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:30.941Z" hostname="rainer-HP-EliteBook-850-G5" time="1.099">
+  <properties/>
+  <testcase name="testBackupWorkerScheduleWhenWorkManagerThrowsCatchesGracefully" classname="com.atrainingtracker.trainingtracker.util.WorkManagerResilienceTest" time="0.724"/>
+  <testcase name="testBackupWorkerScheduleWhenWorkManagerUnavailableDoesNotCrash" classname="com.atrainingtracker.trainingtracker.util.WorkManagerResilienceTest" time="0.202"/>
+  <testcase name="testWorkManagerAvailabilityFlagToggle" classname="com.atrainingtracker.trainingtracker.util.WorkManagerResilienceTest" time="0.173"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

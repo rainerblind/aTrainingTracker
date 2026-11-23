@@ -22,6 +22,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,6 +39,11 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class TuningPreferencesDataStoreOnboardingTest {
+
+    @After
+    fun tearDown() {
+        TuningPreferencesDataStore.setInstanceForTesting(null)
+    }
 
     @Test
     fun defaultConstants_matchSpecification() {

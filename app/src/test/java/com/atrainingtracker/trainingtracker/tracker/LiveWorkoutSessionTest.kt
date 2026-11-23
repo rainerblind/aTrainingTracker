@@ -134,12 +134,12 @@ class LiveWorkoutSessionTest {
         assertEquals(listOf(0.0, 400.0, 1000.0, 1150.0), session.sampledDistances)
 
         // Verify that concatenating the pre-resume encoded stream + post-resume increment decodes to the exact 4 values (no jump from 0)
-        val preEncodedAlt = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.encodeDoubles(listOf(500.0, 510.0, 525.0))
-        val combinedAlt = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.decodeDoubles(preEncodedAlt + increment!!.altitudeIncrement)
+        val preEncodedAlt = com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils.encodeDoubles(listOf(500.0, 510.0, 525.0))
+        val combinedAlt = com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils.decodeDoubles(preEncodedAlt + increment!!.altitudeIncrement)
         assertEquals(listOf(500.0, 510.0, 525.0, 532.0), combinedAlt)
 
-        val preEncodedDist = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.encodeDoubles(listOf(0.0, 400.0, 1000.0))
-        val combinedDist = com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils.decodeDoubles(preEncodedDist + increment.distanceIncrement)
+        val preEncodedDist = com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils.encodeDoubles(listOf(0.0, 400.0, 1000.0))
+        val combinedDist = com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils.decodeDoubles(preEncodedDist + increment.distanceIncrement)
         assertEquals(listOf(0.0, 400.0, 1000.0, 1150.0), combinedDist)
     }
 

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:01:46.211Z" hostname="rainer-HP-EliteBook-850-G5" time="5.124">
+  <properties/>
+  <testcase name="testPedalDynamicsLosslessRoundTrip" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.753"/>
+  <testcase name="testEquipmentResolutionAndPersistenceContract" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="0.731"/>
+  <testcase name="testBikeRadarDeveloperFieldsIngestion" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="0.676"/>
+  <testcase name="testThirdPartyFitBackwardCompatibility" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="0.656"/>
+  <testcase name="testSessionMetadataRoundTrip" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="0.661"/>
+  <testcase name="testSessionMetricsSerialization" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="0.647"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

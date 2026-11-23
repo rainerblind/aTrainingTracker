@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:49:22.536Z" hostname="rainer-HP-EliteBook-850-G5" time="3.921">
+  <properties/>
+  <testcase name="testDowngradeThrowsSQLiteExceptionWithoutDataLoss" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.294"/>
+  <testcase name="testEngineNativeSequenceManagementAndCollisionPrevention" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.806"/>
+  <testcase name="testCleanV1ToV3UpgradePreservesCustomSports" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.297"/>
+  <testcase name="testActivePickerFiltersPlaceholdersAndAllowsClaiming" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.317"/>
+  <testcase name="testIsPlaceholderHelper" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.322"/>
+  <testcase name="testHighVolumePlaceholderScalabilityAndPruning" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.309"/>
+  <testcase name="testReconcileOrphanSportTypesAcquiresAndReleasesBackupLock" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.58"/>
+  <testcase name="testPruneUnreferencedPlaceholdersAcquiresAndReleasesBackupLock" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.417"/>
+  <testcase name="testClaimPlaceholderValidatesNameUniqueness" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.279"/>
+  <testcase name="testCorruptedPostV2StateHealingResurrectsPlaceholders" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseUpgradeTest" time="0.299"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

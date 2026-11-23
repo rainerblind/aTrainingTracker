@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:49:38.628Z" hostname="rainer-HP-EliteBook-850-G5" time="19.111">
+  <properties/>
+  <testcase name="testCreateNewClusterFromWorkout_formatsClusterWorkoutName_forcesIdentity" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="3.796"/>
+  <testcase name="testUnassignClusterFromWorkout_hitCountDropsToZero_clearsPreviewPaths" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.527"/>
+  <testcase name="testStripHitCount_removesSequentialCounters" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.494"/>
+  <testcase name="testUnassignClusterFromWorkout_decrementsOldClusterHitCountAndClearsClusterId" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.487"/>
+  <testcase name="testGetClusterScores_reconcilesStaleHitCountAgainstWorkoutSummaries" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.695"/>
+  <testcase name="testMoveWorkoutToCluster_updatesAltitudeExtremaAndRecalculatesBounds" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.664"/>
+  <testcase name="testCreateNewClusterFromWorkout_withCustomWorkoutName_preservesCustomName" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.461"/>
+  <testcase name="testCreateNewClusterFromWorkout_insertsNewClusterAndAssignsWorkout" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.461"/>
+  <testcase name="testAssignClusterToWorkout_usesAuthoritativeCountFromWorkoutSummaries" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.547"/>
+  <testcase name="testAssignClusterToWorkout_negativeOrZeroClusterId_delegatesToUnassign" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.479"/>
+  <testcase name="testMoveWorkoutToCluster_preservesUpdatedCentroidsAndSynchronizesSport" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.499"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

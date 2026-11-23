@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDialogsUiTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:13.047Z" hostname="rainer-HP-EliteBook-850-G5" time="2.024">
+  <properties/>
+  <testcase name="workoutClusterSelectionDialog_displaysSyncedHitCountAndSelectsCandidate_TST_SET_009_TST_SET_044" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDialogsUiTest" time="0.893"/>
+  <testcase name="editWorkoutClusterDialog_displaysCandidatesAndInvokesOnSelectCluster_TST_SET_010" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDialogsUiTest" time="0.342"/>
+  <testcase name="workoutHeader_onChangeClusterButton_triggersClusterMoveDialog_TST_SET_012" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDialogsUiTest" time="0.218"/>
+  <testcase name="editWorkoutClusterIdentityDialog_renamesChangesSportAndTogglesCounter_TST_SET_008" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDialogsUiTest" time="0.57"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -26,7 +26,7 @@ import android.os.Build
 import android.os.SystemClock
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +35,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -378,7 +379,9 @@ class SmartphoneRawTelemetryRecorder(
             enabledOverrideForTests?.let { return it }
             if (context == null) return false
             return try {
-                SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)
+                runBlocking {
+                    TuningPreferencesDataStore.getInstance(context).recordSmartphoneRawTelemetryFlow.first()
+                }
             } catch (_: Throwable) {
                 false
             }

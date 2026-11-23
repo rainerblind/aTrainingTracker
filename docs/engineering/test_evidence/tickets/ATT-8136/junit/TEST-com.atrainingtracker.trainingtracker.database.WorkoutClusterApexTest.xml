@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:51:05.403Z" hostname="rainer-HP-EliteBook-850-G5" time="11.229">
+  <properties/>
+  <testcase name="testFindApexFromPoints_SinglePointOrEmptyFallback" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.229"/>
+  <testcase name="testLearnFromRoute_doesNotOverwriteAccumulatedApexMean" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.272"/>
+  <testcase name="testWithRemovedWorkout_reversesCentroidsAndAltitudeExtremaWithHitCountGuard" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.261"/>
+  <testcase name="testLearnFromWorkout_maintainsRunningArithmeticMeanOfApex" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.273"/>
+  <testcase name="testFindApexFromPoints_OutAndBackRoute" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.166"/>
+  <testcase name="testOnWorkoutDeleted_reversesArithmeticMeanOfApex" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.25"/>
+  <testcase name="testFindApexFromPoints_CurvedRouteSelectsMaxDisplacementOnTrack" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.218"/>
+  <testcase name="testOnWorkoutDeleted_reversesAltitudeExtremaFromInMemorySnapshot" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.344"/>
+  <testcase name="testWithAddedWorkout_encapsulatesCentroidsBoundsAndAltitudeExtrema" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest" time="1.214"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

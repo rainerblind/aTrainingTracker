@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:00.613Z" hostname="rainer-HP-EliteBook-850-G5" time="2.578">
+  <properties/>
+  <testcase name="testSetDeviceLink_delegatesCorrectly" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.444"/>
+  <testcase name="testAddDeviceLink_whenAlreadyPresent_skipsInsert" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.368"/>
+  <testcase name="testRemoveDeviceLink_validIds_deletesMatchingRow" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.375"/>
+  <testcase name="testAddDeviceLink_whenNotPresent_insertsRow" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.35"/>
+  <testcase name="testAddDeviceLink_invalidIds_noop" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.327"/>
+  <testcase name="testGetAllRemoteSensors_queriesWithExpectedSelectionAndSortOrder" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.361"/>
+  <testcase name="testRemoveDeviceLink_invalidIds_noop" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.353"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -106,6 +106,19 @@ class FitLosslessRoundTripTest {
         every { mockContext.applicationContext } returns mockContext
         every { mockContext.filesDir } returns tempDir
 
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockContext,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockContext,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+
         mockSportTypeDb = mockk(relaxed = true)
         every { mockSportTypeDb.getBSportType(any()) } returns BSportType.BIKE
         every { mockSportTypeDb.getTcxName(any()) } returns "Biking"
@@ -154,6 +167,8 @@ class FitLosslessRoundTripTest {
         WorkoutRepository.resetForTesting(null)
         SportTypeDatabaseManager.resetForTesting(null)
         EquipmentDbHelper.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
         tempDir.deleteRecursively()
     }

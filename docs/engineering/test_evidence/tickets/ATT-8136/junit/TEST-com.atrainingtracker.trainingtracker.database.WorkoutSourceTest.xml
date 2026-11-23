@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSourceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:59.518Z" hostname="rainer-HP-EliteBook-850-G5" time="0.0">
+  <properties/>
+  <testcase name="fromString_validInputs_returnsCorrectEnum" classname="com.atrainingtracker.trainingtracker.database.WorkoutSourceTest" time="0.0"/>
+  <testcase name="fromString_invalidOrNullInputs_defaultsToTracked" classname="com.atrainingtracker.trainingtracker.database.WorkoutSourceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

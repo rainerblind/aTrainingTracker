@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:57:52.202Z" hostname="rainer-HP-EliteBook-850-G5" time="0.024">
+  <properties/>
+  <testcase name="activeFilterCount increments by 1 when spatial criteria is active" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="fromJson handles legacy json without spatial fields gracefully" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.006"/>
+  <testcase name="matches returns false when cluster start is outside default 200m radius" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.014"/>
+  <testcase name="matches honors custom radius threshold" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="lossless JSON serialization and deserialization via toJson and fromJson" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.001"/>
+  <testcase name="matches returns true when cluster start is within default 200m radius" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.001"/>
+  <testcase name="matches returns true when cluster start matches exact filter center" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaSpatialTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

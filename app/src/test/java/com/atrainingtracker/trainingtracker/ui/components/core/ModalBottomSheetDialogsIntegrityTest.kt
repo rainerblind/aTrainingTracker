@@ -18,32 +18,102 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.core
 
-import org.junit.Assert.assertNotNull
+import android.app.Application
+import android.content.Context
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialog
+import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
+import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialog
+import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.junit.After
+import org.junit.Assert.fail
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.lang.reflect.Modifier
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
- * Unit tests verifying modernized modal bottom sheet dialogs, selection flows,
- * and centered dialog invariants according to REQ-UI-149 and TST-UI-102 (ATT-900).
+ * Behavioral Compose UI and excision contract tests verifying modernized modal bottom sheet dialogs,
+ * selection flows, and centered dialog invariants according to REQ-UI-149 and TST-UI-102 (ATT-900).
  */
 // Linked test specs: TST-UI-104, TST-UI-106, TST-UI-107, TST-UI-109
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = Application::class, qualifiers = "w412dp-h915dp-xxhdpi")
 class ModalBottomSheetDialogsIntegrityTest {
 
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(TrainingApplication::class)
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
     @Test
     fun testAppModalBottomSheet_supportsPainterAndVectorIcons() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetKt")
-        val methods = clazz.declaredMethods
-        val appModalBottomSheetMethod = methods.find { it.name.startsWith("AppModalBottomSheet") && Modifier.isPublic(it.modifiers) }
-        assertNotNull("AppModalBottomSheet composable method must exist", appModalBottomSheetMethod)
-        assertTrue(Modifier.isPublic(appModalBottomSheetMethod!!.modifiers))
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                AppModalBottomSheet(
+                    title = "Vector Icon Sheet",
+                    icon = Icons.Default.Settings,
+                    onDismissRequest = {}
+                ) {
+                    Text("Body Vector")
+                }
+                AppModalBottomSheet(
+                    title = "Painter Icon Sheet",
+                    iconPainter = painterResource(id = R.drawable.ic_distance),
+                    onDismissRequest = {}
+                ) {
+                    Text("Body Painter")
+                }
+            }
+        }
 
-        // Ensure painter and vector icon parameter types are supported in method signature
-        val paramTypes = appModalBottomSheetMethod.parameterTypes
-        val hasPainterParam = paramTypes.any { it.name.contains("Painter") }
-        val hasImageVectorParam = paramTypes.any { it.name.contains("ImageVector") }
-        assertTrue("AppModalBottomSheet must accept Painter parameter for sport logos", hasPainterParam)
-        assertTrue("AppModalBottomSheet must accept ImageVector parameter for vector icons", hasImageVectorParam)
+        composeTestRule.onNodeWithText("Vector Icon Sheet").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Body Vector").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Painter Icon Sheet").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Body Painter").assertIsDisplayed()
     }
 
     @Test
@@ -63,210 +133,115 @@ class ModalBottomSheetDialogsIntegrityTest {
         for (className in retiredFragmentClasses) {
             try {
                 Class.forName(className)
-                org.junit.Assert.fail("Retired legacy fragment $className must not exist in classpath (REQ-UI-2801.1)")
+                fail("Retired legacy fragment $className must not exist in classpath (REQ-UI-2801.1)")
             } catch (_: ClassNotFoundException) {
                 // Expected
             }
         }
-    }
-
-    @Test
-    fun testAppBottomSheetContent_existsAndIsPublic() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheetKt")
-        val contentMethod = clazz.declaredMethods.find { it.name.startsWith("AppBottomSheetContent") && Modifier.isPublic(it.modifiers) }
-        assertNotNull("AppBottomSheetContent composable method must exist", contentMethod)
-        assertTrue(Modifier.isPublic(contentMethod!!.modifiers))
-    }
-
-    @Test
-    fun testExportTabContent_replacesRetiredExportSettingsDialog() {
         try {
             Class.forName("com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogKt")
-            org.junit.Assert.fail("Retired ExportSettingsDialogKt island must not exist in classpath (REQ-MIG-059.2)")
+            fail("Retired ExportSettingsDialogKt island must not exist in classpath (REQ-MIG-059.2)")
         } catch (_: ClassNotFoundException) {
             // Expected
         }
-        val exportTabClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ExportTabContentKt")
-        val composableMethod = exportTabClass.declaredMethods.find { it.name == "ExportTabContent" }
-        assertNotNull("ExportTabContent composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
     }
 
     @Test
-    fun testUnitsSettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "UnitsSettingsDialog" }
-        assertNotNull("UnitsSettingsDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
+    fun testAppBottomSheetContent_rendersHeaderAndBody() {
+        var dismissed = false
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                AppBottomSheetContent(
+                    title = "Sheet Content Title",
+                    onDismissRequest = { dismissed = true },
+                    actions = {
+                        AppDialogActions.CancelOnly(onCancel = { dismissed = true })
+                    }
+                ) {
+                    Text("Inner Content")
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("Sheet Content Title").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Inner Content").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.Cancel))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        assertTrue("CancelOnly must invoke onDismiss", dismissed)
     }
 
     @Test
-    fun testDisplaySettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "DisplaySettingsDialog" }
-        assertNotNull("DisplaySettingsDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
+    fun testSettingsDialogs_renderAndHandleDismiss_behavioral() {
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.getDisplayOptions() } returns emptySet()
+        every { TrainingApplication.getCockpitThemeMode() } returns CockpitThemeMode.SYSTEM
+        every { TrainingApplication.getDisplayBrightnessMode() } returns DisplayBrightnessMode.SYSTEM
+        every { TrainingApplication.getCustomDisplayBrightness() } returns 0.5f
+        every { TrainingApplication.getUnit() } returns MyUnits.METRIC
+        every { TrainingApplication.getNumberOfSearchTries() } returns 3
+        every { TrainingApplication.getBtleSearchPeriodSec() } returns 15
+        every { TrainingApplication.startSearchWhenAppStarts() } returns false
+        every { TrainingApplication.startSearchWhenResumeFromPaused() } returns false
+        every { TrainingApplication.startSearchWhenUserChangesSport() } returns false
+        every { TrainingApplication.startSearchWhenTrackingStarts() } returns false
+        every { TrainingApplication.searchOnlyForSportSpecificDevices() } returns false
+        every { TrainingApplication.changeSportWhenDeviceGetsLost() } returns false
 
-    @Test
-    fun testDropboxSettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "DropboxSettingsDialog" }
-        assertNotNull("DropboxSettingsDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
+        var activeSheet by mutableIntStateOf(0)
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                when (activeSheet) {
+                    0 -> UnitsSettingsDialog(onDismiss = {})
+                    1 -> DisplaySettingsDialog(onDismiss = {})
+                    2 -> SearchSettingsDialog(onDismiss = {})
+                    3 -> ActivityTypeSelectionDialog(onTypeSelected = {}, onDismiss = {})
+                    4 -> ClusterInfoDialog(onDismissRequest = {}, onNavigateToAdvancedSettings = {})
+                }
+            }
+        }
 
-    @Test
-    fun testGoogleDriveSettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "GoogleDriveSettingsDialog" }
-        assertNotNull("GoogleDriveSettingsDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
-
-    @Test
-    fun testStravaSettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "StravaSettingsDialog" }
-        assertNotNull("StravaSettingsDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
-
-    @Test
-    fun testSearchSettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "SearchSettingsDialog" }
-        assertNotNull("SearchSettingsDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
-
-    @Test
-    fun testActivityTypeSelectionDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "ActivityTypeSelectionDialog" }
-        assertNotNull("ActivityTypeSelectionDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
-
-    @Test
-    fun testSensorSourceDialog_existsAndExposesComposableContract() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "SensorSourceDialog" }
-        assertNotNull("SensorSourceDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
-
-    @Test
-    fun testDeviceTypeSelectionDialog_existsAndExposesComposableContract() {
-        val dialogClass = Class.forName("com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "DeviceTypeSelectionDialog" }
-        assertNotNull("DeviceTypeSelectionDialog composable function must exist", composableMethod)
-        assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
-    }
-
-    @Test
-    fun testTrackingGridDialogs_existAndExposeComposableContracts() {
-        val editFieldClass = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialogKt")
-        val editFieldMethod = editFieldClass.declaredMethods.find { it.name == "EditSensorFieldDialog" }
-        assertNotNull("EditSensorFieldDialog composable function must exist", editFieldMethod)
-        assertTrue(Modifier.isPublic(editFieldMethod!!.modifiers))
-
-        val configFilterClass = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogKt")
-        val configFilterMethod = configFilterClass.declaredMethods.find { it.name == "ConfigureFilterDialog" }
-        assertNotNull("ConfigureFilterDialog composable function must exist", configFilterMethod)
-        assertTrue(Modifier.isPublic(configFilterMethod!!.modifiers))
-    }
-
-    @Test
-    fun testSportAndEquipmentDialogs_existAndExposeComposableContracts() {
-        val sportTypeClass = Class.forName("com.atrainingtracker.banalservice.ui.sporttype.EditSportTypeDialogKt")
-        val sportTypeMethod = sportTypeClass.declaredMethods.find { it.name == "EditSportTypeDialog" }
-        assertNotNull("EditSportTypeDialog composable function must exist", sportTypeMethod)
-        assertTrue(Modifier.isPublic(sportTypeMethod!!.modifiers))
-
-        val equipClass = Class.forName("com.atrainingtracker.trainingtracker.ui.equipment.EditEquipmentDialogKt")
-        val equipMethod = equipClass.declaredMethods.find { it.name == "EditEquipmentDialog" }
-        assertNotNull("EditEquipmentDialog composable function must exist", equipMethod)
-        assertTrue(Modifier.isPublic(equipMethod!!.modifiers))
-
-        val deviceClass = Class.forName("com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogKt")
-        val deviceMethod = deviceClass.declaredMethods.find { it.name == "EditDeviceDialog" }
-        assertNotNull("EditDeviceDialog composable function must exist", deviceMethod)
-        assertTrue(Modifier.isPublic(deviceMethod!!.modifiers))
-    }
-
-    @Test
-    fun testWorkoutClusterDialogs_existAndExposeComposableContracts() {
-        val clusterCompClass = Class.forName("com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterComponentsKt")
-        val selectClusterMethod = clusterCompClass.declaredMethods.find { it.name == "WorkoutClusterSelectionDialog" }
-        assertNotNull("WorkoutClusterSelectionDialog composable function must exist", selectClusterMethod)
-        assertTrue(Modifier.isPublic(selectClusterMethod!!.modifiers))
-
-        val editClusterMethod = clusterCompClass.declaredMethods.find { it.name == "EditWorkoutClusterDialog" }
-        assertNotNull("EditWorkoutClusterDialog composable function must exist", editClusterMethod)
-        assertTrue(Modifier.isPublic(editClusterMethod!!.modifiers))
-
-        val heatmapClass = Class.forName("com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterHeatmapScreenKt")
-        val identityMethod = heatmapClass.declaredMethods.find { it.name == "EditWorkoutClusterIdentityDialog" }
-        assertNotNull("EditWorkoutClusterIdentityDialog composable function must exist", identityMethod)
-        assertTrue(Modifier.isPublic(identityMethod!!.modifiers))
-
-        val infoClass = Class.forName("com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialogKt")
-        val infoMethod = infoClass.declaredMethods.find { it.name == "ClusterInfoDialog" }
-        assertNotNull("ClusterInfoDialog composable function must exist", infoMethod)
-        assertTrue(Modifier.isPublic(infoMethod!!.modifiers))
-    }
-
-    @Test
-    fun testClusterNamingDialog_existsAndExposesComposableContract() {
-        val importClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreenKt")
-        val clusterNamingMethod = importClass.declaredMethods.find { it.name == "ClusterNamingDialog" }
-        assertNotNull("ClusterNamingDialog composable function must exist", clusterNamingMethod)
-        assertTrue(Modifier.isPublic(clusterNamingMethod!!.modifiers))
-    }
-
-    @Test
-    fun testExportDetailsDialog_existsAndExposesComposableContract() {
-        val exportGroupClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupKt")
-        val exportDetailsMethod = exportGroupClass.declaredMethods.find { it.name == "ExportDetailsDialog" }
-        assertNotNull("ExportDetailsDialog composable function must exist", exportDetailsMethod)
-        assertTrue(Modifier.isPublic(exportDetailsMethod!!.modifiers))
-    }
-
-    @Test
-    fun testEditWorkoutDialog_existsAndExposesComposableContract() {
-        val editWorkoutClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreenKt")
-        val editWorkoutScreenMethod = editWorkoutClass.declaredMethods.find { it.name == "EditWorkoutScreen" }
-        assertNotNull("EditWorkoutScreen composable function must exist", editWorkoutScreenMethod)
-        assertTrue(Modifier.isPublic(editWorkoutScreenMethod!!.modifiers))
-
-        val editWorkoutDialogMethod = editWorkoutClass.declaredMethods.find { it.name == "EditWorkoutDialog" }
-        assertNotNull("EditWorkoutDialog composable function must exist", editWorkoutDialogMethod)
-        assertTrue(Modifier.isPublic(editWorkoutDialogMethod!!.modifiers))
+        composeTestRule.onNodeWithText(context.getString(R.string.prefsUnitsTitle)).assertIsDisplayed()
+        composeTestRule.runOnIdle { activeSheet = 1 }
+        composeTestRule.onNodeWithText(context.getString(R.string.Display)).assertIsDisplayed()
+        composeTestRule.runOnIdle { activeSheet = 2 }
+        composeTestRule.onNodeWithText(context.getString(R.string.Search_Settings)).assertIsDisplayed()
+        composeTestRule.runOnIdle { activeSheet = 3 }
+        composeTestRule.onNodeWithText(context.getString(R.string.choose_activity_type)).assertIsDisplayed()
+        composeTestRule.runOnIdle { activeSheet = 4 }
+        composeTestRule.onNodeWithText(context.getString(R.string.cluster_info_title)).assertIsDisplayed()
     }
 
     @Test
     fun testCenteredDialogInvariants_retainedAsExpected() {
-        // LapSummaryDialog must remain retained as a centered HUD dialog during active tracking
-        val lapSummaryClass = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialogKt")
-        val lapSummaryMethod = lapSummaryClass.declaredMethods.find { it.name == "LapSummaryDialog" }
-        assertNotNull("LapSummaryDialog must be retained", lapSummaryMethod)
-        assertTrue(Modifier.isPublic(lapSummaryMethod!!.modifiers))
+        var deleteConfirmed = false
+        var showDelete by mutableStateOf(false)
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                if (!showDelete) {
+                    LapSummaryDialog(
+                        lapNr = 3,
+                        lapTime = "04:12",
+                        lapDistance = "1.00 km",
+                        lapSpeed = "14.2 km/h",
+                        onDismissRequest = {}
+                    )
+                } else {
+                    DeleteConfirmationDialog(
+                        title = "Delete Item",
+                        message = "Confirm deletion?",
+                        onConfirm = { deleteConfirmed = true },
+                        onDismiss = {}
+                    )
+                }
+            }
+        }
 
-        // Destructive confirmation alerts must remain retained
-        val deleteConfirmClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialogKt")
-        val deleteConfirmMethod = deleteConfirmClass.declaredMethods.find { it.name == "DeleteConfirmationDialog" }
-        assertNotNull("DeleteConfirmationDialog must be retained", deleteConfirmMethod)
-        assertTrue(Modifier.isPublic(deleteConfirmMethod!!.modifiers))
-
-        val workoutDeleteClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeleteDialogKt")
-        val workoutDeleteMethod = workoutDeleteClass.declaredMethods.find { it.name == "WorkoutDeleteDialog" }
-        assertNotNull("WorkoutDeleteDialog must be retained", workoutDeleteMethod)
-        assertTrue(Modifier.isPublic(workoutDeleteMethod!!.modifiers))
-
-        val deleteOldClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.DeleteOldWorkoutsDialogKt")
-        val deleteOldMethod = deleteOldClass.declaredMethods.find { it.name == "DeleteOldWorkoutsDialog" }
-        assertNotNull("DeleteOldWorkoutsDialog must be retained", deleteOldMethod)
-        assertTrue(Modifier.isPublic(deleteOldMethod!!.modifiers))
+        composeTestRule.onNodeWithText("04:12", substring = true).assertIsDisplayed()
+        composeTestRule.runOnIdle { showDelete = true }
+        composeTestRule.onNodeWithText("Delete Item").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Confirm deletion?").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.delete))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        assertTrue("DeleteConfirmationDialog must invoke onConfirm", deleteConfirmed)
     }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialogTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:15.110Z" hostname="rainer-HP-EliteBook-850-G5" time="0.865">
+  <properties/>
+  <testcase name="testWorkoutClusterSelectionDialog_whenCandidateSelected_triggersSelect" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialogTest" time="0.315"/>
+  <testcase name="testWorkoutClusterSelectionDialog_whenCallbacksNull_optionalActionsHidden" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialogTest" time="0.232"/>
+  <testcase name="testWorkoutClusterSelectionDialog_whenOnUnassignProvided_triggersCallbackAndDismisses" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialogTest" time="0.221"/>
+  <testcase name="testLeaveUnclusteredStrings_existAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialogTest" time="0.096"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

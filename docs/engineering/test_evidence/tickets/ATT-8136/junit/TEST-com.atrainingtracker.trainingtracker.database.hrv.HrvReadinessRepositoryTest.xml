@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepositoryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:51:08.941Z" hostname="rainer-HP-EliteBook-850-G5" time="0.15">
+  <properties/>
+  <testcase name="calculateReadiness_queriesOnlyBounded60DayWindow_TST_PER_038_6" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepositoryTest" time="0.087"/>
+  <testcase name="repositoryCalculateReadiness_isolatesOpticalFromEcgCohort_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepositoryTest" time="0.063"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

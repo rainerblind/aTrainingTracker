@@ -499,7 +499,8 @@ class TrackingViewsDatabaseManagerTest {
         injectMockDatabase(manager, mockDb)
 
         val cursor = mockk<Cursor>(relaxed = true)
-        every { cursor.moveToNext() } returnsMany listOf(true, true, false)
+        every { cursor.moveToFirst() } returns true
+        every { cursor.moveToNext() } returnsMany listOf(true, false)
 
         every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE) } returns 0
         every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID) } returns 1

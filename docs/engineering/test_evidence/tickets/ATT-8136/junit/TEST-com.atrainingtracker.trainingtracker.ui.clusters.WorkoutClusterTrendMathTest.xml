@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:16.008Z" hostname="rainer-HP-EliteBook-850-G5" time="0.016">
+  <properties/>
+  <testcase name="testBoundaryResilienceIdenticalDurations" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.006"/>
+  <testcase name="testXAxisAndYAxisScaleBoundsCalculationAndFormatting" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.004"/>
+  <testcase name="testBoundaryResilienceZeroAndOneWorkout" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.0"/>
+  <testcase name="testTukeyIqrOutlierFencingAndResilientYScaling" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.003"/>
+  <testcase name="testRunningPaceModeInversionFasterPaceIsHigher" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.0"/>
+  <testcase name="testDurationModeInversionFasterIsHigher" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.001"/>
+  <testcase name="testChronologicalSortingAndCleansing" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.001"/>
+  <testcase name="testNearestPointHitTesting" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.001"/>
+  <testcase name="testCyclingSpeedModeStandardHigherSpeedIsHigher" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

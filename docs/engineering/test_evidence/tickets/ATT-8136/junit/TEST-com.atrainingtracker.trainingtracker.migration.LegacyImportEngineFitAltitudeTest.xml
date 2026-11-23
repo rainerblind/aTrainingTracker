@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitAltitudeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:02:23.799Z" hostname="rainer-HP-EliteBook-850-G5" time="13.775">
+  <properties/>
+  <testcase name="testLegacyAltitude_parsedCorrectly_whenEnhancedAltitudeIsNull" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitAltitudeTest" time="3.409"/>
+  <testcase name="testEnhancedAltitude_parsedCorrectly_whenLegacyAltitudeIsNull" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitAltitudeTest" time="2.61"/>
+  <testcase name="testEnhancedSpeed_parsedCorrectly_whenLegacySpeedIsNull" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitAltitudeTest" time="2.628"/>
+  <testcase name="testInvalidAltitudeSentinel_filteredOut" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitAltitudeTest" time="2.529"/>
+  <testcase name="testEnhancedAltitude_takesPrecedence_whenBothPresent" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitAltitudeTest" time="2.598"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

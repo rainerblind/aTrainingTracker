@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendCardPolishTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:56:22.066Z" hostname="rainer-HP-EliteBook-850-G5" time="0.008">
+  <properties/>
+  <testcase name="testTimeRangeFilteringLogic" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendCardPolishTest" time="0.007"/>
+  <testcase name="testAverageBadgeLegibilityContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendCardPolishTest" time="0.001"/>
+  <testcase name="testLeftGutterSeparationContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendCardPolishTest" time="0.0"/>
+  <testcase name="testTimeRangeFilterPillsAndHeaderDeduplication" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendCardPolishTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -15,26 +15,52 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import android.app.Application
+import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.io.File
-import java.lang.reflect.Modifier
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.util.regex.Pattern
 
 /**
- * Architectural, UI contract, state model, and localization unit tests for
- * [WorkoutClusterSelectionDialog] verifying unassign and create-new capabilities
+ * Behavioral Compose UI and localization unit tests for [WorkoutClusterSelectionDialog]
+ * verifying unassign and create-new capabilities
  * (ATT-7754 / REQ-SET-059 / TST-SET-104.1 / TST-SET-104.4).
  */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = Application::class, qualifiers = "w412dp-h915dp-xxhdpi")
 class WorkoutClusterSelectionDialogTest {
 
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private lateinit var context: Context
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+    }
 
     private fun extractStringTagRawContent(locale: String, stringKey: String): String? {
         val dirName = if (locale.isEmpty()) "values" else "values-$locale"
@@ -67,133 +93,81 @@ class WorkoutClusterSelectionDialogTest {
         )
     }
 
-    /**
-     * UI state contract holder replicating [WorkoutClusterSelectionDialog] interaction patterns.
-     */
-    private class SelectionDialogStateModel(
-        val candidates: List<Pair<WorkoutCluster, Double>>,
-        val onSelect: (WorkoutCluster) -> Unit,
-        val onDismiss: () -> Unit,
-        val onCreateNew: (() -> Unit)? = null,
-        val onUnassign: (() -> Unit)? = null
-    ) {
-        var isDismissed: Boolean = false
-
-        val hasUnassignOption: Boolean
-            get() = onUnassign != null
-
-        val hasCreateNewOption: Boolean
-            get() = onCreateNew != null
-
-        fun clickUnassign() {
-            requireNotNull(onUnassign) { "onUnassign callback is not available" }
-            onUnassign.invoke()
-            dismiss()
-        }
-
-        fun clickCreateNew() {
-            requireNotNull(onCreateNew) { "onCreateNew callback is not available" }
-            onCreateNew.invoke()
-            dismiss()
-        }
-
-        fun clickSelect(cluster: WorkoutCluster) {
-            onSelect(cluster)
-            dismiss()
-        }
-
-        fun dismiss() {
-            isDismissed = true
-            onDismiss()
-        }
-    }
-
-    @Test
-    fun testWorkoutClusterSelectionDialog_exposesUnassignAndCreateNewComposableContract() {
-        val clusterCompClass = Class.forName("com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterComponentsKt")
-        val selectClusterMethod = clusterCompClass.declaredMethods.find { it.name == "WorkoutClusterSelectionDialog" }
-        assertNotNull("WorkoutClusterSelectionDialog composable function must exist", selectClusterMethod)
-        assertTrue(Modifier.isPublic(selectClusterMethod!!.modifiers))
-
-        // REQ-SET-059: Verify Function0 parameters for onDismiss, onCreateNew, and onUnassign
-        val function0Count = selectClusterMethod.parameterTypes.count {
-            it.name == "kotlin.jvm.functions.Function0"
-        }
-        assertTrue(
-            "WorkoutClusterSelectionDialog must declare Function0 callbacks for onDismiss, onCreateNew, and onUnassign (found $function0Count)",
-            function0Count >= 3
-        )
-
-        // Verify Compose compiler generated parameters
-        val parameterTypes = selectClusterMethod.parameterTypes
-        assertTrue(
-            "WorkoutClusterSelectionDialog must accept Compose runtime parameters",
-            parameterTypes.any { it.name == "androidx.compose.runtime.Composer" }
-        )
-        assertTrue(
-            "WorkoutClusterSelectionDialog must include default bitmask parameter",
-            parameterTypes.last() == java.lang.Integer.TYPE
-        )
-    }
-
     @Test
     fun testWorkoutClusterSelectionDialog_whenOnUnassignProvided_triggersCallbackAndDismisses() {
         var unassignedCalled = false
         var dismissedCalled = false
 
-        val model = SelectionDialogStateModel(
-            candidates = listOf(createCluster(1L, "Route 1") to 0.1),
-            onSelect = {},
-            onDismiss = { dismissedCalled = true },
-            onCreateNew = {},
-            onUnassign = { unassignedCalled = true }
-        )
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                WorkoutClusterSelectionDialog(
+                    title = context.getString(R.string.cluster_move_workout_title),
+                    candidates = listOf(createCluster(1L, "Route 1") to 0.1),
+                    onSelect = {},
+                    onDismiss = { dismissedCalled = true },
+                    sportNameResolver = { "Running" },
+                    bSportTypeResolver = { BSportType.RUN },
+                    onCreateNew = {},
+                    onUnassign = { unassignedCalled = true }
+                )
+            }
+        }
 
-        assertTrue("Unassign option must be present when callback provided", model.hasUnassignOption)
-        assertTrue("Create new option must be present when callback provided", model.hasCreateNewOption)
+        val unassignText = context.getString(R.string.cluster_naming__leave_unclustered)
+        val createNewText = context.getString(R.string.cluster_naming__create_new)
+        composeTestRule.onNodeWithText(unassignText).assertIsDisplayed()
+        composeTestRule.onNodeWithText(createNewText).assertIsDisplayed()
 
-        model.clickUnassign()
+        composeTestRule.onNodeWithText(unassignText).performSemanticsAction(SemanticsActions.OnClick)
 
         assertTrue("Unassign callback must be executed on click", unassignedCalled)
         assertTrue("Dialog must be dismissed after clicking unassign", dismissedCalled)
-        assertTrue(model.isDismissed)
     }
 
     @Test
-    fun testWorkoutClusterSelectionDialog_whenOnUnassignNull_unassignNotAvailable() {
-        var dismissedCalled = false
+    fun testWorkoutClusterSelectionDialog_whenCallbacksNull_optionalActionsHidden() {
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                WorkoutClusterSelectionDialog(
+                    title = context.getString(R.string.cluster_move_workout_title),
+                    candidates = listOf(createCluster(1L, "Route 1") to 0.1),
+                    onSelect = {},
+                    onDismiss = {},
+                    sportNameResolver = { "Running" },
+                    bSportTypeResolver = { BSportType.RUN },
+                    onCreateNew = null,
+                    onUnassign = null
+                )
+            }
+        }
 
-        val model = SelectionDialogStateModel(
-            candidates = listOf(createCluster(1L, "Route 1") to 0.1),
-            onSelect = {},
-            onDismiss = { dismissedCalled = true },
-            onCreateNew = null,
-            onUnassign = null
-        )
-
-        assertFalse("Unassign option must be absent when onUnassign is null", model.hasUnassignOption)
-        assertFalse("Create new option must be absent when onCreateNew is null", model.hasCreateNewOption)
+        composeTestRule.onNodeWithText(context.getString(R.string.cluster_naming__leave_unclustered)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.cluster_naming__create_new)).assertDoesNotExist()
     }
 
     @Test
-    fun testWorkoutClusterSelectionDialog_whenCandidateSelected_triggersSelectAndDismisses() {
+    fun testWorkoutClusterSelectionDialog_whenCandidateSelected_triggersSelect() {
         var selectedCluster: WorkoutCluster? = null
-        var dismissedCalled = false
         val targetCluster = createCluster(42L, "Morning Hill Run")
 
-        val model = SelectionDialogStateModel(
-            candidates = listOf(targetCluster to 0.05),
-            onSelect = { selectedCluster = it },
-            onDismiss = { dismissedCalled = true },
-            onCreateNew = {},
-            onUnassign = {}
-        )
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                WorkoutClusterSelectionDialog(
+                    title = context.getString(R.string.cluster_move_workout_title),
+                    candidates = listOf(targetCluster to 0.05),
+                    onSelect = { selectedCluster = it },
+                    onDismiss = {},
+                    sportNameResolver = { "Running" },
+                    bSportTypeResolver = { BSportType.RUN },
+                    onCreateNew = {},
+                    onUnassign = {}
+                )
+            }
+        }
 
-        model.clickSelect(targetCluster)
+        composeTestRule.onNodeWithText("Morning Hill Run").performSemanticsAction(SemanticsActions.OnClick)
 
         assertEquals(targetCluster, selectedCluster)
-        assertTrue(dismissedCalled)
-        assertTrue(model.isDismissed)
     }
 
     @Test

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:05.063Z" hostname="rainer-HP-EliteBook-850-G5" time="3.911">
+  <properties/>
+  <testcase name="testOnUpgrade_v2ToV3_createsIndexNonDestructively" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.343"/>
+  <testcase name="testUpdateLapDetails_executesCorrectUpdate" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.337"/>
+  <testcase name="testOnUpgrade_v1ToV2_altersTableNonDestructivelyWithoutDropping" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.335"/>
+  <testcase name="testSaveLap_rejectsNegativeDurationAndZeroDistance_insertsNothing" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.328"/>
+  <testcase name="testDbHelperConstantsAndSchema" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.344"/>
+  <testcase name="testSaveLap_nullTimeStartWithPositiveLapTime_fallsBackToUtcNowMinusLapTime_tstTrk090_2" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.385"/>
+  <testcase name="testSaveLap_acceptsPositiveDuration_insertsLap" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.397"/>
+  <testcase name="testSaveLap_guardsAgainstNaNSpeed_recalculatesSafely" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.363"/>
+  <testcase name="testGetLapsForWorkouts_vectorizedBatch_eliminatesNPlusOne" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.385"/>
+  <testcase name="testGetLaps_singleWorkout_mapsColumnsCorrectly" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.356"/>
+  <testcase name="testSaveLap_rejectsZeroDurationAndZeroDistance_insertsNothing" classname="com.atrainingtracker.trainingtracker.database.LapsDatabaseManagerTest" time="0.337"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

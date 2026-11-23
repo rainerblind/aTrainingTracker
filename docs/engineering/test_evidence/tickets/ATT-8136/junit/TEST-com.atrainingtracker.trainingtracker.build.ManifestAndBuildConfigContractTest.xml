@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:42.299Z" hostname="rainer-HP-EliteBook-850-G5" time="0.098">
+  <properties/>
+  <testcase name="testConfigPebbleViewsActivity_notExported" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.074"/>
+  <testcase name="testManifest_backgroundLocationRationaleCommentDocumented" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.001"/>
+  <testcase name="testManifest_permissionAndMemoryInvariantsPreserved" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.008"/>
+  <testcase name="testManifest_modifyAudioSettingsPermissionDeclared" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.006"/>
+  <testcase name="testGpxImportActivity_intentFiltersHardened" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.005"/>
+  <testcase name="testManifest_mediaPermissionsDeclared" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.004"/>
+  <testcase name="testGradleProperties_agp9OptOutFlagsDocumented" classname="com.atrainingtracker.trainingtracker.build.ManifestAndBuildConfigContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

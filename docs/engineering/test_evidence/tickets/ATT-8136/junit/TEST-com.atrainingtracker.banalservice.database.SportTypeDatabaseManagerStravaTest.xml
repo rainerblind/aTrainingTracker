@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:49:22.531Z" hostname="rainer-HP-EliteBook-850-G5" time="0.924">
+  <properties/>
+  <testcase name="testGetSportTypeIdFromStravaName_foundInDatabase" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest" time="0.247"/>
+  <testcase name="testGetSportTypeIdFromStravaName_fallbackToEnumMapping" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest" time="0.226"/>
+  <testcase name="testGetSportTypeIdFromStravaName_nullOrEmpty_returnsMinusOne" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest" time="0.214"/>
+  <testcase name="testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006" classname="com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest" time="0.237"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

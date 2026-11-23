@@ -62,6 +62,9 @@ import java.util.concurrent.atomic.AtomicInteger
 @OptIn(ExperimentalCoroutinesApi::class)
 class BackupRestoreInteractionQueueTest {
 
+    @get:org.junit.Rule
+    val tempFolder = org.junit.rules.TemporaryFolder()
+
     private lateinit var mockApp: Application
     private lateinit var mockContext: Context
     private val testDispatcher = StandardTestDispatcher()
@@ -78,8 +81,26 @@ class BackupRestoreInteractionQueueTest {
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
 
+        val filesDir = tempFolder.newFolder("files")
         mockApp = mockk(relaxed = true)
         mockContext = mockk(relaxed = true)
+        every { mockApp.filesDir } returns filesDir
+        every { mockContext.filesDir } returns filesDir
+        every { mockApp.applicationContext } returns mockApp
+        every { mockContext.applicationContext } returns mockApp
+
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockApp,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockApp,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         val mockPrefs = mockk<SharedPreferences>(relaxed = true)
         val mockEditor = mockk<SharedPreferences.Editor>(relaxed = true)
         every { mockPrefs.edit() } returns mockEditor
@@ -104,6 +125,8 @@ class BackupRestoreInteractionQueueTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

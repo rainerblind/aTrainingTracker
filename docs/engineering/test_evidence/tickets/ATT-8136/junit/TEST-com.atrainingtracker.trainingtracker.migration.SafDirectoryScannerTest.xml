@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:02:18.565Z" hostname="rainer-HP-EliteBook-850-G5" time="0.241">
+  <properties/>
+  <testcase name="testScanDocumentFile_depthLimitBound_ceasesTraversalAtMaxDepth" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.165"/>
+  <testcase name="testScanDocumentFile_sortsUrisAscendingByName" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.019"/>
+  <testcase name="testScanDocumentFile_cancelSignal_abortsTraversalImmediately" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.011"/>
+  <testcase name="testScanDocumentFile_cycleDetection_preventsInfiniteLoop" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.015"/>
+  <testcase name="testIsMatchingFormat_matchesFormatsCaseInsensitively" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.0"/>
+  <testcase name="testScanDocumentFile_recursiveTraversal_discoversMatchingFiles" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.027"/>
+  <testcase name="testScanDocumentFile_nullOrNonDirectoryRoot_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.migration.SafDirectoryScannerTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:51:12.491Z" hostname="rainer-HP-EliteBook-850-G5" time="0.249">
+  <properties/>
+  <testcase name="hprofCapture_requiresConsecutiveHighWater_capsOnePerSession_andPrunesToLatest2" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.022"/>
+  <testcase name="hprofCapture_skipsWhenFreeSpaceBelow1Gb_andShieldsExceptions" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.006"/>
+  <testcase name="periodicSampling_writes30sCsvRowsAndIgnoresIntermediateTicks" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.005"/>
+  <testcase name="backgroundExecutor_runsOffCallingThreadWithDaemonThreadName" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.002"/>
+  <testcase name="onTickBanalService_queriesActiveDevicesOnlyOncePer30Seconds" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.204"/>
+  <testcase name="releaseMode_noOpsCompletelyWithZeroFilesThreadsOrProviderCalls" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.002"/>
+  <testcase name="emptyFilesDirFromRelaxedMockContext_isSafelyIgnoredWithoutCreatingRelativeDirs" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.002"/>
+  <testcase name="deferredBaseFileNameOnResume_autoBindsAndPrunesOldCsvLogsBeyond20" classname="com.atrainingtracker.trainingtracker.tracker.DebugHeapWatchdogTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

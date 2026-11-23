@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:30.915Z" hostname="rainer-HP-EliteBook-850-G5" time="0.017">
+  <properties/>
+  <testcase name="testAppendAndRandomAccess_underChunkThreshold" classname="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" time="0.002"/>
+  <testcase name="testFromCollection_preservesAllElements" classname="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" time="0.002"/>
+  <testcase name="testChunkBoundaryTransitions" classname="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" time="0.002"/>
+  <testcase name="testSynthetic15000Points_boundedTimeAndBoundedAllocation" classname="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" time="0.009"/>
+  <testcase name="testEmptyList_contract" classname="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" time="0.0"/>
+  <testcase name="testEquals_fastPathOnSizeDifference" classname="com.atrainingtracker.trainingtracker.util.SnapshotChunkedListTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

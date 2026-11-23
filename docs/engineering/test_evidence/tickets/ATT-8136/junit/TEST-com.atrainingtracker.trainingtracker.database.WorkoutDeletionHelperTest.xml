@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:58.998Z" hostname="rainer-HP-EliteBook-850-G5" time="0.51">
+  <properties/>
+  <testcase name="testDeleteOldWorkouts_withDeletionProgressCallback_delegatesToRepository" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest" time="0.174"/>
+  <testcase name="testDeleteWorkout_delegatesToWorkoutRepositoryCascade" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest" time="0.163"/>
+  <testcase name="testDeleteOldWorkouts_delegatesToWorkoutRepositoryCascade" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest" time="0.171"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

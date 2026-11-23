@@ -1038,22 +1038,6 @@ fun ClusterNamingDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClusterNamingDialog(
-    state: BackupRestoreViewModel.ClusterInteraction,
-    queueCount: Int,
-    onConfirm: (Long?, String?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    ClusterNamingDialog(
-        state = state,
-        queueCount = queueCount,
-        onConfirm = { decision -> onConfirm(decision.clusterId, decision.newClusterName) },
-        onDismiss = { onDismiss() }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun ImportMappingDialog(
     analysis: ImportEngine.AnalysisResult,
     onConfirm: (Map<Long, Long>, Map<Long, Long>) -> Unit,

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLocalizationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:56:22.078Z" hostname="rainer-HP-EliteBook-850-G5" time="2.818">
+  <properties/>
+  <testcase name="testAllTrendStringsPresentAndNonEmptyInAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterTrendLocalizationTest" time="2.818"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -115,11 +115,6 @@ public final class CursorUtils {
             do {
                 list.add(mapper.map(cursor));
             } while (cursor.moveToNext());
-        } else {
-            // Fallback for mock environments where only moveToNext() is stubbed
-            while (cursor.moveToNext()) {
-                list.add(mapper.map(cursor));
-            }
         }
         return Collections.unmodifiableList(list);
     }

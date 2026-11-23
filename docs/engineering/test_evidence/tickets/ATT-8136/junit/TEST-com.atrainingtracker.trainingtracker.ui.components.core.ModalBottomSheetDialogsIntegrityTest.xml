@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:25.825Z" hostname="rainer-HP-EliteBook-850-G5" time="4.051">
+  <properties/>
+  <testcase name="testSettingsDialogs_renderAndHandleDismiss_behavioral" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="3.014"/>
+  <testcase name="testAppBottomSheetContent_rendersHeaderAndBody" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.132"/>
+  <testcase name="testLegacySettingsDialogFragmentsAndAppBottomSheetDialogFragment_areEliminated" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.111"/>
+  <testcase name="testCenteredDialogInvariants_retainedAsExpected" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.389"/>
+  <testcase name="testAppModalBottomSheet_supportsPainterAndVectorIcons" classname="com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest" time="0.404"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

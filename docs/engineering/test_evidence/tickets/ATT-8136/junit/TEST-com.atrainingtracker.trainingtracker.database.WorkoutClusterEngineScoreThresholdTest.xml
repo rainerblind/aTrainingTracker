@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:53.558Z" hostname="rainer-HP-EliteBook-850-G5" time="1.766">
+  <properties/>
+  <testcase name="testSuggestCluster_respectsExplicitScoreThreshold" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.617"/>
+  <testcase name="testTrainingApplication_clusterScoreThresholdDefaultsAndPersistence" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.593"/>
+  <testcase name="testSuggestCluster_dynamicallyReadsTrainingApplicationPreference" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineScoreThresholdTest" time="0.555"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

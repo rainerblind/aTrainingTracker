@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:52:08.292Z" hostname="rainer-HP-EliteBook-850-G5" time="0.035">
+  <properties/>
+  <testcase name="artifactRateGate_excludesReadingsAbove5Percent" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.025"/>
+  <testcase name="criterion2_dailyDeduplication_and_exactSwcCorridorClassification" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.003"/>
+  <testcase name="calculateReadiness_strictlyIsolatesEcgAndOpticalPpiSwcBaselines_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.003"/>
+  <testcase name="criterion1_perPostureIsolation_and_14DayCalibrationGate" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.0"/>
+  <testcase name="calibrationState_transitionsToCompleteWhenCalibrated" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.0"/>
+  <testcase name="weeklyWindowGate_requiresAtLeast3DaysInLast7Days" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.002"/>
+  <testcase name="criterion_overnightWearableIsolation_from_wakingPostures" classname="com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculatorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -3159,7 +3159,7 @@ def extract_test_code_tags(test_sources=None, repo_root=None):
                 base_id = m_base.group(1) if m_base else raw
                 if is_tool_script and is_synthetic_gov and not base_id.startswith("TST-PRO-"):
                     continue
-                if is_tool_script and not is_synthetic_gov and not base_id.startswith(("TST-PRO-", "TST-TOOL-", "TST-STB-", "TST-TST-", "TST-SIM-", "TST-TRK-017")):
+                if is_tool_script and not is_synthetic_gov and not base_id.startswith(("TST-PRO-", "TST-STR-", "TST-TOOL-", "TST-STB-", "TST-TST-", "TST-SIM-", "TST-TRK-017")):
                     continue
                 code_tags.setdefault(base_id, []).append({
                     "file": rel_fp,
@@ -3852,13 +3852,12 @@ def triage_unbacked_verified_tsts(
     heading_pat = re.compile(r"^###\s+(TST-[A-Z]+-[0-9]+(?:\.[0-9]+)?)[^:\n]*:\s*([^\n]+)")
     generic_contracts = {
         "TranslationParityTest.kt",
-        "AspiceSweAuditContractTest.kt",
+        "test_aspice_swe_audit.py",
+        "test_doc_and_system_contracts.py",
         "SystemArchitectureDesignContractTest.kt",
-        "SystemIntegrationTestContractTest.kt",
         "SystemLiveTrackingRequirementsContractTest.kt",
         "SystemVerificationProtocolContractTest.kt",
         "ReleaseCiAndLintConfigContractTest.kt",
-        "HoechstmassCoreFrameworkContractTest.kt",
     }
     generic_kw_pat = re.compile(
         r"translat|format\s+string|locali|parity|aspice|governance|hoechstmass|shard|backfill|sprint\s+metrics",
