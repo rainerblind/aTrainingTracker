@@ -29,6 +29,7 @@ import com.polar.androidcommunications.api.ble.BleLogger
 import com.polar.sdk.api.PolarBleApi
 import com.polar.sdk.api.PolarBleApiCallback
 import com.polar.sdk.api.model.PolarDeviceInfo
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -629,5 +630,196 @@ class PolarOfflineGattCoordinatorCoexistenceTest {
         assertSame(sharedApi, lease3)
         assertEquals("Fresh singleton creation must invoke bleLoggerDisabler once", 1, customDisablerCalls)
         PolarOfflineGattCoordinator.releasePolarApi(lease3)
+    }
+
+    // REQ-SET-129.2 / TST-SET-131.2
+    @Test
+    fun testConnectWithinTimeout_recoversFromMidWaitDisconnectAndIsolatesSiblingDisconnect_TST_SET_131_2() = runBlocking {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.connectRetryBackoffMs = 20L
+
+        val verityId = "24825632"
+        val verityMac = "24:AC:AC:24:82:56"
+        val h10Id = "1C3B2421"
+        val h10Mac = "AA:BB:CC:DD:EE:01"
+        PolarOfflineGattCoordinator.registerDeviceAliases(verityId, verityMac)
+        PolarOfflineGattCoordinator.registerDeviceAliases(h10Id, h10Mac)
+
+        val api = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+
+        assertFalse("Blank polarId must return false immediately", PolarOfflineGattCoordinator.connectWithinTimeout(api, "  ", 500L))
+
+        val connectCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        val firstWaitEntered = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val secondConnectIssued = kotlinx.coroutines.CompletableDeferred<Unit>()
+        every { sharedApi.connectToDevice(verityId) } answers {
+            if (connectCalls.incrementAndGet() == 2) secondConnectIssued.complete(Unit)
+        }
+        coEvery { sharedApi.waitForConnection(verityId) } coAnswers {
+            firstWaitEntered.complete(Unit)
+            // Simulate Polar SDK waitForConnection hanging silently after a disconnect
+            kotlinx.coroutines.awaitCancellation()
+        }
+
+        val connectJob = async(kotlinx.coroutines.Dispatchers.Default) {
+            PolarOfflineGattCoordinator.connectWithinTimeout(api, verityId, 5_000L)
+        }
+
+        firstWaitEntered.await()
+        assertEquals(1, connectCalls.get())
+
+        // Sibling H10 disconnect must NOT cancel or retry Verity Sense's connectWithinTimeout
+        mux.deviceDisconnected(PolarDeviceInfo(h10Id, h10Mac, -50, "Polar H10 $h10Id", true))
+        kotlinx.coroutines.delay(50L)
+        assertEquals("Sibling disconnect must not trigger Verity Sense retry", 1, connectCalls.get())
+        assertFalse(connectJob.isCompleted)
+
+        // Target Verity Sense mid-wait disconnect (10:57:36 teardown) must cancel wedged wait and retry immediately
+        mux.deviceDisconnected(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        kotlinx.coroutines.withTimeout(2_000L) { secondConnectIssued.await() }
+        assertEquals("Mid-wait disconnect must re-issue connectToDevice", 2, connectCalls.get())
+
+        // Subsequent deviceConnected resolves Attempt 1 immediately
+        mux.deviceConnected(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        assertTrue(kotlinx.coroutines.withTimeout(2_000L) { connectJob.await() })
+        PolarOfflineGattCoordinator.releasePolarApi(api)
+    }
+
+    // REQ-SET-129.2 / TST-SET-131.2
+    @Test
+    fun testConnectWithinTimeout_reusesConnectedAndInFlightConnectingSessionsAndClearsStateOnRelease_TST_SET_131_2() = runBlocking {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.connectRetryBackoffMs = 10L
+
+        val verityId = "24825632"
+        val verityMac = "24:AC:AC:24:82:56"
+        PolarOfflineGattCoordinator.registerDeviceAliases(verityId, verityMac)
+        val api = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+
+        // 1. In-flight deviceConnecting: awaits without issuing duplicate connectToDevice()
+        mux.deviceConnecting(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnecting(verityId))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnecting(verityMac))
+        coEvery { sharedApi.waitForConnection(verityId) } coAnswers { kotlinx.coroutines.awaitCancellation() }
+
+        val inFlightJob = async(kotlinx.coroutines.Dispatchers.Default) {
+            PolarOfflineGattCoordinator.connectWithinTimeout(api, verityId, 5_000L)
+        }
+        kotlinx.coroutines.delay(40L)
+        verify(exactly = 0) { sharedApi.connectToDevice(verityId) }
+        mux.deviceConnected(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        assertTrue(kotlinx.coroutines.withTimeout(2_000L) { inFlightJob.await() })
+        assertFalse("deviceConnected must clear connectingDeviceIds across aliases", PolarOfflineGattCoordinator.isDeviceConnecting(verityMac))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnected(verityId))
+
+        // 2. Already connected: returns true immediately with 0 connectToDevice() calls
+        assertTrue(PolarOfflineGattCoordinator.connectWithinTimeout(api, verityId, 5_000L))
+        verify(exactly = 0) { sharedApi.connectToDevice(verityId) }
+
+        // 3. CancellationException propagates cleanly & releasePolarApi 1->0 clears both sets
+        mux.deviceDisconnected(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        mux.deviceConnecting(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        assertTrue(PolarOfflineGattCoordinator.isDeviceConnecting(verityId))
+        PolarOfflineGattCoordinator.clearConnectingState(verityId)
+        assertFalse("clearConnectingState must clear full alias closure", PolarOfflineGattCoordinator.isDeviceConnecting(verityMac))
+
+        mux.deviceConnecting(PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true))
+        PolarOfflineGattCoordinator.releasePolarApi(api)
+        assertFalse("releasePolarApi 1->0 must clear connectingDeviceIds", PolarOfflineGattCoordinator.isDeviceConnecting(verityId))
+        assertFalse("releasePolarApi 1->0 must clear connectedDeviceIds", PolarOfflineGattCoordinator.isDeviceConnected(verityId))
+    }
+
+    // REQ-SET-129.3 / TST-SET-131.3
+    @Test
+    fun testAwaitFeaturesReady_uses20sDefaultAndResolvesMacHexAliases_TST_SET_131_3() = runBlocking {
+        assertEquals(20_000L, PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS)
+
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        val verityId = "24825632"
+        val verityMac = "24:AC:AC:24:82:56"
+        PolarOfflineGattCoordinator.registerDeviceAliases(verityId, verityMac)
+
+        every { sharedApi.isFeatureReady(verityId, any()) } returns false
+        every {
+            sharedApi.isFeatureReady(verityMac, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING)
+        } returns true
+
+        val api = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        val ready = PolarOfflineGattCoordinator.awaitFeaturesReady(
+            api = api,
+            polarId = verityId,
+            requiredFeatures = setOf(PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING),
+            timeoutMs = 500L
+        )
+        assertTrue("awaitFeaturesReady must resolve feature keyed by MAC alias", ready)
+        PolarOfflineGattCoordinator.releasePolarApi(api)
+    }
+
+    // REQ-SET-129.2 / TST-SET-131.2 (Stage 6 Bounce 1/5 regression)
+    @Test
+    @Suppress("DEPRECATION")
+    fun testConnectWithinTimeout_coalescesConnectedThenDisconnectedBurstBeforeSelectAndDuringBackoff_TST_SET_131_2() = runBlocking {
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.connectRetryBackoffMs = 80L
+
+        val verityId = "24825632"
+        val verityMac = "24:AC:AC:24:82:56"
+        val verityInfo = PolarDeviceInfo(verityId, verityMac, -50, "Polar Sense $verityId", true)
+        PolarOfflineGattCoordinator.registerDeviceAliases(verityId, verityMac)
+
+        val api = PolarOfflineGattCoordinator.acquirePolarApi(context)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+
+        val connectCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        val firstWaitEntered = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val secondConnectIssued = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val thirdConnectIssued = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+        every { sharedApi.connectToDevice(verityId) } answers {
+            when (connectCalls.incrementAndGet()) {
+                1 -> {
+                    // Case B: Queue [CONNECTED, DISCONNECTED] synchronously before select inside awaitSingleConnectionAttempt
+                    mux.deviceConnected(verityInfo)
+                    mux.deviceDisconnected(verityInfo)
+                }
+                2 -> secondConnectIssued.complete(Unit)
+                3 -> thirdConnectIssued.complete(Unit)
+            }
+        }
+        coEvery { sharedApi.waitForConnection(verityId) } coAnswers {
+            if (connectCalls.get() == 2) firstWaitEntered.complete(Unit)
+            kotlinx.coroutines.awaitCancellation()
+        }
+
+        val connectJob = async(kotlinx.coroutines.Dispatchers.Default) {
+            PolarOfflineGattCoordinator.connectWithinTimeout(api, verityId, 5_000L)
+        }
+
+        // Case B verification: [CONNECTED, DISCONNECTED] before select must NOT return true; must retry -> call #2
+        kotlinx.coroutines.withTimeout(2_000L) { secondConnectIssued.await() }
+        assertFalse("Coalesced [CONNECTED, DISCONNECTED] before select must not return true", connectJob.isCompleted)
+        kotlinx.coroutines.withTimeout(2_000L) { firstWaitEntered.await() }
+
+        // Case A verification: Disconnect enters 80ms backoff; burst [CONNECTED, DISCONNECTED] during backoff must NOT return true
+        mux.deviceDisconnected(verityInfo)
+        kotlinx.coroutines.delay(20L)
+        mux.deviceConnected(verityInfo)
+        mux.deviceDisconnected(verityInfo)
+
+        // Must retry -> call #3 instead of falsely returning true after backoff
+        kotlinx.coroutines.withTimeout(2_000L) { thirdConnectIssued.await() }
+        assertEquals(3, connectCalls.get())
+        assertFalse("Coalesced [CONNECTED, DISCONNECTED] during backoff must not return true", connectJob.isCompleted)
+
+        // Genuine final CONNECTED resolves cleanly
+        mux.deviceConnected(verityInfo)
+        assertTrue(kotlinx.coroutines.withTimeout(2_000L) { connectJob.await() })
+        PolarOfflineGattCoordinator.releasePolarApi(api)
     }
 }

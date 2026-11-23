@@ -42,7 +42,13 @@ import com.polar.sdk.api.PolarBleApiDefaultImpl
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHealthThermometerData
 import com.polar.sdk.api.model.PolarHrData
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import java.util.UUID
@@ -58,8 +64,9 @@ import java.util.concurrent.CopyOnWriteArraySet
 object PolarOfflineGattCoordinator {
 
     private const val TAG = "PolarOfflineGattCoord"
-    const val FEATURE_READY_TIMEOUT_MS = 10_000L
+    const val FEATURE_READY_TIMEOUT_MS = 20_000L
     const val STOP_CONNECTION_TIMEOUT_MS = 5_000L
+    internal const val DEFAULT_CONNECT_RETRY_BACKOFF_MS = 250L
     const val ACC_OWNER_ONLINE = "ONLINE"
     const val ACC_OWNER_OFFLINE = "OFFLINE"
     private val POLAR_ID_REGEX = Regex("""\b([0-9A-Fa-f]{8})\b""")
@@ -84,6 +91,11 @@ object PolarOfflineGattCoordinator {
         PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_OFFLINE_RECORDING,
         PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_TRAINING_DATA
     )
+
+    private enum class ConnectionEvent {
+        CONNECTED,
+        DISCONNECTED
+    }
 
     private data class CallbackRegistration(
         val targetIdentifiers: Set<String>,
@@ -117,11 +129,15 @@ object PolarOfflineGattCoordinator {
     @VisibleForTesting
     internal var deviceManagerProvider: () -> DeviceManager? = { BANALService.getDeviceManager() }
 
+    @VisibleForTesting
+    internal var connectRetryBackoffMs: Long = DEFAULT_CONNECT_RETRY_BACKOFF_MS
+
     private val activeSessions = ConcurrentHashMap<String, PolarBleApi>()
     private val activeSessionCallbacks = ConcurrentHashMap<String, PolarBleApiCallbackProvider>()
     private val callbackListeners = CopyOnWriteArraySet<CallbackRegistration>()
     private val deviceAliases = ConcurrentHashMap<String, MutableSet<String>>()
     private val connectedDeviceIds = ConcurrentHashMap.newKeySet<String>()
+    private val connectingDeviceIds = ConcurrentHashMap.newKeySet<String>()
     private val activeAccOwners = ConcurrentHashMap<String, String>()
     private val activeOfflineYieldLeases = mutableListOf<OfflineYieldLease>()
     private val offlineYieldListeners = mutableListOf<OfflineYieldListener>()
@@ -198,6 +214,7 @@ object PolarOfflineGattCoordinator {
         override fun blePowerStateChanged(powered: Boolean) {
             if (!powered) {
                 connectedDeviceIds.clear()
+                connectingDeviceIds.clear()
             }
             for (entry in callbackListeners) {
                 entry.callback.blePowerStateChanged(powered)
@@ -206,6 +223,8 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceConnecting(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { connectingDeviceIds.add(normalizeId(it)) }
+            polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { connectingDeviceIds.add(normalizeId(it)) }
             for (entry in callbackListeners) {
                 if (entry.matchesInfo(polarDeviceInfo)) {
                     entry.callback.deviceConnecting(polarDeviceInfo)
@@ -215,6 +234,7 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            clearDeviceStateAcrossAliases(connectingDeviceIds, polarDeviceInfo.deviceId, polarDeviceInfo.address)
             polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { connectedDeviceIds.add(normalizeId(it)) }
             polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { connectedDeviceIds.add(normalizeId(it)) }
             for (entry in callbackListeners) {
@@ -226,16 +246,8 @@ object PolarOfflineGattCoordinator {
 
         override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
             registerDeviceAliases(polarDeviceInfo.deviceId, polarDeviceInfo.address)
-            polarDeviceInfo.deviceId.takeIf { it.isNotBlank() }?.let { id ->
-                val norm = normalizeId(id)
-                connectedDeviceIds.remove(norm)
-                deviceAliases[norm]?.forEach { connectedDeviceIds.remove(it) }
-            }
-            polarDeviceInfo.address.takeIf { it.isNotBlank() }?.let { addr ->
-                val norm = normalizeId(addr)
-                connectedDeviceIds.remove(norm)
-                deviceAliases[norm]?.forEach { connectedDeviceIds.remove(it) }
-            }
+            clearDeviceStateAcrossAliases(connectedDeviceIds, polarDeviceInfo.deviceId, polarDeviceInfo.address)
+            clearDeviceStateAcrossAliases(connectingDeviceIds, polarDeviceInfo.deviceId, polarDeviceInfo.address)
             for (entry in callbackListeners) {
                 if (entry.matchesInfo(polarDeviceInfo)) {
                     entry.callback.deviceDisconnected(polarDeviceInfo)
@@ -358,6 +370,8 @@ object PolarOfflineGattCoordinator {
             }
         }
         if (apiToShutdown != null) {
+            connectedDeviceIds.clear()
+            connectingDeviceIds.clear()
             try {
                 apiToShutdown.shutDown()
             } catch (t: Throwable) {
@@ -485,6 +499,31 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
+     * Returns true if the shared [PolarBleApi] multiplexer has observed an in-flight connection
+     * attempt (`SESSION_OPENING`) for [polarId] or any registered MAC/8-hex alias (`REQ-SET-129.2`).
+     */
+    @JvmStatic
+    fun isDeviceConnecting(polarId: String?): Boolean {
+        val key = polarId?.let(::normalizeId)?.takeIf { it.isNotEmpty() } ?: return false
+        if (connectingDeviceIds.contains(key)) return true
+        return deviceAliases[key]?.any { connectingDeviceIds.contains(it) } == true
+    }
+
+    /**
+     * Clears in-flight connecting state across the full alias closure of [identifiers] (`REQ-SET-129.2`).
+     */
+    @JvmStatic
+    fun clearConnectingState(vararg identifiers: String?) {
+        clearDeviceStateAcrossAliases(connectingDeviceIds, *identifiers)
+    }
+
+    private fun clearDeviceStateAcrossAliases(targetSet: MutableSet<String>, vararg identifiers: String?) {
+        for (alias in collectAliasClosure(*identifiers)) {
+            targetSet.remove(alias)
+        }
+    }
+
+    /**
      * Returns `true` strictly when [DeviceManager] is active, tracks a matching BLE HRM for
      * [polarId]/[macAddress], and confirms it is NOT receiving data while the shared
      * [PolarBleApi] multiplexer also reports it disconnected (`REQ-SET-119.3`).
@@ -534,20 +573,122 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
-     * Connects to [polarId] and awaits GATT connection within [timeoutMs], returning `false`
-     * on timeout rather than blocking stop finalization for the full PFTP transfer window
-     * (`REQ-SET-119.3`).
+     * Connects to [polarId] and awaits GATT connection within [timeoutMs], reusing already-open or
+     * in-flight managed SDK sessions and immediately retrying on mid-wait `deviceDisconnected`
+     * teardowns (`REQ-SET-119.3`, `REQ-SET-129.2`). Preserves legacy single-shot behavior on
+     * unmanaged `apiOverride` test mocks.
      */
     suspend fun connectWithinTimeout(
         api: PolarBleApi,
         polarId: String,
         timeoutMs: Long
     ): Boolean {
-        return withTimeoutOrNull(timeoutMs) {
-            api.connectToDevice(polarId)
-            api.waitForConnection(polarId)
-            true
-        } ?: false
+        if (polarId.isBlank()) return false
+        if (!isManagedApi(api)) {
+            return withTimeoutOrNull(timeoutMs) {
+                api.connectToDevice(polarId)
+                api.waitForConnection(polarId)
+                true
+            } ?: false
+        }
+        if (isDeviceConnected(polarId)) return true
+
+        val events = Channel<ConnectionEvent>(Channel.UNLIMITED)
+        val targetIds = collectAliasClosure(polarId).ifEmpty { setOf(normalizeId(polarId)) }
+        val transientListener = object : NoOpPolarCallback() {
+            override fun deviceConnected(polarDeviceInfo: PolarDeviceInfo) {
+                if (matchesDeviceInfo(polarId, null, polarDeviceInfo)) {
+                    events.trySend(ConnectionEvent.CONNECTED)
+                }
+            }
+
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+            override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
+                if (matchesDeviceInfo(polarId, null, polarDeviceInfo)) {
+                    events.trySend(ConnectionEvent.DISCONNECTED)
+                }
+            }
+        }
+        val registration = CallbackRegistration(targetIds, transientListener)
+        callbackListeners.add(registration)
+        return try {
+            if (isDeviceConnected(polarId)) return true
+            withTimeoutOrNull(timeoutMs) {
+                var skipInitialConnect = isDeviceConnecting(polarId)
+                var connected = false
+                while (!connected) {
+                    if (isDeviceConnected(polarId)) {
+                        connected = true
+                    } else {
+                        if (!skipInitialConnect) {
+                            if (drainEventsReturnedConnected(events)) {
+                                connected = true
+                                continue
+                            }
+                            api.connectToDevice(polarId)
+                        }
+                        skipInitialConnect = false
+                        if (isDeviceConnected(polarId)) {
+                            connected = true
+                        } else if (awaitSingleConnectionAttempt(api, polarId, events) == ConnectionEvent.CONNECTED) {
+                            connected = true
+                        } else {
+                            val backoffMs = connectRetryBackoffMs
+                            if (backoffMs > 0L) delay(backoffMs)
+                            if (drainEventsReturnedConnected(events) || isDeviceConnected(polarId)) {
+                                connected = true
+                            }
+                        }
+                    }
+                }
+                connected
+            } ?: false
+        } finally {
+            callbackListeners.remove(registration)
+            events.close()
+        }
+    }
+
+    private suspend fun awaitSingleConnectionAttempt(
+        api: PolarBleApi,
+        polarId: String,
+        events: Channel<ConnectionEvent>
+    ): ConnectionEvent = coroutineScope {
+        val waitDeferred = async {
+            try {
+                api.waitForConnection(polarId)
+                ConnectionEvent.CONNECTED
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                Log.w(TAG, "waitForConnection interrupted for $polarId: ${t.message}")
+                ConnectionEvent.DISCONNECTED
+            }
+        }
+        try {
+            select<ConnectionEvent> {
+                events.onReceive { first ->
+                    var latest = first
+                    while (true) {
+                        val next = events.tryReceive().getOrNull() ?: break
+                        latest = next
+                    }
+                    latest
+                }
+                waitDeferred.onAwait { it }
+            }
+        } finally {
+            waitDeferred.cancel()
+        }
+    }
+
+    private fun drainEventsReturnedConnected(events: Channel<ConnectionEvent>): Boolean {
+        var lastEvent: ConnectionEvent? = null
+        while (true) {
+            val next = events.tryReceive().getOrNull() ?: break
+            lastEvent = next
+        }
+        return lastEvent == ConnectionEvent.CONNECTED
     }
 
     /**
@@ -646,6 +787,7 @@ object PolarOfflineGattCoordinator {
         for (alias in aliases) {
             activeSessions[alias]?.let { apisToDisconnect.add(it) }
             connectedDeviceIds.remove(alias)
+            connectingDeviceIds.remove(alias)
         }
 
         if (clearRegistrations) {
@@ -847,11 +989,13 @@ object PolarOfflineGattCoordinator {
             pausedOfflineYieldListeners.clear()
         }
         deviceManagerProvider = { BANALService.getDeviceManager() }
+        connectRetryBackoffMs = DEFAULT_CONNECT_RETRY_BACKOFF_MS
         activeSessions.clear()
         activeSessionCallbacks.clear()
         callbackListeners.clear()
         deviceAliases.clear()
         connectedDeviceIds.clear()
+        connectingDeviceIds.clear()
         activeAccOwners.clear()
     }
 
@@ -1080,7 +1224,8 @@ object PolarOfflineGattCoordinator {
     }
 
     /**
-     * Suspends until every feature in [requiredFeatures] is ready on [api] for [polarId], or times out.
+     * Suspends until every feature in [requiredFeatures] is ready on [api] for [polarId] (or any
+     * registered MAC/8-hex alias), or times out (`REQ-SET-129.3`).
      */
     suspend fun awaitFeaturesReady(
         api: PolarBleApi,
@@ -1088,15 +1233,37 @@ object PolarOfflineGattCoordinator {
         requiredFeatures: Set<PolarBleApi.PolarBleSdkFeature>,
         timeoutMs: Long = FEATURE_READY_TIMEOUT_MS
     ): Boolean {
-        if (requiredFeatures.isEmpty() || requiredFeatures.all { api.isFeatureReady(polarId, it) }) {
+        if (requiredFeatures.isEmpty() || requiredFeatures.all { isFeatureReadyAcrossAliases(api, polarId, it) }) {
             return true
         }
         return awaitFeaturesViaCallback(api, polarId, requiredFeatures, timeoutMs)
     }
 
-    private fun isManagedApi(api: PolarBleApi): Boolean {
+    internal fun isManagedApi(api: PolarBleApi): Boolean {
         val currentShared = synchronized(apiLock) { sharedApi }
         return api === currentShared || activeSessions.values.any { it === api }
+    }
+
+    private fun isFeatureReadyAcrossAliases(
+        api: PolarBleApi,
+        polarId: String,
+        feature: PolarBleApi.PolarBleSdkFeature
+    ): Boolean {
+        if (polarId.isBlank()) return false
+        val aliases = collectAliasClosure(polarId)
+        val candidates = if (aliases.isEmpty()) listOf(polarId) else buildList {
+            add(polarId)
+            for (alias in aliases) {
+                if (!alias.equals(polarId, ignoreCase = true)) add(alias)
+            }
+        }
+        return candidates.any { id ->
+            try {
+                api.isFeatureReady(id, feature)
+            } catch (_: Throwable) {
+                false
+            }
+        }
     }
 
     private suspend fun awaitFeaturesViaCallback(
@@ -1106,7 +1273,7 @@ object PolarOfflineGattCoordinator {
         timeoutMs: Long
     ): Boolean {
         val readyFeatures = ConcurrentHashMap.newKeySet<PolarBleApi.PolarBleSdkFeature>()
-        requiredFeatures.filterTo(readyFeatures) { api.isFeatureReady(polarId, it) }
+        requiredFeatures.filterTo(readyFeatures) { isFeatureReadyAcrossAliases(api, polarId, it) }
 
         val deferred = CompletableDeferred<Boolean>()
         if (isManagedApi(api)) {
@@ -1123,10 +1290,11 @@ object PolarOfflineGattCoordinator {
                     }
                 }
             }
-            val registration = CallbackRegistration(setOf(normalizeId(polarId)), transientListener)
+            val targetIds = collectAliasClosure(polarId).ifEmpty { setOf(normalizeId(polarId)) }
+            val registration = CallbackRegistration(targetIds, transientListener)
             callbackListeners.add(registration)
             return try {
-                requiredFeatures.filterTo(readyFeatures) { api.isFeatureReady(polarId, it) }
+                requiredFeatures.filterTo(readyFeatures) { isFeatureReadyAcrossAliases(api, polarId, it) }
                 if (readyFeatures.containsAll(requiredFeatures)) {
                     true
                 } else {
@@ -1148,6 +1316,7 @@ object PolarOfflineGattCoordinator {
                 existingCallback?.deviceConnecting(polarDeviceInfo)
             }
 
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             override fun deviceDisconnected(polarDeviceInfo: PolarDeviceInfo) {
                 existingCallback?.deviceDisconnected(polarDeviceInfo)
             }
@@ -1180,7 +1349,7 @@ object PolarOfflineGattCoordinator {
 
         api.setApiCallback(callback)
         return try {
-            requiredFeatures.filterTo(readyFeatures) { api.isFeatureReady(polarId, it) }
+            requiredFeatures.filterTo(readyFeatures) { isFeatureReadyAcrossAliases(api, polarId, it) }
             if (readyFeatures.containsAll(requiredFeatures)) {
                 true
             } else {
@@ -1264,6 +1433,7 @@ object PolarOfflineGattCoordinator {
                         } catch (_: Exception) {
                             // Best-effort disconnect after PFTP exchange.
                         }
+                        clearConnectingState(polarId, macAddress)
                     }
                     if (acquiredSharedApi) {
                         releasePolarApi(api)

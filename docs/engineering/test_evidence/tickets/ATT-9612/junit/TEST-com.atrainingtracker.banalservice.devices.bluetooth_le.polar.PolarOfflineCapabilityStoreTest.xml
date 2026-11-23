@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T11:32:34.452Z" hostname="rainer-HP-EliteBook-850-G5" time="10.038">
+  <properties/>
+  <testcase name="testPolarGatedBareSenseDisAndEmptyNameResilience_TST_CON_049_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="9.219"/>
+  <testcase name="testClassifyModelNumber_rejectsBareSenseLikeCardioSenseAndPreservesCanonical8HexId" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.247"/>
+  <testcase name="testRenamedH10_withPmdAndPftpAndLegacyOfflineRec_neverMisclassifiesAsVeritySense" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.11"/>
+  <testcase name="testConfirmedNonPolarGatt_blocksNameHeuristicsEvenWhenRenamedPolarH10OrVeritySense_TST_CON_049_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.106"/>
+  <testcase name="testRenamedVeritySenseAndOh1_classifyDeterministicallyViaDisModel" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.099"/>
+  <testcase name="testLegacySeedSuppressionAndExplicitNonPolarManufacturerGuard_TST_CON_049_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.136"/>
+  <testcase name="testLegacyPreReconnectRowFallback_worksUntilHardwareMetadataHydrated" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.12"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

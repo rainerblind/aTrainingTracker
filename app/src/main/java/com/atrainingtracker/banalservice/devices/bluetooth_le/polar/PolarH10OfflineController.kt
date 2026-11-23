@@ -94,6 +94,10 @@ object PolarH10OfflineController {
         PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_DEVICE_TIME_SETUP
     )
 
+    private val H10_SYNC_FEATURES = setOf(
+        PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING
+    )
+
     private val isArmed = AtomicBoolean(false)
     private val armedStateLock = Any()
     private val armedTokenGenerator = AtomicLong(0L)
@@ -118,6 +122,9 @@ object PolarH10OfflineController {
 
     @VisibleForTesting
     var stopConnectionTimeoutMs: Long = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
+
+    @VisibleForTesting
+    var featureTimeoutMs: Long = PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS
 
     @VisibleForTesting
     var clockMsProvider: () -> Long = { System.currentTimeMillis() }
@@ -209,6 +216,7 @@ object PolarH10OfflineController {
         apiOverride = null
         sdkIntOverride = null
         stopConnectionTimeoutMs = PolarOfflineGattCoordinator.STOP_CONNECTION_TIMEOUT_MS
+        featureTimeoutMs = PolarOfflineGattCoordinator.FEATURE_READY_TIMEOUT_MS
         clockMsProvider = { System.currentTimeMillis() }
         sessionStartTimeMs = 0L
         armedDeviceId = null
@@ -425,6 +433,12 @@ object PolarH10OfflineController {
                     Log.w(TAG, "Polar H10 stop connection timed out after $stopConnectionTimeoutMs ms for $targetId")
                     return@withGattYieldAndPolarApi false
                 }
+                if (PolarOfflineGattCoordinator.isManagedApi(api) &&
+                    !PolarOfflineGattCoordinator.awaitFeaturesReady(api, targetId, H10_SYNC_FEATURES, featureTimeoutMs)
+                ) {
+                    Log.w(TAG, "Polar H10 offline feature timed out during stop backfill for $targetId")
+                    return@withGattYieldAndPolarApi false
+                }
 
                 // 1. Stop ongoing recording on strap
                 try {
@@ -620,8 +634,16 @@ object PolarH10OfflineController {
                 timeoutMs = BACKFILL_TIMEOUT_MS,
                 apiOverride = apiOverride
             ) { api ->
-                api.connectToDevice(targetId)
-                api.waitForConnection(targetId)
+                if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, targetId, BACKFILL_TIMEOUT_MS)) {
+                    Log.w(TAG, "Polar H10 pending sync connection timed out after $BACKFILL_TIMEOUT_MS ms for $targetId")
+                    return@withGattYieldAndPolarApi false
+                }
+                if (PolarOfflineGattCoordinator.isManagedApi(api) &&
+                    !PolarOfflineGattCoordinator.awaitFeaturesReady(api, targetId, H10_SYNC_FEATURES, featureTimeoutMs)
+                ) {
+                    Log.w(TAG, "Polar H10 offline feature timed out during pending sync for $targetId")
+                    return@withGattYieldAndPolarApi false
+                }
 
                 try {
                     val status = api.requestRecordingStatus(targetId)
@@ -797,8 +819,16 @@ object PolarH10OfflineController {
                 timeoutMs = ARMING_TIMEOUT_MS,
                 apiOverride = apiOverride
             ) { api ->
-                api.connectToDevice(polarId)
-                api.waitForConnection(polarId)
+                if (!PolarOfflineGattCoordinator.connectWithinTimeout(api, polarId, ARMING_TIMEOUT_MS)) {
+                    Log.w(TAG, "Polar H10 arming connection timed out after $ARMING_TIMEOUT_MS ms for $polarId")
+                    return@withGattYieldAndPolarApi false
+                }
+                if (PolarOfflineGattCoordinator.isManagedApi(api) &&
+                    !PolarOfflineGattCoordinator.awaitFeaturesReady(api, polarId, H10_OFFLINE_FEATURES, featureTimeoutMs)
+                ) {
+                    Log.w(TAG, "Polar H10 offline features timed out during arming for $polarId")
+                    return@withGattYieldAndPolarApi false
+                }
 
                 // 1. Synchronize device clock
                 try {

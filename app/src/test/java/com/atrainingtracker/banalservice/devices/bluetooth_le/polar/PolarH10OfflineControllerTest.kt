@@ -42,6 +42,7 @@ import com.polar.sdk.api.model.PolarExerciseData
 import com.polar.sdk.api.model.PolarExerciseEntry
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -528,6 +529,7 @@ class PolarH10OfflineControllerTest {
             )
         )
         every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-17_120000") } returns false
+        every { sharedMockApi.isFeatureReady(any(), any()) } returns true
         coEvery { sharedMockApi.connectToDevice(any()) } just Runs
         coEvery { sharedMockApi.waitForConnection(any()) } just Runs
         coEvery { sharedMockApi.requestRecordingStatus(any()) } returns
@@ -883,5 +885,66 @@ class PolarH10OfflineControllerTest {
             PostWorkoutPhysiologyRecomputer.recomputeAfterHrBackfill(any(), 503L, "2026-11-22_081000")
             HrvPostWorkoutRecomputer.recomputeWorkout(any(), 503L)
         }
+    }
+
+    // REQ-SET-129.2 / REQ-SET-129.3 / TST-SET-131.3
+    @Test
+    fun testSyncPendingWorkout_managedApiRecoversFromMidWaitDisconnectAndAwaitsFeatureReady_TST_SET_131_3() = runBlocking {
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = null
+        PolarH10OfflineController.featureTimeoutMs = 5_000L
+        PolarOfflineGattCoordinator.connectRetryBackoffMs = 20L
+
+        val h10Id = "1C3B2421"
+        val h10Mac = "AA:BB:CC:DD:EE:FF"
+        val sharedApi = mockk<PolarBleApi>(relaxed = true)
+        PolarOfflineGattCoordinator.apiFactoryForTesting = { _, _ -> sharedApi }
+        PolarOfflineGattCoordinator.registerDeviceAliases(h10Id, h10Mac)
+
+        val startMs = 1_700_000_010_000L
+        every { mockSummariesDb.getPolarPendingSyncData(504L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(h10Id, "ATT_504", startMs, startMs + 3_000L, true)
+        every { mockWorkoutRepo.getBaseFileName(504L) } returns "2026-11-23_090000"
+
+        val bridgeCb = mockk<com.polar.sdk.api.PolarBleApiCallback>(relaxed = true)
+        PolarOfflineGattCoordinator.acquirePersistentSession(context, h10Id, h10Mac, bridgeCb)
+        val mux = PolarOfflineGattCoordinator.getMultiplexerCallbackForTesting()
+
+        val connectCalls = java.util.concurrent.atomic.AtomicInteger(0)
+        val firstWaitEntered = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val secondConnectIssued = kotlinx.coroutines.CompletableDeferred<Unit>()
+        every { sharedApi.connectToDevice(h10Id) } answers {
+            if (connectCalls.incrementAndGet() == 2) secondConnectIssued.complete(Unit)
+        }
+        coEvery { sharedApi.waitForConnection(h10Id) } coAnswers {
+            firstWaitEntered.complete(Unit)
+            kotlinx.coroutines.awaitCancellation()
+        }
+        every { sharedApi.isFeatureReady(any(), any()) } returns false
+        coEvery { sharedApi.requestRecordingStatus(h10Id) } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { sharedApi.listExercises(h10Id) } returns flowOf(testEntry)
+        coEvery { sharedApi.fetchExercise(h10Id, testEntry) } returns PolarExerciseData(1, listOf(800, 820))
+        coEvery { sharedApi.removeExercise(h10Id, testEntry) } just Runs
+        coEvery { mockRrRepo.insertIntervals(any()) } returns 2
+
+        val syncJob = this.async(kotlinx.coroutines.Dispatchers.Default) {
+            PolarH10OfflineController.syncPendingWorkout(context, 504L)
+        }
+
+        kotlinx.coroutines.withTimeout(2_000L) { firstWaitEntered.await() }
+        // Mid-wait disconnect triggers immediate retry instead of hanging until 30s timeout
+        mux.deviceDisconnected(com.polar.sdk.api.model.PolarDeviceInfo(h10Id, h10Mac, -48, "Polar H10 $h10Id", true))
+        kotlinx.coroutines.withTimeout(2_000L) { secondConnectIssued.await() }
+        mux.deviceConnected(com.polar.sdk.api.model.PolarDeviceInfo(h10Id, h10Mac, -48, "Polar H10 $h10Id", true))
+
+        // Mid-discovery: PFTP feature arrives asynchronously via MAC alias
+        kotlinx.coroutines.delay(50L)
+        mux.bleSdkFeatureReady(h10Mac, PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_H10_EXERCISE_RECORDING)
+
+        val synced = kotlinx.coroutines.withTimeout(3_000L) { syncJob.await() }
+        assertTrue("Polar H10 retry sync must recover from mid-wait disconnect and await feature ready", synced)
+        assertEquals(2, connectCalls.get())
+        verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(504L) }
+        coVerify(exactly = 1) { sharedApi.removeExercise(h10Id, testEntry) }
     }
 }

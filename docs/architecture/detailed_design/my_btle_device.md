@@ -1,14 +1,14 @@
 # Detailed Design: MyBTLEDevice (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BTLE`  
-**Version**: 1.0.11  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Unit**: `MyBTLEDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/bluetooth_le/MyBTLEDevice.java`, 1,483 LOC)  
 **Superclass / Subclasses**: Extends `MyRemoteDevice`; specialized by BLE profiles (`BTLEHeartRateDevice`, `BTLERadarDevice`, cycling speed/cadence/power devices)  
 **SWE.2 Alignment**: `docs/architecture.md` §3.4, §4.5, §4.9 (`IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`, `REQ-SET-120`, `REQ-SET-123`, `REQ-SET-126`, `REQ-TRK-093`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-CON-007`, `REQ-CON-012`, `REQ-CON-020`, `REQ-CON-023`, `REQ-CON-028`, `REQ-CON-030`, `REQ-CON-031`, `REQ-CON-051`, `REQ-CON-052`, `REQ-CON-054`, `REQ-SET-120`, `REQ-SET-123`, `REQ-SET-126`, `REQ-SET-129`, `REQ-TRK-093`
 
 ---
 
@@ -89,7 +89,7 @@ stateDiagram-v2
 | :--- | :--- | :--- |
 | Android BLE HAL -> `MyBTLEDevice` | Callback | `BluetoothGattCallback` (`mGattCallback`) & `ScanCallback` (`mScanCallback`) deliver connection, discovery, read, write, MTU, and notification events |
 | `MyBTLEDevice` -> `MySensorManager` | Registration & Telemetry | Subclasses implement `addSensors()` and `measurementCharacteristicUpdate(gatt, characteristic)` emitting into `MySensor` instances; `BTLEHeartRateDevice` and `PolarOnlineStreamingBridge` additionally implement lock-free `HrSensorHealthProvider` (`getHrHealthTier`, `getHrModality`) for `PrimaryHrSensorArbitrator` in `MySensorManager.getBestSensor(SensorType.HR)` (`REQ-SET-126`) |
-| `MyBTLEDevice` <-> `PolarOfflineGattCoordinator` | Yield Coordination | `pauseGattOperations()`, `resumeGattOperations()`, `isGattPaused()` yield the radio link cleanly without `shutDown()`; `PolarOfflineGattCoordinator` symmetrically pauses/resumes `PolarOnlineStreamingBridge` via alias-aware ref-counted lease tokens (`REQ-SET-120.1`) |
+| `MyBTLEDevice` <-> `PolarOfflineGattCoordinator` | Yield Coordination | `pauseGattOperations()`, `resumeGattOperations()`, `isGattPaused()` yield the radio link cleanly without `shutDown()`; `PolarOfflineGattCoordinator` symmetrically pauses/resumes `PolarOnlineStreamingBridge` via alias-aware ref-counted lease tokens (`REQ-SET-120.1`), linearizable `gattActionLock` quiescence (`REQ-SET-129.1`, acyclic lock DAG: `gattActionLock` -> `{offlineYieldLock, apiLock, searchTimeoutLock, reconnectLock, cadenceEstimatorLock}` with zero reverse edges), alias-tracked `connectingDeviceIds` (cleared across full alias closure on `deviceConnected`, `deviceDisconnected`, `blePowerStateChanged(false)`, `forceDisconnectDevice`, `clearConnectingState`, `releasePolarApi` `1->0`, `withGattYieldAndPolarApi` disconnect exit, and `resetForTesting()`), disconnect-recovering & event-coalescing `connectWithinTimeout()`, and alias-aware `20 s` `awaitFeaturesReady()` (`REQ-SET-129.2`, `REQ-SET-129.3`) |
 
 ### 4.2 Threading & Serialized GATT Queue
 * **Main Looper (`mHandler = new Handler(mContext.getMainLooper())`)**: Executes `connectGatt`, `discoverServices`, `disconnect`/`close`, `configureServices`, `measurementCharacteristicUpdate`, `mSearchTimeoutRunnable`, `mReconnectRunnable`, `mBatteryReadRunnable`, and `mGattTimeoutRunnable`.
@@ -114,6 +114,7 @@ stateDiagram-v2
 | `MyBTLEDeviceAddressAndSearchTest` | `isRandomStaticAddress` MAC classification, scan-assist `ScanFilter` & stop on timeout/disconnect/shutdown, scan-resolved GATT replacement & stale callback rejection, `onScanFailed` direct-connect fallback (`REQ-CON-023`, `TST-CON-023`) |
 | `BLEReconnectRobustnessTest` | Search timeout release (`notifyStopSearching(false)` + `State.DISCONNECTED`), passive never-connected workout convergence (`0` `mReconnectRunnable`, `READY -> TRACKING` replacement, `>= 60 s` disconnect floor, `0` background scan-assist), and session-connected fast `mReconnectRunnable` (`1s..16s`) + `autoConnect = true` (`REQ-CON-036`, `REQ-CON-051`, `REQ-SET-123`, `TST-CON-051`, `TST-SET-125`) |
 | `PolarHrStreamHealthMonitorTest`, `PrimaryHrSensorArbitratorTest`, `PolarOnlineStreamingBridgeTest`, `MySensorManagerPriorityTest`, `BTLEHeartRateDeviceTest` | Verity Sense resting-only PPI gating (`READY`/`IDLE` vs `TRACKING`/`PAUSED` explicit `stopStreaming(PPI)` + RR clear), `hr <= 0`/lost-contact watchdog preservation & `10 s` clear, `> 15 s` stale HR clear, `>= 10 s` artifact-only RR clear, dual-gated flatline (`>= 60 s` & `>= 30` samples) + non-sticky recovery, and deterministic `(healthTier, modalityTier, registrationOrder)` primary HR arbitration (`REQ-SET-126`, `TST-SET-128`) |
+| `PolarOfflineGattCoordinatorCoexistenceTest`, `PolarOnlineStreamingBridgeTest`, `PolarVeritySenseOfflineControllerTest`, `PolarH10OfflineControllerTest` | Linearizable `gattActionLock` bridge yield quiescence, leak-proof `connectingDeviceIds` lifecycle, sibling-isolated disconnect-recovering `connectWithinTimeout()`, alias-aware `20 s` `awaitFeaturesReady()`, and Verity Sense / H10 retry-sync parity (`REQ-SET-129`, `TST-SET-131`) |
 
 ---
 
@@ -133,3 +134,5 @@ stateDiagram-v2
 | `1.0.9` | 2026-11-21 | Lane 1 Author (`ATT-9345`, `--as agent1`) | `ATT-9345` | Documented `PolarHrStreamHealthMonitor`, lock-free `HrSensorHealthProvider`, `PrimaryHrSensorArbitrator` in `MySensorManager`, `BTLEHeartRateDevice` invalid/stale HR clearing, and `PolarOnlineStreamingBridge` Verity Sense workout PPI gating (`REQ-SET-126`, `TST-SET-128`). |
 | `1.0.10` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Updated `pauseGattOperations()` to release & synchronously close `mBluetoothGatt` + invoke `unregisterSensors()` outside `mGattLock` (preserving `mIsBackgroundReconnecting` and ensuring `readNextCharacteristic()` re-runs `configureServices(gatt)` after reconnect) and added lock-safe `mIsGattPaused` stale-GATT close guard in `onConnectionStateChange()` (`MyBTLEDevice.java` `1,464 / 1,500 LOC`, `REQ-TRK-093.4`, `TST-TRK-093.4`). |
 | `1.0.11` | 2026-11-22 | Lane 1 Author (`ATT-8124`, `--as agent1`) | `ATT-8124` | Stage 6 Bounce 1/5 concurrency hardening: guarded `triggerGattConnect`, `onScanResult`/`onScanFailed`, `mSearchTimeoutRunnable`, `onServicesDiscovered`/`readNextCharacteristic(gatt)`, and `onConnectionStateChange` `STATE_CONNECTED`/`STATE_DISCONNECTED` lock-release TOCTOU windows on `!mIsGattPaused` & `gatt == mBluetoothGatt`, extracting `closeGattSafely` (`MyBTLEDevice.java` `1,483 / 1,500 LOC`, `REQ-TRK-093.4`, `TST-TRK-093.4`). |
+| `1.0.12` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Documented `PolarOnlineStreamingBridge.gattActionLock` linearizable yield quiescence DAG, leak-proof `PolarOfflineGattCoordinator.connectingDeviceIds` clear invariants, disconnect-recovering `connectWithinTimeout()`, and alias-aware `20 s` `awaitFeaturesReady()` (`REQ-SET-129`, `TST-SET-131`). |
+| `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Stage 6 Bounce 1/5 heal: corrected acyclic `gattActionLock` lock-DAG documentation (`gattActionLock -> {offlineYieldLock, apiLock, searchTimeoutLock, reconnectLock, cadenceEstimatorLock}`, zero reverse edges) and documented latest-event coalescing in `connectWithinTimeout()`. |

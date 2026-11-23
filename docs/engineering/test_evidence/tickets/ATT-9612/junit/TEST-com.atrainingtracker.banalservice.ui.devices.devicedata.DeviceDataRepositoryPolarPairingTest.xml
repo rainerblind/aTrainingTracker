@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T11:33:32.041Z" hostname="rainer-HP-EliteBook-850-G5" time="0.638">
+  <properties/>
+  <testcase name="siblingPolarIsolation_pairedH10DoesNotMaskUnpairedVeritySense" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.082"/>
+  <testcase name="nullOrBlankPolarDeviceId_usesManufacturerAwareFamilyFallback" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.083"/>
+  <testcase name="pairedTargetVeritySensor_returnsTrue_byPolarIdAndMac" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.092"/>
+  <testcase name="deletedTargetSensor_returnsFalse" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.084"/>
+  <testcase name="renamedPairedSensor_matchesPersistedPolarIdInCapabilityStore" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.096"/>
+  <testcase name="unpairedTargetSensor_withRetainedRowPairedZero_returnsFalse" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.11"/>
+  <testcase name="rePairingFlip_transitionsFromFalseToTrueImmediately" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest" time="0.087"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

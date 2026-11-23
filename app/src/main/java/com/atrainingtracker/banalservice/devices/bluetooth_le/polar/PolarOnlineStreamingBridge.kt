@@ -193,6 +193,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     private val hasConnectedInSession = AtomicBoolean(false)
     private val sessionOpenPendingFeatures = AtomicBoolean(false)
     private val reconnectLock = Any()
+    private val gattActionLock = Any()
     private val streamCoordinator = PolarPmdStreamCoordinator(
         scope = scope,
         deviceId = deviceId,
@@ -352,6 +353,7 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
         if (PolarPmdStreamCoordinator.StreamSlot.ACC in streamCoordinator.cancelAllRenegotiations()) {
             resumeAccAfterOfflineSync.set(true)
         }
+        synchronized(gattActionLock) {} // Linearizable quiescence barrier for in-flight GATT teardowns/connects (`REQ-SET-129.1`).
     }
 
     /** Resumes session sync, silent-HR watchdog, or reconnect cleanly after the final offline GATT lease releases (`REQ-SET-120.2`). */
@@ -503,13 +505,17 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 scheduleSilentHrWatchdogTimer(expectedGeneration)
             }
             BleHrmSilentConnectionWatchdog.Action.DISCONNECT_AND_RECONNECT -> {
-                Log.w(TAG, "Persistent silent Polar HR connection on $sdkSessionId after HR re-subscribe; disconnecting aliases and reconnecting")
-                cancelSilentHrWatchdog(resetState = true)
-                detachBridgeSessionState()
-                val sessionId = sdkSessionId
-                PolarOfflineGattCoordinator.registerDeviceAliases(coordinatorSessionKey, activeSdkStreamId, polarId, macAddress)
-                PolarOfflineGattCoordinator.forceDisconnectDevice(mContext, macAddress, sessionId, clearRegistrations = false)
-                if (!isShutDown.get()) scheduleBackoffReconnect()
+                val disconnected = synchronized(gattActionLock) {
+                    if (isShutDown.get() || !isConnectedFlag.get() || silentHrWatchdog.getGeneration() != expectedGeneration) return
+                    if (isOfflineGattYielded()) { resumeSilentWatchdogAfterOfflineSync.set(true); return }
+                    Log.w(TAG, "Persistent silent Polar HR connection on $sdkSessionId after HR re-subscribe; disconnecting aliases and reconnecting")
+                    cancelSilentHrWatchdog(resetState = true); detachBridgeSessionState()
+                    val sessionId = sdkSessionId
+                    PolarOfflineGattCoordinator.registerDeviceAliases(coordinatorSessionKey, activeSdkStreamId, polarId, macAddress)
+                    PolarOfflineGattCoordinator.forceDisconnectDevice(mContext, macAddress, sessionId, clearRegistrations = false)
+                    true
+                }
+                if (disconnected && !isShutDown.get() && !isOfflineGattYielded()) scheduleBackoffReconnect()
             }
             BleHrmSilentConnectionWatchdog.Action.NONE -> Unit
         }
@@ -611,24 +617,24 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
     }
 
     private fun onSearchTimeout(expectedGeneration: Long, timeoutMs: Long) {
-        if (isShutDown.get() || isOfflineGattYielded()) return
-        val generationMatches = synchronized(searchTimeoutLock) { searchAttemptGeneration == expectedGeneration }
-        if (!generationMatches) return
-        if (!isReceivingData()) {
-            val sessionId = sdkSessionId
-            Log.i(TAG, "Search timed out for Polar sensor $sessionId after $timeoutMs ms")
-            try {
-                polarApi?.disconnectFromDevice(sessionId)
-            } catch (t: Throwable) {
-                Log.w(TAG, "Error disconnecting Polar API on search timeout for $sessionId: ${t.message}")
-            }
-            if (isSearching) {
-                notifyStopSearching(false)
-            }
-            if (isMidSessionOrWorkoutActive() && !isOfflineGattYielded()) {
-                scheduleBackoffReconnect()
+        var yieldBailedWhileSearching = false
+        val timedOut = synchronized(gattActionLock) {
+            if (isShutDown.get()) return
+            if (isOfflineGattYielded()) { yieldBailedWhileSearching = isSearching; false } else {
+                if (!synchronized(searchTimeoutLock) { searchAttemptGeneration == expectedGeneration } || isReceivingData()) return
+                val sessionId = sdkSessionId
+                Log.i(TAG, "Search timed out for Polar sensor $sessionId after $timeoutMs ms")
+                try { polarApi?.disconnectFromDevice(sessionId) } catch (t: Throwable) {
+                    Log.w(TAG, "Error disconnecting Polar API on search timeout for $sessionId: ${t.message}")
+                }
+                PolarOfflineGattCoordinator.clearConnectingState(sessionId, macAddress)
+                true
             }
         }
+        if (yieldBailedWhileSearching) { resumeSearchAfterOfflineSync.set(true); if (isSearching) notifyStopSearching(false); return }
+        if (!timedOut) return
+        if (isSearching) notifyStopSearching(false)
+        if (isMidSessionOrWorkoutActive() && !isOfflineGattYielded()) scheduleBackoffReconnect()
     }
 
     private fun releaseOnlineAccChannels() {
@@ -858,9 +864,15 @@ class PolarOnlineStreamingBridge @JvmOverloads constructor(
                 polarApi = api
                 api.setAutomaticReconnection(true)
             }
-            sessionOpenPendingFeatures.set(true)
-            api.connectToDevice(streamId)
-            syncAlreadyOpenSessionIfReady(api)
+            var yieldBailed = false
+            val connectedIssued = synchronized(gattActionLock) {
+                if (isShutDown.get()) return
+                if (isOfflineGattYielded()) { yieldBailed = true; false } else {
+                    sessionOpenPendingFeatures.set(true); api.connectToDevice(streamId); true
+                }
+            }
+            if (yieldBailed) { if (isSearching) { resumeSearchAfterOfflineSync.set(true); notifyStopSearching(false) }; return }
+            if (connectedIssued) syncAlreadyOpenSessionIfReady(api)
         } catch (t: Throwable) {
             sessionOpenPendingFeatures.set(false)
             Log.w(TAG, "Failed to start persistent Polar PMD session for $polarId: ${t.message}", t)
