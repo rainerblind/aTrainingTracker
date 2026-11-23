@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.routes
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
@@ -28,7 +29,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.max
 
 /**
@@ -279,7 +279,8 @@ object RouteSegmentMatcher {
     }
 
     /**
-     * Projects a coordinate orthogonally onto an individual route polyline segment between [p1] and [p2].
+     * Projects a coordinate orthogonally onto an individual route polyline segment between [p1] and [p2]
+     * using canonical [GeoMath.projectPointOntoSegment] (REQ-GEO-003).
      */
     private fun projectPointOntoSegment(
         point: LatLng,
@@ -287,40 +288,19 @@ object RouteSegmentMatcher {
         p2: PathPoint,
         segmentIndex: Int
     ): PathProjection {
-        val aLat = p1.latLng.latitude
-        val aLng = p1.latLng.longitude
-        val bLat = p2.latLng.latitude
-        val bLng = p2.latLng.longitude
-
-        val midLatRad = Math.toRadians((aLat + bLat) / 2.0)
-        val cosMid = cos(midLatRad)
-
-        val dx = (bLng - aLng) * cosMid
-        val dy = bLat - aLat
-        val segLenSq = dx * dx + dy * dy
-
-        val t: Double = if (segLenSq < 1e-14) {
-            0.0
-        } else {
-            val wx = (point.longitude - aLng) * cosMid
-            val wy = point.latitude - aLat
-            val proj = (wx * dx + wy * dy) / segLenSq
-            proj.coerceIn(0.0, 1.0)
-        }
-
-        val qLat = aLat + t * (bLat - aLat)
-        val qLng = aLng + t * (bLng - aLng)
-
-        val dist = GeoUtils.haversineDistanceMeters(point.latitude, point.longitude, qLat, qLng)
+        val segProj = GeoMath.projectPointOntoSegment(point, p1.latLng, p2.latLng)
         val segDist = (p2.distance - p1.distance).coerceAtLeast(0.0)
-        val distAlong = p1.distance + t * segDist
-        val bearing = GeoUtils.calculateInitialBearing(aLat, aLng, bLat, bLng)
+        val distAlong = p1.distance + segProj.t * segDist
+        val bearing = GeoUtils.calculateInitialBearing(
+            p1.latLng.latitude, p1.latLng.longitude,
+            p2.latLng.latitude, p2.latLng.longitude
+        )
 
         return PathProjection(
             distanceAlongRouteMeters = distAlong,
-            crossTrackDistanceMeters = dist,
+            crossTrackDistanceMeters = segProj.crossTrackDistanceMeters,
             segmentIndex = segmentIndex,
-            t = t,
+            t = segProj.t,
             segmentBearing = bearing
         )
     }

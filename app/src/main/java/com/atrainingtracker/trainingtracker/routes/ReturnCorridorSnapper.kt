@@ -20,8 +20,8 @@ package com.atrainingtracker.trainingtracker.routes
 
 import android.location.Location
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import kotlin.math.cos
 
 /**
  * Result of snapping athlete coordinates to a return navigation corridor.
@@ -135,51 +135,20 @@ object ReturnCorridorSnapper {
             )
         }
 
-        var minDistanceToSegment = Double.MAX_VALUE
-        var bestDistanceAlongRoute = 0.0
-        var bestSegmentIndex = 0
-        var bestT = 0.0
-
-        for (i in 0 until path.size - 1) {
-            val p1 = path[i]
-            val p2 = path[i + 1]
-
-            val aLat = p1.latLng.latitude
-            val aLng = p1.latLng.longitude
-            val bLat = p2.latLng.latitude
-            val bLng = p2.latLng.longitude
-
-            val latAvgRad = Math.toRadians((aLat + bLat) / 2.0)
-            val cosLat = cos(latAvgRad)
-
-            val dx = (bLng - aLng) * cosLat
-            val dy = bLat - aLat
-            val segLenSq = dx * dx + dy * dy
-
-            val t: Double = if (segLenSq < 1e-14) {
-                0.0
-            } else {
-                val wx = (currentLng - aLng) * cosLat
-                val wy = currentLat - aLat
-                val proj = (wx * dx + wy * dy) / segLenSq
-                proj.coerceIn(0.0, 1.0)
-            }
-
-            val qLat = aLat + t * (bLat - aLat)
-            val qLng = aLng + t * (bLng - aLng)
-
-            val results = FloatArray(1)
-            Location.distanceBetween(currentLat, currentLng, qLat, qLng, results)
-            val distToSegment = results[0].toDouble()
-
-            if (distToSegment < minDistanceToSegment) {
-                minDistanceToSegment = distToSegment
-                val segDist = (p2.distance - p1.distance).coerceAtLeast(0.0)
-                bestDistanceAlongRoute = p1.distance + t * segDist
-                bestSegmentIndex = i
-                bestT = t
-            }
-        }
+        val projection = GeoMath.projectOntoPolyline(path, currentLat, currentLng) ?: return CorridorSnapResult(
+            destinationName = route.summary.name,
+            isHomeDestination = false,
+            remainingDistanceMeters = 0.0,
+            remainingClimbMeters = 0.0,
+            isReverseReturn = isReverseReturn,
+            snappedRouteId = route.summary.id,
+            crossTrackDistanceMeters = Double.POSITIVE_INFINITY,
+            path = path
+        )
+        val minDistanceToSegment = projection.crossTrackDistanceMeters
+        val bestSegmentIndex = projection.segmentIndex
+        val bestT = projection.t
+        val bestDistanceAlongRoute = path.first().distance + projection.alongTrackDistance
 
         val totalDist = path.last().distance
         val currentDistAlongRoute = bestDistanceAlongRoute.coerceIn(0.0, totalDist)

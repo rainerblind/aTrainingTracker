@@ -20,13 +20,13 @@ package com.atrainingtracker.trainingtracker.routes
 
 import android.location.Location
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.cos
 
 /**
  * Real-time navigation engine tracking athlete progress along an active route (REQ-MAP-028 / ATT-1450).
@@ -100,52 +100,11 @@ class TurnByTurnNavigationEngine {
         val path = route.path
         if (path.isEmpty()) return TurnNavigationState()
 
-        // 1. Orthogonal projection onto route polyline
-        var minDistanceToSegment = Double.MAX_VALUE
-        var bestDistanceAlongRoute = 0.0
-
-        for (i in 0 until path.size - 1) {
-            val p1 = path[i]
-            val p2 = path[i + 1]
-
-            val aLat = p1.latLng.latitude
-            val aLng = p1.latLng.longitude
-            val bLat = p2.latLng.latitude
-            val bLng = p2.latLng.longitude
-
-            val latAvgRad = Math.toRadians((aLat + bLat) / 2.0)
-            val cosLat = cos(latAvgRad)
-
-            val dx = (bLng - aLng) * cosLat
-            val dy = bLat - aLat
-            val segLenSq = dx * dx + dy * dy
-
-            val t: Double = if (segLenSq < 1e-14) {
-                0.0
-            } else {
-                val wx = (locLng - aLng) * cosLat
-                val wy = locLat - aLat
-                val proj = (wx * dx + wy * dy) / segLenSq
-                proj.coerceIn(0.0, 1.0)
-            }
-
-            val qLat = aLat + t * (bLat - aLat)
-            val qLng = aLng + t * (bLng - aLng)
-
-            val results = FloatArray(1)
-            Location.distanceBetween(locLat, locLng, qLat, qLng, results)
-            val distToSegment = results[0].toDouble()
-
-            if (distToSegment < minDistanceToSegment) {
-                minDistanceToSegment = distToSegment
-                val segDist = (p2.distance - p1.distance).coerceAtLeast(0.0)
-                bestDistanceAlongRoute = p1.distance + t * segDist
-            }
-        }
-
+        // 1. Orthogonal projection onto route polyline via canonical GeoMath (REQ-GEO-003)
+        val projection = GeoMath.projectOntoPolyline(path, locLat, locLng) ?: return TurnNavigationState()
         val totalDist = path.last().distance
-        val currentDist = bestDistanceAlongRoute.coerceIn(0.0, totalDist)
-        val crossTrackDist = minDistanceToSegment
+        val currentDist = (path.first().distance + projection.alongTrackDistance).coerceIn(0.0, totalDist)
+        val crossTrackDist = projection.crossTrackDistanceMeters
 
         // 2. Off-Route Corridor Evaluation
         val offRouteCorridorMeters = tuningConfig.offRouteCorridorThresholdMeters.toDouble()

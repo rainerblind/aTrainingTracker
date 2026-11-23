@@ -24,6 +24,7 @@ import android.net.Uri
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.routes.parsers.TcxTrackpointParser
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
@@ -134,15 +135,6 @@ object TcxCourseParser {
     }
 
     private fun calculateElevationGain(points: List<PathPoint>): Double {
-        var gain = 0.0
-        for (i in 1 until points.size) {
-            val curr = points[i].altitude
-            val prev = points[i - 1].altitude
-            if (curr != null && prev != null) {
-                val diff = curr - prev
-                if (diff > 0) gain += diff
-            }
-        }
-        return gain
+        return GeoMath.calculatePathElevationGain(points)
     }
 }

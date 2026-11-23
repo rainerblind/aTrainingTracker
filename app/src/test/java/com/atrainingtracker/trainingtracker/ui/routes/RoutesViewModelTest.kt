@@ -317,4 +317,35 @@ class RoutesViewModelTest {
 
         coVerify(exactly = 1) { mockRoutesRepo.insertRoute(match { it.externalId == "4.gpx" && it.bSportType == BSportType.UNKNOWN }, any(), any()) }
     }
+
+    /**
+     * TST-GEO-003 (ATT-8133): Verifies RoutesViewModel.updateRoute relies on in-place _allRoutes
+     * patching in RoutesRepository.updateRouteSummary without triggering a redundant refreshRoutes()
+     * full route_points reload from SQLite.
+     */
+    @Test
+    fun testUpdateRoute_updatesSummaryWithoutTriggeringRefreshRoutes_TST_GEO_003() = runTest(testDispatcher) {
+        val summary = RouteSummary(
+            id = 7L,
+            externalId = "ext-7",
+            name = "Renamed Alpine Loop",
+            description = "Updated description",
+            isSelected = false,
+            distance = 12000.0,
+            elevationGain = 300.0,
+            bSportType = BSportType.BIKE,
+            source = RouteSource.LOCAL_GPX,
+            clusterId = 10L
+        )
+        coEvery { mockRoutesRepo.updateRouteSummary(summary) } returns Unit
+
+        val viewModel = createViewModel()
+        viewModel.startEditing(summary)
+        viewModel.updateRoute(summary)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRoutesRepo.updateRouteSummary(summary) }
+        io.mockk.verify(exactly = 0) { mockRoutesRepo.refreshRoutes() }
+        assertNull(viewModel.editingRoute)
+    }
 }

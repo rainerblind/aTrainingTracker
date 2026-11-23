@@ -224,8 +224,10 @@ class RoutesRepositorySyncTest {
     }
 
     /**
-     * TST-PER-048.2: Cluster-to-Route rename sync updates SQLite and _allRoutes without calling
-     * WorkoutClusterEngine.syncRouteNameChange (loop guard, REQ-PER-040.2).
+     * TST-PER-048.2 / TST-GEO-003: Cluster-to-Route rename sync updates only routes.name via
+     * updateRouteNameByClusterId and patches _allRoutes in-place without calling
+     * WorkoutClusterEngine.syncRouteNameChange or reloading route_points from SQLite
+     * (REQ-PER-040.4, REQ-GEO-003, ATT-8133).
      */
     @Test
     fun testSyncClusterNameChange_updatesRouteWithoutCallingClusterEngine_TST_PER_048_2() = runBlocking {
@@ -234,39 +236,47 @@ class RoutesRepositorySyncTest {
         coEvery { mockClimbsDb.getClimbsForRoute(any()) } returns emptyList()
         WorkoutClusterEngine.resetForTesting(mockEngine)
         ClimbsDatabaseManager.resetForTesting(mockClimbsDb)
+
+        val summary = RouteSummary(
+            id = 7L,
+            externalId = "ext-7",
+            name = "Old Route",
+            description = "",
+            isSelected = false,
+            distance = 12000.0,
+            elevationGain = 150.0,
+            bSportType = BSportType.BIKE,
+            source = RouteSource.LOCAL_GPX,
+            clusterId = 10L
+        )
+        val routePath = listOf(
+            com.atrainingtracker.trainingtracker.ui.map.PathPoint(0.0, com.google.android.gms.maps.model.LatLng(48.0, 9.0), 300.0),
+            com.atrainingtracker.trainingtracker.ui.map.PathPoint(12000.0, com.google.android.gms.maps.model.LatLng(48.1, 9.1), 450.0)
+        )
+        val routeWithPath = RouteWithPath(summary = summary, path = routePath)
+        every { mockRoutesDb.getAllRoutes() } returns listOf(routeWithPath)
+        every { mockRoutesDb.updateRouteNameByClusterId(10L, "New Cluster Name") } returns 1
+
         val repository = RoutesRepository.getInstance(mockContext)
 
         try {
-            val summary = RouteSummary(
-                id = 7L,
-                externalId = "ext-7",
-                name = "Old Route",
-                description = "",
-                isSelected = false,
-                distance = 12000.0,
-                elevationGain = 150.0,
-                bSportType = BSportType.BIKE,
-                source = RouteSource.LOCAL_GPX,
-                clusterId = 10L
-            )
-            val routeWithPath = RouteWithPath(summary = summary, path = emptyList())
-            every { mockRoutesDb.getRouteByClusterId(10L) } returns routeWithPath
-            every { mockRoutesDb.getAllRoutes() } returns listOf(
-                routeWithPath.copy(summary = summary.copy(name = "New Cluster Name"))
-            )
-
-            repository.syncClusterNameChange(10L, "New Cluster Name")
             withTimeout(2000) {
-                while (repository.allRoutes.value.firstOrNull()?.summary?.name != "New Cluster Name") {
+                while (repository.allRoutes.value.firstOrNull()?.summary?.name != "Old Route") {
                     delay(10)
                 }
             }
+            clearMocks(mockRoutesDb, answers = false)
+            every { mockRoutesDb.updateRouteNameByClusterId(10L, "New Cluster Name") } returns 1
 
-            verify(exactly = 1) {
-                mockRoutesDb.updateRouteSummary(match { it.id == 7L && it.name == "New Cluster Name" })
-            }
-            verify(exactly = 0) { mockEngine.syncRouteNameChange(any(), any()) }
+            repository.syncClusterNameChange(10L, "New Cluster Name")
+
             assertEquals("New Cluster Name", repository.allRoutes.value.firstOrNull()?.summary?.name)
+            assertEquals(routePath, repository.allRoutes.value.firstOrNull()?.path)
+            verify(exactly = 1) { mockRoutesDb.updateRouteNameByClusterId(10L, "New Cluster Name") }
+            verify(exactly = 0) { mockRoutesDb.getRouteByClusterId(any()) }
+            verify(exactly = 0) { mockRoutesDb.getAllRoutes() }
+            verify(exactly = 0) { mockRoutesDb.getRoutePath(any()) }
+            verify(exactly = 0) { mockEngine.syncRouteNameChange(any(), any()) }
         } finally {
             repository.cancelScope()
             ClimbsDatabaseManager.resetForTesting(null)
@@ -275,8 +285,9 @@ class RoutesRepositorySyncTest {
     }
 
     /**
-     * TST-PER-048.2: Route-to-Cluster rename notifies WorkoutClusterRepository.onRouteSyncedClusterRename
-     * once without infinite recursion back into RoutesDatabaseManager.updateRouteSummary (REQ-PER-040.2).
+     * TST-PER-048.2 / TST-GEO-003: Route-to-Cluster rename patches _allRoutes in-place without
+     * reloading route_points and notifies WorkoutClusterRepository.onRouteSyncedClusterRename
+     * once without infinite recursion back into RoutesDatabaseManager.updateRouteSummary.
      */
     @Test
     fun testUpdateRouteSummary_propagatesToClusterRepositoryWithoutRecursion_TST_PER_048_2() = runBlocking {
@@ -287,29 +298,108 @@ class RoutesRepositorySyncTest {
         WorkoutClusterEngine.resetForTesting(mockEngine)
         WorkoutClusterRepository.resetForTesting(mockClusterRepo)
         ClimbsDatabaseManager.resetForTesting(mockClimbsDb)
+
+        val initialSummary = RouteSummary(
+            id = 7L,
+            externalId = "ext-7",
+            name = "Old Route",
+            description = "",
+            isSelected = false,
+            distance = 12000.0,
+            elevationGain = 150.0,
+            bSportType = BSportType.BIKE,
+            source = RouteSource.LOCAL_GPX,
+            clusterId = 10L
+        )
+        val routePath = listOf(
+            com.atrainingtracker.trainingtracker.ui.map.PathPoint(0.0, com.google.android.gms.maps.model.LatLng(48.0, 9.0), 300.0)
+        )
+        every { mockRoutesDb.getAllRoutes() } returns listOf(RouteWithPath(summary = initialSummary, path = routePath))
         val repository = RoutesRepository.getInstance(mockContext)
 
         try {
-            val summary = RouteSummary(
-                id = 7L,
-                externalId = "ext-7",
-                name = "Route Renamed",
-                description = "",
-                isSelected = false,
-                distance = 12000.0,
-                elevationGain = 150.0,
-                bSportType = BSportType.BIKE,
-                source = RouteSource.LOCAL_GPX,
-                clusterId = 10L
-            )
+            withTimeout(2000) {
+                while (repository.allRoutes.value.isEmpty()) {
+                    delay(10)
+                }
+            }
+            clearMocks(mockRoutesDb, answers = false)
+
+            val summary = initialSummary.copy(name = "Route Renamed")
             repository.updateRouteSummary(summary)
             delay(50)
 
+            assertEquals("Route Renamed", repository.allRoutes.value.firstOrNull()?.summary?.name)
+            assertEquals(routePath, repository.allRoutes.value.firstOrNull()?.path)
             verify(exactly = 1) { mockRoutesDb.updateRouteSummary(summary) }
+            verify(exactly = 0) { mockRoutesDb.getAllRoutes() }
+            verify(exactly = 0) { mockRoutesDb.getRoutePath(any()) }
             verify(exactly = 1) { mockEngine.syncRouteNameChange(10L, "Route Renamed") }
             coVerify(exactly = 1) { mockClusterRepo.onRouteSyncedClusterRename(10L) }
         } finally {
             repository.cancelScope()
+            ClimbsDatabaseManager.resetForTesting(null)
+            WorkoutClusterRepository.resetForTesting(null)
+            WorkoutClusterEngine.resetForTesting(null)
+        }
+    }
+
+    /**
+     * TST-GEO-003 (ATT-8133): Verifies updateRouteSummary runs WorkoutClusterEngine.syncRouteNameChange
+     * strictly on ioDispatcher (never Main UI thread) and reloads via refreshRoutes() when the updated
+     * route ID is missing from a non-empty _allRoutes cache.
+     */
+    @Test
+    fun testUpdateRouteSummary_runsClusterSyncOnIoDispatcherAndReloadsWhenMissing_TST_GEO_003() = runBlocking {
+        val mockEngine = mockk<WorkoutClusterEngine>(relaxed = true)
+        val mockClusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
+        val mockClimbsDb = mockk<ClimbsDatabaseManager>(relaxed = true)
+        coEvery { mockClimbsDb.getClimbsForRoute(any()) } returns emptyList()
+        WorkoutClusterEngine.resetForTesting(mockEngine)
+        WorkoutClusterRepository.resetForTesting(mockClusterRepo)
+        ClimbsDatabaseManager.resetForTesting(mockClimbsDb)
+
+        val ioThreadName = "att-8133-test-io"
+        val ioExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, ioThreadName)
+        }
+        val testIoDispatcher = ioExecutor.asCoroutineDispatcher()
+
+        val observedSyncThreads = mutableListOf<String>()
+        every { mockEngine.syncRouteNameChange(any(), any()) } answers {
+            observedSyncThreads.add(Thread.currentThread().name)
+        }
+
+        val existingSummary = RouteSummary(
+            id = 1L, externalId = "ext-1", name = "Existing Route", description = "",
+            isSelected = false, distance = 5000.0, elevationGain = 50.0,
+            bSportType = BSportType.BIKE, source = RouteSource.LOCAL_GPX, clusterId = 1L
+        )
+        every { mockRoutesDb.getAllRoutes() } returns listOf(RouteWithPath(existingSummary, emptyList()))
+
+        val repository = RoutesRepository(mockContext, mockRoutesDb, mockClimbsDb, testIoDispatcher)
+        try {
+            withTimeout(2000) {
+                while (repository.allRoutes.value.isEmpty()) {
+                    delay(10)
+                }
+            }
+            clearMocks(mockRoutesDb, answers = false)
+            every { mockRoutesDb.getAllRoutes() } returns listOf(RouteWithPath(existingSummary, emptyList()))
+
+            // Update a route ID (99L) absent from non-empty _allRoutes -> must execute sync on ioDispatcher AND reload
+            val missingSummary = existingSummary.copy(id = 99L, name = "Missing Route", clusterId = 99L)
+            repository.updateRouteSummary(missingSummary)
+
+            assertEquals(1, observedSyncThreads.size)
+            assertTrue(
+                "Expected cluster sync on $ioThreadName, got ${observedSyncThreads.first()}",
+                observedSyncThreads.first().startsWith(ioThreadName)
+            )
+            verify(timeout = 1000, exactly = 1) { mockRoutesDb.getAllRoutes() }
+        } finally {
+            repository.cancelScope()
+            ioExecutor.shutdownNow()
             ClimbsDatabaseManager.resetForTesting(null)
             WorkoutClusterRepository.resetForTesting(null)
             WorkoutClusterEngine.resetForTesting(null)

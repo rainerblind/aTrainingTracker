@@ -1,14 +1,14 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.7  
+**Version**: 1.0.8  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Requirements**: 76
+**Total Requirements**: 77
 
 ---
 
@@ -2846,6 +2846,28 @@
 
 **Invariants**: `liteMode(true)` enforced; `DarkMapStyle` / `DarkMapAntiFlashOverlay` preserved; `RouteItem.kt` `targetBounds = null`; `WorkoutClusterSplitMapPreviewTest` & `WorkoutLapsIconContractTest` tokens intact; `WorkoutRepository.kt <= 5,117` LoC untouched; `0` inline `Color(0x...)`; `private` `@Preview`s only; `0` new `src/main` test reads; `N/A - no UI strings`.
 
+### REQ-GEO-003: Consolidated GeoMath Polyline Projection, Elevation-Gain Hysteresis, Read-Only Cluster Scoring & Lightweight Rename Sync [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-GEO-003`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `GeoMath.kt`, `PolylineProgressTracker.kt`, `ForkRouteMatcher.kt`, `RouteDivergenceDetector.kt`, `ForkNavigationRepository.kt`, `RouteSegmentMatcher.kt`, `ReturnCorridorSnapper.kt`, `TurnByTurnNavigationEngine.kt`, `RouteAutoDetector.kt`, `WaypointDistanceCalculator.kt`, `GpxRouteImporter.kt`, `TcxCourseParser.kt`, `ClimbDeduplicator.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `RoutesDatabaseManager.kt`, `RoutesRepository.kt`
+- **Rationale**: Seven separate segment/polyline projectors (including a duplicate `routes.PolylineProjection` and an unscaled raw-degree projection in `RouteAutoDetector` with ~33 % distortion at 50° N), divergent GPX vs. TCX elevation-gain formulas, hidden SQLite writes inside `WorkoutClusterEngine.getClusterScores()`, and full `route_points` reloads on cluster/route renames created geometric inaccuracy and unnecessary SQLite I/O (`ATT-8133`).
+- **Description**:
+  1. *Single Canonical `GeoMath` Projection & $\cos(\phi)$ Scaling (`REQ-GEO-003.1`)*: `com.atrainingtracker.trainingtracker.geo.GeoMath` SHALL provide pure-JVM equirectangular $\cos(\phi)$-scaled `projectPointOntoSegment()`, `distanceToSegmentMeters()`, and `projectOntoPolyline()` returning the single canonical `com.atrainingtracker.trainingtracker.geo.PolylineProjection` (removing the duplicate `routes.PolylineProjection`). `PolylineProgressTracker`, `ForkRouteMatcher`, `RouteSegmentMatcher`, `ReturnCorridorSnapper`, `TurnByTurnNavigationEngine`, `ClimbDeduplicator`, `RouteAutoDetector`, and `WaypointDistanceCalculator` SHALL delegate segment/polyline projection to `GeoMath` so East-West, North-South, and 45° diagonal lateral offsets at 50° N agree within `< 0.5 %`.
+  2. *Unified Route Elevation-Gain Hysteresis (`REQ-GEO-003.2`)*: `GeoMath.calculateElevationGain()` / `calculatePathElevationGain()` SHALL apply canonical `2.0 m` dead-band hysteresis across both `GpxRouteImporter` and `TcxCourseParser` so identical GPX and TCX routes compute identical elevation gains.
+  3. *Read-Only `getClusterScores()` & Zero-Geometry-Reload Rename Sync (`REQ-GEO-003.3`)*: `WorkoutClusterEngine.getClusterScores()` SHALL project authoritative workout counts strictly in-memory without performing SQLite write operations. Cluster and linked-route renames across `WorkoutClusterRepository`, `RoutesRepository`, and `RoutesDatabaseManager.updateRouteNameByClusterId()` SHALL update metadata and in-memory `StateFlow`s in-place without reloading `route_points` geometries or triggering recursive sync loops.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* East-West, North-South, and 45° diagonal route segments at 50° N with identical lateral offsets in meters,
+  • *When* `RouteAutoDetector`, `ForkRouteMatcher`, `RouteSegmentMatcher`, `ReturnCorridorSnapper`, `TurnByTurnNavigationEngine`, `ClimbDeduplicator`, `PolylineProgressTracker`, and `WaypointDistanceCalculator` compute cross-track distance and progress,
+  • *Then* all use `geo.GeoMath`, only `geo.PolylineProjection` exists, and E-W vs. N-S vs. diagonal distances agree within `< 0.5 %`.
+  • *Given* existing clusters and linked routes,
+  • *When* `WorkoutClusterEngine.getClusterScores()` is called or a cluster/linked route is renamed,
+  • *Then* `getClusterScores()` executes `0` SQLite writes and renames propagate display names in-place without reloading `route_points`.
+- **Invariants**: Preserves `REQ-GEO-001`/`REQ-GEO-002` windowed continuity & virtual gates, `REQ-PER-040`/`REQ-PER-041` non-recursive rename sync & whitespace self-healing, zero DB schema version changes, and `Localization Parity: N/A - no UI strings`.
+
 ---
 
 ## Change History
@@ -2859,3 +2881,4 @@
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8080`) | `ATT-8080` | Refined and verified (`[Verified]`) `REQ-MAP-011` and `REQ-MAP-012` for `TrackType.ATT_FUSED`, alias-aware GPS/Fused lookup, `TrackType.NETWORK` removal, and peek bottom-sheet `Layers` wiring. |
 | `1.0.6` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-MAP-017` to `[Verified]` in Stage 5 following `TST-PERF-001` 520-workout memory & vertex-budget verification (`PeriodsRepositoryMemoryTest`, `PeriodVertexBudgetTest`). |
 | `1.0.7` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted 3 unblocked map/navigation requirements (`REQ-MAP-007`, `REQ-MAP-010`, `REQ-MAP-013`) to `[Verified]` (Gate 4 `3e20473b`, `Rule 7.5`). |
+| `1.0.8` | 2026-11-23 | Lane 1 Author (`ATT-8133`, `--as agent1`) | `ATT-8133` | Added `REQ-GEO-003` (`GeoMath` polyline projection & elevation-gain consolidation, `RouteAutoDetector` $\cos(\phi)$ fix, read-only `getClusterScores`, lightweight rename sync). |

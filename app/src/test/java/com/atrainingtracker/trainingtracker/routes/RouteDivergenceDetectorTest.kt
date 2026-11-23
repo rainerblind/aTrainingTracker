@@ -186,4 +186,41 @@ class RouteDivergenceDetectorTest {
         assertTrue(state.branches.any { it.direction == ForkDirection.STRAIGHT })
         assertTrue(state.branches.any { it.direction == ForkDirection.RIGHT })
     }
+
+    /**
+     * TST-GEO-003 (ATT-8133): Verifies RouteDivergenceDetector preserves exact fork distance and
+     * branch classifications when candidate paths carry a non-zero path.first().distance origin offset.
+     */
+    @Test
+    fun testDetectDivergence_nonZeroPathFirstDistanceOffset_matchesZeroBasedBaseline_TST_GEO_003() {
+        val originOffset = 5000.0
+        val sharedPoints = listOf(
+            pt(48.5000, 9.0000, originOffset + 0.0),
+            pt(48.5045, 9.0000, originOffset + 500.0),
+            pt(48.5090, 9.0000, originOffset + 1000.0)
+        )
+        val route1Path = sharedPoints + listOf(
+            pt(48.5120, 8.9950, originOffset + 1500.0),
+            pt(48.5150, 8.9900, originOffset + 2000.0)
+        )
+        val route2Path = sharedPoints + listOf(
+            pt(48.5120, 9.0050, originOffset + 1500.0),
+            pt(48.5150, 9.0100, originOffset + 2000.0)
+        )
+
+        val route1 = RouteWithPath(dummySummary(1L, "Left Offset Route", 38000.0, 420.0), route1Path)
+        val route2 = RouteWithPath(dummySummary(2L, "Right Offset Route", 65000.0, 680.0), route2Path)
+
+        // Athlete at 800m along corridor (200m before fork)
+        val athletePos = LatLng(48.5072, 9.0000)
+        val state = RouteDivergenceDetector.detectDivergence(listOf(route1, route2), athletePos)
+
+        assertNotNull("Fork must be detected accurately even with non-zero path.first().distance", state)
+        requireNotNull(state)
+        assertTrue("Distance to fork should be ~200m, was ${state.distanceToForkMeters}",
+            state.distanceToForkMeters in 150.0..250.0)
+        assertEquals(2, state.branches.size)
+        assertNotNull(state.branches.find { it.routeId == 1L && it.direction == ForkDirection.LEFT })
+        assertNotNull(state.branches.find { it.routeId == 2L && it.direction == ForkDirection.RIGHT })
+    }
 }

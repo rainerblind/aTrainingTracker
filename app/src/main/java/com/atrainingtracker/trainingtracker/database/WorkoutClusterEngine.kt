@@ -1112,12 +1112,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         val clusters = dbManager.getAllClusters().map { cluster ->
             val realCount = actualCounts[cluster.id] ?: 0
             if (cluster.hitCount != realCount) {
-                val healed = cluster.copy(
+                // Read-only scoring projection: reflect authoritative counts in-memory without
+                // performing hidden SQLite writes during read queries (REQ-GEO-003, ATT-8133).
+                cluster.copy(
                     hitCount = realCount,
                     previewPaths = if (realCount == 0) emptyList() else cluster.previewPaths
                 )
-                dbManager.updateCluster(healed)
-                healed
             } else {
                 cluster
             }

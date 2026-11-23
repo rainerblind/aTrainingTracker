@@ -217,5 +217,33 @@ class RouteAutoDetectorTest {
             )
         }
     }
+
+    @Test
+    fun testDistanceToSegmentMeters_cosLatSymmetryAt50North_TST_GEO_003() {
+        val origin = LatLng(50.0, 9.0)
+        val metersPerDegLat = Math.toRadians(1.0) * GeoUtils.EARTH_RADIUS_METERS
+        val metersPerDegLng = metersPerDegLat * kotlin.math.cos(Math.toRadians(origin.latitude))
+        fun offset(nMeters: Double, eMeters: Double) =
+            LatLng(origin.latitude + nMeters / metersPerDegLat, origin.longitude + eMeters / metersPerDegLng)
+
+        val lateralOffset = 40.0
+        val ewEnd = offset(0.0, 1000.0)
+        val ewPoint = offset(lateralOffset, 500.0)
+        val nsEnd = offset(1000.0, 0.0)
+        val nsPoint = offset(500.0, lateralOffset)
+        val c45 = kotlin.math.cos(Math.toRadians(45.0))
+        val diagEnd = offset(1000.0 * c45, 1000.0 * c45)
+        val diagPoint = offset(500.0 * c45 + lateralOffset * c45, 500.0 * c45 - lateralOffset * c45)
+
+        val dEw = RouteAutoDetector.distanceToSegmentMeters(ewPoint.latitude, ewPoint.longitude, origin, ewEnd).toDouble()
+        val dNs = RouteAutoDetector.distanceToSegmentMeters(nsPoint.latitude, nsPoint.longitude, origin, nsEnd).toDouble()
+        val dDiag = RouteAutoDetector.distanceToSegmentMeters(diagPoint.latitude, diagPoint.longitude, origin, diagEnd).toDouble()
+
+        assertEquals(lateralOffset, dEw, 0.2)
+        assertEquals(lateralOffset, dNs, 0.2)
+        assertEquals(lateralOffset, dDiag, 0.2)
+        org.junit.Assert.assertTrue(kotlin.math.abs(dEw - dNs) / lateralOffset < 0.005)
+        org.junit.Assert.assertTrue(kotlin.math.abs(dEw - dDiag) / lateralOffset < 0.005)
+    }
 }
 

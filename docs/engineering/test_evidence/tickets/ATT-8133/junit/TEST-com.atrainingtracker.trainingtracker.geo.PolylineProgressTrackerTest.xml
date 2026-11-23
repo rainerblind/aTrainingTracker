@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:10.224Z" hostname="rainer-HP-EliteBook-850-G5" time="0.017">
+  <properties/>
+  <testcase name="testFinishGateCrossingDetection" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.01"/>
+  <testcase name="testForwardStartGateCrossingDetection" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.001"/>
+  <testcase name="testCorridorExceedanceFallsBackToGlobalSearch" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.001"/>
+  <testcase name="testEquirectangularProjectionOnDiagonalSegmentAt50N" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testParallelPassWithoutSignFlipRejection" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testSinglePointPolylineProjection" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.001"/>
+  <testcase name="testBlendedRemainingDistanceConvergence" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testHeadingAlignment" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testOrthogonalSegmentProjectionExactMidpoint" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testOrthogonalSegmentProjectionWithLateralOffset" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testStatelessCallerBackwardCompatibility" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testCreateStartGateAndFinishGate" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testGateCrossingOutsideDistanceThresholdRejection" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testGateOrthogonalityAt50N" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testCrossProduct" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testOutAndBackWindowedSegmentContinuityUnderLateralJitter" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.0"/>
+  <testcase name="testReverseStartGateCrossingRejection" classname="com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

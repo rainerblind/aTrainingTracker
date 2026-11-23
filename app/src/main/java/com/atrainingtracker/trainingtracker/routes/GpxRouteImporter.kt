@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationService
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
@@ -62,7 +63,7 @@ class GpxRouteImporter @JvmOverloads constructor(
     companion object {
         private const val TAG = "GpxRouteImporter"
         const val MAX_BATCH_SIZE = 100
-        const val ELEVATION_GAIN_HYSTERESIS_METERS = 2.0
+        const val ELEVATION_GAIN_HYSTERESIS_METERS = GeoMath.DEFAULT_ELEVATION_GAIN_HYSTERESIS_METERS
     }
 
     /**
@@ -211,22 +212,6 @@ class GpxRouteImporter @JvmOverloads constructor(
     }
 
     private fun calculateElevationGain(points: List<PathPoint>): Double {
-        var gain = 0.0
-        var lastAlt: Double? = null
-        for (point in points) {
-            val alt = point.altitude ?: continue
-            if (lastAlt == null) {
-                lastAlt = alt
-                continue
-            }
-            val delta = alt - lastAlt
-            if (delta >= ELEVATION_GAIN_HYSTERESIS_METERS) {
-                gain += delta
-                lastAlt = alt
-            } else if (delta <= -ELEVATION_GAIN_HYSTERESIS_METERS) {
-                lastAlt = alt
-            }
-        }
-        return gain
+        return GeoMath.calculatePathElevationGain(points, ELEVATION_GAIN_HYSTERESIS_METERS)
     }
 }

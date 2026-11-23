@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerDeduplicationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:12:43.724Z" hostname="rainer-HP-EliteBook-850-G5" time="1.252">
+  <properties/>
+  <testcase name="testInsertRoute_whenNewRoute_insertsRowAndPoints" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerDeduplicationTest" time="0.718"/>
+  <testcase name="testInsertRoute_whenDuplicateExternalId_updatesSummaryAndReplacesPoints" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerDeduplicationTest" time="0.28"/>
+  <testcase name="testInsertRoute_whenMultipleLegacyDuplicatesExist_purgesLegacyDuplicates" classname="com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerDeduplicationTest" time="0.253"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

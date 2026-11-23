@@ -55,7 +55,7 @@ class ForkRouteMatcherTest {
         val midPos = LatLng(48.5050, 9.0000)
         val projOn = ForkRouteMatcher.projectOntoPolyline(midPos, path)
         assertEquals(0.0, projOn.crossTrackDistanceMeters, 1.0)
-        assertEquals(555.5, projOn.distanceAlongRouteMeters, 2.0)
+        assertEquals(555.5, projOn.alongTrackDistance, 2.0)
 
         // Point offset by ~100m East
         val offsetPos = LatLng(48.5050, 9.00135)

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.routes
 import android.location.Location
 import android.util.Log
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlin.math.abs
@@ -190,24 +191,7 @@ class RouteAutoDetector(
             pointLat: Double, pointLng: Double,
             p1: LatLng, p2: LatLng
         ): Float {
-            // Simplified projection to segment
-            val d1 = computeDistanceMeters(pointLat, pointLng, p1.latitude, p1.longitude)
-            val d2 = computeDistanceMeters(pointLat, pointLng, p2.latitude, p2.longitude)
-            val segmentLen = computeDistanceMeters(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
-
-            if (segmentLen < 1e-4) return d1
-
-            val r = ((pointLat - p1.latitude) * (p2.latitude - p1.latitude) +
-                    (pointLng - p1.longitude) * (p2.longitude - p1.longitude)) /
-                    ((p2.latitude - p1.latitude) * (p2.latitude - p1.latitude) +
-                            (p2.longitude - p1.longitude) * (p2.longitude - p1.longitude))
-
-            if (r <= 0.0) return d1
-            if (r >= 1.0) return d2
-
-            val projLat = p1.latitude + r * (p2.latitude - p1.latitude)
-            val projLng = p1.longitude + r * (p2.longitude - p1.longitude)
-            return computeDistanceMeters(pointLat, pointLng, projLat, projLng)
+            return GeoMath.distanceToSegmentMeters(pointLat, pointLng, p1, p2).toFloat()
         }
     }
 }

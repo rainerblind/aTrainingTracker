@@ -1,0 +1,78 @@
+{
+  "android_test_summary": {
+    "errors": 0,
+    "failing_tests": [],
+    "failures": 0,
+    "skipped": 0,
+    "total": 236
+  },
+  "checks": [
+    {
+      "details": "Android: 236/236 PASS (0 fail, 0 err, 0 skip) across 29 focused in-scope suites via --rerun --tests (select_dependent_tests matched 125 Android classes > 80 threshold). | Python: N/A (0 Python files changed).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10805 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "c00879b25acbf799e721e8664ea8f8170603868f",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.climbs.ClimbDeduplicatorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerDeduplicationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerMapperTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerOptimizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerTTLTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.RoutesDatabaseManagerWaypointTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterAutoNamingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineRouteSyncTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.geo.GeoMathTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.geo.PolylineProgressTrackerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.ForkNavigationRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.ForkRouteMatcherTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.GpxRouteImporterWaypointTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.ReturnCorridorSnapperTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.RouteAutoDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.RouteDivergenceDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcherTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.TcxCourseParserTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationEngineTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.TurnCueDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.routes.WaypointDistanceCalculatorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelFilterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.routes.RoutesViewModelTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-23T07:14:18.148866+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-8133",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

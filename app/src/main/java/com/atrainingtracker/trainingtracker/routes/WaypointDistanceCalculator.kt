@@ -18,22 +18,23 @@
 
 package com.atrainingtracker.trainingtracker.routes
 
-import android.location.Location
+import com.atrainingtracker.trainingtracker.geo.GeoMath
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import kotlin.math.cos
 
 /**
  * Utility for calculating the cumulative distance offset along a route polyline for waypoints.
  *
  * Traceability:
  * - REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points.
+ * - REQ-GEO-003: Consolidated polyline projection via [GeoMath].
  * - TST-MAP-028: Waypoint projection and distance calculation.
  */
 object WaypointDistanceCalculator {
 
     /**
      * Projects a list of [RouteWaypoint] objects onto a polyline formed by [pathPoints]
-     * and assigns an accurate cumulative `distanceFromStart` in meters.
+     * via canonical [GeoMath.projectOntoPolyline] and assigns an accurate cumulative
+     * `distanceFromStart` in meters.
      *
      * Returns the waypoints sorted in ascending order of `distanceFromStart`.
      */
@@ -47,54 +48,16 @@ object WaypointDistanceCalculator {
             return waypoints.map { it.copy(distanceFromStart = 0.0) }
         }
 
+        val originDist = pathPoints.first().distance
         val totalDist = pathPoints.last().distance
 
         val projected = waypoints.map { waypoint ->
-            val wLat = waypoint.latLng.latitude
-            val wLng = waypoint.latLng.longitude
-
-            var minDistanceToSegment = Double.MAX_VALUE
-            var bestDistanceAlongRoute = 0.0
-
-            for (i in 0 until pathPoints.size - 1) {
-                val p1 = pathPoints[i]
-                val p2 = pathPoints[i + 1]
-
-                val aLat = p1.latLng.latitude
-                val aLng = p1.latLng.longitude
-                val bLat = p2.latLng.latitude
-                val bLng = p2.latLng.longitude
-
-                val latAvgRad = Math.toRadians((aLat + bLat) / 2.0)
-                val cosLat = cos(latAvgRad)
-
-                val dx = (bLng - aLng) * cosLat
-                val dy = bLat - aLat
-                val segLenSq = dx * dx + dy * dy
-
-                val t: Double = if (segLenSq < 1e-14) {
-                    0.0
-                } else {
-                    val wx = (wLng - aLng) * cosLat
-                    val wy = wLat - aLat
-                    val proj = (wx * dx + wy * dy) / segLenSq
-                    proj.coerceIn(0.0, 1.0)
-                }
-
-                val qLat = aLat + t * (bLat - aLat)
-                val qLng = aLng + t * (bLng - aLng)
-
-                val results = FloatArray(1)
-                Location.distanceBetween(wLat, wLng, qLat, qLng, results)
-                val distToSegment = results[0].toDouble()
-
-                if (distToSegment < minDistanceToSegment) {
-                    minDistanceToSegment = distToSegment
-                    val segDist = (p2.distance - p1.distance).coerceAtLeast(0.0)
-                    bestDistanceAlongRoute = p1.distance + t * segDist
-                }
+            val proj = GeoMath.projectOntoPolyline(pathPoints, waypoint.latLng)
+            val bestDistanceAlongRoute = if (proj != null) {
+                originDist + proj.alongTrackDistance
+            } else {
+                0.0
             }
-
             waypoint.copy(
                 distanceFromStart = bestDistanceAlongRoute.coerceIn(0.0, totalDist)
             )

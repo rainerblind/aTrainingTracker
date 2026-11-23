@@ -1,14 +1,14 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 71
+**Total Tests**: 72
 
 ---
 
@@ -1319,6 +1319,24 @@
   5. *Contract, Static Audit & `Rule 8.5` Visual Verification (`TST-MAP-071.5`)*:
   • Run `WorkoutClusterSplitMapPreviewTest`, `WorkoutLapsIconContractTest`, `DarkMapAntiFlashOverlayTest`, `DarkMapStyleResolutionTest`, `MapPreviewLiteModeTest`, `RouteItemWaypointContractTest`, `ThemeColorCentralizationAuditTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, and `ArchitectureConformanceContractTest` asserting 100% pass, plus Stage 5 `Rule 8.5` Light/Dark `@Preview` PNG check.
 
+### TST-GEO-003: **Consolidated GeoMath Polyline Projection, Elevation-Gain Hysteresis, Read-Only Cluster Scoring & Lightweight Rename Sync Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-GEO-003` (`REQ-GEO-003.1`..`REQ-GEO-003.3`)
+- **Component**: `GeoMath.kt`, `PolylineProgressTracker.kt`, `ForkRouteMatcher.kt`, `RouteSegmentMatcher.kt`, `ReturnCorridorSnapper.kt`, `TurnByTurnNavigationEngine.kt`, `RouteAutoDetector.kt`, `WaypointDistanceCalculator.kt`, `ClimbDeduplicator.kt`, `GpxRouteImporter.kt`, `TcxCourseParser.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `RoutesDatabaseManager.kt`, `RoutesRepository.kt`
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/geo/GeoMathTest.kt::GeoMathTest::testCosLatIsotropyAt50North_eastWestNorthSouthAndDiagonalWithin0_5Percent_TST_GEO_003`, `app/src/test/java/com/atrainingtracker/trainingtracker/geo/GeoMathTest.kt::GeoMathTest::testSingleCanonicalPolylineProjectionExists_TST_GEO_003`, `app/src/test/java/com/atrainingtracker/trainingtracker/geo/GeoMathTest.kt::GeoMathTest::testUnifiedElevationGainHysteresis_andTcxGpxParity_TST_GEO_003`, `app/src/test/java/com/atrainingtracker/trainingtracker/routes/RouteAutoDetectorTest.kt::RouteAutoDetectorTest::testDistanceToSegmentMeters_cosLatSymmetryAt50North_TST_GEO_003`, `app/src/test/java/com/atrainingtracker/trainingtracker/database/EditWorkoutClusterTest.kt::EditWorkoutClusterTest::testGetClusterScores_reconcilesStaleHitCountAgainstWorkoutSummaries`, `app/src/test/java/com/atrainingtracker/trainingtracker/repositories/RoutesRepositorySyncTest.kt::RoutesRepositorySyncTest::testSyncClusterNameChange_updatesRouteWithoutCallingClusterEngine_TST_PER_048_2` (`ATT-8133`)
+- **Jira**: `ATT-8133` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Canonical `PolylineProjection` & $\cos(\phi)$ Isotropy Across All Projectors (`TST-GEO-003.1`, `GeoMathTest.kt`, `RouteAutoDetectorTest.kt`)*:
+  • Assert `com.atrainingtracker.trainingtracker.routes.PolylineProjection` no longer exists and `ForkRouteMatcher.projectOntoPolyline()` returns `geo.PolylineProjection`.
+  • Verify East-West, North-South, and 45° diagonal lateral offsets at 50° N (and 65° N) match true offset within `< 0.5 %` across `GeoMath`, `RouteAutoDetector`, `ClimbDeduplicator`, `PolylineProgressTracker`, `ForkRouteMatcher`, `ReturnCorridorSnapper`, `TurnByTurnNavigationEngine`, `WaypointDistanceCalculator`, and `RouteSegmentMatcher`.
+  2. *Unified Elevation-Gain Hysteresis Parity (`TST-GEO-003.2`, `GeoMathTest.kt`, `GpxRouteImporterElevationTest.kt`, `TcxCourseParserTest.kt`)*:
+  • Verify `GeoMath.calculateElevationGain()` suppresses `< 2.0 m` noise, handles null/NaN/Infinity safely, and matches `TcxCourseParser` & `GpxRouteImporter` outputs identically.
+  3. *Read-Only `getClusterScores()` & Zero-Geometry-Reload Rename Sync (`TST-GEO-003.3`, `EditWorkoutClusterTest.kt`, `RoutesRepositorySyncTest.kt`, `WorkoutClusterRepositoryTest.kt`)*:
+  • Verify `WorkoutClusterEngine.getClusterScores()` projects authoritative counts in-memory with `0` SQLite writes (`updateCluster`/`insertCluster`/`deleteCluster` never called).
+  • Verify `RoutesRepository.syncClusterNameChange()` and `updateRouteSummary()` update metadata in-place with `0` calls to `getAllRoutes()`, `getRouteByClusterId()`, or `getRoutePath()`, and `WorkoutClusterRepository.onRouteSyncedClusterRename()` patches `_allClusters` in-place without calling `getAllClusters()`.
+
 ---
 
 ## Change History
@@ -1331,3 +1349,4 @@
 | `1.0.3` | 2026-11-18 | AI Agent (`ATT-8736`) | `ATT-8736` | Promoted `TST-MAP-071` to `[Verified]` in Stage 5 (`PathPreviewMapBoundsTest`, `WorkoutSummaryMapMemoizationTest`, emulator UI check). |
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8326`) | `ATT-8326` | Code-grounded `TST-NAV-001/002/003/005/006` and `TST-MAP-010/020` (`[Implemented]`) with deterministic `createComposeRule()` / Robolectric / JVM test specs and GL boundary. |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8326`) | `ATT-8326` | Promoted `TST-NAV-001/002/003/005/006` and `TST-MAP-010/020` to `[Verified]` with `- **Code**:` pointers and Stage 5 `emulator-5554` verification. |
+| `1.0.7` | 2026-11-23 | Lane 1 Author (`ATT-8133`, `--as agent1`) | `ATT-8133` | Added & verified `TST-GEO-003` verifying `REQ-GEO-003` (`GeoMathTest`, `RouteAutoDetectorTest`, `EditWorkoutClusterTest`, `RoutesRepositorySyncTest`, `WorkoutClusterRepositoryTest`). |

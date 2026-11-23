@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.WaypointDistanceCalculatorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T07:13:12.479Z" hostname="rainer-HP-EliteBook-850-G5" time="0.653">
+  <properties/>
+  <testcase name="testCalculateWaypointDistance_withMultiplePoints_sortsByAscendingDistance" classname="com.atrainingtracker.trainingtracker.routes.WaypointDistanceCalculatorTest" time="0.261"/>
+  <testcase name="testCalculateWaypointDistance_projectsAccuratelyOntoStraightPolyline" classname="com.atrainingtracker.trainingtracker.routes.WaypointDistanceCalculatorTest" time="0.188"/>
+  <testcase name="testCalculateWaypointDistance_withEmptyPathOrWaypoints_handlesGracefully" classname="com.atrainingtracker.trainingtracker.routes.WaypointDistanceCalculatorTest" time="0.204"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

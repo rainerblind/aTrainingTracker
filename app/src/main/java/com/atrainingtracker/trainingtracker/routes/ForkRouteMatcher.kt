@@ -20,25 +20,17 @@ package com.atrainingtracker.trainingtracker.routes
 
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.geo.GeoMath
+import com.atrainingtracker.trainingtracker.geo.PolylineProjection
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.routes.RouteProximityRanker
 import com.google.android.gms.maps.model.LatLng
 import kotlin.math.cos
 
 /**
- * Result of projecting a point onto a polyline.
- */
-data class PolylineProjection(
-    val distanceAlongRouteMeters: Double,
-    val crossTrackDistanceMeters: Double,
-    val nearestSegmentIndex: Int,
-    val projectedPoint: LatLng
-)
-
-/**
  * Matches athlete trajectory against candidate routes along an outbound corridor.
  *
- * Conforms to REQ-MAP-031 clause 1 and REQ-MAP-038 clauses 1 & 2.
+ * Conforms to REQ-MAP-031 clause 1, REQ-MAP-038 clauses 1 & 2, and REQ-GEO-003.
  */
 object ForkRouteMatcher {
 
@@ -70,65 +62,19 @@ object ForkRouteMatcher {
     }
 
     /**
-     * Projects a coordinate onto a polyline path and returns orthogonal cross-track distance
-     * and cumulative distance along the path.
+     * Projects a coordinate onto a polyline path via canonical [GeoMath.projectOntoPolyline]
+     * and returns the canonical [PolylineProjection] (REQ-GEO-003).
      */
     fun projectOntoPolyline(point: LatLng, path: List<PathPoint>): PolylineProjection {
-        if (path.isEmpty()) {
-            return PolylineProjection(0.0, Double.MAX_VALUE, 0, point)
-        }
-        if (path.size == 1) {
-            val d = GeoUtils.haversineDistanceMeters(
-                point.latitude, point.longitude,
-                path[0].latLng.latitude, path[0].latLng.longitude
-            )
-            return PolylineProjection(0.0, d, 0, path[0].latLng)
-        }
-
-        var minDistance = Double.MAX_VALUE
-        var bestSegmentIndex = 0
-        var bestT = 0.0
-        var bestProjected = path[0].latLng
-
-        for (i in 0 until path.size - 1) {
-            val p1 = path[i].latLng
-            val p2 = path[i + 1].latLng
-
-            val midLatRad = Math.toRadians((p1.latitude + p2.latitude) / 2.0)
-            val cosMid = cos(midLatRad)
-            val dx = (p2.longitude - p1.longitude) * cosMid
-            val dy = p2.latitude - p1.latitude
-            val vx = (point.longitude - p1.longitude) * cosMid
-            val vy = point.latitude - p1.latitude
-
-            val lenSq = dx * dx + dy * dy
-            val t = if (lenSq > 0.0) ((vx * dx + vy * dy) / lenSq).coerceIn(0.0, 1.0) else 0.0
-
-            val projLat = p1.latitude + t * (p2.latitude - p1.latitude)
-            val projLng = p1.longitude + t * (p2.longitude - p1.longitude)
-
-            val dist = GeoUtils.haversineDistanceMeters(
-                point.latitude, point.longitude,
-                projLat, projLng
-            )
-
-            if (dist < minDistance) {
-                minDistance = dist
-                bestSegmentIndex = i
-                bestT = t
-                bestProjected = LatLng(projLat, projLng)
-            }
-        }
-
-        val segStartDist = path[bestSegmentIndex].distance
-        val segEndDist = path[bestSegmentIndex + 1].distance
-        val distAlong = segStartDist + bestT * (segEndDist - segStartDist)
-
-        return PolylineProjection(
-            distanceAlongRouteMeters = distAlong,
-            crossTrackDistanceMeters = minDistance,
-            nearestSegmentIndex = bestSegmentIndex,
-            projectedPoint = bestProjected
+        return GeoMath.projectOntoPolyline(path, point) ?: PolylineProjection(
+            projectedLatLng = point,
+            segmentIndex = 0,
+            t = 0.0,
+            alongTrackDistance = 0.0,
+            crossTrackDistanceMeters = Double.MAX_VALUE,
+            progressFraction = 0f,
+            interpolatedAltitude = null,
+            instantaneousGradePercent = null
         )
     }
 
@@ -198,19 +144,19 @@ object ForkRouteMatcher {
                 if (projOldest.crossTrackDistanceMeters > MAX_CORRIDOR_TOLERANCE_METERS) {
                     continue
                 }
-                val sharedDistance = proj.distanceAlongRouteMeters - projOldest.distanceAlongRouteMeters
+                val sharedDistance = proj.alongTrackDistance - projOldest.alongTrackDistance
                 if (sharedDistance < MIN_SHARED_PREFIX_METERS) {
                     // Check if current distance from route start satisfies prefix
-                    if (proj.distanceAlongRouteMeters < MIN_SHARED_PREFIX_METERS) {
+                    if (proj.alongTrackDistance < MIN_SHARED_PREFIX_METERS) {
                         continue
                     }
                 }
                 // Check forward heading alignment
-                if (sharedDistance <= 0.0 && proj.distanceAlongRouteMeters < MIN_SHARED_PREFIX_METERS) {
+                if (sharedDistance <= 0.0 && proj.alongTrackDistance < MIN_SHARED_PREFIX_METERS) {
                     continue
                 }
             } else {
-                if (proj.distanceAlongRouteMeters < MIN_SHARED_PREFIX_METERS) {
+                if (proj.alongTrackDistance < MIN_SHARED_PREFIX_METERS) {
                     continue
                 }
             }
