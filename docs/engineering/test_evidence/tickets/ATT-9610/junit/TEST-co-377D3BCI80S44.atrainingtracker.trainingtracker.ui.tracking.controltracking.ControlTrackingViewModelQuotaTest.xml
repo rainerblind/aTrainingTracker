@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelQuotaTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:48:35.538Z" hostname="rainer-HP-EliteBook-850-G5" time="8.942">
+  <properties/>
+  <testcase name="testOnStartTracking_sendsBroadcast_whenReconciliationNotRequired" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelQuotaTest" time="2.356"/>
+  <testcase name="testOnStartTracking_suppressesBroadcast_whenReconciliationTriggered" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelQuotaTest" time="2.226"/>
+  <testcase name="testOnSearchClicked_suppressesSearch_whenReconciliationTriggered" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelQuotaTest" time="2.157"/>
+  <testcase name="testOnSearchClicked_startsSearch_whenReconciliationNotRequired" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelQuotaTest" time="2.203"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

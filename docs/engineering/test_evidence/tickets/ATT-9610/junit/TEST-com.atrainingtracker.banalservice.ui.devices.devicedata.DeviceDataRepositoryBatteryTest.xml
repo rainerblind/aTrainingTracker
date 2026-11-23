@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryBatteryTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:47:05.848Z" hostname="rainer-HP-EliteBook-850-G5" time="2.842">
+  <properties/>
+  <testcase name="testNotifyBatteryUpdated_reactivelyUpdatesAllDevicesStateFlow" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryBatteryTest" time="2.842"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

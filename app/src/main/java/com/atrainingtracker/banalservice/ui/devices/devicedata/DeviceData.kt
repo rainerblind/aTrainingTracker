@@ -26,6 +26,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.sensor.HrModality
+import com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitrator
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import java.util.Locale
 
@@ -58,7 +60,8 @@ data class DeviceRawData(
     val polarH10OfflineRecording: Boolean = true,
     val polarLiveImuEnabled: Boolean = false,
     val linkedWheelPositions: Map<String, WheelPosition> = emptyMap(),
-    val wheelPositionConflicts: Map<String, Map<WheelPosition, String>> = emptyMap()
+    val wheelPositionConflicts: Map<String, Map<WheelPosition, String>> = emptyMap(),
+    val btAddress: String? = null
 )
 
 /**
@@ -98,7 +101,9 @@ data class DeviceUiData(
     val isNewlyDiscovered: Boolean = false,
     val polarLiveImuEnabled: Boolean = false,
     val linkedWheelPositions: Map<String, WheelPosition> = emptyMap(),
-    val wheelPositionConflicts: Map<String, Map<WheelPosition, String>> = emptyMap()
+    val wheelPositionConflicts: Map<String, Map<WheelPosition, String>> = emptyMap(),
+    val btAddress: String? = null,
+    val hrModality: HrModality? = null
 )
 
 // --- THE NEW, SIMPLIFIED FACTORY ---
@@ -131,6 +136,19 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
     val batteryPercentage = when (rawData.protocol) {
         Protocol.SMARTPHONE -> getSmartphoneBatteryPercentage(context)
         else -> rawData.batteryPercentage
+    }
+
+    val hrModality = if (rawData.deviceType == DeviceType.HRM) {
+        PrimaryHrSensorArbitrator.resolveModality(
+            protocol = rawData.protocol,
+            deviceType = rawData.deviceType,
+            deviceName = rawData.deviceName,
+            manufacturer = rawData.manufacturer,
+            macAddress = rawData.btAddress,
+            context = context
+        )
+    } else {
+        null
     }
 
 
@@ -166,7 +184,9 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         linkedSportTypes = rawData.linkedSportTypes,
         polarLiveImuEnabled = rawData.polarLiveImuEnabled,
         linkedWheelPositions = rawData.linkedWheelPositions,
-        wheelPositionConflicts = rawData.wheelPositionConflicts
+        wheelPositionConflicts = rawData.wheelPositionConflicts,
+        btAddress = rawData.btAddress,
+        hrModality = hrModality
         )
 }
 

@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.158  
+**Version**: 1.0.159  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -25,13 +25,13 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [UI Components & Design System (Part 3)](requirements/req_ui_design_system_part3.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 75 | 74 | 1 | 0 |
 | [UI Components & Design System (Part 4)](requirements/req_ui_design_system_part4.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 78 | 78 | 0 | 0 |
 | [UI Components & Design System (Part 5)](requirements/req_ui_design_system_part5.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 56 | 56 | 0 | 0 |
-| [UI Components & Design System (Part 6)](requirements/req_ui_design_system_part6.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 47 | 47 | 0 | 0 |
+| [UI Components & Design System (Part 6)](requirements/req_ui_design_system_part6.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI` | 48 | 48 | 0 | 0 |
 | [Engineering Process, Stability & Architecture (Part 1)](requirements/req_process_stability_part1.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `LIV`, `NFR`, `PRO`, `SEC`, `STB`, `TOOL`, `TST` | 110 | 84 | 26 | 0 |
 | [Engineering Process, Stability & Architecture (Part 2)](requirements/req_process_stability_part2.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `PRO` | 104 | 102 | 1 | 1 |
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1361 across 18 domain shards.
+**Total Living Requirements**: 1362 across 18 domain shards.
 
 ---
 
@@ -120,3 +120,4 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.149` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Added and verified `REQ-CON-056` (`[Verified]`, `.1`–`.4`) in `req_tracking_cockpit_part3.md` (`v1.0.17`) and synchronized master index (`Total=1352`). |
 | `1.0.154` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Added and verified `REQ-UI-2803` (`[Verified]`, `.1`–`.3`) in `req_ui_design_system_part6.md` (`v1.0.31`) and synchronized master index (`Total=1357`, `Verified=1231`). |
 | `1.0.158` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Synchronized master index for `[Verified]` `REQ-SET-130` (`req_settings_profiles.md`, `Total=1361`, `Verified=1235`). |
+| `1.0.159` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Synchronized master index for `[Verified]` `REQ-UI-2804` (`req_ui_design_system_part6.md`, `Total=1362`, `Verified=1236`) and `REQ-UI-268.5` note (`req_ui_design_system_part2.md`). |

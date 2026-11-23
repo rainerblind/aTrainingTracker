@@ -24,9 +24,15 @@ import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.devices.SimpleSensorData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.HrHealthTier
+import com.atrainingtracker.banalservice.sensor.HrModality
+import com.atrainingtracker.banalservice.sensor.HrSensorHealthProvider
+import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -278,5 +284,45 @@ class BANALServiceRepositoryMemoryTest {
         testDispatcher.scheduler.runCurrent()
 
         assertEquals("True movement must append new track breadcrumb", 2, repository.currentTrack.value.size)
+    }
+
+    private abstract class MockHealthHrDevice : MyDevice(null, null, null), HrSensorHealthProvider
+
+    @Test
+    fun testAllActiveDevicesTelemetry_populatesHrHealthTierAndModalityFromArbitrator() {
+        val repository = BANALServiceRepository.getInstance(mockContext)
+        val mockBinder = mockk<BANALService.BANALServiceComm>(relaxed = true)
+
+        val h10Device = mockk<MockHealthHrDevice>(relaxed = true)
+        val h10Sensor = mockk<MySensor<Int>>(relaxed = true)
+        every { h10Device.deviceId } returns 101L
+        every { h10Device.deviceType } returns DeviceType.HRM
+        every { h10Device.getSensor(SensorType.HR) } returns h10Sensor
+        every { h10Device.getHrModality() } returns HrModality.ECG
+        every { h10Device.getHrHealthTier(any()) } returns HrHealthTier.HEALTHY
+        every { h10Sensor.device } returns h10Device
+        every { h10Sensor.isActivated } returns true
+
+        val verityDevice = mockk<MockHealthHrDevice>(relaxed = true)
+        val veritySensor = mockk<MySensor<Int>>(relaxed = true)
+        every { verityDevice.deviceId } returns 102L
+        every { verityDevice.deviceType } returns DeviceType.HRM
+        every { verityDevice.getSensor(SensorType.HR) } returns veritySensor
+        every { verityDevice.getHrModality() } returns HrModality.OPTICAL_PPG
+        every { verityDevice.getHrHealthTier(any()) } returns HrHealthTier.DEGRADED
+        every { veritySensor.device } returns verityDevice
+        every { veritySensor.isActivated } returns true
+
+        every { mockBinder.activeDevicesIncludingSpeedAndLocationDevices } returns listOf(h10Device, verityDevice)
+
+        setServiceBinder(repository, mockBinder)
+        testDispatcher.scheduler.runCurrent()
+
+        val telemetries = repository.allActiveDevicesTelemetry.value
+        assertEquals(2, telemetries.size)
+        assertEquals(HrHealthTier.HEALTHY, telemetries[0].hrHealthTier)
+        assertEquals(HrModality.ECG, telemetries[0].hrModality)
+        assertEquals(HrHealthTier.DEGRADED, telemetries[1].hrHealthTier)
+        assertEquals(HrModality.OPTICAL_PPG, telemetries[1].hrModality)
     }
 }
