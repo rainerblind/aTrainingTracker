@@ -1,7 +1,7 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.50  
+**Version**: 1.0.51  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1116,7 +1116,7 @@
 ### REQ-EXP-047: Per-Channel GNSS Row Deduplication, Location Provider Tagging (`GNSS` vs `GNSS_FUSED`) & Backwards-Compatible Offline Replay Selection (`ATT-9604`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-EXP-047`
-- **System Requirement(s)**: `Derived (SW-only)` — Internal software-only sidecar row deduplication and provider channel disambiguation extending `REQ-EXP-045` / `REQ-EXP-046` without modifying external hardware sensors, Android HALs, SQLite schemas, or cloud APIs.
+- **System Requirement(s)**: `SYSREQ-TRK-010`, `SYSREQ-DEX-001` — Per-channel GNSS row deduplication and provider channel disambiguation (`GNSS` vs `GNSS_FUSED`) extending `REQ-EXP-045` / `REQ-EXP-046` for smartphone raw telemetry sidecar capture and offline replay.
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1145,7 +1145,7 @@
 ### REQ-EXP-048: Preserve Irreplaceable Raw Sensor Sidecars During `ExportManager.invalidateWorkoutExport` (`ATT-9613`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-EXP-048`
-- **System Requirement(s)**: `Derived (SW-only)` — Internal `FileFormat` derived-cache classification and `ExportManager.invalidateWorkoutExport` file-cleanup filter refining `REQ-DAT-029.4` and protecting `REQ-EXP-044.1` / `REQ-EXP-045.3`–`.4` raw sidecars without altering external hardware sensors, HALs, cloud REST APIs, or SQLite schemas.
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-004` — Derived export cache classification in `FileFormat` and `ExportManager.invalidateWorkoutExport` cleanup filtering refining `REQ-DAT-029.4` and protecting `REQ-EXP-044.1` / `REQ-EXP-045.3`–`.4` irreplaceable raw sensor sidecars during re-export and cloud sync.
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
