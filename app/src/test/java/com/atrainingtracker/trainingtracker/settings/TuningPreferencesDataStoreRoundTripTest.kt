@@ -107,6 +107,7 @@ class TuningPreferencesDataStoreRoundTripTest {
                 clusterUseSportType = false,
                 clusterUseAltitudePos = false,
                 clusterScoreThreshold = 1.9f,
+                askOnNewClusterDuringImport = true,
                 autoPauseBikeEnabled = false,
                 autoPauseRunEnabled = true,
                 autoPauseOtherEnabled = true,
@@ -176,7 +177,7 @@ class TuningPreferencesDataStoreRoundTripTest {
                 "autoPauseDebounceSec"
             )
             val fields = TuningConfig::class.java.declaredFields.filter { !Modifier.isStatic(it.modifiers) }
-            assertEquals("Expected all 102 TuningConfig backing fields to be inspected", 102, fields.size)
+            assertEquals("Expected all 103 TuningConfig backing fields to be inspected", 103, fields.size)
             for (field in fields) {
                 field.isAccessible = true
                 if (field.name !in excludedFromDiffCheck) {

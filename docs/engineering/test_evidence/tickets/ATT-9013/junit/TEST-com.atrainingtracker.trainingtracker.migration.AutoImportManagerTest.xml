@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:26:30.948Z" hostname="rainer-HP-EliteBook-850-G5" time="9.172">
+  <properties/>
+  <testcase name="testCooldownSuppressesImmediateRepeat" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="2.977"/>
+  <testcase name="testSyncWhenAutoImportDisabledReturnsEarly" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.906"/>
+  <testcase name="testSyncIncremental_installsBulkImportBatchContextAndRefreshesClimbsOnceWhenClimbsPersisted" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="2.29"/>
+  <testcase name="testPreDownloadDeduplicationAndIncrementalSync_TST_MIG_050_2" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.998"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

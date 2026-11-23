@@ -28,4 +28,6 @@
     <string name="auto_import_format_tcx">TCX</string>
     <string name="auto_import_format_gpx">GPX</string>
     <string name="auto_import_format_all">All</string>
+    <string name="cluster_tuning_ask_on_new_import_label">Prompt to name new routes during import</string>
+    <string name="cluster_tuning_ask_on_new_import_summary">When off, new routes are created silently and named after the first workout.</string>
 </resources>

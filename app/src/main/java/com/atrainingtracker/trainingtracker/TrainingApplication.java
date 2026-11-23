@@ -164,6 +164,7 @@ public class TrainingApplication extends Application {
     public static final String SP_CLUSTER_USE_ALTITUDE_POS = "clusterUseAltitudePos";
     public static final String SP_CLUSTER_TOL_ALTITUDE_POS = "clusterTolAltitudePos";
     public static final String SP_CLUSTER_SCORE_THRESHOLD = "cluster_score_threshold";
+    public static final String SP_CLUSTER_ASK_ON_NEW_DURING_IMPORT = "cluster_ask_on_new_during_import";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
@@ -1145,6 +1146,7 @@ public class TrainingApplication extends Application {
     public static boolean useAltitudePosForClustering() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterUseAltitudePos() : (cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_CLUSTER_USE_ALTITUDE_POS, true) : true); }
     public static float getClusterTolAltitudePos() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterTolAltitudePos() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_TOL_ALTITUDE_POS, 400f) : 400f); }
     public static float getClusterScoreThreshold() { var c = getTuningConfigOrNull(); return c != null ? c.getClusterScoreThreshold() : (cSharedPreferences != null ? cSharedPreferences.getFloat(SP_CLUSTER_SCORE_THRESHOLD, 1.2f) : 1.2f); }
+    public static boolean askOnNewClusterDuringImport() { var c = getTuningConfigOrNull(); return c != null ? c.getAskOnNewClusterDuringImport() : (cSharedPreferences != null && cSharedPreferences.getBoolean(SP_CLUSTER_ASK_ON_NEW_DURING_IMPORT, false)); }
 
     private enum StravaSyncPref {
         EQUIPMENT(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, R.string.lastUpdateOfEquipmentNever, SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC, SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS),

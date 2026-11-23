@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:26:26.206Z" hostname="rainer-HP-EliteBook-850-G5" time="4.703">
+  <properties/>
+  <testcase name="testNoExtraTranslationsInLocales" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.728"/>
+  <testcase name="testMorningHrvInstructionsDesc_noBladderPhrasingAcrossAllLocales_TST_PER_040_6" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.531"/>
+  <testcase name="testStringArrayParity_arrayLengthsMatchBase" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.431"/>
+  <testcase name="testPluralsParity_quantitiesAndSpecifiersMatchBase" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.429"/>
+  <testcase name="testStringKeyParity_allTranslatableKeysPresentInAllLocales" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.493"/>
+  <testcase name="testXmlHygiene_resourceHierarchyAndPlacement" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.022"/>
+  <testcase name="testTranslationCompleteness_localeSpecificLiterals" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.528"/>
+  <testcase name="testDynamicStringsDiscovery_detectsAllDomainShardedFiles" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.004"/>
+  <testcase name="testPeriodEmptyStateStrings_presentAcrossAllLocales_TST_PER_017" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.428"/>
+  <testcase name="testFormatSpecifierParity_allLocalesMatchBaseSpecifiers" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.698"/>
+  <testcase name="testRedundantArraysRemovedFromLocales" classname="com.atrainingtracker.trainingtracker.localization.TranslationParityTest" time="0.41"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -204,6 +204,9 @@ fun ImportBackupTabsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 resumeTrigger++
+                if (com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.hasInitializedInstance()) {
+                    viewModel.refreshClusteringPreferences()
+                }
             }
         }
         val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -684,6 +687,11 @@ fun PreImportTuningBottomSheet(
             },
             clusterScoreThreshold = viewModel.clusterScoreThreshold,
             onClusterScoreThresholdChange = { viewModel.clusterScoreThreshold = it },
+            askOnNewClusterDuringImport = viewModel.askOnNewClusterDuringImport,
+            onAskOnNewClusterDuringImportChange = {
+                viewModel.askOnNewClusterDuringImport = it
+                viewModel.saveClusteringTolerances()
+            },
             onValueChangeFinished = { viewModel.saveClusteringTolerances() },
             isDialog = false
         )

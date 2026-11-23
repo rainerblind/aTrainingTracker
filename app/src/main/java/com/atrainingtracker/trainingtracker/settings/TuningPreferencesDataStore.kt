@@ -292,6 +292,8 @@ object TuningPreferencesDefaults {
     const val MAX_CLUSTER_SCORE_THRESHOLD = 2.5f
     const val STEP_CLUSTER_SCORE_THRESHOLD = 0.1f
 
+    const val CLUSTER_ASK_ON_NEW_DURING_IMPORT = false
+
     /** First-time stop tracking coachmark banner acknowledgement default (REQ-UI-367 / ATT-3387). */
     const val DEFAULT_HAS_SEEN_STOP_TRACKING_HINT = false
 
@@ -438,6 +440,7 @@ data class TuningConfig(
     val clusterUseSportType: Boolean = TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
     val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS,
     val clusterScoreThreshold: Float = TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD,
+    val askOnNewClusterDuringImport: Boolean = TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT,
     val autoPauseBikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val autoPauseRunEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val autoPauseOtherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
@@ -647,6 +650,7 @@ class TuningPreferencesDataStore private constructor(
         val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
         val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
         val KEY_CLUSTER_SCORE_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_score_threshold")
+        val KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_ask_on_new_during_import")
         val KEY_HAS_SEEN_STOP_TRACKING_HINT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_seen_stop_tracking_hint")
         val KEY_HAS_COMPLETED_PERMISSION_ONBOARDING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_completed_permission_onboarding")
         val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
@@ -833,6 +837,7 @@ class TuningPreferencesDataStore private constructor(
             KEY_CLUSTER_USE_SPORT_TYPE,
             KEY_CLUSTER_USE_ALTITUDE_POS,
             KEY_CLUSTER_SCORE_THRESHOLD,
+            KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT,
             KEY_HAS_SEEN_STOP_TRACKING_HINT,
             KEY_HAS_COMPLETED_PERMISSION_ONBOARDING,
             KEY_AUTO_PAUSE_BIKE_ENABLED,
@@ -1331,6 +1336,7 @@ data class AutoPausePreferences(
             clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
             clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS,
             clusterScoreThreshold = PREF_CLUSTER_SCORE_THRESHOLD.read(prefs, TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD),
+            askOnNewClusterDuringImport = prefs[KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT] ?: TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT,
             autoPauseBikeEnabled = autoPausePrefs.bikeEnabled,
             autoPauseRunEnabled = autoPausePrefs.runEnabled,
             autoPauseOtherEnabled = autoPausePrefs.otherEnabled,
@@ -1575,6 +1581,7 @@ data class AutoPausePreferences(
             prefs[KEY_CLUSTER_USE_SPORT_TYPE] = config.clusterUseSportType
             prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = config.clusterUseAltitudePos
             prefs[KEY_CLUSTER_SCORE_THRESHOLD] = clampedClusterScoreThreshold
+            prefs[KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT] = config.askOnNewClusterDuringImport
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
@@ -1640,7 +1647,8 @@ data class AutoPausePreferences(
         altPosTol: Float? = null,
         useSport: Boolean? = null,
         useAlt: Boolean? = null,
-        scoreThreshold: Float? = null
+        scoreThreshold: Float? = null,
+        askOnNewDuringImport: Boolean? = null
     ) {
         editAndSync { prefs ->
             endpointTol?.let { PREF_CLUSTER_TOL_ENDPOINTS.write(prefs, it) }
@@ -1650,6 +1658,7 @@ data class AutoPausePreferences(
             useSport?.let { prefs[KEY_CLUSTER_USE_SPORT_TYPE] = it }
             useAlt?.let { prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = it }
             scoreThreshold?.let { PREF_CLUSTER_SCORE_THRESHOLD.write(prefs, it) }
+            askOnNewDuringImport?.let { prefs[KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT] = it }
         }
     }
 

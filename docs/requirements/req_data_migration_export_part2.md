@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.44  
+**Version**: 1.0.46  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 36
+**Total Requirements**: 37
 
 ---
 
@@ -1217,10 +1217,36 @@
 
 ---
 
+### REQ-MIG-060: Silent Default Route Cluster Creation Named After First Workout & Opt-In Import Prompting (`ATT-9013`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-060`
+- **System Requirement(s)**: `SYSREQ-DEX-002`, `SYSREQ-DEX-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `TuningPreferencesDataStore.kt`, `TrainingApplication.java`, `ClusterTuningContent.kt`, `ClusterTuningSection.kt`, `AdvancedTuningScreen.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `res/values*/strings_auto_import.xml` (9 locales)
+- **Localization Parity**: Added `cluster_tuning_ask_on_new_import_label` and `cluster_tuning_ask_on_new_import_summary` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+- **Rationale**: Prompting via `ClusterNamingDialog` for every unmatched spatial track during bulk Strava/FIT/TCX/GPX imports stalls ingestion behind `Semaphore(3)` while `AutoImportManager` (`listener = null`) left all novel routes unclustered (`ATT-9013`, refining `REQ-MIG-025`, `REQ-MIG-027`, `REQ-MIG-048`, `REQ-MIG-052`, `REQ-SET-075`, `REQ-UI-186`).
+- **Description**:
+  1. *Global Preference & Default (`REQ-MIG-060.1`)*: `TuningPreferencesDefaults.CLUSTER_ASK_ON_NEW_DURING_IMPORT` SHALL default to `false` (`TuningConfig.askOnNewClusterDuringImport`, `KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT` in `ALL_KEYS`, null-safe `TrainingApplication.askOnNewClusterDuringImport()`).
+  2. *Shared 9-Locale Opt-In Toggle (`REQ-MIG-060.2`)*: `ClusterTuningContent` SHALL expose a `TuningToggleItem` controlling `askOnNewClusterDuringImport`, wired across `PreImportTuningBottomSheet` (`BackupRestoreViewModel.saveClusteringTolerances()`) and `ClusterTuningSection` (`AdvancedTuningScreen`), localized across all 9 locales without inline emojis.
+  3. *Silent Auto-Creation & Collision-Safe Naming (`REQ-MIG-060.3`)*: When `suggestCluster(...)` returns `null` during `LegacyImportEngine.recalculateStats()` and `!TrainingApplication.askOnNewClusterDuringImport()`, ingestion SHALL bypass `listener?.onNewClusterCandidate(...)` and invoke `WorkoutClusterEngine.createAutoClusterFromImport(...)` to insert a genuinely new `WorkoutCluster` (never falling back to `learnFromWorkout`'s name-merge lookup), stripping `#N` via `stripHitCount`, resolving collisions via `findUniqueClusterName` (`REQ-PER-041`), falling back to `KnownLocationsRepository`/`WorkoutAutoNamingHelper.generateClusterSeedName` or `R.string.cluster_default_name_format` only when untitled (`workoutName.isNullOrBlank() || workoutName == baseFileName`), preserving `ensureStartingLocationAnchor(start)` (`REQ-UI-186`), and assigning with `forceIdentity = false` so imported workout titles remain intact.
+  4. *Auto-Import & Opt-In Parity (`REQ-MIG-060.4`)*: Background `AutoImportManager` SHALL silently create clusters when `!askOnNewClusterDuringImport` and remain non-blocking (`listener == null` skips prompting) when `askOnNewClusterDuringImport == true`; manual/archive imports with `askOnNewClusterDuringImport == true` SHALL present `ClusterNamingDialog` per `REQ-MIG-025`; `BulkImportBatchContext` SHALL continue deferring `refreshClusters()` until post-batch reconciliation (`REQ-STB-021.3`) while SQLite cluster lookups remain immediately visible within the batch.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* default settings (`askOnNewClusterDuringImport == false`), *When* importing a Strava archive, FIT/TCX/GPX batch, cloud recovery, or Auto-Import with novel and matching routes, *Then* no `ClusterNamingDialog` appears, distinct routes create collision-safe clusters named after their first workout (or `Lieblingsort`/date fallback if untitled), matching workouts join and preserve custom titles, and `ensureStartingLocationAnchor` seeds missing start locations.
+• *Given* the user enables `askOnNewClusterDuringImport = true` in `PreImportTuningBottomSheet` or `ClusterTuningSection`, *When* a manual/archive import encounters a novel route, *Then* `ClusterNamingDialog` is presented per `REQ-MIG-025`, while `AutoImportManager` stays non-blocking.
+
+**Invariants**: `REQ-MIG-025` interactive "Leave Unclustered" (`clusterId = -1L`), `REQ-SET-047` `learnFromWorkout` manual name-merge, `REQ-PER-041` `findUniqueClusterName` suffixing, `REQ-MIG-054` `UPLOAD_TO_STRAVA = 0` guard, and `ImportBackupTabsScreen.kt <= 1,500` LoC remain intact.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Promoted `REQ-MIG-060` to `[Verified]` after implementing silent default import cluster creation + 9-locale `askOnNewClusterDuringImport` opt-in toggle across `ClusterTuningContent`, `ClusterTuningSection`, `AdvancedTuningScreen`, `PreImportTuningBottomSheet`, `WorkoutClusterEngine`, and `LegacyImportEngine`, passing `132/132` targeted Tier-1 tests across 27 suites (`SilentImportClusterCreationTest` `4/4`, `TranslationParityTest` `11/11`, `TuningPreferencesDataStoreRoundTripTest` `3/3`, `0` fail/err/skip), `3/3` safety linters PASS, live `emulator-5554` verification (`ATT-9013_cluster_tuning.png`, `ATT-9013_cluster_tuning_enabled.png`, `0` crash logcat), and `auto_gate.py` SHA-256 bundle (`docs/engineering/test_evidence/tickets/ATT-9013/`). |
+| `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Added `[Planned]` `REQ-MIG-060` (`SYSREQ-DEX-002`, `SYSREQ-DEX-004`, `.1`–`.4`) for default silent route cluster creation named after first workout, collision-safe `findUniqueClusterName` & `KnownLocations`/date fallback, `forceIdentity = false` title preservation, `AutoImportManager` parity, and 9-locale opt-in toggle in `ClusterTuningContent`. |
 | `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Promoted `REQ-MIG-059` to `[Verified]` after implementing `ExportTabContent.kt` at Tab 0 of `ImportBackupTabsScreen`, removing separate `drawer_export` / `ExportSettingsDialog` island with deep-link aliasing, updating 9 locales, passing `124/124` targeted Tier-1 tests across 16 suites (`TranslationParityTest` `11/11`, `ExportTabContentTest` `4/4`), `:app:compileDebugAndroidTestKotlin`, and live `emulator-5554` verification (`ATT-8103_drawer.png`, `ATT-8103_export_tab.png`, `CRASH_LOGCAT_CLEAN`). |
 | `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Added `[Planned]` `REQ-MIG-059` (`Derived (SW-only)`, `.1`–`.3`) integrating `ExportTabContent` as Tab 0 of `ImportBackupTabsScreen`, removing separate `drawer_export` / `ExportSettingsDialog` island with deep-link aliasing, and renaming `import_backup` + adding `tab_export` across all 9 locales. |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `REQ-EXP-049` to `[Verified]` after implementing `CSVFileWriter.isMetadataColumn` / `extractSourcedSensorTypeName` (`_id`/`time` short-circuit + first-`" ("` prefix extraction), `9/9` targeted Tier-1 unit tests PASS (`CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`, `0` fail/err/skip, `0` new warnings). |

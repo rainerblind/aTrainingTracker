@@ -28,4 +28,6 @@
     <string name="auto_import_format_tcx">TCX</string>
     <string name="auto_import_format_gpx">GPX</string>
     <string name="auto_import_format_all">Tutti</string>
+    <string name="cluster_tuning_ask_on_new_import_label">Chiedi il nome dei nuovi percorsi in importazione</string>
+    <string name="cluster_tuning_ask_on_new_import_summary">Se disattivato, i nuovi percorsi vengono creati in silenzio con il nome del primo allenamento.</string>
 </resources>

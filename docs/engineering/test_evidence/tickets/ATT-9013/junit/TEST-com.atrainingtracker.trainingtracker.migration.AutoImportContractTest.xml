@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.AutoImportContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:26:31.627Z" hostname="rainer-HP-EliteBook-850-G5" time="0.395">
+  <properties/>
+  <testcase name="testAutoImportTabLayoutAndOrder_TST_MIG_050_1" classname="com.atrainingtracker.trainingtracker.migration.AutoImportContractTest" time="0.372"/>
+  <testcase name="testAutoImportViewModelPropertiesContract" classname="com.atrainingtracker.trainingtracker.migration.AutoImportContractTest" time="0.021"/>
+  <testcase name="testAutoImportControlsAndFormatsContract_TST_MIG_050_1" classname="com.atrainingtracker.trainingtracker.migration.AutoImportContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

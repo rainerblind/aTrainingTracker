@@ -28,4 +28,6 @@
     <string name="auto_import_format_tcx">TCX</string>
     <string name="auto_import_format_gpx">GPX</string>
     <string name="auto_import_format_all">Alle</string>
+    <string name="cluster_tuning_ask_on_new_import_label">Vraag om naam voor nieuwe routes bij importeren</string>
+    <string name="cluster_tuning_ask_on_new_import_summary">Indien uitgeschakeld worden nieuwe routes stil aangemaakt met de naam van de eerste training.</string>
 </resources>

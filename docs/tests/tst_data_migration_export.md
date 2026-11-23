@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.44  
+**Version**: 1.0.46  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 137
+**Total Tests**: 138
 
 ---
 
@@ -2607,10 +2607,27 @@
 
 ---
 
+### TST-MIG-060: Silent Default Route Cluster Creation & Opt-In Import Prompting Verification (`ATT-9013`) [Verified]
+- **Requirement(s)**: `REQ-MIG-060`
+- **Component**: `TuningPreferencesDataStore.kt`, `TrainingApplication.java`, `ClusterTuningContent.kt`, `ClusterTuningSection.kt`, `AdvancedTuningScreen.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `AutoImportManager.kt`, `res/values*/strings_auto_import.xml`
+- **Jira**: `ATT-9013`
+- **Test Code**:
+  - `SilentImportClusterCreationTest.kt` (`4/4` PASS): Robolectric SQLite & Compose tests covering silent cluster seeding named after first workout (`#N` stripped), spatial collision naming (`findUniqueClusterName`) without corrupting existing centroids, `KnownLocations`/date fallback for untitled workouts, `ensureStartingLocationAnchor(start)`, title preservation (`forceIdentity = false`) vs untitled auto-naming (`#2`), `BulkImportBatchContext` SQLite visibility without per-workout `refreshClusters()`, and opt-in `askOnNewClusterDuringImport = true` invoking `onNewClusterCandidate` (and non-blocking `listener = null`).
+  - `TuningPreferencesDataStoreClusterTest.kt` (`4/4` PASS), `TuningPreferencesDataStoreRoundTripTest.kt` (`3/3` PASS), `ClusterTuningUiBehaviorTest.kt` (`1/1` PASS), `ClusterTuningContractTest.kt` (`10/10` PASS), `ClusterImperialAndLocaleUiTest.kt` (`2/2` PASS), `LegacyImportEngineWorkoutNameTest.kt` (`9/9` PASS), `AutoImportManagerTest.kt` (`4/4` PASS), `TranslationParityTest.kt` (`11/11` PASS).
+- **Verification Evidence**: Verified (`ATT-9013`, `tier-b`; `132/132` targeted Tier-1 unit, Compose UI & contract tests PASS across 27 focused suites — `select_dependent_tests` = 332 > 80 classes — `0` fail, `0` err, `0` skip; `3/3` safety linters PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with visually inspected PNG screenshots `docs/engineering/walkthroughs/img/ATT-9013_cluster_tuning.png` & `docs/engineering/walkthroughs/img/ATT-9013_cluster_tuning_enabled.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9013/`).
+- **Test Description**:
+  1. *Preference Default & Round-Trip (`TST-MIG-060.1` — `TuningPreferencesDataStoreClusterTest.kt`)*: Verify `CLUSTER_ASK_ON_NEW_DURING_IMPORT == false`, `KEY_CLUSTER_ASK_ON_NEW_DURING_IMPORT` in `ALL_KEYS`, `TuningConfig` round-trip, and `TrainingApplication.askOnNewClusterDuringImport()` null-safe default.
+  2. *Silent Cluster Seeding, Collision Safety & Title Preservation (`TST-MIG-060.2` — `SilentImportClusterCreationTest.kt`, `LegacyImportEngineWorkoutNameTest.kt`, `AutoImportManagerTest.kt`)*: Verify default silent import bypasses `onNewClusterCandidate`, seeds distinct clusters for spatially distant identically named workouts without centroid corruption, falls back to `Lieblingsort`/date only when untitled, triggers `ensureStartingLocationAnchor`, preserves custom workout titles while numbering untitled matches `#2`, and invokes silent creation in `AutoImportManager` (staying non-blocking if opted in).
+  3. *Shared Compose UI Toggle, 9-Locale Parity & Emulator Verification (`TST-MIG-060.3` — `ClusterTuningUiBehaviorTest.kt`, `TranslationParityTest.kt`, live `emulator-5554`)*: Render `PreImportTuningBottomSheet` and `ClusterTuningSection` via `createComposeRule()`, toggle `askOnNewClusterDuringImport`, verify 9-locale parity for `strings_auto_import.xml`, and inspect live `emulator-5554` screenshots.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Promoted `TST-MIG-060` to `[Verified]` (`132/132` targeted Tier-1 tests PASS across 27 focused suites incl. `SilentImportClusterCreationTest` `4/4`, `TuningPreferencesDataStoreRoundTripTest` `3/3`, `ClusterTuningUiBehaviorTest` `1/1`, `TranslationParityTest` `11/11`; `0` fail, `0` err, `0` skip; `3/3` safety linters PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with `ATT-9013_cluster_tuning.png` & `ATT-9013_cluster_tuning_enabled.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9013/`). |
+| `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Added `[Planned]` `TST-MIG-060` (`TST-MIG-060.1`–`TST-MIG-060.3`, symmetric with `REQ-MIG-060`) covering default preference & `ALL_KEYS` registration, silent SQLite cluster seeding/collision/title preservation/`AutoImportManager` behavior, Compose UI toggle in `PreImportTuningBottomSheet` & `ClusterTuningSection`, 9-locale parity, and live `emulator-5554` check. |
 | `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Promoted `TST-MIG-059` to `[Verified]` (`124/124` targeted Tier-1 unit, Compose UI & contract tests PASS across 16 suites incl. `ExportTabContentTest` `4/4`, `TranslationParityTest` `11/11`; `:app:compileDebugAndroidTestKotlin` PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` + `Rule 8.5` PNG screenshots `ATT-8103_drawer.png` & `ATT-8103_export_tab.png`; SHA-256 evidence bundle). |
 | `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Added `[Planned]` `TST-MIG-059` (`TST-MIG-059.1`–`TST-MIG-059.3`, symmetric with `REQ-MIG-059`) covering 5-tab `ExportTabContent` Compose UI & immediate persistence, drawer consolidation / deep-link alias / dead-island removal, 9-locale parity, and live `emulator-5554` verification. |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `TST-EXP-049` to `[Verified]` (`9/9` targeted Tier-1 unit tests PASS across 2 suites: `CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`; `0` fail/err/skip, `0` new warnings). |

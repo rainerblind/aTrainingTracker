@@ -25,6 +25,10 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasProgressBarRangeInfo
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -98,6 +102,7 @@ class ClusterTuningUiBehaviorTest {
                 var useSport by remember { mutableStateOf(true) }
                 var useAlt by remember { mutableStateOf(true) }
                 var scoreThreshold by remember { mutableFloatStateOf(1.2f) }
+                var askOnNewImport by remember { mutableStateOf(false) }
 
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     ClusterTuningSection(
@@ -114,7 +119,9 @@ class ClusterTuningUiBehaviorTest {
                         useAltitudePosForClustering = useAlt,
                         onUseAltitudePosChange = { useAlt = it },
                         clusterScoreThreshold = scoreThreshold,
-                        onClusterScoreThresholdChange = { scoreThreshold = it }
+                        onClusterScoreThresholdChange = { scoreThreshold = it },
+                        askOnNewClusterDuringImport = askOnNewImport,
+                        onAskOnNewClusterDuringImportChange = { askOnNewImport = it }
                     )
                 }
             }
@@ -139,8 +146,22 @@ class ClusterTuningUiBehaviorTest {
         }
         assertTrue("Adjusting master slider must update endpoint tolerance", endpointTolChanged)
 
-        // 2. Toggle detailed controls -> detailed sliders appear
-        composeTestRule.onNode(isToggleable()).performScrollTo().performClick()
+        // 2. Ask-on-new-cluster toggle defaults OFF and toggles ON interactively
+        composeTestRule.onNodeWithText(context.getString(R.string.cluster_tuning_ask_on_new_import_label))
+            .performScrollTo()
+            .assertIsDisplayed()
+        val askToggle = composeTestRule.onNode(
+            isToggleable() and hasAnyAncestor(hasTestTag("cluster_tuning_ask_on_new_import_toggle"))
+        )
+        askToggle.assertIsOff()
+        askToggle.performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        askToggle.assertIsOn()
+
+        // 3. Toggle detailed controls -> detailed sliders appear
+        composeTestRule.onNode(
+            isToggleable() and hasAnyAncestor(hasTestTag("cluster_tuning_show_details_toggle"))
+        ).performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText(context.getString(R.string.cluster_tuning_endpoint_label)).performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.cluster_tuning_apex_label)).performScrollTo().assertIsDisplayed()

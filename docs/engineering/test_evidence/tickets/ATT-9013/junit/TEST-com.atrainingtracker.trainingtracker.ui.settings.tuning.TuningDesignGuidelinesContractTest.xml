@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:28:20.979Z" hostname="rainer-HP-EliteBook-850-G5" time="0.013">
+  <properties/>
+  <testcase name="testPoisonPill_rawSwitchViolationDetected" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest" time="0.001"/>
+  <testcase name="testPoisonPill_filterChipViolationDetected" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest" time="0.0"/>
+  <testcase name="testPoisonPill_allowlistedSupporterDebugSectionPasses" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest" time="0.0"/>
+  <testcase name="testAllCategoryComposables_complyWithDesignGuidelines" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest" time="0.011"/>
+  <testcase name="testPoisonPill_elevatedCardViolationDetected" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDesignGuidelinesContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -859,7 +859,7 @@ object LegacyImportEngine {
                 foundSensors = parsedWorkout.foundSensors,
                 parsedLaps = parsedWorkout.parsedLaps,
                 workoutNotes = parsedWorkout.workoutNotes,
-                workoutName = parsedWorkout.workoutName ?: effectiveBaseFileName,
+                workoutName = parsedWorkout.workoutName?.trim()?.takeIf { it.isNotEmpty() } ?: effectiveBaseFileName,
                 firstTime = firstTime,
                 lastTime = parsedWorkout.lastTime,
                 minAltPos = parsedWorkout.minAltPos,
@@ -1292,43 +1292,76 @@ object LegacyImportEngine {
                         clusterEngine.assignClusterToWorkout(context, workoutId, matchingCluster.id, false)
                     }
                 } else {
-                    val startTime = workoutRepo.getWorkoutStartTime(workoutId)
-                    val decision = listener?.onNewClusterCandidate(
-                        date = startTime ?: baseFileName,
-                        start = start, end = end, apex = apex, 
-                        distance = totalDistance, 
-                        bSportType = bSportType,
-                        polyline = polyline,
-                        workoutName = workoutName,
-                        candidateSportTypes = candidateSports,
-                        minAltPos = minAltPos,
-                        maxAltPos = maxAltPos
-                    ) ?: ClusterDecision()
-                    
-                    val existingId = decision.clusterId
-                    val customName = decision.newClusterName
-                    val customWorkoutName = decision.customWorkoutName
+                    val askOnNewCluster = try {
+                        TrainingApplication.askOnNewClusterDuringImport()
+                    } catch (_: Exception) {
+                        false
+                    }
+                    if (!askOnNewCluster) {
+                        recalculationMutex.withLock {
+                            var sportId = workoutRepo.getWorkoutSportId(workoutId)
+                            if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                                sportId = SportTypesRepository.getSportTypeId(bSportType)
+                                workoutRepo.updateWorkoutSport(workoutId, sportId, bSportType)
+                            }
+                            clusterEngine.createAutoClusterFromImport(
+                                context = context,
+                                workoutId = workoutId,
+                                start = start,
+                                end = end,
+                                apex = apex,
+                                distance = totalDistance,
+                                sportId = sportId,
+                                workoutName = workoutName,
+                                baseFileName = baseFileName,
+                                firstTime = firstTime,
+                                minLat = minLat,
+                                minLng = minLng,
+                                maxLat = maxLat,
+                                maxLng = maxLng,
+                                minAltPos = minAltPos,
+                                maxAltPos = maxAltPos
+                            )
+                        }
+                    } else {
+                        val startTime = workoutRepo.getWorkoutStartTime(workoutId)
+                        val decision = listener?.onNewClusterCandidate(
+                            date = startTime ?: baseFileName,
+                            start = start, end = end, apex = apex,
+                            distance = totalDistance,
+                            bSportType = bSportType,
+                            polyline = polyline,
+                            workoutName = workoutName,
+                            candidateSportTypes = candidateSports,
+                            minAltPos = minAltPos,
+                            maxAltPos = maxAltPos
+                        ) ?: ClusterDecision()
 
-                    recalculationMutex.withLock {
-                        if (existingId != null) {
-                            val cluster = WorkoutClusterRepository.getInstance(context).getClusterById(existingId)
-                            var sportId = workoutRepo.getWorkoutSportId(workoutId)
-                            if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                                sportId = SportTypesRepository.getSportTypeId(bSportType)
+                        val existingId = decision.clusterId
+                        val customName = decision.newClusterName
+                        val customWorkoutName = decision.customWorkoutName
+
+                        recalculationMutex.withLock {
+                            if (existingId != null) {
+                                val cluster = WorkoutClusterRepository.getInstance(context).getClusterById(existingId)
+                                var sportId = workoutRepo.getWorkoutSportId(workoutId)
+                                if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                                    sportId = SportTypesRepository.getSportTypeId(bSportType)
+                                }
+                                if (cluster != null) {
+                                    clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId, minAltPos = minAltPos, maxAltPos = maxAltPos)
+                                }
+                                clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true, customWorkoutName)
+                            } else if (!customName.isNullOrBlank()) {
+                                var sportId = workoutRepo.getWorkoutSportId(workoutId)
+                                if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
+                                    sportId = SportTypesRepository.getSportTypeId(bSportType)
+                                }
+                                val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L, minAltPos = minAltPos, maxAltPos = maxAltPos)
+                                clusterEngine.assignClusterToWorkout(context, workoutId, newId, true, customWorkoutName)
+                            } else if (!customWorkoutName.isNullOrBlank()) {
+                                workoutRepo.updateWorkoutName(workoutId, customWorkoutName)
                             }
-                            if (cluster != null) {
-                                clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId, minAltPos = minAltPos, maxAltPos = maxAltPos)
-                            }
-                            clusterEngine.assignClusterToWorkout(context, workoutId, existingId, true, customWorkoutName)
-                        } else if (!customName.isNullOrBlank()) {
-                            var sportId = workoutRepo.getWorkoutSportId(workoutId)
-                            if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                                sportId = SportTypesRepository.getSportTypeId(bSportType)
-                            }
-                            val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L, minAltPos = minAltPos, maxAltPos = maxAltPos)
-                            clusterEngine.assignClusterToWorkout(context, workoutId, newId, true, customWorkoutName)
-                        } else if (!customWorkoutName.isNullOrBlank()) {
-                            workoutRepo.updateWorkoutName(workoutId, customWorkoutName)
                         }
                     }
                 }

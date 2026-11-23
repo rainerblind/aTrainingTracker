@@ -167,6 +167,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
     var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
     var clusterScoreThreshold by mutableStateOf(TrainingApplication.getClusterScoreThreshold())
+    var askOnNewClusterDuringImport by mutableStateOf(TrainingApplication.askOnNewClusterDuringImport())
 
     var uploadToStravaOnImport by mutableStateOf(TrainingApplication.uploadImportedWorkoutsToStrava())
         private set
@@ -254,6 +255,20 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         BackupWorker.schedule(getApplication())
     }
 
+    /**
+     * Synchronizes in-memory cluster tuning fields with the active persisted preferences.
+     */
+    fun refreshClusteringPreferences() {
+        endpointTolerance = TrainingApplication.getClusterTolEndpoints()
+        apexTolerance = TrainingApplication.getClusterTolApex()
+        distanceTolerance = TrainingApplication.getClusterTolDistance()
+        altitudePositionTolerance = TrainingApplication.getClusterTolAltitudePos()
+        useSportTypeForClustering = TrainingApplication.useSportTypeForClustering()
+        useAltitudePosForClustering = TrainingApplication.useAltitudePosForClustering()
+        clusterScoreThreshold = TrainingApplication.getClusterScoreThreshold()
+        askOnNewClusterDuringImport = TrainingApplication.askOnNewClusterDuringImport()
+    }
+
     fun saveClusteringTolerances() {
         viewModelScope.launch {
             com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -265,7 +280,8 @@ class BackupRestoreViewModel @JvmOverloads constructor(
                     altPosTol = altitudePositionTolerance,
                     useSport = useSportTypeForClustering,
                     useAlt = useAltitudePosForClustering,
-                    scoreThreshold = clusterScoreThreshold
+                    scoreThreshold = clusterScoreThreshold,
+                    askOnNewDuringImport = askOnNewClusterDuringImport
                 )
         }
     }
