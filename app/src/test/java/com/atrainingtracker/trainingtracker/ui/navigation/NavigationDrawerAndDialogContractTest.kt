@@ -110,7 +110,8 @@ class NavigationDrawerAndDialogContractTest {
         val sync = groups.first { it.titleRes == R.string.prefsOnlineCommunities }
         assertTrue(sync.items.any { it.id == R.id.drawer_strava })
         assertTrue(sync.items.any { it.id == R.id.drawer_dropbox })
-        assertTrue(sync.items.any { it.id == R.id.drawer_export })
+        assertTrue(sync.items.any { it.id == R.id.drawer_backup_restore })
+        org.junit.Assert.assertFalse(sync.items.any { it.id == R.id.drawer_export })
 
         val settings = groups.first { it.titleRes == R.string.drawer__settings }
         assertTrue(settings.items.any { it.id == R.id.drawer_sport_types })
@@ -140,14 +141,14 @@ class NavigationDrawerAndDialogContractTest {
         composeTestRule.onNodeWithText(context.getString(R.string.drawer__training)).assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.drawer__maps)).assertIsDisplayed()
 
-        // Expand Synchronization and tap Strava + Export
+        // Expand Synchronization and tap Strava + Export, Import & Backup
         composeTestRule.onNodeWithText(context.getString(R.string.prefsOnlineCommunities))
             .performScrollTo()
             .performClick()
         composeTestRule.onNodeWithText(context.getString(R.string.Strava))
             .performScrollTo()
             .performClick()
-        composeTestRule.onNodeWithText(context.getString(R.string.prefsExportTitle))
+        composeTestRule.onNodeWithText(context.getString(R.string.import_backup))
             .performScrollTo()
             .performClick()
 
@@ -160,13 +161,13 @@ class NavigationDrawerAndDialogContractTest {
             .performClick()
 
         assertEquals(
-            listOf(R.id.drawer_strava, R.id.drawer_export, R.id.drawer_sport_types),
+            listOf(R.id.drawer_strava, R.id.drawer_backup_restore, R.id.drawer_sport_types),
             selectedIds
         )
     }
 
     /**
-     * TST-NAV-002.1 (EN): Verify rendered drawer terminology in English ("Equipment", "Synchronization", "Export").
+     * TST-NAV-002.1 (EN): Verify rendered drawer terminology in English ("Equipment", "Synchronization", "Export, Import & Backup").
      */
     @Test
     @Config(sdk = [34], qualifiers = "en-w412dp-h2200dp-xhdpi")
@@ -186,11 +187,12 @@ class NavigationDrawerAndDialogContractTest {
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
-        composeTestRule.onNodeWithText("Export").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Export, Import & Backup").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Export").assertDoesNotExist()
     }
 
     /**
-     * TST-NAV-002.1 (DE): Verify rendered drawer terminology in German ("Ausrüstung", "Synchronisation", "Export").
+     * TST-NAV-002.1 (DE): Verify rendered drawer terminology in German ("Ausrüstung", "Synchronisation", "Export, Import & Backup").
      */
     @Test
     @Config(sdk = [34], qualifiers = "de-w412dp-h2200dp-xhdpi")
@@ -210,7 +212,8 @@ class NavigationDrawerAndDialogContractTest {
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
-        composeTestRule.onNodeWithText("Export").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Export, Import & Backup").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Export").assertDoesNotExist()
     }
 
     /**

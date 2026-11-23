@@ -202,7 +202,8 @@ class ImportBackupTabsSealedStateComposeTest {
             }
         }
 
-        // 1. Tab 0 (Import): Dropbox scan while disconnected -> DropboxDisconnected dialog
+        // 1. Tab 1 (Import): Dropbox scan while disconnected -> DropboxDisconnected dialog
+        navigateToTab(R.string.tab_import)
         composeRule.onNodeWithText(context.getString(R.string.import_fit_dropbox_button))
             .performScrollTo()
             .performClick()
@@ -248,7 +249,8 @@ class ImportBackupTabsSealedStateComposeTest {
             }
         }
 
-        // Trigger PendingImportSource.DropboxBulk("fit") via UI click -> opens PreImportTuningBottomSheet
+        // Navigate to Tab 1 (Import) and trigger PendingImportSource.DropboxBulk("fit") via UI click -> opens PreImportTuningBottomSheet
+        navigateToTab(R.string.tab_import)
         composeRule.onNodeWithText(context.getString(R.string.import_fit_dropbox_button))
             .performScrollTo()
             .performClick()

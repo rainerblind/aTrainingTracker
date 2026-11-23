@@ -27,7 +27,6 @@ enum class SettingsBottomSheetType {
     STRAVA,
     DROPBOX,
     GOOGLE_DRIVE,
-    EXPORT,
     UNITS,
     DISPLAY,
     SEARCH,
@@ -174,7 +173,7 @@ object NavRoutes {
         R.id.drawer_auto_pause -> AUTO_PAUSE
         R.id.drawer_training_zones -> TRAINING_ZONES
         R.id.drawer_athlete_profile -> ATHLETE_PROFILE
-        R.id.drawer_backup_restore -> BACKUP_RESTORE
+        R.id.drawer_export, R.id.drawer_backup_restore -> BACKUP_RESTORE
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
         R.id.drawer_tips_guide -> TIPS_GUIDE
         R.id.drawer_supporter -> SUPPORTER
@@ -220,7 +219,6 @@ object NavRoutes {
         R.id.drawer_dropbox -> SettingsBottomSheetType.DROPBOX
         R.id.drawer_google_drive -> SettingsBottomSheetType.GOOGLE_DRIVE
         R.id.drawer_health_connect -> SettingsBottomSheetType.HEALTH_CONNECT
-        R.id.drawer_export -> SettingsBottomSheetType.EXPORT
         R.id.drawer_units -> SettingsBottomSheetType.UNITS
         R.id.drawer_display_settings -> SettingsBottomSheetType.DISPLAY
         R.id.drawer_tracking_layouts -> SettingsBottomSheetType.ACTIVITY_TYPE

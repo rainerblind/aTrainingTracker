@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.43  
+**Version**: 1.0.44  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 35
+**Total Requirements**: 36
 
 ---
 
@@ -1194,10 +1194,35 @@
 
 ---
 
+### REQ-MIG-059: Integrated Export Tab 0 in `ImportBackupTabsScreen` & Consolidated Drawer Entry (`ATT-8103`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-059`
+- **System Requirement(s)**: `Derived (SW-only)` — UI navigation and settings consolidation integrating local workout export format toggles into `ImportBackupTabsScreen` Tab 0 and removing the standalone Export drawer item while preserving `SYSREQ-DEX-001` export formats and `SYSREQ-DEX-005` backup/restore semantics unchanged.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `ExportTabContent.kt`, `ImportBackupTabsScreen.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `TrainingApplication.java`, `res/values*/strings.xml` (9 locales)
+- **Localization Parity**: Updated `import_backup`, `import_backup_summary`, and added `tab_export` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+- **Rationale**: Consolidates all local data transfer and archival features (Export, Import, Auto-Import, Backup, Restore) under a single tabbed hub and eliminates the duplicate standalone Export bottom-sheet entry from the Navigation Drawer (refining `REQ-MIG-011`, `REQ-MIG-052`, `REQ-UI-463`, `REQ-SET-054`).
+- **Description**:
+  1. *5-Tab `ImportBackupTabsScreen` with Export at Index 0 (`REQ-MIG-059.1`)*: `ImportBackupTabsScreen` SHALL expose 5 ordered tabs (`ImportBackupTabIndex`: `0 = Export`, `1 = Import`, `2 = Auto-Import`, `3 = Backup`, `4 = Restore`) in a `PrimaryScrollableTabRow` with single-line non-wrapping labels and optional `initialTab` parameter (defaulting to `0`). `ExportTabContent` SHALL render all 6 file export toggles (TCX, GPX, Golden Cheetah JSON, CSV, FIT, Raw Sensor Data) in an `ElevatedCard` with `navigationBarsPadding()` and immediate persistence via null-safe `TrainingApplication.setExportTo*()`.
+  2. *Navigation Drawer Cleanup, Deep-Link Alias & Zero Dead Islands (`REQ-MIG-059.2`)*: `AppNavigationDrawer.createDrawerGroups()` SHALL omit the separate `R.id.drawer_export` item from `prefsOnlineCommunities` (leaving 5 items ending with `R.id.drawer_backup_restore`). `NavRoutes.fromDrawerItemId(R.id.drawer_export)` SHALL alias to `NavRoutes.BACKUP_RESTORE`, `NavRoutes.toBottomSheetType(R.id.drawer_export)` SHALL return `null`, `isDrawerItemSelected(R.id.drawer_backup_restore, R.id.drawer_export)` SHALL return `true`, and obsolete `SettingsBottomSheetType.EXPORT` / `ExportSettingsDialog.kt` SHALL be removed.
+  3. *9-Language Localization Parity (`REQ-MIG-059.3`)*: `import_backup` (drawer & top bar title), `import_backup_summary`, and `tab_export` SHALL be localized consistently across all 9 locales without inline emojis (`TranslationParityTest`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Navigation Drawer opened and *Synchronization* expanded, *When* inspecting menu items, *Then* no separate *Export* entry exists and a single renamed entry (*Export, Import & Backup* in EN/DE, localized across all 9 locales) navigates to `ImportBackupTabsScreen` at Tab 0 (*Export*).
+• *Given* `ImportBackupTabsScreen` opened at Tab 0, *When* toggling any of the 6 export formats (TCX, GPX, Golden Cheetah JSON, CSV, FIT, Raw Sensor Data) and switching across all 5 tabs (`Export | Import | Auto-Import | Backup | Restore`), *Then* each toggle persists immediately to `TrainingApplication` preferences and all 5 tabs render their respective screens cleanly without wrapping or clipping.
+
+**Invariants**: Existing `SharedPreferences` keys (`SP_EXPORT_*`) and defaults (`TCX = true`, others `false`) remain untouched; `ImportBackupTabsScreen.kt` stays `<= 1,500` LoC; zero dead/unmounted Composable islands remain.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Promoted `REQ-MIG-059` to `[Verified]` after implementing `ExportTabContent.kt` at Tab 0 of `ImportBackupTabsScreen`, removing separate `drawer_export` / `ExportSettingsDialog` island with deep-link aliasing, updating 9 locales, passing `124/124` targeted Tier-1 tests across 16 suites (`TranslationParityTest` `11/11`, `ExportTabContentTest` `4/4`), `:app:compileDebugAndroidTestKotlin`, and live `emulator-5554` verification (`ATT-8103_drawer.png`, `ATT-8103_export_tab.png`, `CRASH_LOGCAT_CLEAN`). |
+| `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Added `[Planned]` `REQ-MIG-059` (`Derived (SW-only)`, `.1`–`.3`) integrating `ExportTabContent` as Tab 0 of `ImportBackupTabsScreen`, removing separate `drawer_export` / `ExportSettingsDialog` island with deep-link aliasing, and renaming `import_backup` + adding `tab_export` across all 9 locales. |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `REQ-EXP-049` to `[Verified]` after implementing `CSVFileWriter.isMetadataColumn` / `extractSourcedSensorTypeName` (`_id`/`time` short-circuit + first-`" ("` prefix extraction), `9/9` targeted Tier-1 unit tests PASS (`CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`, `0` fail/err/skip, `0` new warnings). |
 | `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Added `[Planned]` `REQ-EXP-049` (`Derived (SW-only)`, `.1`–`.2`) for `_id`/`time` metadata column short-circuiting and first-`" ("` `SensorType` prefix extraction on nested-parentheses device names (`ALTITUDE (Topografische Höhe (DEM))`) in `CSVFileWriter` (`N/A - 0 string changes`). |
 | `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `REQ-EXP-048` to `[Verified]` after Gate 3 (`ATT-9658`) PASS implementation (`FileFormat.isDerivedExportFile()`, null-safe `basePath` & derived-only deletion guard in `ExportManager.invalidateWorkoutExport`), `45/45` targeted Tier-1 unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and `tools/auto_gate.py` SHA-256 evidence bundle. |

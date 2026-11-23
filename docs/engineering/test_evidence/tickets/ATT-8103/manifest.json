@@ -1,0 +1,28 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "d8d94209b41d1200b9a2f84d323433624e5c9574",
+  "files": {
+    "evidence_summary.json": "0fca9d62c7a25d5c60179ee06a250051382ffd403f2e29fb6d6cb477f252d1d3",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "a6f1cbfd89a593561941fda4232342adc5b2077c35b48d13fe4a33a8fd2aa0d7",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest.xml": "6495dafab54b6c83d31ea8f9157dc9e27251804e3a2f5ec0a1cbf39d695ed19b",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.HardcodedStringsAndUnitsContractTest.xml": "bf6197f0cb0b10e7d182e41945640bf3ef06d95bd1a640a5f28baef345a33464",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml": "a2c3edc99623dc2474db747353bc574fccfdefa1e52d10432270cd63ff09b4e6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.AutoImportContractTest.xml": "17d205a69ea47fa005c1c5a6d23d3d7f13d96accba044eedefe8702a66a43cc7",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ExportTabContentTest.xml": "a418db2d1b774891f9e7997604938e8677709a40d55076157e561b466fddada4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest.xml": "d380f3090b3d903031d945d35cfbd4ac1644681a1f4fade7816f3f7f36d24bca",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest.xml": "610452c632d1676caf9726ab6cc23a21fe9146055fcf72e42ec075666f69adf9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.RestoreCardContractTest.xml": "bbaed1c156ab4e272d59f0f4a79c8096b23221f49d8a8a228f22bd571680f163",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.ProcessStabilityComposeUiTest.xml": "f3199ac1051c1e894f9bd10c1172353969eda476e75cd1a90ba228d3b30d869e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest.xml": "538738fd3e1b257710c3b4565c5321a8bdaa32839fea4e0e34443bdceb9e1afe",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest.xml": "2ce8cbc0c9a417f759122205d0dee88607952a45b8d3ad3971f1a72ee80dbc15",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest.xml": "a740ec3d588fef9a7e67a9c9e802adcc527f1c145c55886f634034912752c589",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerStateTest.xml": "7f6b488826c8520b380849aaf6d291d727f488390423b3e13dde7ab8ba5b8c67",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest.xml": "a4a0ebfb16eb3f84f740707236f6b81bf41f6e80ee17b8ec2ebae70b738d1649",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.SingleActivityNavigationTest.xml": "e56f73632bc0c98bd5409af7c71d49c4bbe4f4a7c1d8427e8c8c46270e4a838a",
+    "screenshots/ATT-8103_drawer.png": "e58f81d1f2906565da081851c58dd52adbb5e315dcefc6a0d922d9c0b49f0f4b",
+    "screenshots/ATT-8103_export_tab.png": "45f48e6aa6263dbfcf87c1a1a3cc2cf583b8f016215a16f74123196810524c17"
+  },
+  "run_started_utc": "2026-11-23T06:55:08.174503+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8103"
+}

@@ -1289,50 +1289,56 @@ public class TrainingApplication extends Application {
 
     // File exports
     public static boolean exportToTCX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_TCX, true); // by default, we export to TCX.
+        return cSharedPreferences == null || cSharedPreferences.getBoolean(SP_EXPORT_TCX, true); // by default, we export to TCX.
     }
 
     public static void setExportToTCX(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_TCX, value).apply();
     }
 
     public static boolean exportToGPX() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_GPX, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_GPX, false);
     }
 
     public static void setExportToGPX(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_GPX, value).apply();
     }
 
     public static boolean exportToCSV() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_CSV, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_CSV, false);
     }
 
     public static void setExportToCSV(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_CSV, value).apply();
     }
 
     public static boolean exportToGCJson() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_GC_JSON, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_GC_JSON, false);
     }
 
     public static void setExportToGCJson(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_GC_JSON, value).apply();
     }
 
     public static boolean exportToFIT() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_FIT, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_FIT, false);
     }
 
     public static void setExportToFIT(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_FIT, value).apply();
     }
 
     public static boolean exportToRawSensor() {
-        return cSharedPreferences.getBoolean(SP_EXPORT_RAW_SENSOR, false);
+        return cSharedPreferences != null && cSharedPreferences.getBoolean(SP_EXPORT_RAW_SENSOR, false);
     }
 
     public static void setExportToRawSensor(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_EXPORT_RAW_SENSOR, value).apply();
     }
 

@@ -20,7 +20,12 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -86,28 +91,40 @@ class ImportBackupTabsUiContractTest {
             }
         }
 
-        // Top app bar title: "Import & Backup"
+        // Top app bar title: "Export, Import & Backup"
         composeRule.onNodeWithText(context.getString(R.string.import_backup)).assertIsDisplayed()
 
-        // All 4 tabs exist in HorizontalPager header
+        // All 5 tabs exist in HorizontalPager header in order: Export | Import | Auto-Import | Backup | Restore
+        val exportTab = context.getString(R.string.tab_export)
         val importTab = context.getString(R.string.tab_import)
         val autoImportTab = context.getString(R.string.tab_auto_import)
         val backupTab = context.getString(R.string.tab_backup)
         val restoreTab = context.getString(R.string.tab_restore)
 
-        composeRule.onNodeWithText(importTab).assertExists()
-        composeRule.onNodeWithText(autoImportTab).assertExists()
-        composeRule.onNodeWithText(backupTab).assertExists()
-        composeRule.onNodeWithText(restoreTab).assertExists()
+        val isTab = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+        composeRule.onNode(isTab and hasText(exportTab)).assertExists().assertIsSelected()
+        composeRule.onNode(isTab and hasText(importTab)).assertExists()
+        composeRule.onNode(isTab and hasText(autoImportTab)).assertExists()
+        composeRule.onNode(isTab and hasText(backupTab)).assertExists()
+        composeRule.onNode(isTab and hasText(restoreTab)).assertExists()
+
+        // Default Tab 0 is Export
+        composeRule.onNodeWithText("TCX").assertIsDisplayed()
+
+        // Switch to Import tab and verify Import card content appears
+        composeRule.onNode(isTab and hasText(importTab)).performClick()
+        composeRule.mainClock.advanceTimeBy(1000)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(context.getString(R.string.import_fit_title)).assertExists()
 
         // Switch to Backup tab and verify Backup card content appears
-        composeRule.onNodeWithText(backupTab).performClick()
+        composeRule.onNode(isTab and hasText(backupTab)).performClick()
         composeRule.mainClock.advanceTimeBy(1000)
         composeRule.waitForIdle()
         composeRule.onNodeWithText(context.getString(R.string.backup_now)).assertIsDisplayed()
 
         // Switch to Restore tab and verify Restore card content appears
-        composeRule.onNodeWithText(restoreTab).performClick()
+        composeRule.onNode(isTab and hasText(restoreTab)).performClick()
         composeRule.mainClock.advanceTimeBy(1000)
         composeRule.waitForIdle()
         composeRule.onNodeWithText(context.getString(R.string.restore_from_dropbox)).performScrollTo().assertIsDisplayed()
@@ -227,13 +244,18 @@ class ImportBackupTabsUiContractTest {
             }
         }
 
-        // Import tab cards render positive "Import" titles
+        // Switch to Tab 1 (Import) and verify Import tab cards render positive "Import" titles
+        composeRule.onNodeWithText(context.getString(R.string.tab_import)).performClick()
+        composeRule.mainClock.advanceTimeBy(1000)
+        composeRule.waitForIdle()
+
         composeRule.onNodeWithText(context.getString(R.string.import_fit_title)).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.import_tcx_title)).assertExists()
         composeRule.onNodeWithText(context.getString(R.string.import_gpx_title)).assertExists()
 
         val importKeys = listOf(
             "import_backup",
+            "tab_export",
             "tab_import",
             "import_fit_title",
             "import_fit_description",

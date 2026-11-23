@@ -146,6 +146,18 @@ val FIT_MIME_TYPES = arrayOf("application/vnd.ant.fit", "application/fit", "appl
 val TCX_MIME_TYPES = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml", "application/octet-stream")
 val GPX_MIME_TYPES = arrayOf("application/gpx+xml", "application/xml", "text/xml", "application/octet-stream")
 
+/**
+ * Canonical tab indices for [ImportBackupTabsScreen] (`REQ-MIG-059`).
+ */
+object ImportBackupTabIndex {
+    const val EXPORT = 0
+    const val IMPORT = 1
+    const val AUTO_IMPORT = 2
+    const val BACKUP = 3
+    const val RESTORE = 4
+    const val TAB_COUNT = 5
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportBackupTabsScreen(
@@ -154,7 +166,8 @@ fun ImportBackupTabsScreen(
         com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents.triggerNavigateToWorkout(workoutId)
     },
     onMenuClick: (() -> Unit)? = null,
-    onBackClick: (() -> Unit)? = null
+    onBackClick: (() -> Unit)? = null,
+    initialTab: Int = ImportBackupTabIndex.EXPORT
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
@@ -163,9 +176,14 @@ fun ImportBackupTabsScreen(
     val queueCount by viewModel.pendingInteractionsCount.collectAsState()
     
     val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val safeInitialTab = initialTab.coerceIn(0, ImportBackupTabIndex.TAB_COUNT - 1)
+    val pagerState = rememberPagerState(
+        initialPage = safeInitialTab,
+        pageCount = { ImportBackupTabIndex.TAB_COUNT }
+    )
     
     val tabs = listOf(
+        stringResource(R.string.tab_export),
         stringResource(R.string.tab_import),
         stringResource(R.string.tab_auto_import),
         stringResource(R.string.tab_backup),
@@ -364,13 +382,21 @@ fun ImportBackupTabsScreen(
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        edgePadding = 16.dp,
                         divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                                text = { Text(text = title) }
+                                text = {
+                                    Text(
+                                        text = title,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             )
                         }
                     }
@@ -390,7 +416,10 @@ fun ImportBackupTabsScreen(
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
                 when (pageIndex) {
-                    0 -> ImportTabContent(
+                    ImportBackupTabIndex.EXPORT -> ExportTabContent(
+                        resumeTrigger = resumeTrigger
+                    )
+                    ImportBackupTabIndex.IMPORT -> ImportTabContent(
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
                         onLocalImportClick = { format ->
@@ -425,13 +454,13 @@ fun ImportBackupTabsScreen(
                             pickStravaArchiveLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
                         }
                     )
-                    1 -> AutoImportTabContent(
+                    ImportBackupTabIndex.AUTO_IMPORT -> AutoImportTabContent(
                         viewModel = viewModel,
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
                         isGoogleDriveConnected = isGoogleDriveConnected
                     )
-                    2 -> BackupTabContent(
+                    ImportBackupTabIndex.BACKUP -> BackupTabContent(
                         viewModel = viewModel,
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
@@ -454,7 +483,7 @@ fun ImportBackupTabsScreen(
                             }
                         }
                     )
-                    3 -> {
+                    ImportBackupTabIndex.RESTORE -> {
                         val autoBackupTimestamp = remember(pagerState.currentPage, isBusy) {
                             viewModel.getAutomaticBackupTimestamp(context)
                         }

@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.43  
+**Version**: 1.0.44  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 136
+**Total Tests**: 137
 
 ---
 
@@ -2591,10 +2591,28 @@
 
 ---
 
+### TST-MIG-059: Integrated Export Tab 0, Drawer Consolidation & 9-Locale Parity Verification (`ATT-8103`) [Verified]
+- **Requirement(s)**: `REQ-MIG-059`
+- **Component**: `ExportTabContent.kt`, `ImportBackupTabsScreen.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `TrainingApplication.java`, `res/values*/strings.xml`
+- **Jira**: `ATT-8103`
+- **Test Code**:
+  - `ExportTabContentTest.kt` (`4/4` PASS): behavioral Robolectric Compose UI tests verifying all 6 export toggles render, persist immediately via `TrainingApplication`, Tab 0 default + `initialTab` routing, and `drawer_export` alias to `NavRoutes.BACKUP_RESTORE` with zero `SettingsBottomSheetType.EXPORT` sheet.
+  - `ImportBackupTabsUiContractTest.kt` (`4/4` PASS), `ImportBackupTabsSealedStateComposeTest.kt` (`4/4` PASS), `AutoImportContractTest.kt` (`3/3` PASS), `RestoreCardContractTest.kt` (`5/5` PASS).
+  - `NavigationDrawerStateTest.kt` (`5/5` PASS), `NavigationDrawerAndDialogContractTest.kt` (`5/5` PASS), `SingleActivityNavigationTest.kt` (`16/16` PASS), `SecondaryTabbedHeadersContractTest.kt` (`8/8` PASS), `AppNavigationDrawerContractTest.kt` (`6/6` PASS), `ProcessStabilityComposeUiTest.kt` (`10/10` PASS), `ModalBottomSheetDialogsIntegrityTest.kt` (`20/20` PASS), `TranslationParityTest.kt` (`11/11` PASS), `HardcodedStringsAndUnitsContractTest.kt` (`8/8` PASS), `ArchitectureConformanceContractTest.kt` (`11/11` PASS), `UiReflectionOnlyTestAuditContractTest.kt` (`4/4` PASS).
+- **Verification Evidence**: Verified (`ATT-8103`, `tier-b`; `124/124` targeted Tier-1 tests PASS across 16 suites + `:app:compileDebugAndroidTestKotlin`, `0` fail/err/skip, `0` new compiler warnings; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with `Rule 8.5` inspected screenshots `docs/engineering/walkthroughs/img/ATT-8103_drawer.png` and `docs/engineering/walkthroughs/img/ATT-8103_export_tab.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8103/`).
+- **Test Description**:
+  1. *Export Tab 0 Behavioral UI & Immediate Persistence (`TST-MIG-059.1` — `ExportTabContentTest.kt`, `ImportBackupTabsUiContractTest.kt`)*: Render `ImportBackupTabsScreen` and `ExportTabContent` via `createComposeRule()`, verify all 5 tabs appear in exact order (`Export | Import | Auto-Import | Backup | Restore`), verify Tab 0 renders all 6 format toggles (`TCX`, `GPX`, `Golden Cheetah JSON`, `CSV`, `FIT`, `Raw Sensor Data`), toggle formats and assert immediate persistence in `TrainingApplication.exportTo*()`, and verify switching to Import, Auto-Import, Backup, and Restore tabs works cleanly.
+  2. *Drawer Consolidation, Deep-Link Alias & Dead Island Removal (`TST-MIG-059.2` — `NavigationDrawerStateTest.kt`, `NavigationDrawerAndDialogContractTest.kt`, `SingleActivityNavigationTest.kt`, `ModalBottomSheetDialogsIntegrityTest.kt`)*: Verify `R.id.drawer_export` is absent from `createDrawerGroups()`, `isDrawerItemSelected(R.id.drawer_backup_restore, R.id.drawer_export) == true`, `NavRoutes.fromDrawerItemId(R.id.drawer_export) == NavRoutes.BACKUP_RESTORE`, `NavRoutes.toBottomSheetType(R.id.drawer_export) == null`, `SettingsBottomSheetType` omits `EXPORT`, and `ExportSettingsDialogKt` is removed from classpath.
+  3. *9-Locale Parity & Live Emulator Visual Check (`TST-MIG-059.3` — `TranslationParityTest.kt`, `AutoImportContractTest.kt`, live `emulator-5554`)*: Verify `import_backup`, `import_backup_summary`, and `tab_export` across all 9 locales and visually inspect `ATT-8103_drawer.png` and `ATT-8103_export_tab.png` against the 4-point Visual Self-Inspection Checklist.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Promoted `TST-MIG-059` to `[Verified]` (`124/124` targeted Tier-1 unit, Compose UI & contract tests PASS across 16 suites incl. `ExportTabContentTest` `4/4`, `TranslationParityTest` `11/11`; `:app:compileDebugAndroidTestKotlin` PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` + `Rule 8.5` PNG screenshots `ATT-8103_drawer.png` & `ATT-8103_export_tab.png`; SHA-256 evidence bundle). |
+| `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Added `[Planned]` `TST-MIG-059` (`TST-MIG-059.1`–`TST-MIG-059.3`, symmetric with `REQ-MIG-059`) covering 5-tab `ExportTabContent` Compose UI & immediate persistence, drawer consolidation / deep-link alias / dead-island removal, 9-locale parity, and live `emulator-5554` verification. |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Promoted `TST-EXP-049` to `[Verified]` (`9/9` targeted Tier-1 unit tests PASS across 2 suites: `CSVFileWriterTest` `6/6`, `TrackerServiceDeviceNameQuotingTest` `3/3`; `0` fail/err/skip, `0` new warnings). |
 | `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9245`, `--as agent1`) | `ATT-9245` | Added `[Planned]` `TST-EXP-049` (`TST-EXP-049.1`–`TST-EXP-049.2`, symmetric with `REQ-EXP-049`) verifying `_id`/`time` metadata export, `ALTITUDE (Topografische Höhe (DEM))` & nested-parentheses `INTEGER`/`DOUBLE` resolution, location suffixes, and zero `Log.w` `IllegalArgumentException` stack traces in `CSVFileWriterTest.kt`. |
 | `1.0.42` | 2026-11-23 | Lane 2 Author (`ATT-9613`, `--as agent1`) | `ATT-9613` | Promoted `TST-EXP-048` to `[Verified]` (`45/45` targeted Tier-1 unit & contract tests PASS across 8 suites incl. `ExportManagerTest` `4/4`, `RawSensorFileExporterTest` `6/6`, `ExportManagerFitTest` `8/8`, `ExportManagerGoogleDriveTest` `2/2`, `ExportManagerDropboxGatingTest` `3/3`, `BaseExporterDownloadsTest` `5/5`, `PolarRawTelemetryPrunerTest` `6/6`, `ArchitectureConformanceContractTest` `11/11`; `0` new warnings; SHA-256 evidence bundle). |

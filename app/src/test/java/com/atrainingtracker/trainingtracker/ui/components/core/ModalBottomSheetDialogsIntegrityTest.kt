@@ -79,10 +79,16 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
-    fun testExportSettingsDialog_existsAndExposesComposable() {
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogKt")
-        val composableMethod = dialogClass.declaredMethods.find { it.name == "ExportSettingsDialog" }
-        assertNotNull("ExportSettingsDialog composable function must exist", composableMethod)
+    fun testExportTabContent_replacesRetiredExportSettingsDialog() {
+        try {
+            Class.forName("com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogKt")
+            org.junit.Assert.fail("Retired ExportSettingsDialogKt island must not exist in classpath (REQ-MIG-059.2)")
+        } catch (_: ClassNotFoundException) {
+            // Expected
+        }
+        val exportTabClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ExportTabContentKt")
+        val composableMethod = exportTabClass.declaredMethods.find { it.name == "ExportTabContent" }
+        assertNotNull("ExportTabContent composable function must exist", composableMethod)
         assertTrue(Modifier.isPublic(composableMethod!!.modifiers))
     }
 

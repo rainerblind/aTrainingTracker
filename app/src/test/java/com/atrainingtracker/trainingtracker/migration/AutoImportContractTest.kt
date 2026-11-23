@@ -31,6 +31,7 @@ import org.junit.Test
 class AutoImportContractTest {
 
     private val tabKeys = listOf(
+        "tab_export",
         "tab_import",
         "tab_auto_import",
         "tab_backup",
@@ -48,10 +49,13 @@ class AutoImportContractTest {
         val screenClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreenKt")
         assertNotNull("ImportBackupTabsScreenKt must exist", screenClass)
 
+        val exportTabContentClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ExportTabContentKt")
+        assertNotNull("ExportTabContentKt must exist", exportTabContentClass)
+
         val tabContentClass = Class.forName("com.atrainingtracker.trainingtracker.migration.AutoImportTabContentKt")
         assertNotNull("AutoImportTabContentKt must exist", tabContentClass)
 
-        // 1. Verify all 4 tab labels exist across all 9 locales
+        // 1. Verify all 5 tab labels exist across all 9 locales
         for (key in tabKeys) {
             for (locale in LocalizationTestCache.LOCALES) {
                 val strings = getMergedStrings(locale)
@@ -64,6 +68,7 @@ class AutoImportContractTest {
 
         // 2. Exact contract match for default EN
         val defaultStrings = getMergedStrings("values")
+        assertEquals("Export", defaultStrings["tab_export"]?.trim())
         assertEquals("Import", defaultStrings["tab_import"]?.trim())
         assertEquals("Auto-Import", defaultStrings["tab_auto_import"]?.trim())
         assertEquals("Backup", defaultStrings["tab_backup"]?.trim())
@@ -71,6 +76,7 @@ class AutoImportContractTest {
 
         // 3. Exact contract match for German DE
         val deStrings = getMergedStrings("values-de")
+        assertEquals("Export", deStrings["tab_export"]?.trim())
         assertEquals("Import", deStrings["tab_import"]?.trim())
         assertEquals("Auto-Import", deStrings["tab_auto_import"]?.trim())
         assertEquals("Backup", deStrings["tab_backup"]?.trim())
