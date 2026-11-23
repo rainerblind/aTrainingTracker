@@ -588,4 +588,29 @@ class UnicycleOdometryEkfTest {
         assertTrue(directEkf.updateGnssPosition(directEkf.eastMeters + 8.0, 0.0, accuracyMeters = 5.0, timestampMs = 6_000L, isStationary = false))
         assertTrue("Fix #4 must resume normal position-velocity coupling (before=$beforeFix4, after=${directEkf.speedMps})", directEkf.speedMps > beforeFix4 + 0.05)
     }
+
+    // REQ-FIL-042.3 / TST-FIL-042.3: Interleaved lagged GNSS timestamps must not rewind currentTimestampMs,
+    // while reset(timestampMs) directly restores currentTimestampMs for fresh sessions.
+    @Test
+    fun testInterleavedLaggedGnssTimestamp_keepsCurrentTimestampMonotonicAndResetClearsIt_TST_FIL_042_3() {
+        val ekf = UnicycleOdometryEkf(initialSpeed = 4.0, initialHeadingRad = 0.0, recordSnapshots = true)
+        ekf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.0, timestampMs = 685_756_550L)
+        assertEquals(685_756_550L, ekf.getState().timestampMs)
+
+        // Lagged GNSS fix (-460 ms behind latest 50-Hz gyro prediction) must NOT rewind currentTimestampMs
+        assertTrue(ekf.updateSpeed(4.1, variance = 0.25, timestampMs = 685_756_090L))
+        assertEquals(685_756_550L, ekf.getState().timestampMs)
+        assertTrue(ekf.updateGnssPosition(1.0, 0.0, accuracyMeters = 4.0, timestampMs = 685_756_090L, isStationary = false))
+        assertEquals(685_756_550L, ekf.getState().timestampMs)
+
+        // Forward prediction advances cleanly
+        ekf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.0, timestampMs = 685_756_570L)
+        assertEquals(685_756_570L, ekf.getState().timestampMs)
+
+        // reset() directly restores currentTimestampMs to 0L (or requested baseline) without sticky high-water mark
+        ekf.reset(timestampMs = 0L)
+        assertEquals(0L, ekf.getState().timestampMs)
+        ekf.predict(dtSec = 0.02, gyroYawRateRadPerSec = 0.0, timestampMs = 1_000L)
+        assertEquals(1_000L, ekf.getState().timestampMs)
+    }
 }

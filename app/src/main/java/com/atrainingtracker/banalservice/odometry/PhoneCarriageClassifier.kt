@@ -300,8 +300,10 @@ class PhoneCarriageClassifier(
         latitude: Double? = null,
         longitude: Double? = null
     ) {
+        if (timestampMs == Long.MIN_VALUE) return
         noteTimestamp(timestampMs)
-        if (speedMps.isFinite() && speedMps >= 0.0) {
+        val isNewerOrEqualGnss = lastGnssTimestampMs == Long.MIN_VALUE || timestampMs >= lastGnssTimestampMs
+        if (isNewerOrEqualGnss && speedMps.isFinite() && speedMps >= 0.0) {
             lastGnssSpeedMps = speedMps
             lastGnssTimestampMs = timestampMs
         }
@@ -310,30 +312,35 @@ class PhoneCarriageClassifier(
             latitude in -90.0..90.0 && longitude in -180.0..180.0 &&
             !(abs(latitude) < 1e-6 && abs(longitude) < 1e-6)
         ) {
-            positionSamples.addLast(PositionSample(timestampMs, latitude, longitude))
+            val prevPos = positionSamples.peekLast()
+            if (prevPos == null || timestampMs >= prevPos.timestampMs) {
+                positionSamples.addLast(PositionSample(timestampMs, latitude, longitude))
+            }
         }
-        val validBearing = bearingDeg != null && bearingDeg.isFinite() &&
-            (accuracyMeters == null || (accuracyMeters.isFinite() && accuracyMeters <= 25.0))
-        if (validBearing && speedMps.isFinite() && speedMps >= 1.2) {
-            val safeBearing = bearingDeg
-            val prevB = lastGnssBearingDeg
-            val prevT = lastGnssBearingTimestampMs
-            if (prevB != null && prevT > Long.MIN_VALUE && timestampMs > prevT && timestampMs - prevT <= 3_000L) {
-                // Geographic bearing increases clockwise; ENU yaw is counter-clockwise
-                val dBearingRad = UnicycleOdometryEkf.normalizeAngle(Math.toRadians(prevB - safeBearing))
-                val dtSec = (timestampMs - prevT) / 1000.0
-                estimatedGnssYawRateRadPerSec = (dBearingRad / dtSec).coerceIn(-3.0, 3.0)
+        if (isNewerOrEqualGnss) {
+            val validBearing = bearingDeg != null && bearingDeg.isFinite() &&
+                (accuracyMeters == null || (accuracyMeters.isFinite() && accuracyMeters <= 25.0))
+            if (validBearing && speedMps.isFinite() && speedMps >= 1.2) {
+                val safeBearing = bearingDeg
+                val prevB = lastGnssBearingDeg
+                val prevT = lastGnssBearingTimestampMs
+                if (prevB != null && prevT > Long.MIN_VALUE && timestampMs > prevT && timestampMs - prevT <= 3_000L) {
+                    // Geographic bearing increases clockwise; ENU yaw is counter-clockwise
+                    val dBearingRad = UnicycleOdometryEkf.normalizeAngle(Math.toRadians(prevB - safeBearing))
+                    val dtSec = (timestampMs - prevT) / 1000.0
+                    estimatedGnssYawRateRadPerSec = (dBearingRad / dtSec).coerceIn(-3.0, 3.0)
+                } else {
+                    estimatedGnssYawRateRadPerSec = 0.0
+                }
+                lastGnssBearingDeg = safeBearing
+                lastGnssBearingTimestampMs = timestampMs
             } else {
                 estimatedGnssYawRateRadPerSec = 0.0
+                lastGnssBearingDeg = null
+                lastGnssBearingTimestampMs = Long.MIN_VALUE
             }
-            lastGnssBearingDeg = safeBearing
-            lastGnssBearingTimestampMs = timestampMs
-        } else {
-            estimatedGnssYawRateRadPerSec = 0.0
-            lastGnssBearingDeg = null
-            lastGnssBearingTimestampMs = Long.MIN_VALUE
         }
-        pruneWindows(timestampMs)
+        pruneWindows(if (lastEventTimestampMs != Long.MIN_VALUE) max(timestampMs, lastEventTimestampMs) else timestampMs)
     }
 
     @VisibleForTesting
@@ -379,19 +386,26 @@ class PhoneCarriageClassifier(
         if (nowMs == Long.MIN_VALUE || firstSampleTimestampMs == Long.MIN_VALUE) {
             return committedMode
         }
-        pruneWindows(nowMs)
+        // REQ-FIL-042.3: Defensive monotonic guard prevents lagged cross-sensor timestamps from
+        // seeding candidateSinceMs in the past relative to lastEventTimestampMs and bypassing dwell.
+        val effectiveNowMs = if (lastEventTimestampMs != Long.MIN_VALUE && nowMs < lastEventTimestampMs) {
+            lastEventTimestampMs
+        } else {
+            nowMs
+        }
+        pruneWindows(effectiveNowMs)
 
-        val rawCandidate = evaluateRawCandidate(nowMs)
+        val rawCandidate = evaluateRawCandidate(effectiveNowMs)
         if (rawCandidate == PhoneCarriageMode.UNKNOWN) {
             return committedMode
         }
 
         if (committedMode == PhoneCarriageMode.UNKNOWN) {
-            val elapsedMs = nowMs - firstSampleTimestampMs
-            if (elapsedMs >= MIN_WARMUP_MS || hasStrongDirectEvidence(nowMs, rawCandidate)) {
+            val elapsedMs = effectiveNowMs - firstSampleTimestampMs
+            if (elapsedMs >= MIN_WARMUP_MS || hasStrongDirectEvidence(effectiveNowMs, rawCandidate)) {
                 committedMode = rawCandidate
                 candidateMode = rawCandidate
-                candidateSinceMs = nowMs
+                candidateSinceMs = effectiveNowMs
             }
             return committedMode
         }
@@ -402,7 +416,7 @@ class PhoneCarriageClassifier(
             return committedMode
         }
 
-        if (committedMode.isRunningMode() && rawCandidate == PhoneCarriageMode.RUN_HANDHELD && isGlanceActive(nowMs)) {
+        if (committedMode.isRunningMode() && rawCandidate == PhoneCarriageMode.RUN_HANDHELD && isGlanceActive(effectiveNowMs)) {
             committedMode = rawCandidate
             candidateMode = rawCandidate
             candidateSinceMs = Long.MIN_VALUE
@@ -411,12 +425,12 @@ class PhoneCarriageClassifier(
 
         if (candidateMode != rawCandidate || candidateSinceMs == Long.MIN_VALUE) {
             candidateMode = rawCandidate
-            candidateSinceMs = nowMs
+            candidateSinceMs = effectiveNowMs
             return committedMode
         }
 
         val requiredDwellMs = requiredDwellMs(committedMode, rawCandidate)
-        if (nowMs - candidateSinceMs >= requiredDwellMs) {
+        if (effectiveNowMs - candidateSinceMs >= requiredDwellMs) {
             committedMode = rawCandidate
             candidateSinceMs = Long.MIN_VALUE
         }

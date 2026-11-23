@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.15  
+**Version**: 1.0.17  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 94
+**Total Tests**: 95
 
 ---
 
@@ -2041,6 +2041,20 @@
   3. *Genuine Fast Start Preservation, `REQ-TRK-056.2` Regression & LoC Contract (`TST-FIL-041.3` — `SpeedAndLocationDevice_ATTFusedTest.kt`, `SpeedAndLocationDeviceStationaryJitterTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • Verify legitimate acceleration from standstill to `9.0 m/s` (outdoor GNSS `acc <= 10 m` Doppler `9.0 m/s` and active wheel sensor) tracks `9.0 m/s` promptly without clamping or lag; verify `SpeedAndLocationDevice_GoogleFused` preserves `REQ-TRK-056.2` damped-Doppler fallback; verify `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC.
 
+### TST-FIL-042: **Unified Monotonic `elapsedRealtime` Clock Domain, OEM HAL Normalization & Out-of-Order Hysteresis Guard Verification (`ATT-9600`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-042` (`REQ-FIL-042.1`–`REQ-FIL-042.3`)
+- **Component**: `AttFusedTimestampNormalizer.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageClassifier.kt`, `UnicycleOdometryEkf.kt`
+- **Jira**: `ATT-9600` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `AttFusedTimestampNormalizerTest#testStandardClockBoottime_unifiesGnssAndImuIgnoringLaggingLocationTime_TST_FIL_042_1`, `AttFusedTimestampNormalizerTest#testDivergentOemHals_uptimeMillisDeepSleepAndEpochNsNtpJumpReanchorCleanly_TST_FIL_042_2`, `AttFusedTimestampNormalizerTest#testPlainJvmUnmockedAndRobolectricFrozenClockCoherenceAndReset_TST_FIL_042_2`, `SpeedAndLocationDevice_ATTFusedTest#testPixel10Minus218sGnssOffsetReplay_enforcesFullDwellZeroModeChatterAndPreservesUtcSidecar_TST_FIL_042_1`, `SpeedAndLocationDevice_ATTFusedTest#testDivergentOemSensorTimestamps_uptimeAndEpochNsAlignWithGnssWithoutBreakingDt_TST_FIL_042_2`, `PhoneCarriageClassifierTest#testOutOfOrderLaggedClassifyAndGnss_preservesFullDismountDwellWithoutBypass_TST_FIL_042_3`, `UnicycleOdometryEkfTest#testInterleavedLaggedGnssTimestamp_keepsCurrentTimestampMonotonicAndResetClearsIt_TST_FIL_042_3`
+- **Test Description**:
+  1. *Pixel 10 `-2.18 s` GNSS Offset Replay & External UTC Preservation (`TST-FIL-042.1` — `SpeedAndLocationDevice_ATTFusedTest.kt`, `AttFusedTimestampNormalizerTest.kt`)*:
+     • Reproduce the `t = 4..20 s` window from `2026-11-22_081402.phone_raw.csv.gz` where GPS `Location.getTime()` lags `System.currentTimeMillis()` by `-2.18 s` while `Location.getElapsedRealtimeNanos()` matches `SystemClock.elapsedRealtimeNanos()` within `< 200 ms`; assert `PhoneCarriageClassifier` enforces full `dismountHysteresisMs` (`2.0 s`) / `mountHysteresisMs` (`4.0 s`) dwell with zero sub-`2 s` `4 <-> 1` mode-chatter flips and zero `-2.18 s` EKF/classifier sawtooth; assert `toWallClockEpochMs()` emits monotonic UTC epoch ms immune to NTP jumps and sidecar `epochMs` remains UTC wall-clock.
+  2. *Cross-Device OEM `uptimeMillis`/Epoch-ns Sensor Normalization, Wheel Alignment & JVM/Robolectric Compatibility (`TST-FIL-042.2` — `AttFusedTimestampNormalizerTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`)*:
+     • Verify `SensorEvent.timestamp` on `uptimeMillis` (`-120 s` offset + `+30 s` deep-sleep jump) and Unix epoch ns (`~1.79e18` + NTP jump) normalize cleanly onto `elapsedRealtime` preserving `20 ms` `dt`; verify wall-clock `MySensorManager` wheel callbacks align with GNSS/IMU; verify plain-JVM unmocked `SystemClock` and Robolectric frozen `SystemClock` suites pass cleanly.
+  3. *Out-of-Order Classifier/EKF Monotonic Guards & LoC Contract (`TST-FIL-042.3` — `PhoneCarriageClassifierTest.kt`, `UnicycleOdometryEkfTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify out-of-order `PhoneCarriageClassifier.classify(nowMs < lastEventTimestampMs)` clamps `effectiveNowMs` to `lastEventTimestampMs` so `candidateSinceMs` never seeds in the past and full `2.0 s` dwell holds; verify `UnicycleOdometryEkf` keeps `currentTimestampMs` monotonically non-decreasing; verify `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC.
+
 ---
 
 ## Change History
@@ -2180,3 +2194,5 @@
 | `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `TST-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.13`) with verbatim method citations (`90/90` PASS across 8 targeted suites: `BarometricBucketDispersionTest` `4/4`, `KinematicAltitudeSlopeEkfTest` `17/17`, `AltitudeAndSlopeDevice_ATTFusedTest` `26/26`, `ExtendedRtsAltitudeSlopeSmootherTest` `10/10`, `BarometricAltitudeFilterTest` `7/7`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
 | `1.0.14` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Added `[Planned]` `TST-FIL-041` (`TST-FIL-041.1`–`TST-FIL-041.3`, strictly symmetric `REQ-FIL-041`) covering immediate indoor `acc = 45.9 m` zero-speed publication, `159 s` post-pause `+19.1 m` snap velocity bound (`3.51 m/s` vs `10.85 m/s`), genuine `0 -> 9.0 m/s` fast start, `REQ-TRK-056.2` `GoogleFused` preservation, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC. |
 | `1.0.15` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `TST-FIL-041` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`146/146` PASS across 11 targeted suites: `SpeedAndLocationDevice_ATTFusedTest` `40/40`, `UnicycleOdometryEkfTest` `20/20`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `ExtendedRtsOdometrySmootherTest` `14/14`, `AttFusedColdStartHelperTest` `3/3`, `OdometrySimulationTest` `3/3`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
+| `1.0.16` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Added `[Planned]` `TST-FIL-042` (`TST-FIL-042.1`–`TST-FIL-042.3`, strictly symmetric `REQ-FIL-042`) covering Pixel 10 `-2.18 s` GNSS offset replay (`0` sub-`2 s` `4 <-> 1` flips), OEM `uptimeMillis`/epoch-ns `> 5 s` re-anchoring, wall-clock wheel alignment, UTC `MultisportTelemetryAnchor`/sidecar preservation, out-of-order `PhoneCarriageClassifier`/`UnicycleOdometryEkf` monotonic guards, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC. |
+| `1.0.17` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `TST-FIL-042` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`160/160` PASS across 13 targeted suites: `AttFusedTimestampNormalizerTest` `3/3`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `PhoneCarriageClassifierTest` `16/16`, `UnicycleOdometryEkfTest` `21/21`, `AttFusedColdStartHelperTest` `3/3`, `KinematicSportTypeDiscriminatorTest` `6/6`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T03:23:59.172Z" hostname="rainer-HP-EliteBook-850-G5" time="0.033">
+  <properties/>
+  <testcase name="budgetPhoneDegraded_noBaroNoGyroNoActivityRecognition_fast56MpsRunnerClassifiesRun" classname="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" time="0.004"/>
+  <testcase name="runningKurzeRunde_withStepDetector_classifiesRunWithin30sAndZeroCoasting" classname="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" time="0.003"/>
+  <testcase name="errandBikeRide_metzgerProfileWithUnpausedStops_classifiesBikeAndPreservesMovingSpeed" classname="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" time="0.003"/>
+  <testcase name="movingSpeedHistogram_throttlesHighRateAndBoundsQuantileError" classname="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" time="0.0"/>
+  <testcase name="midSessionRunToBikeTransition_recoversCleanlyToBike" classname="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" time="0.004"/>
+  <testcase name="slow20MpsUphillMtb_bumpyBroadbandChatter_doesNotMisclassifyAsRun" classname="com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

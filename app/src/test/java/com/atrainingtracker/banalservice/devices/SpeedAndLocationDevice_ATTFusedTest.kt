@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.SportContextHint
 import com.atrainingtracker.banalservice.sensor.MySensorManager
@@ -2901,6 +2902,252 @@ class SpeedAndLocationDevice_ATTFusedTest {
             assertTrue("Genuine 9.0 m/s wheel fast start must track >= 8.5 m/s (was $publishedWheelSpeed)", publishedWheelSpeed >= 8.5)
         } finally {
             wheelDevice.shutDown()
+        }
+    }
+
+    // REQ-FIL-042.1 / TST-FIL-042.1: Pixel 10 -2.18 s GNSS wall-clock lag replay (t = 4..20 s of 2026-11-22_081402)
+    // proves unified CLOCK_BOOTTIME eliminates sub-2 s 4 <-> 1 mode chatter, preserves EKF monotonic timestamps,
+    // aligns wall-clock wheel callbacks, and preserves UTC epochMs on sidecar STATE & WHEEL rows.
+    @Test
+    fun testPixel10Minus218sGnssOffsetReplay_enforcesFullDwellZeroModeChatterAndPreservesUtcSidecar_TST_FIL_042_1() = kotlinx.coroutines.runBlocking {
+        val tempFile = java.io.File.createTempFile("att9600_pixel10_replay_", ".phone_raw.csv.gz")
+        tempFile.delete()
+        val recorder = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder(
+            targetFile = tempFile,
+            metadata = com.atrainingtracker.banalservice.devices.raw.PhoneRawMetadata(
+                appVersion = "5.0.0",
+                deviceModel = "Pixel 10",
+                sportId = 1L,
+                sessionStartTimeMs = 1_795_331_655_000L
+            )
+        )
+        recorder.start()
+        val prevClock = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider
+        var monoNs = 685_756_000_000_000L // ~685_756_000 ms (matching 2026-11-22_081402 Pixel 10 boot clock)
+        var wallMs = 1_795_331_659_182L   // real UTC epoch ms (+2,182 ms ahead of GPS location.time!)
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider = { monoNs }
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder)
+
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            override fun currentTimeMillis(): Long = wallMs
+            override fun elapsedRealtimeNanos(): Long = monoNs
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        device.setSportContextHintForTesting(SportContextHint.CYCLING)
+
+        val transitions = mutableListOf<Pair<Long, Int>>()
+        var lastModeCode = device.mActivityAndCarriageModeSensor?.value ?: PhoneCarriageMode.UNKNOWN.code
+        var prevEkfTs = 0L
+        val degPerMeter = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+        var lat = 48.6567
+        val lon = 9.0545
+
+        try {
+            // 16 s replay (t = 4..20 s): steady BIKE_FRONT_POCKET pedaling with transient 1.0 s slow-speed dip
+            // at sec 8 & sec 13 (previously triggering 0.77 s / 1.03 s 4 <-> 1 flips under -2.18 s GNSS lag!).
+            for (sec in 0..16) {
+                for (sub in 0 until 50) {
+                    val stepRelMs = sec * 1_000L + sub * 20L
+                    monoNs = (685_756_000L + stepRelMs) * 1_000_000L
+                    wallMs = 1_795_331_659_182L + stepRelMs
+                    val tSec = stepRelMs / 1000.0
+                    val phase = 2.0 * PI * 1.35 * tSec
+                    val halfTilt = Math.toRadians(60.0 + 20.0 * sin(phase)) * 0.5
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_GAME_ROTATION_VECTOR,
+                            monoNs,
+                            floatArrayOf(sin(halfTilt).toFloat(), 0f, 0f, cos(halfTilt).toFloat())
+                        )
+                    )
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_ACCELEROMETER,
+                            monoNs,
+                            floatArrayOf(0.4f, (9.81 + 1.4 * sin(phase)).toFloat(), 0.8f)
+                        )
+                    )
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_GYROSCOPE,
+                            monoNs,
+                            floatArrayOf(0f, 0f, (0.76 * sin(phase)).toFloat())
+                        )
+                    )
+                    if (sub % 10 == 0) {
+                        device.onSensorChanged(
+                            createSyntheticSensorEvent(
+                                Sensor.TYPE_PRESSURE,
+                                monoNs,
+                                floatArrayOf((962.0 - 0.065 * sin(phase)).toFloat())
+                            )
+                        )
+                    }
+
+                    // Interleaved 1-Hz GPS fix arriving with location.time lagging wallMs by -2,182 ms
+                    // while location.elapsedRealtimeNanos is strictly on CLOCK_BOOTTIME (-90 ms pipeline latency)
+                    if (sub == 5) {
+                        val transientSlow = (sec == 8 || sec == 13)
+                        val gpsSpeed = if (transientSlow) 1.4f else 5.8f
+                        lat += gpsSpeed * degPerMeter
+                        val gpsLoc = createMutableLocation(
+                            lat = lat,
+                            lon = lon,
+                            acc = 4.2f,
+                            timeMs = wallMs - 2_182L, // Pixel 10 -2.18 s wall-clock lag!
+                            hasSpeedFlag = true,
+                            speedMps = gpsSpeed,
+                            hasBearingFlag = true,
+                            bearingDeg = 0.0f
+                        )
+                        every { gpsLoc.elapsedRealtimeNanos } returns (monoNs - 90_000_000L)
+                        device.onLocationChanged(gpsLoc)
+                    }
+
+                    val ekfTs = device.ekf.getState().timestampMs
+                    assertTrue(
+                        "EKF timestamp must never step backward (prev=$prevEkfTs, cur=$ekfTs)",
+                        ekfTs >= prevEkfTs
+                    )
+                    prevEkfTs = ekfTs
+
+                    val curModeCode = device.mActivityAndCarriageModeSensor?.value ?: PhoneCarriageMode.UNKNOWN.code
+                    if (curModeCode != lastModeCode) {
+                        transitions.add((monoNs / 1_000_000L) to curModeCode)
+                        lastModeCode = curModeCode
+                    }
+                }
+            }
+
+            // Exercise 2-arg onWheelMeasurement (must record UTC epochMs into sidecar while updating monotonic EKF)
+            device.onWheelMeasurement(speedMps = 6.2, variance = 0.05)
+
+            assertEquals(
+                "Steady front-pocket ride with 1 s slow dips must remain BIKE_FRONT_POCKET",
+                PhoneCarriageMode.BIKE_FRONT_POCKET.code,
+                device.mActivityAndCarriageModeSensor?.value
+            )
+            // Zero sub-2 s mode-chatter flips (specifically zero 4 <-> 1 oscillation)
+            for (i in 1 until transitions.size) {
+                val dtFlipMs = transitions[i].first - transitions[i - 1].first
+                assertTrue(
+                    "Detected sub-2 s mode chatter flip (${transitions[i - 1].second} -> ${transitions[i].second} in ${dtFlipMs} ms)",
+                    dtFlipMs >= PhoneCarriageClassifier.DEFAULT_DISMOUNT_HYSTERESIS_MS
+                )
+            }
+            assertTrue(
+                "Zero WALKING_TRANSITION (1) false flips allowed during transient 1 s slow dips (transitions=$transitions)",
+                transitions.none { it.second == PhoneCarriageMode.WALKING_TRANSITION.code }
+            )
+        } finally {
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider = prevClock
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder.stop()
+            device.shutDown()
+        }
+
+        try {
+            val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(tempFile)
+            val stateRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.STATE }
+            val wheelRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.WHEEL }
+            assertTrue("At least 1 STATE transition row must be recorded", stateRows.isNotEmpty())
+            assertTrue(
+                "STATE sidecar epochMs must remain authentic UTC wall clock (>= 1.79e12), not uptime ms",
+                stateRows.all { it.epochMs >= 1_795_000_000_000L }
+            )
+            assertEquals("2-arg onWheelMeasurement must record 1 WHEEL sidecar row", 1, wheelRows.size)
+            assertTrue(
+                "2-arg onWheelMeasurement sidecar epochMs must remain authentic UTC (>= 1.79e12), got ${wheelRows[0].epochMs}",
+                wheelRows[0].epochMs >= 1_795_000_000_000L
+            )
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    // REQ-FIL-042.2 / TST-FIL-042.2: Divergent OEM SensorEvent.timestamp (uptimeMillis -120 s & epoch ns)
+    // aligns seamlessly with CLOCK_BOOTTIME GNSS in SpeedAndLocationDevice_ATTFused without breaking dt or windows.
+    @Test
+    fun testDivergentOemSensorTimestamps_uptimeAndEpochNsAlignWithGnssWithoutBreakingDt_TST_FIL_042_2() {
+        var monoMs = 685_756_000L
+        var wallMs = 1_795_331_659_000L
+        val device = object : SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager) {
+            override fun currentTimeMillis(): Long = wallMs
+            override fun elapsedRealtimeNanos(): Long = monoMs * 1_000_000L
+            override fun hasActivityRecognitionPermission(): Boolean = true
+        }
+        device.setSportContextHintForTesting(SportContextHint.CYCLING)
+        val degPerMeter = 1.0 / (Math.toRadians(1.0) * 6371000.0)
+        var lat = 48.6567
+
+        try {
+            for (sec in 0..6) {
+                for (sub in 0 until 50) {
+                    val relMs = sec * 1_000L + sub * 20L
+                    monoMs = 685_756_000L + relMs
+                    wallMs = 1_795_331_659_000L + relMs
+                    val uptimeNs = (monoMs - 120_000L) * 1_000_000L // OEM uptimeMillis -120 s behind elapsedRealtime
+                    val epochNs = wallMs * 1_000_000L               // OEM Unix epoch ns
+                    val tSec = relMs / 1000.0
+                    val phase = 2.0 * PI * 1.35 * tSec
+                    val halfTilt = Math.toRadians(60.0 + 20.0 * sin(phase)) * 0.5
+
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_GAME_ROTATION_VECTOR,
+                            uptimeNs,
+                            floatArrayOf(sin(halfTilt).toFloat(), 0f, 0f, cos(halfTilt).toFloat())
+                        )
+                    )
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_ACCELEROMETER,
+                            uptimeNs,
+                            floatArrayOf(0.4f, (9.81 + 1.4 * sin(phase)).toFloat(), 0.8f)
+                        )
+                    )
+                    device.onSensorChanged(
+                        createSyntheticSensorEvent(
+                            Sensor.TYPE_GYROSCOPE,
+                            uptimeNs,
+                            floatArrayOf(0f, 0f, (0.76 * sin(phase)).toFloat())
+                        )
+                    )
+                    if (sub % 10 == 0) {
+                        device.onSensorChanged(
+                            createSyntheticSensorEvent(
+                                Sensor.TYPE_PRESSURE,
+                                epochNs,
+                                floatArrayOf((962.0 - 0.065 * sin(phase)).toFloat())
+                            )
+                        )
+                    }
+                    if (sub == 0) {
+                        lat += 6.0 * degPerMeter
+                        val loc = createMutableLocation(
+                            lat = lat,
+                            lon = 9.0545,
+                            acc = 4.0f,
+                            timeMs = wallMs - 2_182L,
+                            hasSpeedFlag = true,
+                            speedMps = 6.0f,
+                            hasBearingFlag = true,
+                            bearingDeg = 0.0f
+                        )
+                        every { loc.elapsedRealtimeNanos } returns (monoMs * 1_000_000L)
+                        device.onLocationChanged(loc)
+                    }
+                }
+            }
+            assertEquals(
+                "Mixed uptimeMillis + epoch-ns OEM sensors must classify BIKE_FRONT_POCKET cleanly alongside CLOCK_BOOTTIME GNSS",
+                PhoneCarriageMode.BIKE_FRONT_POCKET.code,
+                device.mActivityAndCarriageModeSensor?.value
+            )
+            assertTrue("EKF speed must converge near 6.0 m/s (was ${device.ekf.speedMps})", device.ekf.speedMps >= 5.0)
+            assertTrue("EKF timestamp must stay on monotonic elapsedRealtime domain (< 1e12)", device.ekf.getState().timestampMs in 685_756_000L..685_770_000L)
+        } finally {
+            device.shutDown()
         }
     }
 

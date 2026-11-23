@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-23T03:23:07.342Z" hostname="rainer-HP-EliteBook-850-G5" time="3.711">
+  <properties/>
+  <testcase name="testIndoorGnssOutageAndStagnantCachedFixes_transitionToStationaryInsteadOfRunWaistHipFreeze_tstFil034_1" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.264"/>
+  <testcase name="testCrossDeviceAndAthletePortability_deniedPermissionBaroFreeFastRunnerAndUphillMtb_tstFil034_4" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.039"/>
+  <testcase name="testCyclicFrontPocketPedaling_zeroFalseGlancesAndClassifiesBikeFrontPocket_tstFil034_2" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.034"/>
+  <testcase name="testInitialState_startsUnknownAndMapsAllCodesCleanly" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.001"/>
+  <testcase name="testZumBaeckerBakeryTimeline_hysteresisAndResetClean" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.034"/>
+  <testcase name="testOutOfOrderLaggedClassifyAndGnss_preservesFullDismountDwellWithoutBypass_TST_FIL_042_3" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.005"/>
+  <testcase name="testActiveFootstrikeCyclingMaskAndHighImpactBatchingGuard_eliminatesBikeFrontPocketBleed_tstFil039_1" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.045"/>
+  <testcase name="testRunningSportContextGuardrail_masksCyclingEvictsStaleBikeAndAllowsBrickOverride_tstFil035_1" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.029"/>
+  <testcase name="testStepDetectorLessPocketAndHandheldWalkingDismount_singleLimbPendulumNotFrontPocket" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.016"/>
+  <testcase name="testSalomonFrontHipBeltReplayNarrowBicepCornerAndTenSecondDwell_achievesHighWaistShare_tstFil039_3" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="3.135"/>
+  <testcase name="testGracefulDegradation_missingStepRotVecOrBarometer" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.007"/>
+  <testcase name="testAllCyclingAndRunningModes_classifiedAccurately" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.011"/>
+  <testcase name="testFrontHipRunningBeltAndEasyPace_bypassesWalkingBandsPreservesObstacleWalkAndCarrySeparation_tstFil035_2" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.045"/>
+  <testcase name="testGnssBearingGapAndInvalidFix_resetsStaleEstimatedYawRate" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.0"/>
+  <testcase name="testChatterResistantMarginAndAsymmetricDwell_suppressesTransientDipsWhilePreservingFastGlanceAndWalkToRun_tstFil035_3" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.026"/>
+  <testcase name="testViewingInclinationGlanceGuard_rejectsVerticalBeltRollsAndPreservesWristGlances_tstFil039_2" classname="com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

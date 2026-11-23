@@ -1,0 +1,20 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "70e01927b8d90cb3a04118c5805152f0dedd38db",
+  "files": {
+    "evidence_summary.json": "27c3d9221e7caf2fb1904afbb145261bf3b6fe6c91dfbe9f081282282bcb2985",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml": "0532be9b48d06331fba7be0e9339e21cd89c28eac691cbd4c9e621d8f4b1d18c",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarDualImuBoundedHeapStressTest.xml": "27fe106b46673051f41d02941151f9ac25b0981625cd2601cebbb7160b1ac13a",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.AttFusedTimestampNormalizerTest.xml": "990e207fabdeb25c1965087ea0dd4932a00278337c91a6cd04ad8e341ce6a05c",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml": "e768a4e4010795bf9639683c96884ba5014e4145fc7805c48e819310237d8f64",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml": "0029bcea7dc5f531947e0233ef8b7854026f2b9db2af6ed3f6acd11c38174abb",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest.xml": "e75ac22869758a5b412b52533b958731beb85e62bf11ce4816bf769d38352c1a",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.OdometrySimulationTest.xml": "a35e282577889b92d8cf28b8f40f50e8c0f1bb39edcc9326e6c20fbb290e687c",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml": "a684f0752db3d39ed8175ea58040c6f8c7873c2fa1d81c88198f3b6adc250fdc",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest.xml": "d6a3a87d3a7d4bc962360a2e4178bbc9080235b9176cc4c6e640d0854aa946c3",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml": "e3ad98cb34bd04c4bf35a6412c202b061de5ca73b1d12ca050dd92323a9b02a5"
+  },
+  "run_started_utc": "2026-11-23T03:15:48.590388+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9600"
+}

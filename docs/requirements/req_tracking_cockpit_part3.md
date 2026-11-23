@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.12  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 44
+**Total Requirements**: 45
 
 ---
 
@@ -1546,6 +1546,32 @@
 
 **Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC; strict `this -> ekf` lock order; `REQ-TRK-056.2` untouched for `GPS` & `GoogleFused`; `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`, `MAX_GNSS_ACCURACY_METERS = 20.0`, `coldStartHelper`, and `ExtendedRtsOdometrySmoother` preserved; `0` DB/UI/`strings*.xml` changes (`Localization Parity: N/A`).
 
+### REQ-FIL-042: Unified Monotonic `elapsedRealtime` Clock Domain Across GNSS, IMU & Wheel Streams in `SpeedAndLocationDevice_ATTFused` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-042`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal monotonic timestamp unification across `AttFusedTimestampNormalizer`, `SpeedAndLocationDevice_ATTFused`, `PhoneCarriageClassifier`, and `UnicycleOdometryEkf` refining `REQ-FIL-028.1`/`.3`, `REQ-FIL-029.3`, and `REQ-FIL-031.1` without modifying hardware HALs, SQLite schemas, UI, or cloud APIs.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AttFusedTimestampNormalizer.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageClassifier.kt`, `UnicycleOdometryEkf.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Sidecar telemetry from Pixel 10 workout `2026-11-22_081402` (`Zum Bäcker #60`, `workoutID = 2428`) revealed a `~2.18 s` offset between GPS `Location.getTime()` and `System.currentTimeMillis()` at matching `CLOCK_BOOTTIME` (`elapsedRealtimeNs`). Passing `location.time` into `PhoneCarriageClassifier` and `UnicycleOdometryEkf` while IMU/baro/step/wheel callbacks used wall-clock `System.currentTimeMillis()` caused a `-2.18 s` backward timestamp sawtooth on every 1-Hz fix and bypassed `dismountHysteresisMs` (`2.0 s`), triggering sub-second `4 <-> 1` (`BIKE_FRONT_POCKET <-> WALKING_TRANSITION`) chatter (`ATT-9600`).
+- **Description**:
+  1. *Unified `CLOCK_BOOTTIME` (`elapsedRealtime`) Internal Domain & UTC External Boundaries (`REQ-FIL-042.1`)*:
+     - `SpeedAndLocationDevice_ATTFused` SHALL unify all internal telemetry consumers (`UnicycleOdometryEkf`, `PhoneCarriageClassifier`, `KinematicSportTypeDiscriminator`, `AttFusedColdStartHelper`, `SmartphoneImuCadenceEstimator`, chord/displacement buffers, and wheel freshness checks) onto Android's monotonic `elapsedRealtime` millisecond clock via `AttFusedTimestampNormalizer`.
+     - GNSS `Location` timestamps SHALL derive from `location.elapsedRealtimeNanos / 1_000_000L` when `> 0L` (guarding against `> 300 s` / epoch-ns broken HALs), falling back to platform `elapsedRealtime` for Android wall-clock fixes with `elapsedRealtimeNanos <= 0L`, while preserving synthetic `< 1.5e12` / plain-JVM `location.time` test inputs. External UTC boundaries (`MultisportTelemetryAnchor.timestampMs` via NTP-immune `toWallClockEpochMs()`, `SmartphoneRawTelemetryRecorder` `epochMs`) MUST remain UTC wall-clock.
+  2. *Cross-Device OEM `SensorEvent` & Wheel Timestamp Normalization (`REQ-FIL-042.2`)*:
+     - `AttFusedTimestampNormalizer` SHALL map standard `CLOCK_BOOTTIME` `SensorEvent`s (`|sensorMs - elapsedMs| <= 5_000 ms`) directly (`offset = 0`, preserving CHRE/FIFO `dt`), latch and drift-reanchor per-sensor-type offsets for divergent OEM HALs (`uptimeMillis` after deep sleep or Unix epoch ns with `> 5_000 ms` offset) without freezing under paused Robolectric clocks, normalize wall-clock wheel callbacks (`>= 1.5e12`) onto `elapsedRealtime`, and degrade cleanly to `currentTimeMillis()` on plain JVM when `SystemClock` is unmocked.
+  3. *Defensive Out-of-Order Classifier/EKF Monotonic Guards & Monolith Cap (`REQ-FIL-042.3`)*:
+     - `PhoneCarriageClassifier.classify(nowMs)` SHALL clamp `effectiveNowMs = max(nowMs, lastEventTimestampMs)` so out-of-order/lagged GNSS or CHRE timestamps NEVER seed `candidateSinceMs` in the past or bypass dwell hysteresis, and `ingestGnssSpeed()` SHALL guard against older out-of-order timestamps. `UnicycleOdometryEkf` SHALL keep `currentTimestampMs` monotonically non-decreasing, and `SpeedAndLocationDevice_ATTFused.kt` MUST stay strictly `<= 1,500` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* GPS `Location.getTime()` lags `System.currentTimeMillis()` by `2.18 s` while `Location.getElapsedRealtimeNanos()` matches `SystemClock.elapsedRealtimeNanos()` within `< 200 ms`, *When* `SpeedAndLocationDevice_ATTFused` processes interleaved 50-Hz IMU and 1-Hz GNSS callbacks, *Then* `PhoneCarriageClassifier` enforces the full `dismountHysteresisMs` (`2.0 s`) / `mountHysteresisMs` (`4.0 s`) dwell windows with zero sub-`2 s` `4 <-> 1` flips and zero `-2.18 s` timestamp sawtooths.
+• *Given* an Android device whose `SensorEvent.timestamp` uses `uptimeMillis` or epoch nanoseconds (`> 5 s` offset from `SystemClock.elapsedRealtimeNanos()`), *When* IMU, wheel, and GNSS events arrive concurrently, *Then* `AttFusedTimestampNormalizer` maps all streams cleanly onto `SystemClock.elapsedRealtime()` without breaking `dt` or sliding windows.
+• *Given* a unit/replay test reproducing the `t = 4..20 s` window from `2026-11-22_081402.phone_raw.csv.gz` (`-2.18 s` GNSS offset) and out-of-order `PhoneCarriageClassifier.classify()` calls, *When* the test suite runs, *Then* zero sub-`2 s` mode-chatter flips occur and all existing `SpeedAndLocationDevice_ATTFused`, `PhoneCarriageClassifier`, `UnicycleOdometryEkf`, and replay tests pass.
+
+**Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC; leaf-only normalizer lock (zero lock inversion); `TST-FIL-029.3` CHRE step batch spacing preserved; UTC `MultisportTelemetryAnchor.timestampMs` & sidecar `epochMs` preserved; `SpeedAndLocationDevice.java` & `MySensorManager.java` untouched; `0` DB/UI/`strings*.xml` edits (`Localization Parity: N/A`).
+
 ---
 
 ## Change History
@@ -1669,3 +1695,5 @@
 | `1.0.10` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `REQ-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.10`) following Gate 3 (`ATT-9650`) PASS, full Stage 4 construction (`BarometricBucketDispersion.kt` `198` LoC, `KinematicAltitudeSlopeEkf.kt` `697/1,500` LoC, `AltitudeAndSlopeDevice_ATTFused.kt` `571/1,500` LoC, `ExtendedRtsAltitudeSlopeSmoother.kt` `656/1,500` LoC), `90/90` targeted unit/contract tests PASS across 8 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9602_walkthrough.md`. |
 | `1.0.11` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Added `[Planned]` `REQ-FIL-041` (`Derived (SW-only)`, `.1`–`.3`) for immediate zero-speed publication on stationary rejected GNSS fixes, post-pause/post-standstill `UnicycleOdometryEkf` position-velocity decoupling (`3`-fix window), and `SpeedAndLocationDevice.trustsFusedLocationSpeed()` preserving `REQ-TRK-056.2` for `GPS`/`GoogleFused` (`N/A - no UI strings`). |
 | `1.0.12` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `REQ-FIL-041` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9652`) PASS, Stage 4 construction (`SpeedAndLocationDevice.java` `867/1,500`, `UnicycleOdometryEkf.kt` `882/1,500`, `SpeedAndLocationDevice_ATTFused.kt` `1,498/1,500` LoC), `146/146` targeted tests PASS across 11 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9601_walkthrough.md`. |
+| `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Added `[Planned]` `REQ-FIL-042` (`Derived (SW-only)`, `.1`–`.3`) for unified monotonic `elapsedRealtime` GNSS/IMU/wheel timestamp normalization (`AttFusedTimestampNormalizer`), OEM `> 5 s` `uptimeMillis`/epoch-ns re-anchoring, UTC boundary preservation (`MultisportTelemetryAnchor` / sidecar), out-of-order `PhoneCarriageClassifier` / `UnicycleOdometryEkf` guards, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`N/A - no UI strings`). |
+| `1.0.14` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `REQ-FIL-042` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9654`) PASS, Stage 4 construction (`AttFusedTimestampNormalizer.kt` `278` LoC, `SpeedAndLocationDevice_ATTFused.kt` shrunk `1,498 -> 1,472/1,500` LoC, `PhoneCarriageClassifier.kt` `1,175/1,500` LoC, `UnicycleOdometryEkf.kt` `888/1,500` LoC, `docs/architecture.md` `v1.0.29`), `160/160` targeted tests PASS across 13 suites (incl. Robolectric), `0` new warnings, and `docs/engineering/walkthroughs/ATT-9600_walkthrough.md`. |

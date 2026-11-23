@@ -34,6 +34,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
@@ -41,6 +42,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.odometry.AttFusedColdStartHelper
+import com.atrainingtracker.banalservice.odometry.AttFusedTimestampNormalizer
 import com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminator
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
 import com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder
@@ -99,7 +101,6 @@ open class SpeedAndLocationDevice_ATTFused(
         private const val CLUSTER_STOP_RADIUS_METERS = 1.5
         private const val CLUSTER_STOP_MIN_SPAN_SEC = 3.0
         private const val MAX_PLAUSIBLE_GNSS_SPEED_MPS = 70.0
-        private const val MAX_CLOCK_DOMAIN_SKEW_MS = 60_000L
         private const val LAST_ACTIVE_THROTTLE_MS = 5_000L
     }
 
@@ -113,6 +114,7 @@ open class SpeedAndLocationDevice_ATTFused(
     val sportDiscriminator = KinematicSportTypeDiscriminator()
     val multisportDetector = com.atrainingtracker.banalservice.odometry.MultisportTransitionDetector()
     internal val coldStartHelper = AttFusedColdStartHelper()
+    internal val timestampNormalizer = AttFusedTimestampNormalizer(::elapsedRealtimeNanos, ::currentTimeMillis)
     @Volatile
     private var mAllowColdStartPinRelease = false
     @Volatile
@@ -155,14 +157,11 @@ open class SpeedAndLocationDevice_ATTFused(
     private var mLastEstimatorTotalStrides = 0
     private var mPreservedStridesTotal = 0
     private var mHasPreservedStridesTotal = false
-    private var mSensorTimestampEpochOffsetMs: Long? = null
-    private val mSensorTimestampEpochOffsetMsByType = HashMap<Int, Long>()
-    private val mLastResolvedSensorMsByType = HashMap<Int, Long>()
 
     private val mSportChangedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT) {
-                handleSportTypeChanged(currentTimeMillis())
+                handleSportTypeChanged(timestampNormalizer.currentMonotonicMs())
             }
         }
     }
@@ -222,6 +221,13 @@ open class SpeedAndLocationDevice_ATTFused(
     }
 
     protected open fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+    protected open fun elapsedRealtimeNanos(): Long = try {
+        val ns = SystemClock.elapsedRealtimeNanos()
+        if (ns > 0L) ns else 0L
+    } catch (_: Throwable) {
+        0L
+    }
 
     private fun registerSportChangedReceiver() {
         if (mSportChangedReceiverRegistered) return
@@ -396,42 +402,9 @@ open class SpeedAndLocationDevice_ATTFused(
         }
     }
 
-    private fun resolveSensorEventTimestampMs(event: SensorEvent): Long {
-        val wallMs = currentTimeMillis()
-        val sensorNs = event.timestamp
-        val sensorType = event.sensor.type
-        synchronized(mCadenceLock) {
-            val candidateMs = if (sensorNs > 0L) {
-                val sensorMs = sensorNs / 1_000_000L
-                val sharedOffset = mSensorTimestampEpochOffsetMs ?: (wallMs - sensorMs).also {
-                    mSensorTimestampEpochOffsetMs = it
-                }
-                val typeOffset = mSensorTimestampEpochOffsetMsByType.getOrPut(sensorType) {
-                    val sharedAlignedMs = sensorMs + sharedOffset
-                    if (abs(wallMs - sharedAlignedMs) <= MAX_CLOCK_DOMAIN_SKEW_MS) {
-                        sharedOffset
-                    } else {
-                        wallMs - sensorMs
-                    }
-                }
-                sensorMs + typeOffset
-            } else {
-                wallMs
-            }
-            val prevResolvedMs = mLastResolvedSensorMsByType[sensorType]
-            val monotonicMs = if (prevResolvedMs != null && candidateMs < prevResolvedMs) {
-                prevResolvedMs
-            } else {
-                candidateMs
-            }
-            mLastResolvedSensorMsByType[sensorType] = monotonicMs
-            return monotonicMs
-        }
-    }
-
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || event.sensor == null || mIsShuttingDown) return
-        val nowMs = resolveSensorEventTimestampMs(event)
+        val nowMs = timestampNormalizer.resolveSensorEventTimestampMs(event.sensor.type, event.timestamp)
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 super.onSensorChanged(event)
@@ -503,13 +476,14 @@ open class SpeedAndLocationDevice_ATTFused(
     override fun recordsRawLocationDirectly(): Boolean = true
 
     override fun onLocationChanged(location: Location) {
-        SmartphoneRawTelemetryRecorder.recordLocation(location, if (location.time > 0L) location.time else System.currentTimeMillis(), com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS)
+        SmartphoneRawTelemetryRecorder.recordLocation(location, if (location.time > 0L) location.time else currentTimeMillis(), com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS)
         if (!AttFusedPreferences.isEffectiveGnssActive(mContext)) return
 
         val lat = location.latitude
         val lon = location.longitude
         val acc = if (location.hasAccuracy() && !location.accuracy.isNaN()) location.accuracy.toDouble() else 10.0
-        val timestampMs = if (location.time > 0L) location.time else System.currentTimeMillis()
+        val locElapsedNs = try { location.elapsedRealtimeNanos } catch (_: Throwable) { 0L }
+        val timestampMs = timestampNormalizer.resolveLocationTimestampMs(locElapsedNs, location.time)
 
         val hasGpsSpeed = location.hasSpeed() && !location.speed.isNaN() && location.speed >= 0.0f
         val gpsSpeed = if (hasGpsSpeed) location.speed.toDouble() else Double.NaN
@@ -744,17 +718,19 @@ open class SpeedAndLocationDevice_ATTFused(
         variance: Double,
         timestampMs: Long
     ) {
-        SmartphoneRawTelemetryRecorder.recordWheel(SmartphoneRawTelemetryRecorder.currentElapsedRealtimeNanos(), timestampMs, speedMps, variance)
+        val monoMs = timestampNormalizer.resolveWheelTimestampMs(timestampMs)
+        val rawEpochMs = if (timestampMs >= AttFusedTimestampNormalizer.UNIX_EPOCH_MS_FLOOR) timestampMs else timestampNormalizer.toWallClockEpochMs(monoMs)
+        SmartphoneRawTelemetryRecorder.recordWheel(SmartphoneRawTelemetryRecorder.currentElapsedRealtimeNanos(), rawEpochMs, speedMps, variance)
         if (!AttFusedPreferences.isEffectiveWheelActive(mContext)) return
         val wasMoving = mLastWheelSpeedMps > SPEED_ZERO_THRESHOLD
-        mLastWheelMeasurementMs = timestampMs
+        mLastWheelMeasurementMs = monoMs
         mLastWheelSpeedMps = speedMps
-        carriageClassifier.ingestWheelSpeed(speedMps, timestampMs)
-        publishInferredSportTelemetry(sportDiscriminator.onSpeedSample(speedMps, timestampMs), timestampMs)
+        carriageClassifier.ingestWheelSpeed(speedMps, monoMs)
+        publishInferredSportTelemetry(sportDiscriminator.onSpeedSample(speedMps, monoMs), monoMs)
         val isNowMoving = speedMps > SPEED_ZERO_THRESHOLD
-        updateCarriageClassification(timestampMs, forceClassify = (isNowMoving != wasMoving))
+        updateCarriageClassification(monoMs, forceClassify = (isNowMoving != wasMoving))
         synchronized(ekf) {
-            ekf.updateSpeed(speedMps, variance, timestampMs)
+            ekf.updateSpeed(speedMps, variance, monoMs)
         }
         setLastActive()
     }
@@ -763,7 +739,7 @@ open class SpeedAndLocationDevice_ATTFused(
         speedMps: Double,
         variance: Double = 0.05
     ) {
-        onWheelMeasurement(speedMps, variance, System.currentTimeMillis())
+        onWheelMeasurement(speedMps, variance, currentTimeMillis())
     }
 
     override fun onWheelDistance(accumulatedDistanceMeters: Double, timestampMs: Long) {
@@ -875,7 +851,7 @@ open class SpeedAndLocationDevice_ATTFused(
             val shouldEmitSensor = synchronized(mYawRateLock) {
                 modeChanged = mode != mCachedCarriageMode
                 mCachedCarriageMode = mode
-                if (modeChanged) SmartphoneRawTelemetryRecorder.updateCarriageMode(mode.code, timestampMs)
+                if (modeChanged) SmartphoneRawTelemetryRecorder.updateCarriageMode(mode.code, currentTimeMillis())
                 mCachedTargetYawWindowSec = targetYawWindowSec
                 mLastClassifyTimestampMs = if (mLastClassifyTimestampMs == Long.MIN_VALUE) {
                     timestampMs
@@ -1107,7 +1083,7 @@ open class SpeedAndLocationDevice_ATTFused(
         gameRotationVector: FloatArray,
         gyroValues: FloatArray,
         dtSec: Double,
-        timestampMs: Long = System.currentTimeMillis()
+        timestampMs: Long = timestampNormalizer.currentMonotonicMs()
     ) {
         carriageClassifier.ingestRotationVector(gameRotationVector, timestampMs)
         val worldYawRate = gyroProjector.projectYawRate(gameRotationVector, gyroValues)
@@ -1350,7 +1326,7 @@ open class SpeedAndLocationDevice_ATTFused(
         }
         if (!shouldTick) return
         val event = com.atrainingtracker.banalservice.odometry.MultisportTransitionBridge.evaluateAndDispatch(
-            mContext, multisportDetector, mode, kinematicSport, timestampMs
+            mContext, multisportDetector, mode, kinematicSport, timestampNormalizer.toWallClockEpochMs(timestampMs)
         )
         if (event != null) handleSportTypeChanged(timestampMs)
     }
@@ -1414,10 +1390,8 @@ open class SpeedAndLocationDevice_ATTFused(
             mPendingCadenceValue = null
             mPendingStrideChanged = false
             mPendingCumulativeStrides = 0
-            mSensorTimestampEpochOffsetMs = null
-            mSensorTimestampEpochOffsetMsByType.clear()
-            mLastResolvedSensorMsByType.clear()
         }
+        timestampNormalizer.reset()
         unregisterCadenceAndStridesSensors()
         mLastEstimatorTotalStrides = 0
         mPreservedStridesTotal = 0
@@ -1476,7 +1450,7 @@ open class SpeedAndLocationDevice_ATTFused(
     override fun triggerDecayTick() {
         super.triggerDecayTick()
         if (mSpeed <= SPEED_ZERO_THRESHOLD) {
-            val nowMs = currentTimeMillis()
+            val nowMs = timestampNormalizer.currentMonotonicMs()
             carriageClassifier.ingestGnssSpeed(0.0, null, null, nowMs)
             updateCarriageClassification(nowMs, forceClassify = true)
         }

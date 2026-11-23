@@ -113,6 +113,12 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
     }
 
     private var currentTimestampMs: Long = 0L
+
+    private fun advanceTimestamp(timestampMs: Long) {
+        if (timestampMs > currentTimestampMs) {
+            currentTimestampMs = timestampMs
+        }
+    }
     private var lastAcceptedGnssTimestampMs: Long = 0L
     private var lastAcceptedMovingGnssTimestampMs: Long = 0L
     private var postPauseDecoupleRemainingFixes: Int = 0
@@ -192,7 +198,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         isStationary: Boolean = false
     ) {
         if (dtSec <= 0.0) return
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         lastDtSec = dtSec
 
         // 1. Save prior state and covariance for snapshot
@@ -293,7 +299,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
      */
     fun updateSpeed(speedMps: Double, variance: Double, timestampMs: Long = currentTimestampMs): Boolean {
         if (!speedMps.isFinite() || !variance.isFinite() || variance <= 0.0) return false
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
 
         val innovation = speedMps - x[2]
         val sBase = p[2][2] + variance
@@ -370,7 +376,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
      * spikes into [speedMps] (REQ-FIL-023.1, ATT-8576).
      */
     fun applyZeroVelocityUpdate(timestampMs: Long = currentTimestampMs) {
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         x[2] = 0.0
         p[2][2] = max(p[2][2], ZUPT_SPEED_VARIANCE)
         postPauseDecoupleRemainingFixes = POST_PAUSE_DECOUPLE_FIXES
@@ -448,7 +454,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         if (accuracyMeters <= 0.0 || accuracyMeters > MAX_GNSS_ACCURACY_METERS) {
             return false
         }
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         var decoupleSpeedUpdate = isStationary || decoupleVelocity
 
         val outageMs = if (lastAcceptedGnssTimestampMs > 0L && timestampMs >= lastAcceptedGnssTimestampMs) {
@@ -698,7 +704,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         if (!headingRad.isFinite() || !varianceRad.isFinite() || varianceRad <= 0.0) {
             return false
         }
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         x[3] = normalizeAngle(headingRad)
         for (idx in 0 until STATE_DIM) {
             if (idx != 3) {
@@ -736,7 +742,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         if (!headingRad.isFinite() || varianceRad <= 0.0 || !varianceRad.isFinite()) {
             return false
         }
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
 
         val innovation = normalizeAngle(headingRad - x[3])
         val s = p[3][3] + varianceRad
