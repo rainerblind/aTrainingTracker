@@ -26,6 +26,7 @@ import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatNormalization
 import com.atrainingtracker.banalservice.devices.hrv.DfaCalculator
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
+import com.atrainingtracker.banalservice.devices.hrv.HrvRmssdCalculator
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
@@ -71,7 +72,7 @@ object HrvPostWorkoutRecomputer {
     const val MAX_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
     const val ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
     const val MIN_DFA_BEATS = 32
-    const val MIN_RMSSD_PAIRS = 3
+    const val MIN_RMSSD_PAIRS = HrvRmssdCalculator.POST_WORKOUT_MIN_VALID_PAIRS
 
     @JvmStatic
     @JvmOverloads
@@ -424,25 +425,10 @@ object HrvPostWorkoutRecomputer {
     }
 
     /**
-     * Evaluates bias-free rMSSD from successive valid (non-artifact) beat intervals.
+     * Evaluates bias-free rMSSD from successive valid (non-artifact) beat intervals (`REQ-MIG-061.2`).
      */
     fun computeBiasFreeRmssd(beats: List<FilteredRrBeat>): Double? {
-        if (beats.size < 2) return null
-        var sumSquaredDiffs = 0.0
-        var validPairCount = 0
-        for (i in 0 until beats.size - 1) {
-            val b1 = beats[i]
-            val b2 = beats[i + 1]
-            if (!b1.isArtifact && !b2.isArtifact) {
-                val diff = b2.rawRrMs - b1.rawRrMs
-                sumSquaredDiffs += diff * diff
-                validPairCount++
-            }
-        }
-        if (validPairCount < MIN_RMSSD_PAIRS) {
-            return null
-        }
-        return sqrt(sumSquaredDiffs / validPairCount.toDouble())
+        return HrvRmssdCalculator.computeBiasFreeRmssd(beats, MIN_RMSSD_PAIRS)
     }
 
     /**

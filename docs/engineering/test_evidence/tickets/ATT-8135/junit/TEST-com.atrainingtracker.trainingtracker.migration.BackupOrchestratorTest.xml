@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupOrchestratorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:00:31.550Z" hostname="rainer-HP-EliteBook-850-G5" time="2.161">
+  <properties/>
+  <testcase name="executeBackupAndUpload_requireCloudWhenNoneConnected_skipsLock_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupOrchestratorTest" time="0.663"/>
+  <testcase name="executeBackupAndUpload_localOnlySucceedsAndCommitsPrefs_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupOrchestratorTest" time="0.676"/>
+  <testcase name="executeBackupAndUpload_partialCloudUploadReportsProgressAndCommitsPrefs_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupOrchestratorTest" time="0.821"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

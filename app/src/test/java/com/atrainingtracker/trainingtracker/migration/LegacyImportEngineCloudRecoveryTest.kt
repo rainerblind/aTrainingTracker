@@ -45,6 +45,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -363,5 +364,73 @@ class LegacyImportEngineCloudRecoveryTest {
             com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.resetForTesting(null)
             Dispatchers.resetMain()
         }
+    }
+
+    @Test
+    fun testExecuteBulkCloudRecovery_talliesCountsAndPropagatesCancellationCleanly_TST_MIG_061_4() = runBlocking {
+        val entries = listOf(
+            CloudWorkoutSourceScanner.CloudRemoteEntry("1", "already_exists.tcx", "/TCX/already_exists.tcx"),
+            CloudWorkoutSourceScanner.CloudRemoteEntry("2", "../../evil.tcx", "/TCX/evil.tcx"),
+            CloudWorkoutSourceScanner.CloudRemoteEntry("3", "download_fails.tcx", "/TCX/download_fails.tcx"),
+            CloudWorkoutSourceScanner.CloudRemoteEntry("4", "good_ride.tcx", "/TCX/good_ride.tcx")
+        )
+        val snapshot = ExistingWorkoutsSnapshot(setOf("already_exists"), emptySet())
+
+        mockkObject(LegacyImportEngine)
+        io.mockk.coEvery {
+            LegacyImportEngine.importFromTcxInternal(any(), any(), any(), any())
+        } returns LegacyImportEngine.ImportStatus.SUCCESS
+
+        val result = LegacyImportEngine.executeBulkCloudRecovery(
+            context = mockContext,
+            entries = entries,
+            cacheDirName = "shared_bulk_test",
+            downloadingStatusResId = R.string.legacy_import__downloading_dropbox,
+            format = "tcx",
+            existingSnapshotProvider = { snapshot },
+            downloader = { entry, target ->
+                if (entry.id == "3") {
+                    false
+                } else {
+                    target.writeText("<TrainingCenterDatabase/>")
+                    true
+                }
+            }
+        )
+
+        assertEquals(1, result.importedCount)
+        assertEquals(1, result.skippedCount)
+        assertEquals(2, result.failedCount)
+        assertEquals(4, result.totalScanned)
+        assertTrue("Outer staging dir must be cleaned up in finally", !File(cacheDir, "shared_bulk_test").exists())
+
+        // Structured-concurrency cancellation propagation & staging cleanup
+        val downloadStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var observedCancellation = false
+        val recoveryJob = kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch {
+            try {
+                LegacyImportEngine.executeBulkCloudRecovery(
+                    context = mockContext,
+                    entries = listOf(CloudWorkoutSourceScanner.CloudRemoteEntry("c1", "cancel_me.tcx")),
+                    cacheDirName = "shared_bulk_cancel",
+                    downloadingStatusResId = R.string.legacy_import__downloading_dropbox,
+                    format = "tcx",
+                    existingSnapshotProvider = { ExistingWorkoutsSnapshot(emptySet(), emptySet()) },
+                    downloader = { _, _ ->
+                        downloadStarted.complete(Unit)
+                        kotlinx.coroutines.awaitCancellation()
+                    }
+                )
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                observedCancellation = true
+                throw ce
+            }
+        }
+        downloadStarted.await()
+        recoveryJob.cancel()
+        recoveryJob.join()
+        assertTrue("CancellationException must propagate cleanly on job cancel", observedCancellation)
+        assertTrue("Recovery job must end cancelled", recoveryJob.isCancelled)
+        assertTrue("Outer staging dir must be purged on cancellation", !File(cacheDir, "shared_bulk_cancel").exists())
     }
 }

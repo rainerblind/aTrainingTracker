@@ -24,24 +24,32 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.migration.ParsedLap
+import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator
+import com.atrainingtracker.trainingtracker.tcx.model.TcxLapExtensions
 import com.atrainingtracker.trainingtracker.tcx.parser.TcxParser
+import com.atrainingtracker.trainingtracker.tcx.parser.TcxStreamListener
 import com.google.android.gms.maps.model.LatLng
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 
 /**
- * Dedicated parser for Garmin TCX workout XML files refactored to route through structured [TcxParser] DTOs.
- *
- * Enforces REQ-MIG-038, REQ-DAT-040 (TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity), and REQ-MIG-055.
+ * Dedicated streaming parser for Garmin TCX workout XML files consuming [TcxParser.parseStreaming]
+ * directly without intermediate trackpoint DTO lists (`REQ-MIG-038`, `REQ-DAT-040`, `REQ-MIG-055`, `REQ-MIG-061.1`).
  */
-object TcxWorkoutParser {
+object TcxWorkoutParser : WorkoutParser {
     private const val TAG = "TcxWorkoutParser"
+
+    override val formatExtension: String = "tcx"
+    override val workoutSource: WorkoutSource = WorkoutSource.TCX
 
     /**
      * Parses a TCX file into [ParsedWorkoutData].
      */
-    fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
+    override fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
         return try {
             FileInputStream(file).use { fis ->
                 parse(fis, context)
@@ -53,28 +61,14 @@ object TcxWorkoutParser {
     }
 
     /**
-     * Parses a TCX stream into [ParsedWorkoutData] (REQ-MIG-048.1, REQ-DAT-040.3).
+     * Parses a TCX stream into [ParsedWorkoutData] in a single streaming XML pass (`REQ-MIG-048.1`, `REQ-MIG-061.1`).
      */
-    fun parse(stream: java.io.InputStream, context: Context): Result<ParsedWorkoutData> {
+    override fun parse(stream: InputStream, context: Context): Result<ParsedWorkoutData> {
         return try {
-            val docResult = TcxParser.parse(stream)
-            if (docResult.isFailure) {
-                Log.e(TAG, "Failed to parse TCX: ${docResult.exceptionOrNull()?.message}")
-                return Result.failure(docResult.exceptionOrNull() ?: Exception("Unknown TCX parse error"))
-            }
-            val document = docResult.getOrThrow()
-            if (document.activities.isEmpty()) {
-                return Result.failure(Exception("TCX document contains no activities"))
-            }
-
-            val activity = document.activities.first()
-            val sportName = activity.sport
-            val workoutName = activity.extensions?.customName?.takeIf { it.isNotBlank() }
-            val workoutNotes = if (activity.extensions != null) {
-                activity.extensions.customDescription?.takeIf { it.isNotBlank() }
-            } else {
-                activity.notes?.takeIf { it.isNotBlank() }
-            }
+            var hasActivity = false
+            var sportName = ""
+            var workoutName: String? = null
+            var workoutNotes: String? = null
 
             var firstTime: String? = null
             var lastTime: String? = null
@@ -91,51 +85,59 @@ object TcxWorkoutParser {
             val foundSensors = mutableSetOf<SensorType>()
             val bufferedSamples = mutableListOf<ContentValues>()
 
-            for ((lapIndex, lap) in activity.laps.withIndex()) {
-                val formattedStartTime = lap.startTime.takeIf { it.isNotBlank() }
-                    ?.let(WorkoutTimestampParser::formatIsoToUtcDbString)
+            val streamResult = TcxParser.parseStreaming(stream, object : TcxStreamListener {
+                override fun onActivityStart(activityIndex: Int, sport: String) {
+                    if (activityIndex == 0) {
+                        hasActivity = true
+                        sportName = sport
+                    }
+                }
 
-                val parsedLap = ParsedLap(
-                    lapNr = lapIndex.toLong(),
-                    startTime = formattedStartTime,
-                    totalTimeSeconds = lap.totalTimeSeconds,
-                    distanceMeters = lap.distanceMeters,
-                    maxSpeed = lap.maximumSpeed,
-                    calories = lap.calories,
-                    avgHeartRate = lap.averageHeartRateBpm,
-                    name = lap.extensions?.name,
-                    description = lap.extensions?.description
-                )
-                parsedLaps.add(parsedLap)
+                override fun onTrackpoint(
+                    inCourse: Boolean,
+                    ownerIndex: Int,
+                    inLap: Boolean,
+                    lapIndex: Int,
+                    time: String,
+                    lat: Double?,
+                    lng: Double?,
+                    altitudeMeters: Double?,
+                    distanceMeters: Double?,
+                    heartRateBpm: Int?,
+                    cadence: Int?,
+                    speed: Double?,
+                    watts: Int?,
+                    runCadence: Int?
+                ) {
+                    if (inCourse || ownerIndex != 0 || !inLap) return
 
-                for (pt in lap.trackpoints) {
                     val values = ContentValues().apply {
                         put(SensorType.LAP_NR.name, lapIndex.toLong())
                     }
 
-                    pt.time.takeIf { it.isNotBlank() }?.let { rawTime ->
+                    time.takeIf { it.isNotBlank() }?.let { rawTime ->
                         val formatted = WorkoutTimestampParser.formatIsoToUtcDbString(rawTime)
                         values.put("time", formatted)
                         if (firstTime == null) firstTime = formatted
                         lastTime = formatted
                     }
 
-                    if (pt.position != null) {
-                        values.put(SensorType.LATITUDE.name, pt.position.latitudeDegrees)
-                        values.put(SensorType.LONGITUDE.name, pt.position.longitudeDegrees)
+                    var pos: LatLng? = null
+                    if (lat != null && lng != null) {
+                        values.put(SensorType.LATITUDE.name, lat)
+                        values.put(SensorType.LONGITUDE.name, lng)
                         foundSensors.add(SensorType.LATITUDE)
                         foundSensors.add(SensorType.LONGITUDE)
 
-                        val pos = LatLng(pt.position.latitudeDegrees, pt.position.longitudeDegrees)
+                        pos = LatLng(lat, lng)
                         points.add(pos)
                     }
 
-                    pt.altitudeMeters?.let { alt ->
+                    altitudeMeters?.let { alt ->
                         values.put(SensorType.ALTITUDE.name, alt)
                         foundSensors.add(SensorType.ALTITUDE)
                         altitudes.add(alt)
-                        if (pt.position != null) {
-                            val pos = LatLng(pt.position.latitudeDegrees, pt.position.longitudeDegrees)
+                        if (pos != null) {
                             if (alt < minAltVal) {
                                 minAltVal = alt
                                 minAltPos = pos
@@ -147,33 +149,33 @@ object TcxWorkoutParser {
                         }
                     }
 
-                    pt.distanceMeters?.let { dist ->
+                    distanceMeters?.let { dist ->
                         values.put(SensorType.DISTANCE_m.name, dist)
                         foundSensors.add(SensorType.DISTANCE_m)
                         distances.add(dist)
                     }
 
-                    pt.heartRateBpm?.let { hr ->
+                    heartRateBpm?.let { hr ->
                         values.put(SensorType.HR.name, hr)
                         foundSensors.add(SensorType.HR)
                     }
 
-                    pt.cadence?.let { cad ->
+                    cadence?.let { cad ->
                         values.put(SensorType.CADENCE.name, cad)
                         foundSensors.add(SensorType.CADENCE)
                     }
 
-                    pt.extensions?.watts?.let { pwr ->
+                    watts?.let { pwr ->
                         values.put(SensorType.POWER.name, pwr)
                         foundSensors.add(SensorType.POWER)
                     }
 
-                    pt.extensions?.speed?.let { spd ->
+                    speed?.let { spd ->
                         values.put(SensorType.SPEED_mps.name, spd)
                         foundSensors.add(SensorType.SPEED_mps)
                     }
 
-                    pt.extensions?.runCadence?.let { runCad ->
+                    runCadence?.let { runCad ->
                         if (!values.containsKey(SensorType.CADENCE.name)) {
                             values.put(SensorType.CADENCE.name, runCad)
                             foundSensors.add(SensorType.CADENCE)
@@ -184,6 +186,69 @@ object TcxWorkoutParser {
                         bufferedSamples.add(values)
                     }
                 }
+
+                override fun onLapEnd(
+                    inCourse: Boolean,
+                    ownerIndex: Int,
+                    lapIndex: Int,
+                    startTime: String,
+                    totalTimeSeconds: Double,
+                    distanceMeters: Double,
+                    maximumSpeed: Double?,
+                    calories: Int?,
+                    averageHeartRateBpm: Int?,
+                    maximumHeartRateBpm: Int?,
+                    intensity: String?,
+                    cadence: Int?,
+                    triggerMethod: String?,
+                    notes: String?,
+                    extensions: TcxLapExtensions?
+                ) {
+                    if (inCourse || ownerIndex != 0) return
+
+                    val formattedStartTime = startTime.takeIf { it.isNotBlank() }
+                        ?.let(WorkoutTimestampParser::formatIsoToUtcDbString)
+
+                    parsedLaps.add(
+                        ParsedLap(
+                            lapNr = lapIndex.toLong(),
+                            startTime = formattedStartTime,
+                            totalTimeSeconds = totalTimeSeconds,
+                            distanceMeters = distanceMeters,
+                            maxSpeed = maximumSpeed,
+                            calories = calories,
+                            avgHeartRate = averageHeartRateBpm,
+                            name = extensions?.name,
+                            description = extensions?.description
+                        )
+                    )
+                }
+
+                override fun onActivityEnd(
+                    activityIndex: Int,
+                    sport: String,
+                    id: String,
+                    notes: String?,
+                    creator: TcxCreator?,
+                    extensions: TcxActivityExtensions?
+                ) {
+                    if (activityIndex != 0) return
+                    sportName = sport
+                    workoutName = extensions?.customName?.takeIf { it.isNotBlank() }
+                    workoutNotes = if (extensions != null) {
+                        extensions.customDescription?.takeIf { it.isNotBlank() }
+                    } else {
+                        notes?.takeIf { it.isNotBlank() }
+                    }
+                }
+            })
+
+            if (streamResult.isFailure) {
+                Log.e(TAG, "Failed to parse TCX: ${streamResult.exceptionOrNull()?.message}")
+                return Result.failure(streamResult.exceptionOrNull() ?: Exception("Unknown TCX parse error"))
+            }
+            if (!hasActivity) {
+                return Result.failure(Exception("TCX document contains no activities"))
             }
 
             if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {

@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.content.Context
 import android.util.Log
-import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import androidx.work.*
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -33,87 +32,30 @@ class BackupWorker(
 
     override suspend fun doWork(): Result {
         Log.i(TAG, "Starting periodic automated backup...")
-        
+
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean("automated_backups", true)
-        val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
-        val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
         if (!automatedEnabled) {
             Log.d(TAG, "Automated backups disabled. Skipping.")
             return Result.success()
         }
 
-        val lock = BackupManager.acquireLock(applicationContext)
-        if (lock == null) {
-            Log.w(TAG, "Backup already in progress by manual operation; yielding with retry.")
-            return Result.retry()
-        }
-
-        return lock.use {
-            val backupFile = BackupManager.createBackup(applicationContext)
-            val targets = mutableMapOf<String, Boolean>()
-            targets["local"] = (backupFile != null)
-
-            if (backupFile != null) {
-                if (!dropboxConnected && !googleDriveConnected) {
-                    Log.i(TAG, "Local backup created successfully without cloud providers.")
-                    val targetsStr = formatTargets(targets)
-                    prefs.edit(commit = true) {
-                        putLong("last_backup_timestamp", System.currentTimeMillis())
-                        putString("last_backup_status", "LOCAL_SUCCESS")
-                        putString("last_backup_targets", targetsStr)
-                    }
-                    return@use Result.success()
-                }
-
-                var anyUploadSuccess = false
-                var anyUploadFailed = false
-
-                if (dropboxConnected) {
-                    val dbxSuccess = DropboxBackupManager.uploadBackup(applicationContext, backupFile)
-                    targets["dropbox"] = dbxSuccess
-                    if (dbxSuccess) {
-                        anyUploadSuccess = true
-                    } else {
-                        anyUploadFailed = true
-                    }
-                }
-
-                if (googleDriveConnected) {
-                    val gdSuccess = GoogleDriveBackupManager.uploadBackup(applicationContext, backupFile)
-                    targets["google_drive"] = gdSuccess
-                    if (gdSuccess) {
-                        anyUploadSuccess = true
-                    } else {
-                        anyUploadFailed = true
-                    }
-                }
-
-                val targetsStr = formatTargets(targets)
-                if (anyUploadSuccess) {
-                    val status = if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS"
-                    prefs.edit(commit = true) {
-                        putLong("last_backup_timestamp", System.currentTimeMillis())
-                        putString("last_backup_status", status)
-                        putString("last_backup_targets", targetsStr)
-                    }
-                    Result.success()
-                } else {
-                    prefs.edit(commit = true) {
-                        putString("last_backup_status", "Upload failed")
-                        putString("last_backup_targets", targetsStr)
-                    }
-                    Result.retry()
-                }
-            } else {
-                val targetsStr = formatTargets(targets)
-                prefs.edit(commit = true) {
-                    putString("last_backup_status", "Local backup creation failed")
-                    putString("last_backup_targets", targetsStr)
-                }
+        val execution = BackupOrchestrator.executeBackupAndUpload(
+            context = applicationContext,
+            requireCloudProvider = false
+        )
+        return when (execution.outcome) {
+            BackupOrchestrator.BackupOutcome.LOCAL_SUCCESS,
+            BackupOrchestrator.BackupOutcome.CLOUD_SUCCESS,
+            BackupOrchestrator.BackupOutcome.CLOUD_PARTIAL_SUCCESS -> Result.success()
+            BackupOrchestrator.BackupOutcome.LOCK_CONTENTION -> {
+                Log.w(TAG, "Backup already in progress by manual operation; yielding with retry.")
                 Result.retry()
             }
+            BackupOrchestrator.BackupOutcome.LOCAL_FAILED,
+            BackupOrchestrator.BackupOutcome.CLOUD_FAILED,
+            BackupOrchestrator.BackupOutcome.NO_CLOUD_PROVIDER -> Result.retry()
         }
     }
 
@@ -122,7 +64,7 @@ class BackupWorker(
         private const val WORK_NAME = "automated_backup_work"
 
         fun formatTargets(targets: Map<String, Boolean>): String {
-            return targets.entries.joinToString(";") { "${it.key}:${if (it.value) "SUCCESS" else "FAILED"}" }
+            return BackupOrchestrator.formatTargets(targets)
         }
 
         fun buildConstraints(context: Context): Constraints {

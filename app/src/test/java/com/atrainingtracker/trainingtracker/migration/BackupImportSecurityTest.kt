@@ -550,5 +550,62 @@ class BackupImportSecurityTest {
             )
         }
     }
+
+    /**
+     * TST-MIG-061.3: Workout ZIP extraction hardening via SecureZipExtractor.extractWorkoutArchive.
+     * Rejects POSIX traversal (../), Windows backslash traversal (..\..\), root-entry (.),
+     * null-byte entry names, and zip-bomb size caps while extracting valid nested workout files.
+     */
+    @Test
+    fun testExtractWorkoutArchive_rejectsTraversalBackslashRootAndZipBomb_TST_MIG_061_3() {
+        val traversalCases = listOf(
+            "../escape.fit",
+            "..\\..\\win_escape.fit",
+            ".",
+            "/etc/evil.fit",
+            "C:\\evil.fit",
+            "bad\u0000.fit"
+        )
+        for ((idx, badEntry) in traversalCases.withIndex()) {
+            val zip = File(tempFolder.root, "evil_workout_$idx.zip")
+            createZipArchive(zip, mapOf(badEntry to "evil".toByteArray()))
+            val dest = File(fakeCacheDir, "workout_extract_$idx")
+            var threw = false
+            try {
+                SecureZipExtractor.extractWorkoutArchive(zip, dest)
+            } catch (_: SecurityException) {
+                threw = true
+            }
+            assertTrue("Expected SecurityException for entry '$badEntry'", threw)
+            assertFalse("Destination must be purged after failure for '$badEntry'", dest.exists())
+        }
+
+        // Zip-bomb single-file cap enforcement
+        val bombZip = File(tempFolder.root, "bomb_workout.zip")
+        createZipArchive(bombZip, mapOf("huge.fit" to ByteArray(4096) { 0x41 }))
+        val bombDest = File(fakeCacheDir, "workout_bomb_dest")
+        var bombThrew = false
+        try {
+            SecureZipExtractor.extractWorkoutArchive(bombZip, bombDest, maxSingleFileBytes = 512L)
+        } catch (_: SecurityException) {
+            bombThrew = true
+        }
+        assertTrue("Expected SecurityException on single-file zip-bomb cap", bombThrew)
+        assertFalse("Destination must be purged after zip-bomb failure", bombDest.exists())
+
+        // Valid multi-file workout archive succeeds
+        val validZip = File(tempFolder.root, "valid_workouts.zip")
+        createZipArchive(
+            validZip,
+            mapOf(
+                "2026-11-23_ride.fit" to "fitdata".toByteArray(),
+                "nested/2026-11-23_run.tcx" to "<TrainingCenterDatabase/>".toByteArray()
+            )
+        )
+        val validDest = File(fakeCacheDir, "workout_valid_dest")
+        val extracted = SecureZipExtractor.extractWorkoutArchive(validZip, validDest)
+        assertEquals(2, extracted.size)
+        assertEquals(listOf("2026-11-23_ride.fit", "2026-11-23_run.tcx"), extracted.map { it.name })
+    }
 }
 

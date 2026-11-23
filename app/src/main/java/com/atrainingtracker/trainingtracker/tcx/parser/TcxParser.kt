@@ -38,12 +38,74 @@ import java.io.InputStream
 import kotlin.math.roundToInt
 
 /**
- * Decoupled streaming XML pull parser producing structured [TcxDocument] DTOs.
+ * Streaming callback interface for [TcxParser.parseStreaming], allowing consumers
+ * ([com.atrainingtracker.trainingtracker.migration.parsers.TcxWorkoutParser],
+ * [com.atrainingtracker.trainingtracker.routes.TcxCourseParser]) to ingest TCX trackpoints
+ * in a single XML pull pass without allocating intermediate trackpoint DTO trees (`REQ-MIG-061.1`).
+ */
+interface TcxStreamListener {
+    fun onActivityStart(activityIndex: Int, sport: String) {}
+    fun onActivityEnd(
+        activityIndex: Int,
+        sport: String,
+        id: String,
+        notes: String?,
+        creator: TcxCreator?,
+        extensions: TcxActivityExtensions?
+    ) {}
+
+    fun onCourseStart(courseIndex: Int) {}
+    fun onCourseEnd(courseIndex: Int, name: String, notes: String?) {}
+
+    fun onLapStart(inCourse: Boolean, ownerIndex: Int, lapIndex: Int, startTime: String) {}
+    fun onTrackpoint(
+        inCourse: Boolean,
+        ownerIndex: Int,
+        inLap: Boolean,
+        lapIndex: Int,
+        time: String,
+        lat: Double?,
+        lng: Double?,
+        altitudeMeters: Double?,
+        distanceMeters: Double?,
+        heartRateBpm: Int?,
+        cadence: Int?,
+        speed: Double?,
+        watts: Int?,
+        runCadence: Int?
+    ) {}
+
+    fun onLapEnd(
+        inCourse: Boolean,
+        ownerIndex: Int,
+        lapIndex: Int,
+        startTime: String,
+        totalTimeSeconds: Double,
+        distanceMeters: Double,
+        maximumSpeed: Double?,
+        calories: Int?,
+        averageHeartRateBpm: Int?,
+        maximumHeartRateBpm: Int?,
+        intensity: String?,
+        cadence: Int?,
+        triggerMethod: String?,
+        notes: String?,
+        extensions: TcxLapExtensions?
+    ) {}
+
+    fun onCoursePoint(courseIndex: Int, coursePoint: TcxCoursePoint) {}
+    fun onAuthor(author: TcxAuthor) {}
+}
+
+/**
+ * Decoupled streaming XML pull parser producing either single-pass [TcxStreamListener] events
+ * (`REQ-MIG-061.1`) or structured [TcxDocument] DTOs (`REQ-DAT-040.3`).
  *
  * Enforces:
  * - REQ-DAT-040.3: Decoupled DTO XML Parser Bridge.
  * - REQ-MIG-037 / REQ-MIG-048.3: BOM and leading whitespace tolerance.
  * - REQ-DAT-012 / REQ-DAT-013: att: extensions and bracket notation fallback parsing.
+ * - REQ-MIG-061.1: Zero-intermediate-tree direct streaming consumption.
  */
 object TcxParser {
 
@@ -57,9 +119,174 @@ object TcxParser {
     }
 
     /**
-     * Parses a TCX XML stream into a [TcxDocument].
+     * Parses a TCX XML stream into a [TcxDocument] by collecting events from [parseStreaming].
      */
     fun parse(inputStream: InputStream): Result<TcxDocument> {
+        val activities = mutableListOf<TcxActivity>()
+        val courses = mutableListOf<TcxCourse>()
+        var parsedAuthor: TcxAuthor? = null
+
+        val currentLaps = mutableListOf<TcxLap>()
+        val currentCourseLaps = mutableListOf<TcxLap>()
+        val currentCourseTrackpoints = mutableListOf<TcxTrackpoint>()
+        val currentCoursePoints = mutableListOf<TcxCoursePoint>()
+        val currentTrackpoints = mutableListOf<TcxTrackpoint>()
+
+        val streamResult = parseStreaming(inputStream, object : TcxStreamListener {
+            override fun onActivityStart(activityIndex: Int, sport: String) {
+                currentLaps.clear()
+            }
+
+            override fun onCourseStart(courseIndex: Int) {
+                currentCourseLaps.clear()
+                currentCourseTrackpoints.clear()
+                currentCoursePoints.clear()
+            }
+
+            override fun onLapStart(inCourse: Boolean, ownerIndex: Int, lapIndex: Int, startTime: String) {
+                currentTrackpoints.clear()
+            }
+
+            override fun onTrackpoint(
+                inCourse: Boolean,
+                ownerIndex: Int,
+                inLap: Boolean,
+                lapIndex: Int,
+                time: String,
+                lat: Double?,
+                lng: Double?,
+                altitudeMeters: Double?,
+                distanceMeters: Double?,
+                heartRateBpm: Int?,
+                cadence: Int?,
+                speed: Double?,
+                watts: Int?,
+                runCadence: Int?
+            ) {
+                val pos = if (lat != null && lng != null) TcxPosition(lat, lng) else null
+                val ext = if (speed != null || watts != null || runCadence != null) {
+                    TcxTrackpointExtensions(
+                        speed = speed,
+                        watts = watts,
+                        runCadence = runCadence
+                    )
+                } else null
+                val tp = TcxTrackpoint(
+                    time = time,
+                    position = pos,
+                    altitudeMeters = altitudeMeters,
+                    distanceMeters = distanceMeters,
+                    heartRateBpm = heartRateBpm,
+                    cadence = cadence,
+                    extensions = ext
+                )
+                if (inLap) {
+                    currentTrackpoints.add(tp)
+                } else if (inCourse) {
+                    currentCourseTrackpoints.add(tp)
+                }
+            }
+
+            override fun onLapEnd(
+                inCourse: Boolean,
+                ownerIndex: Int,
+                lapIndex: Int,
+                startTime: String,
+                totalTimeSeconds: Double,
+                distanceMeters: Double,
+                maximumSpeed: Double?,
+                calories: Int?,
+                averageHeartRateBpm: Int?,
+                maximumHeartRateBpm: Int?,
+                intensity: String?,
+                cadence: Int?,
+                triggerMethod: String?,
+                notes: String?,
+                extensions: TcxLapExtensions?
+            ) {
+                val lap = TcxLap(
+                    startTime = startTime,
+                    totalTimeSeconds = totalTimeSeconds,
+                    distanceMeters = distanceMeters,
+                    maximumSpeed = maximumSpeed,
+                    calories = calories,
+                    averageHeartRateBpm = averageHeartRateBpm,
+                    maximumHeartRateBpm = maximumHeartRateBpm,
+                    intensity = intensity,
+                    cadence = cadence,
+                    triggerMethod = triggerMethod,
+                    trackpoints = currentTrackpoints.toList(),
+                    notes = notes,
+                    extensions = extensions
+                )
+                if (inCourse) {
+                    currentCourseLaps.add(lap)
+                } else {
+                    currentLaps.add(lap)
+                }
+            }
+
+            override fun onCoursePoint(courseIndex: Int, coursePoint: TcxCoursePoint) {
+                currentCoursePoints.add(coursePoint)
+            }
+
+            override fun onCourseEnd(courseIndex: Int, name: String, notes: String?) {
+                courses.add(
+                    TcxCourse(
+                        name = name,
+                        laps = currentCourseLaps.toList(),
+                        trackpoints = currentCourseTrackpoints.toList(),
+                        coursePoints = currentCoursePoints.toList(),
+                        notes = notes
+                    )
+                )
+            }
+
+            override fun onActivityEnd(
+                activityIndex: Int,
+                sport: String,
+                id: String,
+                notes: String?,
+                creator: TcxCreator?,
+                extensions: TcxActivityExtensions?
+            ) {
+                activities.add(
+                    TcxActivity(
+                        sport = sport,
+                        id = id,
+                        laps = currentLaps.toList(),
+                        notes = notes,
+                        creator = creator,
+                        extensions = extensions
+                    )
+                )
+            }
+
+            override fun onAuthor(author: TcxAuthor) {
+                parsedAuthor = author
+            }
+        })
+
+        return streamResult.map {
+            TcxDocument(
+                activities = activities,
+                courses = courses,
+                author = parsedAuthor
+            )
+        }
+    }
+
+    /**
+     * Streams TCX XML text into [listener] without allocating intermediate trackpoint lists.
+     */
+    fun parseStreaming(xmlContent: String, listener: TcxStreamListener): Result<Unit> {
+        return parseStreaming(ByteArrayInputStream(xmlContent.toByteArray(Charsets.UTF_8)), listener)
+    }
+
+    /**
+     * Streams a TCX XML [InputStream] into [listener] in a single pull-parser pass (`REQ-MIG-061.1`).
+     */
+    fun parseStreaming(inputStream: InputStream, listener: TcxStreamListener): Result<Unit> {
         return try {
             val safeStream = stripBomAndLeadingWhitespace(inputStream)
             val factory = XmlPullParserFactory.newInstance().apply {
@@ -68,17 +295,15 @@ object TcxParser {
             val parser = factory.newPullParser()
             parser.setInput(safeStream, "UTF-8")
 
-            val activities = mutableListOf<TcxActivity>()
-            val courses = mutableListOf<TcxCourse>()
-            var author: TcxAuthor? = null
+            var activityIndex = -1
+            var courseIndex = -1
+            var currentActivityLapIndex = 0
+            var currentCourseLapIndex = 0
 
             var inCourse = false
             var inCoursePoint = false
             var currentCourseName = ""
             var currentCourseNotes: String? = null
-            val currentCourseLaps = mutableListOf<TcxLap>()
-            val currentCourseTrackpoints = mutableListOf<TcxTrackpoint>()
-            val currentCoursePoints = mutableListOf<TcxCoursePoint>()
 
             var cpName: String? = null
             var cpTime: String? = null
@@ -94,7 +319,6 @@ object TcxParser {
             var currentActivityCustomName: String? = null
             var currentActivityCustomDesc: String? = null
 
-            val currentLaps = mutableListOf<TcxLap>()
             var currentLapStartTime = ""
             var currentLapTotalTime = 0.0
             var currentLapDistance = 0.0
@@ -109,7 +333,6 @@ object TcxParser {
             var currentLapCustomName: String? = null
             var currentLapCustomDesc: String? = null
 
-            val currentTrackpoints = mutableListOf<TcxTrackpoint>()
             var currentTpTime: String? = null
             var currentTpLat: Double? = null
             var currentTpLng: Double? = null
@@ -147,7 +370,6 @@ object TcxParser {
             var inAuthor = false
             var inAttActivityExtension = false
             var inAttLapExtension = false
-            var inTpx = false
 
             var currentTag = ""
 
@@ -162,6 +384,8 @@ object TcxParser {
                         when (tag) {
                             "Activity" -> {
                                 inActivity = true
+                                activityIndex++
+                                currentActivityLapIndex = 0
                                 var sport = parser.getAttributeValue(null, "Sport")
                                 if (sport == null) {
                                     for (i in 0 until parser.attributeCount) {
@@ -177,7 +401,7 @@ object TcxParser {
                                 currentActivityCustomName = null
                                 currentActivityCustomDesc = null
                                 currentCreator = null
-                                currentLaps.clear()
+                                listener.onActivityStart(activityIndex, currentSport)
                             }
                             "Lap" -> {
                                 inLap = true
@@ -203,7 +427,9 @@ object TcxParser {
                                 currentLapNotes = null
                                 currentLapCustomName = null
                                 currentLapCustomDesc = null
-                                currentTrackpoints.clear()
+                                val ownerIdx = if (inCourse) courseIndex else activityIndex
+                                val lapIdx = if (inCourse) currentCourseLapIndex else currentActivityLapIndex
+                                listener.onLapStart(inCourse, ownerIdx, lapIdx, currentLapStartTime)
                             }
                             "Trackpoint" -> {
                                 inTrackpoint = true
@@ -223,14 +449,13 @@ object TcxParser {
                             "Author" -> inAuthor = true
                             "ActivityExtension" -> inAttActivityExtension = true
                             "LapExtension" -> inAttLapExtension = true
-                            "TPX" -> inTpx = true
                             "Course" -> {
                                 inCourse = true
+                                courseIndex++
+                                currentCourseLapIndex = 0
                                 currentCourseName = ""
                                 currentCourseNotes = null
-                                currentCourseLaps.clear()
-                                currentCourseTrackpoints.clear()
-                                currentCoursePoints.clear()
+                                listener.onCourseStart(courseIndex)
                             }
                             "CoursePoint" -> {
                                 inCoursePoint = true
@@ -271,7 +496,7 @@ object TcxParser {
                                     "PointType" -> cpType = text
                                     "Notes" -> cpNotes = text
                                 }
-                            } else if (inCourse && !inLap && !inTrackpoint) {
+                            } else if (inCourse && !inLap) {
                                 when (currentTag) {
                                     "Name" -> if (currentCourseName.isEmpty()) currentCourseName = text
                                     "Notes" -> currentCourseNotes = text
@@ -360,37 +585,28 @@ object TcxParser {
                         currentTag = ""
                         when (tag) {
                             "Position" -> inPosition = false
-                            "TPX" -> inTpx = false
                             "ActivityExtension" -> inAttActivityExtension = false
                             "LapExtension" -> inAttLapExtension = false
                             "Trackpoint" -> {
                                 if (inTrackpoint) {
-                                    val pos = if (currentTpLat != null && currentTpLng != null) {
-                                        TcxPosition(currentTpLat!!, currentTpLng!!)
-                                    } else null
-
-                                    val ext = if (currentTpSpeed != null || currentTpWatts != null || currentTpRunCadence != null) {
-                                        TcxTrackpointExtensions(
-                                            speed = currentTpSpeed,
-                                            watts = currentTpWatts,
-                                            runCadence = currentTpRunCadence
-                                        )
-                                    } else null
-
-                                    val tp = TcxTrackpoint(
+                                    val ownerIdx = if (inCourse) courseIndex else activityIndex
+                                    val lapIdx = if (inCourse) currentCourseLapIndex else currentActivityLapIndex
+                                    listener.onTrackpoint(
+                                        inCourse = inCourse,
+                                        ownerIndex = ownerIdx,
+                                        inLap = inLap,
+                                        lapIndex = lapIdx,
                                         time = currentTpTime ?: "",
-                                        position = pos,
+                                        lat = currentTpLat,
+                                        lng = currentTpLng,
                                         altitudeMeters = currentTpAlt,
                                         distanceMeters = currentTpDist,
                                         heartRateBpm = currentTpHr,
                                         cadence = currentTpCad,
-                                        extensions = ext
+                                        speed = currentTpSpeed,
+                                        watts = currentTpWatts,
+                                        runCadence = currentTpRunCadence
                                     )
-                                    if (inLap) {
-                                        currentTrackpoints.add(tp)
-                                    } else if (inCourse) {
-                                        currentCourseTrackpoints.add(tp)
-                                    }
                                     inTrackpoint = false
                                 }
                             }
@@ -403,7 +619,12 @@ object TcxParser {
                                         )
                                     } else null
 
-                                    val lap = TcxLap(
+                                    val ownerIdx = if (inCourse) courseIndex else activityIndex
+                                    val lapIdx = if (inCourse) currentCourseLapIndex else currentActivityLapIndex
+                                    listener.onLapEnd(
+                                        inCourse = inCourse,
+                                        ownerIndex = ownerIdx,
+                                        lapIndex = lapIdx,
                                         startTime = currentLapStartTime,
                                         totalTimeSeconds = currentLapTotalTime,
                                         distanceMeters = currentLapDistance,
@@ -414,26 +635,24 @@ object TcxParser {
                                         intensity = currentLapIntensity,
                                         cadence = currentLapCadence,
                                         triggerMethod = currentLapTriggerMethod,
-                                        trackpoints = currentTrackpoints.toList(),
                                         notes = currentLapNotes,
                                         extensions = lapExt
                                     )
-                                    if (inCourse) {
-                                        currentCourseLaps.add(lap)
-                                    } else {
-                                        currentLaps.add(lap)
-                                    }
+                                    if (inCourse) currentCourseLapIndex++ else currentActivityLapIndex++
                                     inLap = false
                                 }
                             }
                             "CoursePoint" -> {
                                 if (inCoursePoint) {
-                                    if (cpLat != null && cpLng != null) {
-                                        currentCoursePoints.add(
-                                            TcxCoursePoint(
+                                    val lat = cpLat
+                                    val lng = cpLng
+                                    if (lat != null && lng != null) {
+                                        listener.onCoursePoint(
+                                            courseIndex = courseIndex,
+                                            coursePoint = TcxCoursePoint(
                                                 name = cpName ?: "",
                                                 time = cpTime,
-                                                position = TcxPosition(cpLat!!, cpLng!!),
+                                                position = TcxPosition(lat, lng),
                                                 altitudeMeters = cpAlt,
                                                 pointType = cpType,
                                                 notes = cpNotes
@@ -445,14 +664,10 @@ object TcxParser {
                             }
                             "Course" -> {
                                 if (inCourse) {
-                                    courses.add(
-                                        TcxCourse(
-                                            name = currentCourseName,
-                                            laps = currentCourseLaps.toList(),
-                                            trackpoints = currentCourseTrackpoints.toList(),
-                                            coursePoints = currentCoursePoints.toList(),
-                                            notes = currentCourseNotes
-                                        )
+                                    listener.onCourseEnd(
+                                        courseIndex = courseIndex,
+                                        name = currentCourseName,
+                                        notes = currentCourseNotes
                                     )
                                     inCourse = false
                                 }
@@ -480,30 +695,30 @@ object TcxParser {
                                         )
                                     } else null
 
-                                    activities.add(
-                                        TcxActivity(
-                                            sport = currentSport,
-                                            id = currentActivityId,
-                                            laps = currentLaps.toList(),
-                                            notes = currentActivityNotes,
-                                            creator = currentCreator,
-                                            extensions = actExt
-                                        )
+                                    listener.onActivityEnd(
+                                        activityIndex = activityIndex,
+                                        sport = currentSport,
+                                        id = currentActivityId,
+                                        notes = currentActivityNotes,
+                                        creator = currentCreator,
+                                        extensions = actExt
                                     )
                                     inActivity = false
                                 }
                             }
                             "Author" -> {
                                 if (inAuthor) {
-                                    author = TcxAuthor(
-                                        name = authorName,
-                                        versionMajor = authorVersionMajor,
-                                        versionMinor = authorVersionMinor,
-                                        buildMajor = authorBuildMajor,
-                                        buildMinor = authorBuildMinor,
-                                        type = authorType,
-                                        langId = authorLangId,
-                                        partNumber = authorPartNumber
+                                    listener.onAuthor(
+                                        TcxAuthor(
+                                            name = authorName,
+                                            versionMajor = authorVersionMajor,
+                                            versionMinor = authorVersionMinor,
+                                            buildMajor = authorBuildMajor,
+                                            buildMinor = authorBuildMinor,
+                                            type = authorType,
+                                            langId = authorLangId,
+                                            partNumber = authorPartNumber
+                                        )
                                     )
                                     inAuthor = false
                                 }
@@ -514,13 +729,7 @@ object TcxParser {
                 eventType = parser.next()
             }
 
-            Result.success(
-                TcxDocument(
-                    activities = activities,
-                    courses = courses,
-                    author = author
-                )
-            )
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

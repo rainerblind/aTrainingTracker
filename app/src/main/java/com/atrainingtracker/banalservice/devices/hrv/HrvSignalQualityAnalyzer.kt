@@ -20,7 +20,6 @@ package com.atrainingtracker.banalservice.devices.hrv
 
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 /**
  * Pure, stateless DSP analyzer detecting firmware-smoothed and quantized synthetic RR streams
@@ -275,12 +274,6 @@ object HrvSignalQualityAnalyzer {
     }
 
     private fun computeRmssd(intervals: List<Double>): Double? {
-        if (intervals.size < 2) return null
-        var sumSquares = 0.0
-        for (i in 1 until intervals.size) {
-            val diff = intervals[i] - intervals[i - 1]
-            sumSquares += diff * diff
-        }
-        return sqrt(sumSquares / (intervals.size - 1))
+        return HrvRmssdCalculator.computeRawRmssd(intervals, minValidPairs = 1)
     }
 }

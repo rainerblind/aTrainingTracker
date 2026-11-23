@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tcx.TCXRoundTripTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:50.158Z" hostname="rainer-HP-EliteBook-850-G5" time="2.725">
+  <properties/>
+  <testcase name="testNameOnlyRoundTripPreservesNullWorkoutNotes" classname="com.atrainingtracker.trainingtracker.tcx.TCXRoundTripTest" time="0.583"/>
+  <testcase name="testBidirectionalDtoRoundTripFidelity" classname="com.atrainingtracker.trainingtracker.tcx.TCXRoundTripTest" time="0.544"/>
+  <testcase name="testMultiLapCustomLapNamePreservesEmptyLapNotes" classname="com.atrainingtracker.trainingtracker.tcx.TCXRoundTripTest" time="0.543"/>
+  <testcase name="testLegacyThirdPartyUnbracketedNotes" classname="com.atrainingtracker.trainingtracker.tcx.TCXRoundTripTest" time="0.514"/>
+  <testcase name="testDescriptionOnlyRoundTripPreservesWorkoutNotes" classname="com.atrainingtracker.trainingtracker.tcx.TCXRoundTripTest" time="0.54"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

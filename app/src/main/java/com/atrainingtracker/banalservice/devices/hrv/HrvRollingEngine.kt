@@ -58,7 +58,7 @@ class HrvRollingEngine @JvmOverloads constructor(
         const val WINDOW_RMSSD_MS = 60_000L
         const val WINDOW_DFA_MS = 120_000L
         const val WINDOW_FILTER_CONTEXT_MS = WINDOW_DFA_MS + 60_000L
-        const val MIN_RMSSD_VALID_PAIRS = 10
+        const val MIN_RMSSD_VALID_PAIRS = HrvRmssdCalculator.LIVE_ROLLING_MIN_VALID_PAIRS
         const val MIN_SDNN_VALID_BEATS = 10
         const val ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0
         const val MIN_ARTIFACT_GATE_THRESHOLD_PERCENT = 3.0
@@ -230,26 +230,7 @@ class HrvRollingEngine @JvmOverloads constructor(
     }
 
     private fun computeBiasFreeRmssd(beats: List<FilteredRrBeat>): Double? {
-        if (beats.size < 2) return null
-
-        var sumSquaredDiffs = 0.0
-        var validPairCount = 0
-
-        for (i in 0 until beats.size - 1) {
-            val b1 = beats[i]
-            val b2 = beats[i + 1]
-            if (!b1.isArtifact && !b2.isArtifact) {
-                val diff = b2.rawRrMs - b1.rawRrMs
-                sumSquaredDiffs += diff * diff
-                validPairCount++
-            }
-        }
-
-        if (validPairCount < MIN_RMSSD_VALID_PAIRS) {
-            return null
-        }
-
-        return sqrt(sumSquaredDiffs / validPairCount.toDouble())
+        return HrvRmssdCalculator.computeBiasFreeRmssd(beats, MIN_RMSSD_VALID_PAIRS)
     }
 
     private fun computeRollingSdnn(

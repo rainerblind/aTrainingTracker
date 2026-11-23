@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:27.610Z" hostname="rainer-HP-EliteBook-850-G5" time="2.63">
+  <properties/>
+  <testcase name="testCandidateFolderHierarchies_formatTcx_prioritizesTcxThenLegacyWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.547"/>
+  <testcase name="testCrossFolderDeduplication_duplicateInWorkoutsAndFormat_deduplicatesByBaseName" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.519"/>
+  <testcase name="testCandidateFolderHierarchies_formatGpx_prioritizesGpxThenLegacyWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.508"/>
+  <testcase name="testCandidateFolderHierarchies_formatAll_scansAllFormatFoldersThenWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.582"/>
+  <testcase name="testCandidateFolderHierarchies_formatFit_prioritizesFitThenLegacyWorkouts" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGoogleDriveFolderResolutionTest" time="0.474"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

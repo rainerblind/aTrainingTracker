@@ -21,7 +21,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
-import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
@@ -29,8 +28,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
-import com.atrainingtracker.trainingtracker.database.WorkoutCluster
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -43,6 +40,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 
 /**
  * ViewModel managing backup creation, cloud/local synchronization, and database restores (REQ-TST-003.4).
@@ -78,6 +76,79 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         val minAltPos: LatLng? = null,
         val maxAltPos: LatLng? = null
     )
+
+    /**
+     * Tracks a validated unpacked `.attbackup` staging directory produced during [analyzeImport]
+     * so [performIncrementalImport] can import directly without copying or unzipping twice (`REQ-MIG-061.5`).
+     */
+    internal data class StagedBackupSession(
+        val uriString: String,
+        val archiveSha256: String,
+        val stagedDir: File
+    )
+
+    private val stagingLock = Any()
+
+    @Volatile
+    private var activeStagedImport: StagedBackupSession? = null
+
+    private fun storeActiveStagedImport(session: StagedBackupSession) {
+        val previous = synchronized(stagingLock) {
+            val prev = activeStagedImport
+            activeStagedImport = session
+            prev
+        }
+        if (previous != null && previous.stagedDir != session.stagedDir) {
+            previous.stagedDir.deleteRecursively()
+        }
+    }
+
+    private fun claimActiveStagedImport(): StagedBackupSession? {
+        return synchronized(stagingLock) {
+            val current = activeStagedImport
+            activeStagedImport = null
+            current
+        }
+    }
+
+    private fun cleanupActiveStagedImport() {
+        claimActiveStagedImport()?.stagedDir?.deleteRecursively()
+    }
+
+    private fun copyUriToFileWithSha256(context: Context, uri: Uri, destFile: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val input = context.contentResolver.openInputStream(uri)
+            ?: throw IllegalStateException("Unable to open backup URI: $uri")
+        input.use { stream ->
+            FileOutputStream(destFile).use { output ->
+                val buffer = ByteArray(8192)
+                var read: Int
+                while (stream.read(buffer).also { read = it } != -1) {
+                    digest.update(buffer, 0, read)
+                    output.write(buffer, 0, read)
+                }
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun computeStreamSha256(context: Context, uri: Uri): String? {
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val input = context.contentResolver.openInputStream(uri) ?: return null
+            input.use { stream ->
+                val buffer = ByteArray(8192)
+                var read: Int
+                while (stream.read(buffer).also { read = it } != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            Log.w("BackupRestoreVM", "Unable to compute streaming SHA-256 for $uri: ${e.message}")
+            null
+        }
+    }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
@@ -334,100 +405,34 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Creates a local backup and uploads it to all enabled cloud providers (Dropbox and/or Google Drive),
-     * acquiring [BackupManager.acquireLock] to prevent race conditions and persisting [lastBackupInfo]
-     * matching [BackupWorker] parity (REQ-MIG-036).
+     * Creates a local backup and uploads it to all enabled cloud providers (Dropbox and/or Google Drive)
+     * via the shared [BackupOrchestrator] pipeline (`REQ-MIG-036`, `REQ-MIG-061.5`).
      */
     fun uploadToCloud(
         context: Context,
         dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
     ): Job {
         return viewModelScope.launch(dispatcher) {
-            val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
-            val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
-
-            if (!dropboxConnected && !googleDriveConnected) {
-                _uiState.value = UiState.Error(context.getString(R.string.cloud_backup_no_provider_dialog_message))
-                return@launch
-            }
-
-            _uiState.value = UiState.Loading("Creating backup...")
-
-            val lock = BackupManager.acquireLock(context)
-            if (lock == null) {
-                _uiState.value = UiState.Error("Backup already in progress")
-                return@launch
-            }
-
-            lock.use {
-                val backupFile = BackupManager.createBackup(context, object : BackupManager.ProgressListener {
-                    override fun onProgress(message: String) {
-                        _uiState.value = UiState.Loading(message)
-                    }
-                })
-
-                val targets = mutableMapOf<String, Boolean>()
-                targets["local"] = (backupFile != null)
-
-                if (backupFile != null) {
-                    var anyUploadSuccess = false
-                    var anyUploadFailed = false
-
-                    if (dropboxConnected) {
-                        _uiState.value = UiState.Loading("Uploading to Dropbox...")
-                        val dbxSuccess = DropboxBackupManager.uploadBackup(context, backupFile)
-                        targets["dropbox"] = dbxSuccess
-                        if (dbxSuccess) {
-                            anyUploadSuccess = true
-                        } else {
-                            anyUploadFailed = true
-                        }
-                    }
-
-                    if (googleDriveConnected) {
-                        _uiState.value = UiState.Loading("Uploading to Google Drive...")
-                        val gdSuccess = GoogleDriveBackupManager.uploadBackup(context, backupFile)
-                        targets["google_drive"] = gdSuccess
-                        if (gdSuccess) {
-                            anyUploadSuccess = true
-                        } else {
-                            anyUploadFailed = true
-                        }
-                    }
-
-                    val targetsStr = BackupWorker.formatTargets(targets)
-                    val status = if (anyUploadSuccess) {
-                        if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS"
-                    } else {
-                        "Upload failed"
-                    }
-
-                    prefs.edit(commit = true) {
-                        if (anyUploadSuccess) {
-                            putLong("last_backup_timestamp", System.currentTimeMillis())
-                        }
-                        putString("last_backup_status", status)
-                        putString("last_backup_targets", targetsStr)
-                    }
-
-                    if (anyUploadSuccess) {
-                        val msg = if (anyUploadFailed) {
-                            "Backup partially uploaded to cloud"
-                        } else {
-                            "Backup uploaded to cloud"
-                        }
-                        _uiState.value = UiState.Success(msg)
-                    } else {
-                        _uiState.value = UiState.Error("Cloud upload failed")
-                    }
-                } else {
-                    val targetsStr = BackupWorker.formatTargets(targets)
-                    prefs.edit(commit = true) {
-                        putString("last_backup_status", "Local backup creation failed")
-                        putString("last_backup_targets", targetsStr)
-                    }
-                    _uiState.value = UiState.Error("Failed to create backup")
-                }
+            val execution = BackupOrchestrator.executeBackupAndUpload(
+                context = context,
+                requireCloudProvider = true,
+                onProgress = { message -> _uiState.value = UiState.Loading(message) }
+            )
+            _uiState.value = when (execution.outcome) {
+                BackupOrchestrator.BackupOutcome.NO_CLOUD_PROVIDER ->
+                    UiState.Error(context.getString(R.string.cloud_backup_no_provider_dialog_message))
+                BackupOrchestrator.BackupOutcome.LOCK_CONTENTION ->
+                    UiState.Error("Backup already in progress")
+                BackupOrchestrator.BackupOutcome.LOCAL_FAILED ->
+                    UiState.Error("Failed to create backup")
+                BackupOrchestrator.BackupOutcome.CLOUD_SUCCESS ->
+                    UiState.Success("Backup uploaded to cloud")
+                BackupOrchestrator.BackupOutcome.CLOUD_PARTIAL_SUCCESS ->
+                    UiState.Success("Backup partially uploaded to cloud")
+                BackupOrchestrator.BackupOutcome.CLOUD_FAILED ->
+                    UiState.Error("Cloud upload failed")
+                BackupOrchestrator.BackupOutcome.LOCAL_SUCCESS ->
+                    UiState.Success("Backup created")
             }
         }
     }
@@ -595,55 +600,100 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         }
     }
 
-    fun analyzeImport(context: Context, uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun analyzeImport(context: Context, uri: Uri): Job {
+        return viewModelScope.launch(ioDispatcher) {
             _uiState.value = UiState.Loading("Analyzing backup content...")
-            val tempFile = File(context.cacheDir, "import_analysis.attbackup")
+            cleanupActiveStagedImport()
+            val stagingRoot = File(context.cacheDir, "import_analysis")
+            val stagedDir = File(stagingRoot, "session_${System.nanoTime()}")
+            val tempFile = File(context.cacheDir, "import_analysis_${System.nanoTime()}.attbackup")
             try {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                
-                val analysis = ImportEngine.analyzeBackup(context, tempFile)
+                val sha256 = copyUriToFileWithSha256(context, uri, tempFile)
+                val analysis = ImportEngine.analyzeBackupToStaging(context, tempFile, stagedDir)
                 if (analysis.sportTypes.isNotEmpty()) {
+                    storeActiveStagedImport(
+                        StagedBackupSession(
+                            uriString = uri.toString(),
+                            archiveSha256 = sha256,
+                            stagedDir = stagedDir
+                        )
+                    )
                     _uiState.value = UiState.MappingRequired(uri, analysis)
                 } else {
+                    stagedDir.deleteRecursively()
                     _uiState.value = UiState.Error("No workouts found in backup file")
                 }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                stagedDir.deleteRecursively()
+                throw ce
             } catch (e: Exception) {
+                stagedDir.deleteRecursively()
                 _uiState.value = UiState.Error("Analysis failed: ${e.message}")
+            } finally {
+                if (tempFile.exists()) {
+                    tempFile.delete()
+                }
             }
         }
     }
 
-    fun performIncrementalImport(context: Context, uri: Uri, sportMapping: Map<Long, Long>, equipmentMapping: Map<Long, Long>) {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun performIncrementalImport(
+        context: Context,
+        uri: Uri,
+        sportMapping: Map<Long, Long>,
+        equipmentMapping: Map<Long, Long>
+    ): Job {
+        return viewModelScope.launch(ioDispatcher) {
             _uiState.value = UiState.Loading("Preparing import...")
-            val tempFile = File(context.cacheDir, "import_upload.attbackup")
+            val claimedSession = claimActiveStagedImport()
+            val listener = object : ImportEngine.ProgressListener {
+                override fun onProgress(current: Int, total: Int, name: String) {
+                    _uiState.value = UiState.Progress(current, total, name)
+                }
+
+                override fun onStatus(message: String) {
+                    _uiState.value = UiState.Loading(message)
+                }
+            }
+
             try {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(tempFile).use { output ->
-                        input.copyTo(output)
+                val canReuseStaging = claimedSession != null &&
+                    claimedSession.uriString == uri.toString() &&
+                    ImportEngine.hasRequiredStagedDatabases(claimedSession.stagedDir) &&
+                    computeStreamSha256(context, uri) == claimedSession.archiveSha256
+
+                val importedCount = if (canReuseStaging) {
+                    ImportEngine.performIncrementalImportFromStaging(
+                        context = context,
+                        stagedDir = claimedSession.stagedDir,
+                        sportTypeMapping = sportMapping,
+                        equipmentMapping = equipmentMapping,
+                        listener = listener
+                    )
+                } else {
+                    claimedSession?.stagedDir?.deleteRecursively()
+                    val tempFile = File(context.cacheDir, "import_upload_${System.nanoTime()}.attbackup")
+                    try {
+                        copyUriToFileWithSha256(context, uri, tempFile)
+                        ImportEngine.performIncrementalImport(
+                            context, tempFile, sportMapping, equipmentMapping, listener
+                        )
+                    } finally {
+                        if (tempFile.exists()) {
+                            tempFile.delete()
+                        }
                     }
                 }
 
-                val importedCount = ImportEngine.performIncrementalImport(
-                    context, tempFile, sportMapping, equipmentMapping, 
-                    object : ImportEngine.ProgressListener {
-                        override fun onProgress(current: Int, total: Int, name: String) {
-                            _uiState.value = UiState.Progress(current, total, name)
-                        }
-                        override fun onStatus(message: String) {
-                            _uiState.value = UiState.Loading(message)
-                        }
-                    }
-                )
-
                 _uiState.value = UiState.Success("Successfully imported $importedCount workouts")
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                claimedSession?.stagedDir?.deleteRecursively()
+                throw ce
             } catch (e: Exception) {
+                claimedSession?.stagedDir?.deleteRecursively()
                 _uiState.value = UiState.Error("Import failed: ${e.message}")
+            } finally {
+                claimedSession?.stagedDir?.deleteRecursively()
             }
         }
     }
@@ -903,103 +953,89 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         context: Context,
         format: String = "all",
         dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
-    ): kotlinx.coroutines.Job {
-        saveClusteringTolerances()
-        return viewModelScope.launch(dispatcher) {
+    ): Job = executeBulkCloudRecovery(
+        dispatcher = dispatcher,
+        initMessage = "Initializing legacy recovery...",
+        precheckErrorMessage = {
             val credential = TrainingApplication.readDropboxCredential()
             if (credential == null || !TrainingApplication.uploadToDropbox()) {
-                _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
-                return@launch
-            }
-            _uiState.value = UiState.Loading("Initializing legacy recovery...")
-            val (result, batch) = withBulkImportBatch { batch ->
-                LegacyImportEngine.bulkRecoverFromDropbox(context, format, createLegacyListener(), uploadToStravaOnImport) to batch
-            }
-            val app = getApplication<Application>()
-            val message = if (result.failedCount > 0) {
-                app.getString(
-                    R.string.legacy_import__finished_with_failed,
-                    result.importedCount,
-                    result.skippedCount,
-                    result.failedCount,
-                    result.totalScanned
-                )
-            } else if (result.skippedCount > 0) {
-                app.getString(
-                    R.string.legacy_import__finished_with_skipped,
-                    result.importedCount,
-                    result.skippedCount,
-                    result.totalScanned
-                )
+                context.getString(R.string.dropbox_disconnected_status)
             } else {
-                app.getString(
-                    R.string.legacy_import__finished_all_new,
-                    result.importedCount,
-                    result.totalScanned
-                )
+                null
             }
-            if (result.importedCount > 0) {
-                // ATT-909 / REQ-MIG-026 / REQ-STB-021.3: Post-bulk recovery reactive reconciliation
-                reconcileBulkImportBatch(
-                    context = app,
-                    refreshClimbs = batch?.hasPersistedClimbs == true,
-                    logTag = "BackupRestoreVM"
-                )
-            }
-            _uiState.value = UiState.Success(message)
+        },
+        emptyScanDiagnosticResId = null,
+        recover = { listener ->
+            LegacyImportEngine.bulkRecoverFromDropbox(context, format, listener, uploadToStravaOnImport)
         }
-    }
+    )
 
     fun bulkRecoverGoogleDriveData(
         context: Context,
         format: String = "all",
         dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
-    ): kotlinx.coroutines.Job {
+    ): Job = executeBulkCloudRecovery(
+        dispatcher = dispatcher,
+        initMessage = "Initializing Google Drive recovery...",
+        precheckErrorMessage = {
+            if (!TrainingApplication.uploadToGoogleDrive()) {
+                context.getString(R.string.google_drive_disconnected_status)
+            } else {
+                var token = TrainingApplication.getGoogleDriveAuthToken()
+                if (token.isNullOrBlank()) {
+                    token = GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+                }
+                if (token.isNullOrBlank()) context.getString(R.string.google_drive_disconnected_status) else null
+            }
+        },
+        emptyScanDiagnosticResId = R.string.google_drive_scan_empty_diagnostic,
+        recover = { listener ->
+            LegacyImportEngine.bulkRecoverFromGoogleDrive(context, format, listener, uploadToStravaOnImport)
+        }
+    )
+
+    private fun executeBulkCloudRecovery(
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        initMessage: String,
+        precheckErrorMessage: suspend () -> String?,
+        emptyScanDiagnosticResId: Int?,
+        recover: suspend (LegacyImportEngine.ProgressListener) -> LegacyImportEngine.RecoveryResult
+    ): Job {
         saveClusteringTolerances()
         return viewModelScope.launch(dispatcher) {
-            if (!TrainingApplication.uploadToGoogleDrive()) {
-                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+            val precheckError = precheckErrorMessage()
+            if (precheckError != null) {
+                _uiState.value = UiState.Error(precheckError)
                 return@launch
             }
-            var token = TrainingApplication.getGoogleDriveAuthToken()
-            if (token.isNullOrBlank()) {
-                token = GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
-            }
-            if (token.isNullOrBlank()) {
-                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
-                return@launch
-            }
-            _uiState.value = UiState.Loading("Initializing Google Drive recovery...")
+            _uiState.value = UiState.Loading(initMessage)
             val (result, batch) = withBulkImportBatch { batch ->
-                LegacyImportEngine.bulkRecoverFromGoogleDrive(context, format, createLegacyListener(), uploadToStravaOnImport) to batch
+                recover(createLegacyListener()) to batch
             }
             val app = getApplication<Application>()
-            val message = if (result.failedCount > 0) {
-                app.getString(
+            val message = when {
+                result.failedCount > 0 -> app.getString(
                     R.string.legacy_import__finished_with_failed,
                     result.importedCount,
                     result.skippedCount,
                     result.failedCount,
                     result.totalScanned
                 )
-            } else if (result.skippedCount > 0) {
-                app.getString(
+                result.skippedCount > 0 -> app.getString(
                     R.string.legacy_import__finished_with_skipped,
                     result.importedCount,
                     result.skippedCount,
                     result.totalScanned
                 )
-            } else if (result.totalScanned == 0) {
-                app.getString(R.string.google_drive_scan_empty_diagnostic)
-            } else {
-                app.getString(
+                result.totalScanned == 0 && emptyScanDiagnosticResId != null ->
+                    app.getString(emptyScanDiagnosticResId)
+                else -> app.getString(
                     R.string.legacy_import__finished_all_new,
                     result.importedCount,
                     result.totalScanned
                 )
             }
             if (result.importedCount > 0) {
-                // REQ-MIG-034 / REQ-STB-021.3: Post-recovery reactive reconciliation
                 reconcileBulkImportBatch(
                     context = app,
                     refreshClimbs = batch?.hasPersistedClimbs == true,
@@ -1054,6 +1090,12 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     }
 
     fun clearState() {
+        cleanupActiveStagedImport()
         _uiState.value = UiState.Idle
+    }
+
+    override fun onCleared() {
+        cleanupActiveStagedImport()
+        super.onCleared()
     }
 }

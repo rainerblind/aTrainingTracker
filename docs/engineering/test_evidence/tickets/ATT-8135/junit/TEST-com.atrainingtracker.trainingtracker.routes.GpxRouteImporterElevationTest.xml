@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T12:01:48.670Z" hostname="rainer-HP-EliteBook-850-G5" time="3.086">
+  <properties/>
+  <testcase name="testImportRoute_whenNetworkTimesOut_importsRouteWithZeroGainSafely" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.674"/>
+  <testcase name="testImportRoute_whenGpxHasEmbeddedElevations_preservesElevationsAndSkipsApi" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.399"/>
+  <testcase name="testImportRoute_whenGpxLacksAltitude_triggersEnrichmentAndCalculatesGain" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.415"/>
+  <testcase name="testImportRoute_whenCircuitBreakerOpen_gracefullyFallbacksToZero" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.394"/>
+  <testcase name="testImportRoute_continuesEnrichmentOnSingleBatchServerError" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.417"/>
+  <testcase name="testImportRoute_whenPointsExceedBatchSize_chunksQueriesToMax100" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.412"/>
+  <testcase name="testImportRoute_appliesHysteresisFilteringSub2MeterNoise" classname="com.atrainingtracker.trainingtracker.routes.GpxRouteImporterElevationTest" time="0.374"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

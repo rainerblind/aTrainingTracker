@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.46  
+**Version**: 1.0.50  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 138
+**Total Tests**: 139
 
 ---
 
@@ -2622,10 +2622,31 @@
 
 ---
 
+### TST-MIG-061: Streaming TCX/GPX/FIT Parser Consolidation, HRV rMSSD Single Source of Truth, Zip-Slip-Hardened Auto-Import & Single-Unzip `.attbackup` Staging Verification (`ATT-8135`) [Verified]
+- **Requirement(s)**: `REQ-MIG-061`
+- **Component**: `TcxParser.kt`, `GpxTrackpointParser.kt`, `TCXFileWriter.kt`, `WorkoutParser.kt`, `FitWorkoutParser.kt`, `TcxWorkoutParser.kt`, `GpxWorkoutParser.kt`, `TcxCourseParser.kt`, `GpxRouteImporter.kt`, `StravaBulkExportImporter.kt`, `HrvRmssdCalculator.kt`, `HrvRollingEngine.kt`, `HrvPostWorkoutRecomputer.kt`, `MorningHrvCheckViewModel.kt`, `HrvSignalQualityAnalyzer.kt`, `SecureZipExtractor.kt`, `CloudWorkoutSourceScanner.kt`, `AutoImportManager.kt`, `LegacyImportEngine.kt`, `BackupOrchestrator.kt`, `BackupWorker.kt`, `ImportEngine.kt`, `BackupRestoreViewModel.kt`
+- **Jira**: `ATT-8135`
+- **Test Code**:
+  - `TrackpointXmlParserTest.kt`, `TcxLeadingWhitespaceSanitizationTest.kt`, `TcxCourseParserTest.kt`, `TcxWorkoutParserTest.kt`, `GpxWorkoutParserTest.kt`, `FitWorkoutParserTest.kt`, `GpxRouteImporterElevationTest.kt`, `GpxRouteImporterWaypointTest.kt`, `TCXRoundTripTest.kt`, `TcxParserTest.kt`, `TCXFileWriterLapTest.kt`, `TCXFileWriterSchemaComplianceTest.kt`, `TCXFileWriterWorkoutNameTest.kt` (streaming TCX/GPX fidelity, `WorkoutParser.forFormat`, classpath absence of `TcxTrackpointParser` and `TCXFileWriter.buildLap`)
+  - `HrvRmssdCalculatorTest.kt` (`10`/`3`/`1` thresholds, `minValidPairs <= 0` NaN guard, raw rMSSD) + `HrvRollingEngineTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `HrvSignalQualityAnalyzerTest.kt`, `MorningHrvCheckViewModelTest.kt`
+  - `AutoImportManagerTest.kt`, `AutoImportContractTest.kt`, `BackupImportSecurityTest.kt`, `LegacyImportEngineCloudRecoveryTest.kt`, `BackupRestoreViewModelGoogleDriveTest.kt`, `DropboxBulkRecoveryFitContractTest.kt`, `GoogleDriveBulkRecoveryContractTest.kt` (Zip-Slip `../` & Windows `\` & root-entry `.` & zip-bomb rejection in `AutoImportManager` & `SecureZipExtractor.extractWorkoutArchive`, `RateLimitException` retry backoff, `executeBulkCloudRecovery` dedupe/skip/fail/cancellation counts, Drive token precheck & `totalScanned == 0` diagnostic)
+  - `BackupStagingReuseTest.kt`, `BackupOrchestratorTest.kt`, `BackupWorkerTest.kt`, `BackupWorkerDropboxGatingTest.kt`, `BackupWorkerGoogleDriveTest.kt`, `BackupCloudProviderUnificationTest.kt`, `BackupMigrationCycleTest.kt`, `ArchitectureConformanceContractTest.kt`, `AndroidViewModelReflectionContractTest.kt` (single-unzip `SecureZipExtractor.extractBackupArchive` count == 1 across `analyzeImport` -> `performIncrementalImport`, URI + streaming SHA-256 verification, temp `.attbackup` & staging cleanup on finish/error/`clearState()`/`onCleared()`, mismatch fallback, `BackupOrchestrator` parity)
+- **Verification Evidence**: Verified (`ATT-8135`, `tier-a`, Gate 3 `ATT-9660` PASSED; `386/386` focused Tier-1 unit & contract tests PASS across 70 suites — `select_dependent_tests` = 85 > 80 classes — `0` fail, `0` err, `0` skip, `0` new compiler warnings; `3/3` safety linters PASS; live `emulator-5554` atomic install & boot smoke `CRASH_LOGCAT_CLEAN` with `Rule 8.5`-inspected screenshot `docs/engineering/walkthroughs/img/ATT-8135_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8135/`).
+- **Test Description**:
+  1. *Direct Streaming TCX/GPX Parsing, Dead-Code Excision & `WorkoutParser` (`TST-MIG-061.1`)*: Verify `Class.forName("...TcxTrackpointParser")` throws `ClassNotFoundException` and `TCXFileWriter` declares no `buildLap` method; verify `TcxParser.parseStreaming` and `GpxTrackpointParser.parseStreaming` stream trackpoints/laps/course-points/waypoints/BOM/leading-whitespace with exact telemetry fidelity across `TcxCourseParser`, `GpxRouteImporter`, `TcxWorkoutParser`, `GpxWorkoutParser`, and `TCXRoundTripTest`; verify `WorkoutParser.forFormat` dispatches FIT/TCX/GPX cleanly.
+  2. *Canonical `HrvRmssdCalculator` Parity (`TST-MIG-061.2`)*: Verify `HrvRmssdCalculator.computeBiasFreeRmssd` excludes artifact-adjacent pairs and enforces `minValidPairs = 10`, `3`, and `1`, and `computeRawRmssd` matches `HrvSignalQualityAnalyzer` across all 4 HRV suites.
+  3. *Zip-Slip & Zip-Bomb Hardening + Backoff in `AutoImportManager` & `CloudWorkoutSourceScanner` (`TST-MIG-061.3`)*: Execute `AutoImportManager.syncIncremental` and `SecureZipExtractor.extractWorkoutArchive` against malicious remote names (`../../evil.fit`, `sub/evil.tcx`, `bad\u0000.gpx`) and crafted `.zip` archives with `../escape.fit` traversal and zip-bomb payloads; assert `SecurityException`/failure counts, zero files outside staging, valid sibling import, and `RateLimitException` backoff retry.
+  4. *Consolidated Bulk Cloud Recovery Counts & Cancellation (`TST-MIG-061.4`)*: Verify `LegacyImportEngine.executeBulkCloudRecovery` and `BackupRestoreViewModel` shared cloud recovery helper report exact `importedCount`, `skippedCount`, `failedCount`, `totalScanned`, propagate `CancellationException` with zero leftover temp dirs, and preserve Google Drive token refresh precheck + `totalScanned == 0` diagnostic.
+  5. *Single-Unzip `.attbackup` Staging Reuse & `BackupOrchestrator` Parity (`TST-MIG-061.5`)*: Spy on `SecureZipExtractor.extractBackupArchive` across `BackupRestoreViewModel.analyzeImport` -> `performIncrementalImport` and assert exactly **1** extraction, immediate deletion of temp `.attbackup`, guaranteed staging deletion after import/error/`clearState()`/`onCleared()`, safe fallback on URI mismatch, and full `BackupOrchestrator` lock/upload/prefs parity across `BackupWorker` and `BackupRestoreViewModel.uploadToCloud`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.50` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Promoted `TST-MIG-061` to `[Verified]` (`386/386` focused Tier-1 unit & contract tests PASS across 70 suites incl. `HrvRmssdCalculatorTest`, `BackupOrchestratorTest`, `BackupStagingReuseTest`, `AutoImportManagerTest`, `BackupImportSecurityTest`, `LegacyImportEngineCloudRecoveryTest`, `TrackpointXmlParserTest`, `TcxLeadingWhitespaceSanitizationTest`, `ArchitectureConformanceContractTest`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `ATT-8135_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8135/`). |
+| `1.0.49` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Added `[Planned]` `TST-MIG-061` (`TST-MIG-061.1`–`TST-MIG-061.5`, strictly symmetric with `REQ-MIG-061`) covering streaming TCX/GPX & `WorkoutParser` fidelity, `TcxTrackpointParser`/`TCXFileWriter.buildLap` removal, `HrvRmssdCalculator`, `AutoImportManager` Zip-Slip/zip-bomb rejection & rate-limit backoff, `executeBulkCloudRecovery` dedupe/skip/fail/cancellation counts, `BackupOrchestrator` parity, and single-unzip `.attbackup` staging reuse & cleanup. |
 | `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Promoted `TST-MIG-060` to `[Verified]` (`132/132` targeted Tier-1 tests PASS across 27 focused suites incl. `SilentImportClusterCreationTest` `4/4`, `TuningPreferencesDataStoreRoundTripTest` `3/3`, `ClusterTuningUiBehaviorTest` `1/1`, `TranslationParityTest` `11/11`; `0` fail, `0` err, `0` skip; `3/3` safety linters PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with `ATT-9013_cluster_tuning.png` & `ATT-9013_cluster_tuning_enabled.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9013/`). |
 | `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Added `[Planned]` `TST-MIG-060` (`TST-MIG-060.1`–`TST-MIG-060.3`, symmetric with `REQ-MIG-060`) covering default preference & `ALL_KEYS` registration, silent SQLite cluster seeding/collision/title preservation/`AutoImportManager` behavior, Compose UI toggle in `PreImportTuningBottomSheet` & `ClusterTuningSection`, 9-locale parity, and live `emulator-5554` check. |
 | `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-8103`, `--as agent1`) | `ATT-8103` | Promoted `TST-MIG-059` to `[Verified]` (`124/124` targeted Tier-1 unit, Compose UI & contract tests PASS across 16 suites incl. `ExportTabContentTest` `4/4`, `TranslationParityTest` `11/11`; `:app:compileDebugAndroidTestKotlin` PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` + `Rule 8.5` PNG screenshots `ATT-8103_drawer.png` & `ATT-8103_export_tab.png`; SHA-256 evidence bundle). |

@@ -25,57 +25,151 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.geo.GeoMath
-import com.atrainingtracker.trainingtracker.routes.parsers.TcxTrackpointParser
+import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCoursePoint
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator
+import com.atrainingtracker.trainingtracker.tcx.parser.TcxParser
+import com.atrainingtracker.trainingtracker.tcx.parser.TcxStreamListener
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
 /**
- * Streaming parser for Garmin TCX courses (<Courses><Course>) extracting trackpoints,
- * cumulative distance, elevation, and <CoursePoint> elements.
+ * Streaming parser for Garmin TCX courses (`<Courses><Course>`, with `<Activity>` fallback)
+ * consuming [TcxParser.parseStreaming] directly without intermediate trackpoint DTO trees.
  *
  * Traceability:
  * - REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points.
- * - REQ-MIG-037: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine (Rule 36).
- * - TST-MAP-028: TCX course and course point extraction verification.
- * - TST-MIG-034: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification.
+ * - REQ-MIG-037 / REQ-MIG-061.1: Single-pass streaming TCX ingestion without `TcxTrackpointParser`.
+ * - TST-MAP-028 / TST-MIG-061.1: TCX course and course point extraction verification.
  */
 object TcxCourseParser {
 
     /**
-     * Parses a TCX Course from an [InputStream] using canonical [TcxTrackpointParser].
+     * Parses a TCX Course from an [InputStream] directly via [TcxParser.parseStreaming].
      */
     fun parse(inputStream: InputStream, defaultExternalId: String = "tcx_course"): Result<RouteImportResult> {
         return try {
-            val parseResult = TcxTrackpointParser.parse(inputStream)
-            if (parseResult.isFailure) {
-                return Result.failure(parseResult.exceptionOrNull() ?: IllegalArgumentException("Failed to parse TCX course"))
-            }
-            val data = parseResult.getOrThrow()
-            val rawPoints = data.laps.flatMap { it.trackpoints }
-                .filter { it.lat != null && it.lng != null }
+            var hasCourse = false
+            var courseName: String? = null
+            var courseNotes: String? = null
+            val courseLapPoints = mutableListOf<PathPoint>()
+            val courseDirectPoints = mutableListOf<PathPoint>()
+            val rawCoursePoints = mutableListOf<RouteWaypoint>()
 
-            if (rawPoints.isEmpty()) {
+            var hasActivity = false
+            var activityName: String? = null
+            var activityNotes: String? = null
+            val activityPoints = mutableListOf<PathPoint>()
+
+            val streamResult = TcxParser.parseStreaming(inputStream, object : TcxStreamListener {
+                override fun onCourseStart(courseIndex: Int) {
+                    if (courseIndex == 0) {
+                        hasCourse = true
+                    }
+                }
+
+                override fun onActivityStart(activityIndex: Int, sport: String) {
+                    if (activityIndex == 0) {
+                        hasActivity = true
+                    }
+                }
+
+                override fun onTrackpoint(
+                    inCourse: Boolean,
+                    ownerIndex: Int,
+                    inLap: Boolean,
+                    lapIndex: Int,
+                    time: String,
+                    lat: Double?,
+                    lng: Double?,
+                    altitudeMeters: Double?,
+                    distanceMeters: Double?,
+                    heartRateBpm: Int?,
+                    cadence: Int?,
+                    speed: Double?,
+                    watts: Int?,
+                    runCadence: Int?
+                ) {
+                    if (lat == null || lng == null || ownerIndex != 0) return
+                    val pathPoint = PathPoint(
+                        latLng = LatLng(lat, lng),
+                        altitude = altitudeMeters ?: 0.0,
+                        distance = distanceMeters ?: 0.0
+                    )
+                    if (inCourse) {
+                        if (inLap) {
+                            courseLapPoints.add(pathPoint)
+                        } else {
+                            courseDirectPoints.add(pathPoint)
+                        }
+                    } else if (inLap) {
+                        activityPoints.add(pathPoint)
+                    }
+                }
+
+                override fun onCoursePoint(courseIndex: Int, coursePoint: TcxCoursePoint) {
+                    if (courseIndex != 0) return
+                    rawCoursePoints.add(
+                        RouteWaypoint(
+                            latLng = LatLng(coursePoint.position.latitudeDegrees, coursePoint.position.longitudeDegrees),
+                            altitude = coursePoint.altitudeMeters ?: 0.0,
+                            name = coursePoint.name,
+                            description = coursePoint.notes ?: "",
+                            type = WaypointType.fromTcx(coursePoint.pointType)
+                        )
+                    )
+                }
+
+                override fun onCourseEnd(courseIndex: Int, name: String, notes: String?) {
+                    if (courseIndex != 0) return
+                    courseName = name.takeIf { it.isNotBlank() }
+                    courseNotes = notes
+                }
+
+                override fun onActivityEnd(
+                    activityIndex: Int,
+                    sport: String,
+                    id: String,
+                    notes: String?,
+                    creator: TcxCreator?,
+                    extensions: TcxActivityExtensions?
+                ) {
+                    if (activityIndex != 0) return
+                    activityName = extensions?.customName
+                    activityNotes = extensions?.customDescription ?: stripBracketedPrefix(notes, activityName)
+                }
+            })
+
+            if (streamResult.isFailure) {
+                return Result.failure(streamResult.exceptionOrNull() ?: IllegalArgumentException("Failed to parse TCX course"))
+            }
+
+            val trackPoints: MutableList<PathPoint>
+            val resolvedName: String?
+            val resolvedNotes: String?
+            val resolvedCoursePoints: List<RouteWaypoint>
+
+            if (hasCourse) {
+                trackPoints = if (courseLapPoints.isNotEmpty()) courseLapPoints else courseDirectPoints
+                resolvedName = courseName
+                resolvedNotes = courseNotes
+                resolvedCoursePoints = rawCoursePoints
+            } else if (hasActivity) {
+                trackPoints = activityPoints
+                resolvedName = activityName
+                resolvedNotes = activityNotes
+                resolvedCoursePoints = emptyList()
+            } else {
+                trackPoints = mutableListOf()
+                resolvedName = null
+                resolvedNotes = null
+                resolvedCoursePoints = emptyList()
+            }
+
+            if (trackPoints.isEmpty()) {
                 return Result.failure(IllegalArgumentException("No valid trackpoints found in TCX course"))
-            }
-
-            val trackPoints = rawPoints.map { pt ->
-                PathPoint(
-                    latLng = LatLng(pt.lat!!, pt.lng!!),
-                    altitude = pt.altitude ?: 0.0,
-                    distance = pt.distanceMeters ?: 0.0
-                )
-            }.toMutableList()
-
-            val rawCoursePoints = data.coursePoints.map { cp ->
-                RouteWaypoint(
-                    latLng = LatLng(cp.lat, cp.lng),
-                    altitude = cp.altitude ?: 0.0,
-                    name = cp.name,
-                    description = cp.notes ?: "",
-                    type = WaypointType.fromTcx(cp.type)
-                )
             }
 
             // Calculate / normalize cumulative distances if missing or zero
@@ -93,14 +187,14 @@ object TcxCourseParser {
             }
 
             // Project waypoints along track polyline
-            val projectedWaypoints = WaypointDistanceCalculator.projectWaypoints(rawCoursePoints, trackPoints)
+            val projectedWaypoints = WaypointDistanceCalculator.projectWaypoints(resolvedCoursePoints, trackPoints)
 
-            val courseName = data.name ?: ""
+            val finalName = resolvedName ?: ""
             val summary = RouteSummary(
                 id = 0,
                 externalId = defaultExternalId,
-                name = if (courseName.isNotBlank()) courseName else "TCX Course",
-                description = data.notes ?: "",
+                name = if (finalName.isNotBlank()) finalName else "TCX Course",
+                description = resolvedNotes ?: "",
                 isSelected = false,
                 distance = trackPoints.last().distance,
                 elevationGain = calculateElevationGain(trackPoints),
@@ -132,6 +226,17 @@ object TcxCourseParser {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun stripBracketedPrefix(notes: String?, name: String?): String? {
+        val raw = notes?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (!name.isNullOrBlank()) {
+            val prefix = "[${name.trim()}]"
+            if (raw.startsWith(prefix)) {
+                return raw.removePrefix(prefix).trim().takeIf { it.isNotEmpty() }
+            }
+        }
+        return raw
     }
 
     private fun calculateElevationGain(points: List<PathPoint>): Double {

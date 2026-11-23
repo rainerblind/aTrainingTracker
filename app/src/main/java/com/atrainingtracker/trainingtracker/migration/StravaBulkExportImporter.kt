@@ -18,10 +18,8 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
-import com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParser
-import com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParser
 import com.atrainingtracker.trainingtracker.migration.parsers.ParsedWorkoutData
-import com.atrainingtracker.trainingtracker.migration.parsers.TcxWorkoutParser
+import com.atrainingtracker.trainingtracker.migration.parsers.WorkoutParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -190,30 +188,16 @@ object StravaBulkExportImporter {
                         rawStream
                     }
 
-                    val source: WorkoutSource
-                    val parseResult: Result<ParsedWorkoutData>
-
-                    decompressedStream.use { stream ->
-                        val lower = filename.lowercase(Locale.ROOT)
-                        when {
-                            lower.contains(".tcx") -> {
-                                source = WorkoutSource.TCX
-                                parseResult = TcxWorkoutParser.parse(stream, context)
-                            }
-                            lower.contains(".gpx") -> {
-                                source = WorkoutSource.GPX
-                                parseResult = GpxWorkoutParser.parse(stream, context)
-                            }
-                            lower.contains(".fit") -> {
-                                source = WorkoutSource.FIT
-                                parseResult = FitWorkoutParser.parse(stream, context)
-                            }
-                            else -> {
-                                Log.w(TAG, "Unsupported activity file format: $filename")
-                                failedCount++
-                                return@forEachIndexed
-                            }
-                        }
+                    val parser = WorkoutParser.forFormat(filename)
+                    if (parser == null) {
+                        decompressedStream.close()
+                        Log.w(TAG, "Unsupported activity file format: $filename")
+                        failedCount++
+                        return@forEachIndexed
+                    }
+                    val source = parser.workoutSource
+                    val parseResult = decompressedStream.use { stream ->
+                        parser.parse(stream, context)
                     }
 
                     if (parseResult.isFailure) {

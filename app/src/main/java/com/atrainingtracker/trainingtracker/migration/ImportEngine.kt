@@ -86,29 +86,56 @@ object ImportEngine {
     )
 
     /**
-     * Analyzes the backup file to find all unique sport types and equipment used in the workouts.
+     * Analyzes the backup file to find all unique sport types and equipment used in the workouts,
+     * cleaning up its temporary extraction directory upon return.
      */
     fun analyzeBackup(context: Context, backupFile: File): AnalysisResult {
+        val tempDir = File(context.cacheDir, "import_analysis")
+        return try {
+            analyzeBackupToStaging(context, backupFile, tempDir)
+        } finally {
+            if (tempDir.exists()) {
+                tempDir.deleteRecursively()
+            }
+        }
+    }
+
+    /**
+     * Unpacks [backupFile] once via [SecureZipExtractor] into [stagedDir] and analyzes all unique
+     * sport types and equipment (`REQ-MIG-061.5`).
+     *
+     * When analysis succeeds with non-empty [AnalysisResult.sportTypes], [stagedDir] is retained so
+     * [performIncrementalImportFromStaging] can import directly without re-unzipping. On any
+     * security violation, error, or empty analysis, [stagedDir] is purged immediately.
+     */
+    fun analyzeBackupToStaging(
+        context: Context,
+        backupFile: File,
+        stagedDir: File
+    ): AnalysisResult {
         val sportTypes = mutableMapOf<Long, SportTypeInfo>()
         val equipment = mutableMapOf<Long, EquipmentInfo>()
-        val tempDir = File(context.cacheDir, "import_analysis")
+        var keepStaging = false
+        var srcSummariesDb: SQLiteDatabase? = null
+        var srcSportDb: SQLiteDatabase? = null
+        var srcEquipDb: SQLiteDatabase? = null
         try {
-            if (tempDir.exists()) tempDir.deleteRecursively()
-            tempDir.mkdirs()
+            if (stagedDir.exists()) stagedDir.deleteRecursively()
+            stagedDir.mkdirs()
 
-            unzipBackup(backupFile, tempDir)
+            unzipBackup(backupFile, stagedDir)
 
-            val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcSportDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/SportType.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcEquipFile = File(tempDir, "databases/Equipment.db")
-            val srcEquipDb = if (srcEquipFile.exists()) {
+            srcSummariesDb = SQLiteDatabase.openDatabase(File(stagedDir, "databases/WorkoutSummaries.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            srcSportDb = SQLiteDatabase.openDatabase(File(stagedDir, "databases/SportType.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            val srcEquipFile = File(stagedDir, "databases/Equipment.db")
+            srcEquipDb = if (srcEquipFile.exists()) {
                 SQLiteDatabase.openDatabase(srcEquipFile.canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
             } else null
 
             // 1. Get unique IDs from workouts
             val usedSportIds = mutableSetOf<Long>()
             val usedEquipIds = mutableSetOf<Long>()
-            
+
             srcSummariesDb.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.SPORT_ID, WorkoutSummaries.EQUIPMENT_ID), null, null, null, null, null).use { cursor ->
                 val sportIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)
                 val equipIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID)
@@ -145,20 +172,69 @@ object ImportEngine {
                 }
             }
 
-            srcSummariesDb.close()
-            srcSportDb.close()
-            srcEquipDb?.close()
+            keepStaging = sportTypes.isNotEmpty()
         } catch (e: SecurityException) {
             Log.e(TAG, "Security violation in analyzeBackup", e)
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Analysis failed", e)
         } finally {
-            if (tempDir.exists()) {
-                tempDir.deleteRecursively()
+            try { srcSummariesDb?.close() } catch (_: Exception) {}
+            try { srcSportDb?.close() } catch (_: Exception) {}
+            try { srcEquipDb?.close() } catch (_: Exception) {}
+            if (!keepStaging && stagedDir.exists()) {
+                stagedDir.deleteRecursively()
             }
         }
         return AnalysisResult(sportTypes.values.toList(), equipment.values.toList())
+    }
+
+    /**
+     * Checks whether [stagedDir] contains the required extracted SQLite database files for
+     * incremental import reuse (`REQ-MIG-061.5`).
+     */
+    fun hasRequiredStagedDatabases(stagedDir: File): Boolean {
+        val dbDir = File(stagedDir, "databases")
+        return File(dbDir, "WorkoutSummaries.db").isFile &&
+            File(dbDir, "WorkoutSamples.db").isFile &&
+            File(dbDir, "Laps.db").isFile
+    }
+
+    /**
+     * Performs incremental import directly from a previously analyzed & validated [stagedDir]
+     * without re-copying or re-unzipping the `.attbackup` archive (`REQ-MIG-061.5`, `REQ-MIG-043`).
+     *
+     * Closes all source SQLite handles before unconditionally deleting [stagedDir] in `finally`.
+     */
+    fun performIncrementalImportFromStaging(
+        context: Context,
+        stagedDir: File,
+        sportTypeMapping: Map<Long, Long>,
+        equipmentMapping: Map<Long, Long>,
+        listener: ProgressListener? = null
+    ): Int {
+        Log.i(TAG, "Starting incremental import from staged dir ${stagedDir.absolutePath}")
+        val cacheRoot = context.cacheDir.toPath().toAbsolutePath().normalize()
+        val stagedPath = stagedDir.toPath().toAbsolutePath().normalize()
+        if (!stagedPath.startsWith(cacheRoot) || stagedPath == cacheRoot) {
+            throw SecurityException("Staged backup directory escapes application cache boundary: ${stagedDir.absolutePath}")
+        }
+
+        val backupLock = BackupManager.acquireLock(context)
+            ?: throw SQLiteDatabaseLockedException("Database locked by concurrent operation")
+
+        return try {
+            DatabaseConnectionManager.checkpointAll(context)
+            importFromUnpackedDir(context, stagedDir, sportTypeMapping, equipmentMapping, listener)
+        } catch (e: Exception) {
+            Log.e(TAG, "Import from staging failed", e)
+            0
+        } finally {
+            if (stagedDir.exists()) {
+                stagedDir.deleteRecursively()
+            }
+            backupLock.close()
+        }
     }
 
     /**
@@ -170,34 +246,58 @@ object ImportEngine {
      * @throws SecurityException If database path verification fails.
      */
     fun performIncrementalImport(
-        context: Context, 
-        backupFile: File, 
+        context: Context,
+        backupFile: File,
         sportTypeMapping: Map<Long, Long>,
         equipmentMapping: Map<Long, Long>,
         listener: ProgressListener? = null
     ): Int {
         Log.i(TAG, "Starting incremental import from ${backupFile.absolutePath}")
-        var importedCount = 0
 
         val backupLock = BackupManager.acquireLock(context)
             ?: throw SQLiteDatabaseLockedException("Database locked by concurrent operation")
 
-        try {
+        val tempDir = File(context.cacheDir, "import_temp")
+        return try {
             DatabaseConnectionManager.checkpointAll(context)
 
             // 1. Unzip to temporary directory
             listener?.onStatus("Unpacking backup...")
-            val tempDir = File(context.cacheDir, "import_temp")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
 
             unzipBackup(backupFile, tempDir)
 
+            importFromUnpackedDir(context, tempDir, sportTypeMapping, equipmentMapping, listener)
+        } catch (e: Exception) {
+            Log.e(TAG, "Import failed", e)
+            0
+        } finally {
+            if (tempDir.exists()) {
+                tempDir.deleteRecursively()
+            }
+            backupLock.close()
+        }
+    }
+
+    private fun importFromUnpackedDir(
+        context: Context,
+        tempDir: File,
+        sportTypeMapping: Map<Long, Long>,
+        equipmentMapping: Map<Long, Long>,
+        listener: ProgressListener?
+    ): Int {
+        var importedCount = 0
+        var srcSummariesDb: SQLiteDatabase? = null
+        var srcSamplesDb: SQLiteDatabase? = null
+        var srcLapsDb: SQLiteDatabase? = null
+
+        try {
             // 2. Open source databases safely
             listener?.onStatus("Opening databases...")
-            val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcSamplesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSamples.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcLapsDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/Laps.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            srcSamplesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSamples.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            srcLapsDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/Laps.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
 
             // 3. Open dedicated scoped connection for ATTACH
             val canonicalSummariesPath = File(WorkoutSummariesDatabaseManager.getInstance(context).database.path).canonicalPath
@@ -217,7 +317,7 @@ object ImportEngine {
                 srcSummariesDb.query(WorkoutSummaries.TABLE, null, null, null, null, null, null).use { cursor ->
                     val total = cursor.count
                     var current = 0
-                    
+
                     while (cursor.moveToNext()) {
                         if (Thread.currentThread().isInterrupted) {
                             throw InterruptedException("Import cancelled")
@@ -225,12 +325,12 @@ object ImportEngine {
                         current++
                         val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
                         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
-                        
+
                         listener?.onProgress(current, total, workoutName)
 
                         val timeStart = try {
                             cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START))
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
 
@@ -240,7 +340,7 @@ object ImportEngine {
                         }
 
                         val oldId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
-                        
+
                         // Single unified SQLite transaction across main, lapsDb, and samplesDb (REQ-MIG-043.1)
                         var effectiveBaseName = fileBaseName
                         try {
@@ -302,25 +402,18 @@ object ImportEngine {
                 }
             }
 
-            try { srcSummariesDb.close() } catch (_: Exception) {}
-            try { srcSamplesDb.close() } catch (_: Exception) {}
-            try { srcLapsDb.close() } catch (_: Exception) {}
-            
             // 5. Update Clusters (SCRUM-117 refinement)
             if (importedCount > 0) {
                 listener?.onStatus("Updating workout clusters...")
                 WorkoutClusterEngine.getInstance(context).migrateHistory(context)
             }
-            
+
             Log.i(TAG, "Import finished. Imported $importedCount new workouts.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Import failed", e)
         } finally {
-            val tempDir = File(context.cacheDir, "import_temp")
-            if (tempDir.exists()) {
-                tempDir.deleteRecursively()
-            }
-            backupLock.close()
+            // Always close all source handles BEFORE caller deletes stagedDir (REQ-MIG-061.5)
+            try { srcSummariesDb?.close() } catch (_: Exception) {}
+            try { srcSamplesDb?.close() } catch (_: Exception) {}
+            try { srcLapsDb?.close() } catch (_: Exception) {}
         }
         return importedCount
     }

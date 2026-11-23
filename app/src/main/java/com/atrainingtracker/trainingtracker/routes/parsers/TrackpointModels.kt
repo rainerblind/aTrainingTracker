@@ -70,18 +70,6 @@ data class RawLap(
 )
 
 /**
- * Aggregate DTO representing the parsed contents of a TCX file (workout activity or course).
- */
-data class ParsedTcxData(
-    var name: String? = null,
-    var notes: String? = null,
-    var sport: String? = null,
-    var creator: String? = null,
-    val laps: MutableList<RawLap> = mutableListOf(),
-    val coursePoints: MutableList<RawCoursePoint> = mutableListOf()
-)
-
-/**
  * Aggregate DTO representing the parsed contents of a GPX file (workout track or route).
  */
 data class ParsedGpxData(
