@@ -61,8 +61,18 @@ class SpeedAndLocationDeviceGoogleFusedTest {
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
 
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getGpsAccuracyThreshold(any()) } returns 200.0f
+
         mockkConstructor(Intent::class)
         every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Double>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Float>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Int>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<String>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), isNull<String>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as Intent }
 
         mockkStatic(TextUtils::class)
         every { TextUtils.equals(any(), any()) } answers {
@@ -254,5 +264,55 @@ class SpeedAndLocationDeviceGoogleFusedTest {
 
         device.onConnectionFailed(ConnectionResult(ConnectionResult.NETWORK_ERROR))
         assertFalse("State flag must be false after onConnectionFailed", device.isLocationUpdatesRegistered)
+    }
+
+    // REQ-EXP-047.1 / TST-EXP-047.1: SpeedAndLocationDevice_GoogleFused always tags fixes as GNSS_FUSED
+    @Test
+    fun testOnLocationChanged_tagsGoogleFusedFixAsGnssFusedEvenWithNullProvider_TST_EXP_047_1() = kotlinx.coroutines.runBlocking {
+        val tempFile = java.io.File.createTempFile("google_fused_tag_", ".phone_raw.csv.gz")
+        tempFile.delete()
+        val recorder = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder(
+            targetFile = tempFile,
+            metadata = com.atrainingtracker.banalservice.devices.raw.PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Pixel 10", sportId = 1L, sessionStartTimeMs = 1_795_331_657_000L)
+        )
+        recorder.start()
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder)
+
+        val device = createDevice()
+        try {
+            val fusedLocNullProvider = mockk<android.location.Location>(relaxed = true) {
+                every { provider } returns null
+                every { latitude } returns 48.137160
+                every { longitude } returns 11.576130
+                every { hasAltitude() } returns true
+                every { altitude } returns 493.4
+                every { hasSpeed() } returns true
+                every { speed } returns 3.2f
+                every { hasBearing() } returns true
+                every { bearing } returns 180.0f
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 5.5f
+                every { time } returns 1_795_331_657_000L
+                every { elapsedRealtimeNanos } returns 685_756_090_900_000L
+            }
+            device.onLocationChanged(fusedLocNullProvider)
+            // Duplicate callback with identical elapsedRealtimeNanos must be deduplicated
+            device.onLocationChanged(fusedLocNullProvider)
+        } finally {
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder.stop()
+            device.shutDown()
+        }
+
+        try {
+            val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(tempFile)
+            val gnssRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS }
+            val fusedRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS_FUSED }
+            org.junit.Assert.assertEquals("Google Fused must never write to raw GNSS channel", 0, gnssRows.size)
+            org.junit.Assert.assertEquals("Google Fused must emit exactly 1 deduplicated GNSS_FUSED row", 1, fusedRows.size)
+            org.junit.Assert.assertEquals(493.4, fusedRows[0].v2, 1e-4)
+        } finally {
+            tempFile.delete()
+        }
     }
 }

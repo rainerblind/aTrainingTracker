@@ -53,14 +53,15 @@ import kotlin.math.sqrt
 
 /**
  * Bounded, crash-safe streaming recorder for smartphone raw sensors (ACC, GYRO, ROTVEC, BARO,
- * STEP, GNSS, WHEEL, STATE) writing `files/raw_sensor/<fileBaseName>.phone_raw.csv.gz`
- * (REQ-EXP-045.1, REQ-EXP-045.2, ATT-9348).
+ * STEP, GNSS, GNSS_FUSED, WHEEL, STATE) writing `files/raw_sensor/<fileBaseName>.phone_raw.csv.gz`
+ * (REQ-EXP-045.1, REQ-EXP-045.2, ATT-9348; REQ-EXP-047.1, REQ-EXP-047.2, ATT-9604).
  *
  * Mirrors `PolarRawTelemetryRecorder` (`ATT-9343`, `ATT-9344`):
  * - Opt-in (`recordSmartphoneRawTelemetryEnabled == false` by default -> zero files/writers/allocations)
  * - Self-contained [SmartphoneRawSensorCapture] listener capturing IMU/GYRO/ROTVEC/BARO/STEP
  *   regardless of whether `SpeedAndLocationDevice_ATTFused` is paired or toggled post-startup
- * - Unified `CLOCK_BOOTTIME` (`SystemClock.elapsedRealtimeNanos()`) timestamps across all 8 channels
+ * - Unified `CLOCK_BOOTTIME` (`SystemClock.elapsedRealtimeNanos()`) timestamps across all 9 channels
+ * - Instance-scoped zero-allocation per-channel GNSS deduplication (`GNSS` vs `GNSS_FUSED`)
  * - Bounded `Channel(capacity = 8192, BufferOverflow.DROP_OLDEST)` with exact `onUndeliveredElement`
  *   dropped-frame accounting
  * - Zero `String.format` per row (single reusable `StringBuilder` in IO drain loop)
@@ -80,6 +81,51 @@ class SmartphoneRawTelemetryRecorder(
     private val droppedFrameCount = AtomicLong(0L)
     private val writtenRowCount = AtomicLong(0L)
     private val isStopped = AtomicBoolean(false)
+
+    // REQ-EXP-047.2 (ATT-9604): Instance-scoped, zero-allocation per-channel GNSS deduplication ring buffers.
+    private class LocationDedupRingBuffer {
+        private val elapsedNsSlots = LongArray(LOCATION_DEDUP_WINDOW_SIZE)
+        private val epochMsSlots = LongArray(LOCATION_DEDUP_WINDOW_SIZE)
+        private val hasLocNsSlots = BooleanArray(LOCATION_DEDUP_WINDOW_SIZE)
+        private var filledCount = 0
+        private var cursor = 0
+
+        fun acceptIfNotDuplicate(elapsedNs: Long, epochMs: Long, hasLocationElapsedNs: Boolean): Boolean {
+            for (i in 0 until filledCount) {
+                if (hasLocationElapsedNs) {
+                    if (hasLocNsSlots[i] && elapsedNsSlots[i] == elapsedNs) return false
+                } else {
+                    if (!hasLocNsSlots[i] && elapsedNsSlots[i] == elapsedNs && epochMsSlots[i] == epochMs) return false
+                }
+            }
+            elapsedNsSlots[cursor] = elapsedNs
+            epochMsSlots[cursor] = epochMs
+            hasLocNsSlots[cursor] = hasLocationElapsedNs
+            cursor = (cursor + 1) % LOCATION_DEDUP_WINDOW_SIZE
+            if (filledCount < LOCATION_DEDUP_WINDOW_SIZE) filledCount++
+            return true
+        }
+    }
+
+    private val locationDedupLock = Any()
+    private val gnssDedupBuffer = LocationDedupRingBuffer()
+    private val gnssFusedDedupBuffer = LocationDedupRingBuffer()
+
+    internal fun shouldAcceptLocation(
+        channel: PhoneRawChannel,
+        elapsedNs: Long,
+        epochMs: Long,
+        hasLocationElapsedNs: Boolean
+    ): Boolean {
+        val ring = when (channel) {
+            PhoneRawChannel.GNSS -> gnssDedupBuffer
+            PhoneRawChannel.GNSS_FUSED -> gnssFusedDedupBuffer
+            else -> return true
+        }
+        return synchronized(locationDedupLock) {
+            ring.acceptIfNotDuplicate(elapsedNs, epochMs, hasLocationElapsedNs)
+        }
+    }
 
     private val channel = Channel<PhoneRawTelemetryRow>(
         capacity = channelCapacity,
@@ -253,6 +299,7 @@ class SmartphoneRawTelemetryRecorder(
         const val FLUSH_INTERVAL_ROWS = 256
         const val FLUSH_INTERVAL_MS = 5_000L
         const val STOP_TIMEOUT_MS = 5_000L
+        const val LOCATION_DEDUP_WINDOW_SIZE = 4
 
         @Volatile
         private var activeRecorder: SmartphoneRawTelemetryRecorder? = null
@@ -551,29 +598,62 @@ class SmartphoneRawTelemetryRecorder(
         }
 
         /**
-         * Dispatches a raw GNSS [Location] fix into the active recorder with strict `.isFinite()`
-         * guards on latitude, longitude, and all optional metrics. Zero allocations when inactive.
+         * Resolves the canonical GNSS channel for an Android [Location] (`"fused"` -> [PhoneRawChannel.GNSS_FUSED],
+         * raw GPS / null / unmocked providers -> [PhoneRawChannel.GNSS]) safely on plain JVM (REQ-EXP-047.1, ATT-9604).
          */
         @JvmStatic
-        fun recordLocation(location: Location, epochMs: Long) {
+        fun resolveLocationChannel(location: Location): PhoneRawChannel {
+            val provider = try {
+                location.provider
+            } catch (_: Throwable) {
+                null
+            }
+            return if (provider != null && provider.equals("fused", ignoreCase = true)) {
+                PhoneRawChannel.GNSS_FUSED
+            } else {
+                PhoneRawChannel.GNSS
+            }
+        }
+
+        /**
+         * Dispatches a raw GNSS [Location] fix into the active recorder with per-channel deduplication
+         * (`GNSS` vs `GNSS_FUSED`, REQ-EXP-047.1/REQ-EXP-047.2) and strict `.isFinite()` guards on
+         * latitude, longitude, and all optional metrics. Zero allocations when inactive.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun recordLocation(
+            location: Location,
+            epochMs: Long,
+            channel: PhoneRawChannel = resolveLocationChannel(location)
+        ) {
             val rec = activeRecorder ?: return
             val lat = location.latitude
             val lon = location.longitude
             if (!lat.isFinite() || !lon.isFinite()) return
 
+            val effectiveChannel = when (channel) {
+                PhoneRawChannel.GNSS, PhoneRawChannel.GNSS_FUSED -> channel
+                else -> resolveLocationChannel(location)
+            }
             val locElapsedNs = try {
                 location.elapsedRealtimeNanos
             } catch (_: Throwable) {
                 0L
             }
-            val elapsedNs = if (locElapsedNs > 0L) locElapsedNs else currentElapsedRealtimeNanos()
+            val hasLocNs = locElapsedNs > 0L
+            val elapsedNs = if (hasLocNs) locElapsedNs else currentElapsedRealtimeNanos()
+            if (!rec.shouldAcceptLocation(effectiveChannel, elapsedNs, epochMs, hasLocationElapsedNs = hasLocNs)) {
+                return
+            }
+
             val altM = if (location.hasAltitude() && location.altitude.isFinite()) location.altitude else 0.0
             val speedMps = if (location.hasSpeed() && location.speed.isFinite()) location.speed.toDouble() else 0.0
             val bearingDeg = if (location.hasBearing() && location.bearing.isFinite()) location.bearing.toDouble() else 0.0
             val accM = if (location.hasAccuracy() && location.accuracy.isFinite()) location.accuracy.toDouble() else 0.0
             rec.record(
                 PhoneRawTelemetryRow(
-                    elapsedNs, epochMs, PhoneRawChannel.GNSS,
+                    elapsedNs, epochMs, effectiveChannel,
                     lat, lon, altM, speedMps, bearingDeg, accM
                 )
             )
@@ -629,6 +709,7 @@ class SmartphoneRawTelemetryRecorder(
         }
 
         @JvmStatic
+        @JvmOverloads
         fun recordGnss(
             elapsedNs: Long,
             epochMs: Long,
@@ -637,13 +718,22 @@ class SmartphoneRawTelemetryRecorder(
             altM: Double,
             speedMps: Double,
             bearingDeg: Double,
-            accuracyM: Double
+            accuracyM: Double,
+            channel: PhoneRawChannel = PhoneRawChannel.GNSS
         ) {
             val rec = activeRecorder ?: return
             if (!latDeg.isFinite() || !lonDeg.isFinite()) return
+            val effectiveChannel = if (channel == PhoneRawChannel.GNSS_FUSED) {
+                PhoneRawChannel.GNSS_FUSED
+            } else {
+                PhoneRawChannel.GNSS
+            }
+            if (!rec.shouldAcceptLocation(effectiveChannel, elapsedNs, epochMs, hasLocationElapsedNs = elapsedNs > 0L)) {
+                return
+            }
             rec.record(
                 PhoneRawTelemetryRow(
-                    elapsedNs, epochMs, PhoneRawChannel.GNSS,
+                    elapsedNs, epochMs, effectiveChannel,
                     latDeg,
                     lonDeg,
                     if (altM.isFinite()) altM else 0.0,

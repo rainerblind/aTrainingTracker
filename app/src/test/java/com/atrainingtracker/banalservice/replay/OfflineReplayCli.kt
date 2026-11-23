@@ -32,6 +32,7 @@ import kotlin.system.exitProcess
  * - `--csv <path>`     Optional 1-Hz CSV output path
  * - `--json <path>`    Optional JSON scorecard output path
  * - `--truth <path>`   Optional `.truth.json` ground-truth regression file (non-zero exit on violation)
+ * - `--gnss-provider <auto|gps|fused>` Optional GNSS provider stream selector (default: `auto`)
  */
 object OfflineReplayCli {
 
@@ -45,6 +46,7 @@ object OfflineReplayCli {
         var csvOut: File? = null
         var jsonOut: File? = null
         var truthFile: File? = null
+        var gnssSource = ReplayGnssSource.AUTO
 
         var i = 0
         while (i < args.size) {
@@ -69,6 +71,12 @@ object OfflineReplayCli {
                     val v = args.getOrNull(i + 1) ?: return usageError(err, "Missing value for --truth")
                     truthFile = File(v); i += 2
                 }
+                "--gnss-provider" -> {
+                    val v = args.getOrNull(i + 1) ?: return usageError(err, "Missing value for --gnss-provider")
+                    gnssSource = ReplayGnssSource.parseOrNull(v)
+                        ?: return usageError(err, "Invalid --gnss-provider value '$v' (expected: auto, gps, or fused)")
+                    i += 2
+                }
                 else -> return usageError(err, "Unknown argument: $flag")
             }
         }
@@ -92,7 +100,11 @@ object OfflineReplayCli {
         }
 
         val result = OfflineTelemetryReplayHarness.replay(
-            ReplayInputs(phoneRawFile = phoneFile, polarRawFiles = polarFiles)
+            ReplayInputs(
+                phoneRawFile = phoneFile,
+                polarRawFiles = polarFiles,
+                config = ReplayConfig(gnssSource = gnssSource)
+            )
         )
         out.print(result.scorecard.toFormattedReport())
 
@@ -124,7 +136,7 @@ object OfflineReplayCli {
 
     private fun usageError(err: PrintStream, message: String): Int {
         err.println("ERROR: $message")
-        err.println("Usage: replayRawTelemetry --phone <path.phone_raw.csv.gz> [--polar <path.polar_raw.csv.gz>] [--csv <out.csv>] [--json <out.json>] [--truth <spec.truth.json>]")
+        err.println("Usage: replayRawTelemetry --phone <path.phone_raw.csv.gz> [--polar <path.polar_raw.csv.gz>] [--csv <out.csv>] [--json <out.json>] [--truth <spec.truth.json>] [--gnss-provider auto|gps|fused]")
         return 2
     }
 }

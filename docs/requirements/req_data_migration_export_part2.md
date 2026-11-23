@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.37  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 32
+**Total Requirements**: 33
 
 ---
 
@@ -1113,10 +1113,41 @@
 
 ---
 
+### REQ-EXP-047: Per-Channel GNSS Row Deduplication, Location Provider Tagging (`GNSS` vs `GNSS_FUSED`) & Backwards-Compatible Offline Replay Selection (`ATT-9604`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-047`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal software-only sidecar row deduplication and provider channel disambiguation extending `REQ-EXP-045` / `REQ-EXP-046` without modifying external hardware sensors, Android HALs, SQLite schemas, or cloud APIs.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `PhoneRawTelemetryRow.kt`, `SmartphoneRawTelemetryRecorder.kt`, `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `OfflineReplayModels.kt`, `OfflineTelemetryReplayHarness.kt`, `OfflineReplayCli.kt`, `app/build.gradle`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: When `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_ATTFused`, and `SpeedAndLocationDevice_GoogleFused` are concurrently paired (`DeviceManager.java:424-462`), both GPS and ATTFused invoke `SmartphoneRawTelemetryRecorder.recordLocation(...)` for the exact same `LocationManager.GPS_PROVIDER` fix (producing 2 consecutive identical `GNSS` rows), while Google Fused interleaves unnormalized WGS84 ellipsoidal fixes into the same untagged `GNSS` channel, distorting offline replay (`:app:replayRawTelemetry`, `ATT-9349`).
+- **Description**:
+  1. *Provider Channel Disambiguation (`REQ-EXP-047.1`)*:
+     - `PhoneRawChannel` SHALL add `GNSS_FUSED` alongside `GNSS` while preserving the exact 9-column CSV schema (`elapsedRealtimeNs,epochMs,channel,v0,v1,v2,v3,v4,v5`), identical `v0..v5` layout (`latDeg,lonDeg,altM,speedMps,bearingDeg,accuracyM`), and `schemaVersion = 1` (`PhoneRawMetadata` untouched).
+     - `SpeedAndLocationDevice.onNewLocation()` SHALL tag `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` fixes as `PhoneRawChannel.GNSS_FUSED` and `DeviceType.SPEED_AND_LOCATION_GPS` fixes as `PhoneRawChannel.GNSS`; `SpeedAndLocationDevice_ATTFused.onLocationChanged()` SHALL tag pre-EKF raw GPS fixes as `PhoneRawChannel.GNSS` (`+0` net LoC, `<= 1,500` LoC ceiling); `SmartphoneRawTelemetryRecorder.recordLocation(location, epochMs, channel = resolveLocationChannel(location))` SHALL remain backwards-compatible via `@JvmOverloads`, defaulting `"fused"` (case-insensitive) to `GNSS_FUSED` and all other/null providers to `GNSS`.
+  2. *Per-Channel Zero-Allocation GNSS Deduplication (`REQ-EXP-047.2`)*:
+     - `SmartphoneRawTelemetryRecorder` SHALL maintain an instance-scoped, thread-safe, zero-allocation per-channel deduplication window (4-slot primitive ring buffer per `GNSS` and `GNSS_FUSED` channel) suppressing duplicate fixes with matching hardware `elapsedRealtimeNanos` (`> 0L`) — or matching `(elapsedNs, epochMs)` when `location.elapsedRealtimeNanos <= 0L` — before `Channel.trySend` without incrementing `droppedFrameCount`, so concurrent `GPS` + `ATTFused` callbacks (even with interleaved `GNSS_FUSED` fixes) emit exactly **1** `GNSS` row per fix while preserving single-device pairings (`GPS`-only, `ATTFused`-only, `GoogleFused`-only).
+  3. *Backwards-Compatible v1 Parsing & Provider-Selectable Offline Replay (`REQ-EXP-047.3`)*:
+     - `PhoneRawTelemetryRow.fromCsvLine()`, `PhoneRawSidecarRecovery`, and `PhoneRawTelemetryReader` SHALL parse and salvage both `GNSS` and `GNSS_FUSED` rows as well as unmodified `v1` sidecars (`2026-11-22_081402.phone_raw.csv.gz`) with zero errors.
+     - `ReplayConfig` SHALL add `gnssSource: ReplayGnssSource = ReplayGnssSource.AUTO` (`AUTO`: consume `GNSS` when present, falling back to `GNSS_FUSED` only if zero `GNSS` rows exist; `GPS`: `GNSS` only; `FUSED`: `GNSS_FUSED` only), `OfflineTelemetryReplayHarness` SHALL filter GNSS ingestion to the resolved channel and skip exact consecutive duplicate GNSS rows in legacy v1 archives, and `OfflineReplayCli` / `:app:replayRawTelemetry` SHALL accept optional `--gnss-provider <auto|gps|fused>` / `-PgnssProvider=...` (default `auto`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice_GPS` and `SpeedAndLocationDevice_ATTFused` are both active during a workout (with or without interleaved `SpeedAndLocationDevice_GoogleFused` updates), *When* a 1-Hz GPS `Location` arrives at both listeners, *Then* exactly **1** `GNSS` row is written to `*.phone_raw.csv.gz` for that `elapsedRealtimeNs` and `droppedFrameCount` remains `0`.
+• *Given* raw GPS and Google Fused providers both emit updates during a workout, *When* `SmartphoneRawTelemetryRecorder` writes the sidecar, *Then* raw GPS fixes are written on channel `GNSS` and Google Fused fixes are written on channel `GNSS_FUSED` without contaminating `GNSS`.
+• *Given* both legacy `v1` sidecars (including consecutive duplicate `GNSS` rows) and new sidecars containing both `GNSS` and `GNSS_FUSED` rows, *When* parsed by `PhoneRawTelemetryReader` and replayed via `OfflineTelemetryReplayHarness` / `:app:replayRawTelemetry`, *Then* both parse cleanly, default `AUTO` replay consumes only raw `GNSS` (falling back to `GNSS_FUSED` on fused-only archives), legacy duplicates are suppressed, and `--gnss-provider gps|fused` selects the requested stream deterministically.
+
+**Invariants**: Exact 9-column `CSV_HEADER` and `schemaVersion = 1` unchanged; `0` overhead/allocations when disabled (`false`); `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`+0` net LoC); pre-EKF raw capture before feature guards preserved (`ATT-9348`); `0` SQLite/UI/`strings*.xml` edits; `ANT-Android-SDKs` untouched at `160000`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.39` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `REQ-EXP-047` to `[Verified]` after Gate 3 (`ATT-9649`) PASS implementation incorporating all 5 guardrails (`PhoneRawChannel.GNSS_FUSED`, 4-slot `filledCount`-guarded `LocationDedupRingBuffer`, authoritative `DeviceType` tagging, `SpeedAndLocationDevice_ATTFused.kt` `1,495/1,500` LoC, `ReplayGnssSource` + v1 dedup + `--gnss-provider` CLI), `88/88` targeted unit & contract tests PASS across 8 suites (`0` fail, `0` err, `0` skip, `0` new warnings), and live `:app:replayRawTelemetry` smoke PASS. |
+| `1.0.38` | 2026-11-22 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Added `[Planned]` `REQ-EXP-047` (`Derived (SW-only)`, `.1`–`.3`) for per-channel GNSS row deduplication, `GNSS` vs `GNSS_FUSED` provider channel tagging, and backwards-compatible v1/provider-selectable offline replay (`N/A - 0 string changes`). |
 | `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Stage 6 Bounce 1/5 heal: delegated `SensorQuotaReconciliationManager.parseLastSeenTimestamp` to `LastActiveDateFormatter` (fixing non-UTC ranking inversion), guarded `WorkoutRepository.reloadWorkoutDataInternal` `finally` with `released` flag, and added `SensorType`-first matching/population in `LiveWorkoutCardStateStore.upsertLiveExtremaAvgRow` (`163/163` targeted Bounce 1/5 tests PASS across 30 suites, `0` new warnings). |
 | `1.0.36` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Promoted `REQ-DAT-048` to `[Verified]` after Stage 4–5 implementation incorporating all 6 Gate 3 (`ATT-9646`) guardrails (`WorkoutSamplesDatabaseManager.java` shrunk to `1,472/1,500` LoC, `WorkoutRepository.kt` `4,975/5,117` LoC with `pendingNotifyInitialLoadedIds` coalescing), `215/215` targeted Tier-1 unit & contract tests PASS across 41 suites (`0` fail, `0` err, `0` skip, `0` new compiler warnings), and `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke (`CRASH_LOGCAT_CLEAN`, `Rule 8.5` PNG inspected). |
 | `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Added `[Planned]` `REQ-DAT-048` (`Derived (SW-only)`, `.1`–`.5`) for SQLite null-safe summary getters, `LIMIT 1`/single-PRAGMA sample queries, cursor-safe `getCalibrationFactor` + fail-fast `setInt` + UTC ISO-8601 `LastActiveDateFormatter` (backward-compatible parsing), `paired = 1` remote-device filtering, `RoutesDbHelper.onUpgrade` early return & single-read `duplicateRouteAsLocal`, numeric `isMinRelevant`, `SensorType`-keyed `ExtremaDataRow`, and single-reload cluster mutations (`N/A - 0 string changes`). |

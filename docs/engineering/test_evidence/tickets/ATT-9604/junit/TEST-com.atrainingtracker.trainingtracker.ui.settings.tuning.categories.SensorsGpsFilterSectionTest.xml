@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:07:33.918Z" hostname="rainer-HP-EliteBook-850-G5" time="7.456">
+  <properties/>
+  <testcase name="coldStartFreshInstance_isEnabledImmediatelyReturnsTrueAfterPersistedOptIn_TST_EXP_045_1" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionTest" time="2.646"/>
+  <testcase name="smartphoneRawTelemetryToggle_rendersAndInvokesCallback_TST_EXP_045_5" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionTest" time="4.668"/>
+  <testcase name="tuningPreferencesDataStore_persistsAndResetsSmartphoneRawTelemetryFlag_TST_EXP_045_5" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionTest" time="0.141"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

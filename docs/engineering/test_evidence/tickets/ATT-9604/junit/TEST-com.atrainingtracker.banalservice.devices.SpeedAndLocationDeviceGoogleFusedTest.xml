@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:05:47.886Z" hostname="rainer-HP-EliteBook-850-G5" time="10.143">
+  <properties/>
+  <testcase name="testShutDown_removesLocationUpdatesAndResetsStateFlag" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.928"/>
+  <testcase name="testShutDown_whenApiThrowsException_catchesSafelyAndDisconnects" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.278"/>
+  <testcase name="testCheckOrReRegister_whenNotRegistered_registersUpdatesAndSetsFlag" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.302"/>
+  <testcase name="testCheckOrReRegister_whenAlreadyRegistered_isIdempotentAndPreventsDuplicates" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.334"/>
+  <testcase name="testOnConnected_registersLocationUpdatesAndSetsStateFlag" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.306"/>
+  <testcase name="testConnectionSuspendedAndFailed_resetsStateFlag" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.303"/>
+  <testcase name="testOnLocationChanged_tagsGoogleFusedFixAsGnssFusedEvenWithNullProvider_TST_EXP_047_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest" time="1.692"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:05:20.964Z" hostname="rainer-HP-EliteBook-850-G5" time="10.452">
+  <properties/>
+  <testcase name="testSportTypesRepository_indoorKeywordsClassification" classname="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" time="3.602"/>
+  <testcase name="testNewlyInitializedDevice_inheritsCachedIndoorMode" classname="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" time="0.959"/>
+  <testcase name="testSetIndoorMode_propagatesToActiveSpeedAndLocationDeviceAndSuppressesGpsUpdates" classname="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" time="0.504"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

@@ -243,6 +243,22 @@ object OfflineTelemetryReplayHarness {
         var polarEvents = 0
         val lastTRelMs = merged.last().tRelMs
 
+        // REQ-EXP-047.3 (ATT-9604): Resolve active GNSS stream and deduplicate exact legacy v1 duplicates.
+        val activeGnssChannel = when (config.gnssSource) {
+            ReplayGnssSource.GPS -> PhoneRawChannel.GNSS
+            ReplayGnssSource.FUSED -> PhoneRawChannel.GNSS_FUSED
+            ReplayGnssSource.AUTO -> if (phoneRows.any { it.channel == PhoneRawChannel.GNSS }) {
+                PhoneRawChannel.GNSS
+            } else {
+                PhoneRawChannel.GNSS_FUSED
+            }
+        }
+        var hasLastAcceptedGnss = false
+        var lastAcceptedGnssElapsedNs = 0L
+        var lastAcceptedGnssEpochMs = 0L
+        var lastAcceptedGnssLat = Double.NaN
+        var lastAcceptedGnssLon = Double.NaN
+
         fun emitUpToSecond(targetSec: Long) {
             while (nextEmitSec <= targetSec) {
                 val secMs = nextEmitSec * 1_000L
@@ -436,7 +452,24 @@ object OfflineTelemetryReplayHarness {
                             sportDiscriminator.onStepDetected(tMs)
                             phoneCadenceEstimator.onStepDetected(tMs, currentMode, sportHint)
                         }
-                        PhoneRawChannel.GNSS -> {
+                        PhoneRawChannel.GNSS, PhoneRawChannel.GNSS_FUSED -> {
+                            if (r.channel != activeGnssChannel) {
+                                continue
+                            }
+                            if (hasLastAcceptedGnss &&
+                                r.elapsedRealtimeNs == lastAcceptedGnssElapsedNs &&
+                                r.epochMs == lastAcceptedGnssEpochMs &&
+                                r.v0 == lastAcceptedGnssLat &&
+                                r.v1 == lastAcceptedGnssLon
+                            ) {
+                                continue
+                            }
+                            hasLastAcceptedGnss = true
+                            lastAcceptedGnssElapsedNs = r.elapsedRealtimeNs
+                            lastAcceptedGnssEpochMs = r.epochMs
+                            lastAcceptedGnssLat = r.v0
+                            lastAcceptedGnssLon = r.v1
+
                             val lat = r.v0
                             val lon = r.v1
                             val alt = r.v2

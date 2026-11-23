@@ -428,6 +428,7 @@ afterEvaluate {
             if (project.hasProperty("csvOut")) { cliArgs.addAll(["--csv", project.property("csvOut").toString()]) }
             if (project.hasProperty("jsonOut")) { cliArgs.addAll(["--json", project.property("jsonOut").toString()]) }
             if (project.hasProperty("truth")) { cliArgs.addAll(["--truth", project.property("truth").toString()]) }
+            if (project.hasProperty("gnssProvider")) { cliArgs.addAll(["--gnss-provider", project.property("gnssProvider").toString()]) }
             if (!cliArgs.isEmpty()) {
                 args(cliArgs)
             }

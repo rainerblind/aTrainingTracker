@@ -501,7 +501,7 @@ open class SpeedAndLocationDevice_ATTFused(
     override fun recordsRawLocationDirectly(): Boolean = true
 
     override fun onLocationChanged(location: Location) {
-        SmartphoneRawTelemetryRecorder.recordLocation(location, if (location.time > 0L) location.time else System.currentTimeMillis())
+        SmartphoneRawTelemetryRecorder.recordLocation(location, if (location.time > 0L) location.time else System.currentTimeMillis(), com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS)
         if (!AttFusedPreferences.isEffectiveGnssActive(mContext)) return
 
         val lat = location.latitude

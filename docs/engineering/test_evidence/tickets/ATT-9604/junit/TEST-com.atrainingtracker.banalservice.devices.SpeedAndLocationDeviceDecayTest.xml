@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:05:20.959Z" hostname="rainer-HP-EliteBook-850-G5" time="26.894">
+  <properties/>
+  <testcase name="testPaceNullification_neverEmitsInfinityOrNaN" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="9.162"/>
+  <testcase name="testLocationUnavailable_decaysSpeedImmediately" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.445"/>
+  <testcase name="testDecoupledSpeedRecovery_afterWatchdogDecay_doesNotAverageWithDecayedSpeed" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.366"/>
+  <testcase name="testMultiSecondCadence_7to8Seconds_doesNotTriggerWatchdogOrSawtoothDecay" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.398"/>
+  <testcase name="testOnAccumulatorsReset_clearsSpeedPaceAndWatchdog" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.393"/>
+  <testcase name="testFallbackBearing_whenBearingMissing_calculatesFromLocationDifference" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.338"/>
+  <testcase name="testFreshLocationFix_cancelsDecayAndResumesActiveSpeed" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.364"/>
+  <testcase name="testDecayTicks_doNotAccumulatePhantomDistance" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.343"/>
+  <testcase name="testShutDown_cancelsWatchdogCallbacks" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.328"/>
+  <testcase name="testContinuousFixes_calculateSmoothedSpeedAndPace" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.342"/>
+  <testcase name="testMultiSecondInterval_3000msOrGreater_bypassesSmoothing" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.35"/>
+  <testcase name="testInactivityTimeout_triggersProgressiveExponentialDecay" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.375"/>
+  <testcase name="testFallbackSpeed_whenSpeedMissing_calculatesFromLocationDifference" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.364"/>
+  <testcase name="testInitialState_speedIsZeroAndPaceIsNull" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.315"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

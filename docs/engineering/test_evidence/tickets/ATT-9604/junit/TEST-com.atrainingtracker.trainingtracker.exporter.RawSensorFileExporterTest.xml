@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:07:24.938Z" hostname="rainer-HP-EliteBook-850-G5" time="8.857">
+  <properties/>
+  <testcase name="testDoExport_whenAbandonedTmpExists_salvagesToFinalSidecarAndExports_TST_STB_025_2" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="8.442"/>
+  <testcase name="testMimeTypeAndFormatProperties" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.1"/>
+  <testcase name="testDoExport_whenSidecarExists_exportsSuccessfully" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.098"/>
+  <testcase name="testDoExport_whenSidecarDoesNotExist_gracefulSkip" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.095"/>
+  <testcase name="testDoExport_phoneOnlyAndBothSidecarsAndPhoneTmpSalvage_TST_EXP_045_3" classname="com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest" time="0.12"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

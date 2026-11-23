@@ -576,8 +576,12 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
 
         if (location != null) {
             if (!recordsRawLocationDirectly()) {
+                com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel rawChannel =
+                        getDeviceType() == DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED
+                                ? com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS_FUSED
+                                : com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS;
                 com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.recordLocation(
-                        location, location.getTime() > 0L ? location.getTime() : System.currentTimeMillis());
+                        location, location.getTime() > 0L ? location.getTime() : System.currentTimeMillis(), rawChannel);
             }
             double accuracyThreshold = SettingsDataStoreJavaHelper.getGpsAccuracyThreshold(mContext);
             if (DEBUG)

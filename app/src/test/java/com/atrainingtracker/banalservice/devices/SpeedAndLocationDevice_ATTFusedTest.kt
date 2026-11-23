@@ -2617,6 +2617,96 @@ class SpeedAndLocationDevice_ATTFusedTest {
         }
     }
 
+    // REQ-EXP-047.1, REQ-EXP-047.2 / TST-EXP-047.2: Concurrent GPS + ATTFused deliver identical GPS fix -> 1 GNSS row
+    @Test
+    fun concurrentGpsAndAttFused_deduplicatesIdenticalGpsFixAcrossInterleavedFusedUpdate_TST_EXP_047_2() = kotlinx.coroutines.runBlocking {
+        val tempFile = java.io.File.createTempFile("gps_att_fused_dedup_", ".phone_raw.csv.gz")
+        tempFile.delete()
+        val recorder = com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder(
+            targetFile = tempFile,
+            metadata = com.atrainingtracker.banalservice.devices.raw.PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Pixel 10", sportId = 1L, sessionStartTimeMs = 1_795_331_657_000L)
+        )
+        recorder.start()
+        com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder)
+
+        every { AttFusedPreferences.isEffectiveGnssActive(any()) } returns true
+        val gpsDevice = SpeedAndLocationDevice_GPS(mockContext, mockSensorManager)
+        val attFusedDevice = SpeedAndLocationDevice_ATTFused(mockContext, mockSensorManager)
+        try {
+            val gpsCopyForGps = mockk<android.location.Location>(relaxed = true) {
+                every { provider } returns "gps"
+                every { latitude } returns 48.137154
+                every { longitude } returns 11.576124
+                every { hasAltitude() } returns true
+                every { altitude } returns 478.2
+                every { hasSpeed() } returns true
+                every { speed } returns 3.4f
+                every { hasBearing() } returns true
+                every { bearing } returns 90.0f
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 4.2f
+                every { time } returns 1_795_331_657_000L
+                every { elapsedRealtimeNanos } returns 685_756_090_818_846L
+            }
+            val gpsCopyForAttFused = mockk<android.location.Location>(relaxed = true) {
+                every { provider } returns "gps"
+                every { latitude } returns 48.137154
+                every { longitude } returns 11.576124
+                every { hasAltitude() } returns true
+                every { altitude } returns 478.2
+                every { hasSpeed() } returns true
+                every { speed } returns 3.4f
+                every { hasBearing() } returns true
+                every { bearing } returns 90.0f
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 4.2f
+                every { time } returns 1_795_331_657_000L
+                every { elapsedRealtimeNanos } returns 685_756_090_818_846L
+            }
+            val interleavedFused = mockk<android.location.Location>(relaxed = true) {
+                every { provider } returns "fused"
+                every { latitude } returns 48.137160
+                every { longitude } returns 11.576130
+                every { hasAltitude() } returns true
+                every { altitude } returns 493.5
+                every { hasSpeed() } returns true
+                every { speed } returns 3.1f
+                every { hasBearing() } returns true
+                every { bearing } returns 91.0f
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 5.0f
+                every { time } returns 1_795_331_657_000L
+                every { elapsedRealtimeNanos } returns 685_756_090_818_846L
+            }
+
+            gpsDevice.onLocationChanged(gpsCopyForGps)
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.recordLocation(
+                interleavedFused,
+                1_795_331_657_000L,
+                com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS_FUSED
+            )
+            attFusedDevice.onLocationChanged(gpsCopyForAttFused)
+        } finally {
+            com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder.stop()
+            gpsDevice.shutDown()
+            attFusedDevice.shutDown()
+        }
+
+        try {
+            val parsed = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(tempFile)
+            val gnssRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS }
+            val fusedRows = parsed.rows.filter { it.channel == com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS_FUSED }
+            assertEquals("Concurrent GPS + ATTFused must emit exactly 1 GNSS row", 1, gnssRows.size)
+            assertEquals("Interleaved Google Fused fix must emit exactly 1 GNSS_FUSED row", 1, fusedRows.size)
+            assertEquals(478.2, gnssRows[0].v2, 1e-4)
+            assertEquals(493.5, fusedRows[0].v2, 1e-4)
+            assertEquals(0L, recorder.getDroppedFrameCount())
+        } finally {
+            tempFile.delete()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType
