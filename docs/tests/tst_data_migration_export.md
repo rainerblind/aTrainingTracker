@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.50  
+**Version**: 1.0.52  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 139
+**Total Tests**: 140
 
 ---
 
@@ -2641,10 +2641,30 @@
 
 ---
 
+### TST-DAT-045: Authoritative Workout Deletion Cascade, Post-Commit `WorkoutMutationEvent` & Reactive ViewModel Cache Verification (`ATT-9607`) [Verified]
+- **Requirement(s)**: `REQ-DAT-049`
+- **Component**: `WorkoutMutationEvent.kt`, `WorkoutDeletionCoordinator.kt`, `WorkoutRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `ActiveDevicesDbHelper.java`, `RawSensorSidecarFiles.kt`, `WorkoutClusterRepository.kt`, `AthleteProfileViewModel.kt`, `TrackingViewModel.kt`, `EquipmentViewModel.kt`, `SportTypeViewModel.kt`, `SportingJourneyViewModel.kt`
+- **Jira**: `ATT-9607`
+- **Test Code**:
+  - `WorkoutDeletionCascadeIntegrationTest.kt`, `WorkoutDeletionHelperTest.kt`, `PolarRawTelemetryPrunerTest.kt`, `ExportManagerTest.kt`, `RawSensorFileExporterTest.kt`, `WorkoutRepositoryDeleteTest.kt`, `WorkoutRepositoryConcurrencyTest.kt`, `WorkoutRepositoryHrvConsensusTest.kt`, `WorkoutClusterRepositoryTest.kt`
+  - `AthleteProfileViewModelPmcDeletionTest.kt`, `AthleteProfileViewModelCardioPowerTest.kt`, `AthleteProfileTabFlowIsolationTest.kt`, `AthleteProfileViewModelHrvTest.kt`, `TrackingViewModelMmpTest.kt`, `EquipmentViewModelLifecycleTest.kt`, `EquipmentViewModelMatrixTest.kt`, `EquipmentViewModelRetiredTest.kt`, `EquipmentViewModelSyncTest.kt`, `SportTypeViewModelRetiredTest.kt`, `SportingJourneyViewModelTest.kt`, `LiveWorkoutCardStateStoreTest.kt`
+  - `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `AndroidViewModelReflectionContractTest.kt`, `RepositoryUiCleanlinessContractTest.kt`, `RepositoryEngineCleanlinessContractTest.kt`, `SourceTextReadingAuditContractTest.kt`
+- **Verification Evidence**: Verified (`ATT-9607`, `tier-a`, Gate 3 `ATT-9666` PASSED; `250/250` targeted Tier-1 unit, Robolectric SQLite integration & contract tests PASS across 54 suites — `0` fail, `0` err, `0` skip, `0` new compiler warnings; `3/3` safety linters PASS; live `emulator-5554` install & boot smoke `CRASH_LOGCAT_CLEAN` with `Rule 8.5`-inspected `docs/engineering/walkthroughs/img/ATT-9607_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9607/`).
+- **Test Description**:
+  1. *End-to-End 7-DB + Sidecar Single Delete & Cold-Start Snapshot (`TST-DAT-045.1`)*: In Robolectric SQLite, seed a finished clustered workout across `WorkoutSummaries.db` (all 5 tables), `Laps.db`, `WorkoutRR.db`, `ActiveDevices.db`, `WorkoutSamples.db`, `ExportStatus.db`, `StravaUpload.db`, `WorkoutClusters.db`, `workout_photos/<id>/`, and `.polar_raw`/`.phone_raw` `.gz`/`.tmp`/`.tmp.salvage` files; invoke `deleteWorkoutCascade` / `deleteWorkout` with empty/unhydrated `_allWorkouts`; assert 0 remaining rows/tables/files across all 7 stores, transactional summary purge, pre-delete DB snapshot cluster decrement, `_allWorkouts` removal, and `PeriodsRepository` reactive update (while verifying `ExportManager.invalidateWorkoutExport` still preserves all raw sidecar files per `ATT-9613`).
+  2. *Synchronous Awaited Bulk Deletion & Rule 74 Ordering (`TST-DAT-045.2`)*: Seed 3 old workouts and 1 recent workout; invoke `deleteOldWorkoutsCascade(daysToKeep, progressCallback)`; assert all 3 old workouts are completely removed from SQLite and sidecars *immediately upon return* (zero async race), progress reports `(1,3)`..`(3,3)`, recent workout survives, exactly 1 `WorkoutMutationEvent.BulkDeleted(3 ids)` is emitted, and `WorkoutRepositoryConcurrencyTest` confirms `DeletionProgress.Idle` precedes `deleteFinishedEvent` (`REQ-STB-018.4`).
+  3. *Cluster In-Memory Sync on Delete (`TST-DAT-045.3`)*: Verify single deletion of a clustered workout updates `WorkoutClusterRepository._allClusters` (`hitCount` decremented) and `_clusterStats` in-place via `syncClusterAfterWorkoutDeletion(clusterId)` and emits exactly 1 `WorkoutMutationEvent.Deleted`.
+  4. *Reactive Downstream ViewModel Refresh & 1-Hz Isolation (`TST-DAT-045.4`)*: Verify `AthleteProfileViewModel` with empty `_allWorkouts` recalculates `pmcUiState` (`CTL`/`ATL`/`TSB`), `cardioUiState`, and `hrvUiState` (daily loads) upon `WorkoutMutationEvent.Deleted` / `BulkDeleted`; verify `TrackingViewModel` refreshes `cachedPowerBenchmarks`; verify `EquipmentViewModel`, `SportTypeViewModel`, and `SportingJourneyViewModel` reload derived stats; verify 1-Hz unfinished live workout updates emit `0` mutation events and `0` historical SQLite re-queries (`REQ-STB-020.4`).
+  5. *Architecture, Reflection & Detailed-Design Contracts (`TST-DAT-045.5`)*: Verify `ArchitectureConformanceContractTest` (LoC ceilings & layering), `DetailedDesignParityContractTest`, `AndroidViewModelReflectionContractTest`, and `Repository*CleanlinessContractTest` pass 100%.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.52` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Promoted `TST-DAT-045` to `[Verified]` (`250/250` targeted Tier-1 unit, Robolectric SQLite integration & contract tests PASS across 54 suites incl. `WorkoutDeletionCascadeIntegrationTest` `4/4`, `AthleteProfileViewModelPmcDeletionTest` `5/5`, `TrackingViewModelMmpTest` `4/4`, `SportTypeViewModelRetiredTest` `3/3`, `WorkoutRepositoryConcurrencyTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, `AndroidViewModelReflectionContractTest`, `SourceTextReadingAuditContractTest`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `ATT-9607_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9607/`). |
+| `1.0.51` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Added `[Planned]` `TST-DAT-045` (`TST-DAT-045.1`–`TST-DAT-045.5`, strictly symmetric with `REQ-DAT-049`) covering end-to-end 7-DB + `.salvage` sidecar cascade, cold-start DB snapshot lookup, synchronous awaited bulk `deleteOldWorkoutsCascade`, `WorkoutClusterRepository` in-memory sync, unhydrated `AthleteProfileViewModel` PMC/Cardio/HRV recalculation, `TrackingViewModel`/`EquipmentViewModel`/`SportTypeViewModel`/`SportingJourneyViewModel` reactive cache invalidation, `REQ-STB-020.4` 1-Hz isolation, and architecture/reflection/detailed-design contracts. |
 | `1.0.50` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Promoted `TST-MIG-061` to `[Verified]` (`386/386` focused Tier-1 unit & contract tests PASS across 70 suites incl. `HrvRmssdCalculatorTest`, `BackupOrchestratorTest`, `BackupStagingReuseTest`, `AutoImportManagerTest`, `BackupImportSecurityTest`, `LegacyImportEngineCloudRecoveryTest`, `TrackpointXmlParserTest`, `TcxLeadingWhitespaceSanitizationTest`, `ArchitectureConformanceContractTest`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `ATT-8135_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8135/`). |
 | `1.0.49` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Added `[Planned]` `TST-MIG-061` (`TST-MIG-061.1`–`TST-MIG-061.5`, strictly symmetric with `REQ-MIG-061`) covering streaming TCX/GPX & `WorkoutParser` fidelity, `TcxTrackpointParser`/`TCXFileWriter.buildLap` removal, `HrvRmssdCalculator`, `AutoImportManager` Zip-Slip/zip-bomb rejection & rate-limit backoff, `executeBulkCloudRecovery` dedupe/skip/fail/cancellation counts, `BackupOrchestrator` parity, and single-unzip `.attbackup` staging reuse & cleanup. |
 | `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9013`, `--as agent1`) | `ATT-9013` | Promoted `TST-MIG-060` to `[Verified]` (`132/132` targeted Tier-1 tests PASS across 27 focused suites incl. `SilentImportClusterCreationTest` `4/4`, `TuningPreferencesDataStoreRoundTripTest` `3/3`, `ClusterTuningUiBehaviorTest` `1/1`, `TranslationParityTest` `11/11`; `0` fail, `0` err, `0` skip; `3/3` safety linters PASS; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with `ATT-9013_cluster_tuning.png` & `ATT-9013_cluster_tuning_enabled.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9013/`). |

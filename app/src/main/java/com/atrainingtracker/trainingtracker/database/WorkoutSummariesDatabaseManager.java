@@ -1846,11 +1846,20 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
         String baseFileName = getBaseFileName(workoutId);
 
         SQLiteDatabase dbSummaries = getDatabase();
-        dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""});
-        dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
-        dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
-        dbSummaries.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
-        dbSummaries.delete(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+        if (dbSummaries != null && dbSummaries.isOpen()) {
+            String[] workoutIdArg = new String[]{String.valueOf(workoutId)};
+            dbSummaries.beginTransaction();
+            try {
+                dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", workoutIdArg);
+                dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", workoutIdArg);
+                dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", workoutIdArg);
+                dbSummaries.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.WORKOUT_ID + "=?", workoutIdArg);
+                dbSummaries.delete(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_WORKOUT_ID + "=?", workoutIdArg);
+                dbSummaries.setTransactionSuccessful();
+            } finally {
+                dbSummaries.endTransaction();
+            }
+        }
         deleteWorkoutPhotoFiles(workoutId);
 
         if (baseFileName != null && !baseFileName.trim().isEmpty()) {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:31.182Z" hostname="rainer-HP-EliteBook-850-G5" time="0.068">
+  <properties/>
+  <testcase name="testLocalizationParity_equipmentTitleAcrossAllNineLocales" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.023"/>
+  <testcase name="testContinuousVerticalDividerContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.001"/>
+  <testcase name="testMetricsAndConstantsContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.041"/>
+  <testcase name="testEquipmentIconTintContract_unifiesActiveBikeAndShoeToPrimary" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.0"/>
+  <testcase name="testSensorColumnSubtleGuidesContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.001"/>
+  <testcase name="testTopLeftCornerHeaderContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.001"/>
+  <testcase name="testEquipmentNameTwoLineWrappingContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

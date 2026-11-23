@@ -137,6 +137,15 @@ class EquipmentViewModel @JvmOverloads constructor(
         loadEquipment()
         observeSyncStatus()
         observeExternalEquipmentLinks()
+        observeWorkoutMutations()
+    }
+
+    private fun observeWorkoutMutations() {
+        viewModelScope.launch(ioDispatcher) {
+            effectiveWorkoutRepo.workoutMutationEvents.collect {
+                loadEquipment()
+            }
+        }
     }
 
     /**

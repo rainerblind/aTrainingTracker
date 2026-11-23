@@ -26,9 +26,11 @@ import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 import com.atrainingtracker.R
@@ -67,16 +69,32 @@ class SportTypeViewModel @JvmOverloads constructor(
     private val _sportTypes = MutableStateFlow<List<SportTypeItem>>(emptyList())
     val sportTypes: StateFlow<List<SportTypeItem>> = _sportTypes.asStateFlow()
 
+    @Volatile
+    private var loadSportTypesJob: Job? = null
+    private val loadGeneration = java.util.concurrent.atomic.AtomicLong(0L)
+
     fun availableEquipment(bSportType: BSportType): List<EquipmentDbHelper.EquipmentData> {
         return dbEquipmentHelper.getEquipmentItems(bSportType, true)
     }
 
     init {
         loadSportTypes()
+        observeWorkoutMutations()
     }
 
-    fun loadSportTypes() {
+    private fun observeWorkoutMutations() {
         viewModelScope.launch(Dispatchers.IO) {
+            workoutRepository.workoutMutationEvents.collect {
+                loadSportTypes()
+            }
+        }
+    }
+
+    @Synchronized
+    fun loadSportTypes() {
+        val myGeneration = loadGeneration.incrementAndGet()
+        loadSportTypesJob?.cancel()
+        loadSportTypesJob = viewModelScope.launch(Dispatchers.IO) {
             val list = mutableListOf<SportTypeItem>()
             val db = dbSportTypeManager.database
             val cursor = db.query(
@@ -87,6 +105,7 @@ class SportTypeViewModel @JvmOverloads constructor(
 
             cursor?.use {
                 while (it.moveToNext()) {
+                    if (!isActive) return@launch
                     val id = it.getLong(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.C_ID))
 
                     val linkedEquipIds = dbLinksHelper.getEquipmentIdsForSport(id)
@@ -127,7 +146,9 @@ class SportTypeViewModel @JvmOverloads constructor(
                     ))
                 }
             }
-            _sportTypes.value = list
+            if (isActive && myGeneration == loadGeneration.get()) {
+                _sportTypes.value = list
+            }
         }
     }
 

@@ -87,6 +87,7 @@ class AthleteProfileViewModelHrvTest {
         mockkObject(WorkoutRepository.Companion)
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
         every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
         every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(any()) } returns emptyList()
 
@@ -96,10 +97,12 @@ class AthleteProfileViewModelHrvTest {
 
         HrvReadinessRepository.resetForTesting(mockHrvRepo)
 
-        mockkConstructor(TuningPreferencesDataStore::class)
-        every { anyConstructed<TuningPreferencesDataStore>().tuningConfigFlow } returns flowOf(
+        val mockTuningDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuningDataStore.tuningConfigFlow } returns flowOf(
             TuningConfig(enableCardioPowerDynamics = true)
         )
+        mockkObject(TuningPreferencesDataStore.Companion)
+        every { TuningPreferencesDataStore.getInstance(any()) } returns mockTuningDataStore
     }
 
     @After

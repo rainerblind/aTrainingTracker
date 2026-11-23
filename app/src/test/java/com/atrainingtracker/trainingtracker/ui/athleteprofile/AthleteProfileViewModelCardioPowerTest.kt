@@ -255,6 +255,7 @@ class AthleteProfileViewModelCardioPowerTest {
         val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
         val allWorkoutsFlow = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData>>(emptyList())
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
         every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returnsMany listOf(initialSamples, updatedSamples)
 
@@ -311,6 +312,7 @@ class AthleteProfileViewModelCardioPowerTest {
         val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
         val allWorkoutsFlow = MutableStateFlow(listOf(finishedBase))
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
         every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returnsMany listOf(initialSamples, updatedSamples)
 
@@ -424,6 +426,7 @@ class AthleteProfileViewModelCardioPowerTest {
         val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
         val allWorkoutsFlow = MutableStateFlow(listOf(baseWorkout))
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
         every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returns emptyList()
 

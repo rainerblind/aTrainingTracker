@@ -48,6 +48,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -254,6 +255,9 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     private val _workoutLoadSamples = MutableStateFlow<List<WorkoutTrainingLoadSample>>(emptyList())
     private val _cardioTrendSamples = MutableStateFlow<List<CardioPowerTrendSample>>(emptyList())
     private val _hrMaxBpm = MutableStateFlow<Int?>(null)
+    // Channel.CONFLATED retains 1 pending refresh token even before the consumer starts on ioDispatcher,
+    // eliminating cold-start lost-wakeup races while serializing & conflating concurrent analytics reloads.
+    private val analyticsRefreshTriggers = Channel<Unit>(Channel.CONFLATED)
 
     private val _hrvReadinessEntries = MutableStateFlow<List<HrvReadinessEntry>>(emptyList())
     private val _selectedHrvPosture = MutableStateFlow<HrvPosture?>(null)
@@ -546,6 +550,11 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             }
         }
         viewModelScope.launch(ioDispatcher) {
+            for (trigger in analyticsRefreshTriggers) {
+                reloadWorkoutAnalytics()
+            }
+        }
+        viewModelScope.launch(ioDispatcher) {
             // REQ-STB-020.4: Only finished workout changes trigger historical cardio/load SQLite queries.
             // Tracks post-finish analytics/backfill fields (rpe, tss, normalizedPowerWatts, polarSyncPending,
             // cardioPowerDynamics scalars, HR/POWER AVG extrema) in addition to core workout identity/totals.
@@ -559,18 +568,34 @@ class AthleteProfileViewModel @JvmOverloads constructor(
                 }
                 .distinctUntilChanged()
                 .collect {
-                    loadCardioTrendSamples()
-                    val samples = try {
-                        workoutRepository.getWorkoutTrainingLoadRecords()
-                    } catch (_: Throwable) {
-                        emptyList()
-                    }
-                    _workoutLoadSamples.value = samples
+                    analyticsRefreshTriggers.trySend(Unit)
                 }
+        }
+        viewModelScope.launch(ioDispatcher) {
+            // REQ-DAT-049.4: Authoritative post-commit deletion/finalization notifications ensure PMC,
+            // Cardio-Power Trends, and HRV daily training loads recalculate even if allWorkouts is empty.
+            workoutRepository.workoutMutationEvents.collect {
+                analyticsRefreshTriggers.trySend(Unit)
+            }
         }
         viewModelScope.launch(ioDispatcher) {
             loadHrvData()
         }
+    }
+
+    private fun reloadWorkoutAnalytics() {
+        val cardioSamples = try {
+            workoutRepository.getCardioPowerDynamicsFitnessTrendSamples(0.50)
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        _cardioTrendSamples.value = cardioSamples
+        val loadSamples = try {
+            workoutRepository.getWorkoutTrainingLoadRecords()
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        _workoutLoadSamples.value = loadSamples
     }
 
     fun loadHrvData() {
@@ -615,14 +640,12 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     }
 
     fun loadCardioTrendSamples() {
-        viewModelScope.launch(ioDispatcher) {
-            val samples = try {
-                workoutRepository.getCardioPowerDynamicsFitnessTrendSamples(0.50)
-            } catch (_: Throwable) {
-                emptyList()
-            }
-            _cardioTrendSamples.value = samples
-        }
+        analyticsRefreshTriggers.trySend(Unit)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        analyticsRefreshTriggers.close()
     }
 
     fun selectCardioTrendMetric(metric: CardioTrendMetric) {

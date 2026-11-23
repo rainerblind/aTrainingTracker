@@ -58,6 +58,7 @@ class TrackingViewModelMmpTest {
     private val liveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
     private val routesRepo = mockk<RoutesRepository>(relaxed = true)
     private val workoutRepo = mockk<WorkoutRepository>(relaxed = true)
+    private val mutationEvents = kotlinx.coroutines.flow.MutableSharedFlow<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutMutationEvent>(extraBufferCapacity = 16)
 
     private val benchmarkPRs = mapOf(
         5 to 600.0,
@@ -69,6 +70,7 @@ class TrackingViewModelMmpTest {
     @Before
     fun setUp() {
         val app = mockk<Application>(relaxed = true)
+        every { workoutRepo.workoutMutationEvents } returns mutationEvents
         every { workoutRepo.getHistoricalPowerBenchmarks() } returns benchmarkPRs
 
         viewModel = TrackingViewModel(
@@ -151,5 +153,19 @@ class TrackingViewModelMmpTest {
         assertNotNull(state.mmpCurveData)
         assertTrue(state.mmpCurveData.peakPowers.isEmpty())
         assertTrue(state.mmpReferencePoints.isEmpty())
+    }
+
+    @Test
+    fun workoutDeletedMutationEvent_reloadsHistoricalPowerBenchmarks() {
+        val updatedPRs = mapOf(5 to 450.0, 60 to 350.0)
+        every { workoutRepo.getHistoricalPowerBenchmarks() } returns updatedPRs
+
+        assertTrue(mutationEvents.tryEmit(com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutMutationEvent.Deleted(workoutId = 42L)))
+
+        val deadline = System.currentTimeMillis() + 3_000L
+        while (System.currentTimeMillis() < deadline && viewModel.extractMmpCurveData(emptyList()).referencePoints != updatedPRs) {
+            Thread.sleep(20L)
+        }
+        assertEquals(updatedPRs, viewModel.extractMmpCurveData(emptyList()).referencePoints)
     }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyComponentsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:36.129Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testAchievementGridChunking_singleItem" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyComponentsTest" time="0.004"/>
+  <testcase name="testAchievementGridChunking_evenCount" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyComponentsTest" time="0.001"/>
+  <testcase name="testAchievementGridChunking_incompleteFinalRow" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyComponentsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

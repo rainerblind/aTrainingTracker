@@ -151,6 +151,7 @@ class AthleteProfileTabFlowIsolationTest {
         mockkObject(WorkoutRepository.Companion)
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
         every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns loadSamples
         every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(any()) } returns emptyList()
 

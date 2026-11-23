@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentTabsScreenContractTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:20.179Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testEquipmentTabsScreen_headerTitleBindingContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentTabsScreenContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

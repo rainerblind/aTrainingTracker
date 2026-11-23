@@ -1,14 +1,14 @@
 # Detailed Design: WorkoutRepository (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-WKO`  
-**Version**: 1.0.4  
+**Version**: 1.0.5  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,953 LOC)  
-**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `WorkoutDeletionHelper`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`, `ActivityCarriageTimelineCalculator`, `WorkoutClimbIngestionCoordinator`, `LiveClimbsRepository`, `WorkoutPostProcessingCoordinator`  
+**Unit**: `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, 4,971 LOC)  
+**Collaborators**: `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `ActiveDevicesDbHelper`, `WorkoutDeletionHelper`, `WorkoutDeletionCoordinator`, `WorkoutMutationEvent`, `WorkoutRrRepository`, `WorkoutClusterRepository`, `ExportManager`, `StravaUploadDbHelper`, `CropCoordinator`, `WorkoutMultiSourceSampleDiscovery`, `ActivityCarriageTimelineCalculator`, `WorkoutClimbIngestionCoordinator`, `LiveClimbsRepository`, `WorkoutPostProcessingCoordinator`  
 **SWE.2 Alignment**: `docs/architecture.md` §1, §3.3, §4.1, §5.1 (`IF-SWE-02`, `IF-SWE-05`, `IF-SWE-06`, `IF-SWE-07`)  
-**Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-WKO-016`, `REQ-PER-045`, `REQ-STB-021.3`, `REQ-STB-021.5`, `REQ-TRK-091`
+**Requirement Trace**: `REQ-ARC-009`, `REQ-PRO-114`, `REQ-PRO-129.2`, `REQ-DAT-042`, `REQ-DAT-049`, `REQ-WKO-016`, `REQ-PER-045`, `REQ-STB-021.3`, `REQ-STB-021.5`, `REQ-TRK-091`
 
 ---
 
@@ -17,7 +17,7 @@
 1. **Singleton Lifecycle (`INSTANCE`, `getInstance`, `resetForTesting`)**: Double-checked volatile singleton bound to `Application` / `applicationContext`, supporting deterministic test isolation via `@VisibleForTesting fun resetForTesting(...)`.
 2. **Reactive Store & Live Events**:
    - `_allWorkouts` / `allWorkouts` (`MutableStateFlow<List<WorkoutData>>` / `StateFlow<List<WorkoutData>>`), `getWorkoutById(id)`, and `getWorkoutDataDirect(workoutId)`.
-   - `initialWorkoutLoaded` (`SingleLiveEvent<WorkoutData>`), `deletionProgress` (`MutableLiveData<DeletionProgress>`), and `saveFinishedEvent` (`SingleLiveEvent<Pair<Long, Boolean>>`).
+   - `initialWorkoutLoaded` (`SingleLiveEvent<WorkoutData>`), `deletionProgress` (`MutableLiveData<DeletionProgress>`), `saveFinishedEvent` (`SingleLiveEvent<Pair<Long, Boolean>>`), and bounded `workoutMutationEvents` (`SharedFlow<WorkoutMutationEvent>`, `replay = 0`, `extraBufferCapacity = 64`, `BufferOverflow.DROP_OLDEST`).
 3. **Concurrency & Anti-Stale-Load Guards**:
    - `isListLoading` (`AtomicBoolean`): single-flight gate protecting `loadAllWorkouts()`.
    - `deletedDuringLoadIds` (`ConcurrentHashMap.newKeySet<Long>()`): tombstones workouts deleted while `loadAllWorkouts()` is in flight so progressive batch appends never resurrect deleted items.
@@ -53,7 +53,7 @@ stateDiagram-v2
 | `refreshWorkout(workoutId)` | `synchronized(activeReloadWorkoutIds)` | If already active, adds to `dirtyReloadWorkoutIds` and returns; otherwise loops until `dirtyReloadWorkoutIds.remove(workoutId)` is false, updating `_allWorkouts` | `IDLE` |
 | `recordLiveSample(...)` | Valid `samplesDb` & `summariesDb` | Runs dual-DB transaction (`samplesDb` + `summariesDb`), invokes `handleMissingColumns()` on missing table/column `SQLException`, updates extrema and encoded streams | `IDLE` |
 | `cropWorkout(workoutId, startIndex, endIndex)` | `cropMutex.withLock` | Trims 1-Hz samples, adjusts laps/extrema/streams atomically on `Dispatchers.IO`, refreshes in-memory cache | `IDLE` |
-| `deleteWorkout(id)` | `isListLoading.get()` check | Records tombstone in `deletedDuringLoadIds` when loading; invokes `deleteWorkoutCascade(id)` / `WorkoutDeletionHelper` and removes entry from `_allWorkouts` | `IDLE` |
+| `deleteWorkout(id)` | `isListLoading.get()` check | Records tombstone in `deletedDuringLoadIds` when loading; delegates to `WorkoutDeletionHelper` / `WorkoutDeletionCoordinator` (`deleteWorkoutCascade(id)`), resolves pre-delete DB snapshot, purges 7 DB stores + sidecars, syncs cluster repo, filters `_allWorkouts`, and emits post-commit `WorkoutMutationEvent.Deleted` (synchronous bulk `deleteOldWorkoutsCascade` emits single `BulkDeleted`) | `IDLE` |
 
 ---
 
@@ -84,7 +84,7 @@ stateDiagram-v2
 | Test Class (`app/src/test/...`) | Verified Behavior & Invariants |
 | :--- | :--- |
 | `WorkoutRepositoryConcurrencyTest`, `WorkoutRepositoryStressTest` | Coalesced `refreshWorkout` (`activeReloadWorkoutIds` / `dirtyReloadWorkoutIds`), `isListLoading` single-flight guard, and `deletedDuringLoadIds` tombstone consistency |
-| `WorkoutRepositoryDeleteTest`, `WorkoutRepositoryCropTest` | Cascade deletion (`deleteWorkoutCascade`), `cropMutex` serialization, and extrema/lap consistency |
+| `WorkoutRepositoryDeleteTest`, `WorkoutDeletionCascadeIntegrationTest`, `WorkoutRepositoryCropTest` | Cascade deletion (`deleteWorkoutCascade`, `deleteOldWorkoutsCascade`, `WorkoutDeletionCoordinator`, `WorkoutMutationEvent`), `cropMutex` serialization, and extrema/lap consistency |
 | `WorkoutRepositoryBoundaryMoveTest`, `WorkoutRepositoryLapSplitTest`, `WorkoutRepositoryLapUpdateTest`, `WorkoutRepositoryLapDeleteTest` | Lap boundary mutations, splits, updates, and deletions |
 | `WorkoutRepositoryStreamTest`, `WorkoutRepositoryTelemetryTest`, `WorkoutRepositoryProjectionTest`, `WorkoutRepositoryTimestampFallbackTest`, `ActivityCarriageTimelineCalculatorTest` | Named source column discovery, overlay decimation (`MAX_OVERLAY_POINTS`), projection decoding, `parseTimestampOffset` fallback, and pre-decimation 1-Hz carriage-mode timeline coalescing |
 | `WorkoutRepositoryCardioPowerBackfillTest`, `WorkoutRepositoryExportStatusTest`, `WorkoutRepositoryHistoricalZoneTest`, `WorkoutRepositoryHrvConsensusTest`, `WorkoutRepositoryMapMarkerApexTest`, `WorkoutRepositoryMarkerTest`, `WorkoutRepositorySaveClusteringTest`, `WorkoutClimbIngestionTest`, `WorkoutHistoricalClimbBackfillTest` | Backfill, export status, zone/HRV consensus, map markers, cluster save integration, and batch-deferred historical climb extraction (`WorkoutClimbIngestionCoordinator`) |
@@ -100,3 +100,4 @@ stateDiagram-v2
 | `1.0.2` | 2026-11-18 | AI Agent (`ATT-8916`, `--as agent1`) | `ATT-8916` | Documented pre-decimation 1-Hz `ACTIVITY_AND_CARRIAGE_MODE` cursor coalescing via `ActivityCarriageTimelineCalculator` and trailing `WorkoutDetailTelemetry.activityCarriageTimeline` field (`REQ-PER-045`). |
 | `1.0.3` | 2026-11-19 | AI Agent (`ATT-9018`, `--as agent1`) | `ATT-9018` | Delegated climb DEM validation and `Climbs.db` persistence to `WorkoutClimbIngestionCoordinator` (`climbs/`, keeping `WorkoutRepository` at `4,931` LOC), added `extractAndPersistClimbsWithoutRefresh` for `BulkImportBatchContext` & single-refresh `backfillHistoricalClimbs`, and linked `WorkoutClimbIngestionTest` / `WorkoutHistoricalClimbBackfillTest` (`REQ-STB-021.3`, `REQ-STB-021.5`). |
 | `1.0.4` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Added direct SQLite cursor reader `loadFreshWorkoutForExport(workoutId)`, immediate `rpe`/`feel` in-memory parity in `saveWorkout()`, and atomic `WorkoutPostProcessingCoordinator.deferExportIfPostProcessing(workoutId)` gating (`4,953 / 5,117` LOC, `REQ-TRK-091.2`). |
+| `1.0.5` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Extracted `WorkoutDeletionCoordinator` (`repositories/`), added bounded post-commit `workoutMutationEvents` (`SharedFlow<WorkoutMutationEvent>`, `extraBufferCapacity = 64`), synchronous awaited `deleteOldWorkoutsCascade`, `ActiveDevices.db` & `.tmp.salvage` sidecar purge, and `WorkoutDeletionCascadeIntegrationTest` (`4,971 / 5,117` LOC, `REQ-DAT-049`). |

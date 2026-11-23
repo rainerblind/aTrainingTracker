@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsCardTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:13.995Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="testIntermediateDateTicks_renderedAcrossMultiMonthSpans" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsCardTest" time="0.0"/>
+  <testcase name="testRangePills_containsOneMonthAndAllStandardRanges" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsCardTest" time="0.0"/>
+  <testcase name="testTouchScrubbing_integratesChartGestureDisambiguator" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsCardTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

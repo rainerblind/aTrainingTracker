@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:53:43.087Z" hostname="rainer-HP-EliteBook-850-G5" time="1.019">
+  <properties/>
+  <testcase name="zone snapshot sync projects latest to DataStore and respects historical backdating" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.882"/>
+  <testcase name="ensureSeededFromDataStore seeds existing positive baselines once and is idempotent" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.044"/>
+  <testcase name="add, backdated add, edit, and delete state machine projects chronological latest to SettingsDataStore" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.093"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyShareHelperTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:21.399Z" hostname="rainer-HP-EliteBook-850-G5" time="0.016">
+  <properties/>
+  <testcase name="testBuildShareText_imperialUnits" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyShareHelperTest" time="0.009"/>
+  <testcase name="testBuildShareText_containsPassportData" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyShareHelperTest" time="0.002"/>
+  <testcase name="testBuildShareText_germanLocale" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyShareHelperTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -406,6 +406,46 @@ class WorkoutClusterRepository internal constructor(
         _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
     }
 
+    /**
+     * Synchronously reconciles in-memory [_allClusters] and [_clusterStats] for [clusterId]
+     * after a member workout is deleted and [WorkoutClusterEngine.onWorkoutDeleted] has updated
+     * `WorkoutClusters.db` (`REQ-DAT-049.3`).
+     */
+    fun syncClusterAfterWorkoutDeletion(clusterId: Long) {
+        if (clusterId <= 0L) return
+        val updatedCluster = try {
+            clusterDb.getClusterById(clusterId)
+        } catch (_: Throwable) {
+            null
+        }
+        _allClusters.update { current ->
+            if (updatedCluster == null) {
+                current.filterNot { it.id == clusterId }
+            } else if (current.any { it.id == clusterId }) {
+                current.map { if (it.id == clusterId) updatedCluster else it }
+                    .sortedByDescending { it.hitCount }
+            } else {
+                current
+            }
+        }
+        val updatedStats = if (updatedCluster != null && updatedCluster.hitCount > 0) {
+            try {
+                summariesManager.getWorkoutClusterStats(clusterId)
+            } catch (_: Throwable) {
+                null
+            }
+        } else {
+            null
+        }
+        _clusterStats.update { current ->
+            if (updatedStats == null || updatedStats.workoutCount <= 0) {
+                current - clusterId
+            } else {
+                current + (clusterId to updatedStats)
+            }
+        }
+    }
+
     suspend fun getStatsForCluster(clusterId: Long): WorkoutClusterStats = withContext(Dispatchers.IO) {
         _clusterStats.value[clusterId] ?: summariesManager.getWorkoutClusterStats(clusterId)
     }

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.sportingjourney
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,8 +33,13 @@ import kotlinx.coroutines.launch
  */
 class SportingJourneyViewModel @JvmOverloads constructor(
     application: Application,
-    private val repository: SportingJourneyRepository = SportingJourneyRepository.getInstance(application)
+    private val repository: SportingJourneyRepository = SportingJourneyRepository.getInstance(application),
+    private val workoutRepository: WorkoutRepository? = null
 ) : AndroidViewModel(application) {
+
+    private val effectiveWorkoutRepo: WorkoutRepository? by lazy {
+        workoutRepository ?: runCatching { WorkoutRepository.getInstance(application) }.getOrNull()
+    }
 
     private val _uiState = MutableStateFlow(SportingJourneyData(isLoading = true))
     val uiState: StateFlow<SportingJourneyData> = _uiState.asStateFlow()
@@ -44,6 +50,16 @@ class SportingJourneyViewModel @JvmOverloads constructor(
 
     init {
         loadData()
+        observeWorkoutMutations()
+    }
+
+    private fun observeWorkoutMutations() {
+        val repo = effectiveWorkoutRepo ?: return
+        viewModelScope.launch {
+            repo.workoutMutationEvents.collect {
+                loadData()
+            }
+        }
     }
 
     /**
