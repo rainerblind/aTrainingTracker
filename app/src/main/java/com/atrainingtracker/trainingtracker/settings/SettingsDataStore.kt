@@ -39,7 +39,6 @@ import com.atrainingtracker.trainingtracker.zones.ZoneValidator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +48,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * Immutable in-memory snapshot of all zone thresholds, baselines, and display options.
@@ -96,51 +94,15 @@ private val Context.backingDataStore: DataStore<Preferences> by preferencesDataS
 )
 
 val Context.dataStore: DataStore<Preferences>
-    get() = resolveDataStore(this)
-
-internal class InMemoryPreferencesDataStore(
-    initialPreferences: Preferences = emptyPreferences()
-) : DataStore<Preferences> {
-    private val stateFlow = MutableStateFlow(initialPreferences)
-    override val data: Flow<Preferences> = stateFlow
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
-        val updated = transform(stateFlow.value)
-        stateFlow.value = updated
-        return updated
-    }
-}
-
-internal fun hasRealFilesDir(context: Context): Boolean {
-    return try {
-        val targetContext = context.applicationContext ?: context
-        val filesDir = targetContext.filesDir
-        filesDir != null && filesDir.path.isNotEmpty() && File(filesDir, "probe").path.isNotEmpty()
-    } catch (_: Throwable) {
-        false
-    }
-}
-
-internal fun resolveDataStore(context: Context): DataStore<Preferences> {
-    return try {
-        if (hasRealFilesDir(context)) {
-            val targetContext = context.applicationContext ?: context
-            targetContext.backingDataStore
-        } else {
-            InMemoryPreferencesDataStore()
-        }
-    } catch (_: Throwable) {
-        InMemoryPreferencesDataStore()
-    }
-}
+    get() = (applicationContext ?: this).backingDataStore
 
 class SettingsDataStore private constructor(
     context: Context,
-    private val dataStore: DataStore<Preferences> = resolveDataStore(context),
+    private val dataStore: DataStore<Preferences> = (context.applicationContext ?: context).backingDataStore,
     private val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
 
     private val context: Context = context.applicationContext ?: context
-    private val isInMemoryFallback: Boolean = dataStore is InMemoryPreferencesDataStore
 
     enum class ZoneType(val id: Int, val zoneCount: Int, val boundaryCount: Int) {
         HR_RUN(0, 5, 4),     // Heart Rate (5 zones, 4 upper boundaries)
@@ -171,26 +133,11 @@ class SettingsDataStore private constructor(
         @Volatile
         private var INSTANCE: SettingsDataStore? = null
 
-        @Volatile
-        private var isTestOverride: Boolean = false
-
         @JvmStatic
         fun getInstance(context: Context): SettingsDataStore {
-            val existing = INSTANCE
-            if (existing != null && (isTestOverride || !existing.isInMemoryFallback)) {
-                return existing
-            }
-            return synchronized(this) {
-                val current = INSTANCE
-                if (current != null && (isTestOverride || !current.isInMemoryFallback || !hasRealFilesDir(context))) {
-                    current
-                } else {
-                    current?.appScope?.cancel()
-                    val appContext = context.applicationContext ?: context
-                    SettingsDataStore(appContext).also {
-                        isTestOverride = false
-                        INSTANCE = it
-                    }
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: SettingsDataStore(context.applicationContext ?: context).also {
+                    INSTANCE = it
                 }
             }
         }
@@ -198,7 +145,7 @@ class SettingsDataStore private constructor(
         @VisibleForTesting
         internal fun createForTesting(
             context: Context,
-            dataStore: DataStore<Preferences> = resolveDataStore(context),
+            dataStore: DataStore<Preferences> = (context.applicationContext ?: context).backingDataStore,
             testScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         ): SettingsDataStore {
             val appContext = context.applicationContext ?: context
@@ -209,7 +156,6 @@ class SettingsDataStore private constructor(
         fun setInstanceForTesting(instance: SettingsDataStore?) {
             synchronized(this) {
                 INSTANCE = instance
-                isTestOverride = instance != null
             }
         }
 

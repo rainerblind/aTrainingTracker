@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T20:27:59.988Z" hostname="rainer-HP-EliteBook-850-G5" time="7.784">
+  <properties/>
+  <testcase name="dismissMissingAdapterDialog_persistsSuppressionAfterDialogExitsComposition_andBlocksReopening" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest" time="5.055"/>
+  <testcase name="activityBroadcastLifecycle_dismissSuppressesRepeatedBroadcasts_andTuningReenableRestores" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest" time="0.48"/>
+  <testcase name="viewStatusAction_opensStatusSheetWithoutMutatingSuppressionPreference" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest" time="1.839"/>
+  <testcase name="coldStartBroadcast_beforeInitialDataStoreEmission_neverShowsWhenPersistedTrue" classname="com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest" time="0.41"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.ADAPTER_NOT_DETECTED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation$mAntAdapterMissingReceiver$1@1fffe594], context=[android.app.ContextImpl@73b8b61d], intentFilter=[android.content.IntentFilter@9ad6031]]]
+Intent = Intent { act=com.atrainingtracker.ADAPTER_NOT_DETECTED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation$mAntAdapterMissingReceiver$1@1fffe594], context=[android.app.ContextImpl@73b8b61d], intentFilter=[android.content.IntentFilter@9ad6031]]]
+Intent = Intent { act=com.atrainingtracker.ADAPTER_NOT_DETECTED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation$mAntAdapterMissingReceiver$1@1fffe594], context=[android.app.ContextImpl@73b8b61d], intentFilter=[android.content.IntentFilter@9ad6031]]]
+Intent = Intent { act=com.atrainingtracker.ADAPTER_NOT_DETECTED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation$mAntAdapterMissingReceiver$1@1fffe594], context=[android.app.ContextImpl@73b8b61d], intentFilter=[android.content.IntentFilter@9ad6031]]]
+Intent = Intent { act=com.atrainingtracker.ADAPTER_NOT_DETECTED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation$mAntAdapterMissingReceiver$1@1fffe594], context=[android.app.ContextImpl@73b8b61d], intentFilter=[android.content.IntentFilter@9ad6031]]]
+Intent = Intent { act=com.atrainingtracker.ADAPTER_NOT_DETECTED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation$mAntAdapterMissingReceiver$1@684c8feb], context=[android.app.ContextImpl@5f7c6d0d], intentFilter=[android.content.IntentFilter@5041b9ec]]]
+]]></system-err>
+</testsuite>

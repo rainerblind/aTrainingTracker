@@ -43,6 +43,9 @@ import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.HrHealthTier
+import com.atrainingtracker.banalservice.sensor.HrModality
+import com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitrator
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.tpms.DualWheelTpmsEstimator
 import com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator
@@ -102,7 +105,9 @@ data class DeviceTelemetry(
     val deviceId: Long,
     val mainValue: com.atrainingtracker.banalservice.devices.SimpleSensorData?,
     val allValues: List<com.atrainingtracker.banalservice.devices.SimpleSensorData>,
-    val batteryPercentage: Int = -1
+    val batteryPercentage: Int = -1,
+    val hrHealthTier: HrHealthTier? = null,
+    val hrModality: HrModality? = null
 )
 
 
@@ -629,11 +634,14 @@ class BANALServiceRepository private constructor(context: Context) {
                         _sensorSourceDeviceIds.value = sourceMapping
 
                         _allActiveDevicesTelemetry.value = binder.activeDevicesIncludingSpeedAndLocationDevices?.map { device ->
+                            val (hrHealthTier, hrModality) = PrimaryHrSensorArbitrator.resolveDeviceHrTelemetryMetadata(device)
                             DeviceTelemetry(
                                 deviceId = device.deviceId,
                                 mainValue = device.mainSensorData,
                                 allValues = device.allSensorData ?: emptyList(),
-                                batteryPercentage = device.batteryPercentage
+                                batteryPercentage = device.batteryPercentage,
+                                hrHealthTier = hrHealthTier,
+                                hrModality = hrModality
                             )
                         } ?: emptyList()
 

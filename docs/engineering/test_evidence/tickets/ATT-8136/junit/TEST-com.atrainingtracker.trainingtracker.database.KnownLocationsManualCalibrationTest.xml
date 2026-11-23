@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.KnownLocationsManualCalibrationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:27.458Z" hostname="rainer-HP-EliteBook-850-G5" time="1.209">
+  <properties/>
+  <testcase name="testManualCalibration_updatesExistingLockedLocation" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsManualCalibrationTest" time="0.613"/>
+  <testcase name="testManualCalibration_createsNewLocationWithLockedManualUser" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsManualCalibrationTest" time="0.595"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

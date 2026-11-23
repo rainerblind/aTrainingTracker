@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:02:40.379Z" hostname="rainer-HP-EliteBook-850-G5" time="1.154">
+  <properties/>
+  <testcase name="testMyPreferenceManager_constructorIsPrivateSharesProcessScopeAndReusesSingleton" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.582"/>
+  <testcase name="testSettingsDataStore_constructorIsPrivateAndNormalizesActivityContext" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.01"/>
+  <testcase name="testMyPreferenceManager_setInstanceForTestingPinsOverrideUntilCleared" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.005"/>
+  <testcase name="testSettingsDataStore_createForTestingNormalizesContextAndSupportsTestScopeCancellation" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.006"/>
+  <testcase name="testSettingsDataStore_setInstanceForTestingPinsOverrideUntilCleared" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.006"/>
+  <testcase name="testProFeatureManager_constructorIsPrivateNormalizesActivityContextAndPreservesJvmStatic" classname="com.atrainingtracker.trainingtracker.settings.PreferenceSingletonsLifecycleTest" time="0.544"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

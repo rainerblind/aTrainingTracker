@@ -26,7 +26,7 @@ import com.atrainingtracker.banalservice.odometry.MovingSpeedHistogram;
 import com.atrainingtracker.banalservice.odometry.MovingSpeedSummary;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils;
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;

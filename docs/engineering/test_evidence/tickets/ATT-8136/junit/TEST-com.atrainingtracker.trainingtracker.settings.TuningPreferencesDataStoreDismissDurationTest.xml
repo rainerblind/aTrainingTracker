@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:04:05.787Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="options_containsAllValuesFrom1To10AndExcludesZero" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <testcase name="validation_negativeValuesCoerceToDefault" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.001"/>
+  <testcase name="defaultConstants_matchExpectedSpecification" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <testcase name="validation_allDiscreteSeconds1To10ArePreserved" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <testcase name="tuningConfig_customDuration_retained" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <testcase name="tuningConfig_defaultsTo4Seconds" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <testcase name="validation_outOfBoundsHighClampsToMax" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <testcase name="validation_legacyZeroCoercesToDefault" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

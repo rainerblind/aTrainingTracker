@@ -52,25 +52,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Collects [kotlinx.coroutines.flow.Flow] emissions while rethrowing [kotlinx.coroutines.CancellationException]
- * and ignoring MockK's `KotlinNothingValueException` when a relaxed mock leaves a flow unstubbed.
- */
-@Suppress("TooGenericExceptionCaught")
-internal suspend fun <T> kotlinx.coroutines.flow.Flow<T>.collectIgnoringUnstubbedMock(
-    action: suspend (T) -> Unit
-) {
-    try {
-        collect { value -> action(value) }
-    } catch (ce: kotlinx.coroutines.CancellationException) {
-        throw ce
-    } catch (t: Throwable) {
-        if (t::class.simpleName != "KotlinNothingValueException") {
-            throw t
-        }
-    }
-}
-
-/**
  * Domain events emitted after any persistent RouteCluster mutation completes (REQ-PER-040.1).
  */
 sealed class ClusterMutationEvent {

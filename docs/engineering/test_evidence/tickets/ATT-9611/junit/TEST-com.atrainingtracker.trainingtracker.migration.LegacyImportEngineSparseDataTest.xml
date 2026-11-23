@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineSparseDataTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:27:10.863Z" hostname="rainer-HP-EliteBook-850-G5" time="0.432">
+  <properties/>
+  <testcase name="testSparseTcxImport_missingHrAndPower_doesNotZeroFillOrFlagSensors_TST_MIG_014" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineSparseDataTest" time="0.432"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@268d927b], context=[android.app.ContextImpl@64ee4c36], intentFilter=[android.content.IntentFilter@77649fc2]]]
+]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:25:39.132Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testGetTableName_rejectsNullOrBlank" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" time="0.0"/>
+  <testcase name="testGetTableName_rejectsLiteralNull" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" time="0.0"/>
+  <testcase name="testGetTableName_allowsMaxLengthAt64" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" time="0.001"/>
+  <testcase name="testGetTableName_rejectsLengthExceedingLimit" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" time="0.0"/>
+  <testcase name="testGetTableName_escapesEmbeddedDoubleQuotes" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" time="0.0"/>
+  <testcase name="testSqlFormatting_withEscapedTableName" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerEscapingTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

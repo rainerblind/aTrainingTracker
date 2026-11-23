@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceWorkoutStartTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:53:38.227Z" hostname="rainer-HP-EliteBook-850-G5" time="3.23">
+  <properties/>
+  <testcase name="testResumeByUser_neverRecordsWorkoutStart" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceWorkoutStartTest" time="0.804"/>
+  <testcase name="testStartNormal_nullGpsFix_doesNotRecordWorkoutStart" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceWorkoutStartTest" time="0.831"/>
+  <testcase name="testStartNormal_recordsWorkoutStartOnceOnFirstValidGpsFix" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceWorkoutStartTest" time="0.801"/>
+  <testcase name="testResumeServiceRecreation_neverRecordsWorkoutStart" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceWorkoutStartTest" time="0.794"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

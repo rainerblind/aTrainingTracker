@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.parsers.WorkoutTimestampParserTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:04:04.491Z" hostname="rainer-HP-EliteBook-850-G5" time="0.033">
+  <properties/>
+  <testcase name="computeDurationSeconds_handlesValidBoundsAndMalformedInputs" classname="com.atrainingtracker.trainingtracker.migration.parsers.WorkoutTimestampParserTest" time="0.0"/>
+  <testcase name="formatIsoToUtcDbString_concurrentContentionRemainsDeterministic" classname="com.atrainingtracker.trainingtracker.migration.parsers.WorkoutTimestampParserTest" time="0.032"/>
+  <testcase name="formatIsoToUtcDbString_handlesOffsetsFractionalBareIsoAndDstGaps" classname="com.atrainingtracker.trainingtracker.migration.parsers.WorkoutTimestampParserTest" time="0.0"/>
+  <testcase name="parseIsoToEpochMillis_preservesSubSecondPrecisionOffsetsAndDstGaps_TST_MIG_058_3" classname="com.atrainingtracker.trainingtracker.migration.parsers.WorkoutTimestampParserTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

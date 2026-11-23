@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:28:45.559Z" hostname="rainer-HP-EliteBook-850-G5" time="1.997">
+  <properties/>
+  <testcase name="testExportManager_exportStatusDatabase_lifecycleTransitions" classname="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" time="0.891"/>
+  <testcase name="testGpxAndTcxWriters_fromRealSqlite_produceValidXml" classname="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" time="0.372"/>
+  <testcase name="testFitFileWriter_fromRealSqlite_producesDecodableFitBinary" classname="com.atrainingtracker.trainingtracker.integration.FileExportersIntegrationTest" time="0.733"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+]]></system-err>
+</testsuite>

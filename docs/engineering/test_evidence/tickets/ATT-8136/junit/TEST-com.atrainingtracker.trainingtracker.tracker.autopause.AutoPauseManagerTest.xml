@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" tests="29" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:52:39.321Z" hostname="rainer-HP-EliteBook-850-G5" time="3.986">
+  <properties/>
+  <testcase name="TST-TRK-010_12 resume speed threshold user unit calculation and ceiling" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.139"/>
+  <testcase name="TST-TRK-030_4 sensor recovery hysteresis requires two consecutive valid packets" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.138"/>
+  <testcase name="TST-TRK-030_2 standstill packet silence debounces to AUTO_PAUSED" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.145"/>
+  <testcase name="TST-TRK-010_3 anti-chatter hysteresis deadband and hard ceiling" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.135"/>
+  <testcase name="TST-TRK-010_2 debounce counter and stationary transition" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.134"/>
+  <testcase name="TST-TRK-010_13 sport specific decoupling for run and other" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.137"/>
+  <testcase name="TST-TRK-020_7 onManualResume respects manualPauseLocked and release is idempotent on IllegalStateException" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.199"/>
+  <testcase name="TST-TRK-030_1 in-motion dropout above resumeThreshold transitions to SENSOR_LOST without pausing" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.135"/>
+  <testcase name="TST-TRK-030_3 dynamic unpairing transitions to SENSOR_LOST and clears lastValidSpeedMps" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.136"/>
+  <testcase name="TST-TRK-030_5 decoupled onManualResume respects manualPauseLocked parameter" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.128"/>
+  <testcase name="TST-TRK-020_4 standstill deceleration silence below resume threshold decays to 0 and triggers AUTO_PAUSED" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.137"/>
+  <testcase name="TST-TRK-010_11 non-finite speed values are safely sanitized" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.131"/>
+  <testcase name="TST-TRK-020_2 ProxySensor delegates timestamp to source sensor and preserves null deviceName" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.139"/>
+  <testcase name="TST-TRK-010_1 sport specific default activation contract" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.135"/>
+  <testcase name="TST-TRK-043_1 multi-tick resume debounce on Bike, Run, Other" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.134"/>
+  <testcase name="TST-TRK-043_2 transient GPS spike rejection and counter reset on stationary or stale tick" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.137"/>
+  <testcase name="TST-TRK-010_3 ceiling calculation enforces 6 kmh hard limit" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.138"/>
+  <testcase name="TST-TRK-020_3 standstill silence triggers AUTO_PAUSED without entering SENSOR_LOST" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.138"/>
+  <testcase name="TST-TRK-010_2 single tick debounce immediately pauses" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.135"/>
+  <testcase name="TST-TRK-043_3 exact single threshold evaluation without hysteresis offset" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.137"/>
+  <testcase name="TST-TRK-020_6 DefaultAutoPauseAudioNotifier reuses single ToneGenerator and releases cleanly" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.143"/>
+  <testcase name="TST-TRK-010_14 imperial unit conversion evaluateTick" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.137"/>
+  <testcase name="TST-TRK-020_5 onManualResume transitions AUTO_PAUSED to TRACKING and allows subsequent auto-pause" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.137"/>
+  <testcase name="TST-TRK-010_10 debounce resets on speed recovery before expiration" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.14"/>
+  <testcase name="TST-TRK-044_1 shouldStartInAutoPause contract" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.135"/>
+  <testcase name="TST-TRK-010_7 mutex precedence blocks auto-resume when manualPauseLocked" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.13"/>
+  <testcase name="TST-TRK-020_1 MySensor tracks and propagates lastUpdateTimestamp" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.127"/>
+  <testcase name="TST-TRK-044_3 mid-workout speed source removal transitions out of AUTO_PAUSED to SENSOR_LOST" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.124"/>
+  <testcase name="TST-TRK-010_6 missing speed source or corrupt speed triggers SENSOR_LOST and recovers on 2 ticks" classname="com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManagerTest" time="0.123"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

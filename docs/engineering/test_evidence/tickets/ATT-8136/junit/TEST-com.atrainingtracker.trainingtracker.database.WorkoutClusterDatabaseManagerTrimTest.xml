@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManagerTrimTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:51:32.019Z" hostname="rainer-HP-EliteBook-850-G5" time="0.393">
+  <properties/>
+  <testcase name="testInsertAndUpdateCluster_trimsWhitespaceAndRejectsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManagerTrimTest" time="0.205"/>
+  <testcase name="testIsNameTaken_trimsWhitespaceAndRejectsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManagerTrimTest" time="0.188"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

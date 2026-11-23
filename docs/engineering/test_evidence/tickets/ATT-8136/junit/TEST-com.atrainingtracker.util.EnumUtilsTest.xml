@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.util.EnumUtilsTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:58:32.046Z" hostname="rainer-HP-EliteBook-850-G5" time="1.283">
+  <properties/>
+  <testcase name="testValidConstant_returnsExactEnum" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.172"/>
+  <testcase name="testUnrecognizedConstant_returnsFallbackOrNull" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.168"/>
+  <testcase name="testEnumEvolution_renamedConstant_returnsFallbackOrNull" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.157"/>
+  <testcase name="testWhitespaceTrimming_returnsExactEnum" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.156"/>
+  <testcase name="testEmptyAndBlankInput_returnsFallbackOrNull" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.156"/>
+  <testcase name="testEnumEvolution_futureConstant_returnsFallbackOrNull" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.158"/>
+  <testcase name="testNullInput_returnsFallbackOrNull" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.156"/>
+  <testcase name="testProductionEnums_BSportTypeAndPeriodType" classname="com.atrainingtracker.util.EnumUtilsTest" time="0.159"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

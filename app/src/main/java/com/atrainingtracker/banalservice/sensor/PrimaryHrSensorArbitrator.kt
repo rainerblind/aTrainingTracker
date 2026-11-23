@@ -18,6 +18,9 @@
 
 package com.atrainingtracker.banalservice.sensor
 
+import android.content.Context
+import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDevice
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevice
@@ -92,15 +95,14 @@ object PrimaryHrSensorArbitrator {
             return if (isOptical) HrModality.OPTICAL_PPG else HrModality.ECG
         }
         if (device is BTLEHeartRateDevice) {
-            val isOptical = runCatching {
-                PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
-                    null,
-                    device.name ?: "",
-                    device.manufacturerName ?: "",
-                    device.address
-                )
-            }.getOrDefault(false)
-            return if (isOptical) HrModality.OPTICAL_PPG else HrModality.ECG
+            return resolveModality(
+                protocol = Protocol.BLUETOOTH_LE,
+                deviceType = DeviceType.HRM,
+                deviceName = runCatching { device.name }.getOrNull(),
+                manufacturer = runCatching { device.manufacturerName }.getOrNull(),
+                macAddress = runCatching { device.address }.getOrNull(),
+                context = null
+            )
         }
         if (device is ANTHeartRateDevice) {
             return HrModality.ANT_PLUS
@@ -108,11 +110,58 @@ object PrimaryHrSensorArbitrator {
         return HrModality.OTHER
     }
 
-    private fun resolveHealthTier(
+    /**
+     * Resolves [HrModality] from persisted device protocol and capability metadata (`REQ-SET-126.3`,
+     * `REQ-UI-2804.1`), sharing the same classification rules as live [resolveModality].
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun resolveModality(
+        protocol: Protocol?,
+        deviceType: DeviceType?,
+        deviceName: String?,
+        manufacturer: String? = null,
+        macAddress: String? = null,
+        context: Context? = null
+    ): HrModality {
+        if (deviceType != DeviceType.HRM) return HrModality.OTHER
+        return when (protocol) {
+            Protocol.BLUETOOTH_LE -> {
+                val isOptical = runCatching {
+                    PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+                        context,
+                        deviceName ?: "",
+                        manufacturer ?: "",
+                        macAddress
+                    )
+                }.getOrElse {
+                    runCatching {
+                        PolarOfflineGattCoordinator.isPolarVeritySenseDevice(
+                            null,
+                            deviceName ?: "",
+                            manufacturer ?: "",
+                            macAddress
+                        )
+                    }.getOrDefault(false)
+                }
+                if (isOptical) HrModality.OPTICAL_PPG else HrModality.ECG
+            }
+            Protocol.ANT_PLUS -> HrModality.ANT_PLUS
+            else -> HrModality.OTHER
+        }
+    }
+
+    /**
+     * Resolves the current [HrHealthTier] for a live [sensor] at wall-clock [nowMs],
+     * matching [selectBestHrSensor] (`REQ-SET-126.3`, `REQ-UI-2804.1`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun resolveHealthTier(
         sensor: MySensor<*>,
-        modality: HrModality,
-        nowMs: Long,
-        staleTimeoutMs: Long
+        modality: HrModality = resolveModality(runCatching { sensor.device }.getOrNull()),
+        nowMs: Long = System.currentTimeMillis(),
+        staleTimeoutMs: Long = DEFAULT_STALE_TIMEOUT_MS
     ): HrHealthTier {
         val activated = runCatching { sensor.isActivated }.getOrDefault(true)
         if (!activated) {
@@ -140,5 +189,20 @@ object PrimaryHrSensorArbitrator {
         }
 
         return if (opticalArtifactSaturated) HrHealthTier.DEGRADED else HrHealthTier.HEALTHY
+    }
+
+    /**
+     * Resolves `(hrHealthTier, hrModality)` for a live [device] carrying `SensorType.HR`,
+     * or `(null, null)` for non-HR devices (`REQ-UI-2804.2`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun resolveDeviceHrTelemetryMetadata(
+        device: MyDevice,
+        nowMs: Long = System.currentTimeMillis()
+    ): Pair<HrHealthTier?, HrModality?> {
+        val hrSensor = runCatching { device.getSensor(SensorType.HR) }.getOrNull() ?: return null to null
+        val modality = resolveModality(device)
+        return resolveHealthTier(hrSensor, modality, nowMs) to modality
     }
 }

@@ -27,7 +27,6 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ClusterMutationEvent
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
-import com.atrainingtracker.trainingtracker.database.collectIgnoringUnstubbedMock
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.database.ClusterCorridorVariant
@@ -295,7 +294,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
 
     private fun observeClusterMutations() {
         viewModelScope.launch {
-            repository.clusterMutationEvents.collectIgnoringUnstubbedMock { event ->
+            repository.clusterMutationEvents.collect { event ->
                 when (event) {
                     is ClusterMutationEvent.Renamed -> handleClusterRenamedEvent(event)
                     is ClusterMutationEvent.Deleted -> handleClusterDeletedEvent(event)

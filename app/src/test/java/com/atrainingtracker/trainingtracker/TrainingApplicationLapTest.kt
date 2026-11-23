@@ -80,6 +80,7 @@ class TrainingApplicationLapTest {
 
     @After
     fun tearDown() {
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
         unmockkAll()
         TrainingApplication.cTrackingMode = TrackingMode.READY
     }

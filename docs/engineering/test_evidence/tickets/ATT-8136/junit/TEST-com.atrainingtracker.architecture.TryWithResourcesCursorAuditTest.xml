@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:30.373Z" hostname="rainer-HP-EliteBook-850-G5" time="0.426">
+  <properties/>
+  <testcase name="testAllLegacyJavaQueriesUseTryWithResourcesOrCursorProvider" classname="com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest" time="0.402"/>
+  <testcase name="testPoisonPill_chainedCallFails" classname="com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest" time="0.014"/>
+  <testcase name="testPoisonPill_unshieldedAllocationFails" classname="com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest" time="0.0"/>
+  <testcase name="testPoisonPill_expiredSuppressionFails" classname="com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest" time="0.009"/>
+  <testcase name="testPoisonPill_validSuppressionAndCursorProviderPass" classname="com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

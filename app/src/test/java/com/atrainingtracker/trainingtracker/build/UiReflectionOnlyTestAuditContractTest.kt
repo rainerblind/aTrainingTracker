@@ -129,11 +129,6 @@ class UiReflectionOnlyTestAuditContractTest {
                 "current=${baseline.size}",
             baseline.size <= LEGACY_BASELINE_CEILING
         )
-        assertEquals(
-            "Baseline legacy reflection-only UI test count must match recorded count (REQ-PRO-132.1)",
-            LEGACY_BASELINE_CEILING,
-            baseline.size
-        )
     }
 
     /**

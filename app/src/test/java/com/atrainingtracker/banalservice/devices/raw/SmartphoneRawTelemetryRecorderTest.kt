@@ -69,30 +69,42 @@ class SmartphoneRawTelemetryRecorderTest {
         every { mockCtx.filesDir } returns null
         every { mockCtx.applicationContext } returns mockCtx
 
-        assertFalse("Opt-in must default to false", SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
-        assertNull(SmartphoneRawTelemetryRecorder.startActiveSession(mockCtx, "2026-11-21_080000", 1L))
-        assertFalse(SmartphoneRawTelemetryRecorder.isRecordingActive())
+        val inMemoryStore = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+            context = mockCtx,
+            dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(inMemoryStore)
+        try {
+            assertFalse("Opt-in must default to false", SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
+            assertNull(SmartphoneRawTelemetryRecorder.startActiveSession(mockCtx, "2026-11-21_080000", 1L))
+            assertFalse(SmartphoneRawTelemetryRecorder.isRecordingActive())
 
-        // Even when explicitly enabled, a plain-JVM MockK Context lacking filesDir safely returns null
-        SmartphoneRawTelemetryRecorder.setEnabledOverrideForTest(true)
-        assertNull(SmartphoneRawTelemetryRecorder.getSidecarFile(mockCtx, "2026-11-21_080000"))
-        assertNull(SmartphoneRawTelemetryRecorder.startActiveSession(mockCtx, "2026-11-21_080000", 1L))
+            // Even when explicitly enabled, a plain-JVM MockK Context lacking filesDir safely returns null
+            SmartphoneRawTelemetryRecorder.setEnabledOverrideForTest(true)
+            assertNull(SmartphoneRawTelemetryRecorder.getSidecarFile(mockCtx, "2026-11-21_080000"))
+            assertNull(SmartphoneRawTelemetryRecorder.startActiveSession(mockCtx, "2026-11-21_080000", 1L))
+        } finally {
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
     }
 
     @Test
-    fun plainJvmRelaxedMockContext_withoutFilesDirStub_returnsFalseWithoutInitializingDataStore_TST_EXP_045_1() {
-        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
-        val relaxedCtx = mockk<Context>(relaxed = true)
-        every { relaxedCtx.applicationContext } returns relaxedCtx
-
-        assertFalse(
-            "Relaxed MockK Context without real filesDir must return false",
-            SmartphoneRawTelemetryRecorder.isEnabled(relaxedCtx)
+    fun inMemoryTuningStore_defaultsOptInFalse_TST_EXP_045_1() {
+        val mockCtx = mockk<Context>(relaxed = true)
+        every { mockCtx.applicationContext } returns mockCtx
+        val inMemoryStore = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+            context = mockCtx,
+            dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
         )
-        assertFalse(
-            "Relaxed MockK Context must NOT initialize TuningPreferencesDataStore",
-            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.hasInitializedInstance()
-        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(inMemoryStore)
+        try {
+            assertFalse(
+                "Fresh TuningPreferencesDataStore must default opt-in to false",
+                SmartphoneRawTelemetryRecorder.isEnabled(mockCtx)
+            )
+        } finally {
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
     }
 
     @Test

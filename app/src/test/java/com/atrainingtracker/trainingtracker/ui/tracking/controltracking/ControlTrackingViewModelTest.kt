@@ -35,6 +35,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -130,6 +131,8 @@ class ControlTrackingViewModelTest {
         mockkObject(TuningPreferencesDataStore.Companion)
         every { TuningPreferencesDataStore.getInstance(any()) } returns mockTuningDataStore
         every { mockTuningDataStore.tuningConfigFlow } returns MutableStateFlow(TuningConfig())
+        TuningPreferencesDataStore.setInstanceForTesting(mockTuningDataStore)
+        SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
 
         val mockHrvRepo = mockk<HrvReadinessRepository>(relaxed = true)
         mockkObject(HrvReadinessRepository.Companion)
@@ -145,12 +148,17 @@ class ControlTrackingViewModelTest {
         every { TrainingApplication.isTracking() } returns false
 
         application = mockk(relaxed = true)
+        val tempFilesDir = java.nio.file.Files.createTempDirectory("ctvm-test-").toFile()
         every { application.packageName } returns "com.atrainingtracker"
+        every { application.applicationContext } returns application
+        every { application.filesDir } returns tempFilesDir
     }
 
     @After
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
+        TuningPreferencesDataStore.setInstanceForTesting(null)
+        SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()

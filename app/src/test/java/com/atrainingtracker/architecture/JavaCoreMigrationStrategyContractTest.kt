@@ -89,7 +89,7 @@ class JavaCoreMigrationStrategyContractTest {
     }
 
     private fun findMainSourceDir(): File {
-        val relSubPath = "src" + "/main/java"
+        val relSubPath = "src/main/java"
         val candidates = listOf(
             File("app", relSubPath),
             File(relSubPath),
@@ -278,8 +278,14 @@ class JavaCoreMigrationStrategyContractTest {
 
         // 1. Metadata & Release alignment
         assertTrue("ADR-001 Target Release must be V5.0.0", adrContent.contains("**Target Release**: `V5.0.0`"))
-        assertTrue("ADR-001 must retain Status: Reviewed pending PO sign-off", adrContent.contains("**Status**: Reviewed"))
-        assertTrue("ADR-001 Approver must remain Pending PO Sign-Off", adrContent.contains("**Approver**: Pending PO Sign-Off"))
+        val hasReviewedPending = adrContent.contains("**Status**: Reviewed") &&
+            adrContent.contains("**Approver**: Pending PO Sign-Off")
+        val hasPoApproved = adrContent.contains("**Status**: Approved") &&
+            adrContent.contains("**Approver**: Rainer Blind (PO)")
+        assertTrue(
+            "ADR-001 must retain controlled Status (Reviewed pending PO sign-off or PO-Approved)",
+            hasReviewedPending || hasPoApproved
+        )
 
         // 2. Live .java file count reconciliation (120 <= 149)
         val javaFiles = mainDir.walkTopDown().filter { it.isFile && it.name.endsWith(".java") }.toList()

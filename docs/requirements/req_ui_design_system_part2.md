@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 2 of 5)
 
 **Document ID**: `DOC-REQ-UI-P2`  
-**Version**: 1.0.5  
+**Version**: 1.0.6  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2725,8 +2725,8 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 3. *Strict Preservation of Backward Compatibility*: All existing call sites of `DeviceStatusRow` omitting `isConnected` (`DeviceItem.kt`, `EditDeviceDialog.kt`) SHALL continue to resolve `device.isConnected` without behavioral alteration.
 4. *Layout and Alignment Invariants*: The 2-row high-density layout (Icon, Name/LED, Battery/Status), 18dp horizontal center axis alignment between status LED and battery icon, and 100% clean-room test suite pass rate MUST NOT be broken.
 5. *Canonical Priority Sorting in `SensorSourceDialog.kt` (`REQ-UI-268.5`)*:
-• In `SensorSourceDialog.kt`, `activeBackups` SHALL be sorted using `compareBy<DeviceTelemetry> { telemetry -> val dev = allDevices.find { it.id == telemetry.deviceId }; MySensorManager.getPriorityRank(sensorType, dev?.deviceType) }.thenBy { telemetry -> allDevices.find { it.id == telemetry.deviceId }?.deviceName ?: "" }.thenBy { it.deviceId }`.
-• In `SensorSourceDialog.kt`, `notConnected` SHALL be sorted using `compareBy<DeviceUiData> { MySensorManager.getPriorityRank(sensorType, it.deviceType) }.thenBy { it.deviceName }.thenBy { it.id }`.
+• For non-HR sensor types (`sensorType != SensorType.HR`; `SensorType.HR` is refined by `REQ-UI-2804` / `ATT-9610`), in `SensorSourceDialog.kt`, `activeBackups` SHALL be sorted using `compareBy<DeviceTelemetry> { telemetry -> val dev = allDevices.find { it.id == telemetry.deviceId }; MySensorManager.getPriorityRank(sensorType, dev?.deviceType) }.thenBy { telemetry -> allDevices.find { it.id == telemetry.deviceId }?.deviceName ?: "" }.thenBy { it.deviceId }`.
+• For non-HR sensor types (`sensorType != SensorType.HR`; `SensorType.HR` is refined by `REQ-UI-2804` / `ATT-9610`), in `SensorSourceDialog.kt`, `notConnected` SHALL be sorted using `compareBy<DeviceUiData> { MySensorManager.getPriorityRank(sensorType, it.deviceType) }.thenBy { it.deviceName }.thenBy { it.id }`.
 • This guarantees that active backups and disconnected devices are displayed deterministically in strict accordance with `MySensorManager`'s fallback hierarchy (e.g. Google Fused above Network) rather than arbitrary hash map or SQLite row ID order.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
@@ -3252,3 +3252,4 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 | `1.0.2` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `REQ-UI-2789` to `[Implemented]` in Stage 4 (`TelemetryChartCanvasHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`). |
 | `1.0.3` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `REQ-UI-2789` to `[Verified]` in Stage 5 (Rule 7.5 Fast Path reusing Gate 4 `ATT-9433` @ `2b4277ca`: `277/277` PASS across 61 suites, `4/4` linters, both `Rule 8.5` PNGs PASS). |
 | `1.0.4` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Refined `REQ-UI-214` (`[Verified]`) with 4-field Chesterton's Fence Audit for swapped `CADENCE`/`HEART_RATE` order in `TelemetryChartStack.kt` & `MapModels.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`) while preserving `WorkoutSummary.kt` and `WorkoutExtrema`. |
+| `1.0.5` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Scoped `REQ-UI-268.5` to non-HR sensor types; `SensorType.HR` health- and modality-aware ordering is specified in `REQ-UI-2804` (`req_ui_design_system_part6.md`). |

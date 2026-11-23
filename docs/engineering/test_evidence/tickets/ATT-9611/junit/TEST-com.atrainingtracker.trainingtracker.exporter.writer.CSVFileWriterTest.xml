@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:28:17.976Z" hostname="rainer-HP-EliteBook-850-G5" time="6.691">
+  <properties/>
+  <testcase name="testCSVFileWriter_emptyCursor_writesHeaderOnly" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="1.632"/>
+  <testcase name="testCSVFileWriter_cooperativeCancellation_abortsAndDeletesOutputFile" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="1.028"/>
+  <testcase name="testCSVFileWriter_headerAndSourceSuffixSorting" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="1.023"/>
+  <testcase name="testCSVFileWriter_metadataAndNestedParenthesesDeviceNames_noEnumWarnings_TST_EXP_049" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="0.996"/>
+  <testcase name="testCSVFileWriter_handlesNullValuesAsEmptyStrings" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="0.997"/>
+  <testcase name="testCSVFileWriter_extractSourcedSensorTypeName_handlesNestedParensAndSuffixes" classname="com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriterTest" time="1.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

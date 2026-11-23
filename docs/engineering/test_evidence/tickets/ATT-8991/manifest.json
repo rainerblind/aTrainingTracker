@@ -1,0 +1,26 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "0b3856f83abc7a8116930748a00f6b0d99830c63",
+  "files": {
+    "evidence_summary.json": "492824c3b023e408c67a28c4ef974a1a557e8c6038012af860a0fd6e34dedbfc",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest.xml": "f5964dcc1a002b1e7267496b9dfdca03445fbe6d331dff8fa189826be85cb01a",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceTypeSensorMappingTest.xml": "326c11189553780d88ed34d4cf423a3027d1712f6d6940486fddfed13cb3861a",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest.xml": "4fbb2096fba10f2521e3e650c9f877990c97c95750e7e084c6fca140d2c6646b",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.AltitudeSlopePriorityTest.xml": "72ad6a5086e912c996b5d3aed0e3aab16b4baa3ed1ec475bf1ccfafee488cae5",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest.xml": "49e1ae366fc18277c7d10b2d013aaff520c270f67533d647b69c634cf2f74ba0",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest.xml": "37e751da8b1c2e2b8f19c69008ade017510d072e1794d933abe67f156bcca127",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest.xml": "16116737b2fcb1fa18f63fbd9c526d65d78cac7d1b42e1265704832ea043476a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "6d23f018a4537f05681394ce810a82a10b0a14eba1f15397c3e0ac12b64cedfd",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest.xml": "9f4882aa97a386e0ea9ac520929c9e10428c7f149c4ef0a60a5f04854ea4baf1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml": "61a26e85c8e2fb3d254e104730b49c70888c92304ff7a68b9afa85f700892502",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest.xml": "3a57fd50fbe5fdc3c6343f3dab22219fa56d6022225e77aa25aa33f523422614",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest.xml": "78e9ba23b06522cfb153431bfb677423e70dd0558fc9428e44812397919026c2",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest.xml": "c352fe384fb8b4ec176b60db42b20d18b3811e36cda6e56baba37f88d44be29e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest.xml": "e18f387759a376f8bb4581de7591ee06009515ae679e65dc1487985fd4cba5e7",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest.xml": "f49e19f8c0bac7e4e4e5f8c14f3c059d3778d8b606991f7a273fde0c1b6a89ae",
+    "screenshots/ATT-8991_sensor_source.png": "593fafb09480571eea5bd2cd74024b08ed6006148cdedae51a012c3a06430a15"
+  },
+  "run_started_utc": "2026-11-23T18:43:37Z",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8991"
+}

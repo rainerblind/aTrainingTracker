@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 6 of 6)
 
 **Document ID**: `DOC-REQ-UI-P6`  
-**Version**: 1.0.31  
+**Version**: 1.0.33  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part6`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 47
+**Total Requirements**: 48
 
 ---
 
@@ -1804,6 +1804,30 @@
   1. *Original Requirement ID & Target*: Refines `REQ-UI-192`, `REQ-UI-206`, `REQ-UI-226`, `REQ-UI-232`, `REQ-UI-234`, `REQ-UI-260`, `REQ-UI-261`, `REQ-UI-513.4`, `REQ-REV-015`, `REQ-STB-020.4`.
   2. *Preservation of Core Invariants*: Preserves `Rule 64` horizontal plot alignment (`50.dp` start / `72:28` landscape), `Rule 69/70` marginal histograms, `ATT-6037` climb badge Paint/Path hoisting, `ATT-9168` offscreen snapshot isolation, `REQ-UI-513.4` synchronized tab time ranges & tab ordering, `REQ-STB-020.4` unfinished-workout SQL deduplication, and `0` string resource changes.
 
+### REQ-UI-2804: Health- and Modality-Aware HR Sensor Ordering in `SensorSourceDialog` (`ATT-9610`) [Verified]
+- **Tests**: `TST-UI-2804`
+- **Tickets**: `ATT-9610`
+- **System Requirement(s)**: Derived (SW UI projection aligning `SensorSourceDialog` with `REQ-SET-126.3` / `SYSREQ-TRK-002`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `PrimaryHrSensorArbitrator.kt`, `DeviceData.kt`, `RawDeviceDataProvider.kt`, `BANALServiceRepository.kt`, `SensorSourceDialog.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: In `SensorSourceDialog.kt`, all Heart Rate monitors share `DeviceType.HRM`, so `MySensorManager.getPriorityRank(SensorType.HR, DeviceType.HRM)` returned the same rank (`0`) for every HRM and fell back to alphabetical `deviceName` ordering for **Active Backups** and **Not Connected** devices instead of matching the `PrimaryHrSensorArbitrator` priority hierarchy introduced in `ATT-9345` (`REQ-SET-126.3`).
+- **Description**:
+  1. *Shared `PrimaryHrSensorArbitrator` Modality & Health Resolution (`REQ-UI-2804.1`)*: `PrimaryHrSensorArbitrator` SHALL provide a shared persisted-metadata `resolveModality(protocol, deviceType, deviceName, manufacturer, macAddress, context)` overload reusing `PolarOfflineGattCoordinator.isPolarVeritySenseDevice` (for `Protocol.BLUETOOTH_LE`), `HrModality.ANT_PLUS` (for `Protocol.ANT_PLUS`), and `HrModality.OTHER` otherwise, and expose `resolveHealthTier(...)` for live `MySensor<*>` snapshot evaluation.
+  2. *DTO Propagation Without Breaking Existing Callers (`REQ-UI-2804.2`)*: `RawDeviceDataProvider` / `DeviceRawData` SHALL carry `btAddress: String? = null` (safe when mock cursors omit `BT_ADDRESS`); `DeviceUiData` (`raw2UiDeviceData`) SHALL carry defaulted `btAddress: String? = null` and `hrModality: HrModality? = null` resolved via `PrimaryHrSensorArbitrator`; `BANALServiceRepository` SHALL populate defaulted `hrHealthTier: HrHealthTier? = null` and `hrModality: HrModality? = null` on `DeviceTelemetry` for active `SensorType.HR` devices while preserving all pinned `BANALServiceRepository` JVM signatures.
+  3. *HR Active Backups & Not Connected Ordering (`REQ-UI-2804.3`)*: When `sensorType == SensorType.HR`, `SensorSourceDialog` SHALL order **Active Backups** by `(healthTier [HEALTHY < DEGRADED < STALE_OR_NULL], modalityTier [ECG < ANT+ < Optical PPG < Other], deviceName, deviceId)` and **Not Connected** by `(modalityTier [ECG < ANT+ < Optical PPG < Other], deviceName, deviceId)` using persisted protocol/capability metadata. Non-HR sensor types SHALL continue ordering via `MySensorManager.getPriorityRank(sensorType, deviceType)` $\to$ `deviceName` $\to$ `deviceId`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `SensorSourceDialog` opened for `SensorType.HR` with multiple active backup HR sensors (e.g., healthy ECG `"Polar H10"`, healthy ANT+, healthy Optical PPG `"Armband Optical"`, degraded ECG, and stale/null ECG), *When* **Active Backups** renders, *Then* `HEALTHY` sensors precede `DEGRADED`, which precede `STALE_OR_NULL`, and ties within a health tier order by `ECG < ANT+ < Optical PPG < Other`, then `deviceName`, then `deviceId`.
+  • *Given* disconnected paired HR devices including a BLE Optical PPG sensor renamed `"Armband Optical"` (persisted via `PolarOfflineCapabilityStore`), an ANT+ HRM, and a BLE ECG `"Polar H10"`, *When* **Not Connected** renders for `SensorType.HR`, *Then* `"Polar H10"` (ECG) precedes ANT+, which precedes `"Armband Optical"` (Optical PPG), overriding alphabetical order.
+  • *Given* any non-HR `SensorType` (`LATITUDE`, `SPEED_mps`, `ALTITUDE`, `POWER`, `RADAR_THREAT_COUNT`), *When* `SensorSourceDialog` renders, *Then* sorting uses `MySensorManager.getPriorityRank(sensorType, deviceType)` unchanged.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-268.5` (`ATT-4375`) and extends `REQ-SET-126.3` (`ATT-9345`) onto `SensorSourceDialog.kt`, `BANALServiceRepository.kt`, `DeviceData.kt`, `RawDeviceDataProvider.kt`, and `PrimaryHrSensorArbitrator.kt`.
+  2. *Historical Origin & Commit Trace*: `REQ-UI-268.5` (`ATT-4375`, `MySensorManager.getPriorityRank` sorting in `SensorSourceDialog`), `REQ-SET-126.3` (`ATT-9345`, `PrimaryHrSensorArbitrator`).
+  3. *Root Reason for Existing Formulation*: Prior to `ATT-9345`, all HRMs were treated with uniform rank `0` under `DeviceType.HRM`.
+  4. *Preservation of Core Invariants*: Non-HR sensor sorting (`REQ-UI-268.5`), conditional dividers (`REQ-UI-2781`), truthful connection status (`REQ-UI-268`), `PolarOfflineCapabilityStore` rename-suppression / non-Polar GATT rules (`REQ-CON-049.4`), and pinned `BANALServiceRepository` JVM signatures remain 100% preserved.
+
 ---
 
 ## Change History
@@ -1840,3 +1864,5 @@
 | `1.0.29` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Added and verified `REQ-UI-2801` (`[Verified]`, `.1`–`.3`) for physical excision of 27 dead Fragment/SettingsDialogFragment/hybrid-bridge files + `StartOrResumeDialog` `DialogFragment` wrapper, `MainActivityWithNavigation` cleanup, and pure Compose `EditDeviceDialog`, `StartOrResumeAlertDialog`, and `GPSDisabledAlertDialog` (`131/131` PASS across 22 suites, `0` new compiler warnings, Light/Dark Compose + live `emulator-5554` PNGs visually verified via `read_file`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8129/`). |
 | `1.0.30` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `REQ-UI-2802` (`[Verified]`, `.1`–`.3`) for Legacy UI & Package Decommissioning Part 2 (`521/521` targeted unit/Compose/contract tests PASS, `:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` PASS, `0` new compiler warnings, 4 live `emulator-5554` PNGs visually verified via `read_file`, `0` crashes in `logcat -b crash -d`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8130/`). |
 | `1.0.31` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Added and verified `REQ-UI-2803` (`[Verified]`, `.1`–`.3`) for unified `Modifier.telemetryChartGestures` + O(log N) search + `Modifier.drawWithCache` viewport-downsampled curves + single-pass speed/pace formatting, `MapDetailLayout`/`TelemetryChartStack` viewport & toolbar deduplication with consistent `ProfileDomainMath.isEffectiveTimeDomain`, and 4-tab isolated `AthleteProfileViewModel` flows with reactive `_hrMaxBpm` and single-write `onSelectTimeRange` (`332/332` targeted tests PASS + `auto_gate.py` dependent suite PASS, `0` new compiler warnings, 4 PNGs visually verified via `read_file`, live `emulator-5554` `0` crashes, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8134/`). |
+| `1.0.32` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Added `REQ-UI-2804` (`[Planned]`, `.1`–`.3`) for health- and modality-aware HR ordering in `SensorSourceDialog` (`Active Backups`: `(healthTier, modalityTier, deviceName, deviceId)`; `Not Connected`: `(modalityTier, deviceName, deviceId)` via shared `PrimaryHrSensorArbitrator`, keeping non-HR sorting unchanged). |
+| `1.0.33` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Promoted `REQ-UI-2804` to `[Verified]` (`214/214` targeted/dependent tests PASS across `34` suites incl. `PrimaryHrSensorArbitratorTest` `9/9`, `SensorSourceDialogPriorityTest` `6/6`, `SensorSourceDialogContractTest` `12/12`, `ControlTracking*` `48/48`, `DeviceDataRepository*` `17/17`, `DeviceListViewModel*` `24/24`, `EditDevice*` `46/46`, `BANALServiceRepository*` `13/13`, `MySensorManagerPriorityTest` `8/8`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` PNG `ATT-9610_sensor_source_dialog.png` visually inspected via `read_file` with `0` crashes in `logcat -b crash -d`; pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3). |

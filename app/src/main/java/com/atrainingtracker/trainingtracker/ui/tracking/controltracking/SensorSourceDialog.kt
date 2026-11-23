@@ -49,7 +49,11 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelper
+import com.atrainingtracker.banalservice.sensor.HrHealthTier
+import com.atrainingtracker.banalservice.sensor.HrModality
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitrator
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
@@ -86,29 +90,24 @@ fun SensorSourceDialog(
     }
     val activeDeviceIds = remember(allActiveTelemetries) { allActiveTelemetries.map { it.deviceId }.toSet() }
     
-    val activeBackups = remember(allActiveTelemetries, sourceDevice, allDevices, sensorType) {
-        allActiveTelemetries
-            .filter { it.deviceId != sourceDevice?.id }
-            .sortedWith(
-                compareBy<DeviceTelemetry> { telemetry ->
-                    val dev = allDevices.find { it.id == telemetry.deviceId }
-                    MySensorManager.getPriorityRank(sensorType, dev?.deviceType)
-                }
-                .thenBy { telemetry ->
-                    allDevices.find { it.id == telemetry.deviceId }?.deviceName ?: ""
-                }
-                .thenBy { it.deviceId }
-            )
+    val activeBackups = remember(allActiveTelemetries, sourceDevice, allDevices, sensorType, context) {
+        sortActiveBackupTelemetries(
+            telemetries = allActiveTelemetries,
+            sensorType = sensorType,
+            sourceDeviceId = sourceDevice?.id,
+            allDevices = allDevices,
+            context = context
+        )
     }
-    
-    val notConnected = remember(allDevices, activeDeviceIds, potentialTypes, sensorType) {
-        allDevices
-            .filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
-            .sortedWith(
-                compareBy<DeviceUiData> { MySensorManager.getPriorityRank(sensorType, it.deviceType) }
-                    .thenBy { it.deviceName }
-                    .thenBy { it.id }
-            )
+
+    val notConnected = remember(allDevices, activeDeviceIds, potentialTypes, sensorType, context) {
+        sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = activeDeviceIds,
+            potentialTypes = potentialTypes,
+            sensorType = sensorType,
+            context = context
+        )
     }
 
     val unitRes = MyHelper.getUnitsId(sensorType)
@@ -464,4 +463,139 @@ private fun DeviceIdentityBlock(
             )
         }
     }
+}
+
+/**
+ * Resolves the effective [HrModality] for a persisted [DeviceUiData] entry (`REQ-UI-2804.3`).
+ * When persisted [DeviceUiData.btAddress] and [context] are available for a [DeviceType.HRM],
+ * re-evaluates [PrimaryHrSensorArbitrator.resolveModality] against live capability metadata;
+ * otherwise uses an explicit [DeviceUiData.hrModality] before falling back to protocol/name rules.
+ */
+internal fun resolveDeviceHrModality(
+    device: DeviceUiData,
+    context: android.content.Context? = null
+): HrModality {
+    if (device.btAddress != null && context != null && device.deviceType == DeviceType.HRM) {
+        return PrimaryHrSensorArbitrator.resolveModality(
+            protocol = device.protocol,
+            deviceType = device.deviceType,
+            deviceName = device.deviceName,
+            manufacturer = device.manufacturer,
+            macAddress = device.btAddress,
+            context = context
+        )
+    }
+    device.hrModality?.let { return it }
+    return PrimaryHrSensorArbitrator.resolveModality(
+        protocol = device.protocol,
+        deviceType = device.deviceType,
+        deviceName = device.deviceName,
+        manufacturer = device.manufacturer,
+        macAddress = device.btAddress,
+        context = context
+    )
+}
+
+/**
+ * Sorts active backup telemetry entries for [SensorSourceDialog] (`REQ-UI-268.5`, `REQ-UI-2804.3`).
+ * For [SensorType.HR], orders by `(healthTier [HEALTHY < DEGRADED < STALE_OR_NULL],
+ * modalityTier [ECG < ANT+ < Optical PPG < Other], deviceName, deviceId)`.
+ * Non-HR sensor types preserve [MySensorManager.getPriorityRank] ordering.
+ */
+internal fun sortActiveBackupTelemetries(
+    telemetries: List<DeviceTelemetry>,
+    sensorType: SensorType,
+    sourceDeviceId: Long?,
+    allDevices: List<DeviceUiData>,
+    context: android.content.Context? = null
+): List<DeviceTelemetry> {
+    val devicesById = allDevices.associateBy { it.id }
+    val filtered = telemetries.filter { it.deviceId != sourceDeviceId }
+    if (sensorType == SensorType.HR) {
+        return filtered.sortedWith(
+            compareBy<DeviceTelemetry>(
+                { (it.hrHealthTier ?: HrHealthTier.STALE_OR_NULL).rank },
+                { telemetry ->
+                    val modality = telemetry.hrModality
+                        ?: devicesById[telemetry.deviceId]?.let { resolveDeviceHrModality(it, context) }
+                        ?: HrModality.OTHER
+                    modality.rank
+                },
+                { devicesById[it.deviceId]?.deviceName ?: "" },
+                { it.deviceId }
+            )
+        )
+    }
+    return filtered.sortedWith(
+        compareBy<DeviceTelemetry>(
+            { MySensorManager.getPriorityRank(sensorType, devicesById[it.deviceId]?.deviceType) },
+            { devicesById[it.deviceId]?.deviceName ?: "" },
+            { it.deviceId }
+        )
+    )
+}
+
+/**
+ * Normalizes a persisted [DeviceUiData.manufacturer] display string for hardware capability checks,
+ * clearing the localized [R.string.devices_unknown_manufacturer] placeholder so un-reconnected
+ * Polar sensors retain legacy name fallback (`REQ-CON-057.3`).
+ */
+internal fun normalizeManufacturerForCapabilityCheck(
+    manufacturer: String,
+    context: android.content.Context? = null
+): String {
+    val trimmed = manufacturer.trim()
+    if (trimmed.isEmpty()) return ""
+    val unknownLabel = context?.let {
+        runCatching { it.getString(R.string.devices_unknown_manufacturer) }.getOrNull()?.trim()
+    }
+    if (!unknownLabel.isNullOrEmpty() && trimmed.equals(unknownLabel, ignoreCase = true)) {
+        return ""
+    }
+    return trimmed
+}
+
+/**
+ * Sorts disconnected devices for [SensorSourceDialog] (`REQ-UI-268.5`, `REQ-UI-2804.3`, `REQ-CON-057.3`).
+ * For [SensorType.HR], orders by `(modalityTier [ECG < ANT+ < Optical PPG < Other],
+ * deviceName, deviceId)` using persisted protocol and capability metadata.
+ * For [DeviceType.HRM] candidates on Polar Live-IMU sensor types (`CADENCE`, `STRIDES`,
+ * `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`), filters via [HrmSensorCapabilityHelper].
+ * Non-HR sensor types preserve [MySensorManager.getPriorityRank] ordering.
+ */
+internal fun sortNotConnectedDevices(
+    allDevices: List<DeviceUiData>,
+    activeDeviceIds: Set<Long>,
+    potentialTypes: Set<DeviceType>,
+    sensorType: SensorType,
+    context: android.content.Context? = null
+): List<DeviceUiData> {
+    val filtered = allDevices.filter { device ->
+        potentialTypes.contains(device.deviceType) &&
+            !activeDeviceIds.contains(device.id) &&
+            (device.deviceType != DeviceType.HRM || HrmSensorCapabilityHelper.isSensorSupported(
+                context = context,
+                sensorType = sensorType,
+                protocol = device.protocol,
+                deviceName = device.deviceName,
+                manufacturer = normalizeManufacturerForCapabilityCheck(device.manufacturer, context),
+                btAddress = device.btAddress
+            ))
+    }
+    if (sensorType == SensorType.HR) {
+        return filtered.sortedWith(
+            compareBy<DeviceUiData>(
+                { resolveDeviceHrModality(it, context).rank },
+                { it.deviceName },
+                { it.id }
+            )
+        )
+    }
+    return filtered.sortedWith(
+        compareBy<DeviceUiData>(
+            { MySensorManager.getPriorityRank(sensorType, it.deviceType) },
+            { it.deviceName },
+            { it.id }
+        )
+    )
 }

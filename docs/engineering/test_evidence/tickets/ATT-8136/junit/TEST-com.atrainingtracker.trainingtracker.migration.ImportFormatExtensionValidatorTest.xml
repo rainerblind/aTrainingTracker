@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ImportFormatExtensionValidatorTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:01:41.717Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testIsMatchingFormat_whenFileNameNullOrBlankOrNoExtension_returnsTrueForStreamInspectionFallback" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatExtensionValidatorTest" time="0.001"/>
+  <testcase name="testIsMatchingFormat_withConflictingWorkoutExtensions_returnsFalse" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatExtensionValidatorTest" time="0.0"/>
+  <testcase name="testIsMatchingFormat_withMatchingExtensions_returnsTrue" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatExtensionValidatorTest" time="0.0"/>
+  <testcase name="testIsMatchingFormat_withUnrelatedDocumentExtensions_returnsFalse" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatExtensionValidatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

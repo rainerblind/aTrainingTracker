@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:38:22.346Z" hostname="rainer-HP-EliteBook-850-G5" time="18.748">
+  <properties/>
+  <testcase name="testSensorSourceDialog_sourceFileContainsBikeRadarTitleAndScalarOmission" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="10.418"/>
+  <testcase name="testSensorSourceDialog_hasZeroReferencesToRouteTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.161"/>
+  <testcase name="testSensorSourceDialog_altitudeCalibrationWithDisconnected_rendersSingleDivider" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="5.495"/>
+  <testcase name="testSensorSourceDialog_sourceWithBackupsAndDisconnected_rendersDividersBetweenSections" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.383"/>
+  <testcase name="testSensorSourceDialog_hrOrdersActiveBackupsAndNotConnectedByHealthAndModality" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.576"/>
+  <testcase name="testSensorSourceDialog_disconnectedOnly_rendersZeroDividers" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.328"/>
+  <testcase name="testComposeRender_cadenceAndVerticalOscillationCapabilityFilterHrms_TST_CON_057_3" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.299"/>
+  <testcase name="testSourceFileExists" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.097"/>
+  <testcase name="testSensorSourceDialog_forRadarThreatCount_mapsDeviceTypeBikeRadar" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.099"/>
+  <testcase name="testCaptureSensorSourceDialogScreenshot" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.611"/>
+  <testcase name="testSensorSourceDialog_usesDedicatedSensorSourceTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.093"/>
+  <testcase name="testDeviceIdentityBlock_forwardsIsConnectedToDeviceStatusRow" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.094"/>
+  <testcase name="testSensorSourceDialog_passesIsConnectedTrueForActiveSensors" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.093"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

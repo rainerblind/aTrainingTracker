@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 2 of 3)
 
 **Document ID**: `DOC-TST-UI-P2`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1086,17 +1086,20 @@
 ### TST-UI-313: **Persistent Missing ANT+ Adapter Dialog Suppression, DataStore Persistence, and Advanced Settings Warning Reset Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-353`
 - **Component**: **Persistent Missing ANT+ Adapter Dialog Suppression, DataStore Persistence, and Advanced Settings Warning Reset Verification**
-- **Jira**: ``ATT-3220`, `ATT-3454``
+- **Jira**: `ATT-3220`, `ATT-3454`, `ATT-9065`
 - **Test Description**:
-  1. *DataStore Preference Serialization & Default Reset Unit Tests (`TuningPreferencesDataStoreTest.kt`)*:
+  1. *DataStore Preference Serialization & Default Reset Unit Tests (`TuningPreferencesDataStoreRoundTripTest.kt`)*:
   • Verify `TuningConfig` initializes with `suppressAntMissingAdapterDialog = false` and `showAntMissingAdapterWarnings = true`.
   • Verify `setSuppressAntMissingAdapterDialog(true)` persists and emits `true` via `suppressAntMissingAdapterDialogFlow`.
   • Verify `setSuppressAntMissingAdapterDialog(false)` persists and emits `false`.
   • Verify `resetToDefaults()` restores `suppressAntMissingAdapterDialog = false`.
-  2. *Broadcast Guard Unit Tests (`AntMissingAdapterDialogSuppressionTest.kt`)*:
-  • Verify `showANTAdapterMissingDialog()` transitions `antDialogState` to `AntDialogState.MissingAdapter` when unsuppressed.
+  2. *Broadcast Guard, Cold-Start Race & Compose Dismissal Unit/UI Tests (`AntMissingAdapterDialogSuppressionTest.kt`, `AntMissingAdapterDialogComposeTest.kt`)*:
+  • Verify `showANTAdapterMissingDialog()` transitions `antDialogState` to `AntDialogState.MissingAdapter` when hydrated and unsuppressed.
   • Verify `showANTAdapterMissingDialog()` discards the broadcast and `antDialogState` remains `null` when suppressed.
   • Verify `antDialogState != null` prevents duplicate emissions.
+  • Verify `createComposeRule()` dismissal of `AntAlertDialogsOverlay` exits composition immediately, synchronously sets `isAntMissingAdapterDialogSuppressed = true`, blocks back-to-back broadcasts, and still completes `setSuppressAntMissingAdapterDialog(true)` on a surviving outer scope.
+  • Verify `onViewStatus` ("ANT+ Status anzeigen") opens `AntServicesStatusSheet` without mutating `suppressAntMissingAdapterDialog`.
+  • Verify cold-start `ADAPTER_NOT_DETECTED` broadcasts before initial `suppressAntMissingAdapterDialogFlow` emission never open the dialog when persisted preference is `true` and flush cleanly when persisted `false`, plus Tuning re-enablement restores dialog visibility.
   3. *Advanced Settings Toggle Contract Tests (`AntMissingAdapterDialogSuppressionTest.kt`)*:
   • Verify `SensorSearchTuningSection` renders `TuningToggleItem` with `checked = showAntMissingAdapterWarnings` under search behavior (`prefs_search_behavior_title`) (ATT-3454).
   • Verify `SensorsGpsFilterSection` no longer declares `showAntMissingAdapterWarnings` or renders the toggle item (ATT-3454).
@@ -3192,3 +3195,4 @@
 | `1.0.3` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Added `TST-UI-2789` `[Planned]` covering marginal histogram/tick helpers, `PathPreviewMap` cluster thumbnail delegation, and `Rule 8.5` PNG inspection. |
 | `1.0.4` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `TST-UI-2789` to `[Implemented]` in Stage 4 (`TelemetryChartCanvasHelpersTest.kt`, `ClusterThumbnailPathPreviewDelegationTest.kt`). |
 | `1.0.5` | 2026-11-21 | AI Agent 1 (`ATT-6041`) | `ATT-6041` | Promoted `TST-UI-2789` to `[Verified]` in Stage 5 (Rule 7.5 Fast Path reusing Gate 4 `ATT-9433` @ `2b4277ca`: `277/277` PASS across 61 suites). |
+| `1.0.7` | 2026-11-23 | AI Agent 1 (`ATT-9065`) | `ATT-9065` | Updated `TST-UI-313` for `ATT-9065` Compose dismissal, cold-start hydration, and broadcast suppression verification; promoted to `[Verified]` (`53/53` Tier-1 tests PASS). |

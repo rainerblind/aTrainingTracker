@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:47:42.303Z" hostname="rainer-HP-EliteBook-850-G5" time="0.545">
+  <properties/>
+  <testcase name="testControlTrackingViewModel_omitsDeadPairingStateAndRetainsActiveSensorDiscovery" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest" time="0.037"/>
+  <testcase name="testPairingButtonsFile_isDeleted" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest" time="0.001"/>
+  <testcase name="testControlTrackingScreen_omitsDeadPairingParametersAndDialog" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest" time="0.037"/>
+  <testcase name="testMySensorsPairingFlowAnd9LocaleStrings_remainIntact" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest" time="0.224"/>
+  <testcase name="testTrackingTabsScreenAndMainActivity_omitDeadPairingWiring" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest" time="0.246"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

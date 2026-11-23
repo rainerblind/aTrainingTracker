@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:47:39.521Z" hostname="rainer-HP-EliteBook-850-G5" time="2.778">
+  <properties/>
+  <testcase name="testDeviceTelemetry_valueEqualityEliminatesStateFlowChurn" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest" time="0.377"/>
+  <testcase name="testTrackBreadcrumbs_stationaryJitterSuppressesSpiderwebPoints" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest" time="1.023"/>
+  <testcase name="testPathPoints_doesNotAppendWhenTrackingModeIsNotTracking" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest" time="0.336"/>
+  <testcase name="testAllActiveDevicesTelemetry_populatesHrHealthTierAndModalityFromArbitrator" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest" time="0.682"/>
+  <testcase name="testPathPoints_stationaryTicksDoNotAppendDuplicatePoints" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest" time="0.36"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

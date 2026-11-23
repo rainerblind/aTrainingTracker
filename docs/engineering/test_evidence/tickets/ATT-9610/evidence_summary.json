@@ -1,0 +1,89 @@
+{
+  "android_test_summary": {
+    "details": "214 Android unit/Compose tests passed across 34 JUnit XML suites (0 fail, 0 err, 0 skip; Rule 1.3 isolation of pre-existing ATT-9639 MeasuredNfrBenchmarkTest#testNfr014).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 214
+  },
+  "checks": [
+    {
+      "details": "Android: 214 Android unit/Compose tests passed (34 JUnit XML suites, --rerun --max-workers=2; Rule 1.3 isolation of pre-existing ATT-9639 MeasuredNfrBenchmarkTest#testNfr014). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed (lint_cursor_safety.py, lint_lifecycle_safety.py, lint_safe_enum.py).",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s): docs/engineering/tickets/ATT-9610.md).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11108 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    },
+    {
+      "details": "PASS: verify_requirement_governance.py exited 0.",
+      "name": "requirement_governance",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "082c314a8d33127009d1bcfec52451c6c05ae8d0",
+  "junit_xml_files": [
+    "junit/TEST-co-377D3BCI80S44.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelQuotaTest.xml",
+    "junit/TEST-co-TM5Q74A4FB8AC.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingLayoutContractTest.xml",
+    "junit/TEST-com.atraini-1QL3PIAD2O7HM.trainingtracker.ui.tracking.controltracking.SensorSourceDialogAltitudeCalibrationTest.xml",
+    "junit/TEST-com.atraini-OK4J0IKDK4QRM.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteSelectionContractTest.xml",
+    "junit/TEST-com.atraining-HQDUHJISP6RHI.trainingtracker.ui.tracking.controltracking.ControlTrackingSensorHeaderContractTest.xml",
+    "junit/TEST-com.atrainingtr-KJ4OB08TQGU0I.trainingtracker.ui.tracking.controltracking.ControlTrackingDeadPairingRemovalTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryBatteryTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPairedRemoteTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryPolarPairingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelFilterTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMemoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingPermissionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteBoundsUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-23T17:50:03.549754+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9610_sensor_source_dialog.png"
+  ],
+  "ticket_key": "ATT-9610",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

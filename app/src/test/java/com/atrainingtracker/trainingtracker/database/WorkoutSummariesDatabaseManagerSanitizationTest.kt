@@ -20,7 +20,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.assertEquals

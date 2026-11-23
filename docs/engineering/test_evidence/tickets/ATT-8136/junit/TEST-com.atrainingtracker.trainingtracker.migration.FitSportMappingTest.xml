@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:01:25.751Z" hostname="rainer-HP-EliteBook-850-G5" time="0.009">
+  <properties/>
+  <testcase name="testTransition_returnsConflict" classname="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" time="0.008"/>
+  <testcase name="testNullSport_returnsUnknown" classname="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" time="0.0"/>
+  <testcase name="testCycling_returnsBike" classname="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" time="0.0"/>
+  <testcase name="testOtherSports_returnsUnknown" classname="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" time="0.0"/>
+  <testcase name="testFitnessEquipment_mapsCorrectlyBasedOnSubsport" classname="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" time="0.0"/>
+  <testcase name="testRunningAndWalking_returnsRun" classname="com.atrainingtracker.trainingtracker.migration.FitSportMappingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:49:17.315Z" hostname="rainer-HP-EliteBook-850-G5" time="5.201">
+  <properties/>
+  <testcase name="testHasPairedRemoteDevices_whenPairedDeviceExists_returnsTrue" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.451"/>
+  <testcase name="testResetBaselineCircumference_copiesCalibrationFactor" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.341"/>
+  <testcase name="testGetBaselineCircumference_returnsStoredValue" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.336"/>
+  <testcase name="testHasPairedRemoteDevices_whenQueryThrowsException_returnsFalseWithoutCrash" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.327"/>
+  <testcase name="testHasPairedHeartRateDevices_whenNoHrmDevice_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.359"/>
+  <testcase name="testHasPairedHeartRateDevices_whenPairedHrmExists_returnsTrue" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.322"/>
+  <testcase name="testMigrateAltitudeFromPressureLegacyNames_updatesLegacyDefaultNames" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.308"/>
+  <testcase name="testSetBaselineCircumference_updatesDatabase" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.304"/>
+  <testcase name="testInsertNewBluetoothDeviceIntoDB_withPairedTrue_storesPairedOne" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.339"/>
+  <testcase name="testGetCalibrationFactor_closesBothCursorsOnEmptyAndNullFallback_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.337"/>
+  <testcase name="testHasPairedRemoteDevices_whenDbNullOrClosed_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.297"/>
+  <testcase name="testInsertNewAntDeviceIntoDB_withPairedTrue_storesPairedOne" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.304"/>
+  <testcase name="testHasPairedHeartRateDevices_whenDbNullOrClosed_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.295"/>
+  <testcase name="testHasPairedRemoteDevices_whenNoMatchingDevicesExist_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.286"/>
+  <testcase name="testDevicesDbHelper_dbVersionIsAtLeastThirteen" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.295"/>
+  <testcase name="testSetInt_rejectsUnsupportedColumnAndUpdatesAllowedColumn_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.298"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

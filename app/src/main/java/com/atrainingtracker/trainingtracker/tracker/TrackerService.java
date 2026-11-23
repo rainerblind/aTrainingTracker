@@ -85,7 +85,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import com.atrainingtracker.database.SqliteSchemaUtils;
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils;
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController;

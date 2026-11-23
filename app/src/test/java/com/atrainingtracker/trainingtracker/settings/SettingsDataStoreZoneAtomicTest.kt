@@ -26,6 +26,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.SavedStateHandle
 import com.atrainingtracker.trainingtracker.ui.settings.zones.ZonesSettingsViewModel
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,12 +71,16 @@ class SettingsDataStoreZoneAtomicTest {
             produceFile = { testFile }
         )
         val context = mockk<Context>(relaxed = true)
+        every { context.applicationContext } returns context
         app = mockk<Application>(relaxed = true)
+        every { app.applicationContext } returns app
         dataStore = SettingsDataStore.createForTesting(context, rawDataStore)
+        SettingsDataStore.setInstanceForTesting(dataStore)
     }
 
     @After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
     }
 

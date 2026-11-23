@@ -15,46 +15,121 @@
 
 package com.atrainingtracker.trainingtracker.ui.clusters
 
+import android.app.Application
+import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.testing.LocalizationTestCache
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModel
+import com.atrainingtracker.trainingtracker.migration.ClusterNamingDialog
+import com.atrainingtracker.trainingtracker.migration.LegacyImportEngine
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import java.io.File
-import java.lang.reflect.Modifier
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.util.regex.Pattern
 
 /**
- * Architectural, UI contract, and 9-language localization tests for [ClusterNamingDialog]
+ * Behavioral Compose UI and 9-language localization tests for [ClusterNamingDialog]
  * escape hatches and [WorkoutClusterSelectionDialog] create-new capability (ATT-5674 / REQ-UI-462 / TST-UI-462).
  */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = Application::class, qualifiers = "w412dp-h915dp-xxhdpi")
 class ClusterNamingDialogEscapeContractTest {
 
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private lateinit var context: Context
     private val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
 
-    private fun findResDirectory(): File {
-        val candidates = listOf(
-            File("src/main/res"),
-            File("app/src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidate paths: $candidates")
+    private val sampleCluster = WorkoutCluster(
+        id = 10L,
+        name = "Existing Loop",
+        probableSportId = 2L,
+        startLat = 48.1,
+        startLng = 11.5,
+        endLat = 48.1,
+        endLng = 11.5,
+        maxDispLat = 48.12,
+        maxDispLng = 11.52,
+        refDistance = 8000.0,
+        hitCount = 4,
+        bSportType = BSportType.RUN
+    )
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        val mockClusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
+        every { mockClusterRepo.allClusters } returns MutableStateFlow(listOf(sampleCluster))
+        coEvery { mockClusterRepo.refreshClusters() } returns Unit
+        WorkoutClusterRepository.resetForTesting(mockClusterRepo)
+
+        val mockEngine = mockk<WorkoutClusterEngine>(relaxed = true)
+        every {
+            mockEngine.scoreClusters(
+                any(), any(), any(), any(), any(), any(), any<Set<BSportType>>(), any(), any(), any()
+            )
+        } returns listOf(sampleCluster to 0.12)
+        every {
+            mockEngine.scoreClusters(
+                any(), any(), any(), any(), any(), any(), any<BSportType>(), any(), any(), any()
+            )
+        } returns listOf(sampleCluster to 0.12)
+        WorkoutClusterEngine.resetForTesting(mockEngine)
+
+        val mockSportRepo = mockk<SportTypesRepository>(relaxed = true)
+        every { mockSportRepo.getUIName(any()) } returns "Running"
+        every { mockSportRepo.getBSportType(any()) } returns BSportType.RUN
+        SportTypesRepository.resetForTesting(mockSportRepo)
     }
 
-    private fun findSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../app/$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Source file not found: $relativePath")
+    @After
+    fun tearDown() {
+        SportTypesRepository.resetForTesting(null)
+        WorkoutClusterEngine.resetForTesting(null)
+        WorkoutClusterRepository.resetForTesting(null)
     }
 
-    private fun extractStringTagRawContent(stringsFile: File, stringKey: String): String? {
-        val content = stringsFile.readText()
+    private fun extractStringTagRawContent(locale: String, stringKey: String): String? {
+        val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+        val content = LocalizationTestCache.getRawContent(dirName, "strings.xml")
         val regex = Pattern.compile("<string\\s+name=[\"']$stringKey[\"']>(.*?)</string>", Pattern.DOTALL)
         val matcher = regex.matcher(content)
         return if (matcher.find()) matcher.group(1) else null
@@ -67,36 +142,34 @@ class ClusterNamingDialogEscapeContractTest {
     }
 
     @Test
-    fun testWorkoutClusterSelectionDialog_exposesCreateNewComposableContract() {
-        val clusterCompClass = Class.forName("com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterComponentsKt")
-        val selectClusterMethod = clusterCompClass.declaredMethods.find { it.name == "WorkoutClusterSelectionDialog" }
-        assertNotNull("WorkoutClusterSelectionDialog composable function must exist", selectClusterMethod)
-        assertTrue(Modifier.isPublic(selectClusterMethod!!.modifiers))
+    fun testWorkoutClusterSelectionDialog_rendersCreateNewOptionAndInvokesCallback() {
+        var createNewCalled = false
+        var dismissedCalled = false
 
-        // REQ-UI-462.1: Verify parameter count and presence of Function0 callback for onCreateNew
-        val function0Count = selectClusterMethod.parameterTypes.count {
-            it.name == "kotlin.jvm.functions.Function0"
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                WorkoutClusterSelectionDialog(
+                    title = context.getString(R.string.cluster_naming__select_existing_route),
+                    candidates = listOf(sampleCluster to 0.12),
+                    onSelect = {},
+                    onDismiss = { dismissedCalled = true },
+                    sportNameResolver = { "Running" },
+                    bSportTypeResolver = { BSportType.RUN },
+                    onCreateNew = { createNewCalled = true }
+                )
+            }
         }
-        assertTrue(
-            "WorkoutClusterSelectionDialog must declare Function0 callbacks for both onDismiss and onCreateNew (found $function0Count)",
-            function0Count >= 2
-        )
 
-        // Verify Compose compiler generates default-argument bitmask parameter
-        val parameterTypes = selectClusterMethod.parameterTypes
-        assertTrue(
-            "WorkoutClusterSelectionDialog must accept Compose runtime parameters",
-            parameterTypes.any { it.name == "androidx.compose.runtime.Composer" }
-        )
-        assertTrue(
-            "WorkoutClusterSelectionDialog must include default bitmask parameter",
-            parameterTypes.last() == java.lang.Integer.TYPE
-        )
+        val createNewLabel = context.getString(R.string.cluster_naming__create_new)
+        composeTestRule.onNodeWithText(createNewLabel).assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.OnClick)
+
+        assertTrue("onCreateNew callback must be invoked", createNewCalled)
+        assertTrue("onDismiss callback must be invoked after create-new", dismissedCalled)
     }
 
     @Test
     fun testClusterEscapeStrings_existAcrossAll9Locales() {
-        val resDir = findResDirectory()
         val keys = listOf(
             "cluster_naming__create_new",
             "clear",
@@ -104,11 +177,8 @@ class ClusterNamingDialogEscapeContractTest {
         )
         for (locale in supportedLocales) {
             val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
-            val stringsFile = File(resDir, "$valuesDir/strings.xml")
-            assertTrue("File $stringsFile must exist", stringsFile.exists())
-
             for (key in keys) {
-                val rawContent = extractStringTagRawContent(stringsFile, key)
+                val rawContent = extractStringTagRawContent(locale, key)
                 assertNotNull("Key '$key' must exist in $valuesDir/strings.xml", rawContent)
                 assertFalse("Key '$key' in $valuesDir must not be blank", rawContent!!.isBlank())
                 assertFalse(
@@ -131,50 +201,72 @@ class ClusterNamingDialogEscapeContractTest {
     }
 
     @Test
-    fun testRoutePickerTextField_bindsInteractionSourceContract() {
+    fun testClusterNamingDialog_routePickerTapOpensSelectionAndClearRestoresCreateNew() {
         // ATT-5818 / Rule 77 / REQ-UI-462.4 / TST-UI-462.5:
-        // Ensure ClusterNamingDialog uses MutableInteractionSource observing PressInteraction.Release
-        // and does NOT rely on dead outer Modifier.clickable on the read-only route assignment field.
-        val sourceFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt")
-        val source = sourceFile.readText()
+        // Behavioral verification that tapping the read-only route picker field opens
+        // WorkoutClusterSelectionDialog, selecting an existing route reveals the Clear button,
+        // and Clear / Create-New reverts back to creating a new route.
+        val interactionState = BackupRestoreViewModel.ClusterInteraction(
+            date = "2026-11-23",
+            start = LatLng(48.1, 11.5),
+            end = LatLng(48.1, 11.5),
+            apex = LatLng(48.12, 11.52),
+            distance = 8000.0,
+            bSportType = BSportType.RUN,
+            polyline = PolyUtil.encode(listOf(LatLng(48.1, 11.5), LatLng(48.12, 11.52))),
+            deferred = CompletableDeferred(),
+            workoutName = "Hausrunde #14"
+        )
+        var confirmedDecision: LegacyImportEngine.ClusterDecision? = null
 
-        // 1. Verify MutableInteractionSource and PressInteraction are imported
-        assertTrue(
-            "ImportBackupTabsScreen.kt must import MutableInteractionSource",
-            source.contains("import androidx.compose.foundation.interaction.MutableInteractionSource")
-        )
-        assertTrue(
-            "ImportBackupTabsScreen.kt must import PressInteraction",
-            source.contains("import androidx.compose.foundation.interaction.PressInteraction")
-        )
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                ClusterNamingDialog(
+                    state = interactionState,
+                    queueCount = 2,
+                    onConfirm = { confirmedDecision = it },
+                    onDismiss = {}
+                )
+            }
+        }
 
-        // 2. Verify routePickerInteractionSource is remembered and collects PressInteraction.Release
-        assertTrue(
-            "ClusterNamingDialog must remember MutableInteractionSource",
-            source.contains("val routePickerInteractionSource = remember(state) { MutableInteractionSource() }")
-        )
-        assertTrue(
-            "ClusterNamingDialog must collect PressInteraction.Release to open selection sheet",
-            source.contains("PressInteraction.Release") && source.contains("showSelectionDialog = true")
-        )
+        composeTestRule.waitForIdle()
+        val createNewText = context.getString(R.string.cluster_naming__create_new)
+        val selectRouteDesc = context.getString(R.string.select_route)
+        val clearDesc = context.getString(R.string.clear)
 
-        // 3. Verify interactionSource is passed to the route OutlinedTextField
-        assertTrue(
-            "OutlinedTextField must receive routePickerInteractionSource",
-            source.contains("interactionSource = routePickerInteractionSource")
-        )
+        // Initially no Clear button; tapping route picker opens WorkoutClusterSelectionDialog
+        composeTestRule.onNodeWithContentDescription(clearDesc).assertDoesNotExist()
+        composeTestRule.onNodeWithText(createNewText).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(selectRouteDesc).performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
 
-        // 4. Verify no dead Modifier.clickable remains on the route assignment OutlinedTextField
-        val routeFieldSnippetRegex = Regex(
-            """OutlinedTextField\s*\(\s*value\s*=\s*selectedCluster\?\.name[^;]+?trailingIcon""",
-            RegexOption.DOT_MATCHES_ALL
-        )
-        val snippetMatch = routeFieldSnippetRegex.find(source)
-        assertNotNull("Selected route OutlinedTextField snippet must be found", snippetMatch)
-        val fieldSnippet = snippetMatch!!.value
-        assertFalse(
-            "Selected route OutlinedTextField must NOT attach dead Modifier.clickable (Rule 77)",
-            fieldSnippet.contains(".clickable { showSelectionDialog = true }") || fieldSnippet.contains(".clickable {")
-        )
+        // Select existing route from the opened selection sheet
+        composeTestRule.onNodeWithText("Existing Loop").performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        // Clear button now appears alongside selected route; tapping it reverts to Create New
+        composeTestRule.onNodeWithText("Existing Loop").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(clearDesc).assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(createNewText).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(clearDesc).assertDoesNotExist()
+
+        // Tapping select_route icon also opens selection dialog; choosing Create New confirms null clusterId
+        composeTestRule.onNodeWithContentDescription(selectRouteDesc).performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodes(hasText(createNewText) and hasClickAction()).onFirst()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.save)).performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        assertNotNull("Confirm decision must be emitted", confirmedDecision)
+        assertNull("After clearing/create-new, clusterId must be null", confirmedDecision?.clusterId)
+        assertEquals("Hausrunde", confirmedDecision?.newClusterName)
     }
 }

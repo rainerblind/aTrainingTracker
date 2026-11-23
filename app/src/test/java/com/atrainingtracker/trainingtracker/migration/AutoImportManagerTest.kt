@@ -67,6 +67,19 @@ class AutoImportManagerTest {
         every { mockContext.applicationContext } returns mockContext
         every { mockContext.cacheDir } returns tempCacheDir
 
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockContext,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockContext,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+
         mockWorkoutRepo = mockk(relaxed = true)
         mockPeriodsRepo = mockk(relaxed = true)
         mockClusterRepo = mockk(relaxed = true)
@@ -108,6 +121,8 @@ class AutoImportManagerTest {
     @After
     fun tearDown() {
         AutoImportManager.resetForTesting()
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
         tempCacheDir.deleteRecursively()
     }

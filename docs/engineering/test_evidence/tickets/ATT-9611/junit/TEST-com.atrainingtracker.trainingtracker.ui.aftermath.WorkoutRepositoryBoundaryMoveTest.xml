@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBoundaryMoveTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:29:20.242Z" hostname="rainer-HP-EliteBook-850-G5" time="5.418">
+  <properties/>
+  <testcase name="moveLapBoundary backward shift updates samples range and replaces laps in LapsDb" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBoundaryMoveTest" time="1.872"/>
+  <testcase name="moveLapBoundary returns failure on empty samples or missing laps" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBoundaryMoveTest" time="1.767"/>
+  <testcase name="moveLapBoundary forward shift updates samples range and replaces laps in LapsDb" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBoundaryMoveTest" time="1.779"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

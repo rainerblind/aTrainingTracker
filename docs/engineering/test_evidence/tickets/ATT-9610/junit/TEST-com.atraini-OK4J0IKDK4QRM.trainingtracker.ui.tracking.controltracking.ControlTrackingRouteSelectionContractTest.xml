@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteSelectionContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:48:06.055Z" hostname="rainer-HP-EliteBook-850-G5" time="0.209">
+  <properties/>
+  <testcase name="testTrackingTabsScreen_wiresRouteSelectionButtonToBottomContentSlot" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteSelectionContractTest" time="0.043"/>
+  <testcase name="testSensorGridScreen_doesNotIntegrateAutoDetectedRouteBanner" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteSelectionContractTest" time="0.155"/>
+  <testcase name="testRouteSelectionButton_adheresToRule23AndBrandingDesignTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteSelectionContractTest" time="0.01"/>
+  <testcase name="testSensorGridScreen_doesNotContainRouteActionChipRow" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingRouteSelectionContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

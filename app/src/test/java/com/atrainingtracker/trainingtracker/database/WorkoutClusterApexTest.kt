@@ -63,7 +63,10 @@ class WorkoutClusterApexTest {
         every { TrainingApplication.getClusterTolDistance() } returns 0.20f
         every { TrainingApplication.useSportTypeForClustering() } returns false
         every { TrainingApplication.useAltitudePosForClustering() } returns false
+        every { TrainingApplication.getClusterScoreThreshold() } returns 1.2f
 
+        WorkoutClusterRepository.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
         mockkObject(WorkoutClusterDatabaseManager.Companion)
         every { WorkoutClusterDatabaseManager.getInstance(any()) } returns mockDbManager
 
@@ -86,6 +89,8 @@ class WorkoutClusterApexTest {
     @After
     fun tearDown() {
         WorkoutClusterEngine.resetForTesting(null)
+        WorkoutClusterRepository.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
         unmockkAll()
     }
 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:51:56.355Z" hostname="rainer-HP-EliteBook-850-G5" time="1.924">
+  <properties/>
+  <testcase name="testCalculateWorkoutTimeWindow_customTolerance" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.103"/>
+  <testcase name="testQueryWorkoutTimePhotos_fallbackToDateAddedWhenDateTakenZero" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.851"/>
+  <testcase name="testUpdatePhotoCoordinatesInDatabase" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.092"/>
+  <testcase name="testInterpolateCoordinatesFromPoints" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.083"/>
+  <testcase name="testSelfHealPhotos_nullIslandCoordinatesResetToNullWhenNoTrack" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.088"/>
+  <testcase name="testQueryWorkoutTimePhotos_invalidTimestamps_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.08"/>
+  <testcase name="testQueryWorkoutTimePhotos_matchingWindow" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.129"/>
+  <testcase name="testGetWorkoutPhotosDirCreatesAndReturnsExpectedPath" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.089"/>
+  <testcase name="testCalculateWorkoutTimeWindow_defaultTolerance" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.106"/>
+  <testcase name="testExtractExifMetadata_emptyFile_returnsNullCoordinates" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.227"/>
+  <testcase name="testParseExifDateTime" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.073"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterBottomSheetLocationStartsTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:44.190Z" hostname="rainer-HP-EliteBook-850-G5" time="0.02">
+  <properties/>
+  <testcase name="testDisplayedLocations_preservesCurrentlySelectedLocationEvenWithLessThan5Starts" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterBottomSheetLocationStartsTest" time="0.003"/>
+  <testcase name="testDisplayedLocations_defaultsToFilteringOutLocationsWithLessThan5Starts" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterBottomSheetLocationStartsTest" time="0.001"/>
+  <testcase name="testShowAllToggle_expandsAndCollapsesFullLocationList" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterBottomSheetLocationStartsTest" time="0.0"/>
+  <testcase name="testHasInfrequentLocations_isFalseWhenAllLocationsHaveAtLeast5Starts" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterBottomSheetLocationStartsTest" time="0.0"/>
+  <testcase name="testClusterFilterBottomSheet_composableFunctionSignatureContract" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterBottomSheetLocationStartsTest" time="0.016"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

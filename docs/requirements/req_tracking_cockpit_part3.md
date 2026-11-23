@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.17  
+**Version**: 1.0.19  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 46
+**Total Requirements**: 47
 
 ---
 
@@ -1603,6 +1603,33 @@
 
 ---
 
+### REQ-CON-057: Capability-Gated Polar Live-IMU HRM Source Selection & Removal of `BIKE_POWER` from Slope/VAM/Ascent/Descent (`ATT-8991`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-057`
+- **System Requirement(s)**: `SYSREQ-TRK-001` — Refines multi-sensor profile capability mapping (`DeviceType.getDeviceTypeList`, `DevicesDatabaseManager.getDeviceIdAndNameLists`, `SensorSourceDialog`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `HrmSensorCapabilityHelper.kt`, `DeviceType.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: `PolarOnlineStreamingBridge` (stored as `DeviceType.HRM`, `Protocol.BLUETOOTH_LE`) emits `CADENCE` and `STRIDES` on Polar H10 and Verity Sense/OH1, and `VERTICAL_OSCILLATION` and `GROUND_CONTACT_TIME` exclusively on Polar H10. Previously `DeviceType.getDeviceTypeList()` omitted `DeviceType.HRM` from `CADENCE`/`STRIDES`, listed all `HRM` devices unconditionally for `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME` (exposing ordinary ANT+/BLE HRMs and Verity Sense), and erroneously mapped `DeviceType.BIKE_POWER` to `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT` (`ATT-8991`).
+- **Description**:
+  1. *`DeviceType.getDeviceTypeList()` Polar HRM & Slope/VAM Mapping (`REQ-CON-057.1`)*: `DeviceType.getDeviceTypeList(SensorType)` SHALL include `DeviceType.HRM` for `SensorType.CADENCE` and `SensorType.STRIDES` (preserving existing cadence/stride device types), retain `DeviceType.HRM` for `SensorType.VERTICAL_OSCILLATION` and `SensorType.GROUND_CONTACT_TIME`, and SHALL remove `DeviceType.BIKE_POWER` from `SensorType.SLOPE`, `SensorType.VERTICAL_SPEED`, `SensorType.ASCENT`, and `SensorType.DESCENT` (retaining `DeviceType.VERTICAL_SPEED_AND_SLOPE` and `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED`).
+  2. *Hardware-Grounded HRM Capability Helper (`REQ-CON-057.2`)*: `HrmSensorCapabilityHelper.isSensorSupported(context, sensorType, protocol, deviceName, manufacturer, btAddress)` SHALL gate `CADENCE`/`STRIDES` strictly to `Protocol.BLUETOOTH_LE` devices classified by `PolarOfflineGattCoordinator` as Polar H10 or Polar Verity Sense/OH1 (`REQ-CON-049.4`), gate `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME` strictly to `Protocol.BLUETOOTH_LE` Polar H10 devices, reject `null` sensor types, ANT+ HRMs (including dual-protocol ANT+ Polar H10), confirmed non-Polar GATT HRMs, and non-Polar/H9 BLE HRMs on those 4 metrics, and return `true` for all HRMs on `HR`, `RR_INTERVAL`, `HRV_RMSSD`, `HRV_DFA_A1`, `HRV_ARTIFACT_RATE`, and `HRV_SDNN` (`REQ-HRV-050.1`).
+  3. *`DevicesDatabaseManager` & `SensorSourceDialog` Parity (`REQ-CON-057.3`)*: `DevicesDatabaseManager.getDeviceIdAndNameLists(SensorType)` SHALL filter `DeviceType.HRM` rows via `HrmSensorCapabilityHelper.isSensorSupported(...)` using safe `>= 0` cursor column-index extraction while preserving `BIKE_POWER` flag filtering; `SensorSourceDialog.sortNotConnectedDevices()` SHALL apply the identical `HrmSensorCapabilityHelper.isSensorSupported(...)` filter for `DeviceType.HRM` entries while preserving `REQ-UI-2804.3` HR modality sorting.
+  4. *Monolith & Zero-Regression Invariants (`REQ-CON-057.4`)*: Keep `DevicesDatabaseManager.java <= 1,671` LoC (`0` upward `.ui.*` imports), `SensorSourceDialog.kt <= 1,500` LoC, `HrmSensorCapabilityHelper.kt <= 1,500` LoC, `MySensorManager` priority tables unchanged, zero DB schema bumps, and `0` `strings*.xml` edits (`Localization Parity: N/A - no UI strings`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* paired BLE Polar H10 (renamed with hardware `H10` metadata or legacy name), BLE Polar Verity Sense, ANT+ Polar H10, ordinary BLE/ANT+ HRMs, Bike Power meter, and Run Footpod, *When* `DeviceType.getDeviceTypeList()`, `DevicesDatabaseManager.getDeviceIdAndNameLists()`, and `SensorSourceDialog.sortNotConnectedDevices()` execute, *Then* `CADENCE`/`STRIDES` include BLE H10 & Verity Sense and exclude ANT+ H10 & ordinary HRMs; `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME` include ONLY BLE H10; `SLOPE`/`VERTICAL_SPEED`/`ASCENT`/`DESCENT` exclude `BIKE_POWER`; and `HR`/`RR_INTERVAL`/`HRV_*` continue to include all HRMs.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Refines `REQ-SET-112` (`ATT-8016`), `REQ-SET-115` (`ATT-8018`), `REQ-CON-049` (`ATT-8717`/`ATT-8949`), `REQ-HRV-050.1` (`ATT-8990`), `REQ-UI-2804.3` (`ATT-9610`).
+2. *Historical Origin & Commit Trace*: `ce73751c` (`SCRUM-140`/`144`), `75c1497e` (`ATT-6279`), `6be4eb31` (`ATT-8018`).
+3. *Root Reason for Existing Formulation*: `DeviceType.getDeviceTypeList()` lacked per-device HRM capability filtering parallel to `BikePowerSensorsHelper`, and `SCRUM-140` speculatively included `BIKE_POWER` on slope/VAM.
+4. *Preservation of Core Invariants*: All HR/RR/HRV HRM source selection (`REQ-HRV-050.1`), `BikePowerSensorsHelper` gating, `MySensorManager` priority tables, `SensorSourceDialog` HR modality/health ordering (`REQ-UI-2804.3`), `EditSensorFieldDialog` `"Best Sensor"` fallback, and monolith/schema limits remain 100% preserved.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1729,3 +1756,5 @@
 | `1.0.15` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 traceability reconciliation: linked `REQ-FIL-040` to `SYSREQ-TRK-008` and `REQ-FIL-041`/`REQ-FIL-042` to `SYSREQ-TRK-010` (`TST-PRO-102.3` / `TST-PRO-103.2`). |
 | `1.0.16` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Added `[Planned]` `REQ-CON-056` (`.1`–`.4`, linked to `SYSREQ-TRK-006`, `SYSREQ-TRK-007`) for canonical 2-key radar-light DataStore consolidation + one-time migration, removal of `RadarLightController.cached*`/`TrackerService.mCachedAutoPauseConfig`, 3-`StateFlow` `RadarStateRepository` split without 1-Hz snooze wakeups, and `RadarLightController` <-> `SmartBrakeLightDetector` AB-BA deadlock elimination (`N/A - no UI strings`). |
 | `1.0.17` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `REQ-CON-056` (`.1`–`.4`) to `[Verified]` following Gate 3 (`ATT-9653`) PASS, full Stage 4 construction (`TrainingApplication.java` `1,969/2,050` LoC, `TrackerService.java` `3,184/3,220` LoC, `docs/architecture.md` `v1.0.30`, `tracker_service.md` `v1.0.12`), `569/569` in-scope unit/contract tests PASS (`:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` PASS), live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8132_walkthrough.md`. |
+| `1.0.18` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Added `[Planned]` `REQ-CON-057` (`.1`–`.4`, linked to `SYSREQ-TRK-001`) for capability-gated Polar Live-IMU HRM source selection (`CADENCE`/`STRIDES` = BLE H10 & Verity Sense; `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME` = BLE H10 only) across `DeviceType`, `DevicesDatabaseManager`, and `SensorSourceDialog`, and removal of `DeviceType.BIKE_POWER` from `SLOPE`/`VERTICAL_SPEED`/`ASCENT`/`DESCENT` (`N/A - no UI strings`). |
+| `1.0.19` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Promoted `REQ-CON-057` (`.1`–`.4`) to `[Verified]` following Gate 3 (`ATT-9665`) PASS, full Stage 4 construction (`HrmSensorCapabilityHelper.kt` `98` LoC, `DeviceType.java` `269` LoC, `DevicesDatabaseManager.java` `1,657/1,671` LoC, `SensorSourceDialog.kt` `601/1,500` LoC), `127/127` PASS across 15 unit/Compose/contract suites (`0` new warnings), `4/4` Python safety linters PASS, live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8991_walkthrough.md`. |

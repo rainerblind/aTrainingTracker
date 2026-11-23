@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterRadarTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:28:24.721Z" hostname="rainer-HP-EliteBook-850-G5" time="4.827">
+  <properties/>
+  <testcase name="testFitFileWriter_withoutRadarSamples_emitsZeroRadarEventsAndZeroDeveloperFields" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterRadarTest" time="2.829"/>
+  <testcase name="testFitFileWriter_withRadarSamples_exportsRadarThreatAlertEventsAndDeveloperFields" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterRadarTest" time="1.998"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.DropboxBackupDefaultsTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:01:06.539Z" hostname="rainer-HP-EliteBook-850-G5" time="2.687">
+  <properties/>
+  <testcase name="testCleanInstallDefaults_automatedBackupsEnabledAndIntervalOneDay_TST_MIG_006_TST_MIG_007" classname="com.atrainingtracker.trainingtracker.migration.DropboxBackupDefaultsTest" time="0.455"/>
+  <testcase name="testBackupWorkerSchedule_enqueuesDailyPeriodicWorkByDefault_TST_MIG_003_TST_MIG_006_TST_MIG_007" classname="com.atrainingtracker.trainingtracker.migration.DropboxBackupDefaultsTest" time="2.232"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

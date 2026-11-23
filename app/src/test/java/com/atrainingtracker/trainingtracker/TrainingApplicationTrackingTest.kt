@@ -148,6 +148,7 @@ class TrainingApplicationTrackingTest {
         TrainingApplication.setManualPauseLock(false, null)
         TrainingApplication.setAutoPaused(false, null)
         setStaticField(TrainingApplication::class.java, "cAppContext", null)
+        setStaticField(TrainingApplication::class.java, "cSharedPreferences", null)
     }
 
     private fun setStaticField(clazz: Class<*>, fieldName: String, value: Any?) {

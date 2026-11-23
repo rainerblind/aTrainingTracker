@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:46:53.230Z" hostname="rainer-HP-EliteBook-850-G5" time="45.839">
+  <properties/>
+  <testcase name="isMorningHrvCheckVisible_whenNeitherHrvNorWellnessEnabled_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="16.089"/>
+  <testcase name="testHasPairedRemoteDevices_initialValueSeededFromDatabase" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.151"/>
+  <testcase name="testHasPairedRemoteDevices_whenRealPairedDeviceAdded_emitsTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.097"/>
+  <testcase name="testOnStartTracking_sendsBroadcast_whenNoUnfinishedWorkout" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.197"/>
+  <testcase name="isMorningHrvCheckVisible_defaultCutoffHour8" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.082"/>
+  <testcase name="isMorningHrvCheckVisible_whenPastCutoffHour_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.09"/>
+  <testcase name="isMorningHrvCheckVisible_whenPolarVeritySensePaired_remainsEligibleAndHidesAfterOpticalSave_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.136"/>
+  <testcase name="testOnStartTracking_sendsBroadcast_whenAlreadyTracking" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.121"/>
+  <testcase name="testHasPairedRemoteDevices_whenRealDeviceIsUnpaired_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.104"/>
+  <testcase name="testHasPairedRemoteDevices_whenOnlySmartphoneDevicesExist_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.064"/>
+  <testcase name="testRemoteDevices_filtersOutOrphanedOrDeletedConnectedSensors" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.033"/>
+  <testcase name="isMorningHrvCheckVisible_whenWellnessModeWithoutHrm_emitsTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.242"/>
+  <testcase name="testOnStartTracking_emitsShowRecoveryDialog_whenUnfinishedWorkoutExistsAndNotTracking" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.185"/>
+  <testcase name="testNavigationEvent_buffersEventsAcrossStoppedLifecycle" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.155"/>
+  <testcase name="isMorningHrvCheckVisible_whenAllConditionsMet_emitsTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.077"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

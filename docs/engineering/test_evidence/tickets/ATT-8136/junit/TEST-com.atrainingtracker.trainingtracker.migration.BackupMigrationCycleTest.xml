@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupMigrationCycleTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:00:44.005Z" hostname="rainer-HP-EliteBook-850-G5" time="0.507">
+  <properties/>
+  <testcase name="testFullBackupWipeAndRestoreCycle_bundlesAndRestoresState_TST_MIG_001" classname="com.atrainingtracker.trainingtracker.migration.BackupMigrationCycleTest" time="0.281"/>
+  <testcase name="testIncrementalImport_deduplicatesExistingWorkoutByFileBaseName_TST_MIG_002" classname="com.atrainingtracker.trainingtracker.migration.BackupMigrationCycleTest" time="0.162"/>
+  <testcase name="testBackupLock_preventsConcurrentReentryDuringActiveMigration_TST_MIG_001" classname="com.atrainingtracker.trainingtracker.migration.BackupMigrationCycleTest" time="0.064"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

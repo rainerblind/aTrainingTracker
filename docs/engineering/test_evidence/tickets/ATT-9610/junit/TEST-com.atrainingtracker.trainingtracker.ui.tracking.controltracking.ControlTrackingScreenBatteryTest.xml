@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:48:35.525Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testCascadeDecoupling_whenBackgroundLocationSkipped_proceedsToBatteryOptimization" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest" time="0.0"/>
+  <testcase name="testStartButtonWarningBadge_evaluatesCorrectlyAcrossPermissionStates" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest" time="0.0"/>
+  <testcase name="testControlTrackingScreenSourceContract_verifiesRequiredComponentsWired" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest" time="0.005"/>
+  <testcase name="testCascadeDecoupling_whenBatteryOptimizationSkipped_startsTrackingWithoutLoop" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest" time="0.0"/>
+  <testcase name="testResumeSynchronization_whenBatteryExempt_autoStartsIfPending" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenBatteryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

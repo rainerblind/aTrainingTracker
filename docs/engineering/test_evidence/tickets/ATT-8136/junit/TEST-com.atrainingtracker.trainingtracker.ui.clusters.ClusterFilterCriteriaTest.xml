@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:44.222Z" hostname="rainer-HP-EliteBook-850-G5" time="0.027">
+  <properties/>
+  <testcase name="testActiveDistanceFilterChipFormatting_andDismissalContract_TST_UI_380_5" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.002"/>
+  <testcase name="testCombinedCriteriaMatching" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.002"/>
+  <testcase name="testSearchQueryMatching" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <testcase name="testDistanceThresholdFiltering" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.001"/>
+  <testcase name="testElevationGainIntervalMatching_andActiveFilterCount_TST_UI_389_3" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <testcase name="testJsonDeserializationEmptyOrNull" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.016"/>
+  <testcase name="testActiveFilterCount" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.001"/>
+  <testcase name="testActiveElevationFilterChipFormatting_andDismissalContract_TST_UI_389_7" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <testcase name="testJsonSerializationRoundtrip_withDistanceInterval_andLegacyCompatibility_TST_UI_380_4" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.002"/>
+  <testcase name="testEquipmentFiltering" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.001"/>
+  <testcase name="testJsonSerializationRoundtrip_withElevationGainInterval_andLegacyCompatibility_TST_UI_389_4" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <testcase name="testDistanceIntervalMatching_andActiveFilterCount_TST_UI_380_3" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.001"/>
+  <testcase name="testJsonSerializationAndDeserialization" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <testcase name="testHitCountThresholdFiltering" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <testcase name="testEmptyCriteriaMatchesEverything" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteriaTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

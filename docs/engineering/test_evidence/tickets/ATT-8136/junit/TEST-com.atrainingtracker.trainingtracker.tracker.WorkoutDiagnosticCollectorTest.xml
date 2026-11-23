@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:52:35.057Z" hostname="rainer-HP-EliteBook-850-G5" time="0.766">
+  <properties/>
+  <testcase name="testPayloadSizeCapUnder8KB" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" time="0.18"/>
+  <testcase name="testEmailBodyFormatting" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" time="0.123"/>
+  <testcase name="testCategoryResolution" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" time="0.111"/>
+  <testcase name="testRepeatedSampleInsertErrorsDeduplicatedWithCountAndTimestamps" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" time="0.109"/>
+  <testcase name="testCleanCollectorReturnsNullJsonAndEmptyList" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" time="0.136"/>
+  <testcase name="testLifecycleStagesSeparation" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutDiagnosticCollectorTest" time="0.104"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:00:14.250Z" hostname="rainer-HP-EliteBook-850-G5" time="20.151">
+  <properties/>
+  <testcase name="testAutomatedBackupSubtitle_structuralContract_resolvesAllFourStates" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="10.504"/>
+  <testcase name="testUploadToCloud_whenNeitherConnected_emitsErrorWithoutAcquiringLock" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="1.76"/>
+  <testcase name="testUploadToCloud_whenBothConnectedAndOneFails_persistsPartialSuccess" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="1.018"/>
+  <testcase name="testCreateAndUploadToBoth_hasNewlineBeforeDropboxGoogleDrive_acrossAll9Locales" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.738"/>
+  <testcase name="testCloudBackupStrings_9LocaleParity" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.56"/>
+  <testcase name="testCloudBackupButton_hasCenteredTextAlignment" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.558"/>
+  <testcase name="testNoCloudConnectedDialog_structuralContract_inImportBackupTabsScreen" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.653"/>
+  <testcase name="testUploadToCloud_whenOnlyDropboxConnected_dispatchesOnlyToDropbox" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.888"/>
+  <testcase name="testUploadToCloud_whenOnlyGoogleDriveConnected_dispatchesOnlyToGoogleDrive" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.842"/>
+  <testcase name="testUploadToCloud_whenLockCannotBeAcquired_emitsError" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.664"/>
+  <testcase name="testCloudBackupButton_structuralContract_resolvesAllFourStates" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.544"/>
+  <testcase name="testUploadToCloud_whenLocalBackupFails_recordsFailureAndReleasesLock" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.64"/>
+  <testcase name="testUploadToCloud_whenBothConnectedAndBothSucceed_persistsSuccessAndParity" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.782"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

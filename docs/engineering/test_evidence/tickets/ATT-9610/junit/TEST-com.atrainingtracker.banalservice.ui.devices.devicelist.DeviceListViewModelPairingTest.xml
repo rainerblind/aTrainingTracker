@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:47:59.614Z" hostname="rainer-HP-EliteBook-850-G5" time="2.405">
+  <properties/>
+  <testcase name="pairing unconfigured BIKE_POWER emits zone onboarding event with tab 2 and pwr_paired reason" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.715"/>
+  <testcase name="pairing configured BIKE_POWER does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.265"/>
+  <testcase name="unpairing an already paired device does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.274"/>
+  <testcase name="pairing configured HRM does not emit zone onboarding event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.285"/>
+  <testcase name="pairing non-physiological sensors completes silently without emitting zone event" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.308"/>
+  <testcase name="pairing unconfigured HRM emits zone onboarding event with tab 0 and hr_paired reason" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.287"/>
+  <testcase name="testOnPairedChanged_unpairingAutoPairedDevice_updatesDeviceWithPairedFalse" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPairingTest" time="0.27"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

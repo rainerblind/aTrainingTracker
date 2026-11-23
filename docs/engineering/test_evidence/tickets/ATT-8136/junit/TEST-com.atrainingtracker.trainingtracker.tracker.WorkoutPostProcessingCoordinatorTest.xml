@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:53:41.462Z" hostname="rainer-HP-EliteBook-850-G5" time="0.975">
+  <properties/>
+  <testcase name="testFaultIsolation_stageExceptionContinuesPipelineClearsActiveStateAndPostsWarning_tstTrk091_1" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.171"/>
+  <testcase name="testDeferredExport_preservesExplicitSyncToHealthConnectTrueAndFalseOverrides_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.106"/>
+  <testcase name="testBackToBackEnqueue_serializesSingleWorkerAndNeverClobbersNewWork_tstTrk091_1" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.104"/>
+  <testcase name="testPostBackfillPhysiologyRecompute_runsStrictlyOnceAfterBackfillAndBeforeHrvReloadExport_TST_TRK_093_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.103"/>
+  <testcase name="testEnqueue_executesStrictStageOrderWithoutBlockingCaller_tstTrk091_1" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.103"/>
+  <testcase name="testEarlySaveDuringPostProcessing_defersExportAndExportsFreshRowAfterWorkoutFinished_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.102"/>
+  <testcase name="testEnqueueDuringIdleFinalization_hostLockPreventsFgsOrNotificationClobber_tstTrk091_1" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.182"/>
+  <testcase name="testShouldRestartDrain_preservesBatchHadWarningFromPrecedingJob_tstTrk091_1" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingCoordinatorTest" time="0.104"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -115,7 +115,8 @@ class CursorUtilsTest {
 
     @Test
     fun testMapList_withMultipleRows_returnsMappedList() {
-        every { mockCursor.moveToNext() } returnsMany listOf(true, true, true, false)
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.moveToNext() } returnsMany listOf(true, true, false)
         every { mockCursor.getString(0) } returnsMany listOf("row1", "row2", "row3")
 
         val result = CursorUtils.mapList(mockCursor) { cursor ->
@@ -123,19 +124,21 @@ class CursorUtilsTest {
         }
 
         assertEquals(listOf("row1", "row2", "row3"), result)
-        verify(exactly = 4) { mockCursor.moveToNext() }
+        verify(exactly = 1) { mockCursor.moveToFirst() }
+        verify(exactly = 3) { mockCursor.moveToNext() }
     }
 
     @Test
     fun testMapList_withEmptyCursor_returnsEmptyList() {
-        every { mockCursor.moveToNext() } returns false
+        every { mockCursor.moveToFirst() } returns false
 
         val result = CursorUtils.mapList(mockCursor) { cursor ->
             cursor.getString(0)
         }
 
         assertTrue(result.isEmpty())
-        verify(exactly = 1) { mockCursor.moveToNext() }
+        verify(exactly = 1) { mockCursor.moveToFirst() }
+        verify(exactly = 0) { mockCursor.moveToNext() }
     }
 
     @Test
@@ -148,7 +151,7 @@ class CursorUtilsTest {
 
     @Test
     fun testMapList_whenExceptionThrown_propagatesCleanly() {
-        every { mockCursor.moveToNext() } returns true
+        every { mockCursor.moveToFirst() } returns true
         every { mockCursor.getString(0) } throws SQLiteException("Disk I/O error")
 
         assertThrows(SQLiteException::class.java) {

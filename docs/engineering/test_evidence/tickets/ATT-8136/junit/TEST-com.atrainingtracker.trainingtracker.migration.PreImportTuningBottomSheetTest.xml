@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.PreImportTuningBottomSheetTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:02:17.949Z" hostname="rainer-HP-EliteBook-850-G5" time="0.613">
+  <properties/>
+  <testcase name="testPreImportDescriptionTranslationsAreDistinctAndLocalized" classname="com.atrainingtracker.trainingtracker.migration.PreImportTuningBottomSheetTest" time="0.333"/>
+  <testcase name="testAllRequiredPreImportTuningKeysExistAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.migration.PreImportTuningBottomSheetTest" time="0.279"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

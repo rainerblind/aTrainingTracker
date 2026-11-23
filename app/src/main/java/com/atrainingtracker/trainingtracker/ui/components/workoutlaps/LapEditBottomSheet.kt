@@ -70,7 +70,7 @@ import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds

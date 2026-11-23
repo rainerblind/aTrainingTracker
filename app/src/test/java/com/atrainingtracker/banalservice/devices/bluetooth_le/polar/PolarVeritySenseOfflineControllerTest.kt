@@ -516,6 +516,7 @@ class PolarVeritySenseOfflineControllerTest {
 
         val now = LocalDateTime.now().minusMinutes(5)
         val anchorMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val sdkUtcStart = java.time.Instant.ofEpochMilli(anchorMs).atOffset(java.time.ZoneOffset.UTC).toLocalDateTime()
         val matchingEntry = PolarOfflineRecordingEntry(
             path = "/U/0/20261115/R/120500/HR.BPB",
             size = 1024L,
@@ -535,7 +536,7 @@ class PolarVeritySenseOfflineControllerTest {
         )
         val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
             data = PolarHrData(samples),
-            startTime = now
+            startTime = sdkUtcStart
         )
         val pairsSlot = slot<List<android.util.Pair<Long, Int>>>()
 
@@ -601,6 +602,7 @@ class PolarVeritySenseOfflineControllerTest {
 
         val now = LocalDateTime.now().minusMinutes(3)
         val anchorMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val sdkUtcStart = java.time.Instant.ofEpochMilli(anchorMs).atOffset(java.time.ZoneOffset.UTC).toLocalDateTime()
         val matchingEntry = PolarOfflineRecordingEntry(
             path = "/U/0/20261115/R/120800/HR.BPB",
             size = 640L,
@@ -609,7 +611,7 @@ class PolarVeritySenseOfflineControllerTest {
         )
         val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
             data = PolarHrData(listOf(createHrSample(hr = 140))),
-            startTime = now
+            startTime = sdkUtcStart
         )
 
         every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_120800") } returns true
@@ -683,6 +685,7 @@ class PolarVeritySenseOfflineControllerTest {
 
         val now = LocalDateTime.now().minusMinutes(10)
         val anchorMs = now.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val sdkUtcStart = java.time.Instant.ofEpochMilli(anchorMs).atOffset(java.time.ZoneOffset.UTC).toLocalDateTime()
         val matchedPath = "/U/0/20261115/R/121500/HR.BPB"
         val matchingEntry = PolarOfflineRecordingEntry(
             path = matchedPath,
@@ -698,8 +701,10 @@ class PolarVeritySenseOfflineControllerTest {
         )
         val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
             data = PolarHrData(listOf(createHrSample(hr = 150), createHrSample(hr = 160))),
-            startTime = now
+            startTime = sdkUtcStart
         )
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-15_121500") } returns true
+        every { mockSamplesDb.patchMissingHeartRateSamples("2026-11-15_121500", anchorMs, any()) } returns 2
         val devItem = DevicesDatabaseManager.RemoteDeviceUIDataCacheItem(
             7L, "Polar Sense $verityPolarId", DeviceType.HRM, Protocol.BLUETOOTH_LE
         )
@@ -1410,6 +1415,7 @@ class PolarVeritySenseOfflineControllerTest {
                 true
             )
         every { mockWorkoutRepo.getBaseFileName(workoutId) } returns baseFileName
+        every { mockSamplesDb.hasMissingHeartRateSamples(baseFileName) } returns true
         every { mockSamplesDb.patchMissingHeartRateSamples(eq(baseFileName), any(), any()) } returns 2
         every { mockSamplesDb.calcHeartRateStats(baseFileName) } returns null
 
@@ -1440,7 +1446,7 @@ class PolarVeritySenseOfflineControllerTest {
         every { sharedApi.listOfflineRecordings(verityPolarId) } returns flowOf(hrEntry)
         val hrData = PolarOfflineRecordingData.HrOfflineRecording(
             data = PolarHrData(listOf(createHrSample(hr = 135), createHrSample(hr = 138))),
-            startTime = hrEntry.date
+            startTime = java.time.Instant.ofEpochMilli(startMs).atOffset(java.time.ZoneOffset.UTC).toLocalDateTime()
         )
         coEvery { sharedApi.getOfflineRecord(verityPolarId, hrEntry, null) } returns hrData
         coEvery { sharedApi.removeOfflineRecord(verityPolarId, hrEntry) } just Runs
@@ -1468,5 +1474,197 @@ class PolarVeritySenseOfflineControllerTest {
         assertTrue("Verity Sense retry sync must succeed on Attempt 1 after mid-wait disconnect + mid-discovery", synced)
         verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(workoutId) }
         coVerify(exactly = 1) { sharedApi.removeOfflineRecord(verityPolarId, hrEntry) }
+    }
+
+    // REQ-SET-130.1 / REQ-SET-130.3 / TST-SET-132.3
+    @Test
+    fun testStopAndBackfill_nonUtcJvmTimezone_alignsUtcStartTimeWithoutHourShift_TST_SET_132_3() = runBlocking {
+        val originalTz = java.util.TimeZone.getDefault()
+        try {
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Berlin"))
+            PolarVeritySenseOfflineController.sdkIntOverride = 33
+            PolarVeritySenseOfflineController.apiOverride = mockApi
+            PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+            val expectedAnchorMs = java.time.Instant.parse("2026-11-22T09:43:08Z").toEpochMilli()
+            val windowStartMs = java.time.Instant.parse("2026-11-22T09:43:06Z").toEpochMilli()
+            val localEntry = PolarOfflineRecordingEntry(
+                path = "/U/0/20261122/R/104308/HR.REC",
+                size = 2048L,
+                date = LocalDateTime.of(2026, 11, 22, 10, 43, 8), // CET local PFTP path
+                type = PolarBleApi.PolarDeviceDataType.HR
+            )
+            // Polar SDK 8.6.0 OfflineRecordingData.parseStartTime returns UTC LocalDateTime (09:43:08)
+            val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
+                data = PolarHrData(listOf(createHrSample(87), createHrSample(92), createHrSample(101))),
+                startTime = LocalDateTime.of(2026, 11, 22, 9, 43, 8)
+            )
+            val anchorSlot = slot<Long>()
+            val pairsSlot = slot<List<android.util.Pair<Long, Int>>>()
+            every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-22_104306") } returns true
+            every {
+                mockSamplesDb.patchMissingHeartRateSamples("2026-11-22_104306", capture(anchorSlot), capture(pairsSlot))
+            } returns 3
+            every { mockSamplesDb.calcHeartRateStats("2026-11-22_104306") } returns
+                WorkoutSamplesDatabaseManager.HrStats(87.0, 101.0, 93.3, 3)
+
+            mockReadyFeatures(verityPolarId)
+            coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+            coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+            coEvery { mockApi.getOfflineRecordingStatus(verityPolarId) } returns emptyList()
+            every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(localEntry)
+            coEvery { mockApi.getOfflineRecord(verityPolarId, localEntry, null) } returns hrRecording
+            coEvery { mockApi.removeOfflineRecord(verityPolarId, localEntry) } just Runs
+            coEvery { mockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+            val ok = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+                context = context,
+                workoutId = 2430L,
+                baseFileName = "2026-11-22_104306",
+                startTimeMs = windowStartMs
+            )
+            assertTrue(ok)
+            assertEquals("Anchor must match exact UTC epoch with zero CET -1h shift", expectedAnchorMs, anchorSlot.captured)
+            assertEquals(3, pairsSlot.captured.size)
+            assertEquals(
+                listOf(
+                    expectedAnchorMs to 87,
+                    (expectedAnchorMs + 1_000L) to 92,
+                    (expectedAnchorMs + 2_000L) to 101
+                ),
+                PolarVeritySenseOfflineController.alignHrSamples(hrRecording, anchorSlot.captured)
+            )
+            coVerify(exactly = 1) { mockApi.removeOfflineRecord(verityPolarId, localEntry) }
+        } finally {
+            java.util.TimeZone.setDefault(originalTz)
+        }
+    }
+
+    // REQ-SET-130.3 / TST-SET-132.3
+    @Test
+    fun testBackfillZeroPatchedWithMissingHr_rejectsCommitPreservesFlashAndPendingState_TST_SET_132_3() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        PolarVeritySenseOfflineController.setArmedForTesting(true, verityPolarId, verityMac)
+
+        val anchorMs = java.time.Instant.parse("2026-11-22T09:43:08Z").toEpochMilli()
+        val entry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261122/R/104308/HR.REC",
+            size = 1024L,
+            date = java.time.Instant.ofEpochMilli(anchorMs).atZone(ZoneId.systemDefault()).toLocalDateTime(),
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
+            data = PolarHrData(listOf(createHrSample(106))),
+            startTime = LocalDateTime.of(2026, 11, 22, 8, 43, 8) // Misaligned out-of-window recording
+        )
+
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-22_104306_misaligned") } returns true
+        every { mockSamplesDb.patchMissingHeartRateSamples("2026-11-22_104306_misaligned", any(), any()) } returns 0
+        mockReadyFeatures(verityPolarId)
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+        coEvery { mockApi.getOfflineRecordingStatus(verityPolarId) } returns emptyList()
+        every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(entry)
+        coEvery { mockApi.getOfflineRecord(verityPolarId, entry, null) } returns hrRecording
+        coEvery { mockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+        // 1. Stop-time backfill: 0 rows patched while missing HR persists -> reject, preserve flash, persist pending
+        val stopOk = PolarVeritySenseOfflineController.stopAndBackfillWorkout(
+            context = context,
+            workoutId = 2431L,
+            baseFileName = "2026-11-22_104306_misaligned",
+            startTimeMs = anchorMs
+        )
+        assertFalse("Zero patched rows with remaining missing HR must fail commit", stopOk)
+        coVerify(exactly = 0) { mockApi.removeOfflineRecord(any(), any()) }
+        verify(exactly = 0) { mockSummariesDb.updateExtremaValue(2431L, SensorType.HR, any(), any(), any()) }
+        verify(exactly = 1) { mockSummariesDb.setPolarSyncPending(2431L, verityPolarId, any(), any(), any()) }
+
+        // 2. Pending retry sync: 0 rows patched while missing HR persists -> reject, preserve flash & pending flag
+        every { mockSummariesDb.getPolarPendingSyncData(2431L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+                verityPolarId,
+                "${PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX}${entry.path}",
+                anchorMs,
+                anchorMs + 60_000L,
+                true
+            )
+        every { mockWorkoutRepo.getBaseFileName(2431L) } returns "2026-11-22_104306_misaligned"
+
+        val retryOk = PolarVeritySenseOfflineController.syncPendingWorkout(context, 2431L)
+        assertFalse("Pending retry with 0 patched rows & missing HR must preserve flash and pending flag", retryOk)
+        coVerify(exactly = 0) { mockApi.removeOfflineRecord(any(), any()) }
+        verify(exactly = 0) { mockSummariesDb.clearPolarSyncPending(2431L) }
+    }
+
+    // REQ-SET-130.3 / TST-SET-132.3
+    @Test
+    @Suppress("LongMethod")
+    fun testPendingSyncAlreadyCompleteHr_fastPathsAndDefenseInDepthWithoutLivelock_TST_SET_132_3() = runBlocking {
+        PolarVeritySenseOfflineController.sdkIntOverride = 33
+        PolarVeritySenseOfflineController.apiOverride = mockApi
+        mockkConstructor(ExportManager::class)
+        every { anyConstructed<ExportManager>().invalidateWorkoutExport(any()) } just Runs
+        every { anyConstructed<ExportManager>().exportWorkout(any()) } just Runs
+
+        val anchorMs = java.time.Instant.parse("2026-11-22T09:43:08Z").toEpochMilli()
+        val entry = PolarOfflineRecordingEntry(
+            path = "/U/0/20261122/R/104308/HR.REC",
+            size = 1024L,
+            date = java.time.Instant.ofEpochMilli(anchorMs).atZone(ZoneId.systemDefault()).toLocalDateTime(),
+            type = PolarBleApi.PolarDeviceDataType.HR
+        )
+        val hrRecording = PolarOfflineRecordingData.HrOfflineRecording(
+            data = PolarHrData(listOf(createHrSample(110), createHrSample(112))),
+            startTime = LocalDateTime.of(2026, 11, 22, 9, 43, 8)
+        )
+        mockReadyFeatures(verityPolarId)
+        coEvery { mockApi.connectToDevice(verityPolarId) } just Runs
+        coEvery { mockApi.waitForConnection(verityPolarId) } just Runs
+        coEvery { mockApi.getOfflineRecordingStatus(verityPolarId) } returns emptyList()
+        every { mockApi.listOfflineRecordings(verityPolarId) } returns flowOf(entry)
+        coEvery { mockApi.getOfflineRecord(verityPolarId, entry, null) } returns hrRecording
+        coEvery { mockApi.removeOfflineRecord(verityPolarId, entry) } just Runs
+        coEvery { mockApi.disconnectFromDevice(verityPolarId) } just Runs
+
+        // Branch A: executePendingSyncSession fast-path when HR is already complete before download
+        every { mockSummariesDb.getPolarPendingSyncData(2432L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+                verityPolarId,
+                "${PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX}${entry.path}",
+                anchorMs,
+                anchorMs + 60_000L,
+                true
+            )
+        every { mockWorkoutRepo.getBaseFileName(2432L) } returns "2026-11-22_104306_complete"
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-22_104306_complete") } returns false
+
+        val fastPathOk = PolarVeritySenseOfflineController.syncPendingWorkout(context, 2432L)
+        assertTrue("Already-complete HR pending sync must succeed via fast path without livelock", fastPathOk)
+        coVerify(exactly = 0) { mockApi.getOfflineRecord(any(), any(), any()) }
+        verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(2432L) }
+        verify(exactly = 1) { mockWorkoutRepo.refreshWorkout(2432L) }
+        coVerify(exactly = 1) { mockApi.removeOfflineRecord(verityPolarId, entry) }
+        verify(exactly = 0) { anyConstructed<ExportManager>().exportWorkout(any()) }
+
+        // Branch B: defense-in-depth in applyBackfillAndCommit (missing at entry check, complete by patch time)
+        every { mockSummariesDb.getPolarPendingSyncData(2433L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData(
+                verityPolarId,
+                "${PolarVeritySenseOfflineController.VERITY_EXERCISE_PREFIX}${entry.path}",
+                anchorMs,
+                anchorMs + 60_000L,
+                true
+            )
+        every { mockWorkoutRepo.getBaseFileName(2433L) } returns "2026-11-22_104306_race_complete"
+        every { mockSamplesDb.hasMissingHeartRateSamples("2026-11-22_104306_race_complete") } returnsMany listOf(true, false)
+        every { mockSamplesDb.patchMissingHeartRateSamples("2026-11-22_104306_race_complete", any(), any()) } returns 0
+
+        val defenseOk = PolarVeritySenseOfflineController.syncPendingWorkout(context, 2433L)
+        assertTrue("Defense-in-depth patchedCount==0 with !hasMissingHeartRateSamples must clear pending without livelock", defenseOk)
+        coVerify(exactly = 1) { mockApi.getOfflineRecord(verityPolarId, entry, null) }
+        verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(2433L) }
+        coVerify(exactly = 2) { mockApi.removeOfflineRecord(verityPolarId, entry) }
     }
 }

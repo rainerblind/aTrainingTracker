@@ -40,7 +40,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.EncodedStreams
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.ExtremaRecord
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import io.mockk.*
@@ -159,6 +159,9 @@ class TrackerServiceResumeTest {
         every { TrainingApplication.isManualPauseLocked() } returns false
         every { TrainingApplication.isAutoPaused() } returns false
         every { TrainingApplication.isPaused() } returns false
+
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any()) } returns com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig()
 
         mockkConstructor(Intent::class)
         every { anyConstructed<Intent>().setPackage(any()) } returns mockk(relaxed = true)

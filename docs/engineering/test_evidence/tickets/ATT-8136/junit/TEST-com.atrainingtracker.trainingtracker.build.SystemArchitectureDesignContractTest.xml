@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:42.559Z" hostname="rainer-HP-EliteBook-850-G5" time="0.137">
+  <properties/>
+  <testcase name="testSystemArchitecture_productionCodeGrounding" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.104"/>
+  <testcase name="testSystemArchitecture_crossChecksSystemRequirementsSpec" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.002"/>
+  <testcase name="testSystemArchitecture_definesAllSystemInterfaces" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.001"/>
+  <testcase name="testSystemArchitecture_definesDynamicBehaviorSequenceDiagrams" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.001"/>
+  <testcase name="testSystemArchitecture_100PercentSysreqAllocationMatrix" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.002"/>
+  <testcase name="testSystemArchitecture_crossChecksDataExchangeSpec" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.001"/>
+  <testcase name="testSystemArchitecture_definesAllSystemElements" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.001"/>
+  <testcase name="testSystemArchitecture_tracesToLivingRequirements" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.025"/>
+  <testcase name="testSystemArchitecture_fileExistsAndHasHeader" classname="com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

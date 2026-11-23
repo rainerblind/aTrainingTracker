@@ -83,6 +83,20 @@ class BackupCloudProviderUnificationTest {
         every { mockContext.filesDir } returns filesDir
         every { mockApp.filesDir } returns filesDir
         every { mockContext.applicationContext } returns mockApp
+        every { mockApp.applicationContext } returns mockApp
+
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockApp,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockApp,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
 
         mockkStatic(PreferenceManager::class)
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns mockPrefs
@@ -126,6 +140,8 @@ class BackupCloudProviderUnificationTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

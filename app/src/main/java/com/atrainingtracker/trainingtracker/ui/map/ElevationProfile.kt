@@ -75,7 +75,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogra
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.*
-import com.atrainingtracker.trainingtracker.ui.util.NumericalEncodingUtils
+import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
 import kotlin.math.abs

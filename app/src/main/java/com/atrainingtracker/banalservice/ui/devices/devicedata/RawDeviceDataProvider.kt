@@ -84,6 +84,16 @@ class RawDeviceDataProvider(
             emptyMap<String, WheelPosition>() to emptyMap<String, Map<WheelPosition, String>>()
         }
 
+        val btAddress = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS)
+            .takeIf { it.isNotBlank() }
+            ?: if (deviceType == DeviceType.HRM && protocol == Protocol.BLUETOOTH_LE) {
+                runCatching { devicesDatabaseManager.getBluetoothMACAddress(id) }
+                    .getOrNull()
+                    ?.takeIf { it.isNotBlank() }
+            } else {
+                null
+            }
+
         return DeviceRawData(
             id = id,
             protocol = protocol,
@@ -102,7 +112,8 @@ class RawDeviceDataProvider(
             polarH10OfflineRecording = polarH10OfflineRecording,
             polarLiveImuEnabled = polarLiveImuEnabled,
             linkedWheelPositions = linkedWheelPositions,
-            wheelPositionConflicts = wheelPositionConflicts
+            wheelPositionConflicts = wheelPositionConflicts,
+            btAddress = btAddress
         )
     }
 

@@ -63,7 +63,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.math.abs
 
 /**
  * Controller for Polar Verity Sense (and compatible optical Polar sensors) offline HR recording
@@ -88,8 +87,6 @@ object PolarVeritySenseOfflineController {
     const val POLAR_SPORT_POOL_SWIMMING = 103L
     private const val ENTRY_MATCH_TOLERANCE_MS = 180_000L
     private const val PENDING_MATCH_TOLERANCE_MS = 600_000L
-    private const val MIN_VALID_HR_BPM = 25
-    private const val MAX_VALID_HR_BPM = 250
     private const val MILLIS_PER_SECOND = 1000L
     private const val SYSTEM_BUSY_ERROR_NAME = "SYSTEM_BUSY"
 
@@ -355,6 +352,11 @@ object PolarVeritySenseOfflineController {
         val needsBackfill = shouldBackfill(appContext, baseFileName)
         val windowStartMs = if (startTimeMs > 0L) startTimeMs else System.currentTimeMillis()
         val windowEndMs = System.currentTimeMillis()
+        Log.i(
+            TAG,
+            "Polar Verity Sense stopAndBackfillWorkout: workoutId=$workoutId polarId=$targetId " +
+                "needsBackfill=$needsBackfill window=$windowStartMs..$windowEndMs"
+        )
         if (apiOverride == null && PolarOfflineGattCoordinator.isTargetConfirmedDisconnected(targetId, targetMac)) {
             Log.i(TAG, "Polar Verity Sense $targetId confirmed disconnected at workout stop; fast-failing backfill.")
             if (needsBackfill && workoutId > 0L) {
@@ -826,8 +828,20 @@ object PolarVeritySenseOfflineController {
                 preferredPath = preferredPath,
                 toleranceMs = PENDING_MATCH_TOLERANCE_MS
             )
+            var alreadyCompleteFastPath = false
             val committed = when {
                 !session.ready -> false
+                session.offlineEntry != null && !baseFileName.isNullOrEmpty() && !shouldBackfill(appContext, baseFileName) -> {
+                    alreadyCompleteFastPath = true
+                    Log.i(
+                        TAG,
+                        "Verity pending sync fast path: workoutId=$workoutId entry=${session.offlineEntry.path} " +
+                            "alreadyCompleteHr=true; skipping PFTP HR download and clearing pending state."
+                    )
+                    summariesDb.clearPolarSyncPending(workoutId)
+                    repo.refreshWorkout(workoutId)
+                    true
+                }
                 session.offlineEntry != null -> {
                     val hrData = api.getOfflineRecord(polarId, session.offlineEntry, secret = null)
                         as? PolarOfflineRecordingData.HrOfflineRecording
@@ -838,9 +852,12 @@ object PolarVeritySenseOfflineController {
                             baseFileName = baseFileName,
                             hrData = hrData,
                             fallbackAnchorMs = windowStartMs,
-                            clearPendingFlag = true
+                            clearPendingFlag = true,
+                            entryPath = session.offlineEntry.path,
+                            windowEndMs = windowEndMs
                         )
                     } else {
+                        Log.w(TAG, "Verity pending sync: getOfflineRecord returned null for workoutId=$workoutId entry=${session.offlineEntry.path}")
                         false
                     }
                 }
@@ -859,10 +876,14 @@ object PolarVeritySenseOfflineController {
             if (committed) {
                 if (session.offlineEntry != null) {
                     api.removeOfflineRecord(polarId, session.offlineEntry)
+                    Log.i(TAG, "Verity pending sync removed flash entry ${session.offlineEntry.path} for workoutId=$workoutId (alreadyCompleteHr=$alreadyCompleteFastPath)")
                 } else if (session.swimRef != null) {
                     api.deleteTrainingSession(polarId, session.swimRef)
+                    Log.i(TAG, "Verity pending sync deleted swim session ${session.swimRef.path} for workoutId=$workoutId")
                 }
-                reexportUpdatedWorkout(appContext, repo, workoutId, baseFileName)
+                if (!alreadyCompleteFastPath) {
+                    reexportUpdatedWorkout(appContext, repo, workoutId, baseFileName)
+                }
             }
             committed
         }
@@ -967,8 +988,10 @@ object PolarVeritySenseOfflineController {
                 // Zero-gap fast path: skip full PFTP download while stopping & cleaning matched flash entry
                 if (session.offlineEntry != null) {
                     api.removeOfflineRecord(backfillCtx.polarId, session.offlineEntry)
+                    Log.i(TAG, "Verity zero-gap fast path: removed flash entry ${session.offlineEntry.path} for workoutId=${backfillCtx.workoutId}")
                 } else if (session.swimRef != null) {
                     api.deleteTrainingSession(backfillCtx.polarId, session.swimRef)
+                    Log.i(TAG, "Verity zero-gap fast path: deleted swim session ${session.swimRef.path} for workoutId=${backfillCtx.workoutId}")
                 }
                 true
             }
@@ -986,14 +1009,18 @@ object PolarVeritySenseOfflineController {
                         baseFileName = backfillCtx.baseFileName,
                         hrData = hrData,
                         fallbackAnchorMs = backfillCtx.windowStartMs,
-                        clearPendingFlag = false
+                        clearPendingFlag = false,
+                        entryPath = session.offlineEntry.path,
+                        windowEndMs = backfillCtx.windowEndMs
                     )
                 } else {
+                    Log.w(TAG, "Verity stop backfill: getOfflineRecord returned null for workoutId=${backfillCtx.workoutId} entry=${session.offlineEntry.path}")
                     false
                 }
                 if (committed) {
                     // Multi-session flash safety: delete ONLY the matched entry strictly AFTER SQLite commit
                     api.removeOfflineRecord(backfillCtx.polarId, session.offlineEntry)
+                    Log.i(TAG, "Verity stop backfill removed flash entry ${session.offlineEntry.path} for workoutId=${backfillCtx.workoutId}")
                 }
                 committed
             }
@@ -1109,52 +1136,21 @@ object PolarVeritySenseOfflineController {
     internal fun buildHrPairsFromIntList(
         hrSamples: List<Int>,
         anchorMs: Long
-    ): List<android.util.Pair<Long, Int>> {
-        if (hrSamples.isEmpty()) return emptyList()
-        val pairs = ArrayList<android.util.Pair<Long, Int>>(hrSamples.size)
-        for ((index, rawBpm) in hrSamples.withIndex()) {
-            if (rawBpm in MIN_VALID_HR_BPM..MAX_VALID_HR_BPM) {
-                pairs.add(android.util.Pair(anchorMs + index * MILLIS_PER_SECOND, rawBpm))
-            }
-        }
-        return pairs
-    }
+    ): List<android.util.Pair<Long, Int>> =
+        PolarOfflineHrTimestampAligner.alignIntHrSamples(hrSamples, anchorMs)
+            .map { (ts, bpm) -> android.util.Pair(ts, bpm) }
 
     @VisibleForTesting
     internal fun extractTurnTimestamps(
         distanceSamples: List<Float>,
         startMs: Long,
         sampleIntervalMs: Long = MILLIS_PER_SECOND
-    ): List<Long> {
-        if (distanceSamples.size < 2) return emptyList()
-        val turns = mutableListOf<Long>()
-        var prevDist = distanceSamples[0]
-        for (i in 1 until distanceSamples.size) {
-            val dist = distanceSamples[i]
-            if (dist > prevDist) {
-                turns.add(startMs + i * sampleIntervalMs)
-                prevDist = dist
-            }
-        }
-        return turns
-    }
+    ): List<Long> =
+        PolarOfflineHrTimestampAligner.extractTurnTimestamps(distanceSamples, startMs, sampleIntervalMs)
 
     @VisibleForTesting
-    internal fun parsePbLocalDateTime(pbDateTime: Types.PbLocalDateTime?): Long? {
-        if (pbDateTime == null || !pbDateTime.hasDate() || !pbDateTime.hasTime()) return null
-        val date = pbDateTime.date
-        val time = pbDateTime.time
-        val ldt = LocalDateTime.of(
-            date.year,
-            date.month,
-            date.day,
-            time.hour,
-            time.minute,
-            time.seconds,
-            time.millis * 1_000_000
-        )
-        return ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-    }
+    internal fun parsePbLocalDateTime(pbDateTime: Types.PbLocalDateTime?): Long? =
+        PolarOfflineHrTimestampAligner.parsePbLocalDateTimeMs(pbDateTime)
 
     @VisibleForTesting
     internal fun parsePbDuration(pbDuration: Types.PbDuration?): Long {
@@ -1208,66 +1204,73 @@ object PolarVeritySenseOfflineController {
     }
 
 
+    @Suppress("LongParameterList")
     private fun applyBackfillAndCommit(
         appContext: Context,
         workoutId: Long,
         baseFileName: String?,
         hrData: PolarOfflineRecordingData.HrOfflineRecording,
         fallbackAnchorMs: Long,
-        clearPendingFlag: Boolean
+        clearPendingFlag: Boolean,
+        entryPath: String? = null,
+        windowEndMs: Long = 0L
     ): Boolean {
         val anchorMs = resolveRecordingAnchorMs(hrData, fallbackAnchorMs)
-        val hrPairs = buildHrPairs(hrData, anchorMs)
-        if (!baseFileName.isNullOrEmpty() && hrPairs.isNotEmpty()) {
-            PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
-                appContext,
-                workoutId,
-                baseFileName,
-                anchorMs,
-                hrPairs
-            )
+        val aligned = alignHrSamples(hrData, anchorMs)
+        val hrPairs = aligned.map { (timestampMs, bpm) -> android.util.Pair(timestampMs, bpm) }
+        val hrValues = aligned.map { it.second }
+        val firstSampleMs = aligned.firstOrNull()?.first
+        val lastSampleMs = aligned.lastOrNull()?.first
+
+        fun logOutcome(patched: Int, committed: Boolean, reason: String? = null) {
+            val suffix = reason?.let { " reason=$it" }.orEmpty()
+            val msg = PolarOfflineHrTimestampAligner.formatBackfillDiagnostics(
+                controller = "Verity", workoutId = workoutId, entryPath = entryPath,
+                rawStartTime = hrData.startTime, anchorMs = anchorMs,
+                windowStartMs = fallbackAnchorMs, windowEndMs = windowEndMs,
+                hrValues = hrValues, firstSampleMs = firstSampleMs, lastSampleMs = lastSampleMs,
+                patchedCount = patched, committed = committed, flashRemoved = committed
+            ) + suffix
+            if (committed) Log.i(TAG, msg) else Log.w(TAG, msg)
+        }
+
+        if (baseFileName.isNullOrEmpty() || hrPairs.isEmpty()) {
+            logOutcome(0, false, if (baseFileName.isNullOrEmpty()) "missing_base_file_name" else "empty_valid_hr_samples")
+            return false
+        }
+
+        val patchedCount = PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+            appContext, workoutId, baseFileName, anchorMs, hrPairs
+        )
+        if (patchedCount > 0) {
             recomputeHrSummaryMetrics(appContext, workoutId, baseFileName)
+            if (clearPendingFlag) WorkoutSummariesDatabaseManager.getInstance(appContext).clearPolarSyncPending(workoutId)
+            WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+            logOutcome(patchedCount, true)
+            return true
         }
-        if (clearPendingFlag) {
-            WorkoutSummariesDatabaseManager.getInstance(appContext).clearPolarSyncPending(workoutId)
+
+        if (WorkoutSamplesDatabaseManager.getInstance(appContext).hasMissingHeartRateSamples(baseFileName)) {
+            logOutcome(0, false, "zero_patched_with_missing_hr")
+            return false
         }
+
+        if (clearPendingFlag) WorkoutSummariesDatabaseManager.getInstance(appContext).clearPolarSyncPending(workoutId)
         WorkoutRepository.getInstance(appContext).refreshWorkout(workoutId)
+        logOutcome(0, true, "already_complete_hr")
         return true
     }
 
     private fun resolveRecordingAnchorMs(
         hrData: PolarOfflineRecordingData.HrOfflineRecording,
         fallbackAnchorMs: Long
-    ): Long {
-        val parsedMs = hrData.startTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        return if (parsedMs > 0L) parsedMs else fallbackAnchorMs
-    }
+    ): Long = PolarOfflineHrTimestampAligner.resolveHrOfflineAnchorMs(hrData.startTime, fallbackAnchorMs)
 
     @VisibleForTesting
     internal fun alignHrSamples(
         hrData: PolarOfflineRecordingData.HrOfflineRecording,
         anchorMs: Long
-    ): List<Pair<Long, Int>> {
-        val samples = hrData.data.samples
-        if (samples.isEmpty()) return emptyList()
-        val pairs = ArrayList<Pair<Long, Int>>(samples.size)
-        for ((index, sample) in samples.withIndex()) {
-            val rawBpm = if (sample.hr > 0) sample.hr else sample.correctedHr
-            if (rawBpm in MIN_VALID_HR_BPM..MAX_VALID_HR_BPM) {
-                pairs.add((anchorMs + index * MILLIS_PER_SECOND) to rawBpm)
-            }
-        }
-        return pairs
-    }
-
-    private fun buildHrPairs(
-        hrData: PolarOfflineRecordingData.HrOfflineRecording,
-        anchorMs: Long
-    ): List<android.util.Pair<Long, Int>> {
-        return alignHrSamples(hrData, anchorMs).map { (timestampMs, bpm) ->
-            android.util.Pair(timestampMs, bpm)
-        }
-    }
+    ): List<Pair<Long, Int>> = PolarOfflineHrTimestampAligner.alignHrSamples(hrData.data.samples, anchorMs)
 
     private fun recomputeHrSummaryMetrics(
         appContext: Context,
@@ -1437,32 +1440,13 @@ object PolarVeritySenseOfflineController {
         windowEndMs: Long,
         preferredPath: String? = null,
         toleranceMs: Long = ENTRY_MATCH_TOLERANCE_MS
-    ): PolarOfflineRecordingEntry? {
-        val hrEntries = entries.filter { it.type == PolarBleApi.PolarDeviceDataType.HR }
-        val zone = ZoneId.systemDefault()
-        val pathMatch = if (!preferredPath.isNullOrBlank()) {
-            hrEntries.firstOrNull { it.path == preferredPath || it.path.contains(preferredPath) }
-        } else {
-            null
-        }
-        return when {
-            hrEntries.isEmpty() -> null
-            pathMatch != null -> pathMatch
-            windowStartMs <= 0L -> hrEntries.minByOrNull { entry ->
-                entry.date.atZone(zone).toInstant().toEpochMilli()
-            }
-            else -> {
-                val effectiveEndMs = if (windowEndMs >= windowStartMs) windowEndMs else windowStartMs
-                hrEntries.filter { entry ->
-                    val entryMs = entry.date.atZone(zone).toInstant().toEpochMilli()
-                    entryMs in (windowStartMs - toleranceMs)..(effectiveEndMs + toleranceMs)
-                }.minByOrNull { entry ->
-                    val entryMs = entry.date.atZone(zone).toInstant().toEpochMilli()
-                    abs(entryMs - windowStartMs)
-                }
-            }
-        }
-    }
+    ): PolarOfflineRecordingEntry? = PolarOfflineHrTimestampAligner.selectMatchingHrEntry(
+        entries = entries,
+        windowStartMs = windowStartMs,
+        windowEndMs = windowEndMs,
+        preferredPath = preferredPath,
+        toleranceMs = toleranceMs
+    )
 
     private fun recordFailure(t: Throwable) {
         isArmed.set(false)

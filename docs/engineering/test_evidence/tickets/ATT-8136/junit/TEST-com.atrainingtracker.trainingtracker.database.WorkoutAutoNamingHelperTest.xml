@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:56.307Z" hostname="rainer-HP-EliteBook-850-G5" time="9.086">
+  <properties/>
+  <testcase name="testGenerateWorkoutName_zeroOrNegativeDistance_omitsDistanceSuffix" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.479"/>
+  <testcase name="testGenerateWorkoutName_startOnly_withDistance_metric" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.395"/>
+  <testcase name="testGenerateWorkoutName_pointToPoint_run" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.406"/>
+  <testcase name="testGenerateWorkoutName_backwardCompatibility_omittedDistanceParam" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.407"/>
+  <testcase name="testGenerateWorkoutName_pointToPoint_bike" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.47"/>
+  <testcase name="testFormatSessionDistance_imperialPrecision" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.425"/>
+  <testcase name="testLocationWithoutName_usesCoordinateFallback" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.454"/>
+  <testcase name="testGenerateWorkoutName_destinationOnly" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.444"/>
+  <testcase name="testGenerateWorkoutName_startOnly" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.429"/>
+  <testcase name="testGenerateWorkoutName_roundTrip_withDistance_metric" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.441"/>
+  <testcase name="testClusterSeedName_nullLocation_returnsNull" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.447"/>
+  <testcase name="testGenerateWorkoutName_roundTrip_bike" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.402"/>
+  <testcase name="testFormatSessionDistance_metricPrecision" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.416"/>
+  <testcase name="testGenerateWorkoutName_pointToPoint_other" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.431"/>
+  <testcase name="testGenerateWorkoutName_pointToPoint_doesNotAppendDistance" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.455"/>
+  <testcase name="testGenerateWorkoutName_roundTrip_other" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.415"/>
+  <testcase name="testGenerateWorkoutName_destinationOnly_doesNotAppendDistance" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.432"/>
+  <testcase name="testGenerateWorkoutName_roundTrip_distanceWithinRadius" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.447"/>
+  <testcase name="testClusterSeedName_seedFromLocation" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.434"/>
+  <testcase name="testGenerateWorkoutName_neitherKnown_returnsNull" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.47"/>
+  <testcase name="testGenerateWorkoutName_roundTrip_run" classname="com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelperTest" time="0.383"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

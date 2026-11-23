@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.WorkoutSamplesHrBackfillTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:25:25.949Z" hostname="rainer-HP-EliteBook-850-G5" time="9.274">
+  <properties/>
+  <testcase name="testPatchMissingHeartRateSamples_rejectsOneHourTimezoneShiftWithoutConstantClamping_TST_SET_132_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.WorkoutSamplesHrBackfillTest" time="9.005"/>
+  <testcase name="testPatchMissingHeartRateSamples_enforcesExact5000MsBoundaryAndPatchesAuthenticDynamicGaps_TST_SET_132_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.WorkoutSamplesHrBackfillTest" time="0.126"/>
+  <testcase name="testPatchMissingHeartRateSamples_preservesValidHrAndOtherSensorsAndComputesStats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.WorkoutSamplesHrBackfillTest" time="0.143"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

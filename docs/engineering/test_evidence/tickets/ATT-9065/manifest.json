@@ -1,0 +1,19 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "4cf6e017bc7ae25483028183065a982cc99d28ee",
+  "files": {
+    "evidence_summary.json": "3d6ab59bb17e0e84fc0382073dfd27a77ee6e4aa73cdf30e9e73b5d62acd4eae",
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest.xml": "f86817405d54efa3a04df0a63439bf89a2394a3db295fff06f2aad989fc199cf",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "daae047d61e5403f82c43dd725e194b324709d120e321edbd294308432527b15",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml": "dd1e3e1990f8513ed08510c15ead4bbab322b5c13dcde7f9fe3540fc2d4c1310",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest.xml": "0c189db5f02565c592732b51180a62e3a46fae0e08f5bee0cfe930f2cac4fad0",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest.xml": "742abf6f058d1766a39b90d7599075955df527901837f47223e59dc57ee86bcf",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntDialogLocalizationTest.xml": "72c097b57d47cceafea5fac9e899709292c88674d028d11e59797edc87c585c8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest.xml": "15b85e4fc58f464450972a45209f1d215b965ad6ad9836522b848a904ebda3b9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest.xml": "de70d4d686ce0671b19ae0bbf9841aca3d10a2089086e50669392e372234c7b8",
+    "screenshots/ATT-9065_ant_dialog.png": "644eccadfa3360f65e58656af1003e84a4d6ede1c7fb0773efde713f4f92c5ba"
+  },
+  "run_started_utc": "2026-11-23T20:33:31.044771+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9065"
+}

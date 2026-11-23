@@ -197,6 +197,9 @@ class WorkoutClustersViewModelTest {
         every { mockPrefManager.clusterFilterCriteriaFlow } returns MutableStateFlow(ClusterFilterCriteria())
         MyPreferenceManager.setInstanceForTesting(mockPrefManager)
 
+        val mockTuningDataStore = mockk<com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore>(relaxed = true)
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(mockTuningDataStore)
+
         every { mockClusterRepo.allClusters } returns allClustersFlow
         every { mockClusterRepo.clusterMutationEvents } returns clusterMutationEventsFlow
         every { mockBanalRepo.currentLocation } returns currentLocationFlow
@@ -215,6 +218,7 @@ class WorkoutClustersViewModelTest {
     fun tearDown() {
         activeViewModel?.viewModelScope?.cancel()
         activeViewModel = null
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
         MyPreferenceManager.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:03:59.972Z" hostname="rainer-HP-EliteBook-850-G5" time="4.516">
+  <properties/>
+  <testcase name="testParseDstBoundariesOffsetsAndFractionalSeconds_TST_MIG_055_2" classname="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" time="0.747"/>
+  <testcase name="testConcurrentMultiThreadGpxParsing_isDeterministic_TST_MIG_055_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" time="0.81"/>
+  <testcase name="testParseValidGpx" classname="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" time="0.739"/>
+  <testcase name="testParseGpx_maxSpeedFallsBackToPeakIntraLapSegmentSpeedAndGuardsDt_TST_MIG_058_3" classname="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" time="0.743"/>
+  <testcase name="testParseGpx_maxSpeedUsesPeakExplicitSpeedAndIgnoresOutliers_TST_MIG_058_3" classname="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" time="0.739"/>
+  <testcase name="testParseGpx_subSecondHighFrequencyTrackpointsComputeExactMaxSpeed_TST_MIG_058_3" classname="com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParserTest" time="0.738"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

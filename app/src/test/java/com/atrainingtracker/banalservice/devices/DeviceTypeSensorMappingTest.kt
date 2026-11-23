@@ -69,4 +69,46 @@ class DeviceTypeSensorMappingTest {
             caloriesDevices != null && caloriesDevices.contains(DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
         )
     }
+
+    // TST-CON-057.1: CADENCE/STRIDES include DeviceType.HRM (capability-gated in DevicesDatabaseManager),
+    // VERTICAL_OSCILLATION/GROUND_CONTACT_TIME retain DeviceType.HRM, and SLOPE/VAM/ASCENT/DESCENT exclude BIKE_POWER
+    @Test
+    fun testPolarHrmCadenceStridesAndBikePowerRemovedFromSlopeVamAscentDescent_TST_CON_057_1() {
+        val cadenceDevices = DeviceType.getDeviceTypeList(SensorType.CADENCE)
+        assertTrue("CADENCE must include DeviceType.HRM", cadenceDevices != null && cadenceDevices.contains(DeviceType.HRM))
+        assertTrue("CADENCE must retain BIKE_CADENCE", cadenceDevices != null && cadenceDevices.contains(DeviceType.BIKE_CADENCE))
+        assertTrue("CADENCE must retain BIKE_POWER", cadenceDevices != null && cadenceDevices.contains(DeviceType.BIKE_POWER))
+        assertTrue("CADENCE must retain RUN_SPEED", cadenceDevices != null && cadenceDevices.contains(DeviceType.RUN_SPEED))
+
+        val stridesDevices = DeviceType.getDeviceTypeList(SensorType.STRIDES)
+        assertTrue("STRIDES must include DeviceType.HRM", stridesDevices != null && stridesDevices.contains(DeviceType.HRM))
+        assertTrue("STRIDES must retain RUN_SPEED", stridesDevices != null && stridesDevices.contains(DeviceType.RUN_SPEED))
+
+        val voDevices = DeviceType.getDeviceTypeList(SensorType.VERTICAL_OSCILLATION)
+        val gctDevices = DeviceType.getDeviceTypeList(SensorType.GROUND_CONTACT_TIME)
+        assertTrue("VERTICAL_OSCILLATION must include DeviceType.HRM", voDevices != null && voDevices.contains(DeviceType.HRM))
+        assertTrue("GROUND_CONTACT_TIME must include DeviceType.HRM", gctDevices != null && gctDevices.contains(DeviceType.HRM))
+
+        val slopeAndVamMetrics = listOf(
+            SensorType.SLOPE,
+            SensorType.VERTICAL_SPEED,
+            SensorType.ASCENT,
+            SensorType.DESCENT
+        )
+        for (sensor in slopeAndVamMetrics) {
+            val deviceTypes = DeviceType.getDeviceTypeList(sensor)
+            assertFalse(
+                "$sensor must NOT include DeviceType.BIKE_POWER (REQ-CON-057.1)",
+                deviceTypes != null && deviceTypes.contains(DeviceType.BIKE_POWER)
+            )
+            assertTrue(
+                "$sensor must retain VERTICAL_SPEED_AND_SLOPE",
+                deviceTypes != null && deviceTypes.contains(DeviceType.VERTICAL_SPEED_AND_SLOPE)
+            )
+            assertTrue(
+                "$sensor must retain ALTITUDE_AND_SLOPE_ATT_FUSED",
+                deviceTypes != null && deviceTypes.contains(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED)
+            )
+        }
+    }
 }

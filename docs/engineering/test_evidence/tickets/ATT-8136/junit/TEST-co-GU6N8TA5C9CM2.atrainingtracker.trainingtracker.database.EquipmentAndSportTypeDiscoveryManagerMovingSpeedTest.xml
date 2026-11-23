@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:49:57.745Z" hostname="rainer-HP-EliteBook-850-G5" time="0.467">
+  <properties/>
+  <testcase name="resolveEffectiveSpeedForIdentity_usesMovingMeanForUnknownAndRun_neverP90" classname="com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest" time="0.001"/>
+  <testcase name="resolveEffectiveSpeedForIdentity_enforcesSparseSampleFloor" classname="com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest" time="0.0"/>
+  <testcase name="resolveSnapshotSportTypeId_honorsExplicitWalkAndHandlesRelaxedMock" classname="com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest" time="0.177"/>
+  <testcase name="resolveIdentityOverload_errandBikeRideMatchesEnduranceBikeAndGear" classname="com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest" time="0.288"/>
+  <testcase name="resolveEffectiveSpeedForIdentity_errandBikeRidesResolveToCyclingCruisingSpeed" classname="com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManagerMovingSpeedTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

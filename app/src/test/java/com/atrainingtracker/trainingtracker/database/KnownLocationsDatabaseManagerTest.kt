@@ -259,7 +259,8 @@ class KnownLocationsDatabaseManagerTest {
         setupMockCursorColumns(mockCursor)
 
         // 2 unlocked legacy rows
-        every { mockCursor.moveToNext() } returns true andThen true andThen false
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.moveToNext() } returns true andThen false
         every { mockCursor.getLong(0) } returns 1L andThen 2L
         every { mockCursor.getString(1) } returns "Start A" andThen "Start B"
         every { mockCursor.getDouble(3) } returns 500.0 andThen 400.0
@@ -381,6 +382,14 @@ class KnownLocationsDatabaseManagerTest {
 
         val totalLocations = 65
         var currentIdx = 0
+        every { mockCursor.moveToFirst() } answers {
+            if (totalLocations > 0) {
+                currentIdx = 1
+                true
+            } else {
+                false
+            }
+        }
         every { mockCursor.moveToNext() } answers {
             if (currentIdx < totalLocations) {
                 currentIdx++
@@ -784,7 +793,8 @@ class KnownLocationsDatabaseManagerTest {
         setupMockCursorColumns(mockCursor)
 
         // Location: id=42, Home, radius=200m, lat=48.0, lng=11.0, bloated hitCount=625
-        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.moveToNext() } returns false
         every { mockCursor.getLong(0) } returns 42L
         every { mockCursor.getString(1) } returns "Home"
         every { mockCursor.getDouble(3) } returns 520.0

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" tests="33" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:24:58.693Z" hostname="rainer-HP-EliteBook-850-G5" time="60.947">
+  <properties/>
+  <testcase name="testApplySwimBackfill_turnsLessThanOrEqualToAnchor_filtersUnanchoredTurnsAndPreventsPhantomLaps" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="6.995"/>
+  <testcase name="testSyncPendingWorkout_backfillsClearsPendingDeletesOnlyMatchedEntryAndReexports" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="3.434"/>
+  <testcase name="testStopAndBackfill_systemBusy_savesSwimBusyPendingTag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.834"/>
+  <testcase name="testStopAndBackfill_zeroGapFastPath_skipsDownloadAndRemovesMatchedEntry" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.561"/>
+  <testcase name="testRenamedVeritySense_armsViaDisHardwareMetadataAndSerialId" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="2.513"/>
+  <testcase name="testArmForActiveWorkout_detectsRenamedDeviceViaCapabilityStore" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.525"/>
+  <testcase name="testStopAndBackfill_swimMode_patchesHrAndDeletesSessionPostCommit" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.938"/>
+  <testcase name="testArming_unprovisionedSensor_invokesDoFirstTimeUse" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.581"/>
+  <testcase name="testSyncPendingWorkout_recoversFromMidWaitDisconnectAndMidDiscoveryDelayedFeature_TST_SET_131_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.809"/>
+  <testcase name="testStopAndBackfill_sensorUnreachable_recordsVerityPendingSync" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.479"/>
+  <testcase name="testBackfillZeroPatchedWithMissingHr_rejectsCommitPreservesFlashAndPendingState_TST_SET_132_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.544"/>
+  <testcase name="testSwimSession_parsesPoolSwimAndExtractsHrAndTurns" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.584"/>
+  <testcase name="testStopAndBackfill_hangingWaitForConnection_timesOutAtStopConnectionTimeoutMs" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.613"/>
+  <testcase name="testSyncPendingPolarWorkout_routesVerityPrefixAndLegacyH10Separately" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="2.31"/>
+  <testcase name="testStopAndFetchOfflineHr_andRemoveOfflineRecord" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.553"/>
+  <testcase name="testPendingSyncAlreadyCompleteHr_fastPathsAndDefenseInDepthWithoutLivelock_TST_SET_132_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.805"/>
+  <testcase name="testExecuteArming_reusesSharedCoordinatorSingletonAndMultiplexerWithoutClobbering" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.578"/>
+  <testcase name="testArmForActiveWorkout_detectsVeritySenseAndIgnoresPolarH10" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.5"/>
+  <testcase name="testExecuteArming_systemBusy_nonBlockingResetsArmedAndResumesGatt" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.621"/>
+  <testcase name="testMidWorkoutFringeFlapInvariant_neverStopsOrQueriesWhileAlreadyArmed" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.501"/>
+  <testcase name="testArmForActiveWorkout_skipsUnwornVeritySenseWhenActiveH10Receives" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.817"/>
+  <testcase name="testExecuteArming_awaitsFeatureCallbacksBeforeSetLocalTime" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.668"/>
+  <testcase name="testStopAndBackfillWorkout_staleArmedTokenPreservesNewerWorkoutArmedStateAndSuppressesNotification_tstTrk091_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.533"/>
+  <testcase name="testExecuteArming_stopsPreExistingHrBeforeStartingNewHrRecording" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.489"/>
+  <testcase name="testApiLevelBelow33_doesNotArmOrInvokeSdk" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.507"/>
+  <testcase name="testStopAndBackfill_sqliteFailure_doesNotDeleteFlashAndPersistsPendingSync" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.467"/>
+  <testcase name="testStopAndBackfill_nonUtcJvmTimezone_alignsUtcStartTimeWithoutHourShift_TST_SET_132_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.487"/>
+  <testcase name="testWorkoutStopped_preservesArmedStateForEndWorkoutBackfill" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.439"/>
+  <testcase name="testIsVeritySwimBusy_identifiesSwimBusyPrefix" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.452"/>
+  <testcase name="testSyncPendingWorkout_cancellationExceptionIsRethrown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.401"/>
+  <testcase name="testStopAndBackfill_gapsExist_aligns1HzHrUpdatesExtremaAndProtectsHrv" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.466"/>
+  <testcase name="testStopAndBackfill_confirmedDisconnectedDevice_fastFailsWithoutWaitingForConnection" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.478"/>
+  <testcase name="testSyncPendingWorkout_systemBusy_updatesSwimBusyPendingTag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineControllerTest" time="1.458"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

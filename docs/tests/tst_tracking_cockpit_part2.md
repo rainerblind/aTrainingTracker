@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.19  
+**Version**: 1.0.21  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 96
+**Total Tests**: 97
 
 ---
 
@@ -2075,6 +2075,28 @@
 
 ---
 
+### TST-CON-057: **Capability-Gated Polar Live-IMU HRM Source Selection & `BIKE_POWER` Slope/VAM Removal Verification (`ATT-8991`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-057` (`REQ-CON-057.1`–`REQ-CON-057.4`)
+- **Component**: `HrmSensorCapabilityHelper.kt`, `DeviceType.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`
+- **Jira**: `ATT-8991` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Verified Test Methods**: `DeviceTypeSensorMappingTest#testPolarHrmCadenceStridesAndBikePowerRemovedFromSlopeVamAscentDescent_TST_CON_057_1`, `HrmSensorCapabilityHelperTest#testBlePolarH10_supportsCadenceStridesVoGctAndHrHrv_TST_CON_057_2`, `HrmSensorCapabilityHelperTest#testBlePolarVeritySense_supportsCadenceAndStridesOnlyNotVoOrGct_TST_CON_057_2`, `HrmSensorCapabilityHelperTest#testAntPlusAndNonPolarOrSpoofedHrms_excludedFromLiveImuButKeptForHrHrv_TST_CON_057_2`, `HrmSensorCapabilityHelperTest#testNullSensorTypeAndThrowingContext_resilientFallback_TST_CON_057_2`, `DevicesDatabaseManagerTest#testGetDeviceIdAndNameLists_capabilityGatesPolarHrmAndExcludesBikePowerFromSlope_TST_CON_057_3`, `SensorSourceDialogPriorityTest#testNotConnectedDevices_capabilityGatesPolarLiveImuAndNormalizesUnknownManufacturer_TST_CON_057_3`, `SensorSourceDialogContractTest#testComposeRender_cadenceAndVerticalOscillationCapabilityFilterHrms_TST_CON_057_3`
+- **Test Description**:
+  1. *`DeviceType.getDeviceTypeList()` Mapping Verification (`TST-CON-057.1` — `DeviceTypeSensorMappingTest.kt`)*:
+     • Assert `DeviceType.getDeviceTypeList(CADENCE)` and `DeviceType.getDeviceTypeList(STRIDES)` contain `DeviceType.HRM` alongside existing cadence/stride sources while `CALORIES` stays isolated.
+     • Assert `DeviceType.getDeviceTypeList(SLOPE/VERTICAL_SPEED/ASCENT/DESCENT)` exclude `DeviceType.BIKE_POWER` while preserving `DeviceType.VERTICAL_SPEED_AND_SLOPE` and `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED`.
+  2. *`HrmSensorCapabilityHelper` Capability Matrix (`TST-CON-057.2` — `HrmSensorCapabilityHelperTest.kt`)*:
+     • Verify BLE Polar H10 (renamed hardware DIS/SDK `H10` & legacy name) returns `true` for `CADENCE`, `STRIDES`, `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`, `HR`, `RR_INTERVAL`, and `HRV_*`.
+     • Verify BLE Polar Verity Sense/OH1 (renamed hardware `VERITY_SENSE` / `offline_rec_` & legacy name) returns `true` for `CADENCE`/`STRIDES`/`HR`/`HRV_*` and `false` for `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME`.
+     • Verify ANT+ Polar H10, ordinary BLE/ANT+ HRMs, Polar H9, confirmed non-Polar GATT spoofs, and rename-suppressed HRMs return `false` for all 4 Live-IMU metrics while returning `true` for `HR`, `RR_INTERVAL`, and `HRV_*`.
+  3. *`DevicesDatabaseManager` & `SensorSourceDialog` Integration & Behavioral Compose Verification (`TST-CON-057.3` — `DevicesDatabaseManagerTest.kt`, `SensorSourceDialogPriorityTest.kt`, `SensorSourceDialogContractTest.kt`)*:
+     • Exercise `DevicesDatabaseManager.getDeviceIdAndNameLists()` across `CADENCE`, `STRIDES`, `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`, `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, `DESCENT`, `HR`, and `HRV_RMSSD` with mixed DB rows (incl. partial-column cursor safety & `BIKE_POWER` flag filtering preservation).
+     • Verify `SensorSourceDialog.sortNotConnectedDevices()` and behavioral Robolectric `createComposeRule()` UI rendering filter non-IMU HRMs out of `CADENCE`/`STRIDES` and filter Verity Sense/ordinary HRMs out of `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME` while preserving `REQ-UI-2804.3` HR modality sorting.
+  4. *Monolith, Priority & Governance Contract Verification (`TST-CON-057.4` — `MySensorManagerPriorityTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`)*:
+     • Assert `DevicesDatabaseManager.java <= 1,671` LoC (`0` upward `.ui.*` imports), `SensorSourceDialog.kt <= 1,500` LoC, `MySensorManager` priority ranks unchanged, zero `src/main` reads, and `Localization Parity: N/A - 0 string changes`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2216,3 +2238,5 @@
 | `1.0.17` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `TST-FIL-042` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`160/160` PASS across 13 targeted suites: `AttFusedTimestampNormalizerTest` `3/3`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `PhoneCarriageClassifierTest` `16/16`, `UnicycleOdometryEkfTest` `21/21`, `AttFusedColdStartHelperTest` `3/3`, `KinematicSportTypeDiscriminatorTest` `6/6`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
 | `1.0.18` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Added `[Planned]` `TST-CON-056` (`.1`–`.4`, strictly symmetric `REQ-CON-056`) covering canonical 2-key radar-light migration & SSoT, zero stale caches in `RadarLightController` & `TrackerService`, 3-`StateFlow` `RadarStateRepository` split without 1-Hz snooze wakeups, and multi-threaded `ThreadMXBean` AB-BA deadlock stress verification (`N/A - no UI strings`). |
 | `1.0.19` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `TST-CON-056` (`.1`–`.4`) to `[Verified]` with verbatim method citations (`569/569` in-scope tests PASS across 18 suites incl. `RadarBrakeLightConcurrencyStressTest 5/5`, `TuningPreferencesDataStoreRadarLightControlModeTest 10/10`, `RadarLightControllerTest`, `RadarSnoozeControllerTest`, `RadarStateRepositoryTest`, `RadarTrafficSimulatorTest`, `ANTBikeRadarDeviceTest`, `BTLERadarDeviceTest`, `ArchitectureConformanceContractTest`, live `emulator-5554` smoke `0` crashes, `Rule 8.5` PNG verified). |
+| `1.0.20` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Added `[Planned]` `TST-CON-057` (`.1`–`.4`, strictly symmetric `REQ-CON-057`) covering `DeviceType.getDeviceTypeList()` HRM/BIKE_POWER updates, `HrmSensorCapabilityHelper` matrix (BLE H10 vs Verity Sense vs ANT+ H10 vs non-Polar/spoofed HRMs vs HR/HRV), `DevicesDatabaseManager.getDeviceIdAndNameLists()` & `SensorSourceDialog` Compose verification, and monolith/governance contracts (`N/A - 0 string changes`). |
+| `1.0.21` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Promoted `TST-CON-057` (`.1`–`.4`) to `[Verified]` with 8 verbatim `TestClass#testMethod` citations (`127/127` PASS across 15 suites: `HrmSensorCapabilityHelperTest 4/4`, `DeviceTypeSensorMappingTest 3/3`, `DevicesDatabaseManagerTest 17/17`, `SensorTypeHrvTest 5/5`, `MySensorManagerPriorityTest 8/8`, `AltitudeSlopePriorityTest 3/3`, `PrimaryHrSensorArbitratorTest 9/9`, `SensorSourceDialogPriorityTest 7/7`, `SensorSourceDialogContractTest 13/13`, `EditSensorFieldViewModelTest 28/28`, 5 contract suites `30/30`; `4/4` safety linters PASS; live `emulator-5554` `CADENCE` smoke `0` crashes + `Rule 8.5` PNG verified). |

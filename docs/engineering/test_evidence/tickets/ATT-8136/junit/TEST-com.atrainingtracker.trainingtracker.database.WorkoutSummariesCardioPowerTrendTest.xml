@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesCardioPowerTrendTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:52:00.282Z" hostname="rainer-HP-EliteBook-850-G5" time="0.551">
+  <properties/>
+  <testcase name="testQueryFitnessTrendSamples_whenDbClosed_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesCardioPowerTrendTest" time="0.17"/>
+  <testcase name="testQueryFitnessTrendSamples_whenEmptyCursor_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesCardioPowerTrendTest" time="0.186"/>
+  <testcase name="testQueryFitnessTrendSamples_executesSqlWithR2ThresholdAndParsesRecords" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesCardioPowerTrendTest" time="0.195"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

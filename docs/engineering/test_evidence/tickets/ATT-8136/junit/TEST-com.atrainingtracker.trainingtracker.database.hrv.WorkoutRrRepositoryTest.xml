@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepositoryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:52:08.746Z" hostname="rainer-HP-EliteBook-850-G5" time="0.179">
+  <properties/>
+  <testcase name="repository_updateBeatQualityFlags_persistsAndClearsFlags_TST_HRV_048" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepositoryTest" time="0.101"/>
+  <testcase name="repository_getMaxBeatIndex_andBlockingBridge" classname="com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepositoryTest" time="0.078"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

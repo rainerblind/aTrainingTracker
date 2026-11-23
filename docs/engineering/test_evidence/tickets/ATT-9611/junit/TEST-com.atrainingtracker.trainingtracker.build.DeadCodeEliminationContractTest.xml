@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:25:59.800Z" hostname="rainer-HP-EliteBook-850-G5" time="0.926">
+  <properties/>
+  <testcase name="testAntStartupCheckContractTestInvariantAudit" classname="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" time="0.001"/>
+  <testcase name="testDeadLegacyClassesAreEliminated" classname="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" time="0.012"/>
+  <testcase name="testMainActivityWithNavigationDeadMethodsAndLockScreenApi" classname="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" time="0.085"/>
+  <testcase name="testTrainingApplicationDeadMethodsAndVolatileState" classname="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" time="0.006"/>
+  <testcase name="testComposePreviewsVisibilityAudit" classname="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" time="0.781"/>
+  <testcase name="testLegacyFragmentsAndObsoleteLayoutsAreEliminated_TST_UI_108" classname="com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest" time="0.038"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

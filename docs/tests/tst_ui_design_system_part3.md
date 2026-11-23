@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.43  
+**Version**: 1.0.45  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 99
+**Total Tests**: 100
 
 ---
 
@@ -1962,6 +1962,26 @@
      - Verify switching Body/HRV/Cardio filter chips invokes `PowerPhysiologyCalculator.computePerformanceManagementChart` `0` additional times, while updating `settingsDataStore.hrMaxFlow` reactively recomputes `pmcUiState` & `uiState` immediately, and `AthleteProfileScreen` invokes `onSelectTimeRange` once per click without double mutation.
      - Verify live `emulator-5554` launch (`com.atrainingtracker.debug`), Athlete Profile tabs & chart rendering, zero crashes in `logcat`, and `read_file` 4-point Visual Self-Inspection (`Rule 8.5`).
 
+### TST-UI-2804: **Health- and Modality-Aware HR Ordering in `SensorSourceDialog` Verification Suite (`ATT-9610`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2804`
+- **Component**: `PrimaryHrSensorArbitrator.kt`, `DeviceData.kt`, `RawDeviceDataProvider.kt`, `BANALServiceRepository.kt`, `SensorSourceDialog.kt`, `PrimaryHrSensorArbitratorTest.kt`, `SensorSourceDialogPriorityTest.kt`, `SensorSourceDialogContractTest.kt`, `BANALServiceRepositoryMemoryTest.kt`
+- **Verification Evidence**:
+  - `PrimaryHrSensorArbitratorTest` (`9/9` PASS, incl. `resolveModality_fromPersistedMetadata_classifiesEcgAntOpticalAndOther`, `resolveModality_fromPersistedCapabilityStore_detectsRenamedOpticalAndRespectsConfirmedNonPolarGatt`, `resolveHealthTier_returnsHealthyDegradedAndStaleOrNullDeterministically`).
+  - `SensorSourceDialogPriorityTest` (`6/6` PASS, incl. `activeBackups_hr_ordersByHealthTierThenModalityThenNameThenId`, `notConnected_hr_ordersByModalityThenNameThenId_includingAntiAlphabeticalNames`, `notConnected_hr_persistedCapabilityMetadataResolvesRenamedOpticalViaRawDeviceDataProvider`).
+  - `SensorSourceDialogContractTest` (`12/12` PASS, incl. `testSensorSourceDialog_hrOrdersActiveBackupsAndNotConnectedByHealthAndModality`).
+  - `BANALServiceRepositoryMemoryTest` (`5/5` PASS, incl. `testAllActiveDevicesTelemetry_populatesHrHealthTierAndModalityFromArbitrator`), `BANALServiceRepositoryTest` (`8/8` PASS), `MySensorManagerPriorityTest` (`8/8` PASS), `ControlTracking*` (`7` suites, `48/48` PASS), `DeviceDataRepository*` (`4` suites, `17/17` PASS), `DeviceListViewModel*` (`4` suites, `24/24` PASS), `EditDevice*` (`8` suites, `46/46` PASS), `SensorSourceDialogAltitudeCalibrationTest` (`4/4` PASS), `ArchitectureConformanceContractTest` (`11/11` PASS), `InterfaceSignatureDriftContractTest` (`3/3` PASS): `214/214` PASS across `34` suites (`0` fail/err/skip); live `emulator-5554` PNG `docs/engineering/walkthroughs/img/ATT-9610_sensor_source_dialog.png` inspected via `read_file` with `0` crashes in `logcat -b crash -d` (pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3).
+- **Jira**: `ATT-9610`
+- **Test Description**:
+  1. *Shared Persisted-Metadata Modality & Health Resolution (`TST-UI-2804.1`, `PrimaryHrSensorArbitratorTest`)*:
+     - Verify `PrimaryHrSensorArbitrator.resolveModality(protocol, deviceType, deviceName, manufacturer, macAddress, context)` classifies BLE ECG vs BLE Optical PPG (including renamed devices resolved via `PolarOfflineCapabilityStore` DIS/GATT metadata), ANT+ HRM, and Other/non-HRM consistently with `resolveModality(MyDevice?)`, and `resolveHealthTier` resolves `HEALTHY`, `DEGRADED`, and `STALE_OR_NULL` deterministically.
+  2. *HR Active Backups & Not Connected Priority Sorting (`TST-UI-2804.2`, `SensorSourceDialogPriorityTest`)*:
+     - Verify `sortActiveBackupTelemetries` for `SensorType.HR` orders strictly by `(healthTier [HEALTHY < DEGRADED < STALE_OR_NULL], modalityTier [ECG < ANT+ < Optical PPG < Other], deviceName, deviceId)`.
+     - Verify `sortNotConnectedDevices` for `SensorType.HR` orders strictly by `(modalityTier [ECG < ANT+ < Optical PPG < Other], deviceName, deviceId)` including anti-alphabetical cases (`"Polar H10"` ECG before `"Armband Optical"` Optical PPG) and persisted `RawDeviceDataProvider`/`raw2UiDeviceData` capability propagation.
+     - Verify non-HR sensor types (`LATITUDE`, `SPEED_mps`, `ALTITUDE`) preserve `MySensorManager.getPriorityRank(sensorType, deviceType)` unchanged.
+  3. *Behavioral Compose UI & Live Emulator Verification (`TST-UI-2804.3`, `SensorSourceDialogContractTest`, `emulator-5554`)*:
+     - Render `SensorSourceDialog` via Robolectric `createComposeRule()` for `SensorType.HR` and assert rendered tree node order (`onAllNodes` / text y-position order) across ECG, ANT+, Optical PPG, and Healthy/Degraded/Stale backups (including `"Armband Optical"` vs `"Polar H10"`).
+     - Verify live `emulator-5554` (`com.atrainingtracker.debug`) launch, opening `SensorSourceDialog` from `SensorStatus` (`HR` icon), clean `logcat -b crash -d`, and `Rule 8.5` PNG inspection via `read_file`.
+
 ---
 
 ## Change History
@@ -2008,3 +2028,5 @@
 | `1.0.41` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `TST-UI-2802` (`[Verified]`, `.1`–`.3`, `521/521` PASS across all targeted suites incl. `LegacyPackageDecommissioningTest`, `BTLERadarDeviceTest`, `HardwareHalIngestionIntegrationTest`, `DatabaseSchemaRegistryParityContractTest`, `DeadCodeEliminationContractTest`, `ManifestAndBuildConfigContractTest`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `ProGuardRulesContractTest`, `AdrCompletenessContractTest`, `ArchitectureConformanceContractTest`, `SourceTextReadingAuditContractTest`; 4 live `emulator-5554` PNGs verified via `read_file`; `0` crashes; SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8130/`). |
 | `1.0.42` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Added and verified `TST-UI-2803` (`[Verified]`, `.1`–`.3`, `15/15` new tests across `TelemetryChartGesturesAndCacheTest` `9/9`, `MapDetailLayoutViewportConsolidationUiTest` `4/4`, `AthleteProfileTabFlowIsolationTest` `2/2`; `332/332` targeted tests across `60` suites + `auto_gate.py` dependent tests PASS; live `emulator-5554` `0` crashes; 4 `Rule 8.5` PNGs verified via `read_file`; SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8134/`). |
 | `1.0.43` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Stage 6 Bounce 1 heal on `TST-UI-2803`: added Pan-Mode double-tap zoom reset, lower-bound duplicate-`startDist` scan, trailing-stopped-sample PACE overlay, and `PaceFormatterTest` negative/`MAX_PACE` parity regression tests (`12/12` + `5/5` PASS; `395/395` fresh PASS across `83` targeted JUnit XML suites), removed dead `drawMultiSensorOverlayCurves`/`drawElevationOverlayCurves`/`OverlayXViewport`, and replaced `ATT-8134_workout_detail_charts.png` with populated `sample_workout` `Map & Graphs` tab (`Elevation Profile` + `Speed` + `Cadence` curves) verified via `read_file`. |
+| `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Added `TST-UI-2804` (`[Planned]`, `.1`–`.3`) verifying shared `PrimaryHrSensorArbitrator` persisted-metadata modality/health resolution, `SensorSourceDialog` HR Active Backups & Not Connected sorting (including anti-alphabetical `"Armband Optical"` vs `"Polar H10"`), Compose UI tree order assertions, and live `emulator-5554` PNG verification. |
+| `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Promoted `TST-UI-2804` to `[Verified]` (`214/214` targeted/dependent tests PASS across `34` suites; live `emulator-5554` PNG `ATT-9610_sensor_source_dialog.png` visually inspected via `read_file` with `0` crashes in `logcat -b crash -d`; pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3). |

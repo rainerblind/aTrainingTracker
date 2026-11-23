@@ -34,13 +34,19 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.SimpleSensorData
+import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
+import com.atrainingtracker.banalservice.sensor.HrHealthTier
+import com.atrainingtracker.banalservice.sensor.HrModality
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import androidx.compose.ui.test.onNodeWithText
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,6 +69,16 @@ class SensorSourceDialogContractTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    @Before
+    fun setUpCapabilityStore() {
+        PolarOfflineCapabilityStore.resetForTesting()
+    }
+
+    @After
+    fun tearDownCapabilityStore() {
+        PolarOfflineCapabilityStore.resetForTesting()
+    }
+
     private fun getDialogClass(): Class<*> {
         return Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogKt")
     }
@@ -71,14 +87,17 @@ class SensorSourceDialogContractTest {
         id: Long,
         name: String,
         deviceType: DeviceType,
-        protocol: Protocol = Protocol.SMARTPHONE
+        protocol: Protocol = Protocol.SMARTPHONE,
+        manufacturer: String = "TestManufacturer",
+        btAddress: String? = null,
+        hrModality: HrModality? = null
     ): DeviceUiData {
         return DeviceUiData(
             id = id,
             protocol = protocol,
             deviceType = deviceType,
             lastSeen = null,
-            manufacturer = "TestManufacturer",
+            manufacturer = manufacturer,
             deviceName = name,
             isPaired = true,
             linkedEquipment = emptyList(),
@@ -95,19 +114,25 @@ class SensorSourceDialogContractTest {
             isConnected = false,
             mainValue = null,
             allValues = null,
-            isNewlyDiscovered = false
+            isNewlyDiscovered = false,
+            btAddress = btAddress,
+            hrModality = hrModality
         )
     }
 
     private fun createTelemetry(
         deviceId: Long,
-        vararg sensors: SensorType
+        vararg sensors: SensorType,
+        hrHealthTier: HrHealthTier? = null,
+        hrModality: HrModality? = null
     ): DeviceTelemetry {
-        val values = sensors.map { SimpleSensorData("12.3", it) }
+        val values = sensors.map { SimpleSensorData("142", it) }
         return DeviceTelemetry(
             deviceId = deviceId,
             mainValue = values.firstOrNull(),
-            allValues = values
+            allValues = values,
+            hrHealthTier = hrHealthTier,
+            hrModality = hrModality
         )
     }
 
@@ -289,5 +314,145 @@ class SensorSourceDialogContractTest {
 
         assertTrue("Screenshot must exist", outFile.exists())
         assertTrue("Screenshot size must be > 0", outFile.length() > 0)
+    }
+
+    /**
+     * TST-UI-2804.3: Verifies via Compose UI tree vertical bounds that `SensorSourceDialog` for
+     * `SensorType.HR` renders Active Backups ordered by `(healthTier, modalityTier, deviceName, deviceId)`
+     * and Not Connected ordered by `(modalityTier, deviceName, deviceId)`, overriding alphabetical names.
+     */
+    @Test
+    fun testSensorSourceDialog_hrOrdersActiveBackupsAndNotConnectedByHealthAndModality() {
+        val verityMac = "DE:AD:BE:EF:00:01"
+        PolarOfflineCapabilityStore.recordDisMetadata(
+            context = null,
+            macAddress = verityMac,
+            modelNumber = "Sense",
+            confirmedPolarService = true
+        )
+
+        val primarySource = createDevice(1L, "Zebra Primary H10", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar")
+        val backupHealthyEcg = createDevice(2L, "Polar H10 Backup", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar")
+        val backupHealthyAnt = createDevice(3L, "Mid ANT+ Strap", DeviceType.HRM, Protocol.ANT_PLUS, "Garmin")
+        val backupHealthyOptical = createDevice(
+            4L,
+            "Armband Optical",
+            DeviceType.HRM,
+            Protocol.BLUETOOTH_LE,
+            "",
+            btAddress = verityMac,
+            hrModality = HrModality.OPTICAL_PPG
+        )
+        val backupDegradedEcg = createDevice(5L, "AAB Degraded ECG", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar")
+        val backupStaleEcg = createDevice(6L, "AAA Stale ECG", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar")
+
+        val discOptical = createDevice(
+            7L,
+            "Armband Optical Disconnected",
+            DeviceType.HRM,
+            Protocol.BLUETOOTH_LE,
+            "",
+            btAddress = verityMac,
+            hrModality = HrModality.OPTICAL_PPG
+        )
+        val discAnt = createDevice(8L, "Ant Disconnected", DeviceType.HRM, Protocol.ANT_PLUS, "Garmin")
+        val discEcg = createDevice(9L, "Polar H10 Disconnected", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar")
+
+        val allDevices = listOf(
+            primarySource,
+            backupStaleEcg,
+            backupDegradedEcg,
+            backupHealthyOptical,
+            backupHealthyAnt,
+            backupHealthyEcg,
+            discOptical,
+            discAnt,
+            discEcg
+        )
+
+        val allTelemetry = listOf(
+            createTelemetry(6L, SensorType.HR, hrHealthTier = HrHealthTier.STALE_OR_NULL, hrModality = HrModality.ECG),
+            createTelemetry(5L, SensorType.HR, hrHealthTier = HrHealthTier.DEGRADED, hrModality = HrModality.ECG),
+            createTelemetry(4L, SensorType.HR, hrHealthTier = HrHealthTier.HEALTHY, hrModality = HrModality.OPTICAL_PPG),
+            createTelemetry(3L, SensorType.HR, hrHealthTier = HrHealthTier.HEALTHY, hrModality = HrModality.ANT_PLUS),
+            createTelemetry(2L, SensorType.HR, hrHealthTier = HrHealthTier.HEALTHY, hrModality = HrModality.ECG),
+            createTelemetry(1L, SensorType.HR, hrHealthTier = HrHealthTier.HEALTHY, hrModality = HrModality.ECG)
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                SensorSourceDialog(
+                    sensorType = SensorType.HR,
+                    sourceDevice = primarySource,
+                    allTelemetry = allTelemetry,
+                    allDevices = allDevices,
+                    onDeviceClick = {},
+                    onDismiss = {}
+                )
+            }
+        }
+
+        fun yPos(label: String): Float =
+            composeTestRule.onNodeWithText(label, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .positionInRoot
+                .y
+
+        // Active Backups order: Healthy ECG -> Healthy ANT+ -> Healthy Optical PPG -> Degraded ECG -> Stale ECG
+        assertTrue(yPos("Zebra Primary H10") < yPos("Polar H10 Backup"))
+        assertTrue(yPos("Polar H10 Backup") < yPos("Mid ANT+ Strap"))
+        assertTrue(yPos("Mid ANT+ Strap") < yPos("Armband Optical"))
+        assertTrue(yPos("Armband Optical") < yPos("AAB Degraded ECG"))
+        assertTrue(yPos("AAB Degraded ECG") < yPos("AAA Stale ECG"))
+
+        // Not Connected order: ECG ("Polar H10 Disconnected") -> ANT+ ("Ant Disconnected") -> Optical PPG ("Armband Optical Disconnected")
+        assertTrue(yPos("AAA Stale ECG") < yPos("Polar H10 Disconnected"))
+        assertTrue(yPos("Polar H10 Disconnected") < yPos("Ant Disconnected"))
+        assertTrue(yPos("Ant Disconnected") < yPos("Armband Optical Disconnected"))
+    }
+
+    // TST-CON-057.3: Behavioral Compose UI test verifying Polar Live-IMU HRM capability filtering in SensorSourceDialog
+    @Test
+    fun testComposeRender_cadenceAndVerticalOscillationCapabilityFilterHrms_TST_CON_057_3() {
+        val h10Mac = "A0:9E:1A:61:61:61"
+        val verityMac = "A0:9E:1A:62:62:62"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10Mac, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMac, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        val h10Device = createDevice(1L, "Polar H10 Chest", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar", btAddress = h10Mac)
+        val verityDevice = createDevice(2L, "Verity Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = verityMac)
+        val antH10 = createDevice(3L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar")
+        val genericBleHrm = createDevice(4L, "Generic BLE Strap", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Wahoo", btAddress = "11:22:33:44:55:66")
+        val allDevices = listOf(h10Device, verityDevice, antH10, genericBleHrm)
+
+        var activeSensorType = SensorType.CADENCE
+        val sensorState = androidx.compose.runtime.mutableStateOf(activeSensorType)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                SensorSourceDialog(
+                    sensorType = sensorState.value,
+                    sourceDevice = null,
+                    allTelemetry = emptyList(),
+                    allDevices = allDevices,
+                    onDeviceClick = {},
+                    onDismiss = {}
+                )
+            }
+        }
+
+        // CADENCE shows BLE H10 and BLE Verity Sense, hiding ANT+ H10 and generic BLE HRM
+        composeTestRule.onNodeWithText("Polar H10 Chest", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Verity Armband", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Polar H10 ANT+", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Generic BLE Strap", useUnmergedTree = true).assertDoesNotExist()
+
+        // Switch to VERTICAL_OSCILLATION -> ONLY BLE H10 remains visible
+        composeTestRule.runOnUiThread { sensorState.value = SensorType.VERTICAL_OSCILLATION }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Polar H10 Chest", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Verity Armband", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Polar H10 ANT+", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Generic BLE Strap", useUnmergedTree = true).assertDoesNotExist()
     }
 }

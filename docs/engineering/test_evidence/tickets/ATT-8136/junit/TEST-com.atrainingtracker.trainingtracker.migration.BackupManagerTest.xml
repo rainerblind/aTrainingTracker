@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:00:52.184Z" hostname="rainer-HP-EliteBook-850-G5" time="1.105">
+  <properties/>
+  <testcase name="testCalculateTotalDatabaseSize_calculatesSumOfDbAndWalFiles" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.134"/>
+  <testcase name="testBackupManagerClassStructure" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.128"/>
+  <testcase name="testCreateBackup_storageIsBoundedToSingleCanonicalArchive" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.231"/>
+  <testcase name="testAcquireLock_acquiresAndReleasesLockCleanly" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.122"/>
+  <testcase name="testCreateBackup_insufficientStorage_abortsCleanly" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.239"/>
+  <testcase name="testCreateBackup_cleansUpStaleTempFileBeforeExecution" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.125"/>
+  <testcase name="testGetBackupDir_createsAndReturnsPersistentBackupsDirectory" classname="com.atrainingtracker.trainingtracker.migration.BackupManagerTest" time="0.126"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

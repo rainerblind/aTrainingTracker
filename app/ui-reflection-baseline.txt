@@ -47,8 +47,6 @@ com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionStackedB
 com/atrainingtracker/trainingtracker/ui/climbs/ClimbDetailSheetContractTest.kt
 com/atrainingtracker/trainingtracker/ui/climbs/LiveClimbSheetLayoutTest.kt
 com/atrainingtracker/trainingtracker/ui/clusters/ClusterFilterBottomSheetLocationStartsTest.kt
-com/atrainingtracker/trainingtracker/ui/clusters/ClusterNamingDialogEscapeContractTest.kt
-com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSelectionDialogTest.kt
 com/atrainingtracker/trainingtracker/ui/common/ComposeHandwritingResilienceTest.kt
 com/atrainingtracker/trainingtracker/ui/components/MetricBadgeShapeTest.kt
 com/atrainingtracker/trainingtracker/ui/components/core/AppDialogActionsIntegrityTest.kt
@@ -58,7 +56,6 @@ com/atrainingtracker/trainingtracker/ui/components/core/CoreComponentsIntegrityT
 com/atrainingtracker/trainingtracker/ui/components/core/EntityDetailSheetScaffoldContractTest.kt
 com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingSheetContainerTest.kt
 com/atrainingtracker/trainingtracker/ui/components/core/MinimumDragHandleTest.kt
-com/atrainingtracker/trainingtracker/ui/components/core/ModalBottomSheetDialogsIntegrityTest.kt
 com/atrainingtracker/trainingtracker/ui/components/workoutlaps/CreateLapOnMapSheetTest.kt
 com/atrainingtracker/trainingtracker/ui/components/workoutlaps/MoveLapBoundaryOnMapSheetTest.kt
 com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorMatrixWheelPositionTest.kt

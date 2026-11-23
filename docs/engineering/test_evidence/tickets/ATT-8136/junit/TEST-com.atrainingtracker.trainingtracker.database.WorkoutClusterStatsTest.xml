@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:51:53.781Z" hostname="rainer-HP-EliteBook-850-G5" time="2.544">
+  <properties/>
+  <testcase name="testNullHandlingInCursor" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.383"/>
+  <testcase name="testSportAdaptiveVelocity" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.272"/>
+  <testcase name="testCursorExtractionSingleCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.271"/>
+  <testcase name="testMultipleWorkoutsAggregation" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.262"/>
+  <testcase name="testRelativeRecencyFormatter" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.272"/>
+  <testcase name="testRepositoryStatsFlowIntegration" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.285"/>
+  <testcase name="testDefaultEmptyStats" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.27"/>
+  <testcase name="testGroupByAllClustersQuery" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.266"/>
+  <testcase name="testSingleWorkoutStats" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest" time="0.263"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

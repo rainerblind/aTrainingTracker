@@ -22,7 +22,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.lang.reflect.Modifier
 
 /**
@@ -31,12 +33,16 @@ import java.lang.reflect.Modifier
  */
 class TuningPreferencesDataStoreLifecycleTest {
 
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
     private val mockApplication = mockk<Application>(relaxed = true)
     private val mockActivity = mockk<Activity>(relaxed = true)
 
     @Before
     fun setUp() {
         every { mockApplication.applicationContext } returns mockApplication
+        every { mockApplication.filesDir } returns tempFolder.newFolder("tuning_lifecycle_files")
         every { mockActivity.applicationContext } returns mockApplication
         TuningPreferencesDataStore.setInstanceForTesting(null)
     }

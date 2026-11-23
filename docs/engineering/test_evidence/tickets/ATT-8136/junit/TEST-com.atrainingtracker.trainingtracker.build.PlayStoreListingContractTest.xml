@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:55:36.729Z" hostname="rainer-HP-EliteBook-850-G5" time="0.142">
+  <properties/>
+  <testcase name="storeScreenshotsAreUniqueAndValid" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.059"/>
+  <testcase name="allTitlesDoNotExceedGooglePlayCharacterLimit" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.008"/>
+  <testcase name="allSupportedLanguageFilesExist" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.001"/>
+  <testcase name="allShortDescriptionsDoNotExceedGooglePlayCharacterLimit" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.004"/>
+  <testcase name="htmlFormattingTagsAreBalanced" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.005"/>
+  <testcase name="allFullDescriptionsDoNotExceedGooglePlayCharacterLimit" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.004"/>
+  <testcase name="fullDescriptionsContainMandatoryV5Features" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.043"/>
+  <testcase name="storeListingsDoNotContainUnimplementedBacklogFeatures" classname="com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest" time="0.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

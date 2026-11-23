@@ -122,7 +122,20 @@ class TcxImportPeriodAndClusterIntegrationTest {
 
         mockApp = mockk(relaxed = true)
         mockContext = mockk(relaxed = true)
+        every { mockApp.applicationContext } returns mockApp
         every { mockContext.applicationContext } returns mockApp
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockApp,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockApp,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
 
         mockSqlDb = mockk(relaxed = true)
 
@@ -260,6 +273,8 @@ class TcxImportPeriodAndClusterIntegrationTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
         EquipmentAndSportTypeDiscoveryManager.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)

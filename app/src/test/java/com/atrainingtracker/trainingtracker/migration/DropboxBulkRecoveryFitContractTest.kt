@@ -64,7 +64,20 @@ class DropboxBulkRecoveryFitContractTest {
         cacheDir.mkdirs()
 
         mockContext = mockk(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
         every { mockContext.cacheDir } returns cacheDir
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStore.createForTesting(
+                mockContext,
+                com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+                mockContext,
+                dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+            )
+        )
         every { mockContext.getString(any()) } returns "Status message"
         every { mockContext.getString(any(), any()) } answers { "Status message with ${args[1]}" }
 
@@ -78,6 +91,8 @@ class DropboxBulkRecoveryFitContractTest {
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         cacheDir.deleteRecursively()
         unmockkAll()
     }

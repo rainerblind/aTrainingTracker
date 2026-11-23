@@ -32,7 +32,6 @@ com/atrainingtracker/trainingtracker/ui/climbs/LiveClimbAdaptiveHeightTest.kt
 com/atrainingtracker/trainingtracker/ui/climbs/LiveClimbSheetLayoutTest.kt
 com/atrainingtracker/trainingtracker/ui/clusters/ClusterInfoDialogContractTest.kt
 com/atrainingtracker/trainingtracker/ui/clusters/ClusterItemAndFilterPolishTest.kt
-com/atrainingtracker/trainingtracker/ui/clusters/ClusterNamingDialogEscapeContractTest.kt
 com/atrainingtracker/trainingtracker/ui/clusters/ClusterNamingDialogLabelsVisualContractTest.kt
 com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterMergeDialogContractTest.kt
 com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitDialogContractTest.kt

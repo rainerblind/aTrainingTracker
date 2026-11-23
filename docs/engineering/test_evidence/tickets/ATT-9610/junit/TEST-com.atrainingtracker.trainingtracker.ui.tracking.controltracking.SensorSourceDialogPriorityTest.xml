@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:48:06.335Z" hostname="rainer-HP-EliteBook-850-G5" time="0.236">
+  <properties/>
+  <testcase name="notConnected_hr_persistedCapabilityMetadataResolvesRenamedOpticalViaRawDeviceDataProvider" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.232"/>
+  <testcase name="activeBackups_hr_ordersByHealthTierThenModalityThenNameThenId" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <testcase name="notConnected_hr_ordersByModalityThenNameThenId_includingAntiAlphabeticalNames" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <testcase name="activeBackups_sortedByPriority_googleFusedBeforeGps" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.0"/>
+  <testcase name="activeBackups_speedPriority_ordersWheelSpeedBeforeFusedAndFusedBeforeGps" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <testcase name="notConnected_sortedByPriority_googleFusedBeforeGps" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

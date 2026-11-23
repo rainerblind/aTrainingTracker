@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupWorkerDropboxGatingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:01:14.601Z" hostname="rainer-HP-EliteBook-850-G5" time="4.965">
+  <properties/>
+  <testcase name="testDoWork_whenUploadBackupToDropboxDisabled_skipsDropboxUpload" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerDropboxGatingTest" time="1.08"/>
+  <testcase name="testBuildConstraints_whenDropboxBackupEnabled_withoutWifiOnly_returnsConnected" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerDropboxGatingTest" time="1.016"/>
+  <testcase name="testBuildConstraints_whenNoCloudBackupEnabled_returnsNotRequired" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerDropboxGatingTest" time="0.942"/>
+  <testcase name="testDoWork_whenUploadBackupToDropboxEnabled_invokesDropboxUpload" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerDropboxGatingTest" time="0.995"/>
+  <testcase name="testBuildConstraints_whenDropboxBackupEnabled_withWifiOnly_returnsUnmetered" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerDropboxGatingTest" time="0.931"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

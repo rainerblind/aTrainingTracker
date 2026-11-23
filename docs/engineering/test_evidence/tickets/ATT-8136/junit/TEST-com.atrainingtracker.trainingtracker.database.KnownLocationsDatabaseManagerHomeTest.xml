@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManagerHomeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T17:50:03.343Z" hostname="rainer-HP-EliteBook-850-G5" time="1.694">
+  <properties/>
+  <testcase name="testGetHomeLocation_returnsNullWhenNoneConfigured" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManagerHomeTest" time="0.346"/>
+  <testcase name="testGetHomeLocation_returnsDesignatedLocation" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManagerHomeTest" time="0.36"/>
+  <testcase name="testSetHomeLocation_transactionalExclusivity" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManagerHomeTest" time="0.34"/>
+  <testcase name="testSchemaV6Upgrade_addsIsHomeColumn" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManagerHomeTest" time="0.324"/>
+  <testcase name="testClearHomeLocation_clearsAll" classname="com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManagerHomeTest" time="0.324"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

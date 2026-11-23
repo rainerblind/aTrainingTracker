@@ -595,4 +595,128 @@ class DevicesDatabaseManagerTest {
 
     @Suppress("UNCHECKED_CAST")
     private fun <T> uncheckedNull(): T = null as T
+
+    // TST-CON-057.3: DevicesDatabaseManager.getDeviceIdAndNameLists gates HRM Polar Live-IMU by capability,
+    // removes BIKE_POWER from SLOPE/VAM/ASCENT/DESCENT, preserves BIKE_POWER flags and HR/HRV HRMs, and handles partial cursors safely
+    @Test
+    fun testGetDeviceIdAndNameLists_capabilityGatesPolarHrmAndExcludesBikePowerFromSlope_TST_CON_057_3() {
+        val h10Mac = "A0:9E:1A:10:10:10"
+        val verityMac = "A0:9E:1A:20:20:20"
+        val spoofedMac = "DE:AD:BE:EF:30:30"
+        com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.resetForTesting()
+        try {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.recordSdkDeviceType(
+                null,
+                h10Mac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.PolarDeviceType.H10
+            )
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.recordSdkDeviceType(
+                null,
+                verityMac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE
+            )
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.recordGattServiceCapabilities(
+                null,
+                spoofedMac,
+                hasPmdService = false,
+                hasPftpService = false
+            )
+
+            val cols = listOf(
+                DevicesDatabaseManager.DevicesDbHelper.C_ID,
+                DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE,
+                DevicesDatabaseManager.DevicesDbHelper.PROTOCOL,
+                DevicesDatabaseManager.DevicesDbHelper.NAME,
+                DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME,
+                DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS
+            )
+            val deviceRows = listOf(
+                listOf(1L, "HRM", "BLUETOOTH_LE", "My Chest Strap", "", h10Mac),
+                listOf(2L, "HRM", "BLUETOOTH_LE", "My Armband", "", verityMac),
+                listOf(3L, "HRM", "ANT_PLUS", "Polar H10 ANT+", "Polar", null),
+                listOf(4L, "HRM", "BLUETOOTH_LE", "Wahoo TICKR", "Wahoo", "11:22:33:44:55:66"),
+                listOf(5L, "HRM", "BLUETOOTH_LE", "Polar H10 Fake", "Polar", spoofedMac),
+                listOf(6L, "RUN_SPEED", "BLUETOOTH_LE", "Stryd Pod", "Stryd", "22:33:44:55:66:77"),
+                listOf(7L, "BIKE_POWER", "ANT_PLUS", "Assioma Duo", "Favero", null),
+                listOf(8L, "ALTITUDE_AND_SLOPE_ATT_FUSED", "SMARTPHONE", "ATT Fused Alt", "Google", null)
+            )
+            every {
+                mockDb.query(
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                    isNull(), isNull(), isNull(), isNull(), isNull(), isNull()
+                )
+            } answers { MockCursorFactory.create(cols, deviceRows) }
+
+            val powerFlags = com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper.addCrankRevolutionDataFlag(0)
+            every {
+                mockDb.query(
+                    DevicesDatabaseManager.DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
+                    isNull(), any(), any(), isNull(), isNull(), isNull()
+                )
+            } answers {
+                MockCursorFactory.create(
+                    listOf(DevicesDatabaseManager.DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS),
+                    listOf(listOf(powerFlags))
+                )
+            }
+
+            val manager = object : DevicesDatabaseManager(mockContext) {
+                override val database: SQLiteDatabase get() = mockDb
+            }
+
+            // CADENCE: BLE H10 (1), BLE Verity Sense (2), Stryd (6), Crank-capable Bike Power (7) — excludes ANT+ H10 (3), TICKR (4), Spoof (5)
+            val cadence = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.CADENCE)
+            assertEquals(listOf(1L, 2L, 6L, 7L), cadence.deviceIds.toList())
+
+            // STRIDES: BLE H10 (1), BLE Verity Sense (2), Stryd (6)
+            val strides = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.STRIDES)
+            assertEquals(listOf(1L, 2L, 6L), strides.deviceIds.toList())
+
+            // VERTICAL_OSCILLATION & GROUND_CONTACT_TIME: BLE H10 (1) ONLY
+            val vo = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.VERTICAL_OSCILLATION)
+            val gct = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.GROUND_CONTACT_TIME)
+            assertEquals(listOf(1L), vo.deviceIds.toList())
+            assertEquals(listOf(1L), gct.deviceIds.toList())
+
+            // SLOPE / VERTICAL_SPEED / ASCENT / DESCENT: ATT Fused Alt (8) ONLY — BIKE_POWER (7) excluded
+            for (slopeMetric in listOf(
+                com.atrainingtracker.banalservice.sensor.SensorType.SLOPE,
+                com.atrainingtracker.banalservice.sensor.SensorType.VERTICAL_SPEED,
+                com.atrainingtracker.banalservice.sensor.SensorType.ASCENT,
+                com.atrainingtracker.banalservice.sensor.SensorType.DESCENT
+            )) {
+                val list = manager.getDeviceIdAndNameLists(slopeMetric)
+                assertEquals("BIKE_POWER must be excluded for $slopeMetric", listOf(8L), list.deviceIds.toList())
+            }
+
+            // HR & HRV_RMSSD: ALL 5 HRM rows (1..5) preserved (REQ-HRV-050.1)
+            assertEquals(
+                listOf(1L, 2L, 3L, 4L, 5L),
+                manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.HR).deviceIds.toList()
+            )
+            assertEquals(
+                listOf(1L, 2L, 3L, 4L, 5L),
+                manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.HRV_RMSSD).deviceIds.toList()
+            )
+
+            // Partial-column cursor safety: missing PROTOCOL/MANUFACTURER_NAME/BT_ADDRESS columns never crash
+            val minimalCols = listOf(
+                DevicesDatabaseManager.DevicesDbHelper.C_ID,
+                DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE,
+                DevicesDatabaseManager.DevicesDbHelper.NAME
+            )
+            every {
+                mockDb.query(
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                    isNull(), isNull(), isNull(), isNull(), isNull(), isNull()
+                )
+            } answers { MockCursorFactory.create(minimalCols, listOf(listOf(99L, "HRM", "Polar H10 Minimal"))) }
+            val minimalCadence = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.CADENCE)
+            assertTrue("Missing PROTOCOL column must safely exclude HRM from Live-IMU without throwing", minimalCadence.deviceIds.isEmpty())
+            val minimalHr = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.HR)
+            assertEquals(listOf(99L), minimalHr.deviceIds.toList())
+        } finally {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.resetForTesting()
+        }
+    }
 }
