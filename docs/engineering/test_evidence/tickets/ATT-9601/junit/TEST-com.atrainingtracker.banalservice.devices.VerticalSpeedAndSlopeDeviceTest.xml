@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-11-23T02:14:11.453Z" hostname="rainer-HP-EliteBook-850-G5" time="14.211">
+  <properties/>
+  <testcase name="testStandstillAltitudeSourceTransition_suppressesDescentAndSlopeArtifacts" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="2.299"/>
+  <testcase name="testCalculateVam_degradedGpsAccuracy_suppressesVamToZero" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testSteadyStateClimbAndDescent_preservedWithSameDeviceGuard" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.515"/>
+  <testcase name="testCalculateVam_steadyDescent_convergesToNegativeVam" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.001"/>
+  <testcase name="testCalculateVam_glitchOutlierClamping_boundsExtremeJumps" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testActiveBaroCalibrationAboveThreshold_beforeCorrectionBroadcast_noDoubleShiftOrReseed" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.567"/>
+  <testcase name="testCalculateVam_stationaryElevator_preservesGenuineAscent" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testCalculateLinearRegressionSlope_withLinearRamp_computesExactSlope" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testCalculateLinearRegressionSlope_insufficientSamples_returnsZero" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.001"/>
+  <testcase name="testCalculateVam_flatRoadDeadband_clampsMicroFluctuationsToZero" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testCalculateVam_stationaryIndoorNoise_suppressedToZero" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testAltitudeCorrectionIntent_shiftsWrappedRingBufferWhenBaroIsActive" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.5"/>
+  <testcase name="testCalculateLinearRegressionSlope_warmup_computesImmediateDynamicSlope" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testCircularBufferWrapping_maintainsCorrectChronologicalOrder" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testCalculateVam_steadyClimb_convergesAccurately" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.001"/>
+  <testcase name="testCalculateVam_lowSpeedGenuineClimb_preserved" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testOnAccumulatorsReset_clearsStaleAltitudeStateAndPreventsStartupPhantomDescent" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.579"/>
+  <testcase name="testAltitudeCorrectionIntent_shiftsFiltersAndSuperFilteredAltitude" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.942"/>
+  <testcase name="testSameDeviceAltitudeStep_reseedsFiltersWithoutPhantomDescentOrSlope" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.485"/>
+  <testcase name="testAltitudeCorrectionIntent_ignoredWhenATTFusedOrDemIsActiveAltitudeSource" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.837"/>
+  <testcase name="testNonFiniteDeltaAndRawAltitude_rejectedCleanly" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="1.483"/>
+  <testcase name="testCalculateVam_backwardCompatibleFiveParamOverload_worksIdentically" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.0"/>
+  <testcase name="testCalculateVam_lowSpeedIndoorWander_suppressedByElevatedDeadband" classname="com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

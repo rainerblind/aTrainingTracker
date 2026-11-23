@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.13  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 93
+**Total Tests**: 94
 
 ---
 
@@ -2027,6 +2027,20 @@
   4. *ERTS Low-Speed Braking Slope Stability & Contract Checks (`TST-FIL-040.4` — `ExtendedRtsAltitudeSlopeSmootherTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • Replay `15 s` flat-road braking segment (`5.5 -> 0.6 m/s`, `DEM = 438 m`, `BARO` dropping `-2.0 m` on pocket decompression); assert ERTS smoothed `SLOPE` stays within `±4%` (no `-11%` plunge) and smoothed altitude stays anchored near `438 m`; verify real `-8%` downhill braking preserves negative grade smoothly without overshoot; verify `lowSpeedSlopeGainFactor()` (`TST-FIL-033.1`) and `ArchitectureConformanceContractTest` (`<= 1,500` LoC) pass.
 
+### TST-FIL-041: **Immediate Stationary Rejected-GNSS Zero-Speed Publication & Post-Pause Velocity Spike Bounding Verification (`ATT-9601`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-041` (`REQ-FIL-041.1`–`REQ-FIL-041.3`)
+- **Component**: `SpeedAndLocationDevice.java`, `UnicycleOdometryEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`
+- **Jira**: `ATT-9601` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `SpeedAndLocationDevice_ATTFusedTest#testStationaryRejectedIndoorGnss_publishesZeroSpeedCancelsWatchdogAndFreezesDistance_TST_FIL_041_1`, `UnicycleOdometryEkfTest#testPostPauseAndPostStandstillDecoupling_blocksSnapSpikeAndRecouplesOnFix4_TST_FIL_041_2`, `SpeedAndLocationDevice_ATTFusedTest#testPostPause159sStopAnd19mOutdoorSnap_boundsPublishedSpeedNearDoppler_TST_FIL_041_2`, `SpeedAndLocationDevice_ATTFusedTest#testGenuineFastStartFromStandstill_tracks9MpsDopplerAndWheelWithoutClamping_TST_FIL_041_3`
+- **Test Description**:
+  1. *Immediate Indoor Zero-Speed Publication (`TST-FIL-041.1` — `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Move at `1.54 m/s`, then transition to an indoor stop (`acc = 45.9 m > MAX_GNSS_ACCURACY_METERS`, `PhoneCarriageMode.STATIONARY`); assert `mSpeedSensor` immediately drops to `0.0 m/s` and `mPaceSensor` to `null` on the exact rejected-fix tick (zero `10–14 s` watchdog lag) while pinned coordinates and cumulative distance remain unchanged (`+0.0 m`). Verify pre-anchor coarse stationary fixes also publish `0.0 m/s` cleanly.
+  2. *Post-Pause `159 s` Stop & `+19.1 m` Outdoor Snap Velocity Bound (`TST-FIL-041.2` — `UnicycleOdometryEkfTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Simulate a `159 s` indoor stop followed by outdoor re-acquisition (`row 228` `acc = 12.75 m`, `row 229` `+19.1 m` coordinate snap in `1 s`, `acc = 11.73 m`, Doppler `3.51 m/s`); assert `ekf.speedMps` and published `mSpeedSensor` remain within `<= 1.5 m/s` of `3.51 m/s` (never spiking to `10.85 m/s`), and verify the 3-fix decoupling window clears back to coupled EKF updates cleanly on fix 4.
+  3. *Genuine Fast Start Preservation, `REQ-TRK-056.2` Regression & LoC Contract (`TST-FIL-041.3` — `SpeedAndLocationDevice_ATTFusedTest.kt`, `SpeedAndLocationDeviceStationaryJitterTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify legitimate acceleration from standstill to `9.0 m/s` (outdoor GNSS `acc <= 10 m` Doppler `9.0 m/s` and active wheel sensor) tracks `9.0 m/s` promptly without clamping or lag; verify `SpeedAndLocationDevice_GoogleFused` preserves `REQ-TRK-056.2` damped-Doppler fallback; verify `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC.
+
 ---
 
 ## Change History
@@ -2164,3 +2178,5 @@
 | `1.0.10` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `TST-TRK-095` (`TST-TRK-095.1`–`.4`) to `[Verified]` with verbatim test citations (`24` JVM suites / `174/174` PASS, `47/47` Python tests PASS, `12/12` live Multi-OS & 9-language emulator sweep `PASS` in `2026-11-22_sweep.md`, `12/12` `Rule 8.5` PNGs audited, SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9498/manifest.json`). |
 | `1.0.11` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Added `[Planned]` `TST-FIL-040` (`TST-FIL-040.1`–`TST-FIL-040.4`, strictly symmetric `REQ-FIL-040`) covering `70–88 m` pocket-compression barometer anti-aliasing, calm/handlebar `8–12%` responsiveness, corrupted-barometer DEM step-gate bypass, 3-state `5 s` startup calibration grace + offline fallback, and ERTS low-speed braking slope stability. |
 | `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `TST-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.13`) with verbatim method citations (`90/90` PASS across 8 targeted suites: `BarometricBucketDispersionTest` `4/4`, `KinematicAltitudeSlopeEkfTest` `17/17`, `AltitudeAndSlopeDevice_ATTFusedTest` `26/26`, `ExtendedRtsAltitudeSlopeSmootherTest` `10/10`, `BarometricAltitudeFilterTest` `7/7`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
+| `1.0.14` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Added `[Planned]` `TST-FIL-041` (`TST-FIL-041.1`–`TST-FIL-041.3`, strictly symmetric `REQ-FIL-041`) covering immediate indoor `acc = 45.9 m` zero-speed publication, `159 s` post-pause `+19.1 m` snap velocity bound (`3.51 m/s` vs `10.85 m/s`), genuine `0 -> 9.0 m/s` fast start, `REQ-TRK-056.2` `GoogleFused` preservation, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC. |
+| `1.0.15` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `TST-FIL-041` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`146/146` PASS across 11 targeted suites: `SpeedAndLocationDevice_ATTFusedTest` `40/40`, `UnicycleOdometryEkfTest` `20/20`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `ExtendedRtsOdometrySmootherTest` `14/14`, `AttFusedColdStartHelperTest` `3/3`, `OdometrySimulationTest` `3/3`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |

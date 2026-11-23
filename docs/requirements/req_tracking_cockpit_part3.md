@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.10  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 43
+**Total Requirements**: 44
 
 ---
 
@@ -1519,6 +1519,33 @@
 
 **Invariants**: `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` unchanged; `REQ-FIL-037` DEM jump gating unchanged when `varBaro <= 16.0 m²`; `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` & `lowSpeedSlopeGainFactor()` unchanged (`TST-FIL-033.1`); `ekf.isInitialized == true` on sample #1; `REQ-FIL-022.3` `0.0 m` bogus descent on late DEM lock preserved; all modified files `<= 1,500` LoC (`0` protected monolith edits); `0` SQLite/UI/`strings*.xml` changes (`Localization Parity: N/A`).
 
+### REQ-FIL-041: Immediate Zero-Speed Publication on Stationary Rejected GNSS Fixes & Post-Pause Velocity Spike Bounding (`ATT-9601`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-041`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal sensor-fusion speed publication and post-pause position-velocity decoupling refining `REQ-FIL-023.1`, `REQ-FIL-036.2`, and `REQ-TRK-056.2` without modifying hardware HALs, SQLite schemas, UI, or cloud APIs.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SpeedAndLocationDevice.java`, `UnicycleOdometryEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Real-world indoor-stop cycling telemetry (`2026-11-22_081402`) revealed two defects in `SpeedAndLocationDevice_ATTFused`: (1) when entering an indoor stop with coarse GNSS accuracy (`acc = 45.9 m > MAX_GNSS_ACCURACY_METERS`), `onLocationChanged()` rejected the fix and returned early without publishing `0.0 m/s` to `mSpeedSensor` / `null` to `mPaceSensor`, freezing `1.536 m/s` for `14 s` until the `10 s` watchdog decayed it; and (2) upon exiting after a `159 s` stop (`row 228 -> row 229`, `+19.1 m` coordinate snap, Doppler `3.51 m/s`), both un-decoupled EKF post-pause `P[pos, v]` cross-covariance and `SpeedAndLocationDevice.java`'s `rawSpeed < 0.2 * calcSpeed` geometric override (`(2.61 + 19.09)/2 = 10.85 m/s`) spiked live speed to `39.1 km/h` (`ATT-9601`).
+- **Description**:
+  1. *Immediate Stationary Zero-Speed Publication (`REQ-FIL-041.1`)*:
+     - `SpeedAndLocationDevice` SHALL expose `protected synchronized void publishStationaryZeroSpeed()` cancelling pending watchdog decay, setting `mIsDecaying = false` and `mSpeed = 0.0`, publishing `0.0` to `mSpeedSensor` and `null` to `mPaceSensor`, while leaving pinned coordinates, `mStationaryAnchor`, `mPrevLocation`, and distance accumulators strictly unchanged (`+0.0 m`).
+     - `SpeedAndLocationDevice_ATTFused.onLocationChanged()` SHALL invoke `publishStationaryZeroSpeed()` strictly outside `synchronized(ekf)` (preserving `this -> ekf` lock ordering) before returning early when `!gnssAccepted && (isStationary || fusedSpeed <= SPEED_ZERO_THRESHOLD)` (including pre-anchor coarse stationary fixes).
+  2. *Post-Pause & Post-Standstill EKF Position-Velocity Decoupling (`REQ-FIL-041.2`)*:
+     - `UnicycleOdometryEkf` SHALL track `lastAcceptedMovingGnssTimestampMs` and `postPauseDecoupleRemainingFixes` (cleared in `resetGnssTrackingState()`). Executing `applyZeroVelocityUpdate()`, receiving a stationary GNSS fix (`isStationary == true`), or observing a `>= POST_PAUSE_DECOUPLE_GAP_MS` (`5_000L` ms) GNSS or moving-GNSS gap SHALL arm `postPauseDecoupleRemainingFixes = POST_PAUSE_DECOUPLE_FIXES` (`3`).
+     - While `postPauseDecoupleRemainingFixes > 0` on moving GNSS updates (`!isStationary`), `updateGnssPosition()` SHALL decouple position-to-velocity gain (`k[2][0] = k[2][1] = 0.0`) and zero velocity cross-covariances (`decoupleVelocityCovariance(pNew)`), decrementing strictly on accepted moving inliers (`consecutiveMovingOutliers == 0`) without throttling `updateSpeed()` (Doppler or wheel).
+  3. *Fused-Speed Trust Hook & `REQ-TRK-056.2` Preservation (`REQ-FIL-041.3`)*:
+     - `SpeedAndLocationDevice` SHALL expose `protected boolean trustsFusedLocationSpeed() { return false; }`, keeping `REQ-TRK-056.2` (`rawSpeed < 0.2 * calcSpeed` geometric fallback) 100% unchanged for `SpeedAndLocationDevice_GPS` and `SpeedAndLocationDevice_GoogleFused`. `SpeedAndLocationDevice_ATTFused` SHALL override `trustsFusedLocationSpeed()` to return `true` so `onNewLocation()` preserves EKF-fused positive `rawSpeed` across post-pause coordinate snaps while keeping `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice_ATTFused` moving at `1.54 m/s` entering an indoor stop (`acc = 45.9 m > 20 m`, `PhoneCarriageMode.STATIONARY`), *When* `onLocationChanged()` rejects the coarse fix with `isStationary == true`, *Then* `mSpeedSensor` immediately publishes `0.0 m/s` and `mPaceSensor` `null` on that tick while pinned coordinates and cumulative distance remain unchanged (`+0.0 m`).
+• *Given* a workout resuming after a `159 s` indoor stop with a `+19.1 m` outdoor snap (`acc = 11.73 m`, Doppler `3.51 m/s`), *When* `SpeedAndLocationDevice_ATTFused` processes the first post-pause fixes, *Then* `SPEED_mps_att_fused` stays within `<= 1.5 m/s` of `3.51 m/s` and does NOT spike to `10.85 m/s`.
+• *Given* a cyclist accelerating legitimately from standstill to `9.0 m/s` with valid outdoor GNSS (`acc <= 10 m`, Doppler `9.0 m/s`) or active wheel sensor, *When* `SpeedAndLocationDevice_ATTFused` processes the start, *Then* `SPEED_mps_att_fused` tracks `9.0 m/s` promptly without clamping or added lag.
+
+**Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC; strict `this -> ekf` lock order; `REQ-TRK-056.2` untouched for `GPS` & `GoogleFused`; `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`, `MAX_GNSS_ACCURACY_METERS = 20.0`, `coldStartHelper`, and `ExtendedRtsOdometrySmoother` preserved; `0` DB/UI/`strings*.xml` changes (`Localization Parity: N/A`).
+
 ---
 
 ## Change History
@@ -1640,3 +1667,5 @@
 | `1.0.7` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `REQ-TRK-095` (`REQ-TRK-095.1`–`.4`) to `[Verified]` (`24` JVM suites / `174/174` PASS incl. `TST-TRK-095`, `47/47` Python tooling tests PASS, `12/12` live Multi-OS & 9-language emulator sweep `PASS` in `docs/engineering/emulator_sweeps/2026-11-22_sweep.md`, `TrackerService.java` `3,207/3,220` LoC, `TrainingApplication.java` `2,040/2,050` LoC, `0` new warnings). |
 | `1.0.8` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Added `[Planned]` `REQ-FIL-040` (`Derived (SW-only)`, `.1`–`.4`) for self-adapting intra-bucket barometer dispersion variance & 3-s trimmed-mean anti-aliasing (`BarometricBucketDispersion`), corrupted-barometer DEM step-gate guard, 3-state `5 s` startup calibration grace, and ERTS low-speed braking slope damping (`N/A - no UI strings`). |
 | `1.0.10` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `REQ-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.10`) following Gate 3 (`ATT-9650`) PASS, full Stage 4 construction (`BarometricBucketDispersion.kt` `198` LoC, `KinematicAltitudeSlopeEkf.kt` `697/1,500` LoC, `AltitudeAndSlopeDevice_ATTFused.kt` `571/1,500` LoC, `ExtendedRtsAltitudeSlopeSmoother.kt` `656/1,500` LoC), `90/90` targeted unit/contract tests PASS across 8 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9602_walkthrough.md`. |
+| `1.0.11` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Added `[Planned]` `REQ-FIL-041` (`Derived (SW-only)`, `.1`–`.3`) for immediate zero-speed publication on stationary rejected GNSS fixes, post-pause/post-standstill `UnicycleOdometryEkf` position-velocity decoupling (`3`-fix window), and `SpeedAndLocationDevice.trustsFusedLocationSpeed()` preserving `REQ-TRK-056.2` for `GPS`/`GoogleFused` (`N/A - no UI strings`). |
+| `1.0.12` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `REQ-FIL-041` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9652`) PASS, Stage 4 construction (`SpeedAndLocationDevice.java` `867/1,500`, `UnicycleOdometryEkf.kt` `882/1,500`, `SpeedAndLocationDevice_ATTFused.kt` `1,498/1,500` LoC), `146/146` targeted tests PASS across 11 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9601_walkthrough.md`. |

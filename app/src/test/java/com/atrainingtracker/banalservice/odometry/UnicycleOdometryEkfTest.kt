@@ -538,4 +538,54 @@ class UnicycleOdometryEkfTest {
         }
         assertTrue("Live EKF with recordSnapshots=false must retain 0 snapshots", liveEkf.getSnapshots().isEmpty())
     }
+
+    // REQ-FIL-041.2 / TST-FIL-041.2: Post-pause / post-standstill 3-fix decoupling blocks +19.1 m snap velocity spike,
+    // arms even on stationary accuracy-gated calls, preserves 0->9 m/s fast starts, and re-couples on fix 4.
+    @Test
+    fun testPostPauseAndPostStandstillDecoupling_blocksSnapSpikeAndRecouplesOnFix4_TST_FIL_041_2() {
+        // 1. Pre-stop moving baseline -> 159 s indoor pause with 50-Hz predict -> row 228 & row 229 (+19.1 m snap)
+        val pauseEkf = UnicycleOdometryEkf(initialEast = 0.0, initialNorth = 0.0, initialSpeed = 5.0, initialHeadingRad = 0.0, recordSnapshots = false)
+        assertTrue(pauseEkf.updateGnssPosition(0.0, 0.0, accuracyMeters = 4.0, timestampMs = 1_000L, isStationary = false))
+
+        // Simulate 159 s stop with coarse rejected indoor fixes & 1-Hz predictions building P[pos, v]
+        pauseEkf.applyZeroVelocityUpdate(timestampMs = 2_000L)
+        for (sec in 3..160) {
+            pauseEkf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = sec * 1_000L)
+            assertFalse(pauseEkf.updateGnssPosition(2.0, 0.0, accuracyMeters = 45.9, timestampMs = sec * 1_000L, isStationary = true))
+        }
+
+        // Row 228 (t = 161 s): first outdoor moving fix (Doppler 2.61 m/s)
+        pauseEkf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = 161_000L)
+        pauseEkf.updateSpeed(2.61, variance = AttFusedColdStartHelper.calibratedDopplerSpeedVariance(12.75), timestampMs = 161_000L)
+        assertTrue(pauseEkf.updateGnssPosition(5.0, 0.0, accuracyMeters = 12.75, timestampMs = 161_000L, isStationary = false))
+        assertTrue("Row 228 speed must track Doppler ~2.61 m/s (was ${pauseEkf.speedMps})", abs(pauseEkf.speedMps - 2.61) <= 1.0)
+
+        // Row 229 (t = 162 s): +19.1 m outdoor position snap in 1 s with Doppler 3.51 m/s -> must NOT spike
+        pauseEkf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = 162_000L)
+        pauseEkf.updateSpeed(3.51, variance = AttFusedColdStartHelper.calibratedDopplerSpeedVariance(11.73), timestampMs = 162_000L)
+        val speedBeforeSnap = pauseEkf.speedMps
+        assertTrue(pauseEkf.updateGnssPosition(24.1, 0.0, accuracyMeters = 11.73, timestampMs = 162_000L, isStationary = false))
+        assertEquals("Decoupled post-pause snap must inject 0.0 m/s velocity leak", speedBeforeSnap, pauseEkf.speedMps, 1e-9)
+        assertTrue("Row 229 speed must stay within 1.5 m/s of 3.51 m/s (was ${pauseEkf.speedMps})", abs(pauseEkf.speedMps - 3.51) <= 1.5)
+
+        // 2. Stationary accuracy-gated call WITHOUT ZUPT still arms 3-fix decoupling (Gate 3 Guardrail #1),
+        //    and fix 4 resumes coupled position-velocity updates cleanly.
+        val directEkf = UnicycleOdometryEkf(initialEast = 0.0, initialNorth = 0.0, initialSpeed = 3.0, initialHeadingRad = 0.0, recordSnapshots = false)
+        assertTrue(directEkf.updateGnssPosition(0.0, 0.0, accuracyMeters = 4.0, timestampMs = 1_000L, isStationary = false))
+        assertFalse(directEkf.updateGnssPosition(0.0, 0.0, accuracyMeters = 45.9, timestampMs = 2_000L, isStationary = true))
+
+        // Fixes 1..3 after stationary arming must remain decoupled (0.0 m/s speed change from position innovation)
+        for (fixIdx in 1..3) {
+            val tMs = 2_000L + fixIdx * 1_000L
+            directEkf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = tMs)
+            val before = directEkf.speedMps
+            assertTrue(directEkf.updateGnssPosition(directEkf.eastMeters + 10.0, 0.0, accuracyMeters = 6.0, timestampMs = tMs, isStationary = false))
+            assertEquals("Post-standstill fix #$fixIdx must stay velocity-decoupled", before, directEkf.speedMps, 1e-9)
+        }
+        // Fix 4: decoupling window expired -> coupled GNSS update now influences x[2] again
+        directEkf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0, timestampMs = 6_000L)
+        val beforeFix4 = directEkf.speedMps
+        assertTrue(directEkf.updateGnssPosition(directEkf.eastMeters + 8.0, 0.0, accuracyMeters = 5.0, timestampMs = 6_000L, isStationary = false))
+        assertTrue("Fix #4 must resume normal position-velocity coupling (before=$beforeFix4, after=${directEkf.speedMps})", directEkf.speedMps > beforeFix4 + 0.05)
+    }
 }

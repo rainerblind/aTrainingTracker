@@ -1,0 +1,30 @@
+# Stage 5 Walkthrough — ATT-9601: Stationary Zero-Speed Publication & Post-Pause Velocity Spike Bounding
+
+- **Ticket**: `ATT-9601` (`2 SP`, `Bug`, `tier-a`, Epic `ATT-166`) | **Target Release**: `V5.0.0` | **Gate 3**: `ATT-9652` (`GATE_PASSED`)
+- **Traceability**: `REQ-FIL-041` (`.1`–`.3`, `[Verified]`, `Derived (SW-only)`) <-> `TST-FIL-041` (`.1`–`.3`, `[Verified]`)
+- **Branch**: `feature/ATT-9601` (branched cleanly off `ad12299e`; preserved intact for Stage 6 Cold Review)
+
+## 1. Summary of Changes & Gate 3 Guardrails Enforced
+
+1. **Immediate Stationary Zero-Speed Publication (`REQ-FIL-041.1`)**:
+   - Added `protected synchronized void publishStationaryZeroSpeed()` in `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice.java` (`867 / 1,500` LoC), cancelling pending watchdog decay (`cancelWatchdog()`), setting `mIsDecaying = false` and `mSpeed = 0.0`, and emitting `0.0` to `mSpeedSensor` and `null` to `mPaceSensor` without mutating pinned coordinates, `mStationaryAnchor`, `mPrevLocation`, or distance accumulators.
+   - Wired `publishStationaryZeroSpeed()` strictly **outside** `synchronized(ekf)` (preserving `this -> ekf` lock ordering) in `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice_ATTFused.kt` (`1,498 / 1,500` LoC) on both pre-anchor coarse stationary rejection and post-anchor `!gnssAccepted && (isStationary || fusedSpeed <= SPEED_ZERO_THRESHOLD)` returns.
+2. **Post-Pause & Post-Standstill EKF Velocity Decoupling (`REQ-FIL-041.2`)**:
+   - Updated `app/src/main/java/com/atrainingtracker/banalservice/odometry/UnicycleOdometryEkf.kt` (`882 / 1,500` LoC) with `POST_PAUSE_DECOUPLE_GAP_MS = 5_000L`, `POST_PAUSE_DECOUPLE_FIXES = 3`, `lastAcceptedMovingGnssTimestampMs`, and `postPauseDecoupleRemainingFixes` (cleared in `resetGnssTrackingState()`).
+   - Enforced Gate 3 Guardrail #1: arms `postPauseDecoupleRemainingFixes = 3` in `applyZeroVelocityUpdate()`, on `isStationary == true` strictly **before** the accuracy gate and stationary early returns, and on `>= 5 s` GNSS/moving-GNSS gaps. Zeroes `k[2][0..1]` and `decoupleVelocityCovariance(pNew)` across the first 3 accepted moving fixes without throttling `updateSpeed()` (Doppler/wheel) during `0 -> 9.0 m/s` starts.
+3. **Fused-Speed Trust Hook & `REQ-TRK-056.2` Preservation (`REQ-FIL-041.3`)**:
+   - Added `protected boolean trustsFusedLocationSpeed() { return false; }` in `SpeedAndLocationDevice.java` (preserving `REQ-TRK-056.2` `rawSpeed < 0.2 * calcSpeed` fallback 100% unchanged for `GPS` & `GoogleFused`), overridden to `true` in `SpeedAndLocationDevice_ATTFused.kt` so EKF-fused speed (`3.51 m/s`) is never overwritten by `calcSpeed = 19.09 m/s` across post-pause coordinate snaps.
+4. **Canonical Links & Living-Doc Parity**:
+   - Normalized ephemeral worktree links in `docs/engineering/analysis/ATT-9601_analysis.md` (Guardrail #4), promoted `REQ-FIL-041` (`req_tracking_cockpit_part3.md` `v1.0.12`) and `TST-FIL-041` (`tst_tracking_cockpit_part2.md` `v1.0.15`) with aligned header/table versions, and synced master indexes.
+
+## 2. Verification Results (`146/146` Tier-1 Targeted PASS, `0` New Warnings)
+
+- Command: `python3 tools/parallel_sprint_lock.py -- ./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" --tests "com.atrainingtracker.banalservice.odometry.AttFusedColdStartHelperTest" --tests "com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" --tests "com.atrainingtracker.banalservice.odometry.OdometrySimulationTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest" --tests "com.atrainingtracker.banalservice.replay.*" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`
+- **Results (`146/146` PASS, `0` fail, `0` err, `0` skip)**:
+  - `SpeedAndLocationDevice_ATTFusedTest`: `40/40` PASS (`TST-FIL-041.1`–`.3`, incl. Guardrail #2 watchdog cancellation & frozen distance assertions)
+  - `UnicycleOdometryEkfTest`: `20/20` PASS (`TST-FIL-041.2`, incl. Guardrail #1 stationary accuracy-gated arming & fix-4 recoupling)
+  - `SpeedAndLocationDeviceStationaryJitterTest`: `15/15` PASS (`REQ-TRK-056.2` preserved) | `SpeedAndLocationDeviceDecayTest`: `14/14` PASS | `SpeedAndLocationDeviceIndoorAndRestCouplingTest`: `11/11` PASS
+  - `ExtendedRtsOdometrySmootherTest`: `14/14` PASS | `AttFusedColdStartHelperTest`: `3/3` PASS | `OdometrySimulationTest`: `3/3` PASS | `OfflineTelemetryReplayHarnessTest`: `11/11` PASS | `OfflineReplayCliTest`: `4/4` PASS
+  - `ArchitectureConformanceContractTest`: `11/11` PASS (`SpeedAndLocationDevice_ATTFused.kt` `1,498 / 1,500` LoC; `0` UI/DB/`strings*.xml` edits)
+- **Governance & Evidence**: `verify_requirement_governance.py --base-ref ad12299e` `exit 0`; `auto_gate.py --ticket ATT-9601 --tier tier-a --base-ref ad12299e --write-bundle` passed `static_safety_linters`, `deliverable_lint`, `conflict_markers`, `evidence_bundle` (`16` JUnit XMLs / `17` SHA-256 hashed files under `docs/engineering/test_evidence/tickets/ATT-9601/`), and `169/169` (`14/14` in-scope suites incl. `SpeedAndLocationDeviceGoogleFusedTest` `7/7`, `SpeedAndLocationDeviceResilienceTest` `9/9`, `VerticalSpeedAndSlopeDeviceTest` `23/23`, `PolarDualImuBoundedHeapStressTest` `1/1`; `181/184` total).
+- **Documented Pre-Existing Baseline Deviations**: `auto_gate.py` reported 2 known pre-existing baseline failures completely unrelated to `ATT-9601` — `DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls` (tracked in **`ATT-9578`**) and `MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds` (+ `classMethod`, tracked in **`ATT-9639`**).

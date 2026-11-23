@@ -1,0 +1,72 @@
+{
+  "android_test_summary": {
+    "details": "Failed Android test(s): com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds, com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod, com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls",
+    "failing_tests": [
+      "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+      "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod",
+      "com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls"
+    ],
+    "passed": false,
+    "ran": 184
+  },
+  "checks": [
+    {
+      "details": "Android: Failed Android test(s): com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds, com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod, com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls | Python: No Python tests selected.",
+      "failing_tests": [
+        "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+        "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod",
+        "com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.testHotPathFiles_containZeroRunBlockingCalls"
+      ],
+      "name": "dependent_unit_tests",
+      "passed": false
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10500 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "3bb1dedff6f0d9e08113577b6e1ebe345441572a",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarDualImuBoundedHeapStressTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.OdometrySimulationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-23T02:12:55.630314+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-9601",
+  "ui_touching": false,
+  "verdict": "FAIL"
+}

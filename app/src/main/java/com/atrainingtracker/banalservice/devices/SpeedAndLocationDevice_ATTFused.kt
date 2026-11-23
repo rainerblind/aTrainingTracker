@@ -254,6 +254,8 @@ open class SpeedAndLocationDevice_ATTFused(
 
     override fun shouldReleaseColdStartStationaryPin(location: Location?): Boolean = mAllowColdStartPinRelease
 
+    override fun trustsFusedLocationSpeed(): Boolean = true
+
     @Synchronized
     fun registerUpdates() {
         registerLocationUpdates()
@@ -546,25 +548,25 @@ open class SpeedAndLocationDevice_ATTFused(
                 currentEkfSpeed <= SPEED_ZERO_THRESHOLD
             ))
 
-        // REQ-FIL-023.1: Defer tangent-plane origin anchoring until a valid GNSS accuracy fix arrives
+        // REQ-FIL-023.1 & REQ-FIL-041.1: Defer tangent-plane anchor until valid fix; publish 0 speed outside ekf lock
+        var rejectedPreAnchor = false
         val rLat: Double
         val rLon: Double
         synchronized(ekf) {
             if (!hasValidGnssAnchor || refLat == null || refLon == null) {
                 if (acc <= 0.0 || acc > UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) {
-                    if (isStationary) {
-                        ekf.applyZeroVelocityUpdate(timestampMs)
-                    }
-                    return
+                    if (isStationary) ekf.applyZeroVelocityUpdate(timestampMs)
+                    rejectedPreAnchor = true
+                } else {
+                    refLat = lat; refLon = lon; hasValidGnssAnchor = true
+                    ekf.reanchorPosition(0.0, 0.0)
                 }
-                refLat = lat
-                refLon = lon
-                hasValidGnssAnchor = true
-                // Atomically re-anchor pre-fix dead-reckoning coordinates to (0, 0) at origin lock
-                ekf.reanchorPosition(0.0, 0.0)
             }
-            rLat = refLat!!
-            rLon = refLon!!
+            rLat = refLat ?: 0.0; rLon = refLon ?: 0.0
+        }
+        if (rejectedPreAnchor) {
+            if (isStationary) publishStationaryZeroSpeed()
+            return
         }
 
         val dLatRad = Math.toRadians(lat - rLat)
@@ -624,6 +626,7 @@ open class SpeedAndLocationDevice_ATTFused(
         }
 
         if (!gnssAccepted && (isStationary || fusedSpeed <= SPEED_ZERO_THRESHOLD)) {
+            publishStationaryZeroSpeed()
             return
         }
 
