@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.WorkoutIngestionSourceTaggingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:18:07.196Z" hostname="rainer-HP-EliteBook-850-G5" time="5.256">
+  <properties/>
+  <testcase name="testImportTcx_tagsSourceAsTcx" classname="com.atrainingtracker.trainingtracker.migration.WorkoutIngestionSourceTaggingTest" time="2.607"/>
+  <testcase name="testImportGpx_tagsSourceAsGpx" classname="com.atrainingtracker.trainingtracker.migration.WorkoutIngestionSourceTaggingTest" time="2.649"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

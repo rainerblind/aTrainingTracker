@@ -30,7 +30,6 @@ enum class SettingsBottomSheetType {
     EXPORT,
     UNITS,
     DISPLAY,
-    ADVANCED_TUNING,
     SEARCH,
     ACTIVITY_TYPE,
     HEALTH_CONNECT

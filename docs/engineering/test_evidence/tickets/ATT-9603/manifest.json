@@ -1,0 +1,26 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "4a667ba11aef4d983bc5c942b29db6643488ace7",
+  "files": {
+    "evidence_summary.json": "7722a695cc2f434560c2f56eb8aad60fa54079833ad50bebb6ce9508b6122227",
+    "junit/TEST-com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest.xml": "4055a63d87eeb3fe7c42938daf00153cb15b088972f8e76607d842baa0cbd0e1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest.xml": "60998e67745496920c2e57a7b1b2b83d08881f058c25f8f8a1ff22f56499b371",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest.xml": "a220e92111ab5b38c11f3c94ec8c8c34d0f63e50197544e8123a5faea3d6b377",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest.xml": "387b51c8fa1dd95642d334ae94cfcf5e7881ee645665f58793207ac4acda8c47",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryConcurrencyTest.xml": "e5f3a379543150d94336ecdcd0ba81ce9fd89bc4c44a8a1c0a7c87e403029bab",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryContractTest.xml": "ab16921fa5d0e429618187b9f64eb804ce076e62e9cca36e34c2f77bccca4a18",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryImmutabilityTest.xml": "16d8a21c0854737d4baa942ff09a8032f52d575f98c3fd5c14dcfd858f189490",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest.xml": "ad740a63c811c0dbd11aba5083cfd81ee71132b74493e2f1730dec243d5f89bc",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest.xml": "c55f40a0ac9143553cdc8a2adb36300d1b07bd772f935453739b976a7d2cfb6c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest.xml": "b574e6a160288ce1a86d0fbc9dfc56fbc9543b3e1907875be2c81614c7af8ebc",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest.xml": "be6c66b69f26d9373b6ba501b5b89bd563e30f96cb7b4f5bb263d48306c3e106",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelLiveDriftTest.xml": "e3dac449aa4a375761bcd66587c3d4aeccbde1a60f616aa36d18dd72deff0756",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest.xml": "560f71dbb082f6a1344dd040ab035937c4c16d6b9e1cb3747b022218cb3c9fac",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest.xml": "806a2c38ade1b5bbbd28572fc03d20649fd610d5947e3cfca1396fb07b0c3072",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest.xml": "cca46e637df942dd55b64d93360a77f748b0a2deb060c061876a4a05fe677b77",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSparklineTest.xml": "33ba75c19e60f6550b125d0348d07515aed4473c47d59ef7233d064358ca7892"
+  },
+  "run_started_utc": "2026-11-22T22:49:10.499034+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9603"
+}

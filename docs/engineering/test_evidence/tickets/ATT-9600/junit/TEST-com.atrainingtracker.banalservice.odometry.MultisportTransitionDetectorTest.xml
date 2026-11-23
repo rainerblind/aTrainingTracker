@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-23T03:23:07.282Z" hostname="rainer-HP-EliteBook-850-G5" time="0.02">
+  <properties/>
+  <testcase name="tier1UserLockAndNotTracking_blockAllTransitions" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.006"/>
+  <testcase name="bikeToRunBrick_with50sT2_confirmsAt1865sWithExactRetroactiveAnchors" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.008"/>
+  <testcase name="shortOppositeSportBlip_under15s_rejectedAndDoesNotTrigger" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="parkedSilentBikeSensorWith50HzAccelFootstrikes_confirmsRunDespiteCyclingPrior" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="directSwitchUnder10s_emitsEventWithShortTransitionWallDuration" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="sameSportBakeryStop_160sStationaryAndWalking_emitsZeroTransitions" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="reset_clearsEstablishedSportPendingAnchorsAndHistory" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="pausedAndAutoPaused_freezeConfirmationWindowAndNeverConfirmWhilePaused" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="duathlon_runToT1ToBikeToT2ToRun_detectsBothTransitions" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="phoneOnlyDuathlon_runToT1ToBikeWithKinematicRunCarryover_preservesT1AndBikeMountAnchor" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

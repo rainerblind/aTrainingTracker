@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
-import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollableBox
 import androidx.compose.material.icons.filled.History
 
 /**

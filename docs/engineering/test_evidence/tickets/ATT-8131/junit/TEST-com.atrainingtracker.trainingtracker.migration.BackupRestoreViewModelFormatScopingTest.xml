@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFormatScopingTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:15:39.966Z" hostname="rainer-HP-EliteBook-850-G5" time="6.466">
+  <properties/>
+  <testcase name="testImportLegacyFile_resolvesFormatCorrectly" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFormatScopingTest" time="3.22"/>
+  <testcase name="testBulkRecoverGoogleDriveData_passesCorrectFormatToGoogleDrive" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFormatScopingTest" time="1.623"/>
+  <testcase name="testBulkRecoverLegacyData_passesCorrectFormatToDropbox" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFormatScopingTest" time="1.622"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:20.238Z" hostname="rainer-HP-EliteBook-850-G5" time="0.031">
+  <properties/>
+  <testcase name="testInvalidZeroDurationOrSinglePointCropRejected" classname="com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest" time="0.005"/>
+  <testcase name="testCropWorkoutScreen_doesNotDeclareNestedVerticalScroll_preventingInfinityHeightConstraintCrash" classname="com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest" time="0.025"/>
+  <testcase name="testRangeUpdateValidatesAndRecomputesMetrics" classname="com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest" time="0.001"/>
+  <testcase name="testInitialUiStateCalculation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

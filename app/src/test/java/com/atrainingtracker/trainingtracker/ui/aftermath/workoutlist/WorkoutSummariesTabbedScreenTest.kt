@@ -37,9 +37,13 @@ class WorkoutSummariesTabbedScreenTest {
     }
 
     @Test
-    fun testWorkoutSummariesListFragment_snackbarHost_appliesNavigationBarsPadding() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment")
-        assertNotNull("WorkoutSummariesListFragment must exist", clazz)
+    fun testWorkoutSummariesListFragment_isEliminatedInFavorOfComposeScreen() {
+        try {
+            Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesListFragment")
+            org.junit.Assert.fail("Legacy WorkoutSummariesListFragment must be eliminated (REQ-UI-2801.1)")
+        } catch (_: ClassNotFoundException) {
+            // Expected
+        }
     }
 
     @Test

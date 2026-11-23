@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:19:25.030Z" hostname="rainer-HP-EliteBook-850-G5" time="0.008">
+  <properties/>
+  <testcase name="testDayPeriodReturnsNullHeatmapProvider" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.001"/>
+  <testcase name="testMonthPeriodReturnsPolylineHeatmapProvider" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.001"/>
+  <testcase name="testYearPeriodReturnsPolylineHeatmapProvider" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.001"/>
+  <testcase name="testWarmHotPaletteAndMiniMapPropagation_TST_MAP_059_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.001"/>
+  <testcase name="testUnifiedCorridorPassCountCalibration_TST_MAP_058_12" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.0"/>
+  <testcase name="testEmptyPathsReturnNullHeatmapProvider" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.002"/>
+  <testcase name="testWeekPeriodReturnsPolylineHeatmapProvider" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapVisualsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

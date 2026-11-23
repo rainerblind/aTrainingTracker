@@ -1,13 +1,13 @@
 # System Context and External System Elements Specification
 
 **Document ID**: `DOC-SYS-CTX`  
-**Version**: 1.3.2  
+**Version**: 1.3.3  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1), SYS.3 (System Architectural Design)  
 **Requirement Reference**: `REQ-PRO-053` (`REQ-PRO-053.1`, `REQ-PRO-053.2`)  
 **Test Reference**: `TST-PRO-053` (`TST-PRO-053.1`–`TST-PRO-053.4`)  
 **Author**: Antigravity Autonomous Engineering Pair  
-**Status**: Approved  
-**Approver**: Rainer Blind (PO)  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -56,12 +56,12 @@ graph TD
         OpenMeteo["Open-Meteo Elevation API<br/>(Digital Elevation Model DEM Queries)"]
         Firebase["Firebase Crashlytics & Analytics<br/>(Operational Crash Logging & Analytics)"]
         GooglePlay["Google Play In-App Review & Auth<br/>(play-services-auth, play:review-ktx)"]
-        PebbleWatch["PebbleKit Smartwatch SDK<br/>(Pebble Watchapp Display)"]
     end
 
     subgraph DecommissionedDomain ["Domain 5: Decommissioned Legacy Interfaces"]
         RunkeeperCloud["Runkeeper HealthGraph API<br/>(PERMANENTLY DECOMMISSIONED)"]
         TrainingPeaksCloud["TrainingPeaks API<br/>(PERMANENTLY DECOMMISSIONED)"]
+        PebbleWatch["PebbleKit Smartwatch SDK<br/>(PERMANENTLY DECOMMISSIONED)"]
     end
 
     Athlete -->|"Touch, Gestures, UI Configuration"| AppCore
@@ -87,10 +87,10 @@ graph TD
     AppCore -->|"Query Reference Altitude"| OpenMeteo
     AppCore -->|"Crash Reporting & Telemetry"| Firebase
     AppCore -->|"Review Prompt & Google Auth"| GooglePlay
-    AppCore -->|"Pebble Dictionary Data Stream"| PebbleWatch
 
     AppCore -.->|"Decommissioned Schema Preserved"| RunkeeperCloud
     AppCore -.->|"Decommissioned Schema Preserved"| TrainingPeaksCloud
+    AppCore -.->|"Decommissioned SDK Removed (ATT-8130)"| PebbleWatch
 ```
 
 ---
@@ -152,8 +152,6 @@ The application operates within the Android application sandboxing model:
    - Application crash logging and operational stability telemetry via `com.google.firebase:firebase-crashlytics` and `com.google.firebase:firebase-analytics` backed by `com.google.firebase:firebase-bom:34.18.0`.
 7. **Google Play Services Auth & In-App Review**:
    - User identity token management via `com.google.android.gms:play-services-auth:21.3.0` and native in-app rating flow via `com.google.android.play:review-ktx:2.0.2`.
-8. **PebbleKit Android SDK**:
-   - Smartwatch companion app telemetry streaming via `com.getpebble:pebblekit:4.0.1`.
 
 ### 3.5 Domain 5: Decommissioned Legacy Interfaces
 1. **Runkeeper HealthGraph API**:
@@ -162,6 +160,9 @@ The application operates within the Android application sandboxing model:
 2. **TrainingPeaks API**:
    - Status: **PERMANENTLY DECOMMISSIONED**.
    - Rationale: TrainingPeaks API service retired. Legacy database schema columns and preferences are preserved for schema stability.
+3. **PebbleKit Android SDK**:
+   - Status: **PERMANENTLY DECOMMISSIONED**.
+   - Rationale: Pebble smartwatch platform discontinued; `com.getpebble:pebblekit:4.0.1`, `smartwatch/pebble/*`, `PebbleView.db`, and manifest components removed in `ATT-8130` (`REQ-UI-2802`).
 
 ---
 
@@ -198,3 +199,4 @@ The application operates within the Android application sandboxing model:
 | `1.3.0` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Added Smartphone IMU (`6` `Sensor.TYPE_*` channels), Polar BLE SDK `8.6.0` PFTP/PMD, Garmin Varia RearVue `6a4e2f00`, ANT+ `0x28`/`0x23`, and bidirectional sensor control edges. |
 | `1.3.1` | 2026-11-18 | AI Agent (`ATT-8201`) | `ATT-8201` | Cold Stage 6 heal: added `Sensor.TYPE_LIGHT` (`SmartRadarLightEngine.kt`) and distinguished Polar H10 `30s` (`30_000L`) vs. Verity Sense `45s` (`45_000L`) `BACKFILL_TIMEOUT_MS`. |
 | `1.3.2` | 2026-11-18 | AI Agent (`ATT-8890`, `--as agent1`) | `ATT-8890` | Added opportunistically gated `Sensor.TYPE_STEP_DETECTOR` plus `PhoneCarriageMode.kt` and `PhoneCarriageClassifier.kt` (`ACTIVITY_AND_CARRIAGE_MODE` 1-Hz telemetry) under Domain 1 §3.1.3 (`REQ-FIL-028`). |
+| `1.3.3` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Moved PebbleKit Smartwatch SDK to Domain 5 (`PERMANENTLY DECOMMISSIONED`) after removing `pebblekit:4.0.1` and `smartwatch/pebble/*`, and reset `Status` to `Reviewed` (`Pending PO Sign-Off`) per `REQ-PRO-120.2`. |

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:43.870Z" hostname="rainer-HP-EliteBook-850-G5" time="0.079">
+  <properties/>
+  <testcase name="testTuningWarningNotice_advisoryContainerAndInformativeIcon" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.025"/>
+  <testcase name="testTuningAccordionSection_zeroTonalElevationAndM3Tokens" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.008"/>
+  <testcase name="testAdvancedTuningDialog_initiallyCollapsesAllSections" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.0"/>
+  <testcase name="testAdvancedTuningDialog_workoutCardPrefsFlowGating" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.0"/>
+  <testcase name="testDecoupledSubsections_existAsIndividualComposables" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.039"/>
+  <testcase name="testNavigationSection_dismissDurationUsesSliderContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.006"/>
+  <testcase name="testWorkoutMasksAndCardsSection_lapDisplayModeUsesSegmentedButton" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.0"/>
+  <testcase name="testAdvancedTuningDialog_usesAccordionSectionStructure" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

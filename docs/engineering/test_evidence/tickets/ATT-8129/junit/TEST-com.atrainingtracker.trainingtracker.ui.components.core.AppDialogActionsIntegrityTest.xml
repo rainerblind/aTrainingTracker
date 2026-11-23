@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActionsIntegrityTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:30.893Z" hostname="rainer-HP-EliteBook-850-G5" time="0.194">
+  <properties/>
+  <testcase name="testPreImportTuningBottomSheet_existsAndPreservesContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActionsIntegrityTest" time="0.158"/>
+  <testcase name="testAppModalBottomSheet_supportsHeaderActions" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActionsIntegrityTest" time="0.019"/>
+  <testcase name="testEditRouteScreen_existsAndPreservesContract" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActionsIntegrityTest" time="0.011"/>
+  <testcase name="testAppDialogActions_exposesSaveCancelConfirmAndCancelOnly" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActionsIntegrityTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:45:35.484Z" hostname="rainer-HP-EliteBook-850-G5" time="2.203">
+  <properties/>
+  <testcase name="testUiState_climbsFlowStreamsPreDeduplicatedStoredClimbsDirectly" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="1.493"/>
+  <testcase name="testUiState_climbsFlowUpdatesReactively_whenAllStoredClimbsChanges" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="0.051"/>
+  <testcase name="testUiState_mapsActiveNavigatedRouteWithProminence" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="0.076"/>
+  <testcase name="testUiState_combinesClimbsFlow" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="0.044"/>
+  <testcase name="testUpdateKnownLocation_delegatesToRepository" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="0.307"/>
+  <testcase name="testUiState_combinesKnownLocationsFlow" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="0.038"/>
+  <testcase name="testUiState_combinesClustersFlow" classname="com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest" time="0.194"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

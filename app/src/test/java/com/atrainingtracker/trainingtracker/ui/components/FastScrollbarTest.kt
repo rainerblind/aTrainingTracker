@@ -18,6 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.ui.components
 
+import com.atrainingtracker.trainingtracker.ui.components.core.FastScrollbar
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateAccumulatedProgress
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateScrollProgress
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateTargetIndex
+import com.atrainingtracker.trainingtracker.ui.components.core.calculateTargetIndexFromProgress
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

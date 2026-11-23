@@ -37,39 +37,22 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.PowerManager
-import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MenuItem
-import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
 import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.util.safeStartService
 import com.atrainingtracker.util.safeUnregisterReceiver
-import androidx.core.view.GravityCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentTransaction
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.preference.PreferenceFragmentCompat
@@ -78,26 +61,16 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
-import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
-import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
-import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager
-import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
-import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
-import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
-import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
@@ -112,38 +85,21 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummary
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragment
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
-import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Collections
-import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
-import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentFragment
-import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrack
 import com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerApp
 import com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes
 import com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerController
 import com.atrainingtracker.trainingtracker.ui.navigation.SettingsBottomSheetType
-import com.atrainingtracker.trainingtracker.ui.navigation.setupComposeNavigationDrawer
-import com.atrainingtracker.trainingtracker.ui.routes.RoutesFragment
-import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegmentsFragment
-import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogFragment
-import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionHelper
-import com.atrainingtracker.trainingtracker.ui.settings.units.UnitsSettingsDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsFragment
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModel
@@ -157,17 +113,15 @@ import java.util.LinkedList
 /**
  * Primary navigation activity and lifecycle cockpit for aTrainingTracker.
  *
- * Coordinates top-level navigation, Jetpack Compose navigation drawer hosting,
- * fragment backstack transactions, BANALService connection lifecycle,
- * system broadcast reception, and workout crash recovery.
+ * Coordinates top-level Jetpack Compose navigation, navigation drawer hosting,
+ * BANALService connection lifecycle, system broadcast reception, and workout crash recovery.
  *
  * Migrated to Kotlin under ATT-657 (fulfills REQ-UI-124, verified by TST-NAV-008).
  */
 class MainActivityWithNavigation :
     AppCompatActivity(),
     BANALService.GetBanalServiceInterface,
-    PreferenceFragmentCompat.OnPreferenceStartScreenCallback,
-    StartOrResumeInterface {
+    PreferenceFragmentCompat.OnPreferenceStartScreenCallback {
 
     companion object {
         @JvmField
@@ -181,6 +135,8 @@ class MainActivityWithNavigation :
 
         const val EXTRA_DRAWER_ITEM_ID = "com.atrainingtracker.EXTRA_DRAWER_ITEM_ID"
         const val EXTRA_FILTER_CRITICAL_BATTERY = "EXTRA_FILTER_CRITICAL_BATTERY"
+        private const val STATE_SHOW_START_OR_RESUME_DIALOG = "STATE_SHOW_START_OR_RESUME_DIALOG"
+        private const val STATE_SHOW_GPS_DISABLED_DIALOG = "STATE_SHOW_GPS_DISABLED_DIALOG"
 
         private val DEBUG: Boolean
             get() = TrainingApplication.getDebug(true)
@@ -222,10 +178,8 @@ class MainActivityWithNavigation :
 
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     internal var mPlayServicesErrorDialog: Dialog? = null
-    protected var mDrawerLayout: DrawerLayout? = null
     protected val mDrawerController: NavigationDrawerController =
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
-    protected var mFragment: Fragment? = null
     var navController: NavHostController? = null
     private var mPendingDrawerItemId: Int? = null
 
@@ -246,7 +200,6 @@ class MainActivityWithNavigation :
     }
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     internal val mHandler: Handler = Handler(Looper.getMainLooper())
-    protected var mStartAndNotResume: Boolean = true
     private var mResumingFromInterruptedNotification: Boolean = false
     protected var mBanalServiceComm: BANALService.BANALServiceComm? = null
     internal val mConnectionStatusListeners: LinkedList<BANALService.GetBanalServiceInterface.ConnectionStatusListener> = LinkedList()
@@ -335,6 +288,8 @@ class MainActivityWithNavigation :
     var showAntStatusSheet: Boolean by mutableStateOf(false)
     var firstJubileeCelebrationState: MilestoneAutoNamingManager.MilestoneCelebrationData? by mutableStateOf(null)
     var garageNudgeState: GarageNudgeEvent? by mutableStateOf(null)
+    var showStartOrResumeDialogState: Boolean by mutableStateOf(false)
+    var showGpsDisabledDialog: Boolean by mutableStateOf(false)
 
     fun showSpecificInstallANTDialog() {
         if (antDialogState != null || showAntStatusSheet) {
@@ -426,7 +381,6 @@ class MainActivityWithNavigation :
     }
 
     private lateinit var mStartTrackingFilter: IntentFilter
-    private var mAlreadyTriedToRequestDropboxToken: Boolean = false
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal val mBanalConnection = object : ServiceConnection {
@@ -491,6 +445,8 @@ class MainActivityWithNavigation :
         if (savedInstanceState != null) {
             mSelectedFragmentId = savedInstanceState.getInt(SELECTED_FRAGMENT_ID, DEFAULT_SELECTED_FRAGMENT_ID)
             mDrawerController.selectedItemId = mSelectedFragmentId
+            showStartOrResumeDialogState = savedInstanceState.getBoolean(STATE_SHOW_START_OR_RESUME_DIALOG, false)
+            showGpsDisabledDialog = savedInstanceState.getBoolean(STATE_SHOW_GPS_DISABLED_DIALOG, false)
         }
 
         try {
@@ -629,10 +585,8 @@ class MainActivityWithNavigation :
                 val hasUnfinished = WorkoutRepository.getInstance(applicationContext).hasUnfinishedWorkout()
                 if (hasUnfinished) {
                     withContext(Dispatchers.Main) {
-                        if (!isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved) {
-                            if (supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
-                                showStartOrResumeDialog()
-                            }
+                        if (!isFinishing && !isDestroyed && !showStartOrResumeDialogState) {
+                            showStartOrResumeDialog()
                         }
                     }
                 }
@@ -758,12 +712,9 @@ class MainActivityWithNavigation :
     override fun onSaveInstanceState(savedInstanceState: Bundle) {
         if (DEBUG) Log.i(TAG, "onSaveInstanceState")
 
-        val fragment = mFragment
-        if (fragment != null && fragment.isAdded) {
-            supportFragmentManager.putFragment(savedInstanceState, "mFragment", fragment)
-        }
-
         savedInstanceState.putInt(SELECTED_FRAGMENT_ID, mSelectedFragmentId)
+        savedInstanceState.putBoolean(STATE_SHOW_START_OR_RESUME_DIALOG, showStartOrResumeDialogState)
+        savedInstanceState.putBoolean(STATE_SHOW_GPS_DISABLED_DIALOG, showGpsDisabledDialog)
         super.onSaveInstanceState(savedInstanceState)
     }
 
@@ -1175,20 +1126,18 @@ class MainActivityWithNavigation :
 
     private fun showGPSDisabledAlertToUser() {
         runOnUiThread {
-            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) {
+            if (isFinishing || isDestroyed) {
                 return@runOnUiThread
             }
-            val gpsDisabledDialog = GPSDisabledDialog()
-            gpsDisabledDialog.show(supportFragmentManager, GPSDisabledDialog.TAG)
+            showGpsDisabledDialog = true
         }
     }
 
-    override fun showStartOrResumeDialog() {
-        val startOrResumeDialog = StartOrResumeDialog()
-        startOrResumeDialog.show(supportFragmentManager, StartOrResumeDialog.TAG)
+    fun showStartOrResumeDialog() {
+        showStartOrResumeDialogState = true
     }
 
-    override fun chooseStart() {
+    fun chooseStart() {
         try {
             NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID)
         } catch (e: Exception) {
@@ -1200,7 +1149,7 @@ class MainActivityWithNavigation :
         }
     }
 
-    override fun chooseResume() {
+    fun chooseResume() {
         try {
             NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID)
         } catch (e: Exception) {

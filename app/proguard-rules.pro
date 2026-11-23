@@ -2,7 +2,6 @@
 # These libraries reference old Apache or internal classes that R8 can't find.
 -dontwarn org.apache.http.**
 -dontwarn android.net.http.AndroidHttpClient
--dontwarn com.getpebble.android.kit.**
 -dontwarn com.dsi.ant.**
 
 # --- Google Maps & Location ---
@@ -36,10 +35,6 @@
 # --- ANT+ Plugin Library ---
 -keep class com.dsi.ant.** { *; }
 -dontwarn com.dsi.ant.**
-
-# --- PebbleKit ---
--keep class com.getpebble.android.kit.** { *; }
--dontwarn com.getpebble.android.kit.**
 
 # --- Dropbox SDK ---
 -keep class com.dropbox.core.** { *; }

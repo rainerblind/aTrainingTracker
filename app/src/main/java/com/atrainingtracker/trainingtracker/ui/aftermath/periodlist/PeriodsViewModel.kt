@@ -385,7 +385,6 @@ class PeriodsViewModel @JvmOverloads constructor(
     fun loadPeriods() {
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
-            periodsRepo.checkIntegrityAndSync()
         }
     }
 

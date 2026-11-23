@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.AttFusedTimestampNormalizerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T03:23:59.162Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testDivergentOemHals_uptimeMillisDeepSleepAndEpochNsNtpJumpReanchorCleanly_TST_FIL_042_2" classname="com.atrainingtracker.banalservice.odometry.AttFusedTimestampNormalizerTest" time="0.0"/>
+  <testcase name="testStandardClockBoottime_unifiesGnssAndImuIgnoringLaggingLocationTime_TST_FIL_042_1" classname="com.atrainingtracker.banalservice.odometry.AttFusedTimestampNormalizerTest" time="0.0"/>
+  <testcase name="testPlainJvmUnmockedAndRobolectricFrozenClockCoherenceAndReset_TST_FIL_042_2" classname="com.atrainingtracker.banalservice.odometry.AttFusedTimestampNormalizerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -257,8 +257,8 @@ class HardwareHalIngestionIntegrationTest {
      */
     @Test
     fun testBtleRadar_gattPacketIngestion_v1AndV2ThreatClassification() {
-        // V1 Threat Packet: header=0x00, id=1, range=45m, byte3=(threat=1 << 4) | (speed=5) = 0x15
-        val v1Payload = byteArrayOf(0x00, 0x01.toByte(), 45.toByte(), 0x15.toByte())
+        // Authentic Garmin Varia V1 sequence-framed threat packet: header=0x12, vid=0x81 (trackId=1), range=45m
+        val v1Payload = byteArrayOf(0x12, 0x81.toByte(), 45.toByte(), 0x00)
         val v1Targets = BTLERadarDevice.parseV1ThreatPacket(v1Payload)
         assertNotNull("V1 radar packet must be parsed into targets", v1Targets)
         assertEquals(1, v1Targets?.size)
@@ -266,18 +266,24 @@ class HardwareHalIngestionIntegrationTest {
         assertEquals(45.0f, v1Targets?.first()?.rangeMeters ?: 0f, 0.01f)
         assertEquals(ThreatLevel.APPROACHING, v1Targets?.first()?.threatLevel)
 
-        // V2 Multi-target packet: header 0x01 + 2 * 8-byte targets
-        val v2Payload = byteArrayOf(
-            0x01,
-            0x01, 0x76.toByte(), 0x06.toByte(), 0x96.toByte(), 0x00.toByte(), 0xEB.toByte(), 0xFF.toByte(), 0x0A.toByte(),
-            0x02, 0x5E.toByte(), 0x01.toByte(), 0x64.toByte(), 0x00.toByte(), 0xEE.toByte(), 0xFF.toByte(), 0x35.toByte()
-        )
+        // Authentic Garmin Varia RearVue 820 V2 multi-target packet: 2-byte header (0x02, 0x00) + 2 * 9-byte structs
+        fun rearVueTarget(id: Int, cls: Int, rangeM: Float, latM: Float, speedMps: Float): ByteArray {
+            val packed = (Math.round(latM * 10f) and 0x7FF) or ((Math.round(rangeM * 10f) and 0x1FFF) shl 11)
+            return byteArrayOf(
+                id.toByte(), cls.toByte(),
+                (packed and 0xFF).toByte(), ((packed shr 8) and 0xFF).toByte(), ((packed shr 16) and 0xFF).toByte(),
+                16.toByte(), 8.toByte(), (-Math.round(speedMps * 2f)).toByte(), 0x80.toByte()
+            )
+        }
+        val v2Payload = byteArrayOf(0x02, 0x00) +
+            rearVueTarget(id = 1, cls = 36, rangeM = 165.4f, latM = -2.1f, speedMps = 15.0f) +
+            rearVueTarget(id = 2, cls = 26, rangeM = 35.0f, latM = -1.8f, speedMps = 10.0f)
         val v2Targets = BTLERadarDevice.parseV2ThreatPacket(v2Payload)
         assertNotNull("V2 radar packet must be parsed into targets", v2Targets)
         assertEquals(2, v2Targets?.size)
         assertEquals(ThreatLevel.FAST_APPROACHING, v2Targets?.get(0)?.threatLevel)
         assertEquals(VehicleSizeCategory.TRUCK_OR_BUS, v2Targets?.get(0)?.vehicleSizeCategory)
-        assertEquals(165.4f, v2Targets?.get(0)?.rangeMeters ?: 0f, 0.01f)
+        assertEquals(165.4f, v2Targets?.get(0)?.rangeMeters ?: 0f, 0.05f)
         assertEquals(ThreatLevel.APPROACHING, v2Targets?.get(1)?.threatLevel)
 
         // Feed parsed V2 targets into real BTLERadarDevice -> RadarStateRepository
@@ -286,9 +292,11 @@ class HardwareHalIngestionIntegrationTest {
         radarDevice.processTargetsForTesting(v2Targets)
         assertEquals(2, RadarStateRepository.getState().targets.size)
 
-        // Guard against empty / malformed payloads
+        // Guard against empty / malformed / legacy synthetic payloads
         assertNull("Empty V1 bytes must safely return null", BTLERadarDevice.parseV1ThreatPacket(byteArrayOf()))
         assertNull("Empty V2 bytes must safely return null", BTLERadarDevice.parseV2ThreatPacket(byteArrayOf()))
+        assertNull("Decommissioned synthetic V1 header 0x00 must return null", BTLERadarDevice.parseV1ThreatPacket(byteArrayOf(0x00, 0x01, 45.toByte(), 0x15.toByte())))
+        assertNull("Decommissioned synthetic V2 header 0x01 must return null", BTLERadarDevice.parseV2ThreatPacket(byteArrayOf(0x01)))
     }
 
     /**

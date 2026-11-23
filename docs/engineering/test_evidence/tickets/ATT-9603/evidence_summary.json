@@ -1,0 +1,64 @@
+{
+  "android_test_summary": {
+    "details": "76 Android unit tests passed (16 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 76
+  },
+  "checks": [
+    {
+      "details": "Android: 76 Android unit tests passed (16 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10378 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "4a667ba11aef4d983bc5c942b29db6643488ace7",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.UiPresentationIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryConcurrencyTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryImmutabilityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelGridTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelLiveDriftTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMapStateTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSparklineTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-22T22:49:10.499034+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-9603",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

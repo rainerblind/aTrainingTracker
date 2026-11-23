@@ -324,6 +324,136 @@ class OfflineTelemetryReplayHarnessTest {
         assertTrue(failCheck.violations.any { it.contains("Ascent") })
     }
 
+    // REQ-EXP-047.3 / TST-EXP-047.3
+    @Test
+    fun replay_mixedGnssAndDivergentGnssFused_autoAndGpsIsolateRawGpsWhileFusedSelectsFused_TST_EXP_047_3() {
+        val cleanPhoneFile = writeSyntheticPhoneRunningSidecar(
+            tempFolder.newFile("clean_gps.phone_raw.csv.gz"),
+            durationSec = 40
+        )
+        val cleanRows = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(cleanPhoneFile).rows
+        // Interleave divergent GNSS_FUSED rows (+20 m ellipsoidal offset, 2x northward displacement & speed)
+        val mixedRows = buildList {
+            for (row in cleanRows) {
+                add(row)
+                if (row.channel == PhoneRawChannel.GNSS) {
+                    val baseLat = 48.1351
+                    val dLat = row.v0 - baseLat
+                    add(
+                        row.copy(
+                            elapsedRealtimeNs = row.elapsedRealtimeNs + 5_000_000L,
+                            channel = PhoneRawChannel.GNSS_FUSED,
+                            v0 = baseLat + dLat * 2.0,
+                            v2 = row.v2 + 20.0,
+                            v3 = row.v3 * 2.0
+                        )
+                    )
+                }
+            }
+        }
+
+        val cleanResult = OfflineTelemetryReplayHarness.replayParsed(cleanRows, emptyList())
+        val autoResult = OfflineTelemetryReplayHarness.replayParsed(mixedRows, emptyList(), ReplayConfig(gnssSource = ReplayGnssSource.AUTO))
+        val gpsResult = OfflineTelemetryReplayHarness.replayParsed(mixedRows, emptyList(), ReplayConfig(gnssSource = ReplayGnssSource.GPS))
+        val fusedResult = OfflineTelemetryReplayHarness.replayParsed(mixedRows, emptyList(), ReplayConfig(gnssSource = ReplayGnssSource.FUSED))
+
+        assertEquals(cleanResult.scorecard.ekfTotalDistanceM, autoResult.scorecard.ekfTotalDistanceM, 1e-6)
+        assertEquals(cleanResult.scorecard.ekfAscentM, autoResult.scorecard.ekfAscentM, 1e-6)
+        assertEquals(autoResult.scorecard.ekfTotalDistanceM, gpsResult.scorecard.ekfTotalDistanceM, 1e-6)
+        assertEquals(autoResult.series.last().ekfAltitudeM, cleanResult.series.last().ekfAltitudeM, 1e-6)
+        assertTrue(
+            "FUSED replay distance (${fusedResult.scorecard.ekfTotalDistanceM}) must significantly exceed GPS (${gpsResult.scorecard.ekfTotalDistanceM})",
+            fusedResult.scorecard.ekfTotalDistanceM > gpsResult.scorecard.ekfTotalDistanceM + 60.0
+        )
+        assertEquals(
+            mixedRows.size,
+            autoResult.scorecard.phoneEventsProcessed
+        )
+        assertEquals(
+            autoResult.scorecard.phoneEventsProcessed + autoResult.scorecard.polarEventsProcessed,
+            autoResult.scorecard.totalEventsProcessed
+        )
+    }
+
+    // REQ-EXP-047.3 / TST-EXP-047.3
+    @Test
+    fun replay_gnssFusedOnlySidecar_autoFallsBackToGnssFused_TST_EXP_047_3() {
+        val cleanPhoneFile = writeSyntheticPhoneRunningSidecar(
+            tempFolder.newFile("fused_only_src.phone_raw.csv.gz"),
+            durationSec = 40
+        )
+        val cleanRows = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(cleanPhoneFile).rows
+        val fusedOnlyRows = cleanRows.map { row ->
+            if (row.channel == PhoneRawChannel.GNSS) row.copy(channel = PhoneRawChannel.GNSS_FUSED) else row
+        }
+
+        val autoResult = OfflineTelemetryReplayHarness.replayParsed(fusedOnlyRows, emptyList(), ReplayConfig(gnssSource = ReplayGnssSource.AUTO))
+        val gpsOnlyResult = OfflineTelemetryReplayHarness.replayParsed(fusedOnlyRows, emptyList(), ReplayConfig(gnssSource = ReplayGnssSource.GPS))
+        val fusedResult = OfflineTelemetryReplayHarness.replayParsed(fusedOnlyRows, emptyList(), ReplayConfig(gnssSource = ReplayGnssSource.FUSED))
+
+        assertTrue("AUTO must fall back to GNSS_FUSED when 0 GNSS rows exist", autoResult.scorecard.ekfTotalDistanceM > 80.0)
+        assertEquals(fusedResult.scorecard.ekfTotalDistanceM, autoResult.scorecard.ekfTotalDistanceM, 1e-6)
+        assertEquals("Explicit GPS on fused-only sidecar must consume 0 GNSS rows", 0.0, gpsOnlyResult.scorecard.ekfTotalDistanceM, 1e-6)
+    }
+
+    // REQ-EXP-047.3 / TST-EXP-047.3: Legacy v1 sidecar with duplicated GNSS rows + interleaved IMU rows
+    @Test
+    fun replay_legacyV1DuplicateGnssRowsWithInterleavedImu_deduplicatesCleanlyAndMatchesCleanReplay_TST_EXP_047_3() {
+        val cleanPhoneFile = writeSyntheticPhoneRunningSidecar(
+            tempFolder.newFile("v1_clean.phone_raw.csv.gz"),
+            durationSec = 40
+        )
+        val cleanRows = com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReader.readAll(cleanPhoneFile).rows
+        // Duplicate every GNSS row with an interleaved ACC row in between (mirrors real HandlerThread interleaving in v1 sidecars)
+        val legacyDupRows = buildList {
+            for (row in cleanRows) {
+                add(row)
+                if (row.channel == PhoneRawChannel.GNSS) {
+                    add(
+                        PhoneRawTelemetryRow(
+                            elapsedRealtimeNs = row.elapsedRealtimeNs,
+                            epochMs = row.epochMs,
+                            channel = PhoneRawChannel.ACC,
+                            v0 = 0.0,
+                            v1 = 9.81,
+                            v2 = 0.0
+                        )
+                    )
+                    add(row.copy())
+                }
+            }
+        }
+        // Baseline with the exact same extra ACC rows (so only the duplicate GNSS rows differ)
+        val baselineWithSameAcc = buildList {
+            for (row in cleanRows) {
+                add(row)
+                if (row.channel == PhoneRawChannel.GNSS) {
+                    add(
+                        PhoneRawTelemetryRow(
+                            elapsedRealtimeNs = row.elapsedRealtimeNs,
+                            epochMs = row.epochMs,
+                            channel = PhoneRawChannel.ACC,
+                            v0 = 0.0,
+                            v1 = 9.81,
+                            v2 = 0.0
+                        )
+                    )
+                }
+            }
+        }
+
+        val baselineResult = OfflineTelemetryReplayHarness.replayParsed(baselineWithSameAcc, emptyList())
+        val dedupedResult = OfflineTelemetryReplayHarness.replayParsed(legacyDupRows, emptyList())
+
+        assertEquals(baselineResult.scorecard.ekfTotalDistanceM, dedupedResult.scorecard.ekfTotalDistanceM, 1e-6)
+        assertEquals(baselineResult.scorecard.ekfAscentM, dedupedResult.scorecard.ekfAscentM, 1e-6)
+        assertEquals(baselineResult.scorecard.ertsTotalDistanceM, dedupedResult.scorecard.ertsTotalDistanceM)
+        assertEquals(
+            dedupedResult.scorecard.phoneEventsProcessed + dedupedResult.scorecard.polarEventsProcessed,
+            dedupedResult.scorecard.totalEventsProcessed
+        )
+    }
+
     companion object {
         /**
          * Generates a realistic synthetic running workout `.phone_raw.csv.gz` containing all 8 channels:

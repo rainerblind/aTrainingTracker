@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:02.550Z" hostname="rainer-HP-EliteBook-850-G5" time="0.015">
+  <properties/>
+  <testcase name="TST-UI-377_4 domain-scoped zone display mode and detail tabs config contract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="TST-UI-377_3 collapsible summary reorder list contract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="TST-UI-377_7 workout photos configuration and subordinate controls contract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.01"/>
+  <testcase name="testFileSizeConstraint_strictlyUnder400Lines" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="testDecoupledLapDisplayModeSubControl" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="testReorderControlsAndCheckboxWidthsContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="TST-UI-377_2 single-column checkbox table contract and details column removal" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="TST-UI-453_4c grade distribution in summary matrix and removal of subordinate switches" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.001"/>
+  <testcase name="TST-UI-499_5 workout details in summary matrix contract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.0"/>
+  <testcase name="testTypographyAndWrappingContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.WorkoutMasksAndCardsLayoutTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

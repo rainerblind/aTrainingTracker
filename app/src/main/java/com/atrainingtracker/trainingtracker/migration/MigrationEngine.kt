@@ -290,6 +290,9 @@ object MigrationEngine {
                 // ATT-4023 / REQ-DAT-032.3: Enforce clean re-authentication invariant across application preferences
                 com.atrainingtracker.trainingtracker.security.AuthCredentialsStore.sanitizeAfterRestore(context)
 
+                // ATT-8131 / REQ-PER-056.4: Purge obsolete PeriodSummaries* files from restored legacy archives
+                com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.cleanupObsoletePeriodDatabases(context, force = true)
+
                 // REQ-MAP-066.3 / ATT-6691: If Climbs.db was absent from the restored archive, reset climbs_workout_backfill_v1
                 // so historical workouts will be automatically backfilled into Climbs.db upon next launch.
                 if (!climbsDbPresentInArchive) {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.AutoImportLocalizationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:14:47.107Z" hostname="rainer-HP-EliteBook-850-G5" time="0.027">
+  <properties/>
+  <testcase name="test9LocaleAutoImportStringsParity_TST_MIG_050_4" classname="com.atrainingtracker.trainingtracker.migration.AutoImportLocalizationTest" time="0.026"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:17:30.207Z" hostname="rainer-HP-EliteBook-850-G5" time="5.182">
+  <properties/>
+  <testcase name="testResolveLapIndex_handlesSortedDuplicateNullAndUnsortedLaps_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.723"/>
+  <testcase name="testParseFit_legacySignedByteRadarAppIdRemainsBackwardCompatible_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.719"/>
+  <testcase name="testParseFit_mixedForeignAndOwnDeveloperFieldsInSameFile_isolatesCleanly_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.715"/>
+  <testcase name="testParseMultiLapFit_assignsExactLapNrFromEpochBounds_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.734"/>
+  <testcase name="testParseValidFit" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.76"/>
+  <testcase name="testParseFit_redefinedDeveloperDataIndexUsesMesgDefBoundAppId_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.743"/>
+  <testcase name="testParseFit_ignoresForeignConnectIqDeveloperFieldsAndAcceptsOwnAppIds_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.788"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

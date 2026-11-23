@@ -22,10 +22,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceFragmentCompat
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
-import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.lang.reflect.Modifier
 
@@ -113,10 +114,19 @@ class MainActivityWithNavigationInteropTest {
             PreferenceFragmentCompat.OnPreferenceStartScreenCallback::class.java.isAssignableFrom(clazz)
         )
 
-        assertTrue(
-            "MainActivityWithNavigation must implement StartOrResumeInterface",
-            StartOrResumeInterface::class.java.isAssignableFrom(clazz)
-        )
+        // REQ-UI-2801.2 / ATT-8129: StartOrResumeInterface bridge and dead legacy fields must be eliminated
+        try {
+            Class.forName("com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface")
+            fail("Legacy StartOrResumeInterface must be eliminated from classpath")
+        } catch (_: ClassNotFoundException) {
+            // Expected
+        }
+        val declaredFieldNames = clazz.declaredFields.map { it.name }.toSet()
+        assertFalse("Dead mFragment field must be eliminated", "mFragment" in declaredFieldNames)
+        assertFalse("Dead mDrawerLayout field must be eliminated", "mDrawerLayout" in declaredFieldNames)
+        assertNotNull("showStartOrResumeDialog must remain exposed", clazz.getMethod("showStartOrResumeDialog"))
+        assertNotNull("chooseStart must remain exposed", clazz.getMethod("chooseStart"))
+        assertNotNull("chooseResume must remain exposed", clazz.getMethod("chooseResume"))
     }
 
     @Test

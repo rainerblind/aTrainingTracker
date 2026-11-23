@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:05:31.844Z" hostname="rainer-HP-EliteBook-850-G5" time="5.532">
+  <properties/>
+  <testcase name="testTeleportationSpike_isRejectedFromDistanceAccumulation" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.411"/>
+  <testcase name="testSubSecondTeleportationSpike_isRejected" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.357"/>
+  <testcase name="testPlausibleHighSpeed_isAccumulated" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.373"/>
+  <testcase name="testPauseOrLongInterval_dtOver30Seconds_accumulatesNormally" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest" time="1.391"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "ClockDeviceTimer" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Log.java)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at io.mockk.proxy.jvm.advice.MethodCall.call(MethodCall.kt:17)
+	at io.mockk.proxy.jvm.advice.SelfCallEliminatorCallable.call(SelfCallEliminatorCallable.kt:13)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.handleOriginalCall(JvmMockFactoryHelper.kt:122)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.access$handleOriginalCall(JvmMockFactoryHelper.kt:28)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1$invocation$1$1.invoke(JvmMockFactoryHelper.kt:45)
+	at io.mockk.impl.stub.MockKStub$handleInvocation$originalPlusToString$1.invoke(MockKStub.kt:258)
+	at io.mockk.impl.stub.SpyKStub.defaultAnswer(SpyKStub.kt:13)
+	at io.mockk.impl.stub.MockKStub.answer(MockKStub.kt:59)
+	at io.mockk.impl.recording.states.AnsweringState.call(AnsweringState.kt:18)
+	at io.mockk.impl.recording.CommonCallRecorder.call(CommonCallRecorder.kt:65)
+	at io.mockk.impl.stub.MockKStub.handleInvocation(MockKStub.kt:297)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1.invocation(JvmMockFactoryHelper.kt:41)
+	at io.mockk.proxy.jvm.advice.Interceptor.call(Interceptor.kt:27)
+	at android.util.Log.e(Log.java)
+	at com.atrainingtracker.banalservice.devices.ClockDevice$ClockTimeTask.run(ClockDevice.java:241)
+	at java.base/java.util.TimerThread.mainLoop(Timer.java:566)
+	at java.base/java.util.TimerThread.run(Timer.java:516)
+]]></system-err>
+</testsuite>

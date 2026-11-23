@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:45:25.193Z" hostname="rainer-HP-EliteBook-850-G5" time="2.834">
+  <properties/>
+  <testcase name="testStartOrResumeAlertDialog_batteryKill_dispatchesAllCallbacks" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogContractTest" time="2.286"/>
+  <testcase name="testLegacyDialogFragmentAndInterfaceWrappers_areEliminated" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogContractTest" time="0.193"/>
+  <testcase name="testGPSDisabledAlertDialog_rendersLocalizedStringsAndDispatchesCallbacks" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogContractTest" time="0.355"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -393,6 +393,93 @@ class SmartphoneRawTelemetryRecorderTest {
         assertFalse("HandlerThread must be cleaned up when 0 sensors register", capture.hasActiveHandlerThreadForTest())
     }
 
+    // REQ-EXP-047.1, REQ-EXP-047.2 / TST-EXP-047.1, TST-EXP-047.2
+    @Test
+    fun recordLocation_deduplicatesPerChannelAcrossInterleavedProvidersAndResetsPerSession_TST_EXP_047_2() = runBlocking {
+        val target1 = File(tempFolder.root, "2026-11-22_081402_s1.phone_raw.csv.gz")
+        val target2 = File(tempFolder.root, "2026-11-22_081402_s2.phone_raw.csv.gz")
+        val meta = PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Pixel 10", sportId = 1L, sessionStartTimeMs = 1_795_331_657_000L)
+
+        fun locMock(providerName: String?, elapsedNs: Long, lat: Double, lon: Double, alt: Double): Location =
+            mockk(relaxed = true) {
+                every { provider } returns providerName
+                every { latitude } returns lat
+                every { longitude } returns lon
+                every { elapsedRealtimeNanos } returns elapsedNs
+                every { hasAltitude() } returns true
+                every { altitude } returns alt
+                every { hasSpeed() } returns true
+                every { speed } returns 3.5f
+                every { hasBearing() } returns true
+                every { bearing } returns 90.0f
+                every { hasAccuracy() } returns true
+                every { accuracy } returns 4.5f
+            }
+
+        val prevClock = SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider
+        var fakeClockNs = 0L
+        SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider = { fakeClockNs }
+
+        val recorder1 = SmartphoneRawTelemetryRecorder(targetFile = target1, metadata = meta)
+        recorder1.start()
+        SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder1)
+        try {
+            // 1. Hardware GPS fix delivered twice (e.g. GPS + ATTFused), with interleaved Google Fused fix sharing same elapsedNs
+            //    and even a 1ms epochMs drift (location.time == 0L fallback scenario).
+            val gpsFix1 = locMock("gps", 685_756_090_818_846L, 48.1371, 11.5761, 478.0)
+            val fusedFix1 = locMock("FUSED", 685_756_090_818_846L, 48.1372, 11.5762, 493.0)
+            SmartphoneRawTelemetryRecorder.recordLocation(gpsFix1, 1_795_331_657_000L)
+            SmartphoneRawTelemetryRecorder.recordLocation(fusedFix1, 1_795_331_657_000L)
+            SmartphoneRawTelemetryRecorder.recordLocation(gpsFix1, 1_795_331_657_001L) // duplicate GPS must be dropped!
+            SmartphoneRawTelemetryRecorder.recordLocation(fusedFix1, 1_795_331_657_000L) // duplicate FUSED must be dropped!
+
+            // 2. Fallback elapsedRealtimeNanos == 0L with initial (elapsedNs = 0L, epochMs = 0L) must NOT be falsely dropped!
+            val zeroClockLoc = locMock(null, 0L, 48.1380, 11.5770, 479.0)
+            SmartphoneRawTelemetryRecorder.recordLocation(zeroClockLoc, 0L)
+            SmartphoneRawTelemetryRecorder.recordLocation(zeroClockLoc, 0L) // exact (0, 0) duplicate dropped
+            SmartphoneRawTelemetryRecorder.recordLocation(zeroClockLoc, 1000L) // advancing epochMs accepted
+
+            // 3. Explicit recordGnss channel normalization (non-GNSS channel defaults to GNSS) & dedup
+            SmartphoneRawTelemetryRecorder.recordGnss(700_000_000L, 2000L, 48.1390, 11.5780, 480.0, 3.0, 45.0, 5.0, PhoneRawChannel.ACC)
+            SmartphoneRawTelemetryRecorder.recordGnss(700_000_000L, 2000L, 48.1390, 11.5780, 480.0, 3.0, 45.0, 5.0, PhoneRawChannel.GNSS)
+            SmartphoneRawTelemetryRecorder.recordGnss(700_000_000L, 2000L, 48.1391, 11.5781, 495.0, 3.0, 45.0, 6.0, PhoneRawChannel.GNSS_FUSED)
+        } finally {
+            SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder1.stop()
+        }
+
+        // 4. Fresh session must start with clean dedup state and accept the same elapsedRealtimeNanos again
+        val recorder2 = SmartphoneRawTelemetryRecorder(targetFile = target2, metadata = meta)
+        recorder2.start()
+        SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(recorder2)
+        try {
+            val gpsFix1Again = locMock("gps", 685_756_090_818_846L, 48.1371, 11.5761, 478.0)
+            SmartphoneRawTelemetryRecorder.recordLocation(gpsFix1Again, 1_795_331_657_000L)
+        } finally {
+            SmartphoneRawTelemetryRecorder.elapsedRealtimeNanosProvider = prevClock
+            SmartphoneRawTelemetryRecorder.setActiveRecorderForTest(null)
+            recorder2.stop()
+        }
+
+        assertEquals("Deduplication must not increment droppedFrameCount", 0L, recorder1.getDroppedFrameCount())
+        val parsed1 = PhoneRawTelemetryReader.readAll(target1)
+        val gnssRows = parsed1.rows.filter { it.channel == PhoneRawChannel.GNSS }
+        val fusedRows = parsed1.rows.filter { it.channel == PhoneRawChannel.GNSS_FUSED }
+        assertEquals("Expected 4 unique GNSS rows (1 hw + 2 fallback + 1 recordGnss)", 4, gnssRows.size)
+        assertEquals("Expected 2 unique GNSS_FUSED rows (1 hw + 1 recordGnss)", 2, fusedRows.size)
+        assertEquals(478.0, gnssRows[0].v2, 1e-6)
+        assertEquals(0L, gnssRows[1].elapsedRealtimeNs)
+        assertEquals(0L, gnssRows[1].epochMs)
+        assertEquals(1000L, gnssRows[2].epochMs)
+        assertEquals(480.0, gnssRows[3].v2, 1e-6)
+        assertEquals(493.0, fusedRows[0].v2, 1e-6)
+        assertEquals(495.0, fusedRows[1].v2, 1e-6)
+
+        val parsed2 = PhoneRawTelemetryReader.readAll(target2)
+        assertEquals("Fresh session must accept identical elapsedRealtimeNanos", 1, parsed2.rows.size)
+        assertEquals(PhoneRawChannel.GNSS, parsed2.rows[0].channel)
+    }
+
     private fun syntheticEvent(sensor: Sensor, timestampNs: Long, data: FloatArray): SensorEvent {
         val event = mockk<SensorEvent>(relaxed = true)
         event.sensor = sensor

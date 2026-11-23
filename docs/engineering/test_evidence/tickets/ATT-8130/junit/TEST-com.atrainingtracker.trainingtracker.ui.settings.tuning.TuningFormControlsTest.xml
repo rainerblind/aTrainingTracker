@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:02.538Z" hostname="rainer-HP-EliteBook-850-G5" time="0.004">
+  <properties/>
+  <testcase name="testSubordinateTuningToggleItem_appliesDownscale0_6fCompactHeightAndLighterPrimaryAlphaColors" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.001"/>
+  <testcase name="testTuningSegmentedButtonRow_existsViaReflection" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <testcase name="testTuningDropdownRow_existsViaReflection" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <testcase name="testTuningToggleItem_declaresTrailingDefaultEnabledAndMinHeight48dp" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <testcase name="testRadarSettingsSection_eliminatesNestedElevatedCardsAndRawSwitches" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.002"/>
+  <testcase name="testSubordinateTuningToggleItem_declaresTrailingDefaultEnabledAndForwardsState" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <testcase name="testTuningFormControls_forwardEnabledAndDetachesGestures" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <testcase name="testTuningSliderItem_declaresTrailingDefaultsForBinaryCompatibility" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <testcase name="testTuningFormControls_appliesDisabledAlpha" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.001"/>
+  <testcase name="testCallbackGating_disabledStateInhibitsAction" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

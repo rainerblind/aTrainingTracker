@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:15:24.247Z" hostname="rainer-HP-EliteBook-850-G5" time="1.504">
+  <properties/>
+  <testcase name="testSecureZipExtractor_rejectsDirectFileSymbolicLink" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.185"/>
+  <testcase name="testSecureZipExtractor_extractsValidArchiveCleanly" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.101"/>
+  <testcase name="testSecureZipExtractor_extractsValidArchiveThroughSymlinkedParent" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.112"/>
+  <testcase name="testSecureZipExtractor_rejectsUnwhitelistedDirectoryThroughSymlinkedParent" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.096"/>
+  <testcase name="testSecureZipExtractor_rejectsInternalSymlinksThroughSymlinkedParent" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.095"/>
+  <testcase name="testSecureZipExtractor_enforcesEntryCountLimit" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.095"/>
+  <testcase name="testPerformFullRestore_rejectsZipSlipTraversal" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.107"/>
+  <testcase name="testPurgeStaleStagingDirs_removesStaleFolders" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.097"/>
+  <testcase name="testSecureZipExtractor_rejectsSymbolicLinks" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.097"/>
+  <testcase name="testSecureZipExtractor_rejectsNonWhitelistedDirectories" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.092"/>
+  <testcase name="testAnalyzeBackup_rejectsZipSlipTraversalAndPurgesTemp" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.112"/>
+  <testcase name="testSecureZipExtractor_rejectsZipSlipThroughSymlinkedParent" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.095"/>
+  <testcase name="testPerformIncrementalImport_rejectsZipSlipTraversalAndPurgesTemp" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.115"/>
+  <testcase name="testSanitizeDriveFileName_rejectsTraversalAndSeparators" classname="com.atrainingtracker.trainingtracker.migration.BackupImportSecurityTest" time="0.101"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

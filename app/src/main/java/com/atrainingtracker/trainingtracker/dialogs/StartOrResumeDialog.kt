@@ -18,21 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.dialogs
 
-import android.content.Context
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.DirectionsRun
@@ -49,97 +45,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.fragment.app.DialogFragment
+import androidx.compose.ui.window.DialogProperties
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper
 import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.KillDiagnosis
 import com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.KillReason
-import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * Modernized recovery dialog that presents forensic process termination diagnosis,
- * progressive escalation on repeat battery kills, and battery optimization settings shortcuts
- * when recovering unfinalized workouts using Material 3 Jetpack Compose (REQ-UI-329, REQ-STB-012, REQ-STB-003, ATT-2948).
- */
-class StartOrResumeDialog : DialogFragment() {
-
-    companion object {
-        @JvmField
-        val TAG: String = StartOrResumeDialog::class.java.name
-    }
-
-    internal var startOrResumeInterface: StartOrResumeInterface? = null
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        attachInterface(context)
-    }
-
-    internal fun attachInterface(context: Context) {
-        if (context is StartOrResumeInterface) {
-            startOrResumeInterface = context
-        } else {
-            throw ClassCastException("$context must implement StartOrResumeInterface")
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NO_TITLE, 0)
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        val context = requireContext()
-        val diagnosis = ProcessExitReasonHelper.resolveKillReason(context)
-
-        return ComposeView(context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                ATrainingTrackerTheme {
-                    StartOrResumeDialogContent(
-                        diagnosis = diagnosis,
-                        onStartNew = {
-                            startOrResumeInterface?.chooseStart()
-                            dismiss()
-                        },
-                        onResume = {
-                            startOrResumeInterface?.chooseResume()
-                            dismiss()
-                        },
-                        onDisableBatteryOptimization = {
-                            ProcessExitReasonHelper.openBatteryOptimizationSettings(context)
-                            dismiss()
-                        }
-                    )
-                }
-            }
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        dialog?.window?.setLayout(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            android.view.WindowManager.LayoutParams.WRAP_CONTENT
-        )
-    }
-}
-
-/**
- * Material 3 Jetpack Compose presentation for workout recovery with contextual kill diagnosis (REQ-UI-329).
+ * Material 3 Jetpack Compose presentation for workout recovery with contextual kill diagnosis
+ * (REQ-UI-329, REQ-STB-012, REQ-STB-003, REQ-UI-2801.3 / ATT-2948, ATT-8129).
  */
 @Composable
 fun StartOrResumeDialogContent(
@@ -198,15 +119,17 @@ fun StartOrResumeDialogContent(
         color = AlertDialogDefaults.containerColor,
         tonalElevation = AlertDialogDefaults.TonalElevation,
         modifier = modifier
-            .padding(24.dp)
+            .padding(horizontal = 16.dp, vertical = 24.dp)
+            .widthIn(max = 420.dp)
             .fillMaxWidth()
             .wrapContentHeight()
     ) {
         Column(
             modifier = Modifier
-                .padding(24.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
@@ -248,22 +171,45 @@ fun StartOrResumeDialogContent(
             if (diagnosis.shouldShowBatteryButton) {
                 FilledTonalButton(
                     onClick = onDisableBatteryOptimization,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
                 ) {
-                    Text(text = stringResource(R.string.action_disable_battery_optimization))
+                    Text(
+                        text = stringResource(R.string.action_disable_battery_optimization),
+                        maxLines = 2,
+                        textAlign = TextAlign.Center,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(onClick = onStartNew) {
-                    Text(text = stringResource(R.string.start_new_workout))
+                Button(
+                    onClick = onResume,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.resume_workout),
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-                Button(onClick = onResume) {
-                    Text(text = stringResource(R.string.resume_workout))
+                OutlinedButton(
+                    onClick = onStartNew,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.start_new_workout),
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -271,7 +217,10 @@ fun StartOrResumeDialogContent(
 }
 
 /**
- * Composable modal alert dialog wrapper for [StartOrResumeDialogContent].
+ * Pure Compose modal alert dialog wrapper for [StartOrResumeDialogContent] (REQ-UI-2801.3).
+ *
+ * Uses `usePlatformDefaultWidth = false` paired with `widthIn(max = 420.dp)` in
+ * [StartOrResumeDialogContent] to preserve full-width phone ergonomics (ATT-3165).
  */
 @Composable
 fun StartOrResumeAlertDialog(
@@ -282,13 +231,52 @@ fun StartOrResumeAlertDialog(
     onDisableBatteryOptimization: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Dialog(onDismissRequest = onDismissRequest) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         StartOrResumeDialogContent(
             diagnosis = diagnosis,
             onStartNew = onStartNew,
             onResume = onResume,
             onDisableBatteryOptimization = onDisableBatteryOptimization,
             modifier = modifier
+        )
+    }
+}
+
+@Preview(name = "StartOrResumeDialog Battery Light", showBackground = true)
+@Composable
+private fun StartOrResumeDialogBatteryLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        StartOrResumeDialogContent(
+            diagnosis = KillDiagnosis(
+                reason = KillReason.BATTERY_KILL,
+                escalationLevel = 1,
+                isStravaActive = false,
+                shouldShowBatteryButton = true
+            ),
+            onStartNew = {},
+            onResume = {},
+            onDisableBatteryOptimization = {}
+        )
+    }
+}
+
+@Preview(name = "StartOrResumeDialog Generic Dark", showBackground = true)
+@Composable
+private fun StartOrResumeDialogGenericDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        StartOrResumeDialogContent(
+            diagnosis = KillDiagnosis(
+                reason = KillReason.GENERIC_UNFINISHED,
+                escalationLevel = 0,
+                isStravaActive = false,
+                shouldShowBatteryButton = false
+            ),
+            onStartNew = {},
+            onResume = {},
+            onDisableBatteryOptimization = {}
         )
     }
 }

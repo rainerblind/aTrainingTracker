@@ -71,14 +71,6 @@ class TrainingApplicationTrackingTest {
         override fun notifyTrackingStateChanged() {
             stateChangedNotified = true
         }
-
-        override fun startPebbleWatchapp() {
-            // No-op for unit test
-        }
-
-        override fun stopPebbleWatchapp() {
-            // No-op for unit test
-        }
     }
 
     private lateinit var app: TestableTrainingApplication

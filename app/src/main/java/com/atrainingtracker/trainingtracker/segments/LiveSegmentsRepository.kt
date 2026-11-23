@@ -204,8 +204,6 @@ class LiveSegmentsRepository internal constructor(
      * Updates the live segment data whenever the user's location changes.
      */
     internal fun updateLiveSegments(currentLocation: LatLng, currentBearing: Double, currentDistance: Double) {
-        if (DEBUG) Log.i(TAG, "updateLiveSegments ...")
-
         _liveSegments.update { currentList ->
             currentList.map { liveSegment ->
                 processLiveSegmentUpdate(liveSegment, currentLocation, currentBearing, currentDistance)
@@ -219,8 +217,6 @@ class LiveSegmentsRepository internal constructor(
         currentBearing: Double,
         currentDistance: Double
     ): LiveSegment {
-        if (DEBUG) Log.i(TAG, "  checking segment: ${liveSegment.staticData.summary.name}")
-
         var newSegmentStatus = liveSegment.liveData.segmentStatus
 
         val startGate = liveSegment.math.startGate ?: PolylineGate(
@@ -246,15 +242,6 @@ class LiveSegmentsRepository internal constructor(
         val end_cross_loc =
             PolylineProgressTracker.crossProduct(endGate.gateStart, endGate.gateEnd, currentLocation)
         val distanceToEnd = PolylineProgressTracker.distanceToGate(currentLocation, endGate)
-
-        if (DEBUG) Log.i(
-            TAG,
-            "  distanceToStart: ${distanceToStart}, distanceToEnd: ${distanceToEnd}"
-        )
-        if (DEBUG) Log.i(
-            TAG,
-            "  start_cross_loc: ${start_cross_loc}, end_cross_loc: ${end_cross_loc}"
-        )
 
         var newStartTimeMs = liveSegment.math.startTime_ms
         var newStartDistance = liveSegment.math.startDistance
@@ -300,6 +287,8 @@ class LiveSegmentsRepository internal constructor(
 
                 // moved away from the start line
                 if (distanceToStart > SEGMENT_START_DISTANCE_THRESHOLD) {
+                    if (DEBUG) Log.i(TAG, "  Moved away from start line: ${liveSegment.staticData.summary.name}")
+
                     newLastSegmentIndex = null
                     newSegmentStatus = LiveSegmentStatus.FAR_FAR_AWAY
                 }
@@ -365,8 +354,6 @@ class LiveSegmentsRepository internal constructor(
             }
 
             LiveSegmentStatus.ON_SEGMENT, LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> {
-                if (DEBUG) Log.i(TAG, "  we are on this segment.  Thus, we update it ...")
-
                 val timeOnSegment =
                     (System.currentTimeMillis() - updatedMath.startTime_ms) / 1000
 
@@ -390,6 +377,8 @@ class LiveSegmentsRepository internal constructor(
 
                 // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
                 if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {
+                    if (DEBUG) Log.i(TAG, "  Off-segment deviation (${distanceToSegment}m): ${liveSegment.staticData.summary.name}")
+
                     liveSegment.copy(
                         math = updatedMath.copy(lastSegmentIndex = null),
                         liveData = LiveSegmentData(

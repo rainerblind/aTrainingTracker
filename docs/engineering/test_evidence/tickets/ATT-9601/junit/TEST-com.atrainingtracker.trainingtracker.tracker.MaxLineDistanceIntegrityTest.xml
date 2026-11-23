@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T02:15:54.124Z" hostname="rainer-HP-EliteBook-850-G5" time="0.073">
+  <properties/>
+  <testcase name="testPointToPointApexCalculationWithEndPosition" classname="com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest" time="0.058"/>
+  <testcase name="testDeterministicApexCalculationFromPolyline" classname="com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest" time="0.006"/>
+  <testcase name="testSelfHealingApexDiscrepancyDetection" classname="com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest" time="0.0"/>
+  <testcase name="testLineDistanceSensorIsNotAccumulator" classname="com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest" time="0.0"/>
+  <testcase name="testLiveWorkoutSessionAnchorsLineDistanceToStart" classname="com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

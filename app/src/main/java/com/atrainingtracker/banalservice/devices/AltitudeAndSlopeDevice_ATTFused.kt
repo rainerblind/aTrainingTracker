@@ -30,6 +30,7 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.odometry.BarometricBucketDispersion
 import com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkf
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor
@@ -72,6 +73,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         const val STANDSTILL_SLOPE_CLEAR_DELAY_MS = 10_000L
         /** 1-Hz rate-matching window (tolerates ~200 ms hardware sensor jitter while flushing 1-Hz ticks). */
         const val BARO_AGGREGATION_WINDOW_MS = 950L
+        /** Grace window deferring unanchored 3-State sensor publication until DEM/GPS lock (REQ-FIL-040.3). */
+        const val STARTUP_REFERENCE_GRACE_MS = 5_000L
     }
 
     val ekf = KinematicAltitudeSlopeEkf()
@@ -99,7 +102,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     private var mStandstillStartTimestampMs: Long = 0L
     private var mLastDemUpdateTimestampMs: Long = 0L
     private var mLastGpsUpdateTimestampMs: Long = 0L
-    private val mBaroBucketAltitudes: MutableList<Double> = mutableListOf()
+    private val mBaroBucket = BarometricBucketDispersion()
+    private var mFirstBaroTimestampMs: Long = -1L
     private var mLastBaroEmitTimestampMs: Long = -1L
     private var mLastBaroBucketTimestampMs: Long = -1L
     private var mEffectiveRBaro: Double = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO
@@ -205,7 +209,8 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         mStandstillStartTimestampMs = 0L
         mLastDemUpdateTimestampMs = 0L
         mLastGpsUpdateTimestampMs = 0L
-        mBaroBucketAltitudes.clear()
+        mBaroBucket.reset()
+        mFirstBaroTimestampMs = -1L
         mLastBaroEmitTimestampMs = -1L
         mLastBaroBucketTimestampMs = -1L
         mEffectiveRBaro = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO
@@ -270,10 +275,11 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     }
 
     /**
-     * Ingests a raw barometric pressure sample (REQ-FIL-026.1).
-     * Immediately initializes EKF on the first sample, then aggregates sub-second (~5 Hz) events
-     * into 1-Hz median buckets using deterministic [timestampMs] before invoking [BarometricAltitudeFilter.filterSlewOnly]
-     * and [KinematicAltitudeSlopeEkf.updateBarometer] in lockstep with 1-Hz [calculateMetrics].
+     * Ingests a raw barometric pressure sample (REQ-FIL-026.1, REQ-FIL-040.1).
+     * Immediately initializes EKF on the first sample, then aggregates sub-second events via
+     * [BarometricBucketDispersion] (calm 1-Hz median vs multi-second trimmed mean + dispersion
+     * variance inflation under pocket-compression aliasing) before invoking
+     * [BarometricAltitudeFilter.filterSlewOnly] and [KinematicAltitudeSlopeEkf.updateBarometer].
      */
     @Synchronized
     @VisibleForTesting
@@ -281,21 +287,35 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         val rawAlt = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa).toDouble()
         if (!rawAlt.isFinite()) return
 
+        if (mFirstBaroTimestampMs < 0L || timestampMs < mFirstBaroTimestampMs) {
+            mFirstBaroTimestampMs = timestampMs
+        }
+
         if (mLastBaroEmitTimestampMs < 0L || !ekf.isInitialized || timestampMs < mLastBaroEmitTimestampMs) {
-            mBaroBucketAltitudes.clear()
+            mBaroBucket.reset()
+            mBaroBucket.addSample(rawAlt, timestampMs)
+            val flushed = mBaroBucket.flushBucket(timestampMs, getCurrentSpeed())
             mLastBaroEmitTimestampMs = timestampMs
             mLastBaroBucketTimestampMs = timestampMs
-            ingestFilteredBaroAltitude(rawAlt, timestampMs)
+            if (flushed != null) {
+                ingestFilteredBaroAltitude(flushed.representativeAltitudeM, timestampMs, flushed.dispersionVarM2)
+            }
             return
         }
 
-        mBaroBucketAltitudes.add(rawAlt)
+        if (timestampMs - mLastBaroEmitTimestampMs > BarometricBucketDispersion.MULTI_SECOND_WINDOW_MS) {
+            // Pause/resume gap: discard stale pre-pause dispersion/window state (REQ-FIL-040.1)
+            mBaroBucket.reset()
+        }
+
+        mBaroBucket.addSample(rawAlt, timestampMs)
         mLastBaroBucketTimestampMs = timestampMs
         if (timestampMs - mLastBaroEmitTimestampMs >= BARO_AGGREGATION_WINDOW_MS) {
-            val medianAlt = computeBucketMedian(mBaroBucketAltitudes)
-            mBaroBucketAltitudes.clear()
+            val flushed = mBaroBucket.flushBucket(timestampMs, getCurrentSpeed())
             mLastBaroEmitTimestampMs = timestampMs
-            ingestFilteredBaroAltitude(medianAlt, timestampMs)
+            if (flushed != null) {
+                ingestFilteredBaroAltitude(flushed.representativeAltitudeM, timestampMs, flushed.dispersionVarM2)
+            }
         }
     }
 
@@ -332,21 +352,24 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     @VisibleForTesting
     internal fun resolvedCarriageModeForTest(): PhoneCarriageMode = mLastObservedCarriageMode
 
-    private fun ingestFilteredBaroAltitude(rawAltM: Double, timestampMs: Long) {
+    @VisibleForTesting
+    internal fun baroDispersionVarForTest(): Double = mBaroBucket.dispersionVarM2
+
+    private fun ingestFilteredBaroAltitude(
+        rawAltM: Double,
+        timestampMs: Long,
+        dispersionVarM2: Double = 0.0
+    ) {
         val mode = syncAdaptiveCarriageParameters()
-        val slewAlt = baroFilter.filterSlewOnly(rawAltM, timestampMs)
         val speed = getCurrentSpeed()
+        val slewSpeed = if (dispersionVarM2 > 0.0) 0.0 else speed
+        val slewAlt = baroFilter.filterSlewOnly(rawAltM, timestampMs, slewSpeed)
         val isStandstill = mode.profile.forceStationaryPinning || speed < ekf.standstillSpeedThresholdMps
+        val varBaro = mEffectiveRBaro + max(0.0, dispersionVarM2)
 
         ekf.setMode(isEffectiveDem || isEffectiveGps)
-        ekf.updateBarometer(slewAlt, varBaro = mEffectiveRBaro, isStandstill = isStandstill, speedMps = speed)
+        ekf.updateBarometer(slewAlt, varBaro = varBaro, isStandstill = isStandstill, speedMps = speed)
         publishAltitudeAndMetrics(speed, timestampMs)
-    }
-
-    private fun computeBucketMedian(values: List<Double>): Double {
-        val sorted = values.sorted()
-        val mid = sorted.size / 2
-        return if (sorted.size % 2 == 1) sorted[mid] else 0.5 * (sorted[mid - 1] + sorted[mid])
     }
 
     @Synchronized
@@ -384,15 +407,21 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
         // Background refresh of preferences and pairings from SQLite (1-Hz background thread, NOT UI thread)
         refreshCachedPreferences()
 
-        if (mBaroBucketAltitudes.isNotEmpty() &&
+        if (!mBaroBucket.isBucketEmpty &&
             mLastBaroEmitTimestampMs >= 0L &&
             nowMs - mLastBaroEmitTimestampMs >= BARO_AGGREGATION_WINDOW_MS
         ) {
-            val medianAlt = computeBucketMedian(mBaroBucketAltitudes)
             val flushTimestampMs = mLastBaroBucketTimestampMs
-            mBaroBucketAltitudes.clear()
-            mLastBaroEmitTimestampMs = nowMs
-            ingestFilteredBaroAltitude(medianAlt, flushTimestampMs)
+            if (nowMs - mLastBaroBucketTimestampMs > BarometricBucketDispersion.MULTI_SECOND_WINDOW_MS) {
+                mBaroBucket.reset()
+                mLastBaroEmitTimestampMs = nowMs
+            } else {
+                val flushed = mBaroBucket.flushBucket(flushTimestampMs, getCurrentSpeed())
+                mLastBaroEmitTimestampMs = nowMs
+                if (flushed != null) {
+                    ingestFilteredBaroAltitude(flushed.representativeAltitudeM, flushTimestampMs, flushed.dispersionVarM2)
+                }
+            }
         }
 
         val mode = syncAdaptiveCarriageParameters()
@@ -464,6 +493,9 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     @Synchronized
     fun reanchorOnResume(lastAltitudeM: Double) {
         if (!lastAltitudeM.isFinite() || lastAltitudeM <= -500.0 || lastAltitudeM >= 9000.0) return
+        mBaroBucket.reset()
+        mLastBaroEmitTimestampMs = -1L
+        mLastBaroBucketTimestampMs = -1L
         ekf.setMode(isEffectiveDem || isEffectiveGps)
         ekf.reanchorOnResume(lastAltitudeM)
         mAscentDescentAnchorAltitude = lastAltitudeM
@@ -480,6 +512,16 @@ open class AltitudeAndSlopeDevice_ATTFused @JvmOverloads constructor(
     @Synchronized
     private fun publishAltitudeAndMetrics(speedMps: Double, nowMs: Long = System.currentTimeMillis()) {
         if (!ekf.isInitialized) return
+
+        // REQ-FIL-040.3: Defer unanchored 3-State publication during initial STARTUP_REFERENCE_GRACE_MS
+        // so raw QNH pressure offsets never emit a 35+ m startup cliff before DEM/GPS lock arrives.
+        if (ekf.is3StateMode &&
+            !ekf.hasReferenceAnchor &&
+            mFirstBaroTimestampMs >= 0L &&
+            (nowMs - mFirstBaroTimestampMs) in 0L until STARTUP_REFERENCE_GRACE_MS
+        ) {
+            return
+        }
 
         val currentAlt = ekf.altitude
         mAltitudeSensor?.newValue(currentAlt)

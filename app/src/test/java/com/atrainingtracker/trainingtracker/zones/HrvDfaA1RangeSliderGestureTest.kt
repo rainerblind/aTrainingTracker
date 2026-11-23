@@ -66,10 +66,10 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.activities.HrvDfaA1RangeSlider
-import com.atrainingtracker.trainingtracker.activities.HrvDfaA1SettingsContent
-import com.atrainingtracker.trainingtracker.activities.HrvThresholdControlRow
-import com.atrainingtracker.trainingtracker.activities.ZoneSettingsScreen
+import com.atrainingtracker.trainingtracker.ui.settings.zones.HrvDfaA1RangeSlider
+import com.atrainingtracker.trainingtracker.ui.settings.zones.HrvDfaA1SettingsContent
+import com.atrainingtracker.trainingtracker.ui.settings.zones.HrvThresholdControlRow
+import com.atrainingtracker.trainingtracker.ui.settings.zones.ZoneSettingsScreen
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults

@@ -1,13 +1,13 @@
 # System Architectural Design Specification (ASPICE SYS.3)
 
 **Document ID**: `DOC-SYS-ARC`  
-**Version**: 1.2.6  
+**Version**: 1.2.8  
 **ASPICE Process Areas**: SYS.3 (System Architectural Design, BP1–BP6)  
 **Parent Epic**: [ATT-6142](https://rainerblind.atlassian.net/browse/ATT-6142) / [ATT-8138](https://rainerblind.atlassian.net/browse/ATT-8138) (*ASPICE CL2 – System Level & Remediation*)  
 **Requirement Reference**: `REQ-PRO-056` (`REQ-PRO-056.1`, `REQ-PRO-056.2`)  
 **Test Reference**: `TST-PRO-056` (`TST-PRO-056.1`–`TST-PRO-056.4`)  
-**Status**: Approved  
-**Approver**: Rainer Blind (PO)  
+**Status**: Reviewed  
+**Approver**: Pending PO Sign-Off  
 
 ---
 
@@ -31,7 +31,7 @@ The aTrainingTracker system is partitioned into 5 primary System Elements across
 | **`SYS-EL-01`** | **Android Smartphone Host Application** | Android Application Process (`com.atrainingtracker`, debug: `com.atrainingtracker.debug`) | Core mobile runtime containing foreground services (`TrackerService`, `BANALService`), background executors (`mDbExecutor`), local SQLite databases (`WorkoutSummaries.db`, `WorkoutSamples.db`), Jetpack Compose UI cockpit (`SensorGridScreen`, `RadarEdgeOverlay`), and domain viewmodels. |
 | **`SYS-EL-02`** | **BLE Peripheral Sports Sensors** | External Wireless Hardware (Bluetooth Low Energy Peripherals) | External physical telemetry & actuation peripherals communicating over Bluetooth Smart GATT: Heart Rate Monitors, Cycling Speed/Cadence, Cycling Power Meters, Running Speed/Cadence, Device Information (`0x180A`), Peripheral Battery (`0x180F`), Garmin Varia Radar & Light Control (`6a4e3200`/`6a4e3202`/`6a4e2f00`), and Polar H10 / Verity Sense PFTP/PMD offline flash & IMU streaming (`0000feee`/`fb005c80`). |
 | **`SYS-EL-03`** | **ANT+ Wireless Sensors & Radio IPC** | External ANT+ Hardware & Radio Transceiver Subsystem | External physical sensors transmitting/receiving over 2.4-GHz ANT-FS RF channels, bridged via Android ANT+ Wireless Transport and ANT+ Plugin Service IPC (`com.dsi.ant.plugins.antplus`) delivering Heart Rate, Bike Power, Speed/Cadence, ANT+ Radar (`0x28`, `ANTBikeRadarDevice.kt`), and bidirectional ANT+ Bike Lights (`0x23`, `ANTBikeLightDevice.kt`). |
-| **`SYS-EL-04`** | **Android OS Platform Services** | Android System Server & Hardware Abstraction Layer (HAL) | Operating system platform services: Hardware GNSS provider (`LocationManager.GPS_PROVIDER`), Google Play Services Location (`SpeedAndLocationDevice_GoogleFused` via `GoogleApiClient` / `LocationListener`), Google Maps Android SDK v2 (`play-services-maps`, `ATrainingTrackerMap.kt`), On-Board Barometer (`Sensor.TYPE_PRESSURE`), Proximity (`Sensor.TYPE_PROXIMITY`), Ambient Light (`Sensor.TYPE_LIGHT`), Smartphone IMU (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`), Power Management (`PowerManager.PARTIAL_WAKE_LOCK`), Foreground Service lifecycles, Audio Subsystem (`AudioAttributes`), PebbleKit (`pebblekit:4.0.1`), and Scoped Storage VFS. |
+| **`SYS-EL-04`** | **Android OS Platform Services** | Android System Server & Hardware Abstraction Layer (HAL) | Operating system platform services: Hardware GNSS provider (`LocationManager.GPS_PROVIDER`), Google Play Services Location (`SpeedAndLocationDevice_GoogleFused` via `GoogleApiClient` / `LocationListener`), Google Maps Android SDK v2 (`play-services-maps`, `ATrainingTrackerMap.kt`), On-Board Barometer (`Sensor.TYPE_PRESSURE`), Proximity (`Sensor.TYPE_PROXIMITY`), Ambient Light (`Sensor.TYPE_LIGHT`), Smartphone IMU (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`), Power Management (`PowerManager.PARTIAL_WAKE_LOCK`), Foreground Service lifecycles, Audio Subsystem (`AudioAttributes`), and Scoped Storage VFS. |
 | **`SYS-EL-05`** | **External Cloud Platforms & Storage** | Remote SaaS Cloud Infrastructure | Third-party cloud REST endpoints, platform aggregators, and telemetry services accessed via HTTPS / SDK: Strava API v3, Dropbox API v2, Google Drive REST API v3, Open-Meteo Elevation API (`api.open-meteo.com/v1/elevation`, `ElevationService.kt`), Firebase Crashlytics & Analytics (`firebase-bom:34.18.0`), Google Play Services Auth & In-App Review (`play-services-auth`, `play:review-ktx`), and Android Health Connect on-device aggregator (`HealthConnectHrvImporter.kt`). |
 
 ---
@@ -93,12 +93,12 @@ graph LR
 
 ### SYS-IF-04: Platform Lifecycle, Onboard Sensors, Maps, Power & Audio Interface
 * **Source / Target**: Bidirectional between `SYS-EL-01` (Host App) and `SYS-EL-04` (Android OS)
-* **Transport / Protocol**: Android System Services (`PowerManager`, `NotificationManager`, `AudioManager`, `SensorManager`, `Service`), Google Maps SDK v2 (`play-services-maps`), and PebbleKit (`pebblekit:4.0.1`).
+* **Transport / Protocol**: Android System Services (`PowerManager`, `NotificationManager`, `AudioManager`, `SensorManager`, `Service`) and Google Maps SDK v2 (`play-services-maps`).
 * **Timing & Rate Bounds**: WakeLock held during ACTIVE tracking; notification at 1-Hz tick; acoustic safety alert latency < 100 ms.
 * **Payload Schema**:
   - Power & FGS: `PARTIAL_WAKE_LOCK` tokens; `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; `Notification` parcel with `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`, and post-workout `FOREGROUND_SERVICE_TYPE_SHORT_SERVICE` (`WorkoutPostProcessingService.kt`, `WorkoutPostProcessingCoordinator.kt`, `WorkoutPostProcessingNotificationManager.kt`; API 34+, zero new manifest permissions).
   - Onboard Sensors: Barometer (`Sensor.TYPE_PRESSURE`), Proximity (`Sensor.TYPE_PROXIMITY`), Ambient Light (`Sensor.TYPE_LIGHT`), Smartphone IMU (`Sensor.TYPE_ACCELEROMETER`, `Sensor.TYPE_GYROSCOPE`, `Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`, `Sensor.TYPE_ROTATION_VECTOR`, `Sensor.TYPE_GAME_ROTATION_VECTOR`), and opportunistically permission-gated Step Detector (`Sensor.TYPE_STEP_DETECTOR`).
-  - Maps, Audio & Watch: Vector/lite-mode map polylines (`ATrainingTrackerMap.kt`), `AudioAttributes.USAGE_ALARM`/`USAGE_MEDIA`, and Pebble dictionary telemetry.
+  - Maps & Audio: Vector/lite-mode map polylines (`ATrainingTrackerMap.kt`) and `AudioAttributes.USAGE_ALARM`/`USAGE_MEDIA`.
 
 ### SYS-IF-05: Cloud REST, DEM Elevation, Health Connect & Telemetry Services Interface
 * **Source / Target Elements**: Bidirectional between `SYS-EL-01` (Host Application via `StravaUploader`, `DropboxBackupManager`, `GoogleDriveBackupManager`, `ElevationService.kt`, `HealthConnectHrvImporter.kt`) and `SYS-EL-05` (External Cloud Platforms & On-Device Health Connect)
@@ -204,7 +204,7 @@ Every system requirement across both functional domains is allocated to designat
 | **`SYSREQ-TRK-010`** | Smartphone IMU Kinematics, Carriage Classification, Cadence & iTPMS | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageMode.kt`, `PhoneCarriageClassifier.kt`, `ImuCadenceDsp.kt`, `SmartphoneImuCadenceEstimator.kt`, `KinematicSportTypeDiscriminator.kt`, `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, `MultisportLapCoordinator.kt`, `PolarLiveRunningCadenceEstimator.kt`, `MySensorManager.java`, `DeviceType.java`, `QuaternionGyroProjector.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `ErtsPostWorkoutRecomputer.kt`, `SpeedAndLocationDevice.java`, `IndirectTpmsEstimator.kt`, `DualWheelTpmsEstimator.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-011`** | Swimming Telemetry & Lap Adjustment | `SYS-EL-01`, `SYS-EL-02` | `SYS-IF-01`, `SYS-IF-06` | `SwimWorkoutAdjustCard.kt`, `SwimmingSection.kt`, `PolarVeritySenseOfflineController.kt`, `FitFileWriter.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
 | **`SYSREQ-TRK-012`** | Live HRV & DFA Alpha-1 Thresholds | `SYS-EL-01`, `SYS-EL-02` | `SYS-IF-01`, `SYS-IF-04`, `SYS-IF-06` | `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `HrvSignalQualityAnalyzer.kt`, `HrvRampTestScreen.kt`, `HrvThresholdEstimator.kt`, `HrvPostWorkoutRecomputer.kt` | Test / `SystemLiveTrackingRequirementsContractTest` |
-| **`SYSREQ-TRK-013`** | Process-Death Session Recovery | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `TrackerService.java`, `StartOrResumeDialog.kt`, `StartOrResumeInterface.java`, `WorkoutSamplesDatabaseManager.java` | Test / `SystemLiveTrackingRequirementsContractTest` |
+| **`SYSREQ-TRK-013`** | Process-Death Session Recovery | `SYS-EL-01`, `SYS-EL-04` | `SYS-IF-04`, `SYS-IF-06` | `TrackerService.java`, `StartOrResumeDialog.kt`, `MainActivityWithNavigation.kt`, `WorkoutSamplesDatabaseManager.java` | Test / `SystemLiveTrackingRequirementsContractTest` |
 
 ### 5.2 Domain 2: Data Exchange & Cloud Sync (SYSREQ-DEX-001..008)
 
@@ -249,3 +249,5 @@ Every system requirement across both functional domains is allocated to designat
 | `1.2.4` | 2026-11-19 | AI Agent (`ATT-8891`, `--as agent1`) | `ATT-8891` | Allocated `KinematicSportTypeDiscriminator.kt` under `SYSREQ-TRK-010` (`REQ-FIL-030`). |
 | `1.2.5` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Allocated `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, and `MultisportLapCoordinator.kt` under `SYSREQ-TRK-010` (`REQ-FIL-031`). |
 | `1.2.6` | 2026-11-20 | Lane A Author (`ATT-9154`, `--as agent1`) | `ATT-9154` | Updated `SYS-IF-04` FGS payload schema to include post-workout `FOREGROUND_SERVICE_TYPE_SHORT_SERVICE` (API 34+, zero new manifest permissions; `REQ-TRK-091`, new `.kt` filenames deferred until Stage 4 per `Rule 81`). |
+| `1.2.7` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Replaced excised `StartOrResumeInterface` with `MainActivityWithNavigation.kt` under `SYSREQ-TRK-013` (`Rule 8.7` code-grounding) and reset `Status` to `Reviewed` (`Pending PO Sign-Off`) per `REQ-PRO-120.2`. |
+| `1.2.8` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Removed decommissioned PebbleKit (`pebblekit:4.0.1`) from active `SYS-EL-04` and `SYS-IF-04` in sync with `system_context.md` v1.3.3 (`REQ-UI-2802`). |

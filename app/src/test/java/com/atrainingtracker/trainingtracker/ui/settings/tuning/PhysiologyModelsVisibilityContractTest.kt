@@ -277,7 +277,6 @@ class PhysiologyModelsVisibilityContractTest {
         val filesToCheck = listOf(
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt",
-            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt",
             "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt"
         )
         for (className in filesToCheck) {

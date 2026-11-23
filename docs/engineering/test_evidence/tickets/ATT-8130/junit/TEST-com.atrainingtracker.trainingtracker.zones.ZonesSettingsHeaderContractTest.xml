@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZonesSettingsHeaderContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:10.370Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testHeaderTitleIsBoundedWithMaxLinesAndEllipsis" classname="com.atrainingtracker.trainingtracker.zones.ZonesSettingsHeaderContractTest" time="0.001"/>
+  <testcase name="testZonesSettingsActivityFileExists" classname="com.atrainingtracker.trainingtracker.zones.ZonesSettingsHeaderContractTest" time="0.001"/>
+  <testcase name="testHeaderUsesCompactIconButtonsInsteadOfTextButtons" classname="com.atrainingtracker.trainingtracker.zones.ZonesSettingsHeaderContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

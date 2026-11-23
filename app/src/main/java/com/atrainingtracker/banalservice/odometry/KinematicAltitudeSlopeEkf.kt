@@ -63,6 +63,7 @@ class KinematicAltitudeSlopeEkf(
         const val DEM_ABRUPT_STEP_FLAT_BARO_M = 1.0 // Flat-baro ceiling for abrupt DEM jumps (REQ-FIL-037.2)
         const val DEM_INNOVATION_HUBER_K = 2.5 // Innovation-based Huber variance-inflation threshold (REQ-FIL-037.2)
         const val DEM_HIGH_PRECISION_VAR_THRESHOLD = 1.0 // Bypass DEM step gating for high-precision anchors (REQ-FIL-037.2)
+        const val DEM_BARO_TRUST_VAR_THRESHOLD = 16.0 // Max raw baro variance trusted for DEM step gating (REQ-FIL-040.2)
         const val DEFAULT_STANDSTILL_THRESHOLD_MPS = 0.3
         const val LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2 // Low-speed slope damping ceiling (REQ-FIL-023.3)
         const val MAX_PHYSICAL_SLOPE = 0.35 // +/-35% grade clamp (REQ-FIL-023.3)
@@ -116,6 +117,7 @@ class KinematicAltitudeSlopeEkf(
     private var lastSpeedMps: Double = 0.0
 
     private var lastBaroAltM: Double = Double.NaN
+    private var lastBaroVarM2: Double = rBaro
     private var lastRefAltM: Double = Double.NaN
     private var lastRefBaroAltM: Double = Double.NaN
     private var lastMovingBaroAltM: Double = Double.NaN
@@ -156,6 +158,7 @@ class KinematicAltitudeSlopeEkf(
         lastSpeedMps = 0.0
         adaptiveBaroJitterVar = 0.0
         lastBaroAltM = Double.NaN
+        lastBaroVarM2 = rBaro
         lastRefAltM = Double.NaN
         lastRefBaroAltM = Double.NaN
         lastMovingBaroAltM = Double.NaN
@@ -178,6 +181,7 @@ class KinematicAltitudeSlopeEkf(
         if (!lastAltitudeM.isFinite() || lastAltitudeM <= -500.0 || lastAltitudeM >= 9000.0) return
         altitude = lastAltitudeM
         slope = 0.0
+        lastBaroVarM2 = rBaro
         p01 = 0.0
         p10 = 0.0
         p11 = 0.01
@@ -220,6 +224,7 @@ class KinematicAltitudeSlopeEkf(
         if (is3StateMode == threeState) return
         is3StateMode = threeState
         hasReferenceAnchor = false
+        lastBaroVarM2 = rBaro
         lastRefAltM = Double.NaN
         lastRefBaroAltM = Double.NaN
         adaptiveBaroJitterVar = 0.0
@@ -331,12 +336,14 @@ class KinematicAltitudeSlopeEkf(
         speedMps: Double = lastSpeedMps
     ) {
         if (!baroAltM.isFinite()) return
+        val safeVarBaro = if (varBaro.isFinite() && varBaro > 0.0) varBaro else rBaro
+        lastBaroVarM2 = safeVarBaro
 
         if (!isInitialized) {
             altitude = baroAltM
             slope = 0.0
             baroBias = 0.0
-            p00 = if (is3StateMode) DEFAULT_UNANCHORED_ALT_VAR else varBaro
+            p00 = if (is3StateMode) DEFAULT_UNANCHORED_ALT_VAR else safeVarBaro
             p11 = 0.01
             p22 = 100.0
             hasBarometerSample = true
@@ -361,7 +368,7 @@ class KinematicAltitudeSlopeEkf(
             baroBias = baroAltM - altitude
             hasBarometerSample = true
             lastBaroAltM = baroAltM
-            lastRefBaroAltM = baroAltM
+            lastRefBaroAltM = if (lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD) baroAltM else Double.NaN
             resetJitterTracker(baroAltM)
             return
         }
@@ -374,7 +381,7 @@ class KinematicAltitudeSlopeEkf(
             // without collapsing bias variance below altitude uncertainty p00.
             if (is3StateMode && hasReferenceAnchor) {
                 val y = baroAltM - (altitude + baroBias)
-                val s = p22 + varBaro
+                val s = p22 + safeVarBaro
                 val yH = applyHuber(y, s)
                 val kBias = p22 / s
                 baroBias += kBias * yH
@@ -388,7 +395,7 @@ class KinematicAltitudeSlopeEkf(
 
         val gainScale = lowSpeedSlopeGainFactor(max(0.0, speedMps))
         val rawResidual = if (!is3StateMode) (baroAltM - twoStateBaroOffsetM) - altitude else baroAltM - (altitude + baroBias)
-        val effectiveVarBaro = varBaro + updateAdaptiveJitterVariance(baroAltM, rawResidual)
+        val effectiveVarBaro = safeVarBaro + updateAdaptiveJitterVariance(baroAltM, rawResidual)
 
         if (!is3StateMode) {
             // 2-State update: z = h
@@ -500,7 +507,11 @@ class KinematicAltitudeSlopeEkf(
             p22 = 100.0
             hasReferenceAnchor = true
             lastRefAltM = refAltM
-            lastRefBaroAltM = if (hasBarometerSample) lastBaroAltM else Double.NaN
+            lastRefBaroAltM = if (hasBarometerSample && lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD) {
+                lastBaroAltM
+            } else {
+                Double.NaN
+            }
             isInitialized = true
             return false
         }
@@ -521,7 +532,11 @@ class KinematicAltitudeSlopeEkf(
             p22 = 100.0
             hasReferenceAnchor = true
             lastRefAltM = refAltM
-            lastRefBaroAltM = if (hasBarometerSample) lastBaroAltM else Double.NaN
+            lastRefBaroAltM = if (hasBarometerSample && lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD) {
+                lastBaroAltM
+            } else {
+                Double.NaN
+            }
             return true
         }
 
@@ -545,8 +560,9 @@ class KinematicAltitudeSlopeEkf(
         val gainScale = lowSpeedSlopeGainFactor(lastSpeedMps)
         val s = p00 + effectiveVarRef
         val k0 = p00 / s
-        // Decouple DEM/GPS reference innovations from slope whenever barometer is active or stationary (REQ-FIL-037.1)
-        val k1Eff = if (hasBarometerSample || isStandstill) 0.0 else (p10 / s) * gainScale
+        val baroTrusted = hasBarometerSample && lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD
+        // Decouple DEM/GPS reference innovations from slope whenever a trusted barometer is active or stationary (REQ-FIL-037.1, REQ-FIL-040.2)
+        val k1Eff = if (baroTrusted || isStandstill) 0.0 else (p10 / s) * gainScale
 
         if (!is3StateMode) {
             altitude += k0 * yEff
@@ -569,7 +585,9 @@ class KinematicAltitudeSlopeEkf(
         enableStepGating: Boolean
     ): Double {
         var stepVarRef = varRef
+        val baroTrusted = lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD
         if (enableStepGating &&
+            baroTrusted &&
             hasBarometerSample &&
             !lastRefAltM.isNaN() &&
             !lastRefBaroAltM.isNaN() &&
@@ -593,9 +611,11 @@ class KinematicAltitudeSlopeEkf(
         }
         // Always advance reference trackers so persistent corrections converge on subsequent ticks
         // while transient DEM grid-cell bounces inflate quadratically on both edges (REQ-FIL-037.2).
+        // Clear lastRefBaroAltM while barometer dispersion exceeds trust threshold so post-recovery
+        // ticks never compare against a pocket-corrupted baseline (REQ-FIL-040.2).
         lastRefAltM = refAltM
         if (hasBarometerSample && !lastBaroAltM.isNaN()) {
-            lastRefBaroAltM = lastBaroAltM
+            lastRefBaroAltM = if (baroTrusted) lastBaroAltM else Double.NaN
         }
         return stepVarRef
     }

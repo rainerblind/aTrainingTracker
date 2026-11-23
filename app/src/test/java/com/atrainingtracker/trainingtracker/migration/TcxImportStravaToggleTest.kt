@@ -132,7 +132,6 @@ class TcxImportStravaToggleTest {
         com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository.resetForTesting(null)
         com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager.resetForTesting(null)
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.resetInstanceForTesting()
-        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.setInstanceForTesting(null)
         com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager.resetForTesting(null)
         listOf(
             WorkoutSummariesDbHelper.DB_NAME,

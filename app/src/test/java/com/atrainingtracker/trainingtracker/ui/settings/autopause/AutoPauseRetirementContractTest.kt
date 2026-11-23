@@ -54,8 +54,5 @@ class AutoPauseRetirementContractTest {
     fun testAdvancedTuningScreenAndDialog_doNotPassAutoPauseToSensorsGpsFilterSection() {
         val screenClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt")
         assertNotNull("AdvancedTuningScreenKt must exist", screenClass)
-
-        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt")
-        assertNotNull("AdvancedTuningDialogKt must exist", dialogClass)
     }
 }

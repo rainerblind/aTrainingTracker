@@ -264,19 +264,6 @@
 
 
         <activity
-            android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
-            android:exported="false"
-            android:label="@string/PebbleConfigActivityLabel"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.aTrainingTracker"
-            android:windowSoftInputMode="stateHidden">
-            <intent-filter>
-                <action android:name="com.atrainingtracker.trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <activity
             android:name="com.dropbox.core.android.AuthActivity"
             android:exported="true"
             android:configChanges="orientation|keyboard"
@@ -348,8 +335,6 @@
             android:name=".trainingtracker.tracker.WorkoutPostProcessingService"
             android:exported="false"
             android:foregroundServiceType="shortService" />
-        <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
-        <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service
             android:name=".banalservice.BANALService"
             android:foregroundServiceType="location|health"

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.OdometrySimulationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T03:23:59.212Z" hostname="rainer-HP-EliteBook-850-G5" time="0.016">
+  <properties/>
+  <testcase name="testCurvedTunnelOutage_deadReckoning_accumulatedDistanceErrorLessThan1Percent" classname="com.atrainingtracker.banalservice.odometry.OdometrySimulationTest" time="0.015"/>
+  <testcase name="testDenseCanopySwitchbacks_gatesNoisyGps_preservesHairpinCurve" classname="com.atrainingtracker.banalservice.odometry.OdometrySimulationTest" time="0.0"/>
+  <testcase name="testSprintSlipAndBrakeLockup_huberWeightingRejectsOutliers" classname="com.atrainingtracker.banalservice.odometry.OdometrySimulationTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

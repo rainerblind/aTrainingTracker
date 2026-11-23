@@ -19,7 +19,8 @@
 package com.atrainingtracker.banalservice.devices.raw
 
 /**
- * Channel discriminator for smartphone raw sensor telemetry rows (REQ-EXP-045.2, ATT-9348).
+ * Channel discriminator for smartphone raw sensor telemetry rows
+ * (REQ-EXP-045.2, ATT-9348; REQ-EXP-047.1, ATT-9604).
  */
 enum class PhoneRawChannel {
     ACC,
@@ -28,23 +29,25 @@ enum class PhoneRawChannel {
     BARO,
     STEP,
     GNSS,
+    GNSS_FUSED,
     WHEEL,
     STATE
 }
 
 /**
  * Single typed smartphone raw telemetry row for compressed CSV sidecar recording and pure-JVM
- * offline simulation replay (`ATT-9348`, `ATT-9349`, REQ-EXP-045.2).
+ * offline simulation replay (`ATT-9348`, `ATT-9349`, `ATT-9604`, REQ-EXP-045.2, REQ-EXP-047.1).
  *
  * Column schema: `elapsedRealtimeNs,epochMs,channel,v0,v1,v2,v3,v4,v5`
- * - `ACC`:    v0=ax, v1=ay, v2=az (m/s^2)
- * - `GYRO`:   v0=gx, v1=gy, v2=gz (rad/s)
- * - `ROTVEC`: v0=qx, v1=qy, v2=qz, v3=qw (unit quaternion)
- * - `BARO`:   v0=pressureHpa, v1=isaAltM
- * - `STEP`:   (empty v0..v5)
- * - `GNSS`:   v0=latDeg, v1=lonDeg, v2=altM, v3=speedMps, v4=bearingDeg, v5=accuracyM
- * - `WHEEL`:  v0=speedMps, v1=variance
- * - `STATE`:  v0=sportId, v1=bSportCode, v2=carriageCode
+ * - `ACC`:        v0=ax, v1=ay, v2=az (m/s^2)
+ * - `GYRO`:       v0=gx, v1=gy, v2=gz (rad/s)
+ * - `ROTVEC`:     v0=qx, v1=qy, v2=qz, v3=qw (unit quaternion)
+ * - `BARO`:       v0=pressureHpa, v1=isaAltM
+ * - `STEP`:       (empty v0..v5)
+ * - `GNSS`:       v0=latDeg, v1=lonDeg, v2=altM, v3=speedMps, v4=bearingDeg, v5=accuracyM (raw GPS)
+ * - `GNSS_FUSED`: v0=latDeg, v1=lonDeg, v2=altM, v3=speedMps, v4=bearingDeg, v5=accuracyM (Google Fused)
+ * - `WHEEL`:      v0=speedMps, v1=variance
+ * - `STATE`:      v0=sportId, v1=bSportCode, v2=carriageCode
  */
 data class PhoneRawTelemetryRow(
     val elapsedRealtimeNs: Long,
@@ -119,7 +122,7 @@ data class PhoneRawTelemetryRow(
                 PhoneRawChannel.BARO, PhoneRawChannel.WHEEL ->
                     v0.isFinite() && v1.isFinite()
                 PhoneRawChannel.STEP -> true
-                PhoneRawChannel.GNSS ->
+                PhoneRawChannel.GNSS, PhoneRawChannel.GNSS_FUSED ->
                     v0.isFinite() && v1.isFinite() && v2.isFinite() &&
                         v3.isFinite() && v4.isFinite() && v5.isFinite()
             }
@@ -146,6 +149,7 @@ data class PhoneRawTelemetryRow(
                 "BARO" -> PhoneRawChannel.BARO
                 "STEP" -> PhoneRawChannel.STEP
                 "GNSS" -> PhoneRawChannel.GNSS
+                "GNSS_FUSED" -> PhoneRawChannel.GNSS_FUSED
                 "WHEEL" -> PhoneRawChannel.WHEEL
                 "STATE" -> PhoneRawChannel.STATE
                 else -> null

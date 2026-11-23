@@ -33,6 +33,28 @@ data class ReplayInputs(
 )
 
 /**
+ * GNSS provider stream selection for [OfflineTelemetryReplayHarness] (REQ-EXP-047.3, ATT-9604).
+ * - [AUTO]: prefer raw hardware GPS (`GNSS`) when present, falling back to `GNSS_FUSED` only if
+ *   the sidecar contains zero `GNSS` rows.
+ * - [GPS]: consume `GNSS` rows only.
+ * - [FUSED]: consume `GNSS_FUSED` rows only.
+ */
+enum class ReplayGnssSource {
+    AUTO,
+    GPS,
+    FUSED;
+
+    companion object {
+        fun parseOrNull(raw: String): ReplayGnssSource? = when (raw.trim().lowercase(Locale.US)) {
+            "auto" -> AUTO
+            "gps" -> GPS
+            "fused" -> FUSED
+            else -> null
+        }
+    }
+}
+
+/**
  * Tunable simulation parameters enabling offline before-vs-after parameter sweeps (REQ-EXP-046.3).
  */
 data class ReplayConfig(
@@ -43,7 +65,8 @@ data class ReplayConfig(
     val altitudeRBaro: Double = 0.25,
     val altitudeRGps: Double = 9.0,
     val gnssMaxAccuracyM: Double = 50.0,
-    val enableErtsSmoothing: Boolean = true
+    val enableErtsSmoothing: Boolean = true,
+    val gnssSource: ReplayGnssSource = ReplayGnssSource.AUTO
 )
 
 /**

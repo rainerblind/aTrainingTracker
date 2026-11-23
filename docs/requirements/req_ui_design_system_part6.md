@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 6 of 6)
 
 **Document ID**: `DOC-REQ-UI-P6`  
-**Version**: 1.0.0  
+**Version**: 1.0.30  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part6`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 44
+**Total Requirements**: 46
 
 ---
 
@@ -1726,6 +1726,58 @@
 
 ---
 
+### REQ-UI-2801: Legacy UI Decommissioning Part 1 — Removal of Unreferenced Fragments, SettingsDialogFragment Wrappers & Pure Compose Dialog Hosting (`ATT-8129`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-2801`
+- **System Requirement(s)**: Derived (SW-only — UI cleanup and pure Compose dialog migration refining `SYSREQ-TRK-013`, `REQ-UI-149`, `REQ-UI-329`, `REQ-STB-012`, `REQ-PER-008`, and `REQ-UI-2799`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `TrackingTabsScreen.kt`, `StartOrResumeDialog.kt`, `GPSDisabledAlertDialog.kt`, `LegacyUiDecommissioningComposeTest.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings` (reuses existing 9-locale keys `gps_disabled_on_device`, `gps_goto_settings`, `Cancel`, `unfinished_workout_title*`, `start_new_workout`, `resume_workout`).
+- **Rationale**: Top-level and settings navigation in `ATrainingTrackerApp.kt` runs entirely on Jetpack Compose `NavHost` and native `ModalBottomSheet`, leaving 27 dead `*Fragment`/`*SettingsDialogFragment`/hybrid `DialogFragment` bridge files (`-2,431` LoC) and double-window `DialogFragment` wrappers around pure Compose dialogs (`EditDeviceFragmentFactory`, `StartOrResumeDialog`, `GPSDisabledDialog.java`).
+- **Description**:
+  1. *Excision of Unreferenced Screen Fragments, SettingsDialogFragments & Hybrid Bridges (`REQ-UI-2801.1`)*:
+     - Production sources under `app/src/main/java` SHALL physically remove all 13 unreferenced screen `*Fragment` classes (`PeriodsFragment`, `EquipmentFragment`, `RoutesFragment`, `WorkoutClustersFragment`, `TrackingTabsFragment`, `BackupRestoreFragment`, `StarredSegmentsFragment`, `DevicesTabbedContainerFragment`, `SportTypeListFragment`, `MapFragmentWithTrack`, `WorkoutSummariesTabbedFragment`, `ZoneSettingsFragment`, `WorkoutSummariesListFragment`), all 9 orphaned `*SettingsDialogFragment` subclasses (`Display`, `Dropbox`, `Export`, `GoogleDrive`, `Search`, `Strava`, `Units`, `ActivityTypeSelection`, `AdvancedTuning`), `AppBottomSheetDialogFragment`, `ActivityTypeSelectionHelper`, `EditDeviceFragmentFactory` / `ComposableEditDeviceDialogFragment`, `StartOrResumeInterface`, `GPSDisabledDialog.java`, and the `StartOrResumeDialog` `DialogFragment` class wrapper.
+  2. *`MainActivityWithNavigation` Cleanup (`REQ-UI-2801.2`)*:
+     - `MainActivityWithNavigation.kt` SHALL remove all dead Fragment/`SettingsDialogFragment` imports, dead legacy fields (`mFragment`, `mDrawerLayout`, `mStartAndNotResume`, `mAlreadyTriedToRequestDropboxToken`), dead `onSaveInstanceState` `putFragment`, and the `StartOrResumeInterface` supertype while preserving `showStartOrResumeDialog()`, `chooseStart()`, `chooseResume()`, `SelectedFragment`, `@JvmField` extras, `hardwareKeyInterceptor`, and `OnPreferenceStartScreenCallback`.
+  3. *Pure Compose State-Driven Dialog Hosting (`REQ-UI-2801.3`)*:
+     - `TrackingTabsScreen.kt` SHALL host `EditDeviceDialog` directly as a pure Compose sibling overlay driven by `rememberSaveable` `editingDeviceId` (zero `DialogFragment` double window) for both `TabNavigationEvent.EditDevice` and `ControlNavigation.ToEditDevice`.
+     - `MainActivityWithNavigation.kt` + `ATrainingTrackerApp.kt` (and `TrackingTabsScreen.kt` for `ControlNavigation.ShowRecoveryDialog`) SHALL host `StartOrResumeAlertDialog` and `GPSDisabledAlertDialog` directly as pure Compose dialogs driven by Compose state without `FragmentManager` or `DialogFragment`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `app/src/main/java`, *When* building and running unit/contract tests, *Then* all 27 excised files and the `StartOrResumeDialog` `DialogFragment` wrapper are absent from disk and classpath and `MainActivityWithNavigation` declares zero `mFragment`/`mDrawerLayout` fields or `StartOrResumeInterface` supertype.
+  • *Given* `TrackingTabsScreen` and `ATrainingTrackerApp`, *When* editing a device, recovering an unfinished workout, or warning about disabled GPS, *Then* `EditDeviceDialog`, `StartOrResumeAlertDialog`, and `GPSDisabledAlertDialog` render directly as pure Compose dialogs with full callback parity and zero `DialogFragment` bridge.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Consolidates `REQ-UI-149`, `REQ-UI-329`, `REQ-STB-012`, `REQ-PER-008`, `REQ-UI-2799` across `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `TrackingTabsScreen.kt`, `StartOrResumeDialog.kt`, and `GPSDisabledAlertDialog.kt`.
+  2. *Preservation of Core Invariants*: Preserves `StartOrResumeDialogContent` forensic diagnosis UI & 9-locale parity, `GPSDisabledAlertDialog` `ACTION_LOCATION_SOURCE_SETTINGS` non-cancelable alert behavior, `EditDeviceDialog` rotation-safe draft staging (`ATT-8125`), `res/layout/` 9 active XMLs (`DeadCodeEliminationContractTest`), `ADR-001` `<= 120` `.java` bound, `SYSREQ-TRK-013` code grounding, and Pebble/classic fragments (`ATT-8130`).
+
+### REQ-UI-2802: Legacy UI & Package Decommissioning Part 2 — Deprecated Screens, Modular Zone Settings, Dead Branches, OpenCSV & Frozen Pebble Subsystem [Verified]
+- **Tests**: `TST-UI-2802`
+- **Tickets**: `ATT-8130`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `ZoneSettingsScreen.kt`, `HrvDfaA1SettingsSection.kt`, `ZonePreviewComponents.kt`, `ZonesSettingsViewModel.kt`, `TrackOnMapScreen.kt`, `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvRampTestConfig.kt`, `TrainingApplication.java`, `MyHelper.java`, `BTLERadarDevice.java`, `CSVFileWriter.java`, `Rfc4180CsvWriter.kt`, `DatabaseSchemaRegistry.kt`, `AndroidManifest.xml`, `app/build.gradle`, `app/proguard-rules.pro`
+- **Rationale**: Duplicate deprecated screens (`AdvancedTuningDialog` missing `SwimmingSection`), unregistered `ZonesSettingsActivity`, dead legacy branches (`TrackOnMapScreen` non-tab branch, `HrvRampTestScreen` `PreFlightSensorCard`), forwarding shims, synthetic non-protocol radar test decoders, vendored 2005 JDBC-tainted `opencsv`, and the discontinued Pebble smartwatch subsystem (`PebbleView.db`, `pebblekit:4.0.1`, `ConfigViews*`) created feature drift and continuous build/schema maintenance burden (~2,500+ LoC).
+- **Description**:
+  1. *Unified Tuning, Modular Zones & Dead UI Branch Removal (`REQ-UI-2802.1`)*:
+     - `SettingsBottomSheetType.ADVANCED_TUNING`, `AdvancedTuningDialog.kt`, and `ClusterTuningScreen.kt` SHALL be physically removed so all expert-settings entry points route strictly to `AdvancedTuningScreen` (including `SwimmingSection`).
+     - Unregistered `class ZonesSettingsActivity` SHALL be removed and Compose zone screens + `ZonesSettingsViewModel` SHALL reside modularly under `ui/settings/zones/` (`ZoneSettingsScreen.kt`, `HrvDfaA1SettingsSection.kt`, `ZonePreviewComponents.kt`, `ZonesSettingsViewModel.kt`) sharing a single deduplicated `ZoneLivePreviewTileCard`.
+     - The unreachable non-tab `else` branch in `TrackOnMapScreen.kt` and unreachable `PreFlightSensorCard` / `HrvTestPhase.PRE_FLIGHT` in `HrvRampTest*` SHALL be deleted while preserving inline `CONFIG`-phase `evaluatePreFlightQuality`.
+  2. *Dead Helpers, Shims & Hardware-Authentic Radar Decoding (`REQ-UI-2802.2`)*:
+     - `TrackOnMapHelper.java` (+ `TrainingApplication.trackOnMapHelper`), `ui/util/Event.kt`, `DynamicalPowerHrEngine.kt` (updating `docs/architecture.md`), `MyHelper.formatRank()`, `ui/components/FastScrollbar.kt` (redirecting callers to `ui.components.core.FastScrollableBox`), and `ui/components/BottomSheetUtils.kt` SHALL be removed.
+     - Invented synthetic V1 (`0x00`) and V2 (`0x01`, `1 + 8*N`) test decoders SHALL be removed from `BTLERadarDevice.java` so production parsing exclusively accepts authentic Garmin Varia V1 (`(header & 0x0F) == 0x02`) and RearVue 820 V2 (`2-byte heartbeat`, `5/6-byte status`, `2 + 9*N`) frames.
+  3. *OpenCSV Replacement & Frozen Pebble Subsystem Excision (`REQ-UI-2802.3`)*:
+     - Vendored `au/com/bytecode/opencsv/*` (+ `package.html`) SHALL be replaced in `CSVFileWriter.java` by minimal internal `Rfc4180CsvWriter.kt` preserving exact RFC-4180 comma/quote/newline/null parity and deleted.
+     - Frozen `smartwatch/pebble/*`, `PebbleDatabaseManager` (`PebbleView.db` entry in `DatabaseSchemaRegistry`), `ConfigViewsActivityClassic`, `ConfigViewsFragment`, `ConfigViewFragment`, `com.getpebble:pebblekit:4.0.1`, `AndroidManifest.xml` Pebble activity/services, `proguard-rules.pro` PebbleKit rules, `TrainingApplication` Pebble hooks, 3 orphaned XML layouts (`pebble_config_list_5.xml`, `main_activity_without_navigation.xml`, `tabbed_config_views.xml`), and `icon_pebble.png` SHALL be physically removed, with PebbleKit moved to Domain 5 (`PERMANENTLY DECOMMISSIONED`) in `docs/system/system_context.md` and removed from active `SYS-EL-04`/`SYS-IF-04` in `docs/system/system_architecture.md`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `app/src/main`, `AndroidManifest.xml`, `app/build.gradle`, and `app/proguard-rules.pro`, *When* compiling and running unit/contract tests, *Then* all 23 excised classes/packages, 3 orphaned XML layouts, `pebblekit:4.0.1`, and synthetic radar `0x00`/`0x01` decoders are absent while `AdvancedTuningScreen`, `ZoneSettingsScreen` (`ui/settings/zones/`), `TrackOnMapScreen`, `HrvRampTestScreen`, `Rfc4180CsvWriter`, and authentic Varia V1/V2 radar decoding compile and test green.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Consolidates `REQ-UI-262`, `REQ-UI-357`, `REQ-UI-384`, `REQ-UI-441`, `REQ-TRK-061.4`, `REQ-TRK-072`, `REQ-CON-028.4`, `REQ-BLD-001`, `REQ-BLD-003`, `REQ-MIG-057`, `REQ-PRO-053`, `REQ-ARC-003`.
+  2. *Preservation of Core Invariants*: Preserves all 12 `AdvancedTuningScreen` sections incl. `SwimmingSection`, `ZoneSettingsScreen` 4-tab layout & `ZoneCalculatorDialog`, inline `CONFIG`-phase `evaluatePreFlightQuality`, `CSVFileWriter` RFC-4180 wire format & cancellation, authentic Garmin Varia V1/V2 BLE parsing, `DatabaseSchemaRegistry` 21-DB + `TrackingViews.db` parity, `res/layout/` 6 active XMLs, and 9-locale `strings*.xml` parity (`0` string changes).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1757,3 +1809,5 @@
 | `1.0.26` | 2026-11-21 | Lane 3 Author (`ATT-9558`, `--as agent1`) | `ATT-9558` | Refined `REQ-UI-2791.1`: replaced thick top-only `3.dp` bar on Row 1 `PmcStatBadge` cards with clean uniform `1.5.dp` all-around colored borders matching curve colors while preserving Row 2 neutral `1.dp` `outlineVariant` borders and 3-curve `FlowRow` legend. |
 | `1.0.27` | 2026-11-21 | Lane 1 Author (`ATT-6037`, `--as agent1`) | `ATT-6037` | Added and verified `REQ-UI-2793` (`[Verified]`, `.1`–`.3`) for `ElevationProfile` Canvas Paint/Path/climb-summit hoisting & coalesced color runs, `MapScreenWithTrack` direct `StateFlow` forwarding + `MapContentScopeImpl` `Rule 66` plain `mutableListOf` + `contentRevision` fix, `TrackingViewModel`/`SensorGridScreen` true `mapState` decoupling, and shared base `AppHttpClient` (emulator + Light/Dark PNGs visually verified via `read_file`, automated gate & evidence bundle in `docs/engineering/test_evidence/tickets/ATT-6037/`). |
 | `1.0.28` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `REQ-UI-2794` (`[Verified]`, `.1`–`.3`) promoting `MapPeekSelection.Climb` to `isSheetBacked = true` in `MapScreenWithTrack` via `BottomSheetScaffold` + `BottomSheetDesign.PeekHeightClimb` (`192.dp`) + `ClimbOnMapScreen` dynamic `measuredHeaderHeight` + `SheetValue.Hidden` selection cleanup, superseding `REQ-UI-2790.2` modal Climb carve-out while preserving `ClimbDetailSheet` for `RouteOnMapScreen`. |
+| `1.0.29` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Added and verified `REQ-UI-2801` (`[Verified]`, `.1`–`.3`) for physical excision of 27 dead Fragment/SettingsDialogFragment/hybrid-bridge files + `StartOrResumeDialog` `DialogFragment` wrapper, `MainActivityWithNavigation` cleanup, and pure Compose `EditDeviceDialog`, `StartOrResumeAlertDialog`, and `GPSDisabledAlertDialog` (`131/131` PASS across 22 suites, `0` new compiler warnings, Light/Dark Compose + live `emulator-5554` PNGs visually verified via `read_file`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8129/`). |
+| `1.0.30` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `REQ-UI-2802` (`[Verified]`, `.1`–`.3`) for Legacy UI & Package Decommissioning Part 2 (`521/521` targeted unit/Compose/contract tests PASS, `:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` PASS, `0` new compiler warnings, 4 live `emulator-5554` PNGs visually verified via `read_file`, `0` crashes in `logcat -b crash -d`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8130/`). |

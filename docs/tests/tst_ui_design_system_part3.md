@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.38  
+**Version**: 1.0.41  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 96
+**Total Tests**: 98
 
 ---
 
@@ -1911,6 +1911,38 @@
 
 ---
 
+### TST-UI-2801: **Legacy UI Decommissioning Part 1 & Pure Compose Dialogs Verification Suite (`ATT-8129`)** [Verified]
+
+- **Requirement(s)**: `REQ-UI-2801` (`REQ-UI-2801.1`–`REQ-UI-2801.3`)
+- **Jira**: `ATT-8129` (Epic `ATT-8120`) | **Target Release**: `V5.0.0`
+- **Verification Scope**:
+  1. *Physical & Classpath Excision (`TST-UI-2801.1`, `LegacyUiDecommissioningComposeTest`, `ModalBottomSheetDialogsIntegrityTest`, `DropboxSettingsDialogTest`, `AdvancedTuningModularityTest`, `WorkoutSummariesTabbedScreenTest`)*:
+     - Verify all 27 excised source files and `StartOrResumeDialog` `DialogFragment` wrapper do not exist on disk or in classpath (`ClassNotFoundException`).
+     - Verify `MainActivityWithNavigation` declares zero `mFragment`/`mDrawerLayout` fields and no longer implements `StartOrResumeInterface` (`MainActivityWithNavigationInteropTest`).
+  2. *Pure Compose Dialog Behavior & Visual Verification (`TST-UI-2801.2`, `LegacyUiDecommissioningComposeTest`, `StartOrResumeDialogContractTest`, `StartOrResumeDialogLayoutTest`, `MainActivityLifecycleTest`, `MainActivityIntentLifecycleTest`, `PeriodsNavigationFilterTest`)*:
+     - Verify `StartOrResumeAlertDialog` & `StartOrResumeDialogContent` render all 4 `KillReason` diagnoses, dispatch `onStartNew`/`onResume`/`onDisableBatteryOptimization`, and pass 9-locale localization parity.
+     - Verify `GPSDisabledAlertDialog` renders localized strings (`gps_disabled_on_device`, `gps_goto_settings`, `Cancel`) and dispatches `onOpenLocationSettings`/`onDismiss`.
+     - Verify pure Compose `EditDeviceDialog` opens from state without `FragmentManager` or `EditDeviceFragmentFactory`.
+     - Capture Light/Dark Compose PNG and live `emulator-5554` screenshot, inspect via `read_file` (`Rule 8.5`), and verify clean `logcat -b crash -d`.
+  3. *Governance & Architectural Contracts (`TST-UI-2801.3`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, `SystemLiveTrackingRequirementsContractTest`, `ArchitectureConformanceContractTest`, `UiReflectionOnlyTestAuditContractTest`)*:
+     - Verify `source-reading-baseline.txt` ratcheted cleanly (`105 -> 104`), `SYSREQ-TRK-013` code grounding intact, `0` new compiler warnings, and `verify_requirement_governance.py` exit `0`.
+
+### TST-UI-2802: **Legacy UI & Package Decommissioning Part 2 Verification Suite (`ATT-8130`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2802`
+- **Component**: `LegacyPackageDecommissioningTest.kt`, `BTLERadarDeviceTest.kt`, `HardwareHalIngestionIntegrationTest.kt`, `DatabaseSchemaRegistryParityContractTest.kt`, `DeadCodeEliminationContractTest.kt`, `ManifestAndBuildConfigContractTest.kt`, `SystemContextContractTest.kt`, `SystemArchitectureDesignContractTest.kt`, `ProGuardRulesContractTest.kt`, `AdrCompletenessContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `AdvancedTuningModularityTest.kt`, `HrvDfaA1SettingsContractTest.kt`, `ZonesSettingsPreviewPillsContractTest.kt`, `ZonesSettingsHeaderContractTest.kt`
+- **Jira**: `ATT-8130`
+- **Test Description**:
+  1. *Classpath & Manifest Excision (`TST-UI-2802.1`, `LegacyPackageDecommissioningTest`, `DeadCodeEliminationContractTest`, `ManifestAndBuildConfigContractTest`, `ProGuardRulesContractTest`, `DatabaseSchemaRegistryParityContractTest`)*:
+     - Verify all 23 excised classes (`AdvancedTuningDialogKt`, `ClusterTuningScreenKt`, `ZonesSettingsActivity`, `TrackOnMapHelper`, `Event`, `DynamicalPowerHrEngineKt`, `ui.components.FastScrollbarKt`, `BottomSheetUtilsKt`, `au.com.bytecode.opencsv.*`, `smartwatch.pebble.*`, `ConfigViewsActivityClassic`, `ConfigViewsFragment`, `ConfigViewFragment`), `SettingsBottomSheetType.ADVANCED_TUNING`, `HrvTestPhase.PRE_FLIGHT`, `MyHelper.formatRank`, `PebbleView.db`, `pebblekit:4.0.1`, and 3 orphaned XML layouts (`res/layout/` `9 -> 6`) are absent.
+  2. *Behavioral Replacement Parity (`TST-UI-2802.2`, `LegacyPackageDecommissioningTest`, `BTLERadarDeviceTest`, `HardwareHalIngestionIntegrationTest`, `ZonesSettings*`, `HrvDfaA1*`, `AdvancedTuning*`)*:
+     - Verify `Rfc4180CsvWriter` exact RFC-4180 quoting, `""` escaping, embedded newlines, and `null` field parity.
+     - Verify shared `ZoneLivePreviewTileCard` Compose rendering, modular `ui/settings/zones/` screens, `AdvancedTuningScreen` with `SwimmingSection`, and live `emulator-5554` navigation + `Rule 8.5` PNG inspection.
+     - Verify `BTLERadarDevice` accepts authentic Garmin Varia V1 (`0x*2`) and RearVue 820 V2 (`2 + 9*N`, 2-byte heartbeat, 5/6-byte status) frames while rejecting synthetic `0x00` and `0x01` frames.
+  3. *Architecture & System Code-Grounding (`TST-UI-2802.3`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `AdrCompletenessContractTest`, `ArchitectureConformanceContractTest`, `SourceTextReadingAuditContractTest`)*:
+     - Verify `ZonesSettingsActivity.kt` removed from monolith allowlist, PebbleKit moved to Domain 5 (`PERMANENTLY DECOMMISSIONED`) in `system_context.md` and removed from `SYS-EL-04`/`SYS-IF-04`, `ADR-006` and `docs/architecture.md` code-grounded, `0` new compiler warnings, and `verify_requirement_governance.py` exit `0`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1951,3 +1983,5 @@
 | `1.0.35` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Added `TST-UI-2800` (`[Planned]`, `.1`–`.4`) covering background repository scopes, `FilteredSensorData` `StateFlow` conflation & unbind-before-connect leak tests, `RrArtifactFilter` `O(N)` equivalence/performance tests, single-push `ProxySensor`/`FilterManager` & `deviceId` rename survival tests, and cockpit 1-Hz recomposition bounds (`TrackingTabGridContent`, `TrackingTabsScreen`). |
 | `1.0.36` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Gate 3 (`ATT-9635`) revision on `TST-UI-2800`: added steady-value sparkline/`W_PRIME_BAL` liveness + NaN equality tests, 92-element causal window + multi-thread safety checks, end-to-end `deviceId` rename survival (`TrackingViewModel`/sparklines), full `itpmsLock`/`trackLock`/`connectionLock` + `ProxySensor` swap coverage, and `DisplayBrightnessMode.SYSTEM`/`CUSTOM`/`AUTO` code-grounding. |
 | `1.0.37` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Promoted `TST-UI-2800` to `[Verified]` (`128/128` PASS across 20 suites incl. `BANALServiceRepositoryHotpathTest` 6/6, `RrArtifactFilterPerformanceEquivalenceTest` 3/3, `ProxySensorAndFilterManagerIdKeyTest` 5/5, `CockpitRecompositionBoundsComposeTest` 2/2, `ArchitectureConformanceContractTest` 11/11, `UiReflectionOnlyTestAuditContractTest` 4/4; `0` new warnings; live `emulator-5554` PNGs & `0` crashes; SHA-256 bundle under `docs/engineering/test_evidence/tickets/ATT-8126/`). |
+| `1.0.40` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Added and verified `TST-UI-2801` (`[Verified]`, `.1`–`.3`) covering physical & classpath excision of 27 dead Fragment/SettingsDialogFragment/hybrid-bridge files + `StartOrResumeDialog` `DialogFragment` wrapper, `MainActivityWithNavigation` cleanup, pure Compose `EditDeviceDialog`/`StartOrResumeAlertDialog`/`GPSDisabledAlertDialog` behavioral Compose UI & Light/Dark + `emulator-5554` verification, and governance contract tests (`131/131` PASS across 22 suites, `source-reading-baseline` ratcheted `105 -> 104`, `0` crashes in `logcat -b crash -d`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8129/`). |
+| `1.0.41` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `TST-UI-2802` (`[Verified]`, `.1`–`.3`, `521/521` PASS across all targeted suites incl. `LegacyPackageDecommissioningTest`, `BTLERadarDeviceTest`, `HardwareHalIngestionIntegrationTest`, `DatabaseSchemaRegistryParityContractTest`, `DeadCodeEliminationContractTest`, `ManifestAndBuildConfigContractTest`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `ProGuardRulesContractTest`, `AdrCompletenessContractTest`, `ArchitectureConformanceContractTest`, `SourceTextReadingAuditContractTest`; 4 live `emulator-5554` PNGs verified via `read_file`; `0` crashes; SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8130/`). |

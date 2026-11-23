@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.MorningCheckCutoffScreenshotTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:44.249Z" hostname="rainer-HP-EliteBook-850-G5" time="12.76">
+  <properties/>
+  <testcase name="testMorningCheckCutoffSlider_visibleWhenPureWellnessEnabled" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.MorningCheckCutoffScreenshotTest" time="11.351"/>
+  <testcase name="testCaptureMorningCheckCutoffSliderScreenshot" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.MorningCheckCutoffScreenshotTest" time="1.409"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

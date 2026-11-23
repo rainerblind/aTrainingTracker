@@ -175,6 +175,22 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
         triggerDecayTick();
     }
 
+    /**
+     * Immediately publishes 0.0 m/s speed and null pace without altering pinned coordinates,
+     * stationary anchor, previous location, or distance accumulators (REQ-FIL-041.1, ATT-9601).
+     */
+    protected synchronized void publishStationaryZeroSpeed() {
+        cancelWatchdog();
+        mIsDecaying = false;
+        mSpeed = 0.0;
+        if (mSpeedSensor != null) {
+            mSpeedSensor.newValue(0.0);
+        }
+        if (mPaceSensor != null) {
+            mPaceSensor.newValue(null);
+        }
+    }
+
     protected synchronized void triggerDecayTick() {
         mIsDecaying = true;
         mSpeed = mSpeed * DECAY_FACTOR;
@@ -571,13 +587,27 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
         return false;
     }
 
+    /**
+     * Returns {@code true} when a subclass supplies EKF-fused speed in {@link Location#getSpeed()}
+     * that must not be overwritten by the {@code REQ-TRK-056.2} raw geometric fallback across
+     * post-pause coordinate snaps (REQ-FIL-041.3, ATT-9601). Defaults to {@code false} so
+     * standalone GPS and Google Fused retain identical behavior.
+     */
+    protected boolean trustsFusedLocationSpeed() {
+        return false;
+    }
+
     public void onNewLocation(Location location) {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
 
         if (location != null) {
             if (!recordsRawLocationDirectly()) {
+                com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel rawChannel =
+                        getDeviceType() == DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED
+                                ? com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS_FUSED
+                                : com.atrainingtracker.banalservice.devices.raw.PhoneRawChannel.GNSS;
                 com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.recordLocation(
-                        location, location.getTime() > 0L ? location.getTime() : System.currentTimeMillis());
+                        location, location.getTime() > 0L ? location.getTime() : System.currentTimeMillis(), rawChannel);
             }
             double accuracyThreshold = SettingsDataStoreJavaHelper.getGpsAccuracyThreshold(mContext);
             if (DEBUG)
@@ -667,8 +697,8 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
                             calcSpeed = 0.0;
                         }
 
-                        // REQ-TRK-056.2: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
-                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
+                        // REQ-TRK-056.2 / REQ-FIL-041.3: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
+                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (trustsFusedLocationSpeed() || calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
                             speed = rawSpeed;
                         } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
                             speed = calcSpeed;
@@ -712,7 +742,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
                                     delta_distance = 0.0;
                                     calcSpeed = 0.0;
                                 }
-                                if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
+                                if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (trustsFusedLocationSpeed() || calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
                                     speed = rawSpeed;
                                 } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
                                     speed = Math.min(calcSpeed, mSpeed);
@@ -730,8 +760,8 @@ public abstract class SpeedAndLocationDevice extends MyDevice implements SensorE
                                 calcSpeed = 0.0;
                             }
 
-                            // REQ-TRK-056.2: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
-                            if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
+                            // REQ-TRK-056.2 / REQ-FIL-041.3: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
+                            if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (trustsFusedLocationSpeed() || calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
                                 speed = rawSpeed;
                             } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
                                 speed = calcSpeed;

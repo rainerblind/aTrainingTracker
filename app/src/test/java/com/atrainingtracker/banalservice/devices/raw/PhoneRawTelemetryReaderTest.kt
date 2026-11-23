@@ -112,4 +112,48 @@ class PhoneRawTelemetryReaderTest {
         assertEquals("TestPhone", parsedMeta.deviceModel)
         assertTrue("Reader must preserve complete pre-truncation rows (got ${parsed.rows.size})", parsed.rows.size >= 25)
     }
+
+    // REQ-EXP-047.1, REQ-EXP-047.3 / TST-EXP-047.1
+    @Test
+    fun roundTripAllNineChannelsIncludingGnssFusedAndRejectsNonFinite_TST_EXP_047_1() = runBlocking {
+        val target = File(tempFolder.root, "2026-11-22_100000.phone_raw.csv.gz")
+        val meta = PhoneRawMetadata(
+            schemaVersion = 1,
+            appVersion = "5.0.0",
+            deviceModel = "Pixel 10",
+            sportId = 2L,
+            sessionStartTimeMs = 1_795_331_657_000L
+        )
+        val inputRows = listOf(
+            PhoneRawTelemetryRow(1000L, 1_795_331_657_000L, PhoneRawChannel.ACC, 0.1, -0.2, 9.81),
+            PhoneRawTelemetryRow(2000L, 1_795_331_657_020L, PhoneRawChannel.GYRO, 0.01, 0.02, -0.03),
+            PhoneRawTelemetryRow(3000L, 1_795_331_657_040L, PhoneRawChannel.ROTVEC, 0.0, 0.0, 0.0, 1.0),
+            PhoneRawTelemetryRow(4000L, 1_795_331_657_060L, PhoneRawChannel.BARO, 1004.5, 73.0),
+            PhoneRawTelemetryRow(5000L, 1_795_331_657_080L, PhoneRawChannel.STEP),
+            PhoneRawTelemetryRow(6000L, 1_795_331_657_100L, PhoneRawChannel.GNSS, 48.137154, 11.576124, 478.5, 3.25, 180.0, 4.1),
+            PhoneRawTelemetryRow(6500L, 1_795_331_657_100L, PhoneRawChannel.GNSS_FUSED, 48.137160, 11.576130, 493.2, 3.10, 181.5, 5.8),
+            PhoneRawTelemetryRow(7000L, 1_795_331_657_120L, PhoneRawChannel.WHEEL, 8.33, 0.04),
+            PhoneRawTelemetryRow(8000L, 1_795_331_657_140L, PhoneRawChannel.STATE, 2.0, 1.0, 5.0)
+        )
+
+        val recorder = SmartphoneRawTelemetryRecorder(targetFile = target, metadata = meta)
+        recorder.start()
+        inputRows.forEach { recorder.record(it) }
+        recorder.stop()
+
+        val parsed = PhoneRawTelemetryReader.readAll(target)
+        assertEquals(meta, parsed.metadata)
+        assertEquals(1, parsed.metadata?.schemaVersion)
+        assertEquals(0, parsed.skippedMalformedLines)
+        assertEquals(inputRows.size, parsed.rows.size)
+        assertEquals(PhoneRawChannel.GNSS, parsed.rows[5].channel)
+        assertEquals(478.5, parsed.rows[5].v2, 1e-6)
+        assertEquals(PhoneRawChannel.GNSS_FUSED, parsed.rows[6].channel)
+        assertEquals(493.2, parsed.rows[6].v2, 1e-6)
+        assertEquals(5.8, parsed.rows[6].v5, 1e-6)
+
+        // Reject missing/non-finite required numeric columns on GNSS_FUSED
+        assertEquals(null, PhoneRawTelemetryRow.fromCsvLine("6500,1795331657100,GNSS_FUSED,48.13,11.57,493.2,3.1,181.5,"))
+        assertEquals(null, PhoneRawTelemetryRow.fromCsvLine("6500,1795331657100,GNSS_FUSED,NaN,11.57,493.2,3.1,181.5,5.8"))
+    }
 }

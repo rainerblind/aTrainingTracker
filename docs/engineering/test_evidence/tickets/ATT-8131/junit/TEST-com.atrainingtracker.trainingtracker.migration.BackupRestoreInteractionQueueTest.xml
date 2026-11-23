@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupRestoreInteractionQueueTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:15:37.694Z" hostname="rainer-HP-EliteBook-850-G5" time="2.262">
+  <properties/>
+  <testcase name="testInteractionSemaphore_limitsQueueToThreeAndResumesConcurrently_TST_MIG_013_TST_MIG_017" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreInteractionQueueTest" time="2.262"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

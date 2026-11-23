@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:47:34.467Z" hostname="rainer-HP-EliteBook-850-G5" time="0.019">
+  <properties/>
+  <testcase name="calculateAccumulatedProgress_boundsClamping_clampsBetweenZeroAndOne" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.011"/>
+  <testcase name="calculateTargetIndex_dragUpwards_decreasesTargetIndex" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.006"/>
+  <testcase name="calculateTargetIndex_dragPastBottomBoundary_clampsToTotalMinusOne" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateScrollProgress_atStartOfList_returnsZero" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateTargetIndex_zeroTotalItems_returnsZero" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateTargetIndex_dragPastTopBoundary_clampsToZero" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateScrollProgress_exceedingBounds_isCoercedBetweenZeroAndOne" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateAccumulatedProgress_continuousSmallDeltas_accumulatesWithoutTruncation" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.001"/>
+  <testcase name="calculateScrollProgress_partialItemOffset_addsFractionalProgress" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateTargetIndexFromProgress_edgeCases_handlesZeroAndOneItem" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateScrollProgress_midwayThroughList_calculatesAccurateFraction" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateTargetIndexFromProgress_mapsCleanlyAcrossEntireList" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateTargetIndex_dragDownwards_increasesTargetIndex" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <testcase name="calculateScrollProgress_zeroOrInvalidItems_returnsZero" classname="com.atrainingtracker.trainingtracker.ui.components.FastScrollbarTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

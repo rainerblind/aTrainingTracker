@@ -145,16 +145,6 @@ fun HrvRampTestScreen(
                         onStartTest = { viewModel.startProtocol() }
                     )
                 }
-                HrvTestPhase.PRE_FLIGHT -> {
-                    PreFlightSensorCard(
-                        tier = uiState.sensorQualityTier,
-                        artifactRate = uiState.preFlightArtifactRate,
-                        messageResId = uiState.preFlightMessageResId,
-                        canStart = uiState.canStartTest,
-                        onStartProtocol = { viewModel.startProtocol() },
-                        onCancel = { viewModel.cancelTest() }
-                    )
-                }
                 HrvTestPhase.WARMUP,
                 HrvTestPhase.TESTING,
                 HrvTestPhase.EARLY_COMPLETION,
@@ -609,115 +599,6 @@ private fun InlineSensorStatusCard(uiState: HrvRampTestUiState) {
                             )
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PreFlightSensorCard(
-    tier: SensorQualityTier,
-    artifactRate: Double?,
-    messageResId: Int?,
-    canStart: Boolean,
-    onStartProtocol: () -> Unit,
-    onCancel: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("hrv_test_preflight_card"),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = stringResource(R.string.hrv_test_preflight_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            val statusColor = when (tier) {
-                SensorQualityTier.HIGH -> TTColor.HrvQualityHigh
-                SensorQualityTier.MODERATE -> TTColor.HrvQualityModerate
-                SensorQualityTier.UNSUITABLE -> MaterialTheme.colorScheme.error
-            }
-
-            val icon = when (tier) {
-                SensorQualityTier.HIGH -> Icons.Default.Check
-                SensorQualityTier.MODERATE -> Icons.Default.WarningAmber
-                SensorQualityTier.UNSUITABLE -> Icons.Default.WarningAmber
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(statusColor.copy(alpha = 0.15f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = statusColor,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-
-            if (messageResId != null) {
-                Text(
-                    text = stringResource(messageResId),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            if (artifactRate != null) {
-                Text(
-                    text = stringResource(R.string.hrv_test_live_artifacts, artifactRate),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = statusColor,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.hrv_test_btn_cancel),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Button(
-                    onClick = onStartProtocol,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .testTag("hrv_test_start_button"),
-                    enabled = canStart,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.hrv_test_btn_start),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
         }

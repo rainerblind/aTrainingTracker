@@ -269,8 +269,7 @@ class WorkoutRepositoryConcurrencyTest {
         assertNotNull(updatedWorkout)
         assertTrue("Workout must be finalized in memory", updatedWorkout!!.finished)
 
-        // Verify lifecycle observers were triggered
-        verify(atLeast = 1) { mockPeriodsRepo.onWorkoutFinished(match { it.id == 101L && it.finished }) }
+        // Verify lifecycle observers were triggered (PeriodsRepository now projects reactively from allWorkouts)
         verify(atLeast = 1) { mockClusterEngine.onWorkoutFinished(any(), match { it.id == 101L && it.finished }) }
     }
 

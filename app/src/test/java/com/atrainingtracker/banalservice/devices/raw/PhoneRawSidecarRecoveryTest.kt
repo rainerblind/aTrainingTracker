@@ -152,4 +152,35 @@ class PhoneRawSidecarRecoveryTest {
         assertEquals(15.4, recovered.rows[0].v5, 1e-6)
         assertEquals(0, recovered.skippedMalformedLines)
     }
+
+    // REQ-EXP-047.1, REQ-EXP-047.3 / TST-EXP-047.1
+    @Test
+    fun recoverAbandonedTmpToFinal_salvagesGnssAndGnssFusedRowsAndDropsTruncatedTail_TST_EXP_047_1() {
+        val target = File(tempFolder.root, "2026-11-22_093000.phone_raw.csv.gz")
+        val tmp = File(tempFolder.root, "2026-11-22_093000.phone_raw.csv.gz.tmp")
+
+        val meta = PhoneRawMetadata(appVersion = "5.0.0", deviceModel = "Pixel 10", sportId = 1L, sessionStartTimeMs = 1000L)
+        val validGps = PhoneRawTelemetryRow(1000L, 1000L, PhoneRawChannel.GNSS, 48.13, 11.57, 478.0, 3.5, 180.0, 4.2)
+        val validFused = PhoneRawTelemetryRow(1050L, 1000L, PhoneRawChannel.GNSS_FUSED, 48.13, 11.57, 493.0, 3.4, 181.0, 5.1)
+        val truncatedFusedNoNewline = "2050,2000,GNSS_FUSED,48.14,11.58,494.0,3.6,180.0,5"
+
+        GZIPOutputStream(tmp.outputStream(), true).use { gzip ->
+            val writer = OutputStreamWriter(gzip, StandardCharsets.UTF_8)
+            writer.write("${meta.toHeaderLine()}\n")
+            writer.write("${PhoneRawTelemetryRow.CSV_HEADER}\n")
+            writer.write("${validGps.toCsvLine()}\n")
+            writer.write("${validFused.toCsvLine()}\n")
+            writer.write(truncatedFusedNoNewline)
+            writer.flush()
+        }
+
+        assertTrue(PhoneRawSidecarRecovery.recoverAbandonedTmpToFinal(tmp, target))
+        val recovered = PhoneRawTelemetryReader.readAll(target)
+        assertEquals(2, recovered.rows.size)
+        assertEquals(PhoneRawChannel.GNSS, recovered.rows[0].channel)
+        assertEquals(478.0, recovered.rows[0].v2, 1e-6)
+        assertEquals(PhoneRawChannel.GNSS_FUSED, recovered.rows[1].channel)
+        assertEquals(493.0, recovered.rows[1].v2, 1e-6)
+        assertEquals(0, recovered.skippedMalformedLines)
+    }
 }

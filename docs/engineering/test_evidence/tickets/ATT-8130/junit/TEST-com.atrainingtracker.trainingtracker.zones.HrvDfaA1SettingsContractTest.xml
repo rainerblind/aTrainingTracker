@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:10.016Z" hostname="rainer-HP-EliteBook-850-G5" time="0.063">
+  <properties/>
+  <testcase name="testHrvDfaA1RangeSlider_invertedOrientationAndUnifiedTrack" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testZoneSettingsScreen_includes4thTabForHrvDfaA1" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHrvSettings_gaugeToggleAndPreviewBarContracts" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHrvLayout_resetButtonWrappingAndAntiClipping" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHrvThresholdMath_enforcesGapInvariant" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHrvLayout_antiWrappingConstraints" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHrvDfaA1SettingsContent_composableExistsViaReflection" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.042"/>
+  <testcase name="testHrvZoneRangeBadges_useStandardGreekAlpha1Typography" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.009"/>
+  <testcase name="testHrvThresholds_invariantAndPrecisionContracts" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.003"/>
+  <testcase name="testHrvDfaA1RangeSlider_usesRangeSliderAndSemanticTrackColors" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHrvSettings_zeroHardcodedEnglishGuidanceStrings" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.001"/>
+  <testcase name="testHeaderActionIcons_hiddenOnHrvTab" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1SettingsContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

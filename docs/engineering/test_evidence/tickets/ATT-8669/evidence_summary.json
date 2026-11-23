@@ -1,0 +1,42 @@
+{
+  "android_test_summary": {
+    "details": "No Android tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "checks": [
+    {
+      "details": "Android: No Android tests selected. | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "Tier C fast lane: zero stage deliverables required.",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10396 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "9f6ca41197a3b674c682c0b6a729dc9802da61c8",
+  "junit_xml_files": [],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-c",
+  "run_started_utc": "2026-11-22T23:16:34.940172+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-8669",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

@@ -38,7 +38,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -72,7 +71,6 @@ class TcxImportPeriodAndClusterIntegrationTest {
     private lateinit var mockSamplesDb: WorkoutSamplesDatabaseManager
     private lateinit var mockLapsDb: LapsDatabaseManager
     private lateinit var mockSportTypeDb: SportTypeDatabaseManager
-    private lateinit var mockPeriodDb: PeriodSummariesDatabaseManager
     private lateinit var mockSqlDb: SQLiteDatabase
     private lateinit var mockClusterEngine: WorkoutClusterEngine
     private lateinit var mockDiscovery: EquipmentAndSportTypeDiscoveryManager
@@ -156,10 +154,6 @@ class TcxImportPeriodAndClusterIntegrationTest {
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
         every { SportTypeDatabaseManager.getSportTypeId(BSportType.RUN) } returns 1L
         every { SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE) } returns 2L
-
-        mockPeriodDb = mockk(relaxed = true)
-        every { mockPeriodDb.isSyncFinished() } returns true
-        PeriodSummariesDatabaseManager.setInstanceForTesting(mockPeriodDb)
 
         mockDiscovery = mockk(relaxed = true)
         EquipmentAndSportTypeDiscoveryManager.resetForTesting(mockDiscovery)
@@ -269,7 +263,6 @@ class TcxImportPeriodAndClusterIntegrationTest {
         unmockkAll()
         EquipmentAndSportTypeDiscoveryManager.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)
-        PeriodSummariesDatabaseManager.setInstanceForTesting(null)
         PeriodsRepository.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         WorkoutClusterRepository.resetForTesting(null)
@@ -383,29 +376,64 @@ class TcxImportPeriodAndClusterIntegrationTest {
     }
 
     @Test
-    fun testTST_MIG_023_selfHealingPeriodSync_detectsDiscrepancyAndTriggersMigration() = runBlocking {
-        // Given: A state where WorkoutSummaries contains 15 finished workouts, but PeriodSummaries only has 10 DAY workouts
-        every { mockSummariesDb.getFinishedWorkoutCount() } returns 15
-        every { mockPeriodDb.getTotalDayWorkoutsCount() } returns 10
-        every { mockPeriodDb.isSyncFinished() } returns true
+    fun testTST_MIG_023_reactivePeriodProjection_syncsImportedWorkoutsAutomatically() {
+        // Given: WorkoutRepository.allWorkouts emits imported finished workouts
+        val workoutsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData>>(emptyList())
+        every { mockWorkoutRepo.allWorkouts } returns workoutsFlow
 
-        val repo = PeriodsRepository.getInstance(mockApp)
+        val repo = PeriodsRepository(
+            application = mockApp,
+            defaultDispatcher = kotlinx.coroutines.Dispatchers.Unconfined,
+            workoutRepo = mockWorkoutRepo
+        )
+        assertTrue("Periods must start empty when no finished workouts exist", repo.groupedPeriods.value[0].isEmpty())
 
-        // When: checkIntegrityAndSync is called
-        val discrepancyDetected = repo.checkIntegrityAndSync()
+        // When: 15 finished workouts arrive via WorkoutRepository.allWorkouts
+        val baseTimeS = 1700000000L
+        val ldt = java.time.LocalDateTime.of(2023, 11, 14, 10, 0)
+        workoutsFlow.value = (1L..15L).map { id ->
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData(
+                id = id,
+                finished = true,
+                fileBaseName = "imported_$id",
+                workoutName = "Imported Ride $id",
+                sportId = 2L,
+                sportName = "Cycling",
+                bSportType = BSportType.BIKE,
+                startTimeS = baseTimeS + id * 60L,
+                formattedDate = "2023-11-14",
+                formattedTime = "10:00",
+                localDateTime = ldt,
+                equipmentName = null,
+                equipmentId = 0L,
+                commute = false,
+                trainer = false,
+                mapPolyline = "",
+                encodedAltitudes = "",
+                encodedDistances = "",
+                uploadToStrava = 0,
+                totalDistance = 10000.0,
+                maxDisplacement = 0.0,
+                activeTimeSec = 1800L,
+                totalTimeSec = 1800L,
+                avgSpeedMps = 5.5,
+                ascentMeters = 100L,
+                descentMeters = 100L,
+                minAltitude = 0.0,
+                maxAltitude = 100.0,
+                description = null,
+                goal = null,
+                method = null,
+                stravaSportName = null
+            )
+        }
 
-        // Then: Discrepancy is detected (15 > 10), returns true
-        assertTrue("Discrepancy must be detected when finished workouts exceed period summaries", discrepancyDetected)
-
-        // And Given: Sync is in parity (15 finished workouts == 15 period workouts)
-        every { mockSummariesDb.getFinishedWorkoutCount() } returns 15
-        every { mockPeriodDb.getTotalDayWorkoutsCount() } returns 15
-
-        // When: checkIntegrityAndSync is called again
-        val inSync = repo.checkIntegrityAndSync()
-
-        // Then: No discrepancy, returns false
-        assertFalse("No discrepancy when finished workouts match period summaries", inSync)
+        // Then: Day/Week/Month/Year totals immediately reflect all 15 workouts without SQLite cache drift
+        assertEquals(15, repo.groupedPeriods.value[0].sumOf { it.totalWorkouts })
+        assertEquals(15, repo.groupedPeriods.value[1].sumOf { it.totalWorkouts })
+        assertEquals(15, repo.groupedPeriods.value[2].sumOf { it.totalWorkouts })
+        assertEquals(15, repo.groupedPeriods.value[3].sumOf { it.totalWorkouts })
+        assertEquals(150_000.0, repo.groupedPeriods.value[0].sumOf { it.totalDistance }, 0.001)
     }
 
     @Test
@@ -463,7 +491,6 @@ class TcxImportPeriodAndClusterIntegrationTest {
 
             // Single post-batch reconciliation executes exactly once across all repositories
             coVerify(exactly = 1) { mockWorkoutRepo.loadAllWorkouts() }
-            verify(exactly = 1) { mockPeriodsRepo.syncPeriodsIfDiscrepancy() }
             coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
             coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
         } finally {

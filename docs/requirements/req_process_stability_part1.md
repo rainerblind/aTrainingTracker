@@ -1,14 +1,14 @@
 # Living Requirements: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-REQ-PRO-P1`  
-**Version**: 1.0.2  
+**Version**: 1.0.4  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `process_stability_part1`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 109
+**Total Requirements**: 110
 
 ---
 
@@ -96,6 +96,25 @@
 • *Then* Segment A SHALL outrank Segment B based on primary status weight (4 > 3).
 
 **Invariants**: Gate crossing geometry, polyline projection, PR comparison, and 100% clean-room test pass rate MUST NOT be broken.
+
+### REQ-LIV-006: Transition-Only Debug Logging in LiveSegmentsRepository (Zero Per-Tick Logcat Flood) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-LIV-002`
+- **System Requirement(s)**: `SYSREQ-TRK-004`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepository.kt`
+- **Rationale**: Unconditional per-tick `Log.i` calls inside `LiveSegmentsRepository.updateLiveSegments()` and `processLiveSegmentUpdate()` emitted ~150 lines/sec (~92,339 lines in 10 minutes) in debug builds for unchanged `FAR_FAR_AWAY` segments, wasting CPU/allocations and evicting useful runtime diagnostics from `logcat` (`ATT-9603`).
+- **Description**: `LiveSegmentsRepository` SHALL NOT emit per-tick `Log.*` statements inside `updateLiveSegments()` or `processLiveSegmentUpdate()` for unchanged segment states (including `FAR_FAR_AWAY`, steady-state `APPROACHING`, `ON_SEGMENT`, `ON_SEGMENT_CLOSE_TO_FINISH`, and `FINISHED` ticks), restricting `if (DEBUG) Log.i(...)` strictly to actual `LiveSegmentStatus` transitions while keeping `DEBUG = BuildConfig.DEBUG` and preserving all live segment detection and progress invariants.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `>= 50` saved Strava segments (including `FAR_FAR_AWAY` segments `> 10 km` away) and `DEBUG == true`,
+  • *When* `LiveSegmentsRepository.updateLiveSegments()` processes repeated 1-Hz location updates without status transitions,
+  • *Then* `LiveSegmentsRepository` emits `0` `Log.*` lines.
+  • *Given* a segment transitioning across `FAR_FAR_AWAY -> APPROACHING -> ON_SEGMENT -> ON_SEGMENT_CLOSE_TO_FINISH -> FINISHED -> FAR_FAR_AWAY`,
+  • *When* `LiveSegmentsRepository` processes location updates,
+  • *Then* `Log.i` fires strictly on actual status transitions when `DEBUG` is enabled, and all segment state transitions, distances, and PR delta metrics behave identically.
+- **Invariants**: Atomic `_liveSegments.update`, immutable `LiveSegmentMath` (`REQ-MAP-065`), 45° bearing alignment (`REQ-LIV-004`), orthogonal polyline progress (`REQ-GEO-001`), and `BuildConfig.DEBUG` release dead-code stripping remain unchanged.
 
 ### REQ-PRO-001: Integrate Agile Workflow with Jira Cloud [Implemented]
 - **Tests**: `TST-MAN-001`
@@ -2156,7 +2175,7 @@ The workflow SHALL mandate that:
 • `app/src/main/AndroidManifest.xml` SHALL retain active `<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />` required by Android 14+ (`Build.VERSION_CODES.UPSIDE_DOWN_CAKE`) for background `START_STICKY` FGS recovery (`REQ-TRK-015`).
 • The misleading legacy manifest comment claiming background location is not necessary SHALL be replaced with accurate documentation explaining the Android 14+ FGS promotion contract.
 4. *Preservation of Build & Memory Invariants (`REQ-BLD-003.4`)*:
-• The application SHALL retain `android:largeHeap="true"` (`REQ-PER-012`) to support high-density period heatmaps and multi-session GIS vector tracks without OOM, retain local patched core library `local-repo/androidx.core:1.15.0-patched` (`REQ-UI-164`) against defective OEM ROM accessibility crashes, and preserve AGP 9 build property flags until AGP 10.
+• The application SHALL retain `android:largeHeap="true"` (`REQ-PER-012`) to support high-density period heatmaps and multi-session GIS vector tracks without OOM, retain local patched core library `local-repo/androidx.core:1.15.0-patched` (`REQ-UI-164`) against defective OEM ROM accessibility crashes, preserve AGP 9 compatibility flags (`android.newDsl=false`, `android.builtInKotlin=false`) for Secrets Gradle Plugin / legacy Kotlin plugin compatibility until AGP 10, and enable `android.nonFinalResIds=true` and `android.enableAppCompileTimeRClass=true` (`ATT-9365`) so resource edits do not invalidate `R.jar` across Kotlin compilation.
 5. *Automated Manifest Security Contract Verification (`REQ-BLD-003.5`)*:
 • `ManifestSecurityContractTest.kt` SHALL verify via automated contract test that `ConfigPebbleViewsActivity` is not exported (`android:exported="false"`), `GpxImportActivity` contains no `host="*"` or `file` scheme, `ACCESS_BACKGROUND_LOCATION` is declared, and `largeHeap="true"` is retained.
 
@@ -3365,3 +3384,5 @@ The workflow SHALL mandate that:
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
 | `1.0.1` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted `REQ-PRO-004` (`TST-UI-039`) and `REQ-PRO-005` (`TST-UNT-011`) to `[Verified]` following Gate 4 verification (`3e20473b`, `Rule 7.5`). |
+| `1.0.2` | 2026-11-21 | Lane 2 (`ATT-9365` / base) | `ATT-9365` | Synchronized `REQ-BLD-003.4` (`nonFinalResIds=true`, `enableAppCompileTimeRClass=true`). |
+| `1.0.4` | 2026-11-22 | Lane 2 (`ATT-9603`, `--as agent1`) | `ATT-9603` | Added and verified `REQ-LIV-006` (transition-only debug logging in `LiveSegmentsRepository`). |

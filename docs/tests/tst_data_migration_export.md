@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.38  
+**Version**: 1.0.40  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 133
+**Total Tests**: 134
 
 ---
 
@@ -2531,10 +2531,37 @@
 
 ---
 
+### TST-EXP-047: **Per-Channel GNSS Deduplication, `GNSS` vs `GNSS_FUSED` Provider Tagging & Backwards-Compatible Replay Verification (`ATT-9604`)** [Verified]
+- **Requirement(s)**: `REQ-EXP-047` (`REQ-EXP-047.1`–`REQ-EXP-047.3`)
+- **Component**: `PhoneRawTelemetryRow.kt`, `SmartphoneRawTelemetryRecorder.kt`, `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_ATTFused.kt`, `OfflineReplayModels.kt`, `OfflineTelemetryReplayHarness.kt`, `OfflineReplayCli.kt`, `app/build.gradle`
+- **Jira**: `ATT-9604` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Implemented Unit Tests**:
+  - `PhoneRawTelemetryReaderTest.kt`: `roundTripAllNineChannelsIncludingGnssFusedAndRejectsNonFinite_TST_EXP_047_1` (`3/3` PASS)
+  - `PhoneRawSidecarRecoveryTest.kt`: `recoverAbandonedTmpToFinal_salvagesGnssAndGnssFusedRowsAndDropsTruncatedTail_TST_EXP_047_1` (`4/4` PASS)
+  - `SmartphoneRawTelemetryRecorderTest.kt`: `recordLocation_deduplicatesPerChannelAcrossInterleavedProvidersAndResetsPerSession_TST_EXP_047_2` (`11/11` PASS)
+  - `SpeedAndLocationDevice_ATTFusedTest.kt`: `concurrentGpsAndAttFused_deduplicatesIdenticalGpsFixAcrossInterleavedFusedUpdate_TST_EXP_047_2` (`37/37` PASS)
+  - `SpeedAndLocationDeviceGoogleFusedTest.kt`: `testOnLocationChanged_tagsGoogleFusedFixAsGnssFusedEvenWithNullProvider_TST_EXP_047_1` (`7/7` PASS)
+  - `OfflineTelemetryReplayHarnessTest.kt`: `replay_mixedGnssAndDivergentGnssFused_autoAndGpsIsolateRawGpsWhileFusedSelectsFused_TST_EXP_047_3`, `replay_gnssFusedOnlySidecar_autoFallsBackToGnssFused_TST_EXP_047_3`, `replay_legacyV1DuplicateGnssRowsWithInterleavedImu_deduplicatesCleanlyAndMatchesCleanReplay_TST_EXP_047_3` (`11/11` PASS)
+  - `OfflineReplayCliTest.kt`: `cli_gnssProviderFlag_selectsAutoGpsFusedAndRejectsInvalidValue_TST_EXP_047_3` (`4/4` PASS)
+  - `ArchitectureConformanceContractTest.kt` (`11/11` PASS, `SpeedAndLocationDevice_ATTFused.kt` `1,495/1,500` LoC verified)
+- **Verification Evidence**: Verified (`ATT-9604`, Gate 3 `ATT-9649` PASSED; `88/88` targeted Tier-1 unit & contract tests PASS across 8 suites via `./gradlew :app:testDebugUnitTest --rerun`, `0` fail, `0` err, `0` skip, `0` new compiler warnings; live `./gradlew :app:replayRawTelemetry -PphoneRaw=... -PgnssProvider=gps` PASS in 4s; SHA-256 machine evidence bundle at `docs/engineering/test_evidence/tickets/ATT-9604/manifest.json`).
+- **Test Description**:
+  1. *Provider Channel Disambiguation & 9-Channel Round-Trip (`TST-EXP-047.1` — `PhoneRawTelemetryReaderTest.kt`, `PhoneRawSidecarRecoveryTest.kt`, `SmartphoneRawTelemetryRecorderTest.kt`)*:
+     • Verify `PhoneRawTelemetryRow` serializes, validates (rejecting non-finite `v0..v5`), and round-trips all 9 channels (`ACC`, `GYRO`, `ROTVEC`, `BARO`, `STEP`, `GNSS`, `GNSS_FUSED`, `WHEEL`, `STATE`) under exact 9-column `CSV_HEADER` and `schemaVersion = 1`, including `.tmp` crash salvage of `GNSS_FUSED` rows.
+     • Verify `recordLocation` maps `"fused"`/`"FUSED"` to `GNSS_FUSED` and `"gps"`/`null` to `GNSS`, while `SpeedAndLocationDevice_GoogleFused` always emits `GNSS_FUSED` (even when `location.provider` is `null`/unmocked), and `SpeedAndLocationDevice_GPS` and `SpeedAndLocationDevice_ATTFused` emit `GNSS`.
+  2. *Per-Channel Zero-Allocation GNSS Deduplication (`TST-EXP-047.2` — `SmartphoneRawTelemetryRecorderTest.kt`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Simulate concurrent `SpeedAndLocationDevice_GPS` + `SpeedAndLocationDevice_ATTFused` delivery of identical 1-Hz GPS fixes (including with interleaved `SpeedAndLocationDevice_GoogleFused` updates sharing the same or different `elapsedRealtimeNanos` and with `location.time == 0L`); verify exactly **1** `GNSS` row and **1** `GNSS_FUSED` row are written per fix, `droppedFrameCount == 0`, distinct timestamps are preserved, fallback `elapsedRealtimeNanos == 0L` deduplicates by `(elapsedNs, epochMs)` without dropping advancing `epochMs`, and new sessions start with clean dedup state.
+  3. *Backwards-Compatible v1 Replay, Provider Selection & Contract Checks (`TST-EXP-047.3` — `OfflineTelemetryReplayHarnessTest.kt`, `OfflineReplayCliTest.kt`, `ArchitectureConformanceContractTest.kt`, `DataStoreHotPathContractTest.kt`)*:
+     • Replay (a) a mixed `GNSS` + `GNSS_FUSED` sidecar (with intentionally divergent Google Fused WGS84 altitude `+20 m` / speed) under `AUTO`, `GPS`, and `FUSED` verifying `AUTO` and `GPS` match clean raw-GPS replay with zero Google Fused contamination while `FUSED` replays the fused stream; (b) a `GNSS_FUSED`-only sidecar under `AUTO` verifying automatic fallback; (c) a legacy `v1` sidecar with consecutive duplicate `GNSS` rows verifying lossless parsing and exact duplicate suppression; (d) `OfflineReplayCli` `--gnss-provider auto|gps|fused` and invalid-value exit code `2`; and verify `ArchitectureConformanceContractTest` (`SpeedAndLocationDevice_ATTFused.kt <= 1,500`) and `DataStoreHotPathContractTest` pass.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.40` | 2026-11-23 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Promoted `TST-EXP-047` to `[Verified]` (`88/88` targeted unit & contract tests PASS across 8 suites incl. `PhoneRawTelemetryReaderTest` `3/3`, `PhoneRawSidecarRecoveryTest` `4/4`, `SmartphoneRawTelemetryRecorderTest` `11/11`, `SpeedAndLocationDevice_ATTFusedTest` `37/37`, `SpeedAndLocationDeviceGoogleFusedTest` `7/7`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`; live `:app:replayRawTelemetry` PASS; SHA-256 evidence bundle). |
+| `1.0.39` | 2026-11-22 | Lane 2 Author (`ATT-9604`, `--as agent1`) | `ATT-9604` | Added `[Planned]` `TST-EXP-047` (`TST-EXP-047.1`–`TST-EXP-047.3`, strictly symmetric with `REQ-EXP-047`) covering 9-channel `GNSS`/`GNSS_FUSED` round-trip & salvage, concurrent GPS+ATTFused per-channel deduplication with interleaved Google Fused fixes, and backwards-compatible v1/provider-selectable offline replay + CLI tests. |
 | `1.0.38` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Stage 6 Bounce 1/5 heal: added non-UTC timezone ranking test in `SensorQuotaReconciliationManagerTest` (`13/13`), guarded `finally` cleanup test in `WorkoutRepositoryExtremaAndClusterTest` (`5/5`), and cross-locale `SensorType` test in `LiveWorkoutCardStateStoreTest` (`6/6`); `163/163` targeted tests PASS across 30 suites (`0` new warnings) + refreshed SHA-256 evidence bundle. |
 | `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Promoted `TST-DAT-044` to `[Verified]` (`215/215` PASS across 41 targeted unit & contract suites, `0` fail, `0` err, `0` skip, `0` new compiler warnings; `INSTALL_REQUIRED=true` live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `Rule 8.5` PNG bundled; SHA-256 evidence bundle). |
 | `1.0.36` | 2026-11-22 | Lane 2 Author (`ATT-8128`, `--as agent1`) | `ATT-8128` | Added `[Planned]` `TST-DAT-044` (`TST-DAT-044.1`–`TST-DAT-044.5`, strictly symmetric `REQ-DAT-048`) covering SQLite null-safe summary getters, `LIMIT 1`/single-PRAGMA sample queries, cursor-safe `getCalibrationFactor` + fail-fast `setInt` + cross-locale UTC `LastActiveDateFormatter`, `paired = 1` SQL filtering, `RoutesDbHelper.onUpgrade` early return & single-read `duplicateRouteAsLocal`, numeric `isMinRelevant`, `SensorType`-keyed `ExtremaDataRow`, and single-reload cluster mutations. |

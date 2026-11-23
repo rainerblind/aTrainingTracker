@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapUpdateTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:18:41.285Z" hostname="rainer-HP-EliteBook-850-G5" time="2.22">
+  <properties/>
+  <testcase name="testUpdateLapDetails_clearDetails_updatesToNull" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapUpdateTest" time="1.123"/>
+  <testcase name="testUpdateLapDetails_persistsToDbAndUpdatesInMemoryCache" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryLapUpdateTest" time="1.097"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

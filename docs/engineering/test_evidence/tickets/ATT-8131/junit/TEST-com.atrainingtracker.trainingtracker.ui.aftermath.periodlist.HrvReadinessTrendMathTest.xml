@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:19:24.591Z" hostname="rainer-HP-EliteBook-850-G5" time="0.142">
+  <properties/>
+  <testcase name="testComputeOutlierResilientYDomain_clampsExtremesWhenNAtLeast4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.032"/>
+  <testcase name="testCalculateTrendSeries_60dSwcCorridorEvaluatesBesselSampleSdAndClassifiesStatus" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.038"/>
+  <testcase name="calculateTrendSeries_isolatesEcgAndOpticalCohortsAndDefaultsOpticalOnlyAthletes_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.022"/>
+  <testcase name="testCalculateTrendSeries_preservesNonHrvWorkoutDaysWithNullRawValueAndLoad" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <testcase name="testFindNearestPoint_calendarEpochDayProjectionWithMultiDayGaps" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <testcase name="testNotesPreservedInTrendPointsAndProvenanceBadgeParsing" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.043"/>
+  <testcase name="testFindNearestPoint_projectsTouchCoordinateCorrectly" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <testcase name="testCalculateTrendSeries_deduplicatesDailyReadingsAndFiltersArtifacts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <testcase name="testCalculateTrendSeries_alignsDailyTrainingLoads" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <testcase name="testResolveAvailablePostures_picksPostureWithMaxValidCount" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <testcase name="testCalculateTrendSeries_7dRollingAverageRequiresAtLeast3Days" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMathTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

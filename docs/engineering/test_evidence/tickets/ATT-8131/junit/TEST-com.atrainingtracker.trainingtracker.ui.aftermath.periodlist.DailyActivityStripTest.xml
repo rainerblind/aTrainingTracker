@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:19:24.470Z" hostname="rainer-HP-EliteBook-850-G5" time="0.099">
+  <properties/>
+  <testcase name="testDailySportContributionDataModelDefaults" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" time="0.006"/>
+  <testcase name="testExtractDailyMetricValue_allMetrics" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" time="0.075"/>
+  <testcase name="testGenerateDateSequence_weekAndMonth" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" time="0.0"/>
+  <testcase name="testExtractMaxDailyMetricValue_allMetrics" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" time="0.001"/>
+  <testcase name="testCalculateDailyBarFraction_scalingAndClamping" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" time="0.001"/>
+  <testcase name="testMiniBarShapes_roundedTopAndSharpBottom_TST_PER_035_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.DailyActivityStripTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

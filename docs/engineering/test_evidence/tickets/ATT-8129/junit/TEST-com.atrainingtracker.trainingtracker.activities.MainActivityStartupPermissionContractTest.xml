@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.MainActivityStartupPermissionContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:44:49.457Z" hostname="rainer-HP-EliteBook-850-G5" time="2.159">
+  <properties/>
+  <testcase name="testLegacyPermissionMethodsRetired_REQ_PRI_006" classname="com.atrainingtracker.trainingtracker.activities.MainActivityStartupPermissionContractTest" time="0.736"/>
+  <testcase name="testMainActivity_inheritsAppCompatActivity" classname="com.atrainingtracker.trainingtracker.activities.MainActivityStartupPermissionContractTest" time="0.694"/>
+  <testcase name="testLocationPermissionSafetyMaintained_REQ_STB_008" classname="com.atrainingtracker.trainingtracker.activities.MainActivityStartupPermissionContractTest" time="0.729"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

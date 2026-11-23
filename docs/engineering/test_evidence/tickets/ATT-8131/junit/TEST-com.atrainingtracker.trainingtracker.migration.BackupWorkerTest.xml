@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:15:59.936Z" hostname="rainer-HP-EliteBook-850-G5" time="9.669">
+  <properties/>
+  <testcase name="testBuildConstraints_whenCloudDisabled_setsNetworkTypeNotRequired" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.716"/>
+  <testcase name="testDoWork_whenLockContention_returnsRetry" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.9"/>
+  <testcase name="testDoWork_whenCloudUploadFails_preservesLocalBackupAndReturnsRetry" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="1.006"/>
+  <testcase name="testBuildConstraints_whenGoogleDriveBackupEnabled_setsNetworkTypeUnmetered" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.73"/>
+  <testcase name="testDoWork_whenNoCloudConnected_createsLocalBackupAndSucceeds" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.891"/>
+  <testcase name="testFormatTargets_formatsSuccessAndFailedEntriesCorrectly" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.696"/>
+  <testcase name="testDoWork_whenLocalBackupFails_returnsRetry" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.895"/>
+  <testcase name="testCompanionSchedule_structureAndMethodExistence" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.653"/>
+  <testcase name="testDoWork_whenDisabled_skipsExecution" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.684"/>
+  <testcase name="testDoWork_whenDropboxEnabledWithoutCredentials_skipsDropboxAndSucceedsLocally" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.849"/>
+  <testcase name="testBuildConstraints_whenDropboxEnabledWithCredential_setsNetworkTypeUnmetered" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="0.635"/>
+  <testcase name="testDoWork_whenOneCloudSucceedsAndOneFails_setsPartialSuccess" classname="com.atrainingtracker.trainingtracker.migration.BackupWorkerTest" time="1.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

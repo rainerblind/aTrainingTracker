@@ -273,7 +273,7 @@ class AthleteProfileContractAndLocalizationTest {
         )
         val zonesFile = File(
             resolveModuleRoot(),
-            "src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt"
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones/ZoneSettingsScreen.kt"
         )
         assertTrue("ZonesSettingsActivity.kt must exist", zonesFile.exists())
         val zonesSource = zonesFile.readText()

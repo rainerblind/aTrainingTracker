@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:07:19.320Z" hostname="rainer-HP-EliteBook-850-G5" time="5.149">
+  <properties/>
+  <testcase name="writeCsv_emitsDotDecimalOneHzRowsWithCanonicalHeader" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.305"/>
+  <testcase name="diff_compareBaselineAndCandidate_computesExactQuantitativeDeltas" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.64"/>
+  <testcase name="replay_syntheticRunningWorkout_pairedPhoneAndPolar_isBitExactDeterministicAcrossRuns" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="1.688"/>
+  <testcase name="replay_syntheticRunningWorkout_phoneOnly_computesCarriageCadenceEkfAndErtsMetrics" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.371"/>
+  <testcase name="replay_syntheticRunningWorkout_polarOnly_computesH10AndVerityCadenceAndDynamics" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.401"/>
+  <testcase name="replay_mixedGnssAndDivergentGnssFused_autoAndGpsIsolateRawGpsWhileFusedSelectsFused_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.535"/>
+  <testcase name="replay_veritySenseGyroOnlySidecar_preservesUnscaledDegPerSecAndRoutesSenseModel" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.084"/>
+  <testcase name="polarMetadataAndReader_executeOnPureJvmWithoutRobolectric" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.012"/>
+  <testcase name="replay_gnssFusedOnlySidecar_autoFallsBackToGnssFused_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.432"/>
+  <testcase name="groundTruth_verify_passesWithinBoundsAndReportsExplicitViolationsOnRegression" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.336"/>
+  <testcase name="replay_legacyV1DuplicateGnssRowsWithInterleavedImu_deduplicatesCleanlyAndMatchesCleanReplay_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.343"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

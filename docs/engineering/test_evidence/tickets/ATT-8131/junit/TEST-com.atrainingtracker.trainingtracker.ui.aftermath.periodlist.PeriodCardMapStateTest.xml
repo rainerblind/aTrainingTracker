@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:19:24.895Z" hostname="rainer-HP-EliteBook-850-G5" time="0.13">
+  <properties/>
+  <testcase name="testTstMap058_12_CardMapStateMaxCorridorPassCount" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.076"/>
+  <testcase name="testTstPer025_5_EmptyAndMalformedGpsResilience" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.0"/>
+  <testcase name="testTstPer030_RegionIdExtraction" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.011"/>
+  <testcase name="testTstPer025_3_SpatialRegionClusteringAndFramingOffload" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.001"/>
+  <testcase name="testTstPer025_7c_SummaryPolylinesSourcePrioritization" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.004"/>
+  <testcase name="testTstPer032_4_CorridorFrequencyCalibrationOnSportFilteredPathSet" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.017"/>
+  <testcase name="testTstPer025_7b_VectorPolylineRetentionForThirtyOrFewerWorkoutsAndDayCards" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.008"/>
+  <testcase name="testTstPer025_4_PolylineHeatmapTileProviderIntegration" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.002"/>
+  <testcase name="testTstPer025_2_AdaptiveSimplificationToleranceScaling" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.003"/>
+  <testcase name="testTstPer025_7a_AdaptiveSuppressionForOverThirtyWorkoutsWithHeatmap" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.003"/>
+  <testcase name="testTstPer025_1_FullPeriodRouteIngestionWithoutEightTrackTruncation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCardMapStateTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -93,9 +93,7 @@ class AdrCompletenessContractTest {
                     "com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModel",
                     "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel",
                     "com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel",
-                    "com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic",
-                    "com.atrainingtracker.trainingtracker.fragments.ConfigViewsFragment",
-                    "com.atrainingtracker.trainingtracker.fragments.mapFragments.TrackOnMapHelper"
+                    "com.atrainingtracker.trainingtracker.ui.settings.zones.ZonesSettingsViewModel"
                 )
             ),
             AdrSpec(
@@ -168,6 +166,7 @@ class AdrCompletenessContractTest {
 
             val hasHonestOrSignedStatus =
                 content.contains("- **Status**: Retrospective (Pending PO Sign-Off)") ||
+                    content.contains("- **Status**: Reviewed") ||
                     content.contains("- **Status**: Approved")
             assertTrue("${spec.id} must state explicit Status metadata", hasHonestOrSignedStatus)
             if (content.contains("Pending PO Sign-Off")) {

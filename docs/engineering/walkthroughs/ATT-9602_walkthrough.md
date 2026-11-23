@@ -1,0 +1,33 @@
+# Stage 5 Walkthrough — ATT-9602: Barometer Pocket-Compression Anti-Aliasing, 3-State Startup Grace & ERTS Braking Stability
+
+- **Ticket**: `ATT-9602` (`3 SP`, `Bug`, `tier-a`, Epic `ATT-166`) | **Target Release**: `V5.0.0` | **Gate 3**: `ATT-9650` (`GATE_PASSED`)
+- **Traceability**: `REQ-FIL-040` (`.1`–`.4`, `[Verified]`, `Derived (SW-only)`) <-> `TST-FIL-040` (`.1`–`.4`, `[Verified]`)
+- **Branch**: `feature/ATT-9602` (branched cleanly off `c812c7fa`; preserved intact for Stage 6 Cold Review)
+
+## 1. Summary of Changes & Gate 3 Guardrails Enforced
+
+1. **Intra-Bucket Dispersion & Multi-Second Anti-Aliasing (`REQ-FIL-040.1`)**:
+   - Added pure-Kotlin [`BarometricBucketDispersion.kt`](file:///home/rainer/.gemini/antigravity/worktrees/74f0757f-0dba-4fda-9c0e-9e9c0929bf16/subagent-Lane-2-Author--ATT-166--Neon--self-93c57924/app/src/main/java/com/atrainingtracker/banalservice/odometry/BarometricBucketDispersion.kt) (`198` LoC) computing intra-bucket `IQR` vs speed-aware `physicalSpan = max(2.5, 0.20 * speedMps)`. Calm handlebar rides, `8–12%` climbs, and `-12%` `18 m/s` alpine descents keep `dispersionVarM2 == 0.0` and emit exact 1-Hz bucket median with speed-coupled slew (`0` lag). Severe pocket waves (`0.92 Hz`, `70–88 m`) inflate `dispersionVarM2` immediately (`<= 2,500 m²`, `0.65` decay retention), emit `[Q1..Q3]` trimmed mean across a bounded `3,000 ms` (`<= 128` samples) rolling window, and clamp `filterSlewOnly` to base slew (`speedMps = 0.0`).
+   - Enforced Gate 3 Guardrail #1: ignores non-finite samples, resets on backward timestamps / pause gaps (`> 3,000 ms`) / `reanchorOnResume()`, and prunes `rollingWindow` deterministically by `flushTimestampMs` with empty-window fallback to bucket median.
+2. **Corrupted-Barometer DEM Step-Gate & Slope Observability (`REQ-FIL-040.2`)**:
+   - Updated [`KinematicAltitudeSlopeEkf.kt`](file:///home/rainer/.gemini/antigravity/worktrees/74f0757f-0dba-4fda-9c0e-9e9c0929bf16/subagent-Lane-2-Author--ATT-166--Neon--self-93c57924/app/src/main/java/com/atrainingtracker/banalservice/odometry/KinematicAltitudeSlopeEkf.kt) (`697 / 1,500` LoC) with `DEM_BARO_TRUST_VAR_THRESHOLD = 16.0` and `lastBaroVarM2` updated across all `updateBarometer()` paths using raw finite positive `varBaro` (pre-`adaptiveBaroJitterVar`, Guardrail #2).
+   - While `lastBaroVarM2 > 16.0`, `computeStepGatedRefVariance()` bypasses baro-vs-ref veto and clears `lastRefBaroAltM = NaN`, and `updateReferenceAltitude()` restores DEM slope observability (`k1Eff`) so stale climb slope cannot lock a permanent steady-state offset on flat finishes. Healthy baro (`<= 16.0`) preserves 100% of `REQ-FIL-037.1`/`.2`.
+3. **3-State Startup Calibration Grace (`REQ-FIL-040.3`)**:
+   - Updated [`AltitudeAndSlopeDevice_ATTFused.kt`](file:///home/rainer/.gemini/antigravity/worktrees/74f0757f-0dba-4fda-9c0e-9e9c0929bf16/subagent-Lane-2-Author--ATT-166--Neon--self-93c57924/app/src/main/java/com/atrainingtracker/banalservice/devices/AltitudeAndSlopeDevice_ATTFused.kt) (`571 / 1,500` LoC) to defer unanchored 3-State sensor publication for up to `STARTUP_REFERENCE_GRACE_MS = 5_000L` (`ekf.isInitialized == true` on sample #1). Eliminates the `470.9 -> 435.0 m` cliff on outdoor DEM/GPS lock (`t = 1–2 s`) while preserving offline `>= 5 s` fallback (`REQ-FIL-022.3` `0.0 m` bogus descent), 2-State immediate publish, and `reanchorOnResume()`.
+4. **ERTS Low-Speed Braking Protection (`REQ-FIL-040.4`)**:
+   - Updated [`ExtendedRtsAltitudeSlopeSmoother.kt`](file:///home/rainer/.gemini/antigravity/worktrees/74f0757f-0dba-4fda-9c0e-9e9c0929bf16/subagent-Lane-2-Author--ATT-166--Neon--self-93c57924/app/src/main/java/com/atrainingtracker/banalservice/odometry/ExtendedRtsAltitudeSlopeSmoother.kt) (`656 / 1,500` LoC) with deceleration detection guarded strictly by `k > 0 && dtSec in 0.1..5.0 && prevSpeedMps >= 0.3` (Guardrail #3), `8.0×` baro variance across full braking when referenced (`4.0×` unreferenced `< 2.5 m/s`), and `(speedMps / 2.5)^2` `qgVal`/baro-`k1` damping below `2.5 m/s`, leaving `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` and `lowSpeedSlopeGainFactor()` untouched (`TST-FIL-033.1`).
+5. **SWE.2 & Living-Doc Parity**:
+   - Registered `BarometricBucketDispersion` in `docs/architecture.md` (`v1.0.26`), promoted `REQ-FIL-040` (`req_tracking_cockpit_part3.md` `v1.0.10`) and `TST-FIL-040` (`tst_tracking_cockpit_part2.md` `v1.0.13`) with aligned header/table versions (Guardrail #4), and synced master indexes.
+
+## 2. Verification Results (`90/90` Tier-1 Targeted PASS, `0` New Warnings)
+
+- Command: `python3 tools/parallel_sprint_lock.py -- ./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.devices.BarometricAltitudeFilterTest" --tests "com.atrainingtracker.banalservice.replay.*" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`
+- **Results (`90/90` PASS, `0` fail, `0` err, `0` skip)**:
+  - `BarometricBucketDispersionTest`: `4/4` PASS (`TST-FIL-040.1`)
+  - `KinematicAltitudeSlopeEkfTest`: `17/17` PASS (`TST-FIL-040.2`, `REQ-FIL-037.2` preserved)
+  - `AltitudeAndSlopeDevice_ATTFusedTest`: `26/26` PASS (`TST-FIL-040.1`, `TST-FIL-040.3`, `REQ-FIL-022.3` preserved)
+  - `ExtendedRtsAltitudeSlopeSmootherTest`: `10/10` PASS (`TST-FIL-040.4`, `TST-FIL-033.1` preserved)
+  - `BarometricAltitudeFilterTest`: `7/7` PASS | `OfflineTelemetryReplayHarnessTest`: `11/11` PASS | `OfflineReplayCliTest`: `4/4` PASS
+  - `ArchitectureConformanceContractTest`: `11/11` PASS (all modified files `<= 697 / 1,500` LoC; `0` monolith/UI/DB/`strings*.xml` edits)
+- **Governance & Evidence**: `verify_requirement_governance.py --base-ref c812c7fa` `exit 0`; `auto_gate.py --ticket ATT-9602 --tier tier-a --base-ref c812c7fa --write-bundle` passed `static_safety_linters`, `deliverable_lint`, `conflict_markers`, `evidence_bundle` (`7` JUnit XMLs / `8` SHA-256 hashed files under `docs/engineering/test_evidence/tickets/ATT-9602/`), and `92/92` (`6/6` in-scope suites incl. `ExtendedRtsOdometrySmootherTest` `14/14` & `ErtsPostWorkoutRecomputerTest` `21/21`, `102/104` total).
+- **Documented Pre-Existing Baseline Deviation**: `auto_gate.py` reported 1 pre-existing baseline failure completely unrelated to `ATT-9602` — `MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds` (+ `classMethod` teardown), tracked externally in **`ATT-9639`**.

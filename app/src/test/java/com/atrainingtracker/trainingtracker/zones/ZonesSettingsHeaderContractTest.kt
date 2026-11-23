@@ -39,7 +39,7 @@ class ZonesSettingsHeaderContractTest {
             current = current.parentFile
         }
         val root = current ?: File(".")
-        return File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        return File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/zones/ZoneSettingsScreen.kt")
     }
 
     @Test

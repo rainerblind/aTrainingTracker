@@ -1,7 +1,7 @@
 # System Requirements Specification: Live Tracking with Sensors
 
 **Document ID**: `DOC-SYS-TRK`  
-**Version**: 1.2.23  
+**Version**: 1.2.24  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1–BP3)  
 **Requirement Reference**: `REQ-PRO-054` (`REQ-PRO-054.1`, `REQ-PRO-054.2`)  
 **Test Reference**: `TST-PRO-054` (`TST-PRO-054.1`–`TST-PRO-054.3`)  
@@ -165,11 +165,11 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Title**: Three-Tier Process-Death Session Recovery & State Restoration
 * **Statement**: The system SHALL detect and recover interrupted workout sessions across OS process termination or service recreation:
   1. Persist live session state and accumulated sensor baselines (`TrackerService.java`, `WorkoutSamplesDatabaseManager.java`) to restore interrupted workouts across `MANUAL_PAUSED`, `AUTO_PAUSED`, and `TRACKING` states without losing prior elapsed time, distance, or lap splits.
-  2. Prompt the athlete for explicit resume or discard action via `StartOrResumeDialog.kt` (`StartOrResumeInterface.java`) when an unfinished session exists on startup.
+  2. Prompt the athlete for explicit resume or discard action via pure Compose `StartOrResumeAlertDialog` (`StartOrResumeDialog.kt`, `MainActivityWithNavigation.kt`) when an unfinished session exists on startup.
 * **Rationale**: Android background memory pressure or battery kills must never silently discard multi-hour workout telemetry already persisted to SQLite.
 * **Priority**: High
 * **Verification Method**: Test (`SystemLiveTrackingRequirementsContractTest.kt`, `TrackerService.java`, `StartOrResumeDialog.kt`)
-* **Traced Software Components**: `TrackerService.java`, `StartOrResumeDialog.kt`, `StartOrResumeInterface.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`
+* **Traced Software Components**: `TrackerService.java`, `StartOrResumeDialog.kt`, `MainActivityWithNavigation.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`
 
 ---
 
@@ -245,3 +245,4 @@ The following matrix establishes bidirectional traceability between system track
 | `1.2.21` | 2026-11-21 | Lane B Author (`ATT-9348`, `--as agent1`) | `ATT-9348` | Linked `REQ-EXP-045` (`SmartphoneRawTelemetryRecorder.kt`, `PhoneRawSidecarRecovery.kt`, `PhoneRawTelemetryReader.kt`) under `SYSREQ-TRK-010` in §3/§4 parity. |
 | `1.2.22` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Linked `REQ-EXP-046` (pure-JVM offline simulation replay over `PhoneRawTelemetryReader.kt` & `PolarRawTelemetryReader.kt`) under `SYSREQ-TRK-010` in §3/§4 parity. |
 | `1.2.23` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Linked `REQ-SET-123` and grounded `DeviceSearchPeriodicRetryCoordinator.kt` under `SYSREQ-TRK-002` in §3/§4 parity (`Rule 81`). |
+| `1.2.24` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Updated `SYSREQ-TRK-013` code grounding after removing legacy `StartOrResumeInterface` in favor of pure Compose `StartOrResumeAlertDialog` (`StartOrResumeDialog.kt`, `MainActivityWithNavigation.kt`). |

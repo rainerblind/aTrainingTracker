@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:33.256Z" hostname="rainer-HP-EliteBook-850-G5" time="0.004">
+  <properties/>
+  <testcase name="testLayer3BackHandler_dispatchesViaOnBackPressedDispatcherLIFO" classname="com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest" time="0.004"/>
+  <testcase name="testPushedScreenBackAction_clearsContextualFiltersAndPopsBackstack" classname="com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest" time="0.0"/>
+  <testcase name="testRootBackNavigation_movesTaskToBackWhenOnRootTrackingWithoutBackstack" classname="com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest" time="0.0"/>
+  <testcase name="testNonRootBackNavigation_redirectsToStartTrackingOrPopsBackstack" classname="com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest" time="0.0"/>
+  <testcase name="testDrawerEdgeSwipeInterceptorPredicate_deactivatedWhenPushed" classname="com.atrainingtracker.trainingtracker.ui.navigation.ATrainingTrackerAppNavigationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

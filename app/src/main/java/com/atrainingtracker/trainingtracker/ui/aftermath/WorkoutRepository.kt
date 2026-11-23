@@ -82,7 +82,6 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
@@ -3921,10 +3920,6 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             updateWorkoutInMemory(workoutId) { current ->
                 current.copy(finished = true)
             }
-            val updatedWorkout = _allWorkouts.value.firstOrNull { it.id == workoutId }
-            if (updatedWorkout != null) {
-                app?.let { PeriodsRepository.getInstance(it).onWorkoutFinished(updatedWorkout) }
-            }
         }
     }
 
@@ -4505,7 +4500,6 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
                             
                             if (isNewImportOrFinish) {
-                                app?.let { PeriodsRepository.getInstance(it).onWorkoutFinished(freshWorkoutData) }
                                 extractAndPersistClimbsFromWorkout(workoutId)
                             }
 
@@ -4664,7 +4658,6 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
             oldWorkout?.let { old ->
                 if (old.sportId != userEditedWorkout.sportId) {
-                    app?.let { PeriodsRepository.getInstance(it).onWorkoutSportChanged(userEditedWorkout, old) }
                     WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout.toClusterWorkoutSnapshot(), old.toClusterWorkoutSnapshot())
                 }
             }
@@ -4723,8 +4716,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         deletedDuringLoadIds.add(id)
                     }
                     // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
-                    workout?.let { 
-                        app?.let { appInstance -> PeriodsRepository.getInstance(appInstance).onWorkoutDeleted(it) }
+                    workout?.let {
                         WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it.toClusterWorkoutSnapshot())
                     }
 
@@ -4776,7 +4768,6 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         notificationManager.showResyncNotification()
 
                         loadAllWorkouts()
-                        PeriodsRepository.getInstance(application).resyncAllPeriods()
                         WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
                         WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                     }

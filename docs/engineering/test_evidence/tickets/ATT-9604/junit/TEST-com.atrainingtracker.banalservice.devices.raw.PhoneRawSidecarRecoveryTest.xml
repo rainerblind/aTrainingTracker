@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.raw.PhoneRawSidecarRecoveryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T00:07:18.850Z" hostname="rainer-HP-EliteBook-850-G5" time="0.051">
+  <properties/>
+  <testcase name="recoverAbandonedTmpToFinal_salvagesIntactPreCrashRowsAndDropsPartialTail_TST_EXP_045_2" classname="com.atrainingtracker.banalservice.devices.raw.PhoneRawSidecarRecoveryTest" time="0.035"/>
+  <testcase name="resumeRecorder_salvagesTruncatedTmpAndAppendsPostCrashRows_TST_EXP_045_2" classname="com.atrainingtracker.banalservice.devices.raw.PhoneRawSidecarRecoveryTest" time="0.01"/>
+  <testcase name="recoverAbandonedTmpToFinal_salvagesGnssAndGnssFusedRowsAndDropsTruncatedTail_TST_EXP_047_1" classname="com.atrainingtracker.banalservice.devices.raw.PhoneRawSidecarRecoveryTest" time="0.003"/>
+  <testcase name="truncatedNonNewlineTrailingGnssRow_isStrictlyDroppedByRecoveryAndReader_TST_EXP_045_2" classname="com.atrainingtracker.banalservice.devices.raw.PhoneRawSidecarRecoveryTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

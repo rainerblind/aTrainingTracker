@@ -1,0 +1,30 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "b0de9fea4daa9648a5d07badafa15c21a3e5c6ea",
+  "files": {
+    "evidence_summary.json": "8c06503852b90626546161fc6d7de2e918ade60798b874e9de2b3533fabb5865",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest.xml": "980e7d48451a2c6dfe3e246b8d7f10beabe31ef65f13f3670823136ac4aa0582",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest.xml": "6dc79d5fcc7b8e7ec68a075e3e11bae2a1d9954ecd8512baffd7f50d4afcc781",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDisplacementTest.xml": "c8934fe1b51f4d0bf0de7bdeea14e5ce928455d8dd3c9d3e5864a2531d00edac",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceGoogleFusedTest.xml": "df81b36ed00dc0ddd87028227d0f0ad183dd2ba20c72f0f59bd2c412ee11b464",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceIndoorAndRestCouplingTest.xml": "e50a5cb80ac5d6bd9d10d034f930e8f029749feef7339fc2b92c45d782d26393",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest.xml": "1776e25b72ad9ed92fb06a7ac65a7b25d62659909d6ea2aae9647dc7aa339b48",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceStationaryJitterTest.xml": "7c4a65ba525d8a148677f8657486e29dc5b55b723a1a59589fad45a6c4a360f5",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml": "43f659becba4a514833f74c1dd3a620674f1e793dc85bf5049d9094b5cdc6040",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.VerticalSpeedAndSlopeDeviceTest.xml": "ce2311e03724fcabae0a8095a2edbcb8ffd147185ca7b53e1ca8f7def7a7b016",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.raw.PhoneRawSidecarRecoveryTest.xml": "25d4598d6a73d7adc8b0c7aad3c5e001969474497ba5e1f29279fe0e26f4248b",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.raw.PhoneRawTelemetryReaderTest.xml": "7a6d0493df0b9e2429abb0ced02e9c6d65efbd50f96f18d167ee7534fc578065",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest.xml": "d8d594926de70cd7b86f00b11d141f288e12284c35aa39dc89af9273b24e4813",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineReplayCliTest.xml": "c976d5503c1101e58167d650571dbafa1631ed9792655bc12344010e660b90d8",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest.xml": "54727eb7fd6bada443a86681d1da3b82bd901739c198869508842aaee12d9be1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml": "92662f3bb666a236f499202c8b15d09bc8689dc47306456dd14a4c4687cc3de4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.RawSensorFileExporterTest.xml": "2b0d8b97397e165cd88f79618e0eb8e3b3b8880001003bf9f91a188b49bf5575",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.xml": "1f14569d882c168860bba566d104c7860ad8c4333b3e2da113d415b8e866f6c8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.MaxLineDistanceIntegrityTest.xml": "7461da87ce052ab1d9aee97650319aeabb8cec645cc5edc64d476c753a1221e0",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.dialogs.SensorDiagnosticBundlePrivacyTest.xml": "e270718230150c25a16dcded065274e6a58d512da7951001e3f6b9fcfd6e1bb1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionTest.xml": "8020a1f73df4130e5151637cee7f9f48d35d2419e3f1896d69035781b02024ca"
+  },
+  "run_started_utc": "2026-11-23T00:04:47.586708+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9604"
+}

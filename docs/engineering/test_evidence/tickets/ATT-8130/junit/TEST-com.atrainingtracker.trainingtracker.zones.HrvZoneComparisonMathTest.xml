@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:49:08.759Z" hostname="rainer-HP-EliteBook-850-G5" time="0.019">
+  <properties/>
+  <testcase name="testEvaluateConsensusGate_threeSessionsWithin10Watts_unlocksWithMedian" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.012"/>
+  <testcase name="testComparePowerZones_nullFtp_returnsNullDeltas" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testEvaluateConsensusGate_singleFreeRide_remainsLocked" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testEvaluateConsensusGate_threeSessionsSpreadExceeds10Watts_remainsLocked" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.001"/>
+  <testcase name="testEvaluateHrConsensusGate_singleFreeRide_remainsLocked" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.001"/>
+  <testcase name="testEvaluateConsensusGate_guidedRampHighConfidence_unlocksImmediately" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testCompareHeartRateZones_nullHrMax_returnsNullDeltas" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.001"/>
+  <testcase name="testEvaluateHrConsensusGate_guidedHighSpreadTooNarrow_remainsLocked" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testEvaluateConsensusGate_sessionsOlderThan30Days_ignored" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testCalculateMedian_oddAndEvenCollections" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testComparePowerZones_validThresholds_computesCorrectDeltas" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.002"/>
+  <testcase name="testEvaluateHrConsensusGate_guidedHighConfidence_unlocks" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testEvaluateConsensusGate_lowConfidenceSessions_ignored" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testEvaluateHrConsensusGate_threeSessionsSpreadExceeds6Bpm_remainsLocked" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testComparePowerZones_unestimatedThresholds_returnsNullDeltasIndependently" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testCompareHeartRateZones_validThresholds_computesCorrectInformationalDeltas" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.002"/>
+  <testcase name="testEvaluateConsensusGate_guidedStepHighConfidence_unlocksImmediately" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <testcase name="testEvaluateHrConsensusGate_threeSessionsWithin6Bpm_unlocksWithMedian" classname="com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

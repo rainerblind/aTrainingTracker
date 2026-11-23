@@ -1316,4 +1316,66 @@ class PhoneCarriageClassifierTest {
             sustainedHandClf.currentMode
         )
     }
+
+    // REQ-FIL-042.3 / TST-FIL-042.3: Out-of-order lagged classify() / GNSS timestamps must never seed
+    // candidateSinceMs in the past relative to lastEventTimestampMs or bypass dismountHysteresisMs (2.0 s).
+    @Test
+    fun testOutOfOrderLaggedClassifyAndGnss_preservesFullDismountDwellWithoutBypass_TST_FIL_042_3() {
+        val clf = PhoneCarriageClassifier()
+        clf.setSportContext(SportContextHint.CYCLING)
+
+        // 1. Establish steady BIKE_FRONT_POCKET over t = 0..5_000 ms (no steps, 6.0 m/s, 1.35 Hz thigh swing)
+        for (t in 0L..5_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.35 * sec
+            clf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            clf.ingestGyro(0.75 * sin(phase), 0.75, t)
+            if (t % 200L == 0L) clf.ingestBarometerAltitude(430.0 + 0.55 * sin(phase), t)
+            if (t % 1000L == 0L) {
+                clf.ingestGnssSpeed(6.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                clf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, clf.currentMode)
+
+        // 2. Feed walking-speed cue at t = 5_400 ms, then invoke classify() with a -2,182 ms lagged timestamp (3_218 ms)
+        //    followed 450 ms later by IMU classify(5_850 ms). Without the monotonic guard, 5_850 - 3_218 = 2_632 >= 2_000 ms
+        //    would immediately bypass dismountHysteresisMs!
+        clf.ingestGnssSpeed(1.2, bearingDeg = 90.0, accuracyMeters = 5.0, timestampMs = 5_400L)
+        for (stepT in listOf(5_050L, 5_600L, 6_150L)) {
+            if (stepT <= 5_400L) clf.ingestStepEvent(stepT)
+        }
+        assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, clf.classify(5_400L - 2_182L))
+
+        // Out-of-order older GNSS fix (3_218 ms) must not overwrite newer 5_400 ms GNSS speed
+        clf.ingestGnssSpeed(0.0, bearingDeg = 0.0, accuracyMeters = 5.0, timestampMs = 3_218L)
+
+        // Advance only 450 ms (to 5_850 ms) and 1_400 ms (to 6_800 ms) — BOTH < 2_000 ms dwell -> MUST stay BIKE_FRONT_POCKET
+        for (t in 5_420L..6_800L step 20L) {
+            val sec = t / 1000.0
+            clf.ingestRotationVector(quaternionFromEulerXDeg(72.0 + 8.0 * sin(2.0 * PI * 0.9 * sec)), t)
+            clf.ingestGyro(0.22 * sin(2.0 * PI * 0.9 * sec), 0.22, t)
+            if (t % 550L == 0L) clf.ingestStepEvent(t)
+            if (t == 5_850L || t == 6_800L) {
+                assertEquals(
+                    "Full 2.0 s dismount dwell must hold at t=$t despite earlier -2.18 s lagged classify()",
+                    PhoneCarriageMode.BIKE_FRONT_POCKET,
+                    clf.classify(t)
+                )
+            }
+        }
+
+        // Advance past full 2.0 s dwell (to 7_600 ms = +2.2 s from 5_400 ms) -> now commits WALKING_TRANSITION cleanly
+        for (t in 6_820L..7_600L step 20L) {
+            val sec = t / 1000.0
+            clf.ingestRotationVector(quaternionFromEulerXDeg(72.0 + 8.0 * sin(2.0 * PI * 0.9 * sec)), t)
+            clf.ingestGyro(0.22 * sin(2.0 * PI * 0.9 * sec), 0.22, t)
+            if (t % 550L == 0L) clf.ingestStepEvent(t)
+        }
+        assertEquals(
+            "Genuine sustained >= 2.0 s walking dismount must commit WALKING_TRANSITION",
+            PhoneCarriageMode.WALKING_TRANSITION,
+            clf.classify(7_600L)
+        )
+    }
 }

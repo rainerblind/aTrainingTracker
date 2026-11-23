@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:14:47.160Z" hostname="rainer-HP-EliteBook-850-G5" time="12.17">
+  <properties/>
+  <testcase name="testAutomatedBackupSubtitle_structuralContract_resolvesAllFourStates" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="2.27"/>
+  <testcase name="testUploadToCloud_whenNeitherConnected_emitsErrorWithoutAcquiringLock" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="1.488"/>
+  <testcase name="testUploadToCloud_whenBothConnectedAndOneFails_persistsPartialSuccess" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="1.044"/>
+  <testcase name="testCreateAndUploadToBoth_hasNewlineBeforeDropboxGoogleDrive_acrossAll9Locales" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.743"/>
+  <testcase name="testCloudBackupStrings_9LocaleParity" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.579"/>
+  <testcase name="testCloudBackupButton_hasCenteredTextAlignment" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.587"/>
+  <testcase name="testNoCloudConnectedDialog_structuralContract_inImportBackupTabsScreen" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.699"/>
+  <testcase name="testUploadToCloud_whenOnlyDropboxConnected_dispatchesOnlyToDropbox" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.913"/>
+  <testcase name="testUploadToCloud_whenOnlyGoogleDriveConnected_dispatchesOnlyToGoogleDrive" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.891"/>
+  <testcase name="testUploadToCloud_whenLockCannotBeAcquired_emitsError" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.747"/>
+  <testcase name="testCloudBackupButton_structuralContract_resolvesAllFourStates" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.585"/>
+  <testcase name="testUploadToCloud_whenLocalBackupFails_recordsFailureAndReleasesLock" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.723"/>
+  <testcase name="testUploadToCloud_whenBothConnectedAndBothSucceed_persistsSuccessAndParity" classname="com.atrainingtracker.trainingtracker.migration.BackupCloudProviderUnificationTest" time="0.901"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

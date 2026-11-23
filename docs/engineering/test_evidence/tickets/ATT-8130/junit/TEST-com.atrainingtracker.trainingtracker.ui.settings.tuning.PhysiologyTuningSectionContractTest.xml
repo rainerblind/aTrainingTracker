@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyTuningSectionContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:48:57.014Z" hostname="rainer-HP-EliteBook-850-G5" time="0.013">
+  <properties/>
+  <testcase name="testSubordinateSwitchCheckedTrack_relativeLuminanceIsSignificantlyLighterInLightMode" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyTuningSectionContractTest" time="0.0"/>
+  <testcase name="testTuningClasses_existAndAreDecoupled" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyTuningSectionContractTest" time="0.011"/>
+  <testcase name="testSubordinateTuningToggleItem_colorTokensAndGeometryContract" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.PhysiologyTuningSectionContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

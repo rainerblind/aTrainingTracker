@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:20:53.228Z" hostname="rainer-HP-EliteBook-850-G5" time="0.032">
+  <properties/>
+  <testcase name="testQuartileCalculationAndLevels" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.024"/>
+  <testcase name="testDailySportActivity_andContributionModel" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.0"/>
+  <testcase name="testEmbeddedContributionGridParameters_defaultAndEmbeddedValues" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.001"/>
+  <testcase name="testMonthHeaderColumnPositions" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.002"/>
+  <testcase name="testDayOfWeekLabelCadence_showsMonWedFriSun_TST_PER_031_10" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.0"/>
+  <testcase name="testCalculateInitialScrollOffset_clampingAndEdgeAlignment" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.001"/>
+  <testcase name="testCalendarMatrixMapping_standardAndLeapYears" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.004"/>
+  <testcase name="testCalculateTargetColumn_pastPresentFutureYears" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.0"/>
+  <testcase name="testMultiSportSeparationAndRule57Order" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.YearlyContributionGridTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

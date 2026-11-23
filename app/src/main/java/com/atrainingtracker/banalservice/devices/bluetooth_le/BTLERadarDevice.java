@@ -69,8 +69,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     private static final String TAG = "BTLERadarDevice";
     private static final boolean DEBUG = BANALService.getDebug(false);
 
-    public static final byte PACKET_TYPE_THREAT = 0x00;
-    public static final byte PACKET_TYPE_V2_THREAT = 0x01;
     public static final long WATCHDOG_TIMEOUT_MS = 3500L;
     public static final long STALE_TRACK_TIMEOUT_MS = 2000L;
     public static final long STALE_TRACK_MOVING_MS = 800L;
@@ -955,7 +953,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public static boolean isV1Heartbeat(@Nullable byte[] payload) {
         if (payload == null || payload.length != 1) return false;
         byte header = payload[0];
-        return ((header & 0x0F) == 0x02) || header == PACKET_TYPE_THREAT;
+        return (header & 0x0F) == 0x02;
     }
 
     public static boolean isV1SectorPacket(@Nullable byte[] payload) {
@@ -1004,8 +1002,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     /**
      * Demuxes and parses a Garmin Varia BLE V1 packet (characteristic 6a4e3203).
      *
-     * Supports sequence-framed headers (low nibble 0x02, cycling 0x02..0xF2) and legacy 0x00 frames.
-     * Demuxes 1-byte heartbeats, 6-byte sector diagnostics, and multi-target threat triplets.
+     * Supports authentic sequence-framed headers (low nibble 0x02, cycling 0x02..0xF2).
+     * Demuxes 1-byte heartbeats and multi-target threat triplets.
      */
     @Nullable
     public static List<RadarTarget> parseV1ThreatPacket(@Nullable byte[] payload) {
@@ -1023,10 +1021,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         byte header = payload[0];
-        boolean isV1SeqHeader = (header & 0x0F) == 0x02;
-        boolean isLegacyHeader = (header == PACKET_TYPE_THREAT);
-
-        if (!isV1SeqHeader && !isLegacyHeader) {
+        if ((header & 0x0F) != 0x02) {
             return null;
         }
 
@@ -1047,67 +1042,44 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             int offset = 1 + i * 3;
             int vid = payload[offset] & 0xFF;
             int dist = payload[offset + 1] & 0xFF;
-            int flagOrSpeed = payload[offset + 2] & 0xFF;
 
-            if (isV1SeqHeader) {
-                // Real hardware frame: bit 7 (0x80) indicates valid vehicle.
-                // Filter out vid < 0x80, vid == 0xFD, and dist == 0xFF.
-                if ((vid & 0x80) == 0 || vid == 0xFD || dist == 0xFF) {
-                    continue;
-                }
-                int trackId = vid & 0x7F;
-                float rangeMeters = (float) dist;
-                float approachSpeedMps = 0.0f;
-                ThreatLevel threatLevel;
+            // Real hardware frame: bit 7 (0x80) indicates valid vehicle.
+            // Filter out vid < 0x80, vid == 0xFD, and dist == 0xFF.
+            if ((vid & 0x80) == 0 || vid == 0xFD || dist == 0xFF) {
+                continue;
+            }
+            int trackId = vid & 0x7F;
+            float rangeMeters = (float) dist;
+            float approachSpeedMps = 0.0f;
+            ThreatLevel threatLevel;
 
-                if (trackHistory != null) {
-                    synchronized (trackHistory) {
-                        TrackState prev = trackHistory.get(trackId);
-                        if (prev != null) {
-                            long dtMs = nowMs - prev.timestampMs;
-                            if (dtMs > 0 && dtMs <= STALE_TRACK_TIMEOUT_MS) {
-                                float dt = dtMs / 1000.0f;
-                                float dr = prev.rangeMeters - rangeMeters;
-                                if (dt > 0.001f && dr > 0.0f) {
-                                    approachSpeedMps = dr / dt;
-                                } else if (dt > 0.001f) {
-                                    approachSpeedMps = 0.0f;
-                                }
+            if (trackHistory != null) {
+                synchronized (trackHistory) {
+                    TrackState prev = trackHistory.get(trackId);
+                    if (prev != null) {
+                        long dtMs = nowMs - prev.timestampMs;
+                        if (dtMs > 0 && dtMs <= STALE_TRACK_TIMEOUT_MS) {
+                            float dt = dtMs / 1000.0f;
+                            float dr = prev.rangeMeters - rangeMeters;
+                            if (dt > 0.001f && dr > 0.0f) {
+                                approachSpeedMps = dr / dt;
+                            } else if (dt > 0.001f) {
+                                approachSpeedMps = 0.0f;
                             }
                         }
-                        if (approachSpeedMps >= 15.0f) {
-                            threatLevel = ThreatLevel.FAST_APPROACHING;
-                        } else {
-                            threatLevel = ThreatLevel.APPROACHING;
-                        }
-                        trackHistory.put(trackId, new TrackState(rangeMeters, approachSpeedMps, threatLevel, nowMs));
                     }
-                } else {
-                    threatLevel = ThreatLevel.APPROACHING;
-                }
-
-                targets.add(new RadarTarget(trackId, rangeMeters, approachSpeedMps, threatLevel));
-            } else {
-                // Legacy synthetic packet parsing (header == 0x00)
-                int targetId = vid;
-                float rangeMeters = (float) dist;
-                int threatBits = (flagOrSpeed >> 4) & 0x03;
-                ThreatLevel threatLevel;
-                switch (threatBits) {
-                    case 1:
-                        threatLevel = ThreatLevel.APPROACHING;
-                        break;
-                    case 2:
-                    case 3:
+                    if (approachSpeedMps >= 15.0f) {
                         threatLevel = ThreatLevel.FAST_APPROACHING;
-                        break;
-                    default:
-                        threatLevel = ThreatLevel.NONE;
-                        break;
+                    } else {
+                        threatLevel = ThreatLevel.APPROACHING;
+                    }
+                    trackHistory.put(trackId, new TrackState(rangeMeters, approachSpeedMps, threatLevel, nowMs));
                 }
-                float approachSpeedMps = (float) (flagOrSpeed & 0x0F);
-                targets.add(new RadarTarget(targetId, rangeMeters, approachSpeedMps, threatLevel));
+            } else {
+                threatLevel = ThreatLevel.APPROACHING;
             }
+
+            targets.add(new RadarTarget(trackId, rangeMeters, approachSpeedMps, threatLevel));
         }
 
         return targets;
@@ -1141,21 +1113,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
      *     - offset + 6: widthMeters (uint8 * 0.25f)
      *     - offset + 7: speedY (int8 * 0.5f m/s longitudinal closing speed; negative=approaching -> approachSpeedMps = -speedY)
      *     - offset + 8: speedX (int8 * 0.5f m/s lateral speed; 0x80 = unknown sentinel)
-     * - Legacy synthetic format:
-     *   - 1-byte clear frame (0x01)
-     *   - 1-byte header 0x01 + N * 8-byte target structs
      */
     @Nullable
     public static List<RadarTarget> parseV2ThreatPacket(@Nullable byte[] payload) {
-        if (payload == null || payload.length == 0) {
-            return null;
-        }
-
-        // Legacy synthetic 1-byte clear frame
-        if (payload.length == 1) {
-            if (payload[0] == PACKET_TYPE_V2_THREAT) {
-                return Collections.emptyList();
-            }
+        if (payload == null || payload.length < 2) {
             return null;
         }
 
@@ -1268,88 +1229,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                         speedXMps,
                         widthMeters,
                         lengthMeters,
-                        sizeCategory,
-                        laneState
-                ));
-            }
-            return targets;
-        }
-
-        // Backward compatibility: Legacy synthetic V2 packet (header 0x01, 1 + 8*N bytes)
-        if (payload[0] == PACKET_TYPE_V2_THREAT && (payload.length - 1) % 8 == 0) {
-            int targetPayloadLen = payload.length - 1;
-            int numTargets = targetPayloadLen / 8;
-            List<RadarTarget> targets = new ArrayList<>(numTargets);
-
-            for (int i = 0; i < numTargets; i++) {
-                int offset = 1 + i * 8;
-                int targetId = payload[offset] & 0xFF;
-                int rangeRaw = (payload[offset + 1] & 0xFF) | ((payload[offset + 2] & 0xFF) << 8);
-                float rangeMeters = rangeRaw / 10.0f;
-
-                short speedRaw = (short) ((payload[offset + 3] & 0xFF) | ((payload[offset + 4] & 0xFF) << 8));
-                float approachSpeedMps = speedRaw / 10.0f;
-
-                short lateralRaw = (short) ((payload[offset + 5] & 0xFF) | ((payload[offset + 6] & 0xFF) << 8));
-                float lateralOffsetMeters = lateralRaw / 10.0f;
-
-                int sizeAndThreat = payload[offset + 7] & 0xFF;
-                int threatBits = sizeAndThreat & 0x03;
-                ThreatLevel threatLevel;
-                switch (threatBits) {
-                    case 1:
-                        threatLevel = ThreatLevel.APPROACHING;
-                        break;
-                    case 2:
-                    case 3:
-                        threatLevel = ThreatLevel.FAST_APPROACHING;
-                        break;
-                    default:
-                        threatLevel = ThreatLevel.NONE;
-                        break;
-                }
-
-                int sizeBits = (sizeAndThreat >> 2) & 0x03;
-                VehicleSizeCategory sizeCategory;
-                switch (sizeBits) {
-                    case 1:
-                        sizeCategory = VehicleSizeCategory.CAR;
-                        break;
-                    case 2:
-                        sizeCategory = VehicleSizeCategory.TRUCK_OR_BUS;
-                        break;
-                    default:
-                        sizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT;
-                        break;
-                }
-
-                int laneBits = (sizeAndThreat >> 4) & 0x03;
-                LaneState laneState;
-                switch (laneBits) {
-                    case 1:
-                        laneState = LaneState.IN_RIDER_LANE;
-                        break;
-                    case 2:
-                        laneState = LaneState.CHANGING_LANE;
-                        break;
-                    case 3:
-                        laneState = LaneState.PASSING_LANE;
-                        break;
-                    default:
-                        laneState = LaneState.UNKNOWN;
-                        break;
-                }
-
-                targets.add(new RadarTarget(
-                        targetId,
-                        rangeMeters,
-                        approachSpeedMps,
-                        threatLevel,
-                        lateralOffsetMeters,
-                        approachSpeedMps,
-                        0.0f,
-                        null,
-                        null,
                         sizeCategory,
                         laneState
                 ));

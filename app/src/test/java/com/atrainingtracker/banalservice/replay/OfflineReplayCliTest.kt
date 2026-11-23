@@ -124,4 +124,52 @@ class OfflineReplayCliTest {
         assertEquals(2, exitMissingFile)
         assertTrue(errBuf2.toString(StandardCharsets.UTF_8.name()).contains("does not exist"))
     }
+
+    // REQ-EXP-047.3 / TST-EXP-047.3
+    @Test
+    fun cli_gnssProviderFlag_selectsAutoGpsFusedAndRejectsInvalidValue_TST_EXP_047_3() {
+        val phoneFile = OfflineTelemetryReplayHarnessTest.writeSyntheticPhoneRunningSidecar(
+            tempFolder.newFile("cli_provider_phone.phone_raw.csv.gz"),
+            durationSec = 25
+        )
+        val jsonAuto = File(tempFolder.root, "out/auto.json")
+        val jsonGps = File(tempFolder.root, "out/gps.json")
+        val jsonFused = File(tempFolder.root, "out/fused.json")
+
+        val exitAuto = OfflineReplayCli.runCli(
+            args = arrayOf("--phone", phoneFile.absolutePath, "--gnss-provider", "auto", "--json", jsonAuto.absolutePath),
+            out = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name()),
+            err = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name())
+        )
+        val exitGps = OfflineReplayCli.runCli(
+            args = arrayOf("--phone", phoneFile.absolutePath, "--gnss-provider", "gps", "--json", jsonGps.absolutePath),
+            out = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name()),
+            err = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name())
+        )
+        val exitFused = OfflineReplayCli.runCli(
+            args = arrayOf("--phone", phoneFile.absolutePath, "--gnss-provider", "fused", "--json", jsonFused.absolutePath),
+            out = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name()),
+            err = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name())
+        )
+
+        assertEquals(0, exitAuto)
+        assertEquals(0, exitGps)
+        assertEquals(0, exitFused)
+        assertEquals(jsonAuto.readText(), jsonGps.readText())
+        assertTrue(
+            "Fused-only CLI run on GPS-only sidecar must report 0.0000 distance",
+            jsonFused.readText().contains("\"ekfTotalDistanceM\":0.0000")
+        )
+
+        val errInvalid = ByteArrayOutputStream()
+        val exitInvalid = OfflineReplayCli.runCli(
+            args = arrayOf("--phone", phoneFile.absolutePath, "--gnss-provider", "bogus"),
+            out = PrintStream(ByteArrayOutputStream(), true, StandardCharsets.UTF_8.name()),
+            err = PrintStream(errInvalid, true, StandardCharsets.UTF_8.name())
+        )
+        val errText = errInvalid.toString(StandardCharsets.UTF_8.name())
+        assertEquals(2, exitInvalid)
+        assertTrue("Expected invalid provider diagnostic:\n$errText", errText.contains("Invalid --gnss-provider"))
+        assertTrue("Expected usage line to document --gnss-provider:\n$errText", errText.contains("--gnss-provider auto|gps|fused"))
+    }
 }

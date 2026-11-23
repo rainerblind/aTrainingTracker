@@ -428,4 +428,93 @@ class LiveSegmentsRepositoryTest {
         assertEquals(LiveSegmentStatus.FINISHED, finished.liveData.segmentStatus)
         assertNull("lastSegmentIndex must reset to null on segment finish", finished.math.lastSegmentIndex)
     }
+
+    @Test
+    fun testFarFarAwaySegments_zeroPerTickLogcatFlood_across60Segments() = runTest(testDispatcher) {
+        // Seed 60 saved segments ~450 km away from athlete location (REQ-LIV-006, TST-LIV-002)
+        val distantSegments = (1..60).map { idx ->
+            val latBase = 51.0 + idx * 0.01
+            sampleSegment.copy(
+                summary = sampleSegment.summary.copy(
+                    stravaId = 90000L + idx,
+                    name = "Distant Segment #$idx"
+                ),
+                path = listOf(
+                    PathPoint(distance = 0.0, latLng = LatLng(latBase, 10.0), altitude = 500.0),
+                    PathPoint(distance = 200.0, latLng = LatLng(latBase + 0.001, 10.0), altitude = 510.0),
+                    PathPoint(distance = 400.0, latLng = LatLng(latBase + 0.002, 10.0), altitude = 520.0),
+                    PathPoint(distance = 600.0, latLng = LatLng(latBase + 0.004, 10.0), altitude = 530.0),
+                    PathPoint(distance = 800.0, latLng = LatLng(latBase + 0.006, 10.0), altitude = 540.0),
+                    PathPoint(distance = 1000.0, latLng = LatLng(latBase + 0.008, 10.0), altitude = 550.0)
+                )
+            )
+        }
+        allSegmentsWithPathFlow.value = distantSegments
+        testScope.testScheduler.advanceUntilIdle()
+        assertEquals(60, repository.liveSegments.value.size)
+
+        // Simulate 20 consecutive 1-Hz GNSS ticks far away from all 60 segments
+        repeat(20) { tick ->
+            repository.updateLiveSegments(
+                currentLocation = LatLng(47.0 + tick * 0.0001, 10.0),
+                currentBearing = 0.0,
+                currentDistance = tick * 10.0
+            )
+        }
+
+        assertTrue(
+            "All 60 distant segments must remain FAR_FAR_AWAY",
+            repository.liveSegments.value.all { it.liveData.segmentStatus == LiveSegmentStatus.FAR_FAR_AWAY }
+        )
+        verify(exactly = 0) { Log.v(any<String>(), any<String>()) }
+        verify(exactly = 0) { Log.d(any<String>(), any<String>()) }
+        verify(exactly = 0) { Log.i(any<String>(), any<String>()) }
+        verify(exactly = 0) { Log.w(any<String>(), any<String>()) }
+        verify(exactly = 0) { Log.e(any<String>(), any<String>()) }
+    }
+
+    @Test
+    fun testStatusTransitions_logOnlyOnActualStatusChanges_neverOnSteadyStateTicks() = runTest(testDispatcher) {
+        allSegmentsWithPathFlow.value = listOf(sampleSegment)
+        testScope.testScheduler.advanceUntilIdle()
+
+        // 5 steady-state FAR_FAR_AWAY ticks -> 0 logs
+        repeat(5) { tick ->
+            repository.updateLiveSegments(LatLng(46.90 + tick * 0.0001, 10.0), currentBearing = 0.0, currentDistance = tick * 10.0)
+        }
+        verify(exactly = 0) { Log.i(any<String>(), any<String>()) }
+
+        // Transition 1: FAR_FAR_AWAY -> APPROACHING (+1 log), followed by 3 steady-state APPROACHING ticks (+0 logs)
+        repository.updateLiveSegments(LatLng(46.9990, 10.0), currentBearing = 0.0, currentDistance = 100.0)
+        repository.updateLiveSegments(LatLng(46.9992, 10.0), currentBearing = 0.0, currentDistance = 120.0)
+        repository.updateLiveSegments(LatLng(46.9994, 10.0), currentBearing = 0.0, currentDistance = 140.0)
+        repository.updateLiveSegments(LatLng(46.9996, 10.0), currentBearing = 0.0, currentDistance = 160.0)
+        assertEquals(LiveSegmentStatus.APPROACHING, repository.liveSegments.value.first().liveData.segmentStatus)
+        verify(exactly = 1) { Log.i(LiveSegmentsRepository.TAG, any<String>()) }
+
+        // Transition 2: APPROACHING -> ON_SEGMENT (+1 log), followed by 3 steady-state ON_SEGMENT ticks (>500m from end, +0 logs)
+        repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 210.0)
+        repository.updateLiveSegments(LatLng(47.0010, 10.0), currentBearing = 0.0, currentDistance = 310.0)
+        repository.updateLiveSegments(LatLng(47.0020, 10.0), currentBearing = 0.0, currentDistance = 420.0)
+        repository.updateLiveSegments(LatLng(47.0030, 10.0), currentBearing = 0.0, currentDistance = 530.0)
+        assertEquals(LiveSegmentStatus.ON_SEGMENT, repository.liveSegments.value.first().liveData.segmentStatus)
+        verify(exactly = 2) { Log.i(LiveSegmentsRepository.TAG, any<String>()) }
+
+        // Transition 3: ON_SEGMENT -> ON_SEGMENT_CLOSE_TO_FINISH (+1 log)
+        repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
+        assertEquals(LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH, repository.liveSegments.value.first().liveData.segmentStatus)
+        verify(exactly = 3) { Log.i(LiveSegmentsRepository.TAG, any<String>()) }
+
+        // Transition 4: ON_SEGMENT_CLOSE_TO_FINISH -> FINISHED (+1 log), followed by 2 steady-state FINISHED ticks (+0 logs)
+        repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
+        repository.updateLiveSegments(LatLng(47.0085, 10.0), currentBearing = 0.0, currentDistance = 1050.0)
+        repository.updateLiveSegments(LatLng(47.0088, 10.0), currentBearing = 0.0, currentDistance = 1080.0)
+        assertEquals(LiveSegmentStatus.FINISHED, repository.liveSegments.value.first().liveData.segmentStatus)
+        verify(exactly = 4) { Log.i(LiveSegmentsRepository.TAG, any<String>()) }
+
+        // Transition 5: FINISHED -> FAR_FAR_AWAY (+1 log)
+        repository.updateLiveSegments(LatLng(47.0110, 10.0), currentBearing = 0.0, currentDistance = 1350.0)
+        assertEquals(LiveSegmentStatus.FAR_FAR_AWAY, repository.liveSegments.value.first().liveData.segmentStatus)
+        verify(exactly = 5) { Log.i(LiveSegmentsRepository.TAG, any<String>()) }
+    }
 }

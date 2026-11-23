@@ -158,33 +158,42 @@ class BTLERadarDeviceTest {
         val heartbeat = byteArrayOf(0x08, 0x01, 0x02, 0x03)
         assertNull(BTLERadarDevice.parseV1ThreatPacket(heartbeat))
 
-        // Sector amplitude packet (header 0x02)
+        // Malformed sequence-framed packet (header 0x02, payload len 2 -> not 1 + 3*N)
         val sector = byteArrayOf(0x02, 0x10, 0x20)
         assertNull(BTLERadarDevice.parseV1ThreatPacket(sector))
 
-        // Malformed threat packet (not 1 + 3*N bytes)
-        val malformed = byteArrayOf(0x00, 0x01, 0x02)
-        assertNull(BTLERadarDevice.parseV1ThreatPacket(malformed))
+        // Decommissioned synthetic 0x00 header must be rejected (REQ-UI-2802 / ATT-8130)
+        val legacySyntheticClear = byteArrayOf(0x00)
+        assertNull(BTLERadarDevice.parseV1ThreatPacket(legacySyntheticClear))
+        val legacySyntheticThreat = byteArrayOf(0x00, 0x01, 60.toByte(), 0x15.toByte())
+        assertNull(BTLERadarDevice.parseV1ThreatPacket(legacySyntheticThreat))
     }
 
     @Test
     fun testParseV1ThreatPacket_decodesMultiTargetFrame() {
-        // Clear frame (0 targets): header 0x00
-        val clearFrame = byteArrayOf(0x00)
+        // Authentic 1-byte V1 clear/heartbeat frame: sequence header 0x12 (low nibble 0x02)
+        val clearFrame = byteArrayOf(0x12)
         val clearTargets = BTLERadarDevice.parseV1ThreatPacket(clearFrame)
         assertNotNull(clearTargets)
         assertTrue(clearTargets!!.isEmpty())
 
-        // 2 targets:
-        // Target 0: ID=1, Range=60m, SpeedAndThreat=0x15 (threatBits=1 -> APPROACHING, speed=5 mps)
-        // Target 1: ID=2, Range=25m, SpeedAndThreat=0x29 (threatBits=2 -> FAST_APPROACHING, speed=9 mps)
-        val payload = byteArrayOf(
-            0x00,
-            0x01, 60.toByte(), 0x15.toByte(),
-            0x02, 25.toByte(), 0x29.toByte()
+        // Authentic V1 sequence-framed multi-target packet with track history closing speed:
+        // Frame 1 at t=1000ms: Target 1 @ 65m (vid=0x81), Target 2 @ 45m (vid=0x82)
+        // Frame 2 at t=2000ms: Target 1 @ 60m (closing 5 m/s -> APPROACHING), Target 2 @ 25m (closing 20 m/s -> FAST_APPROACHING)
+        val history = mutableMapOf<Int, BTLERadarDevice.TrackState>()
+        val frame1 = byteArrayOf(
+            0x12,
+            0x81.toByte(), 65.toByte(), 0x00,
+            0x82.toByte(), 45.toByte(), 0x00
         )
+        assertEquals(2, BTLERadarDevice.parseV1ThreatPacket(frame1, history, 1000L)!!.size)
 
-        val targets = BTLERadarDevice.parseV1ThreatPacket(payload)
+        val frame2 = byteArrayOf(
+            0x22,
+            0x81.toByte(), 60.toByte(), 0x00,
+            0x82.toByte(), 25.toByte(), 0x00
+        )
+        val targets = BTLERadarDevice.parseV1ThreatPacket(frame2, history, 2000L)
         assertNotNull(targets)
         assertEquals(2, targets!!.size)
 
@@ -197,7 +206,7 @@ class BTLERadarDeviceTest {
         val t1 = targets[1]
         assertEquals(2, t1.targetId)
         assertEquals(25.0f, t1.rangeMeters, 0.001f)
-        assertEquals(9.0f, t1.approachSpeedMps, 0.001f)
+        assertEquals(20.0f, t1.approachSpeedMps, 0.001f)
         assertEquals(ThreatLevel.FAST_APPROACHING, t1.threatLevel)
     }
 
@@ -303,39 +312,67 @@ class BTLERadarDeviceTest {
         assertNull(BTLERadarDevice.parseV2ThreatPacket(null))
         assertNull(BTLERadarDevice.parseV2ThreatPacket(byteArrayOf()))
 
-        // Wrong header (0x00 is V1, not V2)
+        // Decommissioned synthetic 1-byte clear (0x01) and 1 + 8*N frames must be rejected (REQ-UI-2802 / ATT-8130)
+        assertNull(BTLERadarDevice.parseV2ThreatPacket(byteArrayOf(0x01)))
+        assertNull(
+            BTLERadarDevice.parseV2ThreatPacket(
+                byteArrayOf(0x01, 0x01, 0x76.toByte(), 0x06, 0x96.toByte(), 0x00, 0xEB.toByte(), 0xFF.toByte(), 0x0A)
+            )
+        )
+
+        // Malformed payload (not 2-byte heartbeat, 5/6-byte status, or 2 + 9*N)
         val v1Header = byteArrayOf(0x00, 0x01, 0x02)
         assertNull(BTLERadarDevice.parseV2ThreatPacket(v1Header))
 
-        // Heartbeat / status packet (header 0x08)
         val heartbeat = byteArrayOf(0x08, 0x01, 0x02, 0x03)
         assertNull(BTLERadarDevice.parseV2ThreatPacket(heartbeat))
 
-        // Malformed threat packet (not 1 + 8*N bytes)
-        val malformed = byteArrayOf(0x01, 0x01, 0x02, 0x03)
+        val malformed = byteArrayOf(0x02, 0x00, 0x01, 0x02, 0x03)
         assertNull(BTLERadarDevice.parseV2ThreatPacket(malformed))
+    }
+
+    private fun encodeRearVueV2Target(
+        targetId: Int,
+        targetClass: Int,
+        rangeMeters: Float,
+        lateralMeters: Float,
+        lengthMeters: Float,
+        widthMeters: Float,
+        approachSpeedMps: Float,
+        lateralSpeedMps: Float? = null
+    ): ByteArray {
+        val latDm = Math.round(lateralMeters * 10.0f) and 0x7FF
+        val rangeDm = Math.round(rangeMeters * 10.0f) and 0x1FFF
+        val packed = latDm or (rangeDm shl 11)
+        val speedYByte = (-Math.round(approachSpeedMps * 2.0f)).toByte()
+        val speedXByte = if (lateralSpeedMps == null) 0x80.toByte() else Math.round(lateralSpeedMps * 2.0f).toByte()
+        return byteArrayOf(
+            targetId.toByte(),
+            targetClass.toByte(),
+            (packed and 0xFF).toByte(),
+            ((packed shr 8) and 0xFF).toByte(),
+            ((packed shr 16) and 0xFF).toByte(),
+            Math.round(lengthMeters * 4.0f).toByte(),
+            Math.round(widthMeters * 4.0f).toByte(),
+            speedYByte,
+            speedXByte
+        )
     }
 
     @Test
     fun testParseV2ThreatPacket_decodesMultiTargetFrameWithLateralOffsetAndSize() {
-        // Clear frame (0 targets): header 0x01
-        val clearFrame = byteArrayOf(0x01)
+        // Authentic RearVue 820 2-byte idle heartbeat (0 targets)
+        val clearFrame = byteArrayOf(0x02, 0x00)
         val clearTargets = BTLERadarDevice.parseV2ThreatPacket(clearFrame)
         assertNotNull(clearTargets)
         assertTrue(clearTargets!!.isEmpty())
 
-        // 2 targets:
-        // Target 0: ID=1, Range=165.4m (1654 -> low=0x76, high=0x06), Speed=15.0 m/s (150 -> low=0x96, high=0x00),
-        //           Lateral=-2.1m (-21 -> low=0xEB, high=0xFF), sizeAndThreat=0x0A (threat=2 FAST_APPROACHING, size=2 TRUCK_OR_BUS, lane=0)
-        // Target 1: ID=2, Range=35.0m (350 -> low=0x5E, high=0x01), Speed=10.0 m/s (100 -> low=0x64, high=0x00),
-        //           Lateral=-1.8m (-18 -> low=0xEE, high=0xFF), sizeAndThreat=0x35 (threat=1 APPROACHING, size=1 CAR, lane=3 PASSING_LANE)
-        val payload = byteArrayOf(
-            0x01,
-            // Target 0
-            0x01, 0x76.toByte(), 0x06.toByte(), 0x96.toByte(), 0x00.toByte(), 0xEB.toByte(), 0xFF.toByte(), 0x0A.toByte(),
-            // Target 1
-            0x02, 0x5E.toByte(), 0x01.toByte(), 0x64.toByte(), 0x00.toByte(), 0xEE.toByte(), 0xFF.toByte(), 0x35.toByte()
-        )
+        // Authentic RearVue 820 2 + 2*9 byte multi-target frame:
+        // Target 0: ID=1, LARGE(36 -> TRUCK_OR_BUS), Range=165.4m, Lateral=-2.5m (PASSING_LANE), Approach=15.0 m/s (FAST_APPROACHING)
+        // Target 1: ID=2, MODERATE(26 -> CAR), Range=35.0m, Lateral=-1.8m (CHANGING_LANE), Approach=10.0 m/s (APPROACHING)
+        val payload = byteArrayOf(0x02, 0x00) +
+            encodeRearVueV2Target(1, 36, 165.4f, -2.5f, 8.0f, 2.5f, 15.0f) +
+            encodeRearVueV2Target(2, 26, 35.0f, -1.8f, 4.5f, 2.0f, 10.0f)
 
         val targets = BTLERadarDevice.parseV2ThreatPacket(payload)
         assertNotNull(targets)
@@ -343,21 +380,21 @@ class BTLERadarDeviceTest {
 
         val t0 = targets[0]
         assertEquals(1, t0.targetId)
-        assertEquals(165.4f, t0.rangeMeters, 0.001f)
-        assertEquals(15.0f, t0.approachSpeedMps, 0.001f)
+        assertEquals(165.4f, t0.rangeMeters, 0.05f)
+        assertEquals(15.0f, t0.approachSpeedMps, 0.05f)
         assertEquals(ThreatLevel.FAST_APPROACHING, t0.threatLevel)
-        assertEquals(-2.1f, t0.lateralOffsetMeters!!, 0.001f)
+        assertEquals(-2.5f, t0.lateralOffsetMeters!!, 0.05f)
         assertEquals(VehicleSizeCategory.TRUCK_OR_BUS, t0.vehicleSizeCategory)
-        assertEquals(LaneState.UNKNOWN, t0.laneState)
+        assertEquals(LaneState.PASSING_LANE, t0.laneState)
 
         val t1 = targets[1]
         assertEquals(2, t1.targetId)
-        assertEquals(35.0f, t1.rangeMeters, 0.001f)
-        assertEquals(10.0f, t1.approachSpeedMps, 0.001f)
+        assertEquals(35.0f, t1.rangeMeters, 0.05f)
+        assertEquals(10.0f, t1.approachSpeedMps, 0.05f)
         assertEquals(ThreatLevel.APPROACHING, t1.threatLevel)
-        assertEquals(-1.8f, t1.lateralOffsetMeters!!, 0.001f)
+        assertEquals(-1.8f, t1.lateralOffsetMeters!!, 0.05f)
         assertEquals(VehicleSizeCategory.CAR, t1.vehicleSizeCategory)
-        assertEquals(LaneState.PASSING_LANE, t1.laneState)
+        assertEquals(LaneState.CHANGING_LANE, t1.laneState)
     }
 
     @Test
@@ -632,9 +669,9 @@ class BTLERadarDeviceTest {
 
         val v1Char = mockk<BluetoothGattCharacteristic>()
         every { v1Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
-        // V1 payload with 1 target (4 bytes: header 0x00, targetId 1, range 60m, speedAndThreat 0x15)
+        // Authentic Varia V1 sequence-framed payload with 1 target (header 0x12, vid 0x81 -> trackId 1, range 60m)
         every { v1Char.value } returns byteArrayOf(
-            0x00.toByte(), 0x01.toByte(), 60.toByte(), 0x15.toByte()
+            0x12.toByte(), 0x81.toByte(), 60.toByte(), 0x00.toByte()
         )
 
         val mockGatt = mockk<BluetoothGatt>(relaxed = true)

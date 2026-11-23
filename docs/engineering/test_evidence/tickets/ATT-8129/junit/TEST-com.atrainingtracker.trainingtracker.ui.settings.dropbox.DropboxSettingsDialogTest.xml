@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:47:37.135Z" hostname="rainer-HP-EliteBook-850-G5" time="2.249">
+  <properties/>
+  <testcase name="testFindActivity_withNonActivityContext_returnsNull" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.706"/>
+  <testcase name="testDropboxSettingsDialogFragment_isEliminatedForPureComposeSingleAuthority" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.169"/>
+  <testcase name="testFindActivity_withDeeplyNestedContextWrappers_unwrapsActivity" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.169"/>
+  <testcase name="testFindActivity_withDirectActivity_returnsActivity" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.184"/>
+  <testcase name="testBackupIntervalPersistence_updatesSharedPreferences" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.146"/>
+  <testcase name="testGranularDropboxPreferences_commitAndReadBack" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.151"/>
+  <testcase name="testFindActivity_withContextThemeWrapper_unwrapsActivity" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.129"/>
+  <testcase name="testSingleAuthorityCredentialCapture_persistsCredentialAndEnablesUpload" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.451"/>
+  <testcase name="testFindActivity_withSingleContextWrapper_unwrapsActivity" classname="com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogTest" time="0.143"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -70,6 +70,10 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         const val ZUPT_SPEED_VARIANCE = 2.0
         const val GNSS_OUTAGE_RECOVERY_GAP_MS = 15_000L
         const val GNSS_CLUSTER_MAX_STEP_GAP_MS = 5_000L
+        /** GNSS/moving gap threshold arming post-pause position-velocity decoupling (REQ-FIL-041.2). */
+        const val POST_PAUSE_DECOUPLE_GAP_MS = 5_000L
+        /** Accepted moving GNSS fixes decoupled after pause, outage, or standstill (REQ-FIL-041.2). */
+        const val POST_PAUSE_DECOUPLE_FIXES = 3
         /** Hard drop-oldest snapshot capacity ceiling preventing unbounded heap growth (`REQ-STB-023.1`). */
         const val MAX_SNAPSHOTS = 4096
 
@@ -109,7 +113,15 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
     }
 
     private var currentTimestampMs: Long = 0L
+
+    private fun advanceTimestamp(timestampMs: Long) {
+        if (timestampMs > currentTimestampMs) {
+            currentTimestampMs = timestampMs
+        }
+    }
     private var lastAcceptedGnssTimestampMs: Long = 0L
+    private var lastAcceptedMovingGnssTimestampMs: Long = 0L
+    private var postPauseDecoupleRemainingFixes: Int = 0
     private var lastAcceptedGnssAccuracyMeters: Double = Double.POSITIVE_INFINITY
     private var consecutiveStationaryOutliers: Int = 0
     private var lastStationaryOutlierEast: Double = 0.0
@@ -186,7 +198,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         isStationary: Boolean = false
     ) {
         if (dtSec <= 0.0) return
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         lastDtSec = dtSec
 
         // 1. Save prior state and covariance for snapshot
@@ -287,7 +299,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
      */
     fun updateSpeed(speedMps: Double, variance: Double, timestampMs: Long = currentTimestampMs): Boolean {
         if (!speedMps.isFinite() || !variance.isFinite() || variance <= 0.0) return false
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
 
         val innovation = speedMps - x[2]
         val sBase = p[2][2] + variance
@@ -364,9 +376,10 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
      * spikes into [speedMps] (REQ-FIL-023.1, ATT-8576).
      */
     fun applyZeroVelocityUpdate(timestampMs: Long = currentTimestampMs) {
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         x[2] = 0.0
         p[2][2] = max(p[2][2], ZUPT_SPEED_VARIANCE)
+        postPauseDecoupleRemainingFixes = POST_PAUSE_DECOUPLE_FIXES
         decoupleVelocityCovariance(p)
         symmetrizeCovariance()
         commitSnapshot()
@@ -387,6 +400,8 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
 
     private fun resetGnssTrackingState() {
         lastAcceptedGnssTimestampMs = 0L
+        lastAcceptedMovingGnssTimestampMs = 0L
+        postPauseDecoupleRemainingFixes = 0
         lastAcceptedGnssAccuracyMeters = Double.POSITIVE_INFINITY
         consecutiveStationaryOutliers = 0
         lastStationaryOutlierEast = 0.0
@@ -432,16 +447,33 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         decoupleVelocity: Boolean = false
     ): Boolean {
         stationaryClusterSnapped = false
+        if (isStationary) {
+            // Arm post-standstill velocity decoupling before accuracy-gate / stationary early returns (REQ-FIL-041.2)
+            postPauseDecoupleRemainingFixes = POST_PAUSE_DECOUPLE_FIXES
+        }
         if (accuracyMeters <= 0.0 || accuracyMeters > MAX_GNSS_ACCURACY_METERS) {
             return false
         }
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         var decoupleSpeedUpdate = isStationary || decoupleVelocity
 
         val outageMs = if (lastAcceptedGnssTimestampMs > 0L && timestampMs >= lastAcceptedGnssTimestampMs) {
             timestampMs - lastAcceptedGnssTimestampMs
         } else {
             0L
+        }
+        if (!isStationary) {
+            val movingGapMs = if (lastAcceptedMovingGnssTimestampMs > 0L && timestampMs >= lastAcceptedMovingGnssTimestampMs) {
+                timestampMs - lastAcceptedMovingGnssTimestampMs
+            } else {
+                0L
+            }
+            if (outageMs >= POST_PAUSE_DECOUPLE_GAP_MS || movingGapMs >= POST_PAUSE_DECOUPLE_GAP_MS) {
+                postPauseDecoupleRemainingFixes = POST_PAUSE_DECOUPLE_FIXES
+            }
+            if (postPauseDecoupleRemainingFixes > 0) {
+                decoupleSpeedUpdate = true
+            }
         }
 
         // Innovation y = z - H*x where H = [1 0 0 0 0; 0 1 0 0 0]
@@ -625,6 +657,12 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         if (consecutiveMovingOutliers == 0) {
             lastAcceptedGnssTimestampMs = timestampMs
             lastAcceptedGnssAccuracyMeters = accuracyMeters
+            if (!isStationary) {
+                lastAcceptedMovingGnssTimestampMs = timestampMs
+                if (postPauseDecoupleRemainingFixes > 0) {
+                    postPauseDecoupleRemainingFixes--
+                }
+            }
         }
         symmetrizeCovariance()
         commitSnapshot()
@@ -666,7 +704,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         if (!headingRad.isFinite() || !varianceRad.isFinite() || varianceRad <= 0.0) {
             return false
         }
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
         x[3] = normalizeAngle(headingRad)
         for (idx in 0 until STATE_DIM) {
             if (idx != 3) {
@@ -704,7 +742,7 @@ class UnicycleOdometryEkf @JvmOverloads constructor(
         if (!headingRad.isFinite() || varianceRad <= 0.0 || !varianceRad.isFinite()) {
             return false
         }
-        currentTimestampMs = timestampMs
+        advanceTimestamp(timestampMs)
 
         val innovation = normalizeAngle(headingRad - x[3])
         val s = p[3][3] + varianceRad

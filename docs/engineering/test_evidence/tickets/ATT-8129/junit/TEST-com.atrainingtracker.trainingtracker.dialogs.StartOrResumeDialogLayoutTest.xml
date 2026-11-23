@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:46:58.795Z" hostname="rainer-HP-EliteBook-850-G5" time="14.166">
+  <properties/>
+  <testcase name="testStartOrResumeAlertDialog_german360dp_1_3x_stackedFullWidthNoTruncation" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest" time="13.047"/>
+  <testcase name="testStartOrResumeDialog_allKillReasonsRenderContextualTitleAndActions" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest" time="0.361"/>
+  <testcase name="testKillDiagnosis_allStateCombinationsInstantiable" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest" time="0.148"/>
+  <testcase name="testRecoveryAndGpsDialogs_9LanguageLocalizationParity" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest" time="0.355"/>
+  <testcase name="testStartOrResumeAlertDialog_german360dp_1_0x_stackedFullWidthNoTruncation" classname="com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialogLayoutTest" time="0.255"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

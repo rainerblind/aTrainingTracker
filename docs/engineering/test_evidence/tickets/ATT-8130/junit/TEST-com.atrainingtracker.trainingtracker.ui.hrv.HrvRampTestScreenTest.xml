@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-22T23:47:34.491Z" hostname="rainer-HP-EliteBook-850-G5" time="0.22">
+  <properties/>
+  <testcase name="testRule81HostNavigationMountingInATrainingTrackerApp_TST_TRK_072_5" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" time="0.067"/>
+  <testcase name="testRule81HostNavigationMountingInAthleteProfileScreen_TST_TRK_072_5" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" time="0.084"/>
+  <testcase name="testRequiredTestTagsPresentInHrvRampTestScreen_TST_TRK_072_5" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" time="0.052"/>
+  <testcase name="testConsolidatedLauncherNavigationAndCleanScreen_TST_TRK_072_9" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" time="0.006"/>
+  <testcase name="testStringKeysPresenceInHrvStringsXml_TST_TRK_072_6" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" time="0.01"/>
+  <testcase name="testHrvRampTestScreenComposableContract_TST_TRK_072_5" classname="com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreenTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

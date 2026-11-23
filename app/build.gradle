@@ -244,7 +244,6 @@ dependencies {
     implementation "com.google.accompanist:accompanist-drawablepainter:0.37.3"
 
     // --- Legacy & Hardware SDKs ---
-    implementation 'com.getpebble:pebblekit:4.0.1'
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
     implementation files('../ANT-Android-SDKs/ANT_Android_SDK/API/android_antlib_4-16-0.aar')
     implementation 'com.github.polarofficial:polar-ble-sdk:8.6.0'
@@ -428,6 +427,7 @@ afterEvaluate {
             if (project.hasProperty("csvOut")) { cliArgs.addAll(["--csv", project.property("csvOut").toString()]) }
             if (project.hasProperty("jsonOut")) { cliArgs.addAll(["--json", project.property("jsonOut").toString()]) }
             if (project.hasProperty("truth")) { cliArgs.addAll(["--truth", project.property("truth").toString()]) }
+            if (project.hasProperty("gnssProvider")) { cliArgs.addAll(["--gnss-provider", project.property("gnssProvider").toString()]) }
             if (!cliArgs.isEmpty()) {
                 args(cliArgs)
             }

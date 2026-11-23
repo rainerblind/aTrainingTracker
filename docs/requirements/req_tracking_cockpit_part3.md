@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.7  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 42
+**Total Requirements**: 45
 
 ---
 
@@ -1488,6 +1488,92 @@
 
 ---
 
+### REQ-FIL-040: Self-Adapting Intra-Bucket Barometer Dispersion Variance, 3-State Startup Calibration Grace & ERTS Low-Speed Braking Slope Stability (`ATT-9602`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-040`
+- **System Requirement(s)**: `SYSREQ-TRK-008` — Refines live barometric pressure & EKF altitude/slope fusion (`REQ-FIL-026`, `REQ-FIL-022.3`, `REQ-FIL-033.1`, `REQ-FIL-037.2`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BarometricBucketDispersion.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkf.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Real-world Pixel 10 pocket-cycling telemetry (`2026-11-22_081402.phone_raw.csv.gz`) exposed three altitude-fusion defects: (1) asymmetric `~0.92 Hz` pocket-compression pressure waves (`70–88 m` peak-to-peak) beat against fixed 1-Hz baro buckets (`+6..+12 m` monotonic median bias invisible to sign-reversal jitter detection), inflating live `att_fused_altitude_slope` by `+6.74 m` / `+10%` on flat ground and doubling ascent/descent (`33.6 m` vs `18.8 m` ERTS), while also tripping `computeStepGatedRefVariance()` to veto true flat DEM; (2) uncalibrated `1013.25 hPa` standard-atmosphere altitude is emitted on `rows 0..1` before DEM/GPS lock at `row 2` (`470.9 -> 435.0 m` cliff); and (3) ERTS `SLOPE` plunges to `-11%` during flat-ground end-of-ride braking (`5.5 -> 0.6 m/s`) when pocket decompression pulls baro `-2.07 m` below flat DEM (`ATT-9602`).
+- **Description**:
+  1. *Self-Adapting Intra-Bucket Barometer Dispersion & Multi-Second Anti-Aliasing (`REQ-FIL-040.1`)*:
+     - Pure-Kotlin `BarometricBucketDispersion` SHALL measure intra-bucket physical dispersion (`IQR = Q3 - Q1` for `size >= 4`, `0.5 * (max - min)` for `size in 2..3`, `0.0` for `size < 2`) against a speed-aware physical elevation allowance `physicalSpan = max(2.5, 0.20 * max(0.0, speedMps))`.
+     - When `excessSpread = max(0.0, spread - physicalSpan) == 0.0` (handlebar mounts, calm pockets, and real `8–12%` climbs or fast alpine descents with `span <= 2 m`), `dispersionVarM2` SHALL remain `0.0` and the exact 1-Hz bucket median SHALL be emitted with zero added lag (passing speed-coupled slew `speedMps = speed` to `baroFilter.filterSlewOnly()`).
+     - When `excessSpread > 0.0` (severe pocket compression / wind buffeting), `BarometricBucketDispersion` SHALL inflate `dispersionVarM2` immediately (`min(2500.0, 2.0 * excessSpread^2)`) with exponential decay (`0.65` retention) on recovery, emit the interquartile trimmed mean across a bounded rolling `3,000 ms` raw sample window (`<= 128` samples, spanning `>= 2–3` pedal cycles), keep `baroFilter.filterSlewOnly()` at tight base slew (`speedMps = 0.0`), and feed `varBaro = mEffectiveRBaro + dispersionVarM2` into `KinematicAltitudeSlopeEkf.updateBarometer()`.
+  2. *Corrupted-Barometer DEM Step-Gate Protection (`REQ-FIL-040.2`)*:
+     - `KinematicAltitudeSlopeEkf` SHALL track `lastBaroVarM2` (updated across all `updateBarometer()` paths using raw finite positive `varBaro`, reset in `reset()`/`reanchorOnResume()`/`setMode()`) and apply baro-vs-ref step-discrepancy gating in `computeStepGatedRefVariance()` and DEM-to-slope decoupling (`k1Eff = 0`) ONLY when `lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD` (`16.0 m²`), clearing `lastRefBaroAltM = NaN` while untrusted so a dispersion-corrupted pocket barometer neither vetoes flat DEM/GPS anchoring nor locks a stale slope bias while preserving 100% of `REQ-FIL-037` whenever the barometer is healthy (`varBaro <= 16.0 m²`).
+  3. *3-State Startup Calibration Grace Guard (`REQ-FIL-040.3`)*:
+     - `AltitudeAndSlopeDevice_ATTFused` SHALL record `mFirstBaroTimestampMs` on initial barometer ingestion (cleared in `shutDown()`) and defer publishing `mAltitudeSensor` / `mSlopeSensor` / `mVerticalSpeedSensor` / `mAscentSensor` / `mDescentSensor` for up to `STARTUP_REFERENCE_GRACE_MS = 5_000L` strictly when `ekf.is3StateMode && !ekf.hasReferenceAnchor` (`ekf.isInitialized` MUST still become `true` immediately on sample #1).
+     - Upon arrival of a DEM/GPS reference within the grace window, calibrated altitude SHALL be emitted immediately with zero startup cliff and `0.0 m` phantom ascent/descent; if no reference arrives within `5 s` (offline/indoor), publication SHALL fall back seamlessly to barometer altitude (preserving `REQ-FIL-022.3` zero bogus descent on later DEM lock), while 2-State mode (`!is3StateMode`) and `reanchorOnResume()` MUST continue publishing immediately (`0 ms` delay).
+  4. *ERTS Low-Speed Braking Slope Stability (`REQ-FIL-040.4`)*:
+     - `ExtendedRtsAltitudeSlopeSmoother` SHALL preserve `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` and `lowSpeedSlopeGainFactor()` unchanged (`TST-FIL-033.1`), while detecting active deceleration (`dv/dt <= -0.25 m/s²` with a `4.0 s` low-speed braking hold below `2.5 m/s`): during braking, inflate `effectiveVarBaro` (`8.0×` with DEM/GPS reference, `4.0×` without reference below `2.5 m/s`) and smoothly damp low-speed braking slope updates & curvature (`qgVal` & baro `k1` scaled by `(speedMps / 2.5)^2` below `2.5 m/s`) so flat-ground braking (`5.5 -> 0.6 m/s`) avoids `-11%` grade plunges while steady-speed climbs/descents and genuine downhill braking remain accurate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* raw `~13 Hz` barometer telemetry with a `70–88 m` asymmetric `~0.92 Hz` pocket-compression wave on a flat `436–438 m` road (`t = 25..65 s`, `DEM = 436..438 m`, `speed = 5.5 m/s`, `QNH +34 m`) and a full-workout loop with pocket waves + genuine climbs/descents, *When* `AltitudeAndSlopeDevice_ATTFused` processes the stream, *Then* live fused `ALTITUDE` stays within `<= 2.0 m` of true elevation (no `+6.7 m` / `+10%` phantom climb) and full-workout live `ASCENT`/`DESCENT` stay within `<= 20%` of ERTS / true gain.
+• *Given* a cyclist climbing or descending a real `8–12%` alpine grade on a handlebar mount or calm pocket (`intra-bucket span <= 2 m`), *When* `AltitudeAndSlopeDevice_ATTFused` processes the stream, *Then* `dispersionVarM2` remains `0.0` (`varBaro` uninflated) and live altitude & slope % track the true grade promptly with zero added lag.
+• *Given* a 3-State workout starting outdoors with `+35 m` QNH offset and DEM/GPS arriving at `t = 1–2 s`, *When* the first `5 s` of samples are recorded, *Then* `ALTITUDE` does not emit a `470.9 -> 435.0 m` (`-35.7 m`) cliff or inject phantom ascent/descent; *When* completely offline for `>= 5 s`, *Then* it falls back gracefully to baro altitude; *When* in 2-State mode, *Then* it publishes immediately on sample #1.
+• *Given* a flat-road `15 s` braking segment (`5.5 -> 0.6 m/s`, `DEM = 438 m`, `BARO` dropping `-2.0 m` on pocket decompression), *When* `ExtendedRtsAltitudeSlopeSmoother.smooth()` runs, *Then* smoothed `SLOPE` stays within realistic flat-road bounds (`|SLOPE| <= 4%`, no `-11%` plunge) while steady climbs/descents remain unaffected.
+
+**Invariants**: `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` unchanged; `REQ-FIL-037` DEM jump gating unchanged when `varBaro <= 16.0 m²`; `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` & `lowSpeedSlopeGainFactor()` unchanged (`TST-FIL-033.1`); `ekf.isInitialized == true` on sample #1; `REQ-FIL-022.3` `0.0 m` bogus descent on late DEM lock preserved; all modified files `<= 1,500` LoC (`0` protected monolith edits); `0` SQLite/UI/`strings*.xml` changes (`Localization Parity: N/A`).
+
+### REQ-FIL-041: Immediate Zero-Speed Publication on Stationary Rejected GNSS Fixes & Post-Pause Velocity Spike Bounding (`ATT-9601`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-041`
+- **System Requirement(s)**: `SYSREQ-TRK-010` — Refines smartphone fused odometry speed publication and post-pause position-velocity decoupling (`REQ-FIL-023.1`, `REQ-FIL-036.2`, `REQ-TRK-056.2`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SpeedAndLocationDevice.java`, `UnicycleOdometryEkf.kt`, `SpeedAndLocationDevice_ATTFused.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Real-world indoor-stop cycling telemetry (`2026-11-22_081402`) revealed two defects in `SpeedAndLocationDevice_ATTFused`: (1) when entering an indoor stop with coarse GNSS accuracy (`acc = 45.9 m > MAX_GNSS_ACCURACY_METERS`), `onLocationChanged()` rejected the fix and returned early without publishing `0.0 m/s` to `mSpeedSensor` / `null` to `mPaceSensor`, freezing `1.536 m/s` for `14 s` until the `10 s` watchdog decayed it; and (2) upon exiting after a `159 s` stop (`row 228 -> row 229`, `+19.1 m` coordinate snap, Doppler `3.51 m/s`), both un-decoupled EKF post-pause `P[pos, v]` cross-covariance and `SpeedAndLocationDevice.java`'s `rawSpeed < 0.2 * calcSpeed` geometric override (`(2.61 + 19.09)/2 = 10.85 m/s`) spiked live speed to `39.1 km/h` (`ATT-9601`).
+- **Description**:
+  1. *Immediate Stationary Zero-Speed Publication (`REQ-FIL-041.1`)*:
+     - `SpeedAndLocationDevice` SHALL expose `protected synchronized void publishStationaryZeroSpeed()` cancelling pending watchdog decay, setting `mIsDecaying = false` and `mSpeed = 0.0`, publishing `0.0` to `mSpeedSensor` and `null` to `mPaceSensor`, while leaving pinned coordinates, `mStationaryAnchor`, `mPrevLocation`, and distance accumulators strictly unchanged (`+0.0 m`).
+     - `SpeedAndLocationDevice_ATTFused.onLocationChanged()` SHALL invoke `publishStationaryZeroSpeed()` strictly outside `synchronized(ekf)` (preserving `this -> ekf` lock ordering) before returning early when `!gnssAccepted && (isStationary || fusedSpeed <= SPEED_ZERO_THRESHOLD)` (including pre-anchor coarse stationary fixes).
+  2. *Post-Pause & Post-Standstill EKF Position-Velocity Decoupling (`REQ-FIL-041.2`)*:
+     - `UnicycleOdometryEkf` SHALL track `lastAcceptedMovingGnssTimestampMs` and `postPauseDecoupleRemainingFixes` (cleared in `resetGnssTrackingState()`). Executing `applyZeroVelocityUpdate()`, receiving a stationary GNSS fix (`isStationary == true`), or observing a `>= POST_PAUSE_DECOUPLE_GAP_MS` (`5_000L` ms) GNSS or moving-GNSS gap SHALL arm `postPauseDecoupleRemainingFixes = POST_PAUSE_DECOUPLE_FIXES` (`3`).
+     - While `postPauseDecoupleRemainingFixes > 0` on moving GNSS updates (`!isStationary`), `updateGnssPosition()` SHALL decouple position-to-velocity gain (`k[2][0] = k[2][1] = 0.0`) and zero velocity cross-covariances (`decoupleVelocityCovariance(pNew)`), decrementing strictly on accepted moving inliers (`consecutiveMovingOutliers == 0`) without throttling `updateSpeed()` (Doppler or wheel).
+  3. *Fused-Speed Trust Hook & `REQ-TRK-056.2` Preservation (`REQ-FIL-041.3`)*:
+     - `SpeedAndLocationDevice` SHALL expose `protected boolean trustsFusedLocationSpeed() { return false; }`, keeping `REQ-TRK-056.2` (`rawSpeed < 0.2 * calcSpeed` geometric fallback) 100% unchanged for `SpeedAndLocationDevice_GPS` and `SpeedAndLocationDevice_GoogleFused`. `SpeedAndLocationDevice_ATTFused` SHALL override `trustsFusedLocationSpeed()` to return `true` so `onNewLocation()` preserves EKF-fused positive `rawSpeed` across post-pause coordinate snaps while keeping `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice_ATTFused` moving at `1.54 m/s` entering an indoor stop (`acc = 45.9 m > 20 m`, `PhoneCarriageMode.STATIONARY`), *When* `onLocationChanged()` rejects the coarse fix with `isStationary == true`, *Then* `mSpeedSensor` immediately publishes `0.0 m/s` and `mPaceSensor` `null` on that tick while pinned coordinates and cumulative distance remain unchanged (`+0.0 m`).
+• *Given* a workout resuming after a `159 s` indoor stop with a `+19.1 m` outdoor snap (`acc = 11.73 m`, Doppler `3.51 m/s`), *When* `SpeedAndLocationDevice_ATTFused` processes the first post-pause fixes, *Then* `SPEED_mps_att_fused` stays within `<= 1.5 m/s` of `3.51 m/s` and does NOT spike to `10.85 m/s`.
+• *Given* a cyclist accelerating legitimately from standstill to `9.0 m/s` with valid outdoor GNSS (`acc <= 10 m`, Doppler `9.0 m/s`) or active wheel sensor, *When* `SpeedAndLocationDevice_ATTFused` processes the start, *Then* `SPEED_mps_att_fused` tracks `9.0 m/s` promptly without clamping or added lag.
+
+**Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC; strict `this -> ekf` lock order; `REQ-TRK-056.2` untouched for `GPS` & `GoogleFused`; `MIN_DOPPLER_SPEED_MPS = 3.0`, `ZUPT_SPEED_VARIANCE = 2.0`, `MAX_GNSS_ACCURACY_METERS = 20.0`, `coldStartHelper`, and `ExtendedRtsOdometrySmoother` preserved; `0` DB/UI/`strings*.xml` changes (`Localization Parity: N/A`).
+
+### REQ-FIL-042: Unified Monotonic `elapsedRealtime` Clock Domain Across GNSS, IMU & Wheel Streams in `SpeedAndLocationDevice_ATTFused` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-042`
+- **System Requirement(s)**: `SYSREQ-TRK-010` — Refines smartphone IMU kinematics, carriage classification & fused odometry clock-domain coherence (`REQ-FIL-028.1`/`.3`, `REQ-FIL-029.3`, `REQ-FIL-031.1`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AttFusedTimestampNormalizer.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `PhoneCarriageClassifier.kt`, `UnicycleOdometryEkf.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Sidecar telemetry from Pixel 10 workout `2026-11-22_081402` (`Zum Bäcker #60`, `workoutID = 2428`) revealed a `~2.18 s` offset between GPS `Location.getTime()` and `System.currentTimeMillis()` at matching `CLOCK_BOOTTIME` (`elapsedRealtimeNs`). Passing `location.time` into `PhoneCarriageClassifier` and `UnicycleOdometryEkf` while IMU/baro/step/wheel callbacks used wall-clock `System.currentTimeMillis()` caused a `-2.18 s` backward timestamp sawtooth on every 1-Hz fix and bypassed `dismountHysteresisMs` (`2.0 s`), triggering sub-second `4 <-> 1` (`BIKE_FRONT_POCKET <-> WALKING_TRANSITION`) chatter (`ATT-9600`).
+- **Description**:
+  1. *Unified `CLOCK_BOOTTIME` (`elapsedRealtime`) Internal Domain & UTC External Boundaries (`REQ-FIL-042.1`)*:
+     - `SpeedAndLocationDevice_ATTFused` SHALL unify all internal telemetry consumers (`UnicycleOdometryEkf`, `PhoneCarriageClassifier`, `KinematicSportTypeDiscriminator`, `AttFusedColdStartHelper`, `SmartphoneImuCadenceEstimator`, chord/displacement buffers, and wheel freshness checks) onto Android's monotonic `elapsedRealtime` millisecond clock via `AttFusedTimestampNormalizer`.
+     - GNSS `Location` timestamps SHALL derive from `location.elapsedRealtimeNanos / 1_000_000L` when `> 0L` (guarding against `> 300 s` / epoch-ns broken HALs), falling back to platform `elapsedRealtime` for Android wall-clock fixes with `elapsedRealtimeNanos <= 0L`, while preserving synthetic `< 1.5e12` / plain-JVM `location.time` test inputs. External UTC boundaries (`MultisportTelemetryAnchor.timestampMs` via NTP-immune `toWallClockEpochMs()`, `SmartphoneRawTelemetryRecorder` `epochMs`) MUST remain UTC wall-clock.
+  2. *Cross-Device OEM `SensorEvent` & Wheel Timestamp Normalization (`REQ-FIL-042.2`)*:
+     - `AttFusedTimestampNormalizer` SHALL map standard `CLOCK_BOOTTIME` `SensorEvent`s (`|sensorMs - elapsedMs| <= 5_000 ms`) directly (`offset = 0`, preserving CHRE/FIFO `dt`), latch and drift-reanchor per-sensor-type offsets for divergent OEM HALs (`uptimeMillis` after deep sleep or Unix epoch ns with `> 5_000 ms` offset) without freezing under paused Robolectric clocks, normalize wall-clock wheel callbacks (`>= 1.5e12`) onto `elapsedRealtime`, and degrade cleanly to `currentTimeMillis()` on plain JVM when `SystemClock` is unmocked.
+  3. *Defensive Out-of-Order Classifier/EKF Monotonic Guards & Monolith Cap (`REQ-FIL-042.3`)*:
+     - `PhoneCarriageClassifier.classify(nowMs)` SHALL clamp `effectiveNowMs = max(nowMs, lastEventTimestampMs)` so out-of-order/lagged GNSS or CHRE timestamps NEVER seed `candidateSinceMs` in the past or bypass dwell hysteresis, and `ingestGnssSpeed()` SHALL guard against older out-of-order timestamps. `UnicycleOdometryEkf` SHALL keep `currentTimestampMs` monotonically non-decreasing, and `SpeedAndLocationDevice_ATTFused.kt` MUST stay strictly `<= 1,500` LoC.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* GPS `Location.getTime()` lags `System.currentTimeMillis()` by `2.18 s` while `Location.getElapsedRealtimeNanos()` matches `SystemClock.elapsedRealtimeNanos()` within `< 200 ms`, *When* `SpeedAndLocationDevice_ATTFused` processes interleaved 50-Hz IMU and 1-Hz GNSS callbacks, *Then* `PhoneCarriageClassifier` enforces the full `dismountHysteresisMs` (`2.0 s`) / `mountHysteresisMs` (`4.0 s`) dwell windows with zero sub-`2 s` `4 <-> 1` flips and zero `-2.18 s` timestamp sawtooths.
+• *Given* an Android device whose `SensorEvent.timestamp` uses `uptimeMillis` or epoch nanoseconds (`> 5 s` offset from `SystemClock.elapsedRealtimeNanos()`), *When* IMU, wheel, and GNSS events arrive concurrently, *Then* `AttFusedTimestampNormalizer` maps all streams cleanly onto `SystemClock.elapsedRealtime()` without breaking `dt` or sliding windows.
+• *Given* a unit/replay test reproducing the `t = 4..20 s` window from `2026-11-22_081402.phone_raw.csv.gz` (`-2.18 s` GNSS offset) and out-of-order `PhoneCarriageClassifier.classify()` calls, *When* the test suite runs, *Then* zero sub-`2 s` mode-chatter flips occur and all existing `SpeedAndLocationDevice_ATTFused`, `PhoneCarriageClassifier`, `UnicycleOdometryEkf`, and replay tests pass.
+
+**Invariants**: `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC; leaf-only normalizer lock (zero lock inversion); `TST-FIL-029.3` CHRE step batch spacing preserved; UTC `MultisportTelemetryAnchor.timestampMs` & sidecar `epochMs` preserved; `SpeedAndLocationDevice.java` & `MySensorManager.java` untouched; `0` DB/UI/`strings*.xml` edits (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1605,3 +1691,10 @@
 | `1.0.4` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Promoted `REQ-TRK-094` to `[Verified]` (`224/224` PASS across 34 targeted unit/contract suites including `TST-TRK-094.1`–`.4` & Stage 6 Bounce 1 lazy `activeSessionDeviceIdsProvider` + `ConcurrentHashMap.newKeySet()`, `TrackerService.java` `3,180/3,220` LoC, `TrainingApplication.java` `2,038/2,050` LoC, clean `emulator-5554` smoke). |
 | `1.0.6` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `REQ-TRK-095` `[Planned]` (`REQ-TRK-095.1`–`.4`, linked to `SYSREQ-TRK-005`/`013`, `N/A - no UI strings`) for race-free `TrackerService` & `WorkoutPostProcessingService` FGS startup/teardown handshakes, FIFO `mWorkoutID` finalization, and 3-OS/9-locale sweep verification. |
 | `1.0.7` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `REQ-TRK-095` (`REQ-TRK-095.1`–`.4`) to `[Verified]` (`24` JVM suites / `174/174` PASS incl. `TST-TRK-095`, `47/47` Python tooling tests PASS, `12/12` live Multi-OS & 9-language emulator sweep `PASS` in `docs/engineering/emulator_sweeps/2026-11-22_sweep.md`, `TrackerService.java` `3,207/3,220` LoC, `TrainingApplication.java` `2,040/2,050` LoC, `0` new warnings). |
+| `1.0.8` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Added `[Planned]` `REQ-FIL-040` (`Derived (SW-only)`, `.1`–`.4`) for self-adapting intra-bucket barometer dispersion variance & 3-s trimmed-mean anti-aliasing (`BarometricBucketDispersion`), corrupted-barometer DEM step-gate guard, 3-state `5 s` startup calibration grace, and ERTS low-speed braking slope damping (`N/A - no UI strings`). |
+| `1.0.10` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `REQ-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.10`) following Gate 3 (`ATT-9650`) PASS, full Stage 4 construction (`BarometricBucketDispersion.kt` `198` LoC, `KinematicAltitudeSlopeEkf.kt` `697/1,500` LoC, `AltitudeAndSlopeDevice_ATTFused.kt` `571/1,500` LoC, `ExtendedRtsAltitudeSlopeSmoother.kt` `656/1,500` LoC), `90/90` targeted unit/contract tests PASS across 8 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9602_walkthrough.md`. |
+| `1.0.11` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Added `[Planned]` `REQ-FIL-041` (`Derived (SW-only)`, `.1`–`.3`) for immediate zero-speed publication on stationary rejected GNSS fixes, post-pause/post-standstill `UnicycleOdometryEkf` position-velocity decoupling (`3`-fix window), and `SpeedAndLocationDevice.trustsFusedLocationSpeed()` preserving `REQ-TRK-056.2` for `GPS`/`GoogleFused` (`N/A - no UI strings`). |
+| `1.0.12` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `REQ-FIL-041` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9652`) PASS, Stage 4 construction (`SpeedAndLocationDevice.java` `867/1,500`, `UnicycleOdometryEkf.kt` `882/1,500`, `SpeedAndLocationDevice_ATTFused.kt` `1,498/1,500` LoC), `146/146` targeted tests PASS across 11 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9601_walkthrough.md`. |
+| `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Added `[Planned]` `REQ-FIL-042` (`Derived (SW-only)`, `.1`–`.3`) for unified monotonic `elapsedRealtime` GNSS/IMU/wheel timestamp normalization (`AttFusedTimestampNormalizer`), OEM `> 5 s` `uptimeMillis`/epoch-ns re-anchoring, UTC boundary preservation (`MultisportTelemetryAnchor` / sidecar), out-of-order `PhoneCarriageClassifier` / `UnicycleOdometryEkf` guards, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`N/A - no UI strings`). |
+| `1.0.14` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `REQ-FIL-042` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9654`) PASS, Stage 4 construction (`AttFusedTimestampNormalizer.kt` `278` LoC, `SpeedAndLocationDevice_ATTFused.kt` shrunk `1,498 -> 1,472/1,500` LoC, `PhoneCarriageClassifier.kt` `1,175/1,500` LoC, `UnicycleOdometryEkf.kt` `888/1,500` LoC, `docs/architecture.md` `v1.0.29`), `160/160` targeted tests PASS across 13 suites (incl. Robolectric), `0` new warnings, and `docs/engineering/walkthroughs/ATT-9600_walkthrough.md`. |
+| `1.0.15` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 traceability reconciliation: linked `REQ-FIL-040` to `SYSREQ-TRK-008` and `REQ-FIL-041`/`REQ-FIL-042` to `SYSREQ-TRK-010` (`TST-PRO-102.3` / `TST-PRO-103.2`). |

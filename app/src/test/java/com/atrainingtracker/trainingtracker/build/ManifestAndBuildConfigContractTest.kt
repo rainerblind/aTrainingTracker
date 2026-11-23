@@ -73,13 +73,21 @@ class ManifestAndBuildConfigContractTest {
             }
         }
 
-        assertNotNull("ConfigPebbleViewsActivity must be declared in AndroidManifest.xml (REQ-BLD-003.1)", pebbleActivity)
-        val exported = pebbleActivity!!.getAttribute("android:exported")
         assertEquals(
-            "ConfigPebbleViewsActivity must be android:exported=\"false\" to eliminate external attack surface (REQ-BLD-003.1)",
-            "false",
-            exported
+            "Decommissioned ConfigPebbleViewsActivity must be removed from AndroidManifest.xml (REQ-UI-2802 / ATT-8130)",
+            null,
+            pebbleActivity
         )
+
+        val services: NodeList = doc.getElementsByTagName("service")
+        for (i in 0 until services.length) {
+            val element = services.item(i) as Element
+            val name = element.getAttribute("android:name")
+            assertFalse(
+                "Decommissioned Pebble service must be removed from AndroidManifest.xml: $name",
+                name.contains("PebbleService")
+            )
+        }
     }
 
     @Test
@@ -242,6 +250,14 @@ class ManifestAndBuildConfigContractTest {
         assertTrue(
             "gradle.properties must retain android.builtInKotlin=false",
             content.contains("android.builtInKotlin=false")
+        )
+        assertTrue(
+            "gradle.properties must enable android.nonFinalResIds=true for incremental Kotlin compilation (REQ-BLD-003.4, ATT-9365)",
+            content.contains("android.nonFinalResIds=true")
+        )
+        assertTrue(
+            "gradle.properties must enable android.enableAppCompileTimeRClass=true to isolate R.jar on resource edits (REQ-BLD-003.4, ATT-9365)",
+            content.contains("android.enableAppCompileTimeRClass=true")
         )
     }
 }

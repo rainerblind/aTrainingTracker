@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:20:53.264Z" hostname="rainer-HP-EliteBook-850-G5" time="0.155">
+  <properties/>
+  <testcase name="testNotificationManager_showResyncNotification_notifiesWithCorrectId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest" time="0.132"/>
+  <testcase name="testNotificationManager_cancelNotification_cancelsCorrectId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest" time="0.006"/>
+  <testcase name="testDeletionProgress_progressCalculation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest" time="0.005"/>
+  <testcase name="testNotificationManager_disabledNotifications_doesNotNotify" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest" time="0.005"/>
+  <testcase name="testNotificationManager_showProgressNotification_notifiesWithCorrectId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

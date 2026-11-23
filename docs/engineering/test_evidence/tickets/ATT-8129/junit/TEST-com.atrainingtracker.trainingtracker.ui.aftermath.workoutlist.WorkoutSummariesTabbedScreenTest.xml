@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-22T20:45:30.954Z" hostname="rainer-HP-EliteBook-850-G5" time="0.144">
+  <properties/>
+  <testcase name="testWorkoutSummariesTabbedScreen_snackbarHost_appliesNavigationBarsPadding" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest" time="0.088"/>
+  <testcase name="testWorkoutSummariesListFragment_isEliminatedInFavorOfComposeScreen" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest" time="0.0"/>
+  <testcase name="testRoutesScreen_snackbarHost_appliesNavigationBarsPadding" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest" time="0.056"/>
+  <testcase name="testWorkoutSummariesTabbedScreen_editWorkout_scopesViewModelStoreOwner" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest" time="0.0"/>
+  <testcase name="testWorkoutSummariesTabbedScreen_processDeathRestore_triggersLoadAftermathData" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedScreenTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
