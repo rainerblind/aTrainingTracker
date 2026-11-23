@@ -146,14 +146,32 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
 
     @Test
     fun testHandlePressureMeasurement_initializesAndPublishesAltitude() {
-        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        // 1. 3-State mode (DEM active): initializes EKF on sample #1, defers unanchored emission during 5 s grace (REQ-FIL-040.3),
+        //    and falls back cleanly at >= 5 s if offline.
+        val device3State = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device3State.handlePressureMeasurement(1013.25f, 1000L)
+        assertTrue("EKF must be initialized after first measurement", device3State.ekf.isInitialized)
+        assertEquals(0.0, device3State.ekf.altitude, 1.0)
+        assertEquals("Unanchored 3-State must defer publication inside 5 s grace", null, device3State.mAltitudeSensor?.value)
+        device3State.calculateMetrics(6000L)
+        assertNotNull("3-State offline fallback must publish at >= 5 s", device3State.mAltitudeSensor?.value)
+        assertEquals(0.0, (device3State.mAltitudeSensor?.value as Number).toDouble(), 1.0)
 
-        // 1013.25 hPa is standard sea level (approx 0m)
-        device.handlePressureMeasurement(1013.25f, 1000L)
-
-        assertTrue("EKF must be initialized after first measurement", device.ekf.isInitialized)
-        assertNotNull("Altitude sensor should have value", device.mAltitudeSensor?.value)
-        assertEquals(0.0, (device.mAltitudeSensor?.value as Number).toDouble(), 1.0)
+        // 2. 2-State mode (barometer-only): publishes immediately at t = 0 ms
+        every { AttFusedAltitudePreferences.isEffectiveDemActive(any()) } returns false
+        every { AttFusedAltitudePreferences.isEffectiveGpsActive(any()) } returns false
+        every { AttFusedAltitudePreferences.getEffectiveState(any()) } returns
+            AttFusedAltitudePreferences.EffectiveState(
+                isBarometerActive = true,
+                isDemActive = false,
+                isGpsActive = false,
+                isSpeedActive = true
+            )
+        val device2State = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device2State.handlePressureMeasurement(1013.25f, 1000L)
+        assertTrue("2-State EKF must be initialized after first measurement", device2State.ekf.isInitialized)
+        assertNotNull("2-State altitude sensor must publish immediately", device2State.mAltitudeSensor?.value)
+        assertEquals(0.0, (device2State.mAltitudeSensor?.value as Number).toDouble(), 1.0)
     }
 
     @Test
@@ -506,7 +524,9 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         repeat(5) { idx ->
             device.handlePressureMeasurement(p568, 1000L + idx * 200L)
         }
-        assertEquals(568.4, (device.mAltitudeSensor?.value as Number).toDouble(), 1.0)
+        assertTrue("EKF must initialize internally on sample #1", device.ekf.isInitialized)
+        assertEquals(568.4, device.ekf.altitude, 1.0)
+        assertEquals("3-State startup grace suppresses uncalibrated 568.4 m cliff before DEM lock (REQ-FIL-040.3)", null, device.mAltitudeSensor?.value)
 
         // First DEM fix (438.0 m) arrives at calculateMetrics(5000L)
         device.calculateMetrics(5000L)
@@ -978,5 +998,227 @@ class AltitudeAndSlopeDevice_ATTFusedTest {
         ekf2State.predict(1.0, 3.2)
         ekf2State.updateBarometer(baroIsaAltM + 1.5, isStandstill = false, speedMps = 3.2)
         assertTrue("2-State subsequent baro delta must still track relative climb", ekf2State.altitude in 431.0..432.5)
+    }
+
+    // REQ-FIL-040.1 / TST-FIL-040.1: ~13 Hz asymmetric 0.92 Hz 70-88 m pocket-compression wave on flat DEM
+    // and full loop must keep live altitude within <= 2.0 m (no +6.7 m / +10% phantom hill) and ascent/descent within <= 20%.
+    @Test
+    fun testPocketCompressionAliasing_flatAndFullLoop_eliminatesPhantomHill_TST_FIL_040_1() {
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 6.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val carriageSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { carriageSensor.value } returns com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_FRONT_POCKET.code
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ACTIVITY_AND_CARRIAGE_MODE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        } returns carriageSensor
+
+        var demAlt = 437.0
+        var demTs = 1_000L
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { demSensor.value } answers { demAlt }
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.handleReferenceAltitude(437.0, isDem = true, nowMs = 1_000L)
+
+        // 1. Flat DEM 436-438 m (t = 25..65 s) with ~13 Hz asymmetric 0.92 Hz 80 m p-p pocket wave + +35 m QNH offset
+        var maxFlatAltErrM = 0.0
+        var maxFlatSlopePct = 0
+        var baroTsMs = 2_000L
+        for (sec in 2..65) {
+            val trueAlt = 437.0 + kotlin.math.sin(sec / 10.0) // gentle 436..438 m flat road
+            demAlt = trueAlt
+            demTs = sec * 1_000L
+            val secEndMs = (sec + 1) * 1_000L
+            while (baroTsMs < secEndMs) {
+                val tSec = baroTsMs / 1000.0
+                val wave = if (sec >= 20) {
+                    val phase = 2.0 * Math.PI * 0.92 * tSec
+                    40.0 * kotlin.math.sin(phase) - 8.0 * kotlin.math.sin(2.0 * phase)
+                } else {
+                    0.0
+                }
+                val baroAlt = trueAlt + 35.0 + wave
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+                device.handlePressureMeasurement(p, baroTsMs)
+                baroTsMs += 77L
+            }
+            device.calculateMetrics(sec * 1_000L)
+            if (sec in 25..65) {
+                maxFlatAltErrM = maxOf(maxFlatAltErrM, kotlin.math.abs(device.ekf.altitude - trueAlt))
+                maxFlatSlopePct = maxOf(maxFlatSlopePct, kotlin.math.abs(device.mSlopeSensor?.value ?: 0))
+            }
+        }
+        assertTrue("Pocket wave must inflate baroDispersionVar (> 100 m^2, was ${device.baroDispersionVarForTest()})", device.baroDispersionVarForTest() > 100.0)
+        assertTrue("Flat pocket-wave live altitude error must stay <= 2.0 m (was $maxFlatAltErrM m)", maxFlatAltErrM <= 2.0)
+        assertTrue("Flat pocket-wave live slope must not show phantom +10% hill (max was $maxFlatSlopePct%)", maxFlatSlopePct <= 4)
+
+        // Pause/resume gap (> 3 s) clears stale dispersion variance
+        val resumeTs = 80_000L
+        val pCalm = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - (437.0 + 35.0) / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(pCalm, resumeTs)
+        assertEquals("Pause gap > 3 s must clear stale dispersion variance", 0.0, device.baroDispersionVarForTest(), 1e-9)
+
+        // 2. Full-loop cycling replay (+60 m climb / -60 m descent) under continuous ~13 Hz 0.92 Hz 75 m pocket waves
+        val loopDevice = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        loopDevice.refreshCachedPreferences()
+        demAlt = 440.0
+        demTs = 1_000L
+        loopDevice.handleReferenceAltitude(440.0, isDem = true, nowMs = 1_000L)
+
+        var loopBaroTs = 2_000L
+        for (sec in 2..261) {
+            val idx = sec - 2
+            val trueAlt = when {
+                idx < 30 -> 440.0
+                idx < 130 -> 440.0 + 60.0 * ((idx - 30) / 100.0) // +60 m climb (+10% grade at 6 m/s)
+                idx < 150 -> 500.0
+                idx < 230 -> 500.0 - 60.0 * ((idx - 150) / 80.0) // -60 m descent
+                else -> 440.0 // 30 s flat closing stretch symmetric with 30 s flat start
+            }
+            demAlt = trueAlt
+            demTs = sec * 1_000L
+            val secEndMs = (sec + 1) * 1_000L
+            while (loopBaroTs < secEndMs) {
+                val tSec = loopBaroTs / 1000.0
+                val phase = 2.0 * Math.PI * 0.92 * tSec
+                val wave = 37.5 * kotlin.math.sin(phase) - 7.5 * kotlin.math.sin(2.0 * phase)
+                val baroAlt = trueAlt + 35.0 + wave
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - baroAlt / 44330.0, 5.255).toFloat()
+                loopDevice.handlePressureMeasurement(p, loopBaroTs)
+                loopBaroTs += 77L
+            }
+            loopDevice.calculateMetrics(sec * 1_000L)
+        }
+        val loopAscent = (loopDevice.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0
+        val loopDescent = (loopDevice.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0
+        assertTrue("Full-loop live ascent under pocket wave must stay within 20% of 60 m (48..72 m, was $loopAscent m)", loopAscent in 48.0..72.0)
+        assertTrue("Full-loop live descent under pocket wave must stay within 20% of 60 m (48..72 m, was $loopDescent m)", loopDescent in 48.0..72.0)
+        assertTrue("Full-loop closing altitude must stay within 2.5 m of 440 m (was ${loopDevice.ekf.altitude} m)", kotlin.math.abs(loopDevice.ekf.altitude - 440.0) <= 2.5)
+    }
+
+    // REQ-FIL-040.1 / TST-FIL-040.1: Calm handlebar 10% climb (5 m/s) & fast -12% alpine descent (18 m/s)
+    // keep dispersionVarM2 == 0.0 and track true altitude & slope promptly without lag.
+    @Test
+    fun testCalmHandlebarClimbAndFastAlpineDescent_zeroDispersionAndPromptTracking_TST_FIL_040_1() {
+        var speedMps = 5.0
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } answers { speedMps }
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        val carriageSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { carriageSensor.value } returns com.atrainingtracker.banalservice.odometry.PhoneCarriageMode.BIKE_HANDLEBAR.code
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ACTIVITY_AND_CARRIAGE_MODE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        } returns carriageSensor
+
+        var demAlt = 500.0
+        var demTs = 1_000L
+        val demSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { demSensor.value } answers { demAlt }
+        every { demSensor.lastUpdateTimestamp } answers { demTs }
+        every {
+            mockSensorManager.getSensorForDeviceType(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION)
+        } returns demSensor
+
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        device.handleReferenceAltitude(500.0, isDem = true, nowMs = 1_000L)
+
+        // 1. 20 s calm 10% climb at 5 m/s (+0.5 m/s)
+        var tMs = 2_000L
+        var trueAlt = 500.0
+        for (sec in 2..21) {
+            val secEnd = (sec + 1) * 1_000L
+            while (tMs < secEnd) {
+                trueAlt += 0.05 // 10 Hz * +0.05 m = +0.5 m/s
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - trueAlt / 44330.0, 5.255).toFloat()
+                device.handlePressureMeasurement(p, tMs)
+                tMs += 100L
+            }
+            demAlt = trueAlt
+            demTs = sec * 1_000L
+            device.calculateMetrics(sec * 1_000L)
+            assertEquals("Calm handlebar climb must keep dispersionVarM2 == 0.0", 0.0, device.baroDispersionVarForTest(), 1e-9)
+        }
+        val climbSlopePct = device.ekf.slopePercent
+        assertTrue("Calm 10% climb must track grade promptly (7..13%, was $climbSlopePct%)", climbSlopePct in 7.0..13.0)
+        assertTrue("Calm climb altitude must track true elevation within 2 m (true=$trueAlt, ekf=${device.ekf.altitude})", kotlin.math.abs(device.ekf.altitude - trueAlt) <= 2.0)
+
+        // 2. 15 s fast -12% alpine descent at 18 m/s (-2.16 m/s)
+        speedMps = 18.0
+        for (sec in 22..36) {
+            val secEnd = (sec + 1) * 1_000L
+            while (tMs < secEnd) {
+                trueAlt -= 0.216 // 10 Hz * -0.216 m = -2.16 m/s
+                val p = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+                    Math.pow(1.0 - trueAlt / 44330.0, 5.255).toFloat()
+                device.handlePressureMeasurement(p, tMs)
+                tMs += 100L
+            }
+            demAlt = trueAlt
+            demTs = sec * 1_000L
+            device.calculateMetrics(sec * 1_000L)
+            assertEquals("Fast -12% alpine descent must keep dispersionVarM2 == 0.0", 0.0, device.baroDispersionVarForTest(), 1e-9)
+        }
+        val descentSlopePct = device.ekf.slopePercent
+        assertTrue("Fast -12% alpine descent must track negative grade promptly (-15..-8%, was $descentSlopePct%)", descentSlopePct in -15.0..-8.0)
+    }
+
+    // REQ-FIL-040.3 / TST-FIL-040.3: 3-State startup grace eliminates 470.9 -> 435.0 m cliff on t=2 s DEM lock,
+    // falls back cleanly at >= 5 s offline with 0.0 m bogus descent on late DEM, and clears dispersion on reanchorOnResume().
+    @Test
+    fun testStartupReferenceGrace_eliminatesCliffAndPreservesOfflineFallback_TST_FIL_040_3() {
+        val speedSensor = mockk<com.atrainingtracker.banalservice.sensor.MySensor<Number>>(relaxed = true)
+        every { speedSensor.value } returns 4.0
+        every { mockSensorManager.getSensor(SensorType.SPEED_mps) } returns speedSensor
+
+        // 1. 3-State startup: +35.9 m QNH offset (470.9 m baro vs 435.0 m DEM arriving at t = 2 s)
+        val device = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        device.refreshCachedPreferences()
+        val p470 = SensorManager.PRESSURE_STANDARD_ATMOSPHERE *
+            Math.pow(1.0 - 470.9 / 44330.0, 5.255).toFloat()
+        device.handlePressureMeasurement(p470, 10_000L)
+        device.calculateMetrics(11_000L)
+        assertTrue("EKF must be initialized internally at t = 0 s", device.ekf.isInitialized)
+        assertEquals("Uncalibrated 470.9 m must NOT be published during 5 s grace", null, device.mAltitudeSensor?.value)
+
+        // DEM arrives at t = 2 s -> emits calibrated 435.0 m immediately with 0.0 m phantom ascent/descent
+        device.handleReferenceAltitude(435.0, isDem = true, nowMs = 12_000L)
+        assertEquals(435.0, (device.mAltitudeSensor?.value as Number).toDouble(), 0.5)
+        assertEquals(0.0, (device.mAscentSensor?.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+        assertEquals(0.0, (device.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+
+        // 2. Offline workout (no DEM/GPS for >= 5 s): falls back cleanly to baro at t = 5 s,
+        //    and late DEM at t = 12 s still resets anchor with 0.0 m bogus descent (REQ-FIL-022.3).
+        val offlineDevice = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        offlineDevice.refreshCachedPreferences()
+        offlineDevice.handlePressureMeasurement(p470, 20_000L)
+        offlineDevice.calculateMetrics(24_000L)
+        assertEquals("Offline 3-State still defers at t = 4 s", null, offlineDevice.mAltitudeSensor?.value)
+        offlineDevice.calculateMetrics(25_000L)
+        assertNotNull("Offline 3-State must fall back cleanly at t = 5 s", offlineDevice.mAltitudeSensor?.value)
+        assertEquals(470.9, (offlineDevice.mAltitudeSensor?.value as Number).toDouble(), 1.0)
+        // Late DEM lock at t = 12 s (-35.9 m calibration step) -> 0.0 m bogus descent
+        offlineDevice.handleReferenceAltitude(435.0, isDem = true, nowMs = 32_000L)
+        assertEquals(435.0, (offlineDevice.mAltitudeSensor?.value as Number).toDouble(), 0.5)
+        assertEquals(0.0, (offlineDevice.mDescentSensor?.value as? Number)?.toDouble() ?: 0.0, 1e-6)
+
+        // 3. reanchorOnResume() publishes immediately and resets any pre-pause baro dispersion variance
+        val resumeDevice = AltitudeAndSlopeDevice_ATTFused(mockContext, mockSensorManager, autoStartScheduler = false)
+        resumeDevice.refreshCachedPreferences()
+        resumeDevice.reanchorOnResume(435.0)
+        assertEquals(435.0, (resumeDevice.mAltitudeSensor?.value as Number).toDouble(), 0.1)
+        assertEquals(0.0, resumeDevice.baroDispersionVarForTest(), 1e-9)
     }
 }

@@ -1,0 +1,17 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "65b8c8b2df6fff00815a3e73d0065afff04484c1",
+  "files": {
+    "evidence_summary.json": "7a6fc30fffad1a84e78302585a9b61f8d60138075f148675439ca7c29cd8aa46",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest.xml": "b4cdb57fd4f4e3553f7c91a5428201a8373642e8911e4296b4a613a879568721",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest.xml": "70321cdb72694cfb1b999f916c2c07b96855f002370e9587a3e602fa7f70a835",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest.xml": "41c86dd29130736be0bbdc60d76c36fac1db0e27dc2a3d81e8816d262d624cb7",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml": "0ae5d5ee07e258ead1764867156522500c6b853ca34982119a7d6d2853a83e43",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest.xml": "47835996399c4b8d5166d490d268e70c7172a7afcfc75bfb170bcbfba7c04d01",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml": "57a13b6f84c830b1f6cc4cb4fc9e68dc3f33eaecd3aabe9dc27e37c9a6aa4991",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest.xml": "2845ca792a4386e1abaeae90b61de659f24081f1c054db32119f25b5c285794f"
+  },
+  "run_started_utc": "2026-11-23T01:02:31.514531+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9602"
+}

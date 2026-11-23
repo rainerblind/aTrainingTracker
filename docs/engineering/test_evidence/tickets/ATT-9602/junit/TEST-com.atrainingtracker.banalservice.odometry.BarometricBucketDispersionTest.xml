@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:08:53.432Z" hostname="rainer-HP-EliteBook-850-G5" time="0.564">
+  <properties/>
+  <testcase name="calmHandlebarAndSteepAlpineDescent_keepZeroDispersionAndEmitExactBucketMedian" classname="com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest" time="0.52"/>
+  <testcase name="guardsNonFiniteBackwardTimestampPauseGapSmallBucketsAndDelayedFlush" classname="com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest" time="0.001"/>
+  <testcase name="dispersionVarianceDecaysSmoothlyWhenPocketWaveStops" classname="com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest" time="0.005"/>
+  <testcase name="pocketCompression092HzWave_inflatesDispersionAndSuppressesBeatAliasing" classname="com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest" time="0.021"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

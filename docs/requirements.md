@@ -1,7 +1,7 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
 **Document ID**: `DOC-REQ-INDEX`  
-**Version**: 1.0.142  
+**Version**: 1.0.143  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -14,7 +14,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit (Part 1)](requirements/req_tracking_cockpit_part1.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK`, `WEA` | 110 | 99 | 11 | 0 |
 | [Tracking & Live Sensor Cockpit (Part 2)](requirements/req_tracking_cockpit_part2.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 49 | 49 | 0 | 0 |
-| [Tracking & Live Sensor Cockpit (Part 3)](requirements/req_tracking_cockpit_part3.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 42 | 42 | 0 | 0 |
+| [Tracking & Live Sensor Cockpit (Part 3)](requirements/req_tracking_cockpit_part3.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `SEN`, `TRK` | 43 | 43 | 0 | 0 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, HRV/workout dynamics, radar analytics. | `HRV`, `PER`, `RAD`, `SPT`, `WKO` | 72 | 58 | 14 | 0 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, climbs, navigation overlays, GPX track follow-me, radar map overlays. | `CLM`, `GEO`, `MAP`, `NAV`, `RAD` | 76 | 64 | 12 | 0 |
 | [Persistence, Migration & Cloud Export (Part 1)](requirements/req_data_migration_export_part1.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX/radar export. | `DAT`, `EXP`, `EXT`, `MIG`, `RAD` | 114 | 99 | 15 | 0 |
@@ -31,7 +31,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 17 | 17 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 11 | 11 | 0 | 0 |
 
-**Total Living Requirements**: 1347 across 18 domain shards.
+**Total Living Requirements**: 1348 across 18 domain shards.
 
 ---
 
@@ -110,3 +110,5 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | `1.0.135` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Added and verified `REQ-TRK-094` `[Verified]` in `req_tracking_cockpit_part3.md` (`TrackerService.java` `3,180/3,220` LoC, `TrainingApplication.java` `2,038/2,050` LoC) and synchronized master index (`Total=1334`, `Verified=1208`, `Implemented=125`, `Planned=1`). |
 | `1.0.139` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Added and verified `REQ-UI-2801` `[Verified]` in `req_ui_design_system_part6.md` (`v1.0.29`) and synchronized master index grand totals (`Total=1344`, `Verified=1218`, `Implemented=125`, `Planned=1`). |
 | `1.0.140` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `REQ-UI-2802` `[Verified]` in `req_ui_design_system_part6.md` (`v1.0.30`) and synchronized master index grand totals (`Total=1345`, `Verified=1219`, `Implemented=125`, `Planned=1`). |
+| `1.0.142` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Synchronized master index for `[Planned]` `REQ-FIL-040` in `req_tracking_cockpit_part3.md` (`v1.0.8`). |
+| `1.0.143` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `REQ-FIL-040` to `[Verified]` in `req_tracking_cockpit_part3.md` (`v1.0.10`) and synchronized master index (`Total=1348`). |

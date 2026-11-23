@@ -1,0 +1,61 @@
+{
+  "android_test_summary": {
+    "details": "Failed Android test(s): com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds, com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod",
+    "failing_tests": [
+      "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+      "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod"
+    ],
+    "passed": false,
+    "ran": 104
+  },
+  "checks": [
+    {
+      "details": "Android: Failed Android test(s): com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds, com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod | Python: No Python tests selected.",
+      "failing_tests": [
+        "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+        "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod"
+      ],
+      "name": "dependent_unit_tests",
+      "passed": false
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (10430 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "65b8c8b2df6fff00815a3e73d0065afff04484c1",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.BarometricBucketDispersionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-23T01:02:31.514531+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-9602",
+  "ui_touching": false,
+  "verdict": "FAIL"
+}

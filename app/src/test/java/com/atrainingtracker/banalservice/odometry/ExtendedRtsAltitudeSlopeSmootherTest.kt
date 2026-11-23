@@ -452,4 +452,81 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
             maxAltDev < 3.0
         )
     }
+
+    // REQ-FIL-040.4 / TST-FIL-040.4: Low-speed end-of-ride braking deceleration prevents -11% slope plunge
+    // on flat road while preserving real -8% downhill braking and guarding sub-100ms dt jitter / pause gaps.
+    @Test
+    fun testLowSpeedBrakingProtection_eliminatesFlatBrakingPlungeAndPreservesDownhill_TST_FIL_040_4() {
+        val baseTs = 10_000_000L
+
+        // 1. Flat road (DEM = 438.0 m): 20 s steady cruise at 5.5 m/s, then 15 s braking 5.5 -> 0.6 m/s
+        //    with simultaneous -2.0 m barometer decompression drop, followed by 5 s standstill.
+        val flatBrakingSamples = (0 until 40).map { sec ->
+            val speed = when {
+                sec < 20 -> 5.5
+                sec < 35 -> 5.5 - (4.9 * (sec - 19) / 15.0)
+                else -> 0.0
+            }
+            val baroDrop = when {
+                sec < 20 -> 0.0
+                sec < 35 -> -2.0 * ((sec - 19) / 15.0)
+                else -> -2.0
+            }
+            RawAltitudeSample(
+                timestampMs = baseTs + sec * 1000L,
+                rawAltitudeM = 438.0 + baroDrop,
+                referenceAltitudeM = 438.0,
+                smoothedSpeedMps = speed,
+                isStandstill = speed < 0.3,
+                carriageMode = PhoneCarriageMode.BIKE_FRONT_POCKET
+            )
+        }
+        val flatSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(flatBrakingSamples)
+        val brakingWindow = flatSmoothed.subList(20, 35)
+        val maxAbsBrakingSlope = brakingWindow.maxOf { abs(it.slopePercent) }
+        val maxAltDeviation = brakingWindow.maxOf { abs(it.altitudeM - 438.0) }
+        assertTrue(
+            "Flat braking slope must stay within |SLOPE| <= 4.0% (no -11% dip; got $maxAbsBrakingSlope%)",
+            maxAbsBrakingSlope <= 4.0
+        )
+        assertTrue(
+            "Flat braking altitude must remain anchored near 438.0 m (maxDev=$maxAltDeviation m)",
+            maxAltDeviation <= 1.5
+        )
+
+        // 2. Real -8% downhill braking (5.5 -> 1.0 m/s): must preserve smooth negative slope (not clamped to 0%)
+        var downhillAlt = 500.0
+        val downhillSamples = (0 until 35).map { sec ->
+            val speed = if (sec < 20) 5.5 else 5.5 - (4.5 * (sec - 19) / 15.0)
+            if (sec > 0) downhillAlt += -0.08 * speed
+            RawAltitudeSample(
+                timestampMs = baseTs + 100_000L + sec * 1000L,
+                rawAltitudeM = downhillAlt,
+                referenceAltitudeM = downhillAlt,
+                smoothedSpeedMps = speed,
+                isStandstill = false,
+                carriageMode = PhoneCarriageMode.BIKE_HANDLEBAR
+            )
+        }
+        val downhillSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(downhillSamples)
+        val midDownhillBrakingSlope = downhillSmoothed[28].slopePercent
+        assertTrue(
+            "Real -8% downhill braking must preserve smooth negative slope in -11%..-3% (got $midDownhillBrakingSlope%)",
+            midDownhillBrakingSlope in -11.0..-3.0
+        )
+
+        // 3. Sub-100ms duplicate timestamp jitter & >5 s pause gap remain finite and well-behaved
+        val jitterAndPauseSamples = listOf(
+            RawAltitudeSample(baseTs, 440.0, 440.0, 5.0, false),
+            RawAltitudeSample(baseTs + 1L, 440.0, 440.0, 4.9, false), // dt = 0.001 s -> accel ignored
+            RawAltitudeSample(baseTs + 1_000L, 440.4, 440.4, 5.0, false),
+            RawAltitudeSample(baseTs + 12_000L, 440.4, 440.4, 2.0, false), // 11 s pause gap -> clean decay
+            RawAltitudeSample(baseTs + 13_000L, 440.5, 440.5, 2.0, false)
+        )
+        val jitterSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(jitterAndPauseSamples)
+        assertTrue(
+            "Sub-100ms jitter and >5 s pause gap must produce finite smooth outputs",
+            jitterSmoothed.all { it.altitudeM.isFinite() && it.slopePercent.isFinite() }
+        )
+    }
 }

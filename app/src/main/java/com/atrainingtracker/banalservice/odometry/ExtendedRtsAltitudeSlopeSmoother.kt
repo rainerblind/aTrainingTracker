@@ -75,6 +75,14 @@ object ExtendedRtsAltitudeSlopeSmoother {
     const val MAX_SLOPE_VARIANCE = 0.015 // Prevents unbounded p11 growth over long rides (REQ-FIL-033.1)
     const val STANDSTILL_SLOPE_GRACE_SEC = 2.0
     const val STANDSTILL_SLOPE_DECAY_TAU_SEC = 2.5
+    const val BRAKING_DECEL_THRESHOLD_MPS2 = 0.25 // Deceleration threshold for low-speed braking protection (REQ-FIL-040.4)
+    const val BRAKING_HOLD_DURATION_SEC = 4.0
+    const val BRAKING_LOW_SPEED_CEILING_MPS = 2.5
+    const val BRAKING_BARO_VAR_MULTIPLIER = 8.0
+    const val BRAKING_BARO_VAR_NO_REF_MULTIPLIER = 4.0
+
+    private const val BRAKING_ACCEL_MIN_DT_SEC = 0.1
+    private const val BRAKING_ACCEL_MAX_DT_SEC = 5.0
 
     private const val DEFAULT_QH = 0.005       // Elevation random walk m^2 / s
     private const val DEFAULT_QG = 1e-4        // Spatial slope grade curvature per meter
@@ -169,6 +177,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
 
         var lastTimeMs = samples.first().timestampMs
         var standstillDurationSec = 0.0
+        var prevSpeedMps = 0.0
+        var brakingHoldSec = 0.0
 
         for (k in 0 until n) {
             val sample = samples[k]
@@ -185,6 +195,35 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 (sample.carriageMode == PhoneCarriageMode.STATIONARY && speedMps < 0.35)
             val deltaDist = if (isStandstill) 0.0 else max(0.0, speedMps * dtSec)
             val gainScale = if (isStandstill) 0.0 else lowSpeedSlopeGainFactor(speedMps)
+
+            // Detect sustained braking deceleration without disturbing steady climbing or TST-FIL-033.1 (REQ-FIL-040.4)
+            if (isStandstill) {
+                brakingHoldSec = 0.0
+            } else if (k > 0 &&
+                dtSec in BRAKING_ACCEL_MIN_DT_SEC..BRAKING_ACCEL_MAX_DT_SEC &&
+                prevSpeedMps >= STANDSTILL_SPEED_THRESHOLD_MPS
+            ) {
+                val accelMps2 = (speedMps - prevSpeedMps) / dtSec
+                if (accelMps2 <= -BRAKING_DECEL_THRESHOLD_MPS2) {
+                    brakingHoldSec = BRAKING_HOLD_DURATION_SEC
+                } else if (brakingHoldSec > 0.0) {
+                    brakingHoldSec = max(0.0, brakingHoldSec - dtSec)
+                }
+            } else if (brakingHoldSec > 0.0) {
+                brakingHoldSec = max(0.0, brakingHoldSec - dtSec)
+            }
+            prevSpeedMps = speedMps
+
+            val brakingGainScale = if (!isStandstill &&
+                brakingHoldSec > 0.0 &&
+                speedMps < BRAKING_LOW_SPEED_CEILING_MPS
+            ) {
+                val ratio = (speedMps / BRAKING_LOW_SPEED_CEILING_MPS).coerceIn(0.0, 1.0)
+                ratio * ratio
+            } else {
+                1.0
+            }
+            val effectiveSlopeGainScale = gainScale * brakingGainScale
 
             // 1. Predict (exact linear transition matching saved jacobians[k])
             val isBaroResetStep = k > 0 && sample.rawAltitudeM.isFinite() &&
@@ -209,7 +248,7 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 } else {
                     standstillDurationSec = 0.0
                     x[0] += x[1] * deltaDist
-                    val qgVal = DEFAULT_QG * deltaDist * gainScale
+                    val qgVal = DEFAULT_QG * deltaDist * effectiveSlopeGainScale
                     val qhVal = DEFAULT_QH * dtSec
 
                     val prevP11 = p[1][1]
@@ -267,10 +306,17 @@ object ExtendedRtsAltitudeSlopeSmoother {
                         rVar = varBaro
                     )
                 } else {
-                    val s = p[0][0] + 2.0 * p[0][2] + p[2][2] + varBaro
+                    val brakingVarScale = when {
+                        hasReference && brakingHoldSec > 0.0 -> BRAKING_BARO_VAR_MULTIPLIER
+                        !hasReference && brakingHoldSec > 0.0 && speedMps < BRAKING_LOW_SPEED_CEILING_MPS ->
+                            BRAKING_BARO_VAR_NO_REF_MULTIPLIER
+                        else -> 1.0
+                    }
+                    val effectiveVarBaro = varBaro * brakingVarScale
+                    val s = p[0][0] + 2.0 * p[0][2] + p[2][2] + effectiveVarBaro
                     val yH = if (isBaroResetStep) y else applyHuber(y, s)
                     val k0 = (p[0][0] + p[0][2]) / s
-                    val k1 = ((p[1][0] + p[1][2]) / s) * gainScale
+                    val k1 = ((p[1][0] + p[1][2]) / s) * effectiveSlopeGainScale
                     val k2 = (p[2][0] + p[2][2]) / s
 
                     x[0] += k0 * yH
@@ -281,7 +327,7 @@ object ExtendedRtsAltitudeSlopeSmoother {
                         p = p,
                         kVec = doubleArrayOf(k0, k1, k2),
                         hVec = doubleArrayOf(1.0, 0.0, 1.0),
-                        rVar = varBaro
+                        rVar = effectiveVarBaro
                     )
                 }
             }

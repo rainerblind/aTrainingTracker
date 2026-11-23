@@ -585,6 +585,56 @@ class KinematicAltitudeSlopeEkfTest {
         )
     }
 
+    // REQ-FIL-040.2 / TST-FIL-040.2: Corrupted high-dispersion barometer (varBaro > 16 m^2) never vetoes true flat DEM,
+    // clears lastRefBaroAltM so post-recovery ticks stay clean, and preserves healthy-baro REQ-FIL-037.2 step gating.
+    @Test
+    fun testCorruptedBaroDispersion_doesNotVetoFlatDemAndRecoversCleanly_TST_FIL_040_2() {
+        val ekf = KinematicAltitudeSlopeEkf(is3StateMode = true)
+        ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        ekf.updateBarometer(473.0, varBaro = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, isStandstill = false, speedMps = 6.0)
+
+        // Establish steady flat baseline on healthy barometer
+        repeat(5) {
+            ekf.predict(1.0, 6.0)
+            ekf.updateBarometer(473.0, varBaro = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, isStandstill = false, speedMps = 6.0)
+            ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        }
+
+        // Inject +10 m monotonic pocket-aliasing baro bias with high dispersion varBaro = 1000.0 (> 16.0)
+        // on flat 438.0 m DEM: DEM step-gate MUST NOT inflate rDem to veto flat 438.0 m reference.
+        for (sec in 1..20) {
+            ekf.predict(1.0, 6.0)
+            ekf.updateBarometer(473.0 + 0.5 * sec, varBaro = 1000.0, isStandstill = false, speedMps = 6.0)
+            ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            assertTrue(
+                "Flat DEM must stabilize altitude within 1.5 m despite high-var biased baro (sec=$sec, alt=${ekf.altitude})",
+                kotlin.math.abs(ekf.altitude - 438.0) <= 1.5
+            )
+            assertSymmetricSpd3x3(ekf)
+        }
+
+        // Recovery tick: barometer drops back to clean 473.0 m with healthy varBaro = 0.25.
+        // Because lastRefBaroAltM was cleared during corruption, this recovery tick MUST NOT trigger
+        // a false step discrepancy against the corrupted 483.0 m baseline.
+        ekf.predict(1.0, 6.0)
+        ekf.updateBarometer(473.0, varBaro = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, isStandstill = false, speedMps = 6.0)
+        ekf.updateReferenceAltitude(438.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertTrue(
+            "Post-recovery altitude must remain anchored near 438.0 m (alt=${ekf.altitude})",
+            kotlin.math.abs(ekf.altitude - 438.0) <= 1.5
+        )
+
+        // Subsequent healthy tick: abrupt -15 m DEM grid jump while healthy baro stays flat MUST still be gated (REQ-FIL-037.2)
+        val altBeforeDemJump = ekf.altitude
+        ekf.predict(1.0, 6.0)
+        ekf.updateBarometer(473.0, varBaro = KinematicAltitudeSlopeEkf.DEFAULT_VAR_BARO, isStandstill = false, speedMps = 6.0)
+        ekf.updateReferenceAltitude(423.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        assertTrue(
+            "Healthy barometer after recovery must restore REQ-FIL-037.2 DEM jump gating (before=$altBeforeDemJump, after=${ekf.altitude})",
+            kotlin.math.abs(ekf.altitude - altBeforeDemJump) < 0.8
+        )
+    }
+
     private fun assertSymmetricSpd3x3(filter: KinematicAltitudeSlopeEkf) {
         assertEquals("p01/p10 must be symmetric", filter.p01, filter.p10, 1e-12)
         assertEquals("p02/p20 must be symmetric", filter.p02, filter.p20, 1e-12)

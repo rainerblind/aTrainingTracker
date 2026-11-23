@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" tests="26" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:08:53.535Z" hostname="rainer-HP-EliteBook-850-G5" time="58.404">
+  <properties/>
+  <testcase name="testCalmHandlebarClimbAndFastAlpineDescent_zeroDispersionAndPromptTracking_TST_FIL_040_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="10.629"/>
+  <testcase name="testShutDown_resetsEkfAndCleansUp" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.707"/>
+  <testcase name="testFinding5_workoutPause_clampsDtSecAndPreventsSpike" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.645"/>
+  <testcase name="testSyntheticZumBaecker57Replay_preventsAscentInflation_tstFil026_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="3.108"/>
+  <testcase name="testHandleReferenceAltitude_updatesEkfState" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.623"/>
+  <testcase name="testTerrainClimbAccumulation_withHysteresis_tstFil020_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.764"/>
+  <testcase name="testFinding2_concurrencyBetweenMetricsAndPressureMeasurement" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="2.11"/>
+  <testcase name="testSyntheticPixel10KurzeRunde53LoopReplay_gatesDemGridJumpsAndPreservesMslClosure_tstFil037_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="4.53"/>
+  <testcase name="testDeviceCreation_registersAllFiveSensors" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.635"/>
+  <testcase name="testFiveHzJeansPocketPedalingOscillations_rateMatchedAndSlopeBounded_tstFil026_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.895"/>
+  <testcase name="testFinding3_demTimestampGating_preventsCovarianceCollapse" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.655"/>
+  <testcase name="testStartupReferenceGrace_eliminatesCliffAndPreservesOfflineFallback_TST_FIL_040_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.632"/>
+  <testcase name="testFinding1_cachesPreferenceAndPairingStates_inMemory" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.599"/>
+  <testcase name="testBarometricMicroRippleHysteresisRejection_tstFil020_2" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.816"/>
+  <testcase name="testStandstillSlopeClearing_publishesZeroInsteadOfFrozenNegativeSlope_tstFil023_2" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.914"/>
+  <testcase name="testShutDown_clearsSubSecondBaroBucket_acrossRestart_tstFil026_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.743"/>
+  <testcase name="testClimbingCycle_accumulatesAscentAndUpdatesSlope" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.71"/>
+  <testcase name="testPocketCompressionAliasing_flatAndFullLoop_eliminatesPhantomHill_TST_FIL_040_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="3.2"/>
+  <testcase name="testReanchorOnResume_bothThreeStateAndTwoState_preventsStepAndAscentJump_TST_STB_025_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.629"/>
+  <testcase name="testAdaptiveBaroWindowAndRBaro_respondsSmoothlyToCarriageModeAndFallsBackUnknown_tstFil028_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.715"/>
+  <testcase name="testDemReferencePrecedence_overridesGpsAltitude_tstFil020_1" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.515"/>
+  <testcase name="testHandlePressureMeasurement_initializesAndPublishesAltitude" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.451"/>
+  <testcase name="testLowSpeedRollAway_suppressesSlopeSpikeAndAscentInflation_tstFil023_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.73"/>
+  <testcase name="testTechnicalDeviceName_localeInvariant_tstFil020_4" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.457"/>
+  <testcase name="testCalibrationJumpAscentDescentGuard_zeroBogusDescentAndRealClimbAfterward_tstFil022_3" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.548"/>
+  <testcase name="testFinding4_gpsElevationIngestion_whenGpsActive" classname="com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" time="1.43"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

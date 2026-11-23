@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.7  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 42
+**Total Requirements**: 43
 
 ---
 
@@ -1488,6 +1488,39 @@
 
 ---
 
+### REQ-FIL-040: Self-Adapting Intra-Bucket Barometer Dispersion Variance, 3-State Startup Calibration Grace & ERTS Low-Speed Braking Slope Stability (`ATT-9602`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-040`
+- **System Requirement(s)**: `Derived (SW-only)` — Internal software-only barometer dispersion estimation, 3-state startup emission gating, and ERTS deceleration damping refining `REQ-FIL-026`, `REQ-FIL-022.3`, `REQ-FIL-033.1`, and `REQ-FIL-037.2` without modifying hardware sensors, Android HALs, SQLite schemas, or cloud APIs.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BarometricBucketDispersion.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkf.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Localization Parity**: `N/A - no UI strings`
+- **Rationale**: Real-world Pixel 10 pocket-cycling telemetry (`2026-11-22_081402.phone_raw.csv.gz`) exposed three altitude-fusion defects: (1) asymmetric `~0.92 Hz` pocket-compression pressure waves (`70–88 m` peak-to-peak) beat against fixed 1-Hz baro buckets (`+6..+12 m` monotonic median bias invisible to sign-reversal jitter detection), inflating live `att_fused_altitude_slope` by `+6.74 m` / `+10%` on flat ground and doubling ascent/descent (`33.6 m` vs `18.8 m` ERTS), while also tripping `computeStepGatedRefVariance()` to veto true flat DEM; (2) uncalibrated `1013.25 hPa` standard-atmosphere altitude is emitted on `rows 0..1` before DEM/GPS lock at `row 2` (`470.9 -> 435.0 m` cliff); and (3) ERTS `SLOPE` plunges to `-11%` during flat-ground end-of-ride braking (`5.5 -> 0.6 m/s`) when pocket decompression pulls baro `-2.07 m` below flat DEM (`ATT-9602`).
+- **Description**:
+  1. *Self-Adapting Intra-Bucket Barometer Dispersion & Multi-Second Anti-Aliasing (`REQ-FIL-040.1`)*:
+     - Pure-Kotlin `BarometricBucketDispersion` SHALL measure intra-bucket physical dispersion (`IQR = Q3 - Q1` for `size >= 4`, `0.5 * (max - min)` for `size in 2..3`, `0.0` for `size < 2`) against a speed-aware physical elevation allowance `physicalSpan = max(2.5, 0.20 * max(0.0, speedMps))`.
+     - When `excessSpread = max(0.0, spread - physicalSpan) == 0.0` (handlebar mounts, calm pockets, and real `8–12%` climbs or fast alpine descents with `span <= 2 m`), `dispersionVarM2` SHALL remain `0.0` and the exact 1-Hz bucket median SHALL be emitted with zero added lag (passing speed-coupled slew `speedMps = speed` to `baroFilter.filterSlewOnly()`).
+     - When `excessSpread > 0.0` (severe pocket compression / wind buffeting), `BarometricBucketDispersion` SHALL inflate `dispersionVarM2` immediately (`min(2500.0, 2.0 * excessSpread^2)`) with exponential decay (`0.65` retention) on recovery, emit the interquartile trimmed mean across a bounded rolling `3,000 ms` raw sample window (`<= 128` samples, spanning `>= 2–3` pedal cycles), keep `baroFilter.filterSlewOnly()` at tight base slew (`speedMps = 0.0`), and feed `varBaro = mEffectiveRBaro + dispersionVarM2` into `KinematicAltitudeSlopeEkf.updateBarometer()`.
+  2. *Corrupted-Barometer DEM Step-Gate Protection (`REQ-FIL-040.2`)*:
+     - `KinematicAltitudeSlopeEkf` SHALL track `lastBaroVarM2` (updated across all `updateBarometer()` paths using raw finite positive `varBaro`, reset in `reset()`/`reanchorOnResume()`/`setMode()`) and apply baro-vs-ref step-discrepancy gating in `computeStepGatedRefVariance()` and DEM-to-slope decoupling (`k1Eff = 0`) ONLY when `lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD` (`16.0 m²`), clearing `lastRefBaroAltM = NaN` while untrusted so a dispersion-corrupted pocket barometer neither vetoes flat DEM/GPS anchoring nor locks a stale slope bias while preserving 100% of `REQ-FIL-037` whenever the barometer is healthy (`varBaro <= 16.0 m²`).
+  3. *3-State Startup Calibration Grace Guard (`REQ-FIL-040.3`)*:
+     - `AltitudeAndSlopeDevice_ATTFused` SHALL record `mFirstBaroTimestampMs` on initial barometer ingestion (cleared in `shutDown()`) and defer publishing `mAltitudeSensor` / `mSlopeSensor` / `mVerticalSpeedSensor` / `mAscentSensor` / `mDescentSensor` for up to `STARTUP_REFERENCE_GRACE_MS = 5_000L` strictly when `ekf.is3StateMode && !ekf.hasReferenceAnchor` (`ekf.isInitialized` MUST still become `true` immediately on sample #1).
+     - Upon arrival of a DEM/GPS reference within the grace window, calibrated altitude SHALL be emitted immediately with zero startup cliff and `0.0 m` phantom ascent/descent; if no reference arrives within `5 s` (offline/indoor), publication SHALL fall back seamlessly to barometer altitude (preserving `REQ-FIL-022.3` zero bogus descent on later DEM lock), while 2-State mode (`!is3StateMode`) and `reanchorOnResume()` MUST continue publishing immediately (`0 ms` delay).
+  4. *ERTS Low-Speed Braking Slope Stability (`REQ-FIL-040.4`)*:
+     - `ExtendedRtsAltitudeSlopeSmoother` SHALL preserve `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` and `lowSpeedSlopeGainFactor()` unchanged (`TST-FIL-033.1`), while detecting active deceleration (`dv/dt <= -0.25 m/s²` with a `4.0 s` low-speed braking hold below `2.5 m/s`): during braking, inflate `effectiveVarBaro` (`8.0×` with DEM/GPS reference, `4.0×` without reference below `2.5 m/s`) and smoothly damp low-speed braking slope updates & curvature (`qgVal` & baro `k1` scaled by `(speedMps / 2.5)^2` below `2.5 m/s`) so flat-ground braking (`5.5 -> 0.6 m/s`) avoids `-11%` grade plunges while steady-speed climbs/descents and genuine downhill braking remain accurate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* raw `~13 Hz` barometer telemetry with a `70–88 m` asymmetric `~0.92 Hz` pocket-compression wave on a flat `436–438 m` road (`t = 25..65 s`, `DEM = 436..438 m`, `speed = 5.5 m/s`, `QNH +34 m`) and a full-workout loop with pocket waves + genuine climbs/descents, *When* `AltitudeAndSlopeDevice_ATTFused` processes the stream, *Then* live fused `ALTITUDE` stays within `<= 2.0 m` of true elevation (no `+6.7 m` / `+10%` phantom climb) and full-workout live `ASCENT`/`DESCENT` stay within `<= 20%` of ERTS / true gain.
+• *Given* a cyclist climbing or descending a real `8–12%` alpine grade on a handlebar mount or calm pocket (`intra-bucket span <= 2 m`), *When* `AltitudeAndSlopeDevice_ATTFused` processes the stream, *Then* `dispersionVarM2` remains `0.0` (`varBaro` uninflated) and live altitude & slope % track the true grade promptly with zero added lag.
+• *Given* a 3-State workout starting outdoors with `+35 m` QNH offset and DEM/GPS arriving at `t = 1–2 s`, *When* the first `5 s` of samples are recorded, *Then* `ALTITUDE` does not emit a `470.9 -> 435.0 m` (`-35.7 m`) cliff or inject phantom ascent/descent; *When* completely offline for `>= 5 s`, *Then* it falls back gracefully to baro altitude; *When* in 2-State mode, *Then* it publishes immediately on sample #1.
+• *Given* a flat-road `15 s` braking segment (`5.5 -> 0.6 m/s`, `DEM = 438 m`, `BARO` dropping `-2.0 m` on pocket decompression), *When* `ExtendedRtsAltitudeSlopeSmoother.smooth()` runs, *Then* smoothed `SLOPE` stays within realistic flat-road bounds (`|SLOPE| <= 4%`, no `-11%` plunge) while steady climbs/descents remain unaffected.
+
+**Invariants**: `DEFAULT_VAR_BARO = 0.25` & 2-state `p00 = varBaro` unchanged; `REQ-FIL-037` DEM jump gating unchanged when `varBaro <= 16.0 m²`; `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` & `lowSpeedSlopeGainFactor()` unchanged (`TST-FIL-033.1`); `ekf.isInitialized == true` on sample #1; `REQ-FIL-022.3` `0.0 m` bogus descent on late DEM lock preserved; all modified files `<= 1,500` LoC (`0` protected monolith edits); `0` SQLite/UI/`strings*.xml` changes (`Localization Parity: N/A`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1605,3 +1638,5 @@
 | `1.0.4` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Promoted `REQ-TRK-094` to `[Verified]` (`224/224` PASS across 34 targeted unit/contract suites including `TST-TRK-094.1`–`.4` & Stage 6 Bounce 1 lazy `activeSessionDeviceIdsProvider` + `ConcurrentHashMap.newKeySet()`, `TrackerService.java` `3,180/3,220` LoC, `TrainingApplication.java` `2,038/2,050` LoC, clean `emulator-5554` smoke). |
 | `1.0.6` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `REQ-TRK-095` `[Planned]` (`REQ-TRK-095.1`–`.4`, linked to `SYSREQ-TRK-005`/`013`, `N/A - no UI strings`) for race-free `TrackerService` & `WorkoutPostProcessingService` FGS startup/teardown handshakes, FIFO `mWorkoutID` finalization, and 3-OS/9-locale sweep verification. |
 | `1.0.7` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `REQ-TRK-095` (`REQ-TRK-095.1`–`.4`) to `[Verified]` (`24` JVM suites / `174/174` PASS incl. `TST-TRK-095`, `47/47` Python tooling tests PASS, `12/12` live Multi-OS & 9-language emulator sweep `PASS` in `docs/engineering/emulator_sweeps/2026-11-22_sweep.md`, `TrackerService.java` `3,207/3,220` LoC, `TrainingApplication.java` `2,040/2,050` LoC, `0` new warnings). |
+| `1.0.8` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Added `[Planned]` `REQ-FIL-040` (`Derived (SW-only)`, `.1`–`.4`) for self-adapting intra-bucket barometer dispersion variance & 3-s trimmed-mean anti-aliasing (`BarometricBucketDispersion`), corrupted-barometer DEM step-gate guard, 3-state `5 s` startup calibration grace, and ERTS low-speed braking slope damping (`N/A - no UI strings`). |
+| `1.0.10` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `REQ-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.10`) following Gate 3 (`ATT-9650`) PASS, full Stage 4 construction (`BarometricBucketDispersion.kt` `198` LoC, `KinematicAltitudeSlopeEkf.kt` `697/1,500` LoC, `AltitudeAndSlopeDevice_ATTFused.kt` `571/1,500` LoC, `ExtendedRtsAltitudeSlopeSmoother.kt` `656/1,500` LoC), `90/90` targeted unit/contract tests PASS across 8 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9602_walkthrough.md`. |

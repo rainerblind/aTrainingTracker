@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.10  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 92
+**Total Tests**: 93
 
 ---
 
@@ -2010,6 +2010,25 @@
 
 ---
 
+### TST-FIL-040: **Pocket-Compression Barometer Dispersion Anti-Aliasing, 3-State Startup Calibration Grace & ERTS Low-Speed Braking Slope Verification (`ATT-9602`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-040` (`REQ-FIL-040.1`–`REQ-FIL-040.4`)
+- **Component**: `BarometricBucketDispersion.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `KinematicAltitudeSlopeEkf.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Jira**: `ATT-9602` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `BarometricBucketDispersionTest#calmHandlebarAndSteepAlpineDescent_keepZeroDispersionAndEmitExactBucketMedian`, `BarometricBucketDispersionTest#pocketCompression092HzWave_inflatesDispersionAndSuppressesBeatAliasing`, `BarometricBucketDispersionTest#dispersionVarianceDecaysSmoothlyWhenPocketWaveStops`, `BarometricBucketDispersionTest#guardsNonFiniteBackwardTimestampPauseGapSmallBucketsAndDelayedFlush`, `KinematicAltitudeSlopeEkfTest#testCorruptedBaroDispersion_doesNotVetoFlatDemAndRecoversCleanly_TST_FIL_040_2`, `AltitudeAndSlopeDevice_ATTFusedTest#testPocketCompressionAliasing_flatAndFullLoop_eliminatesPhantomHill_TST_FIL_040_1`, `AltitudeAndSlopeDevice_ATTFusedTest#testCalmHandlebarClimbAndFastAlpineDescent_zeroDispersionAndPromptTracking_TST_FIL_040_1`, `AltitudeAndSlopeDevice_ATTFusedTest#testStartupReferenceGrace_eliminatesCliffAndPreservesOfflineFallback_TST_FIL_040_3`, `ExtendedRtsAltitudeSlopeSmootherTest#testLowSpeedBrakingProtection_eliminatesFlatBrakingPlungeAndPreservesDownhill_TST_FIL_040_4`
+- **Test Description**:
+  1. *Pocket-Compression Wave Anti-Aliasing & Handlebar Responsiveness (`TST-FIL-040.1` — `BarometricBucketDispersionTest.kt`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Feed synthetic `~13 Hz` asymmetric `0.92 Hz` pocket-compression waves (`70–88 m` peak-to-peak, matching `2026-11-22_081402`) over `40 s` flat `436–438 m` road (`DEM = 436..438 m`, `speed = 5.5 m/s`, `+34 m` QNH offset) and across a full-workout loop with real climbs/descents; assert `dispersionVarM2` inflates immediately, live fused `ALTITUDE` stays within `<= 2.0 m` of true elevation (no `+6.7 m` / `+10%` phantom hill), and full-workout live `ASCENT`/`DESCENT` stay within `<= 20%` of ERTS/true gain.
+     • Feed calm/handlebar `8–12%` climb and fast `-12%` alpine descent (`18 m/s`, intra-bucket `span <= 2.2 m`); assert `dispersionVarM2 == 0.0`, `varBaro` stays uninflated (`profile.rBaroM2`), and live altitude & slope % track the true grade promptly with zero added lag.
+  2. *Corrupted-Barometer DEM Step-Gate Bypass & Healthy-Baro Preservation (`TST-FIL-040.2` — `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • Verify that when `updateBarometer(..., varBaro = 1000.0)` injects a `+8 m` biased barometer sample (`lastBaroVarM2 > 16.0`), subsequent flat `DEM` (`updateReferenceAltitude`) is NOT vetoed by `computeStepGatedRefVariance()`, while healthy `varBaro <= 16.0` preserves all `REQ-FIL-037.2` DEM grid-jump gating and `DEFAULT_VAR_BARO = 0.25` / 2-state `p00` invariants.
+  3. *3-State Startup Calibration Grace, Offline Fallback & 2-State Immediate Publish (`TST-FIL-040.3` — `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Verify 3-State workout with `+35 m` QNH offset (`470.9 m` baro vs `435.0 m` DEM arriving at `t = 2 s`) sets `ekf.isInitialized == true` at `t = 0 s`, emits NO uncalibrated `470.9 m` cliff on `t = 0..1 s`, emits `435.0 m` cleanly at `t = 2 s` with `0.0 m` phantom ascent/descent; verify offline/no-DEM workout falls back to baro after `>= 5 s` grace expiry (and late DEM lock at `t = 10 s` still adds `0.0 m` bogus descent); verify 2-State mode and `reanchorOnResume()` publish immediately at `t = 0 s`.
+  4. *ERTS Low-Speed Braking Slope Stability & Contract Checks (`TST-FIL-040.4` — `ExtendedRtsAltitudeSlopeSmootherTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Replay `15 s` flat-road braking segment (`5.5 -> 0.6 m/s`, `DEM = 438 m`, `BARO` dropping `-2.0 m` on pocket decompression); assert ERTS smoothed `SLOPE` stays within `±4%` (no `-11%` plunge) and smoothed altitude stays anchored near `438 m`; verify real `-8%` downhill braking preserves negative grade smoothly without overshoot; verify `lowSpeedSlopeGainFactor()` (`TST-FIL-033.1`) and `ArchitectureConformanceContractTest` (`<= 1,500` LoC) pass.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2143,3 +2162,5 @@
 | `1.0.7` | 2026-11-22 | Lane 1 Author (`ATT-6034`, `--as agent1`) | `ATT-6034` | Promoted `TST-TRK-094` to `[Verified]` (`224/224` PASS across 34 unit/contract suites incl. Stage 6 Bounce 1 lazy `activeSessionDeviceIdsProvider` fault-isolation test, `0` fail, `0` err, `0` skip, clean `emulator-5554` smoke, SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-6034/manifest.json`). |
 | `1.0.9` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `TST-TRK-095` `[Planned]` (`TST-TRK-095.1`–`.4`, strictly symmetric `REQ-TRK-095`, `N/A - no UI strings`) covering `TrackerService`/`TrainingApplication` & `WorkoutPostProcessingService` FGS handshakes, FIFO `mWorkoutID` resolution, 3-OS/9-locale sweep verification, and LoC/SWE.3 parity. |
 | `1.0.10` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `TST-TRK-095` (`TST-TRK-095.1`–`.4`) to `[Verified]` with verbatim test citations (`24` JVM suites / `174/174` PASS, `47/47` Python tests PASS, `12/12` live Multi-OS & 9-language emulator sweep `PASS` in `2026-11-22_sweep.md`, `12/12` `Rule 8.5` PNGs audited, SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9498/manifest.json`). |
+| `1.0.11` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Added `[Planned]` `TST-FIL-040` (`TST-FIL-040.1`–`TST-FIL-040.4`, strictly symmetric `REQ-FIL-040`) covering `70–88 m` pocket-compression barometer anti-aliasing, calm/handlebar `8–12%` responsiveness, corrupted-barometer DEM step-gate bypass, 3-state `5 s` startup calibration grace + offline fallback, and ERTS low-speed braking slope stability. |
+| `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9602`, `--as agent1`) | `ATT-9602` | Promoted `TST-FIL-040` (`.1`–`.4`) to `[Verified]` and aligned shard header `Version` (`1.0.13`) with verbatim method citations (`90/90` PASS across 8 targeted suites: `BarometricBucketDispersionTest` `4/4`, `KinematicAltitudeSlopeEkfTest` `17/17`, `AltitudeAndSlopeDevice_ATTFusedTest` `26/26`, `ExtendedRtsAltitudeSlopeSmootherTest` `10/10`, `BarometricAltitudeFilterTest` `7/7`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
