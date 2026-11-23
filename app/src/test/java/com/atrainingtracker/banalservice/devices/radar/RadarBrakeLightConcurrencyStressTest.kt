@@ -67,6 +67,7 @@ class RadarBrakeLightConcurrencyStressTest {
         io.mockk.every { android.util.Log.e(any(), any()) } returns 0
         io.mockk.every { android.util.Log.e(any(), any(), any()) } returns 0
         TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         RadarStateRepository.reset()
         RadarSnoozeController.reset()
         RadarLightController.reset()
@@ -77,6 +78,7 @@ class RadarBrakeLightConcurrencyStressTest {
     @After
     fun tearDown() {
         TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         RadarStateRepository.reset()
         RadarSnoozeController.reset()
         RadarLightController.reset()
@@ -106,6 +108,10 @@ class RadarBrakeLightConcurrencyStressTest {
     @Test
     fun tuningPreferencesUpdates_propagateImmediatelyToRadarLightControllerAndAutoPauseConfig_tstCon056_2() = runTest {
         val mockContext = mockk<Context>(relaxed = true)
+        val tempFilesDir = java.nio.file.Files.createTempDirectory("radar-stress-").toFile()
+        io.mockk.every { mockContext.applicationContext } returns mockContext
+        io.mockk.every { mockContext.filesDir } returns tempFilesDir
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
         val inMemory = InMemoryPreferencesDataStore()
         val store = TuningPreferencesDataStore.createForTesting(
             context = mockContext,
@@ -146,6 +152,10 @@ class RadarBrakeLightConcurrencyStressTest {
         RadarSnoozeController.setCoroutineScope(testScope)
 
         val mockContext = mockk<Context>(relaxed = true)
+        val tempFilesDir = java.nio.file.Files.createTempDirectory("radar-stress-").toFile()
+        io.mockk.every { mockContext.applicationContext } returns mockContext
+        io.mockk.every { mockContext.filesDir } returns tempFilesDir
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
         val mockSynth = mockk<RadarAudioSynthesizer>(relaxed = true)
         val mockAudio = mockk<AudioManager>(relaxed = true)
         val mockVibrator = mockk<Vibrator>(relaxed = true)
@@ -162,6 +172,11 @@ class RadarBrakeLightConcurrencyStressTest {
 
         SmartRadarLightEngine.coroutineDispatcher = UnconfinedTestDispatcher(testScheduler)
         SmartRadarLightEngine.isAutomationEnabled = true
+        val mockTuningStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        io.mockk.every { mockTuningStore.tuningConfigFlow } returns kotlinx.coroutines.flow.MutableStateFlow(
+            com.atrainingtracker.trainingtracker.settings.TuningConfig()
+        )
+        TuningPreferencesDataStore.setInstanceForTesting(mockTuningStore)
         SmartRadarLightEngine.start(mockContext)
         alertManager.start()
 
@@ -304,6 +319,10 @@ class RadarBrakeLightConcurrencyStressTest {
             override fun disconnectLight() {}
         }
         val mockContext = mockk<Context>(relaxed = true)
+        val tempFilesDir = java.nio.file.Files.createTempDirectory("radar-stress-").toFile()
+        io.mockk.every { mockContext.applicationContext } returns mockContext
+        io.mockk.every { mockContext.filesDir } returns tempFilesDir
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
         SmartBrakeLightDetector.onSpeedChanged(8.0f, nowMs = 1000L)
         SmartBrakeLightDetector.setDvDtForTesting(-3.0f)
 
