@@ -1,7 +1,7 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.44  
+**Version**: 1.0.45  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -41,7 +41,8 @@
 
 ### TST-PERF-004: **Incremental Period Visibility** [Verified]
 - **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
-- **Component**: `PeriodsRepository.kt`, `PeriodSummariesDbTest.kt`
+- **Component**: `PeriodsRepository.kt`, `PeriodReactiveProjectionTest.kt` (superseding decommissioned `PeriodSummariesDbTest.kt` per `ATT-8131`)
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodReactiveProjectionTest.kt::PeriodReactiveProjectionTest::testReactiveProjection_5000WorkoutsCompletesQuicklyInMemory_TST_PER_056_2`
 - **Jira**: ``ATT-374``
 - **Priority**: High
 - **Type**: Functional
@@ -50,7 +51,8 @@
 
 ### TST-PERF-005: **Dual-Phase Sync Efficiency** [Verified]
 - **Requirement(s)**: `REQ-PER-004`
-- **Component**: `PeriodsRepository.kt`, `PeriodSummariesDbTest.kt`
+- **Component**: `PeriodsRepository.kt`, `PeriodReactiveProjectionTest.kt` (superseding decommissioned `PeriodSummariesDbTest.kt` per `ATT-8131`)
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodReactiveProjectionTest.kt::PeriodReactiveProjectionTest::testPeriodSummariesDatabaseManagerExcised_andRegistryExcludesIt_TST_PER_056_1`
 - **Jira**: ``ATT-380``
 - **Priority**: High
 - **Type**: Functional
@@ -207,6 +209,7 @@
 ### TST-PER-020: **Immediate Period View Reactive Synchronization on Workout Finalization Verification** [Verified]
 - **Requirement(s)**: `REQ-PER-014`
 - **Component**: **Immediate Period View Reactive Synchronization on Workout Finalization Verification**
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepositorySyncTest.kt::PeriodsRepositorySyncTest::testPeriodsViewModel_loadPeriods_triggersWorkoutLoad` & `PeriodReactiveProjectionTest.kt::PeriodReactiveProjectionTest::testReactiveProjection_cropEditSportChangeDeleteAndNonPeriodDedup_TST_PER_056_3` (`ATT-8131`)
 - **Jira**: ``ATT-3056``
 - **Test Description**:
   1. *Fresh Install Direct Broadcast Reception & Period Emission Unit Test (`PeriodsRepositorySyncTest.kt`)*:
@@ -325,7 +328,8 @@
 
 ### TST-PER-026: **Self-Contained Period Persistence, Zero-N+1 Batch Loading & Bidirectional Sync Healing Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-020`
-- **Component**: **Period Summaries Database & Repository Sync**
+- **Component**: **Period Summaries Database & Repository Sync** (`PeriodSummaries.db` decommissioned in `ATT-8131`; superseded by reactive in-memory `PeriodsRepository` projection)
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodReactiveProjectionTest.kt::PeriodReactiveProjectionTest::testReactiveProjection_cropEditSportChangeDeleteAndNonPeriodDedup_TST_PER_056_3` & `PeriodsRepositorySyncTest.kt::PeriodsRepositorySyncTest::testPeriodsRepository_hasZeroReceiverOrDatabaseManagerFields`
 - **Jira**: `ATT-4476`
 - **Test Description**:
   1. *Zero-N+1 Batch Query Budget Tests (`TST-PER-026.1`, `PeriodSummariesDatabaseManagerTest.kt`)*:
@@ -1499,3 +1503,4 @@
 | `1.0.42` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Added `TST-PER-056` (`[Planned]`, `.1`–`.4`) covering `PeriodSummaries.db` decommissioning & contract ratchets, reactive in-memory projection parity & 5,000-workout perf, crop/edit instant refresh & 3,600-tick zero-rebuild guards, one-time obsolete disk cleanup, and legacy `.attbackup` restore compatibility. |
 | `1.0.43` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Promoted `TST-PER-056` to `[Verified]` with verbatim `PeriodReactiveProjectionTest`, `PeriodsRepositorySyncTest`, `TcxImportPeriodAndClusterIntegrationTest`, `DatabaseSchemaRegistryParityContractTest`, and `ArchitectureConformanceContractTest` citations (`611/611` PASS across 123 suites, live `emulator-5554` PNGs & `0` crashes, SHA-256 evidence bundle). |
 | `1.0.44` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Stage 6 Bounce 1/5 heal: stubbed `MigrationEngine.appRestarter` in `PeriodReactiveProjectionTest` for standalone JVM safety, added `testObsoletePeriodSummariesDiskCleanup_doesNotSetPrefFlagWhenDeleteFails_TST_PER_056_4` (`7/7` standalone PASS, `612/612` total across 123 suites), and grounded `MigrationEngine.performFullRestore`. |
+| `1.0.45` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 evidence grounding: updated `TST-PERF-004`, `TST-PERF-005`, `TST-PER-020`, `TST-PER-026` citations to `PeriodReactiveProjectionTest.kt` & `PeriodsRepositorySyncTest.kt` following `PeriodSummaries.db` decommissioning (`ATT-8131`, `TST-PRO-101`). |

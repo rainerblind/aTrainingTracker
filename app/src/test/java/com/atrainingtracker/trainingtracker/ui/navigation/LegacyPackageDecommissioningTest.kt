@@ -52,7 +52,7 @@ import java.io.StringWriter
  * 3. Verifies shared `ZoneLivePreviewTileCard` renders HR/Power and HRV DFA a1 previews cleanly.
  * 4. Verifies `BTLERadarDevice` rejects decommissioned synthetic `0x00`/`0x01` test headers.
  */
-// Linked test specs: TST-UI-2802
+// Linked test specs: TST-UI-2802, TST-STB-024 (Pebble subsystem & PebbleView.db decommissioned in ATT-8130)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class LegacyPackageDecommissioningTest {

@@ -1,7 +1,7 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.39  
+**Version**: 1.0.40  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1090,7 +1090,7 @@
 ### REQ-DAT-048: SQLite Null-Safe Summary Getters, `LIMIT 1`/Single-Pragma Sample Queries, Cursor-Safe/UTC `DevicesDatabaseManager`, `paired = 1` Remote Device Filtering, Route Upgrade/Duplication Hygiene & Locale-Independent Extrema Mapping (`ATT-8128`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-044`
-- **System Requirement(s)**: `Derived (SW-only)`
+- **System Requirement(s)**: `SYSREQ-DEX-005`, `SYSREQ-TRK-001`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -1185,3 +1185,4 @@
 | `1.0.14` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Added `[Planned]` `REQ-EXP-046` (`SYSREQ-TRK-010`, `SYSREQ-DEX-001`) for pure-JVM `PolarRawMetadata`/`PolarRawTelemetryReader`, deterministic multi-sidecar offline replay harness, scorecard/diff/CSV/ground-truth verifier, and lazy Gradle `JavaExec` CLI task `:app:replayRawTelemetry`. |
 | `1.0.15` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `REQ-EXP-046` to `[Implemented]` following Stage 4 implementation (`PolarRawMetadata.kt`, `PolarRawTelemetryReader.kt`, `app/src/test/.../replay/` harness + CLI, lazy `:app:replayRawTelemetry` task in `app/build.gradle`, `55/55` PASS + live CLI smoke PASS/FAIL). |
 | `1.0.16` | 2026-11-21 | Lane B Author (`ATT-9349`, `--as agent1`) | `ATT-9349` | Promoted `REQ-EXP-046` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9476`) independently verified `56/56` PASS across 9 suites (`0` warnings) @ `d889e9ca` + live `:app:replayRawTelemetry` PASS (`9s`) / FAIL (`4s`). |
+| `1.0.40` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 traceability reconciliation: linked `REQ-DAT-048` (`ATT-8128`) to `SYSREQ-DEX-005`, `SYSREQ-TRK-001` (`TST-PRO-102.3` / `TST-PRO-103.2`). |

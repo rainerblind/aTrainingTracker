@@ -160,6 +160,10 @@ class PeriodReactiveProjectionTest {
         )
     }
 
+    /**
+     * Verifies PeriodSummariesDatabaseManager excision & registry parity (TST-PER-056.1;
+     * supersedes PeriodSummaries.db sync tests TST-PERF-004, TST-PERF-005, TST-PER-020, TST-PER-026, TST-BUG-002).
+     */
     @Test
     fun testPeriodSummariesDatabaseManagerExcised_andRegistryExcludesIt_TST_PER_056_1() {
         var found = true

@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.14  
+**Version**: 1.0.15  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1491,7 +1491,7 @@
 ### REQ-FIL-040: Self-Adapting Intra-Bucket Barometer Dispersion Variance, 3-State Startup Calibration Grace & ERTS Low-Speed Braking Slope Stability (`ATT-9602`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-040`
-- **System Requirement(s)**: `Derived (SW-only)` — Internal software-only barometer dispersion estimation, 3-state startup emission gating, and ERTS deceleration damping refining `REQ-FIL-026`, `REQ-FIL-022.3`, `REQ-FIL-033.1`, and `REQ-FIL-037.2` without modifying hardware sensors, Android HALs, SQLite schemas, or cloud APIs.
+- **System Requirement(s)**: `SYSREQ-TRK-008` — Refines live barometric pressure & EKF altitude/slope fusion (`REQ-FIL-026`, `REQ-FIL-022.3`, `REQ-FIL-033.1`, `REQ-FIL-037.2`).
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1522,7 +1522,7 @@
 ### REQ-FIL-041: Immediate Zero-Speed Publication on Stationary Rejected GNSS Fixes & Post-Pause Velocity Spike Bounding (`ATT-9601`) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-041`
-- **System Requirement(s)**: `Derived (SW-only)` — Internal sensor-fusion speed publication and post-pause position-velocity decoupling refining `REQ-FIL-023.1`, `REQ-FIL-036.2`, and `REQ-TRK-056.2` without modifying hardware HALs, SQLite schemas, UI, or cloud APIs.
+- **System Requirement(s)**: `SYSREQ-TRK-010` — Refines smartphone fused odometry speed publication and post-pause position-velocity decoupling (`REQ-FIL-023.1`, `REQ-FIL-036.2`, `REQ-TRK-056.2`).
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1549,7 +1549,7 @@
 ### REQ-FIL-042: Unified Monotonic `elapsedRealtime` Clock Domain Across GNSS, IMU & Wheel Streams in `SpeedAndLocationDevice_ATTFused` [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-042`
-- **System Requirement(s)**: `Derived (SW-only)` — Internal monotonic timestamp unification across `AttFusedTimestampNormalizer`, `SpeedAndLocationDevice_ATTFused`, `PhoneCarriageClassifier`, and `UnicycleOdometryEkf` refining `REQ-FIL-028.1`/`.3`, `REQ-FIL-029.3`, and `REQ-FIL-031.1` without modifying hardware HALs, SQLite schemas, UI, or cloud APIs.
+- **System Requirement(s)**: `SYSREQ-TRK-010` — Refines smartphone IMU kinematics, carriage classification & fused odometry clock-domain coherence (`REQ-FIL-028.1`/`.3`, `REQ-FIL-029.3`, `REQ-FIL-031.1`).
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
@@ -1697,3 +1697,4 @@
 | `1.0.12` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `REQ-FIL-041` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9652`) PASS, Stage 4 construction (`SpeedAndLocationDevice.java` `867/1,500`, `UnicycleOdometryEkf.kt` `882/1,500`, `SpeedAndLocationDevice_ATTFused.kt` `1,498/1,500` LoC), `146/146` targeted tests PASS across 11 suites, `0` new warnings, and `docs/engineering/walkthroughs/ATT-9601_walkthrough.md`. |
 | `1.0.13` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Added `[Planned]` `REQ-FIL-042` (`Derived (SW-only)`, `.1`–`.3`) for unified monotonic `elapsedRealtime` GNSS/IMU/wheel timestamp normalization (`AttFusedTimestampNormalizer`), OEM `> 5 s` `uptimeMillis`/epoch-ns re-anchoring, UTC boundary preservation (`MultisportTelemetryAnchor` / sidecar), out-of-order `PhoneCarriageClassifier` / `UnicycleOdometryEkf` guards, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC (`N/A - no UI strings`). |
 | `1.0.14` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `REQ-FIL-042` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9654`) PASS, Stage 4 construction (`AttFusedTimestampNormalizer.kt` `278` LoC, `SpeedAndLocationDevice_ATTFused.kt` shrunk `1,498 -> 1,472/1,500` LoC, `PhoneCarriageClassifier.kt` `1,175/1,500` LoC, `UnicycleOdometryEkf.kt` `888/1,500` LoC, `docs/architecture.md` `v1.0.29`), `160/160` targeted tests PASS across 13 suites (incl. Robolectric), `0` new warnings, and `docs/engineering/walkthroughs/ATT-9600_walkthrough.md`. |
+| `1.0.15` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 traceability reconciliation: linked `REQ-FIL-040` to `SYSREQ-TRK-008` and `REQ-FIL-041`/`REQ-FIL-042` to `SYSREQ-TRK-010` (`TST-PRO-102.3` / `TST-PRO-103.2`). |

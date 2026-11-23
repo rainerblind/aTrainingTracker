@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 1 of 2)
 
 **Document ID**: `DOC-TST-PRO-P1`  
-**Version**: 1.0.6  
+**Version**: 1.0.7  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -497,7 +497,7 @@
 - **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PER-001`, `REQ-DAT-003`
 - **Component**: **Aggregation Gap Stability**
-- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummariesDbTest.kt::PeriodSummariesDbTest::testHierarchicalResync_withTemporalGapMonthsAndWeeks_aggregatesWithoutCorruption_TST_BUG_002` (`ATT-8327`)
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodReactiveProjectionTest.kt::PeriodReactiveProjectionTest::testReactiveProjection_multiSportMultiYearDstLocaleEmptyGapsAndRange_TST_PER_056_2` (superseding decommissioned `PeriodSummariesDbTest.kt` after `ATT-8131` reactive in-memory projection)
 - **Jira**: ``ATT-372``
 - **Test Description**: 1. Import training history with temporal gaps (e.g. skip a week/month). 2. Trigger a full hierarchical sync.
 
@@ -2527,3 +2527,4 @@
 | `1.0.2` | 2026-11-20 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Stage 5: Promoted `41` executable/reconciled TSTs to `[Verified]` with verification evidence citations (`156/156` Python + `151/151` Kotlin PASS at `d266d87b`); honestly retained `7` Bucket C TSTs at `[Implemented]`. |
 | `1.0.3` | 2026-11-20 | Lane A Flash (`ATT-8327`, `--as agent1`) | `ATT-8327` | Stage 6 Bounce 1/3 doc-only fix: corrected Python method names in `Verification Evidence`, aligned `TST-PRO-006` wording to `6-stage`, expanded exact file paths across all `41` TSTs, and synced revision history. |
 | `1.0.6` | 2026-11-22 | Lane 2 (`ATT-9603`, `--as agent1`) | `ATT-9603` | Added and verified `TST-LIV-002` (`LiveSegmentsRepositoryTest` 16/16 PASS; 20/20 across `*LiveSegments*`). |
+| `1.0.7` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 evidence grounding: updated `TST-BUG-002` citation from decommissioned `PeriodSummariesDbTest.kt` to `PeriodReactiveProjectionTest.kt` (`ATT-8131`, `TST-PRO-101`). |

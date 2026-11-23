@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.57  
+**Version**: 1.0.58  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1649,7 +1649,8 @@
 - **Priority**: Medium
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleServiceLifecycleTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/smartwatch/pebble/PebbleDatabaseManagerTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/LifecycleServiceReceiverSafetyAuditTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/TryWithResourcesCursorAuditTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/navigation/LegacyPackageDecommissioningTest.kt` (Pebble subsystem & `PebbleView.db` fully decommissioned in `ATT-8130`), `app/src/test/java/com/atrainingtracker/architecture/LifecycleServiceReceiverSafetyAuditTest.kt`, `app/src/test/java/com/atrainingtracker/architecture/TryWithResourcesCursorAuditTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/navigation/LegacyPackageDecommissioningTest.kt::LegacyPackageDecommissioningTest::testDecommissionedScreensHelpersOpenCsvAndPebble_absentFromClasspath_TST_UI_2802_1` (`ATT-8130`)
 - **Jira**: `ATT-9244`
 - **Test Description**:
   1. *Unsupported-Host Immediate Exit & Crash-Free `onDestroy()` (`TST-STB-024.1`, `PebbleServiceLifecycleTest.kt`)*:
@@ -1830,3 +1831,4 @@
 | `1.0.53` | 2026-11-22 | Lane 2 Author (`ATT-9567`, `--as agent1`) | `ATT-9567` | Added `[Verified]` `TST-PRO-136` (`TST-PRO-136.1`–`.3`: Weekly Full Test Suite 4th pillar, overdue-first Jira deduplication, and unified `days_threshold=6` unit tests) and aligned `TST-PRO-095`, `TST-PRO-096`, and `TST-PRO-135.4` to the 6-day cadence. |
 | `1.0.56` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `[Planned]` `TST-PRO-138` (`TST-PRO-138.1`, strictly symmetric `REQ-PRO-138`, `N/A - Python tooling only`) verifying `tools/baseline_manager.py` surfaces latest `FAIL`/unknown emulator sweeps as `Open Release Deviations` and clears them on newer `PASS` sweeps. |
 | `1.0.57` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Promoted `TST-PRO-138` (`TST-PRO-138.1`) to `[Verified]` with verbatim `tools/test_baseline_manager.py` citations (`7/7` PASS, `47/47` total Python tooling tests PASS, governance `exit 0`). |
+| `1.0.58` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 evidence grounding: updated `TST-STB-024` citation to `LegacyPackageDecommissioningTest.kt` following Pebble subsystem decommissioning (`ATT-8130`, `TST-PRO-101`). |
