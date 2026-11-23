@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.45  
+**Version**: 1.0.48  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 128
+**Total Requirements**: 129
 
 ---
 
@@ -3084,6 +3084,36 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-130: Polar Offline HR UTC Timestamp Alignment, Bounded Gap Matching & Commit-Gated Flash Cleanup (`ATT-9611`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-132`
+- **System Requirement(s)**: `SYSREQ-DEX-007`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PolarOfflineHrTimestampAligner.kt`, `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, `WorkoutSamplesDatabaseManager.java`
+- **Localization Parity**: `N/A - 0 string changes` (`0` edits to `res/values*/strings*.xml`)
+- **Rationale**: On Pixel 10 (`ATT-9611`, Workout `2430`, `Europe/Berlin` `CET = UTC+1`, Polar Verity Sense `24825632`), `PolarVeritySenseOfflineController.resolveRecordingAnchorMs()` converted Polar BLE SDK `8.6.0` `HrOfflineRecording.startTime` (parsed as UTC by `OfflineRecordingData.parseStartTime`) using `ZoneId.systemDefault()`, shifting the entire offline HR series `-3,600 s` earlier than UTC `WorkoutSamples.time`. Because `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()` had zero maximum timestamp tolerance and `applyBackfillAndCommit()` ignored `patchedCount`, all 73 missing HR rows were flat-line clamped to the single final sample (`106 bpm`) and the genuine flash recording was deleted with zero `Log.i` diagnostics.
+- **Description**:
+  1. *Pure-JVM UTC Anchor Alignment & Timezone-Safe Entry Selection (`REQ-SET-130.1`)*: `PolarOfflineHrTimestampAligner` (pure-JVM, zero `android.*` imports) SHALL convert `HrOfflineRecording.startTime` strictly via `ZoneOffset.UTC` (falling back to `fallbackAnchorMs` ONLY when `startTime` is null, `< 2020`, or yields `<= 0L`), align valid 1-Hz HR samples (`25..250 bpm`, `hr > 0 ? hr : correctedHr`) to `anchorMs + index * 1_000L`, honor `Types.PbLocalDateTime.timeZoneOffset` strictly when `hasTimeZoneOffset()` is true AND `timeZoneOffset in -1080..1080` (guarding against `DateTimeException` on malformed protobuf bytes, else `fallbackZone`), and match `PolarOfflineRecordingEntry` entries within `[windowStartMs - toleranceMs, effectiveEndMs + toleranceMs]` evaluating all valid local offsets (`zoneId.rules.getValidOffsets(entry.date)`, handling DST fall-back 2-offset overlap hours) first and falling back to UTC path matching ONLY when zero local matches exist in a non-UTC timezone.
+  2. *Bounded Nearest-Sample Matching (`REQ-SET-130.2`)*: `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()` SHALL enforce `MAX_HR_MATCH_TOLERANCE_MS = 5_000L` (`<= 5 s`) when selecting the nearer of `hrMap.floorEntry(tsMs)` and `hrMap.ceilingEntry(tsMs)` for every missing `SensorType.HR` row (`HR IS NULL OR HR <= 0`), skipping any row whose nearest offline HR sample exceeds `5_000 ms` (never flat-line clamping out-of-window rows) while preserving existing live HR/GPS/speed/cadence/power values, the `totalRows == 0` empty-table insert path, and its exact public JVM signature.
+  3. *Commit-Gated Flash Cleanup, Complete-HR Pending Fast Path & Structured Diagnostics (`REQ-SET-130.3`)*: `PolarVeritySenseOfflineController.executePendingSyncSession()` SHALL provide a symmetric zero-gap fast path when `session.offlineEntry != null && !baseFileName.isNullOrEmpty() && !shouldBackfill(appContext, baseFileName)` (preserving full `session.swimSession` backfill): skip PFTP HR download, log `Log.i` (`alreadyCompleteHr=true`), clear `polarSyncPending`, remove the matched flash entry, refresh the workout, and return `true`. In `applyBackfillAndCommit()` (defense-in-depth), capture `patchedCount` from `PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType()`; whenever `baseFileName.isNullOrEmpty()`, `hrPairs.isEmpty()`, or `(patchedCount <= 0 && hasMissingHeartRateSamples(baseFileName))`, it MUST skip `recomputeHrSummaryMetrics()`, MUST NOT clear `polarSyncPending`, MUST log `Log.w`, and MUST return `false` so neither `handleStopBackfillMatch()` nor `executePendingSyncSession()` invokes `api.removeOfflineRecord()`. Conversely, when `patchedCount == 0 && !hasMissingHeartRateSamples(baseFileName)` (with non-empty `baseFileName` and `hrPairs`), it SHALL log `Log.i`, clear pending if requested, refresh the workout, and return `true` (preventing permanent pending-retry livelock). Both `PolarVeritySenseOfflineController` and `PolarH10OfflineController` SHALL emit structured `Log.i` diagnostics (`Log.w` on zero-patch rejection) recording `workoutId`, matched `entry.path`, `startTime` (Verity), `anchorMs`, `samples`/`beats`, `hrRange=[min..max]`, `patchedCount`, and `flashRemoved`.
+  4. *Monolith Ceilings, Pinned Signatures & Zero Side Effects (`REQ-SET-130.4`)*: Keep `PolarVeritySenseOfflineController.kt <= 1,500` LoC (reduced below `1,492`), `PolarH10OfflineController.kt <= 1,500` LoC, `WorkoutSamplesDatabaseManager.java <= 1,500` LoC with unchanged public JVM signatures (`InterfaceSignatureDriftContractTest`); preserve Verity Sense `WorkoutRr.db` / `HrvPostWorkoutRecomputer` exclusion (`REQ-SET-109.2`) and H10 RR-only backfill (`intervals.isNotEmpty()`); `0` DB schema bumps; `0` edits to `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `TrackerService.java`, and `res/values*/strings*.xml`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-109` (`ATT-7924`), `REQ-SET-105` (`ATT-7918`), `REQ-TRK-084.4`, `REQ-TRK-093` (`ATT-8124`) across `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, and `WorkoutSamplesDatabaseManager.java`.
+  2. *Historical Origin & Commit Trace*: `ATT-7918` (`patchMissingHeartRateSamples()`), `ATT-7924` (`resolveRecordingAnchorMs()` / `applyBackfillAndCommit()`), `ATT-8124` (H10 UTC epoch anchor).
+  3. *Root Reason for Existing Formulation*: `ATT-7924` assumed local wall-clock semantics for Polar SDK `LocalDateTime`; `ATT-7918` used unbounded nearest-neighbor `floor`/`ceiling` to absorb ~1 s clock jitter.
+  4. *Preservation of Core Invariants*: Preserves gap-only canonical `HR` patching, live HR/GPS/power preservation, `totalRows == 0` swim insert path, Verity Sense HRV isolation (`REQ-SET-109.2`), H10 RR-only backfill parity, pinned JVM signatures, and `< 1,500` LoC monolith budgets.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a device in `Europe/Berlin` (`CET +1` / `CEST +2`) or `America/New_York` (`EST -5`) with UTC `WorkoutSamples.time` (`09:43:06Z..09:45:29Z`) and Polar SDK `HrOfflineRecording.startTime = 2026-11-22T09:43:08`, *When* `PolarOfflineHrTimestampAligner` resolves the anchor and aligns samples, *Then* `anchorMs` equals exact `2026-11-22T09:43:08Z` with zero timezone shift and dynamic 1-Hz HR samples align second-for-second.
+• *Given* an offline HR series shifted by `1 h` or an unrecorded gap `> 5_000 ms` from the nearest offline sample, *When* `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()` executes, *Then* out-of-window rows remain unpatched (`0` flat-line clamped rows) while rows within `<= 5_000 ms` receive authentic nearest HR values.
+• *Given* `patchMissingHeartRateSamples()` returns `0` while `hasMissingHeartRateSamples(baseFileName)` is still `true`, *When* `stopAndBackfillWorkout()` or `syncPendingWorkout()` executes, *Then* `applyBackfillAndCommit()` returns `false`, `api.removeOfflineRecord()` and `clearPolarSyncPending()` are NOT invoked, and `Log.w` records the rejection; conversely, when `hasMissingHeartRateSamples(baseFileName)` is `false` (already complete HR), `executePendingSyncSession()` fast-paths cleanup and `applyBackfillAndCommit()` returns `true` cleanly without livelock.
+
+**Invariants**: Canonical `HR` gap-only patching; live HR/GPS/Power preserved; `totalRows == 0` empty-table insert preserved; zero `WorkoutRr.db` writes on Verity Sense; H10 RR-only backfill preserved; `removeOfflineRecord()` gated on `patchedCount > 0 || !hasMissingHeartRateSamples` (with non-empty `baseFileName`); DST fall-back & `-1080..1080` offset guards; all touched files `<= 1,500` LoC; pinned JVM signatures unchanged; `0` UI/string/DB-schema edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3132,3 +3162,6 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.42` | 2026-11-22 | Lane 3 Author (`ATT-8121`, `--as agent1`) | `ATT-8121` | Promoted `REQ-SET-128` to `[Verified]` following Stage 4/5 construction & verification (`231/231 PASS` across 34 targeted suites incl. `PreferenceSingletonsLifecycleTest` `7/7`, `ArchitectureConformanceContractTest` `11/11`, `0` new Kotlin warnings, live `emulator-5554` smoke install & `read_file` PNG verified, `CRASH_LOGCAT_CLEAN`). |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Added `REQ-SET-129` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-DEX-007`/`SYSREQ-TRK-002`) for linearizable `PolarOnlineStreamingBridge` yield quiescence (`gattActionLock`), disconnect-recovering & in-flight-reusing `connectWithinTimeout()`, alias-aware `20 s` `awaitFeaturesReady()`, and H10/Verity Sense sibling parity (`N/A - 0 string changes`). |
 | `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Promoted `REQ-SET-129` to `[Verified]` following Stage 4/5 construction & verification (`232/232 PASS` across 24 Polar/BLE/Contract suites, `0` production Kotlin warnings, all 4 Polar files `<= 1,500` LoC, `my_btle_device.md` `v1.0.12`, and `docs/engineering/walkthroughs/ATT-9612_walkthrough.md`). |
+| `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Added `REQ-SET-130` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-DEX-007`) for pure-JVM UTC `HrOfflineRecording.startTime` alignment (`PolarOfflineHrTimestampAligner`), `<= 5_000 ms` bounded matching in `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()`, `patchedCount > 0` flash-deletion gate, and structured Verity Sense + H10 backfill diagnostics (`N/A - 0 string changes`). |
+| `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Gate 3 (`ATT-9661`) revision: added symmetric already-complete-HR fast path in `executePendingSyncSession()` + defense-in-depth `patchedCount == 0 && !hasMissingHeartRateSamples` livelock guard (`REQ-SET-130.3`), DST fall-back `getValidOffsets()` entry matching, and `-1080..1080` `PbLocalDateTime.timeZoneOffset` range guard (`REQ-SET-130.1`). |
+| `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Promoted `REQ-SET-130` to `[Verified]` following Stage 4/5 construction & verification (`250/250 PASS` across 24 Polar/`WorkoutSamples`/Contract suites, `0` production Kotlin/Java warnings, `PolarOfflineHrTimestampAligner.kt` `266` LoC, `PolarVeritySenseOfflineController.kt` `1,476/1,500`, `PolarH10OfflineController.kt` `936/1,500`, `WorkoutSamplesDatabaseManager.java` `1,478/1,500`, and `docs/engineering/walkthroughs/ATT-9611_walkthrough.md`). |

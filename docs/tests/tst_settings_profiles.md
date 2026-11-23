@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.45  
+**Version**: 1.0.48  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 117
+**Total Tests**: 118
 
 ---
 
@@ -1758,6 +1758,24 @@
 
 ---
 
+### TST-SET-132: **Polar Offline HR UTC Timestamp Alignment, Bounded Gap Matching & Commit-Gated Flash Cleanup Suite (`ATT-9611`)** [Verified]
+- **Requirement(s)**: `REQ-SET-130` (`REQ-SET-130.1`..`REQ-SET-130.4`)
+- **Component**: `PolarOfflineHrTimestampAligner.kt`, `PolarVeritySenseOfflineController.kt`, `PolarH10OfflineController.kt`, `WorkoutSamplesDatabaseManager.java`, `PolarOfflineHrTimestampAlignerTest.kt`, `WorkoutSamplesHrBackfillTest.kt`, `PolarVeritySenseOfflineControllerTest.kt`, `PolarH10OfflineControllerTest.kt`
+- **Jira**: `ATT-9611`
+- **Priority**: Critical | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Pure-JVM UTC Anchor & Timezone Alignment (`TST-SET-132.1`, `PolarOfflineHrTimestampAlignerTest#testResolveHrOfflineAnchorMs_interpretsStartTimeAsUtcRegardlessOfSystemTimezone_TST_SET_132_1`, `PolarOfflineHrTimestampAlignerTest#testParsePbLocalDateTimeMs_honorsValidOffsetAndGuardsOutOfRangeWithoutException_TST_SET_132_1`, `PolarOfflineHrTimestampAlignerTest#testSelectMatchingHrEntry_handlesDstFallBackTwoOffsetsAndUtcFallbackWithoutCollision_TST_SET_132_1`, `PolarOfflineHrTimestampAlignerTest#testAlignHrSamplesAndFormatBackfillDiagnostics_filtersBoundsAndReportsMinMaxSpan_TST_SET_132_1`)*:
+     • Verify across `UTC`, `Europe/Berlin` (`CET +1` / `CEST +2`, including DST fall-back 2-offset overlap hour via `zoneId.rules.getValidOffsets()`), `America/New_York` (`EST -5`), and `Asia/Tokyo` that `resolveHrOfflineAnchorMs()` interprets Polar SDK `HrOfflineRecording.startTime` strictly as UTC, falls back only when null / year `< 2020`, aligns valid 1-Hz HR samples (`25..250 bpm`), honors `Types.PbLocalDateTime.timeZoneOffset` inside `-1080..1080` while safely falling back on out-of-range offsets without throwing `DateTimeException`, selects `PolarOfflineRecordingEntry` local-first with UTC fallback only when no local entry matches, and formats structured diagnostic summaries.
+  2. *Bounded Nearest-Sample SQLite Patching (`TST-SET-132.2`, `WorkoutSamplesHrBackfillTest#testPatchMissingHeartRateSamples_rejectsOneHourTimezoneShiftWithoutConstantClamping_TST_SET_132_2`, `WorkoutSamplesHrBackfillTest#testPatchMissingHeartRateSamples_enforcesExact5000MsBoundaryAndPatchesAuthenticDynamicGaps_TST_SET_132_2`)*:
+     • Reproduce Workout `2430` (`CET +1` 1-hour shifted offline HR series) and verify `patchMissingHeartRateSamples()` returns `0` with zero `106 bpm` flat-line clamping; verify exact `5_000 ms` boundary acceptance vs. `5_001 ms` rejection; verify authentic dynamic multi-sample gap patching across initial and mid-workout gaps while preserving existing live HR/GPS/Power rows and the `totalRows == 0` empty-table swim insert path.
+  3. *Commit-Gated Flash Cleanup, Complete-HR Fast Path & Verity/H10 Diagnostics Parity (`TST-SET-132.3`, `PolarVeritySenseOfflineControllerTest#testStopAndBackfill_nonUtcJvmTimezone_alignsUtcStartTimeWithoutHourShift_TST_SET_132_3`, `PolarVeritySenseOfflineControllerTest#testBackfillZeroPatchedWithMissingHr_rejectsCommitPreservesFlashAndPendingState_TST_SET_132_3`, `PolarVeritySenseOfflineControllerTest#testPendingSyncAlreadyCompleteHr_fastPathsAndDefenseInDepthWithoutLivelock_TST_SET_132_3`, `PolarH10OfflineControllerTest#testStopAndPendingBackfill_preservesRrOnlyBackfillWhenPatchedHrRowsZeroAndLogsDiagnostics_TST_SET_132_3`)*:
+     • Verify Verity Sense `stopAndBackfillWorkout()` and `syncPendingWorkout()` under `Europe/Berlin` align UTC `HrOfflineRecording.startTime` accurately; verify BOTH `patchedCount == 0` branches (missing-HR rejection preserving flash/pending vs. already-complete-HR fast path & defense-in-depth without livelock); verify post-commit single-entry removal when `patchedCount > 0` and H10 sibling parity (preserving RR-only backfill when `patchedHrRows == 0 && intervals.isNotEmpty()`).
+  4. *Monolith Ceilings, Pinned Signatures & Governance Contracts (`TST-SET-132.4`)*:
+     • Verify `ArchitectureConformanceContractTest` (`11/11`), `InterfaceSignatureDriftContractTest` (`3/3`), `DeadCodeEliminationContractTest` (`6/6`), `SourceTextReadingAuditContractTest` (`6/6`), and `SystemDataExchangeRequirementsContractTest` (`4/4`) (`Localization Parity: N/A - 0 string changes`).
+- **Verification Evidence**: Tier-1 targeted run `250/250 PASS` (`0` fail, `0` err, `0` skip) across 24 suites (`PolarOfflineHrTimestampAlignerTest` `4/4`, `WorkoutSamplesHrBackfillTest` `3/3`, `PolarVeritySenseOfflineControllerTest` `33/33`, `PolarH10OfflineControllerTest` `27/27`, `PolarOfflineGattCoordinatorCoexistenceTest` `14/14`, `PolarOnlineStreamingBridgeTest` `58/58`, `PolarPmdStreamCoordinatorTest` `11/11`, `PolarRawTelemetryRecorderTest` `9/9`, `PolarHrStreamHealthMonitorTest` `7/7`, `PolarOfflineCapabilityStoreTest` `7/7`, `PolarRawTelemetryPrunerTest` `6/6`, `PolarRawTelemetryReaderTest` `6/6`, `PolarH10RunningDynamicsEstimatorTest` `5/5`, `PolarLiveRunningCadenceEstimatorTest` `5/5`, `PolarPpiStreamProcessorTest` `4/4`, `PolarRetrySyncCoordinatorTest` `3/3`, `PolarDualImuBoundedHeapStressTest` `1/1`, `WorkoutSamplesDatabaseManagerTest` `11/11`, `WorkoutSamplesDatabaseManagerEscapingTest` `6/6`, plus 5 Contract suites `30/30`; `10/10` verbatim `TST-SET-132` methods verified, `0` production compiler warnings); `:app:assembleDebug` PASS; evidence bundle `docs/engineering/test_evidence/tickets/ATT-9611/` and `docs/engineering/walkthroughs/ATT-9611_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1806,3 +1824,6 @@
 | `1.0.43` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Added `TST-SET-131` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-129`) covering `gattActionLock` yield quiescence, managed `connectWithinTimeout()` disconnect recovery & in-flight handshake reuse, alias-aware `20 s` `awaitFeaturesReady()` across Verity Sense & H10, and monolith/signature/detailed-design contracts (`N/A - 0 string changes`). |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Promoted `TST-SET-131` to `[Verified]` with all `6/6` verbatim `TestClass#testMethod` citations (`232/232 PASS` across 24 Polar/BLE/Contract suites, `:app:assembleDebug` PASS, `0` production Kotlin warnings, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9612/`). |
 | `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Stage 6 Bounce 1/5 heal: added `testConnectWithinTimeout_coalescesConnectedThenDisconnectedBurstBeforeSelectAndDuringBackoff_TST_SET_131_2` (`7/7` verbatim `TST-SET-131` methods, `233/233 PASS` across 24 suites), suppressed `OVERRIDE_DEPRECATION` warning on `PolarOfflineGattCoordinator`, and updated `my_btle_device.md` (`v1.0.13`) lock DAG. |
+| `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Added `TST-SET-132` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-130`) covering pure-JVM UTC anchor & timezone alignment (`PolarOfflineHrTimestampAlignerTest`), `<= 5_000 ms` bounded SQLite gap matching (`WorkoutSamplesHrBackfillTest`), commit-gated flash cleanup & H10 sibling parity (`PolarVeritySenseOfflineControllerTest`, `PolarH10OfflineControllerTest`), and monolith/signature/system contracts (`N/A - 0 string changes`). |
+| `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Gate 3 (`ATT-9661`) revision: added DST fall-back `getValidOffsets()` & malformed `timeZoneOffset` range-guard tests (`TST-SET-132.1`), plus both `patchedCount == 0` branches (missing-HR rejection vs. already-complete-HR fast-path & defense-in-depth livelock guard in `TST-SET-132.3`). |
+| `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Promoted `TST-SET-132` to `[Verified]` with all `10/10` verbatim `TestClass#testMethod` citations (`250/250 PASS` across 24 Polar/`WorkoutSamples`/Contract suites, `:app:assembleDebug` PASS, `0` production compiler warnings, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9611/`). |

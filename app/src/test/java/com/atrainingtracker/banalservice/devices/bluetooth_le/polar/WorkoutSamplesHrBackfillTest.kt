@@ -131,4 +131,132 @@ class WorkoutSamplesHrBackfillTest {
         val rrRepo = WorkoutRrRepository.getInstance(context)
         assertTrue(rrRepo.getIntervalsForWorkoutBlocking(999L).isEmpty())
     }
+
+    // REQ-SET-130.2 / TST-SET-132.2
+    @Test
+    fun testPatchMissingHeartRateSamples_rejectsOneHourTimezoneShiftWithoutConstantClamping_TST_SET_132_2() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        WorkoutSamplesDatabaseManager.resetForTesting(null)
+        val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context)
+        val baseFileName = "2026-11-22_104306_cet_shift_repro"
+        val table = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDb.createNewTable(baseFileName, listOf(SensorType.HR))
+        val db = samplesDb.database
+        val timeCol = WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+
+        // Reproduces Pixel 10 Workout 2430 (09:43:06Z..09:45:27Z UTC = 10:43:06..10:45:27 CET):
+        // initial gap + live HR + mid-workout gap + live HR
+        val t0UtcSec = java.time.Instant.parse("2026-11-22T09:43:06Z").epochSecond
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(java.time.ZoneOffset.UTC)
+        for (s in 0..140) {
+            val timeStr = formatter.format(java.time.Instant.ofEpochSecond(t0UtcSec + s))
+            val cv = ContentValues().apply {
+                put(timeCol, timeStr)
+                when {
+                    s in 13..73 -> put(SensorType.HR.name, 87 + (s % 15))
+                    s in 134..140 -> put(SensorType.HR.name, 108 - (s - 134) / 2)
+                    else -> putNull(SensorType.HR.name)
+                }
+            }
+            db.insertOrThrow(table, null, cv)
+        }
+
+        // Offline HR shifted -1 hour earlier (08:43:08Z..08:45:29Z), ending at 106 bpm
+        val shiftedAnchorMs = (t0UtcSec - 3_600L + 2L) * 1_000L
+        val shiftedPairs = (0..140).map { i ->
+            val bpm = if (i == 140) 106 else 88 + (i % 20)
+            Pair(shiftedAnchorMs + i * 1_000L, bpm)
+        }
+
+        val patched = samplesDb.patchMissingHeartRateSamples(baseFileName, shiftedAnchorMs, shiftedPairs)
+        assertEquals("1-hour shifted series must patch 0 rows and never flat-line clamp to 106 bpm", 0, patched)
+        assertTrue(samplesDb.hasMissingHeartRateSamples(baseFileName))
+
+        var nonNullGapRows = 0
+        db.rawQuery("SELECT HR FROM $table WHERE _id <= 13 OR (_id BETWEEN 75 AND 134)", null).use { c ->
+            while (c.moveToNext()) {
+                if (!c.isNull(0)) nonNullGapRows++
+            }
+        }
+        assertEquals("Zero missing gap rows may be corrupted by out-of-window samples", 0, nonNullGapRows)
+    }
+
+    // REQ-SET-130.2 / TST-SET-132.2
+    @Test
+    @Suppress("LongMethod")
+    fun testPatchMissingHeartRateSamples_enforcesExact5000MsBoundaryAndPatchesAuthenticDynamicGaps_TST_SET_132_2() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        WorkoutSamplesDatabaseManager.resetForTesting(null)
+        val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context)
+        val baseFileName = "2026-11-22_104306_boundary_and_dynamic"
+        val table = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDb.createNewTable(baseFileName, listOf(SensorType.HR, SensorType.POWER))
+        val db = samplesDb.database
+        val timeCol = WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+        val t0Sec = java.time.Instant.parse("2026-11-22T09:43:06Z").epochSecond
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(java.time.ZoneOffset.UTC)
+
+        // Rows at offsets: 0s (6s before first offline sample -> >5000ms REJECT),
+        // 1s (5s before first offline sample -> ==5000ms ACCEPT),
+        // 6s..8s (exact dynamic 1-Hz offline samples 91, 95, 99),
+        // 9s (live HR 102 -> MUST preserve),
+        // 13s (5s after last offline sample 8s -> ==5000ms ACCEPT),
+        // 14s (6s after last offline sample 8s -> >5000ms REJECT)
+        val rowSpecs = listOf(
+            Triple(0L, null, 180),
+            Triple(1L, null, 185),
+            Triple(6L, null, 190),
+            Triple(7L, null, 195),
+            Triple(8L, null, 200),
+            Triple(9L, 102, 205),
+            Triple(13L, null, 210),
+            Triple(14L, null, 215)
+        )
+        for ((offsetSec, liveHr, power) in rowSpecs) {
+            db.insertOrThrow(
+                table,
+                null,
+                ContentValues().apply {
+                    put(timeCol, formatter.format(java.time.Instant.ofEpochSecond(t0Sec + offsetSec)))
+                    if (liveHr != null) put(SensorType.HR.name, liveHr) else putNull(SensorType.HR.name)
+                    put(SensorType.POWER.name, power)
+                }
+            )
+        }
+
+        val offlinePairs = listOf(
+            Pair((t0Sec + 6L) * 1_000L, 91),
+            Pair((t0Sec + 7L) * 1_000L, 95),
+            Pair((t0Sec + 8L) * 1_000L, 99)
+        )
+        assertEquals(5_000L, WorkoutSamplesDatabaseManager.MAX_HR_MATCH_TOLERANCE_MS)
+        val patched = samplesDb.patchMissingHeartRateSamples(baseFileName, (t0Sec + 6L) * 1_000L, offlinePairs)
+        assertEquals("Only rows within <= 5000 ms (offsets 1, 6, 7, 8, 13) should be patched", 5, patched)
+
+        val actualHrAndPower = mutableListOf<Pair<Int?, Int>>()
+        db.rawQuery("SELECT HR, POWER FROM $table ORDER BY _id ASC", null).use { c ->
+            while (c.moveToNext()) {
+                val hr = if (c.isNull(0)) null else c.getInt(0)
+                actualHrAndPower.add(Pair(hr, c.getInt(1)))
+            }
+        }
+        assertEquals(null, actualHrAndPower[0].first)   // 0s: 6000 ms away -> skipped
+        assertEquals(91, actualHrAndPower[1].first)     // 1s: 5000 ms away -> boundary accepted
+        assertEquals(91, actualHrAndPower[2].first)     // 6s: exact dynamic sample
+        assertEquals(95, actualHrAndPower[3].first)     // 7s: exact dynamic sample
+        assertEquals(99, actualHrAndPower[4].first)     // 8s: exact dynamic sample
+        assertEquals(102, actualHrAndPower[5].first)    // 9s: live HR preserved
+        assertEquals(99, actualHrAndPower[6].first)     // 13s: 5000 ms away -> boundary accepted
+        assertEquals(null, actualHrAndPower[7].first)   // 14s: 6000 ms away -> skipped
+        assertEquals(180, actualHrAndPower[0].second)
+        assertEquals(215, actualHrAndPower[7].second)
+
+        // Empty-table swim-only insert path must remain preserved
+        val emptyTableBase = "2026-11-22_110000_empty_swim_table"
+        samplesDb.createNewTable(emptyTableBase, listOf(SensorType.HR))
+        val inserted = samplesDb.patchMissingHeartRateSamples(emptyTableBase, (t0Sec + 6L) * 1_000L, offlinePairs)
+        assertEquals("Empty-table insert path must remain preserved", 3, inserted)
+    }
 }

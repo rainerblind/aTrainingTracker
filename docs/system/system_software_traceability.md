@@ -1,7 +1,7 @@
 # System-to-Software Requirement Traceability & Tailoring Specification
 
 **Document ID**: `DOC-SYS-TRC`  
-**Version**: 1.2.25  
+**Version**: 1.2.26  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP5), SWE.1 (Software Requirements Analysis, BP5)  
 **Requirement Reference**: `REQ-PRO-076` (`REQ-PRO-076.1`–`REQ-PRO-076.4`)  
 **Test Reference**: `TST-PRO-076` (`TST-PRO-076.1`–`TST-PRO-076.4`)  
@@ -52,7 +52,7 @@ This specification establishes normative, bidirectional traceability between bla
 | `SYSREQ-DEX-004` | Cloud Storage Sync (Dropbox & GDrive) | `REQ-DAT-020`, `REQ-DAT-022`, `REQ-DAT-024`, `REQ-DAT-029`, `REQ-EXP-018`, `REQ-EXP-044`, `REQ-EXP-045`, `REQ-EXP-048`, `REQ-MIG-002`, `REQ-MIG-003`, `REQ-MIG-007`, `REQ-MIG-008`, `REQ-MIG-009`, `REQ-MIG-010`, `REQ-MIG-019`, `REQ-MIG-028`, `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-034`, `REQ-MIG-035`, `REQ-MIG-036`, `REQ-MIG-038`, `REQ-MIG-040`, `REQ-MIG-049`, `REQ-MIG-050`, `REQ-MIG-052` | `DropboxBackupManager.kt`, `GoogleDriveBackupManager.kt`, `DropboxUploader.java`, `GoogleDriveUploader.kt`, `RawSensorSidecarFiles.kt`, `BackupWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-005` | Full State Backup & Atomic Recovery | `REQ-DAT-004`, `REQ-DAT-005`, `REQ-DAT-006`, `REQ-DAT-007`, `REQ-DAT-008`, `REQ-DAT-009`, `REQ-DAT-011`, `REQ-DAT-015`, `REQ-DAT-016`, `REQ-DAT-020`, `REQ-DAT-026`, `REQ-DAT-033`, `REQ-DAT-035`, `REQ-DAT-036`, `REQ-DAT-044`, `REQ-MIG-001`, `REQ-MIG-004`, `REQ-MIG-005`, `REQ-MIG-006`, `REQ-MIG-011`, `REQ-MIG-012`, `REQ-MIG-013`, `REQ-MIG-014`, `REQ-MIG-015`, `REQ-MIG-016`, `REQ-MIG-017`, `REQ-MIG-020`, `REQ-MIG-021`, `REQ-MIG-023`, `REQ-MIG-025`, `REQ-MIG-026`, `REQ-MIG-027`, `REQ-MIG-029`, `REQ-MIG-032`, `REQ-MIG-041`, `REQ-MIG-042`, `REQ-MIG-043`, `REQ-MIG-044`, `REQ-MIG-045`, `REQ-MIG-047`, `REQ-MIG-048` | `BackupManager.kt`, `SecureZipExtractor.kt`, `BackupRestoreViewModel.kt`, `DatabaseConnectionManager.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-006` | Security Isolation & Credentials Shield | `REQ-DAT-024`, `REQ-EXP-020`, `REQ-EXT-009`, `REQ-EXT-011`, `REQ-EXT-012` | `AuthCredentialsStore.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectHrvImporter.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
-| `SYSREQ-DEX-007` | Polar BLE PFTP/PMD Offline Backfill (30s/45s) | `REQ-CON-045`, `REQ-CON-049`, `REQ-CON-050`, `REQ-SET-120`, `REQ-SET-129`, `REQ-TRK-084`, `REQ-TRK-091`, `REQ-EXP-044` | `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `WorkoutPostProcessingCoordinator.kt`, `TrackerService.java`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-007` | Polar BLE PFTP/PMD Offline Backfill (30s/45s) | `REQ-CON-045`, `REQ-CON-049`, `REQ-CON-050`, `REQ-SET-120`, `REQ-SET-129`, `REQ-SET-130`, `REQ-TRK-084`, `REQ-TRK-091`, `REQ-EXP-044` | `PolarH10OfflineController.kt`, `PolarVeritySenseOfflineController.kt`, `PolarOfflineHrTimestampAligner.kt`, `PolarOfflineGattCoordinator.kt`, `PolarOnlineStreamingBridge.kt`, `WorkoutSamplesDatabaseManager.java`, `WorkoutPostProcessingCoordinator.kt`, `TrackerService.java`, `SystemDataExchangeRequirementsContractTest.kt` |
 | `SYSREQ-DEX-008` | External Elevation Model (Open-Meteo DEM) | `REQ-DAT-014`, `REQ-TRK-024`, `REQ-SEN-025`, `REQ-CLM-009` | `ElevationService.kt`, `ElevationCacheDatabaseManager.kt`, `ElevationResult.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
 
 ---
@@ -118,3 +118,4 @@ The integrity of this traceability specification is automatically verified by `t
 | `1.2.23` | 2026-11-21 | Single-Lane Author (`ATT-9243`, `--as agent1`) | `ATT-9243` | Linked `REQ-SET-123` and grounded `DeviceSearchPeriodicRetryCoordinator.kt` under `SYSREQ-TRK-002` (`Rule 81`). |
 | `1.2.24` | 2026-11-23 | Lane 2 Author (`ATT-9612`, `--as agent1`) | `ATT-9612` | Linked `REQ-SET-129` under `SYSREQ-DEX-007` and `SYSREQ-TRK-002` (`Rule 8.7`). |
 | `1.2.25` | 2026-11-23 | Sprint Coordinator (`ATT-9657`) | `ATT-9657` | Tier-2 SYSREQ traceability reconciliation: linked `REQ-EXP-047` under `SYSREQ-TRK-010`/`SYSREQ-DEX-001`, `REQ-EXP-048` under `SYSREQ-DEX-001`/`SYSREQ-DEX-004`, and `REQ-GEO-003` under `SYSREQ-TRK-009`. |
+| `1.2.26` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Linked `REQ-SET-130` and grounded `PolarOfflineHrTimestampAligner.kt` / `WorkoutSamplesDatabaseManager.java` under `SYSREQ-DEX-007` (`Rule 8.7`). |

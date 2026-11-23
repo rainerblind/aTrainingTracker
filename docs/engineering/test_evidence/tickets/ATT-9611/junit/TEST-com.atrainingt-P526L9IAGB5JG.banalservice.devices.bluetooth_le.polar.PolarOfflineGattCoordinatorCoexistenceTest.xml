@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:24:40.064Z" hostname="rainer-HP-EliteBook-850-G5" time="18.493">
+  <properties/>
+  <testcase name="testFindEnabledPolarDevice_skipsUnwornSecondarySensorWhenAnotherHrmReceives" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="15.632"/>
+  <testcase name="testWithGattYieldAndPolarApi_pausesAndResumesTargetAliasesWithoutHarmingSibling_TST_SET_122_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.825"/>
+  <testcase name="testAcquirePolarApi_disablesDefaultBleLoggerOnSingletonCreation_TST_STB_023_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.096"/>
+  <testcase name="testSingletonRefCounting_creates8FeatureSupersetOnceAndShutsDownOnlyOnLastRelease" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.483"/>
+  <testcase name="testWithGattYieldAndPolarApi_aliasExpansionAcrossOverlappingLeases_transitionsPausedSetOnce_TST_SET_122_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.107"/>
+  <testcase name="testPerChannelAccMutualExclusion_blocksConcurrentOfflineAndOnlineAccOnVeritySense" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.176"/>
+  <testcase name="testConnectWithinTimeout_recoversFromMidWaitDisconnectAndIsolatesSiblingDisconnect_TST_SET_131_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.217"/>
+  <testcase name="testWithGattYieldAndPolarApi_reusesActiveBridgeSessionWithoutTeardown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.093"/>
+  <testcase name="testMultiplexedCallbacks_routeBidirectionalMacAndHexIdsWithoutClobbering" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.2"/>
+  <testcase name="testWithGattYieldAndPolarApi_nestedLeasesAndExceptionOrCancellationReleaseCleanly_TST_SET_122_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.087"/>
+  <testcase name="testConnectWithinTimeout_reusesConnectedAndInFlightConnectingSessionsAndClearsStateOnRelease_TST_SET_131_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.132"/>
+  <testcase name="testForceDisconnectDeviceAndDisconnectUnpairedSessions_clearsTargetAliasesWithoutHarmingSibling_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.105"/>
+  <testcase name="testAwaitFeaturesReady_uses20sDefaultAndResolvesMacHexAliases_TST_SET_131_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.079"/>
+  <testcase name="testConnectWithinTimeout_coalescesConnectedThenDisconnectedBurstBeforeSelectAndDuringBackoff_TST_SET_131_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.253"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

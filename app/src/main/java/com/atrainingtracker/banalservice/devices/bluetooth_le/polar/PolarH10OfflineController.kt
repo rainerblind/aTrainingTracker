@@ -494,9 +494,10 @@ object PolarH10OfflineController {
                             }
 
                             val (intervals, hrPairs) = buildAnchoredSamples(workoutId, hrSamples, anchorMs, endTimeMs)
+                            var patchedHrRows = 0
                             if (intervals.isNotEmpty()) {
                                 // Patch WorkoutSamples.db and record SensorType.HR when rows are patched
-                                PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                                patchedHrRows = PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
                                     appContext,
                                     workoutId,
                                     baseFileName,
@@ -526,7 +527,25 @@ object PolarH10OfflineController {
 
                             // Transactional slot cleanup: removeExercise strictly AFTER SQLite commit (or empty trim)
                             api.removeExercise(targetId, entry)
-                            Log.i(TAG, "Successfully backfilled and removed exercise ${entry.path} on $targetId (beats=${intervals.size})")
+                            Log.i(
+                                TAG,
+                                PolarOfflineHrTimestampAligner.formatBackfillDiagnostics(
+                                    controller = "H10",
+                                    workoutId = workoutId,
+                                    entryPath = entry.path,
+                                    rawStartTime = null,
+                                    anchorMs = anchorMs,
+                                    windowStartMs = effectiveStartTimeMs,
+                                    windowEndMs = endTimeMs,
+                                    hrValues = intervals.map { (60_000.0 / it.rrMs).roundToInt().coerceIn(30, 250) },
+                                    firstSampleMs = intervals.firstOrNull()?.beatTimestampMs,
+                                    lastSampleMs = intervals.lastOrNull()?.beatTimestampMs,
+                                    patchedCount = patchedHrRows,
+                                    committed = intervals.isNotEmpty(),
+                                    flashRemoved = true,
+                                    beatsCount = intervals.size
+                                )
+                            )
                         } else {
                             api.removeExercise(targetId, entry)
                         }
@@ -702,8 +721,9 @@ object PolarH10OfflineController {
                     val repo = WorkoutRepository.getInstance(appContext)
                     val baseFileName = repo.getBaseFileName(workoutId) ?: summariesDb.getBaseFileName(workoutId)
 
+                    var patchedHrRows = 0
                     if (intervals.isNotEmpty()) {
-                        PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
+                        patchedHrRows = PolarOfflineGattCoordinator.patchMissingHeartRateAndRecordSensorType(
                             appContext,
                             workoutId,
                             baseFileName,
@@ -721,7 +741,25 @@ object PolarH10OfflineController {
                     summariesDb.clearPolarSyncPending(workoutId)
 
                     api.removeExercise(targetId, matchingEntry)
-                    Log.i(TAG, "Successfully performed deferred sync and removed exercise ${matchingEntry.path} (beats=${intervals.size})")
+                    Log.i(
+                        TAG,
+                        PolarOfflineHrTimestampAligner.formatBackfillDiagnostics(
+                            controller = "H10-Pending",
+                            workoutId = workoutId,
+                            entryPath = matchingEntry.path,
+                            rawStartTime = null,
+                            anchorMs = anchorMs,
+                            windowStartMs = pendingData.expectedStartMs,
+                            windowEndMs = pendingData.expectedEndMs,
+                            hrValues = intervals.map { (60_000.0 / it.rrMs).roundToInt().coerceIn(30, 250) },
+                            firstSampleMs = intervals.firstOrNull()?.beatTimestampMs,
+                            lastSampleMs = intervals.lastOrNull()?.beatTimestampMs,
+                            patchedCount = patchedHrRows,
+                            committed = intervals.isNotEmpty(),
+                            flashRemoved = true,
+                            beatsCount = intervals.size
+                        )
+                    )
 
                     repo.refreshWorkout(workoutId)
                     if (intervals.isNotEmpty()) {

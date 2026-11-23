@@ -938,8 +938,16 @@ public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSa
     }
 
     /**
-     * Patches missing heart rate samples in the workout samples table using offline reconstructed HR data (ATT-7918, REQ-SET-105.3).
-     * Preserves all existing valid HR samples, GPS, speed, cadence, and power data.
+     * Maximum timestamp distance (in milliseconds) allowed when matching an offline Polar HR sample
+     * to a missing row in {@code WorkoutSamples.db} ({@code ATT-9611}, {@code REQ-SET-130.2}).
+     * Prevents unbounded endpoint clamping across misaligned or out-of-window gaps.
+     */
+    public static final long MAX_HR_MATCH_TOLERANCE_MS = 5_000L;
+
+    /**
+     * Patches missing heart rate samples in the workout samples table using offline reconstructed HR data (ATT-7918, REQ-SET-105.3, ATT-9611, REQ-SET-130.2).
+     * Preserves all existing valid HR samples, GPS, speed, cadence, and power data, and skips any
+     * missing row whose nearest offline HR sample exceeds {@link #MAX_HR_MATCH_TOLERANCE_MS}.
      *
      * @param baseFileName The workout file base name.
      * @param startTimeMs The workout start epoch ms.
@@ -1001,13 +1009,11 @@ public class WorkoutSamplesDatabaseManager extends BaseDatabaseManager<WorkoutSa
                     long tsMs = row.second > 0 ? row.second : startTimeMs;
                     java.util.Map.Entry<Long, Integer> floor = hrMap.floorEntry(tsMs);
                     java.util.Map.Entry<Long, Integer> ceiling = hrMap.ceilingEntry(tsMs);
+                    long floorDelta = (floor != null) ? Math.abs(tsMs - floor.getKey()) : Long.MAX_VALUE;
+                    long ceilingDelta = (ceiling != null) ? Math.abs(tsMs - ceiling.getKey()) : Long.MAX_VALUE;
                     Integer hr = null;
-                    if (floor != null && ceiling != null) {
-                        hr = Math.abs(tsMs - floor.getKey()) <= Math.abs(tsMs - ceiling.getKey()) ? floor.getValue() : ceiling.getValue();
-                    } else if (floor != null) {
-                        hr = floor.getValue();
-                    } else if (ceiling != null) {
-                        hr = ceiling.getValue();
+                    if (Math.min(floorDelta, ceilingDelta) <= MAX_HR_MATCH_TOLERANCE_MS) {
+                        hr = (floorDelta <= ceilingDelta && floor != null) ? floor.getValue() : ceiling.getValue();
                     }
                     if (hr != null && hr > 0) {
                         stmt.bindLong(1, hr);

@@ -947,4 +947,31 @@ class PolarH10OfflineControllerTest {
         verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(504L) }
         coVerify(exactly = 1) { sharedApi.removeExercise(h10Id, testEntry) }
     }
+
+    // REQ-SET-130.3 / REQ-SET-130.4 / TST-SET-132.3
+    @Test
+    fun testStopAndPendingBackfill_preservesRrOnlyBackfillWhenPatchedHrRowsZeroAndLogsDiagnostics_TST_SET_132_3() = runBlocking {
+        PolarH10OfflineController.sdkIntOverride = 33
+        PolarH10OfflineController.apiOverride = mockApi
+
+        val startMs = 1_700_000_050_000L
+        every { mockSummariesDb.getPolarPendingSyncData(505L) } returns
+            WorkoutSummariesDatabaseManager.PolarPendingSyncData("1C3B2421", "ATT_505", startMs, startMs + 3_000L, true)
+        every { mockWorkoutRepo.getBaseFileName(505L) } returns "2026-11-23_091500"
+        every { mockSamplesDb.patchMissingHeartRateSamples("2026-11-23_091500", startMs, any()) } returns 0
+        coEvery { mockApi.connectToDevice("1C3B2421") } just Runs
+        coEvery { mockApi.waitForConnection("1C3B2421") } just Runs
+        coEvery { mockApi.requestRecordingStatus("1C3B2421") } returns PolarH10OfflineExerciseApi.PolarRecordingStatus(false, "", true)
+        every { mockApi.listExercises("1C3B2421") } returns flowOf(testEntry)
+        coEvery { mockApi.fetchExercise("1C3B2421", testEntry) } returns PolarExerciseData(1, listOf(750, 760, 770))
+        coEvery { mockApi.removeExercise("1C3B2421", testEntry) } just Runs
+        coEvery { mockRrRepo.insertIntervals(any()) } returns 3
+
+        val synced = PolarH10OfflineController.syncPendingWorkout(context, 505L)
+        assertTrue("H10 RR-only backfill must still commit and clean up flash when patchedHrRows == 0", synced)
+        coVerify(exactly = 1) { mockRrRepo.insertIntervals(match { it.size == 3 }) }
+        verify(exactly = 0) { mockWorkoutRepo.addAccumulatedSensorTypes(505L, setOf(SensorType.HR)) }
+        verify(exactly = 1) { mockSummariesDb.clearPolarSyncPending(505L) }
+        coVerify(exactly = 1) { mockApi.removeExercise("1C3B2421", testEntry) }
+    }
 }

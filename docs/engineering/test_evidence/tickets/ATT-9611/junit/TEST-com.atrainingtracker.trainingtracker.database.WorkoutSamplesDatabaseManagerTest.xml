@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:28:15.296Z" hostname="rainer-HP-EliteBook-850-G5" time="2.668">
+  <properties/>
+  <testcase name="testApplyAltitudeDriftCorrection_caseA_epochAndUpperBoundsProtectPreCrashAndPostCalRows" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.088"/>
+  <testcase name="testApplyAltitudeDriftCorrection_negativeOffset_shiftsDownwardsSymmetrically" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.066"/>
+  <testcase name="testPatchSwimKinematics_nonExistentTable_returnsSafelyWithoutException" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.067"/>
+  <testcase name="testApplyAltitudeDriftCorrection_caseB_piecewiseLinear_updatesAllAltitudeColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.065"/>
+  <testcase name="testApplyAltitudeDriftCorrection_caseA_uniformShift_updatesAllAltitudeColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.066"/>
+  <testcase name="testApplyAltitudeDriftCorrection_isolatesNonBarometricColumnsAndChecksCanonicalSource" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.066"/>
+  <testcase name="testCalcExtremaValue_allNullAndMissingColumn_returnsNullAcrossAllExtremaTypes" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.489"/>
+  <testcase name="testApplyAltitudeDriftCorrection_withoutBarometricColumn_leavesDemAndCanonicalUntouched" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.076"/>
+  <testcase name="testPruneAndShiftSamples_readsTableSchemaViaSinglePragmaCall_TST_DAT_044_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.514"/>
+  <testcase name="testApplyAltitudeDriftCorrection_nearZeroOffset_skipsExecution" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="0.069"/>
+  <testcase name="testCalcExtremaValue_startEndUseSingleColumnLimit1AndPaceAvgZeroGuards_TST_DAT_044_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManagerTest" time="1.099"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

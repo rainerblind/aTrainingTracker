@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:24:39.572Z" hostname="rainer-HP-EliteBook-850-G5" time="45.688">
+  <properties/>
+  <testcase name="testZeroGapFastPath_bypassesPftpDownload" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="11.722"/>
+  <testcase name="testStopAndBackfill_timeout_persistsPendingSyncMetadata" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.361"/>
+  <testcase name="testStopAndBackfillWorkout_trimsTrailingBeats_skipsEmptyDbWrite_andRespectsRunPostBackfillRecompute_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.691"/>
+  <testcase name="testStopAndPendingBackfill_preservesRrOnlyBackfillWhenPatchedHrRowsZeroAndLogsDiagnostics_TST_SET_132_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.416"/>
+  <testcase name="testExecuteArming_success_armsRecording" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.363"/>
+  <testcase name="testStopAndBackfill_zeroPatchedRows_doesNotRecordHrAccumulatedSensorType" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.356"/>
+  <testcase name="testBackfillAndPendingSync_reuseSharedCoordinatorSingletonWithoutCleanup" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.572"/>
+  <testcase name="testSyncPendingWorkout_managedApiRecoversFromMidWaitDisconnectAndAwaitsFeatureReady_TST_SET_131_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.387"/>
+  <testcase name="testRemoveExercise_onlyAfterSqliteCommit" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.275"/>
+  <testcase name="testStopAndBackfill_hangingWaitForConnection_timesOutAtStopConnectionTimeoutMs" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.299"/>
+  <testcase name="testExecuteArming_capturesPostStartRecordingAnchorAndResetsLifecycle_TST_TRK_093_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.296"/>
+  <testcase name="testBuildAnchoredSamples_handlesThreeEndTimeCasesAndInvalidRr_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.214"/>
+  <testcase name="testSyncPendingWorkout_trimsByExpectedEndMsAndRunsPhysiologyBeforeHrv_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.276"/>
+  <testcase name="testExecuteArming_failure_handlesGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.226"/>
+  <testcase name="testSyncPendingWorkout_nullBaseFileName_doesNotRecordHrAccumulatedSensorType" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.325"/>
+  <testcase name="testFringeFlapInvariance_alreadyArmed_doesNotRearm" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.208"/>
+  <testcase name="testStopAndBackfill_gapsExist_fetchesAndPatchesDb" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.243"/>
+  <testcase name="testDismissPendingSync_clearsPendingFlag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.213"/>
+  <testcase name="testApiLevelBelow33_bypassesBackfill" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.218"/>
+  <testcase name="testSyncPendingWorkout_success_fetchesPatchesAndClearsFlag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.252"/>
+  <testcase name="testWorkoutStopped_resetsArmedState" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.219"/>
+  <testcase name="testArmForActiveWorkout_skipsUnwornH10WhenOtherHrmReceives" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.361"/>
+  <testcase name="testStopAndBackfillWorkout_staleArmedTokenPreservesNewerWorkoutArmedStateAndSuppressesNotification_tstTrk091_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.213"/>
+  <testcase name="testSyncPendingWorkout_cancellationExceptionIsRethrown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.21"/>
+  <testcase name="testRenamedH10_armsAndSyncsPendingWorkoutViaDisHardwareMetadata" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.246"/>
+  <testcase name="testApiLevelBelow33_doesNotArm" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.176"/>
+  <testcase name="testStopAndBackfill_confirmedDisconnectedDevice_fastFailsWithoutWaitingForConnection" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.338"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

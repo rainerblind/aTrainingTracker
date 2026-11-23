@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.WorkoutImportCollisionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:29:57.589Z" hostname="rainer-HP-EliteBook-850-G5" time="0.069">
+  <properties/>
+  <testcase name="testStructuralDDLConstruction_preservesColumnsAndConstraints" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportCollisionTest" time="0.046"/>
+  <testcase name="testDisambiguateBaseName_generatesBoundedUniqueName" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportCollisionTest" time="0.009"/>
+  <testcase name="testTrueDuplicate_matchesCaseInsensitiveFileNameAndTimestamp" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportCollisionTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

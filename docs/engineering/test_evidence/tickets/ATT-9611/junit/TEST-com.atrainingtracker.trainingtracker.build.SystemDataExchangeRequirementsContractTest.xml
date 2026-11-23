@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T15:25:38.668Z" hostname="rainer-HP-EliteBook-850-G5" time="0.461">
+  <properties/>
+  <testcase name="testSysreqDataExchange_codeGroundingParity" classname="com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" time="0.001"/>
+  <testcase name="testSysreqDataExchange_fileExistsAndContainsAllRequirements" classname="com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" time="0.002"/>
+  <testcase name="testSysreqDataExchange_allRequirementsHaveMandatorySections" classname="com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" time="0.001"/>
+  <testcase name="testSysreqDataExchange_allReferencedCodeFilesExistOnDisk" classname="com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" time="0.456"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
