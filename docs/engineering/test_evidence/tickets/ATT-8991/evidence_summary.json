@@ -1,0 +1,60 @@
+{
+  "android_test_summary": {
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "suites": 15,
+    "tests": 127
+  },
+  "checks": [
+    {
+      "detail": "127/127 PASS across 15 targeted unit, Compose UI, and contract suites (0 warnings)",
+      "name": "gradle_assemble_and_unit_tests",
+      "status": "PASS"
+    },
+    {
+      "detail": "4/4 PASS (lint_cursor_safety, lint_lifecycle_safety, lint_safe_enum, check_secrets_hygiene)",
+      "name": "static_safety_linters",
+      "status": "PASS"
+    },
+    {
+      "detail": "verify_requirement_governance.py + --check-verified-evidence PASS (exit 0)",
+      "name": "requirement_governance",
+      "status": "PASS"
+    },
+    {
+      "detail": "emulator-5554 CADENCE SensorSourceDialog live smoke 0 crashes; Rule 8.5 PNG visually verified",
+      "name": "emulator_live_smoke",
+      "status": "PASS"
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "0b3856f83abc7a8116930748a00f6b0d99830c63",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceTypeSensorMappingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.AltitudeSlopePriorityTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DeadCodeEliminationContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest.xml"
+  ],
+  "python_test_summary": null,
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-23T18:43:37Z",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-8991_sensor_source.png"
+  ],
+  "ticket_key": "ATT-8991",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

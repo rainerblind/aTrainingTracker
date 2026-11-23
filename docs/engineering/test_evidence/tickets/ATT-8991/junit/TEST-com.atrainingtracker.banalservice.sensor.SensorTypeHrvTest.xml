@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:36:23.564Z" hostname="rainer-HP-EliteBook-850-G5" time="0.03">
+  <properties/>
+  <testcase name="testHrvArtifactRateProperties" classname="com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest" time="0.001"/>
+  <testcase name="testHrvSdnnProperties" classname="com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest" time="0.0"/>
+  <testcase name="testHrvDfaA1Properties" classname="com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest" time="0.0"/>
+  <testcase name="testHrvRmssdProperties" classname="com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest" time="0.0"/>
+  <testcase name="testHrvDfaA1_typographyGreekAlpha1Parity" classname="com.atrainingtracker.banalservice.sensor.SensorTypeHrvTest" time="0.028"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

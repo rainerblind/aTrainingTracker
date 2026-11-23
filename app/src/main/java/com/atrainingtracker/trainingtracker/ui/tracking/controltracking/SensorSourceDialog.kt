@@ -49,6 +49,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelper
 import com.atrainingtracker.banalservice.sensor.HrHealthTier
 import com.atrainingtracker.banalservice.sensor.HrModality
 import com.atrainingtracker.banalservice.sensor.MySensorManager
@@ -535,9 +536,31 @@ internal fun sortActiveBackupTelemetries(
 }
 
 /**
- * Sorts disconnected devices for [SensorSourceDialog] (`REQ-UI-268.5`, `REQ-UI-2804.3`).
+ * Normalizes a persisted [DeviceUiData.manufacturer] display string for hardware capability checks,
+ * clearing the localized [R.string.devices_unknown_manufacturer] placeholder so un-reconnected
+ * Polar sensors retain legacy name fallback (`REQ-CON-057.3`).
+ */
+internal fun normalizeManufacturerForCapabilityCheck(
+    manufacturer: String,
+    context: android.content.Context? = null
+): String {
+    val trimmed = manufacturer.trim()
+    if (trimmed.isEmpty()) return ""
+    val unknownLabel = context?.let {
+        runCatching { it.getString(R.string.devices_unknown_manufacturer) }.getOrNull()?.trim()
+    }
+    if (!unknownLabel.isNullOrEmpty() && trimmed.equals(unknownLabel, ignoreCase = true)) {
+        return ""
+    }
+    return trimmed
+}
+
+/**
+ * Sorts disconnected devices for [SensorSourceDialog] (`REQ-UI-268.5`, `REQ-UI-2804.3`, `REQ-CON-057.3`).
  * For [SensorType.HR], orders by `(modalityTier [ECG < ANT+ < Optical PPG < Other],
  * deviceName, deviceId)` using persisted protocol and capability metadata.
+ * For [DeviceType.HRM] candidates on Polar Live-IMU sensor types (`CADENCE`, `STRIDES`,
+ * `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`), filters via [HrmSensorCapabilityHelper].
  * Non-HR sensor types preserve [MySensorManager.getPriorityRank] ordering.
  */
 internal fun sortNotConnectedDevices(
@@ -547,7 +570,18 @@ internal fun sortNotConnectedDevices(
     sensorType: SensorType,
     context: android.content.Context? = null
 ): List<DeviceUiData> {
-    val filtered = allDevices.filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
+    val filtered = allDevices.filter { device ->
+        potentialTypes.contains(device.deviceType) &&
+            !activeDeviceIds.contains(device.id) &&
+            (device.deviceType != DeviceType.HRM || HrmSensorCapabilityHelper.isSensorSupported(
+                context = context,
+                sensorType = sensorType,
+                protocol = device.protocol,
+                deviceName = device.deviceName,
+                manufacturer = normalizeManufacturerForCapabilityCheck(device.manufacturer, context),
+                btAddress = device.btAddress
+            ))
+    }
     if (sensorType == SensorType.HR) {
         return filtered.sortedWith(
             compareBy<DeviceUiData>(

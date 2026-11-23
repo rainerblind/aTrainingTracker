@@ -483,4 +483,69 @@ class SensorSourceDialogPriorityTest {
         assertEquals(HrModality.ANT_PLUS, sorted[1].hrModality)
         assertEquals(HrModality.OPTICAL_PPG, sorted[2].hrModality)
     }
+
+    // TST-CON-057.3: SensorSourceDialog.sortNotConnectedDevices filters HRM Polar Live-IMU candidates by capability,
+    // normalizes localized R.string.devices_unknown_manufacturer placeholder, and excludes BIKE_POWER from SLOPE
+    @Test
+    fun testNotConnectedDevices_capabilityGatesPolarLiveImuAndNormalizesUnknownManufacturer_TST_CON_057_3() {
+        val h10Mac = "A0:9E:1A:51:51:51"
+        val verityMac = "A0:9E:1A:52:52:52"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10Mac, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMac, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.getString(com.atrainingtracker.R.string.devices_unknown_manufacturer) } returns "Unbekannter Hersteller"
+
+        val bleH10Renamed = createDevice(1L, "Brustgurt", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = h10Mac)
+        val bleH10LegacyUnknownMfg = createDevice(
+            2L,
+            "Polar H10 99887766",
+            DeviceType.HRM,
+            Protocol.BLUETOOTH_LE,
+            "Unbekannter Hersteller",
+            btAddress = "A0:9E:1A:53:53:53"
+        )
+        val bleVerityRenamed = createDevice(3L, "Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = verityMac)
+        val antH10 = createDevice(4L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar")
+        val bleGenericHrm = createDevice(5L, "Wahoo TICKR", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Wahoo", btAddress = "11:22:33:44:55:66")
+        val bikePower = createDevice(6L, "Assioma Duo", DeviceType.BIKE_POWER, Protocol.ANT_PLUS, "Favero")
+        val fusedAlt = createDevice(7L, "ATT Fused Alt", DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED, Protocol.SMARTPHONE, "Google")
+        val allDevices = listOf(bleH10Renamed, bleH10LegacyUnknownMfg, bleVerityRenamed, antH10, bleGenericHrm, bikePower, fusedAlt)
+
+        val cadenceNotConnected = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.CADENCE) ?: emptySet(),
+            sensorType = SensorType.CADENCE,
+            context = mockContext
+        )
+        assertEquals(listOf(6L, 3L, 1L, 2L), cadenceNotConnected.map { it.id })
+
+        val voNotConnected = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.VERTICAL_OSCILLATION) ?: emptySet(),
+            sensorType = SensorType.VERTICAL_OSCILLATION,
+            context = mockContext
+        )
+        assertEquals(listOf(1L, 2L), voNotConnected.map { it.id })
+
+        val slopeNotConnected = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.SLOPE) ?: emptySet(),
+            sensorType = SensorType.SLOPE,
+            context = mockContext
+        )
+        assertEquals(listOf(7L), slopeNotConnected.map { it.id })
+
+        val hrNotConnected = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.HR) ?: emptySet(),
+            sensorType = SensorType.HR,
+            context = mockContext
+        )
+        assertEquals(5, hrNotConnected.size)
+    }
 }

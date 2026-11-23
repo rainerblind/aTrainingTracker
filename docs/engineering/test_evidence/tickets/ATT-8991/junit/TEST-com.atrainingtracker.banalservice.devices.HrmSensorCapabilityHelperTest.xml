@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:36:19.545Z" hostname="rainer-HP-EliteBook-850-G5" time="0.019">
+  <properties/>
+  <testcase name="testNullSensorTypeAndThrowingContext_resilientFallback_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.006"/>
+  <testcase name="testBlePolarH10_supportsCadenceStridesVoGctAndHrHrv_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.001"/>
+  <testcase name="testAntPlusAndNonPolarOrSpoofedHrms_excludedFromLiveImuButKeptForHrHrv_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.009"/>
+  <testcase name="testBlePolarVeritySense_supportsCadenceAndStridesOnlyNotVoOrGct_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

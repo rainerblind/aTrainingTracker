@@ -410,4 +410,49 @@ class SensorSourceDialogContractTest {
         assertTrue(yPos("Polar H10 Disconnected") < yPos("Ant Disconnected"))
         assertTrue(yPos("Ant Disconnected") < yPos("Armband Optical Disconnected"))
     }
+
+    // TST-CON-057.3: Behavioral Compose UI test verifying Polar Live-IMU HRM capability filtering in SensorSourceDialog
+    @Test
+    fun testComposeRender_cadenceAndVerticalOscillationCapabilityFilterHrms_TST_CON_057_3() {
+        val h10Mac = "A0:9E:1A:61:61:61"
+        val verityMac = "A0:9E:1A:62:62:62"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10Mac, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMac, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        val h10Device = createDevice(1L, "Polar H10 Chest", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar", btAddress = h10Mac)
+        val verityDevice = createDevice(2L, "Verity Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = verityMac)
+        val antH10 = createDevice(3L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar")
+        val genericBleHrm = createDevice(4L, "Generic BLE Strap", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Wahoo", btAddress = "11:22:33:44:55:66")
+        val allDevices = listOf(h10Device, verityDevice, antH10, genericBleHrm)
+
+        var activeSensorType = SensorType.CADENCE
+        val sensorState = androidx.compose.runtime.mutableStateOf(activeSensorType)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                SensorSourceDialog(
+                    sensorType = sensorState.value,
+                    sourceDevice = null,
+                    allTelemetry = emptyList(),
+                    allDevices = allDevices,
+                    onDeviceClick = {},
+                    onDismiss = {}
+                )
+            }
+        }
+
+        // CADENCE shows BLE H10 and BLE Verity Sense, hiding ANT+ H10 and generic BLE HRM
+        composeTestRule.onNodeWithText("Polar H10 Chest", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Verity Armband", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Polar H10 ANT+", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Generic BLE Strap", useUnmergedTree = true).assertDoesNotExist()
+
+        // Switch to VERTICAL_OSCILLATION -> ONLY BLE H10 remains visible
+        composeTestRule.runOnUiThread { sensorState.value = SensorType.VERTICAL_OSCILLATION }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Polar H10 Chest", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Verity Armband", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Polar H10 ANT+", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Generic BLE Strap", useUnmergedTree = true).assertDoesNotExist()
+    }
 }

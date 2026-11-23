@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:36:09.520Z" hostname="rainer-HP-EliteBook-850-G5" time="10.016">
+  <properties/>
+  <testcase name="testHasPairedRemoteDevices_whenPairedDeviceExists_returnsTrue" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="5.911"/>
+  <testcase name="testResetBaselineCircumference_copiesCalibrationFactor" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.292"/>
+  <testcase name="testGetBaselineCircumference_returnsStoredValue" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.244"/>
+  <testcase name="testGetDeviceIdAndNameLists_capabilityGatesPolarHrmAndExcludesBikePowerFromSlope_TST_CON_057_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.605"/>
+  <testcase name="testHasPairedRemoteDevices_whenQueryThrowsException_returnsFalseWithoutCrash" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.216"/>
+  <testcase name="testHasPairedHeartRateDevices_whenNoHrmDevice_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.236"/>
+  <testcase name="testHasPairedHeartRateDevices_whenPairedHrmExists_returnsTrue" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.231"/>
+  <testcase name="testMigrateAltitudeFromPressureLegacyNames_updatesLegacyDefaultNames" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.218"/>
+  <testcase name="testSetBaselineCircumference_updatesDatabase" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.217"/>
+  <testcase name="testInsertNewBluetoothDeviceIntoDB_withPairedTrue_storesPairedOne" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.234"/>
+  <testcase name="testGetCalibrationFactor_closesBothCursorsOnEmptyAndNullFallback_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.243"/>
+  <testcase name="testHasPairedRemoteDevices_whenDbNullOrClosed_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.216"/>
+  <testcase name="testInsertNewAntDeviceIntoDB_withPairedTrue_storesPairedOne" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.239"/>
+  <testcase name="testHasPairedHeartRateDevices_whenDbNullOrClosed_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.218"/>
+  <testcase name="testHasPairedRemoteDevices_whenNoMatchingDevicesExist_returnsFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.224"/>
+  <testcase name="testDevicesDbHelper_dbVersionIsAtLeastThirteen" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.219"/>
+  <testcase name="testSetInt_rejectsUnsupportedColumnAndUpdatesAllowedColumn_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest" time="0.243"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

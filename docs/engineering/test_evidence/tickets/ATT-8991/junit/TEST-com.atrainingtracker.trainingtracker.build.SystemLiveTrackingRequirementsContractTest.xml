@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:36:21.084Z" hostname="rainer-HP-EliteBook-850-G5" time="0.534">
+  <properties/>
+  <testcase name="testSysreqLiveTracking_codeGroundingParity" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.02"/>
+  <testcase name="testSysreqLiveTracking_allRequirementsHaveMandatorySections" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.003"/>
+  <testcase name="testSysreqLiveTracking_fileExistsAndContainsAllRequirements" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.002"/>
+  <testcase name="testSysreqLiveTracking_allReferencedCodeFilesExistOnDisk" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.509"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

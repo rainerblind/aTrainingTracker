@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T18:36:16.408Z" hostname="rainer-HP-EliteBook-850-G5" time="0.465">
+  <properties/>
+  <testcase name="selectBestHrSensor_failsOverToHealthyVerityWhenH10IsStaleOrDegraded" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.302"/>
+  <testcase name="selectBestHrSensor_prefersHealthyEcgOverHealthyOpticalRegardlessOfRegistrationOrder" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.018"/>
+  <testcase name="resolveModality_fromPersistedCapabilityStore_detectsRenamedOpticalAndRespectsConfirmedNonPolarGatt" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.054"/>
+  <testcase name="selectBestHrSensor_handlesNonRelaxedMockStubsWithoutThrowing" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.015"/>
+  <testcase name="selectBestHrSensor_enforcesFullModalityOrderEcgAntOpticalOther" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.031"/>
+  <testcase name="resolveHealthTier_returnsHealthyDegradedAndStaleOrNullDeterministically" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.018"/>
+  <testcase name="selectBestHrSensor_retainsHighestModalityWhenAllCandidatesAreStaleOrNull" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.013"/>
+  <testcase name="resolveModality_fromPersistedMetadata_classifiesEcgAntOpticalAndOther" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.001"/>
+  <testcase name="selectBestHrSensor_prefersHealthyH10OverDegradedOrFlatlinedVerity" classname="com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitratorTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

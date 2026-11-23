@@ -36,6 +36,7 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper;
 import com.atrainingtracker.banalservice.devices.DeviceType;
+import com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelper;
 import com.atrainingtracker.banalservice.devices.Manufacturer;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.Protocol;
@@ -473,6 +474,20 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
 
                                 case POWER:
                                     break; // always add
+                            }
+                        } else if (deviceType == DeviceType.HRM) {
+                            int protocolIdx = cursor.getColumnIndex(DevicesDbHelper.PROTOCOL);
+                            int nameIdx = cursor.getColumnIndex(DevicesDbHelper.NAME);
+                            int mfgIdx = cursor.getColumnIndex(DevicesDbHelper.MANUFACTURER_NAME);
+                            int btAddrIdx = cursor.getColumnIndex(DevicesDbHelper.BT_ADDRESS);
+                            Protocol protocol = protocolIdx >= 0
+                                    ? EnumUtils.safeValueOfOrNull(Protocol.class, cursor.getString(protocolIdx), TAG)
+                                    : null;
+                            String name = nameIdx >= 0 ? cursor.getString(nameIdx) : null;
+                            String manufacturer = mfgIdx >= 0 ? cursor.getString(mfgIdx) : null;
+                            String btAddress = btAddrIdx >= 0 ? cursor.getString(btAddrIdx) : null;
+                            if (!HrmSensorCapabilityHelper.isSensorSupported(mContext, sensorType, protocol, name, manufacturer, btAddress)) {
+                                continue;
                             }
                         }
 

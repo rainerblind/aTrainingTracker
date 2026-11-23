@@ -175,6 +175,7 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.BIKE_SPEED_AND_CADENCE);
                 deviceTypes.add(DeviceType.BIKE_POWER);      // but not all
                 deviceTypes.add(DeviceType.RUN_SPEED);
+                deviceTypes.add(DeviceType.HRM);             // Polar H10 & Verity Sense live IMU only (REQ-CON-057.1)
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
@@ -185,6 +186,7 @@ public enum DeviceType {
 
             case STRIDES:
                 deviceTypes.add(DeviceType.RUN_SPEED);
+                deviceTypes.add(DeviceType.HRM);             // Polar H10 & Verity Sense live IMU only (REQ-CON-057.1)
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
@@ -232,7 +234,6 @@ public enum DeviceType {
             case DESCENT:
                 deviceTypes.add(DeviceType.VERTICAL_SPEED_AND_SLOPE);
                 deviceTypes.add(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED);
-                deviceTypes.add(DeviceType.BIKE_POWER);
                 break;
             case TEMPERATURE:
             case TEMPERATURE_MAX:
