@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-23T20:27:35.694Z" hostname="rainer-HP-EliteBook-850-G5" time="22.816">
+  <properties/>
+  <testcase name="testOnPause_whenNotTracking_stopsInRideBatteryMonitoring" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="15.301"/>
+  <testcase name="testCheckGpsEnabledIfPermitted_runsOnIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="1.487"/>
+  <testcase name="testChooseStart_dispatchesDiscardToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.641"/>
+  <testcase name="testInRideBatteryAlertDeduplication_survivesActivityRecreation" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.347"/>
+  <testcase name="testOnNavControllerReady_withPendingItemAndReadyGraph_dispatchesAndClearsPending" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.943"/>
+  <testcase name="testNavigateToDrawerItem_whenNavGraphNotReady_queuesPendingItemSafely" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.31"/>
+  <testcase name="testChooseResume_dispatchesCheckToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.311"/>
+  <testcase name="testOnDestroy_whenChangingConfigurations_unconditionallyUnbindsAndRemovesRunnable" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.318"/>
+  <testcase name="testIsNavGraphReady_returnsFalseForNullOrThrowingController" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.289"/>
+  <testcase name="testOnPause_whenTracking_maintainsInRideBatteryMonitoring" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.36"/>
+  <testcase name="testPlayServicesDialog_dismissedInOnDestroy" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.445"/>
+  <testcase name="testOnServiceConnected_dispatchesFiltersQueryToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="1.099"/>
+  <testcase name="testCheckUnfinishedWorkout_dispatchesToIoDispatcher" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.323"/>
+  <testcase name="testLifecycleScopeCoroutines_automaticallyCancelledOnDestroy" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.313"/>
+  <testcase name="testOnDestroy_unconditionallyUnbindsAndRemovesRunnable" classname="com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest" time="0.324"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$3@14daee5e], context=[android.app.ContextImpl@2e794dc1], intentFilter=[android.content.IntentFilter@67fb79af]]]
+]]></system-err>
+</testsuite>

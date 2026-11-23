@@ -1,0 +1,68 @@
+{
+  "android_test_summary": {
+    "details": "53 Android unit/Compose/contract tests passed (8 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 53
+  },
+  "checks": [
+    {
+      "details": "Android: 53/53 passed across 8 JUnit XMLs",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "3/3 passed (lint_cursor_safety, lint_lifecycle_safety, lint_safe_enum)",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "ATT-9065.md verified",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "0 conflict markers",
+      "name": "conflict_markers",
+      "passed": true
+    },
+    {
+      "details": "verify_requirement_governance.py PASS",
+      "name": "requirement_governance",
+      "passed": true
+    },
+    {
+      "details": "emulator-5554 installDebug + AntServicesStatusSheet screenshot inspected via read_file; logcat clean",
+      "name": "emulator_smoke",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "4cf6e017bc7ae25483028183065a982cc99d28ee",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.activities.MainActivityLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntAlertDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntDialogLocalizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogComposeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "N/A (no Python tooling modified)",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-23T20:33:31.044771+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9065_ant_dialog.png"
+  ],
+  "ticket_key": "ATT-9065",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 3 of 5)
 
 **Document ID**: `DOC-REQ-UI-P3`  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -3181,22 +3181,23 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `TuningPreferencesDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SensorSearchTuningSection.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningScreen.kt`
-- **Rationale**: The system SHALL persistently suppress the missing ANT+ adapter dialog upon user dismissal and provide an Advanced Tuning toggle in the Sensor Search & Behavior section to inspect and re-enable warnings (ATT-3220, ATT-3454, amending `REQ-UI-323` and complementing `REQ-SET-073`):
+- **Implementation**: `TuningPreferencesDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SensorSearchTuningSection.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`
+- **Rationale**: The system SHALL persistently suppress the missing ANT+ adapter dialog upon user dismissal and provide an Advanced Tuning toggle in the Sensor Search & Behavior section to inspect and re-enable warnings (ATT-3220, ATT-3454, ATT-9065, amending `REQ-UI-323` and complementing `REQ-SET-073`):
 1. *Persistent Suppression Preference (`TuningPreferencesDataStore.kt`)*:
 • In `TuningPreferencesDataStore.kt`, the system SHALL define preference key `KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")`.
 • On clean installation, the preference SHALL default to `false` (`TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG = false`).
 • `TuningConfig` SHALL declare `val suppressAntMissingAdapterDialog: Boolean = TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG` and helper property `val showAntMissingAdapterWarnings: Boolean get() = !suppressAntMissingAdapterDialog`.
 • `TuningPreferencesDataStore` SHALL expose `val suppressAntMissingAdapterDialogFlow: Flow<Boolean>` and mutator `suspend fun setSuppressAntMissingAdapterDialog(suppress: Boolean)`.
 • Invoking `resetToDefaults()` in `TuningPreferencesDataStore` SHALL restore `suppressAntMissingAdapterDialog = false`.
-2. *Broadcast Reception Guard (`MainActivityWithNavigation.kt`)*:
-• In `MainActivityWithNavigation.kt`, the activity SHALL observe `suppressAntMissingAdapterDialogFlow` from `TuningPreferencesDataStore`.
-• When `mAntAdapterMissingReceiver` receives `com.atrainingtracker.ADAPTER_NOT_DETECTED`:
-- If `suppressAntMissingAdapterDialog == true`, the broadcast SHALL be discarded immediately without mutating `antDialogState`.
-- If `suppressAntMissingAdapterDialog == false`, the activity SHALL evaluate `showANTAdapterMissingDialog()` and display `AntMissingAdapterDialog` if not already visible.
-3. *Dismissal Persistence (`ATrainingTrackerApp.kt`)*:
-• When the athlete taps "Verstanden" (`onDismiss`) on `AntMissingAdapterDialog`, the app SHALL asynchronously invoke `tuningPreferencesDataStore.setSuppressAntMissingAdapterDialog(true)`.
-• Tapping the primary action button "ANT+ Status anzeigen" (`onViewStatus`) SHALL dismiss the dialog and display `AntServicesStatusSheet` without mutating the suppression preference.
+2. *Broadcast Reception Guard & Cold-Start Hydration Gate (`MainActivityWithNavigation.kt`)*:
+• In `MainActivityWithNavigation.kt`, the activity SHALL observe `suppressAntMissingAdapterDialogFlow` from `TuningPreferencesDataStore` via `applyAntMissingAdapterSuppressionState(suppressed)`.
+• Cold-start `com.atrainingtracker.ADAPTER_NOT_DETECTED` broadcasts arriving prior to initial `suppressAntMissingAdapterDialogFlow` emission (`!isAntMissingAdapterSuppressionLoaded`) SHALL be deferred (`hasPendingAntAdapterMissingBroadcast = true`) rather than opening the dialog prematurely: if DataStore hydrates `true`, the deferred broadcast is discarded; if DataStore hydrates `false`, `showANTAdapterMissingDialog()` presents `AntMissingAdapterDialog`.
+• When `mAntAdapterMissingReceiver` receives `com.atrainingtracker.ADAPTER_NOT_DETECTED` after hydration:
+- If `isAntMissingAdapterDialogSuppressed == true`, the broadcast SHALL be discarded immediately without mutating `antDialogState`.
+- If `isAntMissingAdapterDialogSuppressed == false`, the activity SHALL evaluate `showANTAdapterMissingDialog()` and display `AntMissingAdapterDialog` if not already visible.
+3. *Durable Dismissal Persistence & Synchronous Race Guard (`ATrainingTrackerApp.kt` & `MainActivityWithNavigation.kt`)*:
+• When the athlete taps "Verstanden" (`onDismiss`) on `AntMissingAdapterDialog`, the app SHALL synchronously invoke `activity.onAntMissingAdapterDialogDismissed()` (setting `isAntMissingAdapterDialogSuppressed = true`, closing `antDialogState = null`, and shielding against stale in-flight `false` DataStore emissions) and launch `tuningDataStore.setSuppressAntMissingAdapterDialog(true)` inside `withContext(NonCancellable)` on a parent-scoped `CoroutineScope` (`ATrainingTrackerApp` outer `scope`, never an inner branch-local scope cancelled when `MissingAdapter` leaves composition).
+• Tapping the primary action button "ANT+ Status anzeigen" (`onViewStatus`) SHALL dismiss the dialog and display `AntServicesStatusSheet` (`showAntStatusSheet = true`, `antDialogState = null`) without mutating the suppression preference.
 4. *Advanced Settings Re-Enablement Toggle (`SensorSearchTuningSection.kt`, `AdvancedTuningDialog.kt` & `AdvancedTuningScreen.kt`)*:
 • In `SensorSearchTuningSection.kt` (under "Suchverhalten" / Search behavior), the system SHALL render a `TuningToggleItem` (ATT-3454):
 - Title: `tuning_show_ant_missing_adapter_warnings_title` ("Show missing ANT+ adapter warnings" / "Warnung bei fehlendem ANT+ Adapter")
@@ -3359,3 +3360,4 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | 2026-11-18 | AI Agent (`ATT-8206`) | `ATT-8206` | Split oversized shard into compliant sub-shard (<= 4,000 lines, `REQ-PRO-093.4`, `REQ-PRO-127.3`). |
+| `1.0.2` | 2026-11-23 | AI Agent 1 (`ATT-9065`) | `ATT-9065` | Refined `REQ-UI-353` for durable outer-scope DataStore suppression, synchronous dismissal guard, and cold-start hydration gate; promoted to `[Verified]`. |

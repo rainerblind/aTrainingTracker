@@ -283,6 +283,9 @@ class MainActivityWithNavigation :
     }
     var isAntMissingAdapterDialogSuppressed: Boolean = false
         internal set
+    internal var isAntMissingAdapterSuppressionLoaded: Boolean = false
+    internal var hasPendingAntAdapterMissingBroadcast: Boolean = false
+    internal var isPersistingAntMissingAdapterSuppression: Boolean = false
 
     var antDialogState: AntDialogState? by mutableStateOf(null)
     var showAntStatusSheet: Boolean by mutableStateOf(false)
@@ -307,7 +310,50 @@ class MainActivityWithNavigation :
         if (isAntMissingAdapterDialogSuppressed || antDialogState != null || showAntStatusSheet) {
             return
         }
+        if (!isAntMissingAdapterSuppressionLoaded) {
+            hasPendingAntAdapterMissingBroadcast = true
+            return
+        }
         antDialogState = AntDialogState.MissingAdapter
+    }
+
+    /**
+     * Synchronously marks the missing ANT+ adapter dialog as suppressed and closes it so
+     * back-to-back broadcasts cannot reopen the popup before DataStore persistence completes
+     * (ATT-9065 / REQ-UI-353).
+     */
+    internal fun onAntMissingAdapterDialogDismissed() {
+        isAntMissingAdapterSuppressionLoaded = true
+        hasPendingAntAdapterMissingBroadcast = false
+        isPersistingAntMissingAdapterSuppression = true
+        isAntMissingAdapterDialogSuppressed = true
+        antDialogState = null
+    }
+
+    /**
+     * Applies persisted suppression emissions from [TuningPreferencesDataStore.suppressAntMissingAdapterDialogFlow],
+     * guarding cold-start broadcasts that arrive prior to initial DataStore hydration (ATT-9065 / REQ-UI-353).
+     */
+    internal fun applyAntMissingAdapterSuppressionState(suppressed: Boolean) {
+        isAntMissingAdapterSuppressionLoaded = true
+        if (isPersistingAntMissingAdapterSuppression) {
+            if (suppressed) {
+                isPersistingAntMissingAdapterSuppression = false
+                isAntMissingAdapterDialogSuppressed = true
+                hasPendingAntAdapterMissingBroadcast = false
+            }
+            return
+        }
+        isAntMissingAdapterDialogSuppressed = suppressed
+        if (suppressed) {
+            hasPendingAntAdapterMissingBroadcast = false
+            if (antDialogState is AntDialogState.MissingAdapter) {
+                antDialogState = null
+            }
+        } else if (hasPendingAntAdapterMissingBroadcast) {
+            hasPendingAntAdapterMissingBroadcast = false
+            showANTAdapterMissingDialog()
+        }
     }
 
     public override fun onNewIntent(intent: Intent) {
@@ -520,7 +566,7 @@ class MainActivityWithNavigation :
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 tuningPreferencesDataStore.suppressAntMissingAdapterDialogFlow.collect { suppressed ->
-                    isAntMissingAdapterDialogSuppressed = suppressed
+                    applyAntMissingAdapterSuppressionState(suppressed)
                 }
             }
         }

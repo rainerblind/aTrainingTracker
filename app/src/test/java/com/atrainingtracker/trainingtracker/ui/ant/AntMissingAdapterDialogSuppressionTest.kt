@@ -63,62 +63,140 @@ class AntMissingAdapterDialogSuppressionTest {
         unmockkAll()
     }
 
-    @Test
-    fun testShowANTAdapterMissingDialog_whenUnsuppressed_showsMissingAdapterDialog() {
+    private fun createMockActivity(
+        suppressed: Boolean,
+        loaded: Boolean = true,
+        initialDialogState: AntDialogState? = null,
+        showStatusSheet: Boolean = false
+    ): Pair<MainActivityWithNavigation, () -> AntDialogState?> {
         val activity = mockk<MainActivityWithNavigation>(relaxed = true)
         every { activity.showANTAdapterMissingDialog() } answers { callOriginal() }
+        every { activity.onAntMissingAdapterDialogDismissed() } answers { callOriginal() }
+        every { activity.applyAntMissingAdapterSuppressionState(any()) } answers { callOriginal() }
 
-        val field = MainActivityWithNavigation::class.java.getDeclaredField("isAntMissingAdapterDialogSuppressed")
-        field.isAccessible = true
-        field.setBoolean(activity, false)
+        setBooleanField(activity, "isAntMissingAdapterDialogSuppressed", suppressed)
+        setBooleanField(activity, "isAntMissingAdapterSuppressionLoaded", loaded)
+        setBooleanField(activity, "hasPendingAntAdapterMissingBroadcast", false)
+        setBooleanField(activity, "isPersistingAntMissingAdapterSuppression", false)
 
-        var dialogState: AntDialogState? = null
+        var dialogState: AntDialogState? = initialDialogState
         every { activity.antDialogState } answers { dialogState }
         every { activity.antDialogState = any() } answers { dialogState = firstArg() }
-        every { activity.showAntStatusSheet } returns false
+        every { activity.showAntStatusSheet } returns showStatusSheet
+
+        return activity to { dialogState }
+    }
+
+    private fun setBooleanField(target: Any, name: String, value: Boolean) {
+        val field = MainActivityWithNavigation::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        field.setBoolean(target, value)
+    }
+
+    private fun getBooleanField(target: Any, name: String): Boolean {
+        val field = MainActivityWithNavigation::class.java.getDeclaredField(name)
+        field.isAccessible = true
+        return field.getBoolean(target)
+    }
+
+    @Test
+    fun testShowANTAdapterMissingDialog_whenUnsuppressed_showsMissingAdapterDialog() {
+        val (activity, getDialogState) = createMockActivity(suppressed = false, loaded = true)
 
         activity.showANTAdapterMissingDialog()
 
-        assertEquals(AntDialogState.MissingAdapter, dialogState)
+        assertEquals(AntDialogState.MissingAdapter, getDialogState())
     }
 
     @Test
     fun testShowANTAdapterMissingDialog_whenSuppressed_discardsBroadcast() {
-        val activity = mockk<MainActivityWithNavigation>(relaxed = true)
-        every { activity.showANTAdapterMissingDialog() } answers { callOriginal() }
-
-        val field = MainActivityWithNavigation::class.java.getDeclaredField("isAntMissingAdapterDialogSuppressed")
-        field.isAccessible = true
-        field.setBoolean(activity, true)
-
-        var dialogState: AntDialogState? = null
-        every { activity.antDialogState } answers { dialogState }
-        every { activity.antDialogState = any() } answers { dialogState = firstArg() }
-        every { activity.showAntStatusSheet } returns false
+        val (activity, getDialogState) = createMockActivity(suppressed = true, loaded = true)
 
         activity.showANTAdapterMissingDialog()
 
-        assertNull("antDialogState must remain null when suppressed", dialogState)
+        assertNull("antDialogState must remain null when suppressed", getDialogState())
     }
 
     @Test
     fun testShowANTAdapterMissingDialog_whenAlreadyShowing_doesNotOverwriteExistingState() {
-        val activity = mockk<MainActivityWithNavigation>(relaxed = true)
-        every { activity.showANTAdapterMissingDialog() } answers { callOriginal() }
-
-        val field = MainActivityWithNavigation::class.java.getDeclaredField("isAntMissingAdapterDialogSuppressed")
-        field.isAccessible = true
-        field.setBoolean(activity, false)
-
         val existingState = AntDialogState.MissingDependency("ANT Radio Service", "com.dsi.ant.service.socket")
-        var dialogState: AntDialogState? = existingState
-        every { activity.antDialogState } answers { dialogState }
-        every { activity.antDialogState = any() } answers { dialogState = firstArg() }
-        every { activity.showAntStatusSheet } returns false
+        val (activity, getDialogState) = createMockActivity(
+            suppressed = false,
+            loaded = true,
+            initialDialogState = existingState
+        )
 
         activity.showANTAdapterMissingDialog()
 
-        assertEquals(existingState, dialogState)
+        assertEquals(existingState, getDialogState())
+    }
+
+    @Test
+    fun testOnAntMissingAdapterDialogDismissed_blocksImmediateRepeatedBroadcastsBeforeDataStoreCompletes() {
+        val (activity, getDialogState) = createMockActivity(
+            suppressed = false,
+            loaded = true,
+            initialDialogState = AntDialogState.MissingAdapter
+        )
+
+        activity.onAntMissingAdapterDialogDismissed()
+
+        assertNull("Dismissal must close MissingAdapter immediately", getDialogState())
+        assertTrue(
+            "Dismissal must synchronously mark dialog suppressed",
+            getBooleanField(activity, "isAntMissingAdapterDialogSuppressed")
+        )
+
+        // Simulate immediate back-to-back ADAPTER_NOT_DETECTED broadcasts before DataStore write finishes
+        repeat(3) {
+            activity.showANTAdapterMissingDialog()
+            assertNull("Back-to-back broadcast #$it must not reopen dismissed dialog", getDialogState())
+        }
+
+        // Simulate stale in-flight `false` emission from DataStore arriving before write commits `true`
+        activity.applyAntMissingAdapterSuppressionState(false)
+        assertTrue(
+            "Stale in-flight false emission must not clear pending dismissal suppression",
+            getBooleanField(activity, "isAntMissingAdapterDialogSuppressed")
+        )
+        activity.showANTAdapterMissingDialog()
+        assertNull("Broadcast after stale false emission must still be suppressed", getDialogState())
+
+        // Once DataStore emits `true`, pending write flag clears and Tuning re-enablement works
+        activity.applyAntMissingAdapterSuppressionState(true)
+        assertFalse(getBooleanField(activity, "isPersistingAntMissingAdapterSuppression"))
+        activity.applyAntMissingAdapterSuppressionState(false)
+        assertFalse(getBooleanField(activity, "isAntMissingAdapterDialogSuppressed"))
+        activity.showANTAdapterMissingDialog()
+        assertEquals(AntDialogState.MissingAdapter, getDialogState())
+    }
+
+    @Test
+    fun testColdStartBroadcast_beforeHydration_respectsPersistedTrueSuppression() {
+        val (activity, getDialogState) = createMockActivity(suppressed = false, loaded = false)
+
+        activity.showANTAdapterMissingDialog()
+        assertNull("Pre-hydration broadcast must not show dialog prematurely", getDialogState())
+        assertTrue(getBooleanField(activity, "hasPendingAntAdapterMissingBroadcast"))
+
+        activity.applyAntMissingAdapterSuppressionState(true)
+        assertNull("Persisted true suppression must discard deferred cold-start broadcast", getDialogState())
+        assertFalse(getBooleanField(activity, "hasPendingAntAdapterMissingBroadcast"))
+    }
+
+    @Test
+    fun testColdStartBroadcast_beforeHydration_flushesWhenPersistedFalse() {
+        val (activity, getDialogState) = createMockActivity(suppressed = false, loaded = false)
+
+        activity.showANTAdapterMissingDialog()
+        assertNull("Pre-hydration broadcast must wait for initial DataStore value", getDialogState())
+
+        activity.applyAntMissingAdapterSuppressionState(false)
+        assertEquals(
+            "Persisted false must flush deferred cold-start broadcast once hydrated",
+            AntDialogState.MissingAdapter,
+            getDialogState()
+        )
     }
 
     @Test
@@ -148,6 +226,12 @@ class AntMissingAdapterDialogSuppressionTest {
         assertTrue(
             "ATrainingTrackerApp must setSuppressAntMissingAdapterDialog(true) on dismiss",
             content.contains("setSuppressAntMissingAdapterDialog(true)")
+        )
+        val missingAdapterBranch = content.substringAfter("is AntDialogState.MissingAdapter ->")
+            .substringBefore("is AntDialogState.MissingDependency ->")
+        assertFalse(
+            "MissingAdapter branch must NOT create a branch-local rememberCoroutineScope() that cancels on dismiss",
+            missingAdapterBranch.contains("rememberCoroutineScope")
         )
     }
 

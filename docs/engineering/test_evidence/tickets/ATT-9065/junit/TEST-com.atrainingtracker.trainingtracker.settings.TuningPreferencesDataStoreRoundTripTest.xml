@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T20:27:37.848Z" hostname="rainer-HP-EliteBook-850-G5" time="5.089">
+  <properties/>
+  <testcase name="boundedPref_contractAndPrivateConstructor_verified_TST_SET_123_3" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest" time="0.072"/>
+  <testcase name="saveTuningConfig_roundTripsAllPersistedFieldsIncluding4AutoPauseKeys_TST_SET_123_1" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest" time="4.99"/>
+  <testcase name="boundedPref_dependentClampsZeroRuleAndLegacyMirrors_preserveExactBehavior_TST_SET_123_2" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

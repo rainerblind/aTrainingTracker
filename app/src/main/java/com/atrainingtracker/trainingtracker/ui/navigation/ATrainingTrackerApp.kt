@@ -56,7 +56,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -828,55 +831,12 @@ fun ATrainingTrackerApp(
         }
     }
 
-    // Material 3 ANT+ Alert Dialogs & Status Sheet (REQ-UI-323 / ATT-2939)
-    when (val dialogState = activity.antDialogState) {
-        is AntDialogState.MissingAdapter -> {
-            val scope = rememberCoroutineScope()
-            val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(activity) }
-            AntMissingAdapterDialog(
-                onViewStatus = {
-                    activity.antDialogState = null
-                    activity.showAntStatusSheet = true
-                },
-                onDismiss = {
-                    activity.antDialogState = null
-                    scope.launch {
-                        tuningDataStore.setSuppressAntMissingAdapterDialog(true)
-                    }
-                }
-            )
-        }
-        is AntDialogState.MissingDependency -> {
-            val context = LocalContext.current
-            AntMissingDependencyDialog(
-                dependencyName = dialogState.dependencyName,
-                onGoToStore = {
-                    activity.antDialogState = null
-                    val startStore = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("market://details?id=${dialogState.packageName}")
-                    ).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    try {
-                        context.startActivity(startStore)
-                    } catch (e: Exception) {
-                        val webIntent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://play.google.com/store/apps/details?id=${dialogState.packageName}")
-                        ).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(webIntent)
-                    }
-                },
-                onDismiss = {
-                    activity.antDialogState = null
-                }
-            )
-        }
-        null -> Unit
-    }
+    // Material 3 ANT+ Alert Dialogs & Status Sheet (REQ-UI-323 / REQ-UI-353 / ATT-2939 / ATT-9065)
+    AntAlertDialogsOverlay(
+        activity = activity,
+        scope = scope,
+        tuningDataStore = tuningDataStore
+    )
 
     // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308, ATT-5658)
     activity.firstJubileeCelebrationState?.let { jubileeData ->
@@ -916,12 +876,6 @@ fun ATrainingTrackerApp(
                     settingsDataStore.setHasShownFirstJubileePrompt(true)
                 }
             }
-        )
-    }
-
-    if (activity.showAntStatusSheet) {
-        AntServicesStatusSheet(
-            onDismiss = { activity.showAntStatusSheet = false }
         )
     }
 
@@ -1015,6 +969,76 @@ fun ATrainingTrackerApp(
                     tuningDataStore.setHasCompletedPermissionOnboarding(true)
                 }
             }
+        )
+    }
+}
+
+/**
+ * Overlay rendering ANT+ alert dialogs and [AntServicesStatusSheet] using a parent-scoped
+ * [CoroutineScope] that outlives [AntDialogState.MissingAdapter] leaving composition (ATT-9065).
+ */
+@Composable
+internal fun AntAlertDialogsOverlay(
+    activity: MainActivityWithNavigation,
+    scope: CoroutineScope,
+    tuningDataStore: TuningPreferencesDataStore
+) {
+    when (val dialogState = activity.antDialogState) {
+        is AntDialogState.MissingAdapter -> {
+            AntMissingAdapterDialog(
+                onViewStatus = {
+                    activity.showAntStatusSheet = true
+                    activity.antDialogState = null
+                },
+                onDismiss = {
+                    activity.onAntMissingAdapterDialogDismissed()
+                    scope.launch {
+                        try {
+                            withContext(NonCancellable) {
+                                tuningDataStore.setSuppressAntMissingAdapterDialog(true)
+                            }
+                        } finally {
+                            activity.isPersistingAntMissingAdapterSuppression = false
+                        }
+                    }
+                }
+            )
+        }
+        is AntDialogState.MissingDependency -> {
+            val context = LocalContext.current
+            AntMissingDependencyDialog(
+                dependencyName = dialogState.dependencyName,
+                onGoToStore = {
+                    activity.antDialogState = null
+                    val startStore = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("market://details?id=${dialogState.packageName}")
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        context.startActivity(startStore)
+                    } catch (e: Exception) {
+                        val webIntent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://play.google.com/store/apps/details?id=${dialogState.packageName}")
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(webIntent)
+                    }
+                },
+                onDismiss = {
+                    activity.antDialogState = null
+                }
+            )
+        }
+        null -> Unit
+    }
+
+    if (activity.showAntStatusSheet) {
+        AntServicesStatusSheet(
+            onDismiss = { activity.showAntStatusSheet = false }
         )
     }
 }
