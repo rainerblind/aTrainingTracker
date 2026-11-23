@@ -386,34 +386,24 @@ class AltitudeAwareClusterMatchingTest {
         // Unmock static to test actual setter/getter behavior with mocked SharedPreferences
         unmockkAll()
 
-        val mockPrefs = mockk<android.content.SharedPreferences>(relaxed = true)
-        val mockEditor = mockk<android.content.SharedPreferences.Editor>(relaxed = true)
-
-        every { mockPrefs.edit() } returns mockEditor
-        every { mockEditor.putFloat(any(), any()) } returns mockEditor
-        every { mockEditor.putBoolean(any(), any()) } returns mockEditor
-
-        val field = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
-        field.isAccessible = true
-        val originalPrefs = field.get(null)
-        field.set(null, mockPrefs)
+        val mockContext = mockk<android.content.Context>(relaxed = true)
+        val inMemory = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+        val store = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+            context = mockContext,
+            dataStoreOverride = inMemory
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(store)
+        TrainingApplication.setAppContextForTesting(mockContext)
 
         try {
-            TrainingApplication.setClusterTolAltitudePos(250f)
-            verify(exactly = 1) {
-                mockEditor.putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, 250f)
+            kotlinx.coroutines.runBlocking {
+                store.updateClusterTuning(altPosTol = 250f, useAlt = false)
             }
-
-            TrainingApplication.setUseAltitudePosForClustering(false)
-            verify(exactly = 1) {
-                mockEditor.putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, false)
-            }
-
-            verify(exactly = 2) {
-                mockEditor.apply()
-            }
+            assertEquals(250f, TrainingApplication.getClusterTolAltitudePos(), 0.001f)
+            org.junit.Assert.assertFalse(TrainingApplication.useAltitudePosForClustering())
         } finally {
-            field.set(null, originalPrefs)
+            TrainingApplication.setAppContextForTesting(null)
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
         }
     }
 }

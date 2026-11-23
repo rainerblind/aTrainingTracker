@@ -153,7 +153,6 @@ fun AdvancedTuningScreen(
     LaunchedEffect(persistedWorkoutCardPrefs) { persistedWorkoutCardPrefs?.let { if (!isAftermathPrefsInitialized) { workoutCardPrefs = it; isAftermathPrefsInitialized = true } } }
     LaunchedEffect(persistedWorkoutDetailPrefs) { persistedWorkoutDetailPrefs?.let { if (!isDetailPrefsInitialized) { workoutDetailPrefs = it; isDetailPrefsInitialized = true } } }
     LaunchedEffect(persistedWorkoutSectionsOrder) { persistedWorkoutSectionsOrder?.let { if (!isSectionsOrderInitialized) { workoutSectionsOrder = it; isSectionsOrderInitialized = true } } }
-    LaunchedEffect(Unit) { tuningDataStore.purgeLegacyMapCameraPreferences() }
 
     fun applyConfig(config: TuningConfig) {
         elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain

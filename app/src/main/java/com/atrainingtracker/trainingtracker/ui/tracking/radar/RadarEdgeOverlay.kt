@@ -104,6 +104,7 @@ import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -216,11 +217,16 @@ object RadarOverlayMath {
     }
 
     /**
-     * Formats compact status badge pill text during audio snooze / suppression (REQ-TRK-064.2).
+     * Formats compact status badge pill text during audio snooze / suppression (REQ-TRK-064.2, REQ-CON-056.3).
+     * Derives remaining minutes from monotonic [RadarAudioSnoozeState.snoozeUntilElapsedRealtimeMs] without a 1-Hz repository ticker.
      */
-    fun formatSnoozeBadgeText(snoozeState: RadarAudioSnoozeState): String? {
+    @JvmOverloads
+    fun formatSnoozeBadgeText(
+        snoozeState: RadarAudioSnoozeState,
+        nowElapsedRealtimeMs: Long = RadarSnoozeController.DEFAULT_TIME_PROVIDER()
+    ): String? {
         if (!snoozeState.isSnoozed) return null
-        val secs = snoozeState.remainingSeconds
+        val secs = snoozeState.remainingSecondsAt(nowElapsedRealtimeMs)
         return when {
             secs != null -> {
                 val mins = (secs + 59) / 60
@@ -681,7 +687,21 @@ private fun RadarStatusBadgePill(
     val badgeTextColor: Color
 
     val snoozeState = radarState.audioSnoozeState
-    val snoozeBadgeText = RadarOverlayMath.formatSnoozeBadgeText(snoozeState)
+    var snoozeClockMs by remember(snoozeState.snoozeUntilElapsedRealtimeMs) {
+        mutableStateOf(RadarSnoozeController.DEFAULT_TIME_PROVIDER())
+    }
+    LaunchedEffect(snoozeState.isSnoozed, snoozeState.snoozeUntilElapsedRealtimeMs) {
+        val until = snoozeState.snoozeUntilElapsedRealtimeMs
+        if (snoozeState.isSnoozed && until != null) {
+            while (true) {
+                val now = RadarSnoozeController.DEFAULT_TIME_PROVIDER()
+                snoozeClockMs = now
+                if (now >= until) break
+                delay(1000L)
+            }
+        }
+    }
+    val snoozeBadgeText = RadarOverlayMath.formatSnoozeBadgeText(snoozeState, snoozeClockMs)
     val isFastApproaching = !isDisconnectError && radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING
 
     when {

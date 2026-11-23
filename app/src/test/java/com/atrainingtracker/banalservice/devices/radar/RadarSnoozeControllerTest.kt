@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices.radar
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
@@ -74,7 +75,11 @@ class RadarSnoozeControllerTest {
         assertEquals(900, state.remainingSeconds)
         assertTrue(RadarSnoozeController.isRoutineAlertSuppressed())
         assertTrue(RadarSnoozeController.isFastThreatAlertSuppressed())
-        assertEquals(state, RadarStateRepository.getState().audioSnoozeState)
+        val repoSnooze = RadarStateRepository.snoozeState.value
+        assertTrue(repoSnooze.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, repoSnooze.mode)
+        assertEquals(simulatedTimeMs + 15 * 60 * 1000L, repoSnooze.snoozeUntilElapsedRealtimeMs)
+        assertEquals(900, repoSnooze.remainingSecondsAt(simulatedTimeMs))
     }
 
     @Test
@@ -186,26 +191,55 @@ class RadarSnoozeControllerTest {
     }
 
     @Test
-    fun tickerCoroutine_decrementsRemainingSecondsAndAutoExpires() = runTest {
+    fun oneShotExpiryTimer_hasZeroIntermediateEmissions_reschedulesOn15mTo30m_andExpiresCleanly_tstCon056_3() = runTest {
         val testScope = TestScope(testScheduler)
         RadarSnoozeController.setCoroutineScope(testScope)
 
+        val snoozeEmissions = mutableListOf<RadarAudioSnoozeState>()
+        val collectJob = testScope.launch {
+            RadarStateRepository.snoozeState.collect { snoozeEmissions.add(it) }
+        }
+        testScope.testScheduler.runCurrent()
+        val baselineEmissions = snoozeEmissions.size
+
         RadarSnoozeController.snooze(RadarAudioSnoozeMode.SNOOZE_15M)
+        testScope.testScheduler.runCurrent()
         assertEquals(900, RadarSnoozeController.getSnoozeState().remainingSeconds)
+        assertEquals(baselineEmissions + 1, snoozeEmissions.size)
 
-        // Advance 10 seconds
-        simulatedTimeMs += 10_000L
-        testScope.advanceTimeBy(10_000L)
-        assertEquals(890, RadarSnoozeController.getSnoozeState().remainingSeconds)
+        // Advance 60 seconds: ZERO intermediate snoozeState emissions (no 1-Hz ticker!)
+        simulatedTimeMs += 60_000L
+        testScope.advanceTimeBy(60_000L)
+        testScope.testScheduler.runCurrent()
+        assertEquals(840, RadarSnoozeController.getSnoozeState().remainingSeconds)
+        assertEquals("Must emit ZERO intermediate ticks during active snooze", baselineEmissions + 1, snoozeEmissions.size)
 
-        // Advance past expiration (remaining 890s + 1s)
-        simulatedTimeMs += 891_000L
-        testScope.advanceTimeBy(891_000L)
+        // Reschedule SNOOZE_15M -> SNOOZE_30M: cancels previous 15m timer cleanly
+        RadarSnoozeController.snooze(RadarAudioSnoozeMode.SNOOZE_30M)
+        testScope.testScheduler.runCurrent()
+        assertEquals(1800, RadarSnoozeController.getSnoozeState().remainingSeconds)
+        assertEquals(baselineEmissions + 2, snoozeEmissions.size)
+
+        // Advance past original 15m expiry (900s): 30m snooze MUST remain active!
+        simulatedTimeMs += 900_000L
+        testScope.advanceTimeBy(900_000L)
+        testScope.testScheduler.runCurrent()
+        assertTrue("30m reschedule must cancel prior 15m expiry", RadarSnoozeController.getSnoozeState().isSnoozed)
+        assertEquals(900, RadarSnoozeController.getSnoozeState().remainingSeconds)
+        assertEquals(baselineEmissions + 2, snoozeEmissions.size)
+
+        // Advance remaining 900s: single one-shot expiry fires cleanly
+        simulatedTimeMs += 900_000L
+        testScope.advanceTimeBy(900_000L)
+        testScope.testScheduler.runCurrent()
 
         val expiredState = RadarSnoozeController.getSnoozeState()
         assertFalse(expiredState.isSnoozed)
         assertEquals(RadarAudioSnoozeMode.NONE, expiredState.mode)
         assertNull(expiredState.remainingSeconds)
+        assertEquals(baselineEmissions + 3, snoozeEmissions.size)
+
+        collectJob.cancel()
     }
 
     @Test

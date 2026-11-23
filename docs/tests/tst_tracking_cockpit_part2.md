@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.17  
+**Version**: 1.0.19  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 95
+**Total Tests**: 96
 
 ---
 
@@ -2057,6 +2057,24 @@
 
 ---
 
+### TST-CON-056: **Radar Subsystem & State-Cache Consolidation, 3-StateFlow Split & AB-BA Deadlock-Free Concurrency Verification (`ATT-8132`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-056` (`REQ-CON-056.1`–`REQ-CON-056.4`)
+- **Component**: `TuningPreferencesDataStore.kt`, `SettingsDataStore.kt`, `TrainingApplication.java`, `TrackerService.java`, `RadarState.kt`, `RadarAudioSnoozeState.kt`, `RadarStateRepository.kt`, `RadarSnoozeController.kt`, `RadarLightController.kt`, `SmartBrakeLightDetector.kt`, `SmartRadarLightEngine.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`
+- **Jira**: `ATT-8132` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Verified Test Methods**: `TuningPreferencesDataStoreRadarLightControlModeTest#createPreferencesMigration_migratesLegacyRadarLightKeysAndCleansClusterPrefs_tstCon056_1`, `RadarBrakeLightConcurrencyStressTest#deadCachesAndInvalidationHooks_areRemovedFromRadarLightControllerAndTrackerService_tstCon056_2`, `RadarBrakeLightConcurrencyStressTest#preferenceChanges_propagateImmediatelyWithoutStaleCache_tstCon056_2`, `RadarSnoozeControllerTest#oneShotExpiryTimer_hasZeroIntermediateEmissions_reschedulesOn15mTo30m_andExpiresCleanly_tstCon056_3`, `RadarBrakeLightConcurrencyStressTest#timedSnooze_producesZeroWakeupsInSmartRadarLightEngineAndRadarAlertManager_tstCon056_3`, `RadarBrakeLightConcurrencyStressTest#concurrentThreatAndSnoozeMutations_neverOverwriteTargetsOrFailoverControlState_tstCon056_3`, `RadarBrakeLightConcurrencyStressTest#parallelRadarLightControllerAndSmartBrakeLightDetector_haveZeroAbBaDeadlocks_tstCon056_4`
+- **Test Description**:
+  1. *Canonical 2-Key Radar-Light Migration & Single Source of Truth (`TST-CON-056.1` — `TuningPreferencesDataStoreRadarLightControlModeTest.kt`, `MapCameraTuningPreferencesTest.kt`, `TuningPreferencesDataStoreRoundTripTest.kt`, `TuningConfigTest.kt`, `AltitudeAwareClusterMatchingTest.kt`, `WorkoutClusterEngineScoreThresholdTest.kt`)*:
+     • Run one-time `DataMigration<Preferences>` across all legacy radar-light key permutations, `LEGACY_MAP_CAMERA_KEYS`, and legacy SharedPreferences cluster tolerances; assert exact preservation of prior effective modes, removal of obsolete keys, idempotent `shouldMigrate == false` on rerun, unified fresh-install `SMART_AUTOMATION` consistency, and full `TuningConfig` derived-property agreement after `updateRadarAutoLightControl`/`updateRadarLightControlMode`.
+  2. *Zero Stale Caches & Immediate Settings Propagation (`TST-CON-056.2` — `RadarLightControllerTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `TrackerServiceResilienceTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify `RadarLightController` has zero `cached*` fields / `updateCachedPreferences` overloads, reflects DataStore changes immediately, and persists on one long-lived scope; verify `TrackerService.getAutoPauseConfig()` immediately reflects `updateAutoPause{Bike,Run,Other}Enabled` and `resetToDefaults` without `invalidateAutoPauseCache()`; assert `TrackerService.java <= 3,220` LoC and `TrainingApplication.java <= 2,050` LoC.
+  3. *3-StateFlow Split, Zero 1-Hz Snooze Wakeups & Atomic Concurrency (`TST-CON-056.3` — `RadarStateRepositoryTest.kt`, `RadarSnoozeControllerTest.kt`, `SmartRadarLightEngineTest.kt`, `RadarAlertManagerTest.kt`, `RadarEdgeOverlayTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`, `RadarTrafficSimulatorTest.kt`, `RadarSettingsSectionTest.kt`)*:
+     • Activate timed 15m/30m snooze with `TestScope` and advance intermediate seconds -> assert `0` intermediate `snoozeState` emissions, `0` wakeups or cooldown extensions in `SmartRadarLightEngine` and `RadarAlertManager`, and exact 1-shot expiry at `snoozeUntilElapsedRealtimeMs`; verify concurrent 8-Hz threat + snooze/light updates never overwrite targets and preserve failover (`BLE -> ANT_PLUS -> SIMULATOR`); verify `RadarEdgeOverlay` derives badge minutes from `snoozeUntilElapsedRealtimeMs`.
+  4. *AB-BA Deadlock-Free Multi-Thread Stress Test (`TST-CON-056.4` — `RadarBrakeLightConcurrencyStressTest.kt`, `SmartBrakeLightDetectorTest.kt`, `RadarLightControllerTest.kt`)*:
+     • Run parallel `ExecutorService` threads (`>= 4` threads, `>= 5,000` iterations) concurrently exercising `RadarLightController` (`registerRadarDevice`, `unregisterRadarDevice`, `setManualLightMode`, `setAutoMode`, `checkAndRestorePreBrakeMode`) and `SmartBrakeLightDetector` (`onLinearAccelerationChanged`, `stopListening`, `isAutoBypassed`, `isEnabled`) while checking `ThreadMXBean.findDeadlockedThreads()`; assert bounded completion with `0` deadlocks and `0` uncaught exceptions.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2196,3 +2214,5 @@
 | `1.0.15` | 2026-11-23 | Lane 2 Author (`ATT-9601`, `--as agent1`) | `ATT-9601` | Promoted `TST-FIL-041` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`146/146` PASS across 11 targeted suites: `SpeedAndLocationDevice_ATTFusedTest` `40/40`, `UnicycleOdometryEkfTest` `20/20`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `ExtendedRtsOdometrySmootherTest` `14/14`, `AttFusedColdStartHelperTest` `3/3`, `OdometrySimulationTest` `3/3`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
 | `1.0.16` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Added `[Planned]` `TST-FIL-042` (`TST-FIL-042.1`–`TST-FIL-042.3`, strictly symmetric `REQ-FIL-042`) covering Pixel 10 `-2.18 s` GNSS offset replay (`0` sub-`2 s` `4 <-> 1` flips), OEM `uptimeMillis`/epoch-ns `> 5 s` re-anchoring, wall-clock wheel alignment, UTC `MultisportTelemetryAnchor`/sidecar preservation, out-of-order `PhoneCarriageClassifier`/`UnicycleOdometryEkf` monotonic guards, and `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC. |
 | `1.0.17` | 2026-11-23 | Lane 2 Author (`ATT-9600`, `--as agent1`) | `ATT-9600` | Promoted `TST-FIL-042` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`160/160` PASS across 13 targeted suites: `AttFusedTimestampNormalizerTest` `3/3`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `PhoneCarriageClassifierTest` `16/16`, `UnicycleOdometryEkfTest` `21/21`, `AttFusedColdStartHelperTest` `3/3`, `KinematicSportTypeDiscriminatorTest` `6/6`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `OfflineTelemetryReplayHarnessTest` `11/11`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`). |
+| `1.0.18` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Added `[Planned]` `TST-CON-056` (`.1`–`.4`, strictly symmetric `REQ-CON-056`) covering canonical 2-key radar-light migration & SSoT, zero stale caches in `RadarLightController` & `TrackerService`, 3-`StateFlow` `RadarStateRepository` split without 1-Hz snooze wakeups, and multi-threaded `ThreadMXBean` AB-BA deadlock stress verification (`N/A - no UI strings`). |
+| `1.0.19` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `TST-CON-056` (`.1`–`.4`) to `[Verified]` with verbatim method citations (`569/569` in-scope tests PASS across 18 suites incl. `RadarBrakeLightConcurrencyStressTest 5/5`, `TuningPreferencesDataStoreRadarLightControlModeTest 10/10`, `RadarLightControllerTest`, `RadarSnoozeControllerTest`, `RadarStateRepositoryTest`, `RadarTrafficSimulatorTest`, `ANTBikeRadarDeviceTest`, `BTLERadarDeviceTest`, `ArchitectureConformanceContractTest`, live `emulator-5554` smoke `0` crashes, `Rule 8.5` PNG verified). |

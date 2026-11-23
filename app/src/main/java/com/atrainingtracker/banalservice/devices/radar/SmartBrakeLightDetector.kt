@@ -25,24 +25,17 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.SystemClock
 import android.util.Log
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * Smartphone IMU & GPS deceleration brake-light detector (REQ-CON-035, ATT-5121).
+ * Smartphone IMU & GPS deceleration brake-light detector (REQ-CON-035, REQ-CON-056.4, ATT-5121, ATT-8132).
  *
- * Coordinates:
- * 1. Attitude Compensation: Fuses [android.hardware.Sensor.TYPE_LINEAR_ACCELERATION] with
- *    [android.hardware.Sensor.TYPE_GRAVITY] to project dynamic motion onto horizontal and vertical planes.
- * 2. Vertical Shock & Pothole Rejection: Rejects vertical spikes (|a_v| > 4.0 m/s^2) that lack
- *    sustained forward deceleration.
- * 3. Forward Deceleration Trigger: Emits a confirmed Brake Event to [RadarLightController] when
- *    longitudinal deceleration a <= -2.0 m/s^2 is sustained for >= 250 ms at riding speeds v >= 2.5 m/s
- *    and speed derivative dv/dt <= 0.
- * 4. Auto-Bypass Gating: Automatically disabled when the connected radar peripheral possesses
- *    hardware-level brake sensing (Garmin Varia RearVue 820).
- * 5. Lifecycle Management: Registers [SensorEventListener] during active tracking and unregisters on
- *    pause, stop, or disconnect to protect battery life.
+ * Lock-Hierarchy Invariant (`REQ-CON-056.4`):
+ * - [isEnabled] and [isAutoBypassed] use lock-free [AtomicBoolean].
+ * - All outbound calls to [RadarLightController.triggerBrakeLight] execute strictly OUTSIDE
+ *   [detectorLock], eliminating the AB-BA deadlock cycle by construction ($E(L_B \to L_A) = \emptyset$).
  */
 object SmartBrakeLightDetector : SensorEventListener {
 
@@ -53,25 +46,35 @@ object SmartBrakeLightDetector : SensorEventListener {
     const val MIN_SPEED_MPS = 2.5f // ~9.0 km/h
     const val VERTICAL_SHOCK_THRESHOLD_MPS2 = 4.0f
 
-    @Volatile
-    var isEnabled: Boolean = true
+    private val detectorLock = Any()
+
+    private val enabledFlag = AtomicBoolean(true)
+    private val autoBypassedFlag = AtomicBoolean(false)
+
+    private enum class BrakeAction { NONE, START_BRAKING, END_BRAKING }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun safeElapsedRealtime(): Long = try {
+        SystemClock.elapsedRealtime()
+    } catch (_: Throwable) {
+        System.nanoTime() / 1_000_000L
+    }
+
+    var isEnabled: Boolean
+        get() = enabledFlag.get()
         set(value) {
-            synchronized(this) {
-                field = value
-                if (!value && isListening) {
-                    stopListening()
-                }
+            enabledFlag.set(value)
+            if (!value && isListening) {
+                stopListening()
             }
         }
 
-    @Volatile
-    var isAutoBypassed: Boolean = false
+    var isAutoBypassed: Boolean
+        get() = autoBypassedFlag.get()
         set(value) {
-            synchronized(this) {
-                field = value
-                if (value && isListening) {
-                    stopListening()
-                }
+            autoBypassedFlag.set(value)
+            if (value && isListening) {
+                stopListening()
             }
         }
 
@@ -147,9 +150,11 @@ object SmartBrakeLightDetector : SensorEventListener {
     @JvmStatic
     @JvmOverloads
     fun startListening(context: Context, customSensorManager: SensorManager? = null) {
-        synchronized(this) {
-            if (isListening || !isEnabled || isAutoBypassed) return
-            val sm = customSensorManager ?: (context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager) ?: return
+        synchronized(detectorLock) {
+            if (isListening || !enabledFlag.get() || autoBypassedFlag.get()) return
+            val sm = customSensorManager
+                ?: (context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager)
+                ?: return
             val linAcc = sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
             val gravity = sm.getDefaultSensor(Sensor.TYPE_GRAVITY)
             if (linAcc != null) {
@@ -166,10 +171,12 @@ object SmartBrakeLightDetector : SensorEventListener {
 
     /**
      * Unregisters IMU listeners from Android [SensorManager] to prevent battery drain.
+     * Releases any active brake state via [RadarLightController.triggerBrakeLight] strictly OUTSIDE [detectorLock].
      */
     @JvmStatic
     fun stopListening() {
-        synchronized(this) {
+        val shouldReleaseBrake: Boolean
+        synchronized(detectorLock) {
             if (!isListening) return
             try {
                 sensorManager?.unregisterListener(this)
@@ -179,10 +186,13 @@ object SmartBrakeLightDetector : SensorEventListener {
             sensorManager = null
             isListening = false
             decelerationStartRealtimeMs = 0L
-            if (isBraking) {
-                endBraking(SystemClock.elapsedRealtime())
-            }
+            shouldReleaseBrake = isBraking
+            isBraking = false
             Log.i(TAG, "SensorManager listeners unregistered for SmartBrakeLightDetector")
+        }
+        if (shouldReleaseBrake) {
+            Log.i(TAG, "Deceleration brake event ended; releasing to post-brake hold window")
+            RadarLightController.triggerBrakeLight(active = false, nowMs = safeElapsedRealtime())
         }
     }
 
@@ -191,7 +201,7 @@ object SmartBrakeLightDetector : SensorEventListener {
      */
     @JvmStatic
     fun onGravityChanged(gx: Float, gy: Float, gz: Float) {
-        synchronized(this) {
+        synchronized(detectorLock) {
             gravityX = gx
             gravityY = gy
             gravityZ = gz
@@ -205,9 +215,9 @@ object SmartBrakeLightDetector : SensorEventListener {
     @JvmOverloads
     fun onSpeedChanged(
         speedMps: Float,
-        nowMs: Long = SystemClock.elapsedRealtime()
+        nowMs: Long = safeElapsedRealtime()
     ) {
-        synchronized(this) {
+        synchronized(detectorLock) {
             if (lastSpeedTimestampMs > 0L) {
                 val dt = (nowMs - lastSpeedTimestampMs) / 1000f
                 if (dt > 0.05f) {
@@ -233,18 +243,14 @@ object SmartBrakeLightDetector : SensorEventListener {
      */
     @JvmStatic
     fun setDvDtForTesting(dvDt: Float) {
-        synchronized(this) {
+        synchronized(detectorLock) {
             currentDvDt = dvDt
         }
     }
 
     /**
      * Primary IMU sensor callback processing linear acceleration [android.hardware.Sensor.TYPE_LINEAR_ACCELERATION].
-     *
-     * @param ax X-axis linear acceleration (m/s^2)
-     * @param ay Y-axis linear acceleration (m/s^2)
-     * @param az Z-axis linear acceleration (m/s^2)
-     * @param nowMs Current elapsed realtime in ms (overridable for testing)
+     * Computes transitions under [detectorLock] and invokes [RadarLightController.triggerBrakeLight] strictly outside it.
      */
     @JvmStatic
     @JvmOverloads
@@ -252,14 +258,13 @@ object SmartBrakeLightDetector : SensorEventListener {
         ax: Float,
         ay: Float,
         az: Float,
-        nowMs: Long = SystemClock.elapsedRealtime()
+        nowMs: Long = safeElapsedRealtime()
     ) {
-        synchronized(this) {
-            if (!isEnabled || isAutoBypassed) {
-                if (isBraking) {
-                    endBraking(nowMs)
-                }
-                return
+        var forwardAccLog = 0f
+        var elapsedLog = 0L
+        val action: BrakeAction = synchronized(detectorLock) {
+            if (!enabledFlag.get() || autoBypassedFlag.get()) {
+                return@synchronized clearBrakingLocked()
             }
 
             // 1. Attitude compensation via normalized gravity unit vector
@@ -274,8 +279,6 @@ object SmartBrakeLightDetector : SensorEventListener {
             val verticalAcc = ax * normGx + ay * normGy + az * normGz
             lastVerticalShock = abs(verticalAcc)
 
-            // Forward longitudinal deceleration along bike travel axis:
-            // In standard phone mount (portrait mode, screen tilted up/forward), forward horizontal axis is projected +Y
             // Horizontal forward unit vector: f = (0, 1, 0) - ((0, 1, 0) . g_norm) * g_norm
             val fDotG = normGy
             val fX = -fDotG * normGx
@@ -286,29 +289,21 @@ object SmartBrakeLightDetector : SensorEventListener {
             val forwardAcc = if (fNorm > 0.1f) {
                 (ax * fX + ay * fY + az * fZ) / fNorm
             } else {
-                // Phone mounted flat / horizontal: forward direction defaults to +Y
                 ay
             }
             lastForwardDeceleration = forwardAcc
+            forwardAccLog = forwardAcc
 
             // 2. Vertical shock & pothole rejection
-            // If vertical shock is excessive without sustained forward deceleration, reset accumulator
             if (lastVerticalShock > VERTICAL_SHOCK_THRESHOLD_MPS2 && forwardAcc > DECELERATION_THRESHOLD_MPS2) {
                 decelerationStartRealtimeMs = 0L
-                if (isBraking) {
-                    endBraking(nowMs)
-                }
-                return
+                return@synchronized clearBrakingLocked()
             }
 
             // 3. Minimum speed and speed derivative check (REQ-CON-035.1)
-            // Riding speed must be >= 2.5 m/s (~9.0 km/h) and speed derivative dv/dt <= 0 (not accelerating)
             if (currentSpeedMps < MIN_SPEED_MPS || currentDvDt > 0.05f) {
                 decelerationStartRealtimeMs = 0L
-                if (isBraking) {
-                    endBraking(nowMs)
-                }
-                return
+                return@synchronized clearBrakingLocked()
             }
 
             // 4. Deceleration threshold & duration gating
@@ -317,34 +312,50 @@ object SmartBrakeLightDetector : SensorEventListener {
                     decelerationStartRealtimeMs = nowMs
                 }
                 val elapsed = nowMs - decelerationStartRealtimeMs
+                elapsedLog = elapsed
                 if (elapsed >= MIN_DECELERATION_DURATION_MS && !isBraking) {
                     isBraking = true
-                    Log.i(TAG, "Deceleration brake event triggered (a=$forwardAcc m/s^2, sustained=${elapsed}ms)")
-                    RadarLightController.triggerBrakeLight(active = true, nowMs = nowMs)
+                    BrakeAction.START_BRAKING
+                } else {
+                    BrakeAction.NONE
                 }
             } else {
                 decelerationStartRealtimeMs = 0L
-                if (isBraking) {
-                    endBraking(nowMs)
-                }
+                clearBrakingLocked()
             }
+        }
+
+        when (action) {
+            BrakeAction.START_BRAKING -> {
+                Log.i(TAG, "Deceleration brake event triggered (a=$forwardAccLog m/s^2, sustained=${elapsedLog}ms)")
+                RadarLightController.triggerBrakeLight(active = true, nowMs = nowMs)
+            }
+            BrakeAction.END_BRAKING -> {
+                Log.i(TAG, "Deceleration brake event ended; releasing to post-brake hold window")
+                RadarLightController.triggerBrakeLight(active = false, nowMs = nowMs)
+            }
+            BrakeAction.NONE -> Unit
         }
     }
 
-    private fun endBraking(nowMs: Long) {
-        isBraking = false
-        decelerationStartRealtimeMs = 0L
-        Log.i(TAG, "Deceleration brake event ended; releasing to post-brake hold window")
-        RadarLightController.triggerBrakeLight(active = false, nowMs = nowMs)
+    private fun clearBrakingLocked(): BrakeAction {
+        return if (isBraking) {
+            isBraking = false
+            decelerationStartRealtimeMs = 0L
+            BrakeAction.END_BRAKING
+        } else {
+            BrakeAction.NONE
+        }
     }
 
     /**
      * Resets transient motion state across workout stops while preserving configuration and auto-bypass status (REQ-CON-035.5).
+     * Calls [stopListening] strictly outside [detectorLock] to preserve the deadlock-free lock hierarchy (REQ-CON-056.4).
      */
     @JvmStatic
     fun resetMotionState() {
-        synchronized(this) {
-            stopListening()
+        stopListening()
+        synchronized(detectorLock) {
             isBraking = false
             currentSpeedMps = 0f
             currentDvDt = 0f
@@ -361,13 +372,12 @@ object SmartBrakeLightDetector : SensorEventListener {
 
     /**
      * Resets detector state for unit test isolation.
+     * Calls [resetMotionState] strictly outside [detectorLock] to preserve the deadlock-free lock hierarchy.
      */
     @JvmStatic
     fun reset() {
-        synchronized(this) {
-            resetMotionState()
-            isEnabled = true
-            isAutoBypassed = false
-        }
+        resetMotionState()
+        enabledFlag.set(true)
+        autoBypassedFlag.set(false)
     }
 }

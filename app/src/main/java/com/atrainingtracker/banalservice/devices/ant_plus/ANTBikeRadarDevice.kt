@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
+import com.atrainingtracker.banalservice.devices.radar.RadarThreatState
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -453,18 +454,19 @@ class ANTBikeRadarDevice(
         val overallThreat = computeOverallThreatLevel(targetsList)
         val nowMs = SystemClock.elapsedRealtime()
 
-        RadarStateRepository.updateTelemetryState { currentState ->
-            RadarState(
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
                 connectionState = RadarConnectionState.CONNECTED,
                 overallThreatLevel = overallThreat,
                 targets = targetsList,
                 lastUpdateRealtimeMs = nowMs,
-                lightMode = currentState.lightMode,
-                isLightControlSupported = currentState.isLightControlSupported || (companionLightDevice?.isAssociated == true),
-                audioSnoozeState = currentState.audioSnoozeState,
-                source = RadarSource.ANT_PLUS,
-                isAutoMode = currentState.isAutoMode
+                source = RadarSource.ANT_PLUS
             )
+        )
+        if (companionLightDevice?.isAssociated == true) {
+            RadarStateRepository.updateLightState { current ->
+                if (current.isLightControlSupported) current else current.copy(isLightControlSupported = true)
+            }
         }
 
         windowAggregator.onTargetsUpdated(targetsList, nowMs)
@@ -513,19 +515,15 @@ class ANTBikeRadarDevice(
         channelAcquisitionHandle?.cancel()
         channelAcquisitionHandle = null
         activeTargets.clear()
-        RadarStateRepository.updateTelemetryState { currentState ->
-            RadarState(
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
                 connectionState = RadarConnectionState.DISCONNECTED_ERROR,
                 overallThreatLevel = ThreatLevel.NONE,
                 targets = emptyList(),
                 lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
-                lightMode = currentState.lightMode,
-                isLightControlSupported = currentState.isLightControlSupported,
-                audioSnoozeState = currentState.audioSnoozeState,
-                source = RadarSource.ANT_PLUS,
-                isAutoMode = currentState.isAutoMode
+                source = RadarSource.ANT_PLUS
             )
-        }
+        )
         resetSensorsToClear()
     }
 
@@ -630,19 +628,15 @@ class ANTBikeRadarDevice(
         }
         antService = null
         activeTargets.clear()
-        RadarStateRepository.updateTelemetryState { currentState ->
-            RadarState(
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
                 connectionState = RadarConnectionState.DISCONNECTED,
                 overallThreatLevel = ThreatLevel.NONE,
                 targets = emptyList(),
                 lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
-                lightMode = currentState.lightMode,
-                isLightControlSupported = currentState.isLightControlSupported,
-                audioSnoozeState = currentState.audioSnoozeState,
-                source = RadarSource.ANT_PLUS,
-                isAutoMode = currentState.isAutoMode
+                source = RadarSource.ANT_PLUS
             )
-        }
+        )
         resetSensorsToClear()
         super.shutDown()
     }

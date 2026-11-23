@@ -283,9 +283,11 @@ class EditDeviceViewModelTest {
         every { mockRepo.getDeviceSnapshotById(88L) } returns radarDevice
 
         com.atrainingtracker.banalservice.devices.radar.RadarLightController.reset()
-        com.atrainingtracker.banalservice.devices.radar.RadarLightController.updateCachedPreferences(
-            autoMode = true,
-            defaultMode = com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onPreferencesUpdated(
+            com.atrainingtracker.trainingtracker.settings.TuningConfig(
+                radarLightControlMode = com.atrainingtracker.trainingtracker.settings.RadarLightControlMode.SMART_AUTOMATION,
+                radarLightDefaultMode = com.atrainingtracker.banalservice.devices.radar.RadarLightMode.SOLID
+            )
         )
 
         val viewModel = EditDeviceViewModel(

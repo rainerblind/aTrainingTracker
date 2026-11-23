@@ -33,15 +33,15 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.radar.LaneState;
-import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState;
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState;
 import com.atrainingtracker.banalservice.devices.radar.RadarLatchedSnapshot;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode;
+import com.atrainingtracker.banalservice.devices.radar.RadarLightState;
 import com.atrainingtracker.banalservice.devices.radar.RadarSource;
-import com.atrainingtracker.banalservice.devices.radar.RadarState;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
+import com.atrainingtracker.banalservice.devices.radar.RadarThreatState;
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator;
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel;
@@ -158,36 +158,36 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             synchronized (mTrackHistory) {
                 mTrackHistory.clear();
             }
-            RadarStateRepository.updateTelemetryState(currentState -> createBleRadarState(
+            RadarStateRepository.updateThreatState(createBleThreatState(
                     RadarConnectionState.DISCONNECTED_ERROR,
                     ThreatLevel.NONE,
-                    Collections.emptyList(),
-                    currentState.getLightMode(),
-                    mIsLightControlSupported,
-                    currentState
+                    Collections.emptyList()
             ));
+            syncLightControlSupported();
             resetSensorsToClear();
         }
     };
 
-    private static RadarState createBleRadarState(
+    private static RadarThreatState createBleThreatState(
             RadarConnectionState connectionState,
             ThreatLevel threatLevel,
-            List<RadarTarget> targets,
-            RadarLightMode lightMode,
-            boolean isLightControlSupported,
-            RadarState currentState
+            List<RadarTarget> targets
     ) {
-        return new RadarState(
+        return new RadarThreatState(
                 connectionState,
                 threatLevel,
                 targets,
                 SystemClock.elapsedRealtime(),
-                lightMode,
-                isLightControlSupported,
-                currentState.getAudioSnoozeState(),
-                RadarSource.BLE,
-                currentState.isAutoMode()
+                RadarSource.BLE
+        );
+    }
+
+    private void syncLightControlSupported() {
+        final boolean supported = mIsLightControlSupported;
+        RadarStateRepository.updateLightState(current ->
+                current.isLightControlSupported() == supported
+                        ? current
+                        : new RadarLightState(current.getLightMode(), supported, current.isAutoMode())
         );
     }
 
@@ -198,23 +198,20 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     @Override
     public boolean isReceivingData() {
-        return super.isReceivingData() && RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED;
+        return super.isReceivingData() && RadarStateRepository.getThreatState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED;
     }
 
     @Override
     public void startSearching() {
         super.startSearching();
-        RadarStateRepository.updateTelemetryStateIf(currentState -> {
+        RadarStateRepository.updateThreatStateIf(currentState -> {
             if (currentState.getConnectionState() == RadarConnectionState.DISCONNECTED_ERROR) {
                 return null;
             }
-            return createBleRadarState(
+            return createBleThreatState(
                     RadarConnectionState.CONNECTING,
                     ThreatLevel.NONE,
-                    Collections.emptyList(),
-                    currentState.getLightMode(),
-                    mIsLightControlSupported,
-                    currentState
+                    Collections.emptyList()
             );
         });
     }
@@ -223,17 +220,14 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     protected void notifyStopSearching(boolean success) {
         super.notifyStopSearching(success);
         if (!success) {
-            RadarStateRepository.updateTelemetryStateIf(currentState -> {
+            RadarStateRepository.updateThreatStateIf(currentState -> {
                 if (currentState.getConnectionState() == RadarConnectionState.DISCONNECTED_ERROR) {
                     return null;
                 }
-                return createBleRadarState(
+                return createBleThreatState(
                         RadarConnectionState.DISCONNECTED,
                         ThreatLevel.NONE,
-                        Collections.emptyList(),
-                        currentState.getLightMode(),
-                        mIsLightControlSupported,
-                        currentState
+                        Collections.emptyList()
                 );
             });
         }
@@ -270,14 +264,12 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         // Radar service discovered: transition to CONNECTED and arm 3.5s fail-safe watchdog (ATT-7543 / REQ-CON-028.4)
-        RadarStateRepository.updateTelemetryState(currentState -> createBleRadarState(
+        RadarStateRepository.updateThreatState(createBleThreatState(
                 RadarConnectionState.CONNECTED,
                 ThreatLevel.NONE,
-                Collections.emptyList(),
-                currentState.getLightMode(),
-                mIsLightControlSupported,
-                currentState
+                Collections.emptyList()
         ));
+        syncLightControlSupported();
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
             mHandler.postDelayed(mWatchdogRunnable, WATCHDOG_TIMEOUT_MS);
@@ -560,14 +552,14 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         ThreatLevel overallThreat = computeOverallThreatLevel(targets);
-        RadarStateRepository.updateTelemetryState(currentState -> createBleRadarState(
+        RadarStateRepository.updateThreatState(createBleThreatState(
                 RadarConnectionState.CONNECTED,
                 overallThreat,
-                targets,
-                currentState.getLightMode(),
-                mIsLightControlSupported,
-                currentState
+                targets
         ));
+        if (mIsLightControlSupported) {
+            syncLightControlSupported();
+        }
 
         long nowMs = SystemClock.elapsedRealtime();
 
@@ -663,14 +655,14 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @Override
     protected void disconnectFromGatt() {
         resetConnectionState();
-        RadarStateRepository.updateTelemetryState(currentState -> createBleRadarState(
+        RadarStateRepository.updateThreatState(createBleThreatState(
                 RadarConnectionState.DISCONNECTED,
                 ThreatLevel.NONE,
-                Collections.emptyList(),
-                RadarLightMode.OFF,
-                false,
-                currentState
+                Collections.emptyList()
         ));
+        RadarStateRepository.updateLightState(current ->
+                new RadarLightState(RadarLightMode.OFF, false, current.isAutoMode())
+        );
         resetSensorsToClear();
         super.disconnectFromGatt();
     }

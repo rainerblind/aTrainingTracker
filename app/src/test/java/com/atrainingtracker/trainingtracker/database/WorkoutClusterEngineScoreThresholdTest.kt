@@ -157,7 +157,7 @@ class WorkoutClusterEngineScoreThresholdTest {
         assertTrue("Score $score should be between 1.0 and 1.2", score in 1.0..1.2)
 
         // Default TrainingApplication threshold is 1.2f -> match found
-        TrainingApplication.setClusterScoreThreshold(1.2f)
+        assertEquals(1.2f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
         val defaultMatch = engine.suggestCluster(
             start, end, apex, distance,
             workoutSportType = BSportType.RUN,
@@ -167,26 +167,37 @@ class WorkoutClusterEngineScoreThresholdTest {
         assertEquals(77L, defaultMatch?.id)
 
         // If user tunes threshold down to 0.8f -> rejected
-        TrainingApplication.setClusterScoreThreshold(0.8f)
+        // With stricter threshold (0.8), score 1.125 should NOT match
         val strictMatch = engine.suggestCluster(
             start, end, apex, distance,
             workoutSportType = BSportType.RUN,
-            cachedClusters = listOf(candidateCluster)
+            cachedClusters = listOf(candidateCluster),
+            scoreThreshold = 0.8
         )
         assertNull("Stricter threshold 0.8 should reject score $score", strictMatch)
     }
 
     @Test
     fun testTrainingApplication_clusterScoreThresholdDefaultsAndPersistence() {
-        // Default value
-        assertEquals(1.2f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
+        val inMemory = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+        val store = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+            context = context,
+            dataStoreOverride = inMemory
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(store)
+        try {
+            // Default value
+            assertEquals(1.2f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
 
-        // Mutation and retrieval
-        TrainingApplication.setClusterScoreThreshold(1.8f)
-        assertEquals(1.8f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
+            // Mutation and retrieval via DataStore single source of truth
+            kotlinx.coroutines.runBlocking { store.updateClusterTuning(scoreThreshold = 1.8f) }
+            assertEquals(1.8f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
 
-        // Reset
-        TrainingApplication.setClusterScoreThreshold(1.2f)
-        assertEquals(1.2f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
+            // Reset
+            kotlinx.coroutines.runBlocking { store.updateClusterTuning(scoreThreshold = 1.2f) }
+            assertEquals(1.2f, TrainingApplication.getClusterScoreThreshold(), 0.001f)
+        } finally {
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
     }
 }

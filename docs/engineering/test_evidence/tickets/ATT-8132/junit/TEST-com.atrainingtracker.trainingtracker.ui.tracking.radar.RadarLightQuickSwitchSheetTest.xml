@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:41:19.981Z" hostname="rainer-HP-EliteBook-850-G5" time="3.689">
+  <properties/>
+  <testcase name="testContent_stvzoPruning_hidesFlashingModes" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.496"/>
+  <testcase name="testModalWrapper_clickingAllSnoozePresets_triggersOnSnoozeSelectedBeforeDismiss_TST_CON_055_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.719"/>
+  <testcase name="testContent_clickingSmartAuto_triggersOnAutoSelected" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.304"/>
+  <testcase name="testModalSheet_composableSignaturesExposeAllRequiredComponents" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.159"/>
+  <testcase name="testContent_compactGridFitsWithoutClipping_andMatchesAscendingOrder" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.338"/>
+  <testcase name="testContent_clickingSnoozeOptions_triggersOnSnoozeSelectedAndDismiss" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.216"/>
+  <testcase name="testContent_activeSnooze_clickingResume_triggersOnResumeAudioAndDismiss" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.168"/>
+  <testcase name="testModalWrapper_activeSnooze_clickingResume_triggersOnResumeAudioBeforeDismiss_TST_CON_055_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.431"/>
+  <testcase name="testContent_unsupportedLightControl_hidesLightSectionRetainsSnooze" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.192"/>
+  <testcase name="testContent_clickingManualMode_triggersOnModeSelectedWithExactMode" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.209"/>
+  <testcase name="testContent_captureLightAndDarkPreviewForVisualInspection" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheetTest" time="0.453"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

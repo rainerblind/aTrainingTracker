@@ -690,13 +690,6 @@ public class TrackerService extends Service {
     private static final AtomicBoolean sFgsStartPending = new AtomicBoolean(false);
     private static final AtomicBoolean sPendingStopBeforeStart = new AtomicBoolean(false);
 
-    public static void invalidateAutoPauseCache() {
-        TrackerService service = sInstance;
-        if (service != null) {
-            service.invalidateAutoPauseConfigCache();
-        }
-    }
-
     public static void notifyManualResume() {
         TrackerService service = sInstance;
         if (service != null) {
@@ -704,24 +697,8 @@ public class TrackerService extends Service {
         }
     }
 
-    private volatile AutoPauseConfig mCachedAutoPauseConfig = null;
-    private volatile long mLastAutoPauseConfigFetchMs = 0L;
-    private static final long AUTO_PAUSE_CONFIG_CACHE_TTL_MS = 5000L;
-
     public AutoPauseConfig getAutoPauseConfig() {
-        long now = System.currentTimeMillis();
-        boolean currentIsMetric = (TrainingApplication.getUnit() == com.atrainingtracker.trainingtracker.MyUnits.METRIC);
-        if (mCachedAutoPauseConfig == null 
-                || (now - mLastAutoPauseConfigFetchMs) > AUTO_PAUSE_CONFIG_CACHE_TTL_MS
-                || mCachedAutoPauseConfig.isMetric() != currentIsMetric) {
-            mCachedAutoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
-            mLastAutoPauseConfigFetchMs = now;
-        }
-        return mCachedAutoPauseConfig;
-    }
-
-    public void invalidateAutoPauseConfigCache() {
-        mCachedAutoPauseConfig = null;
+        return SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
     }
 
     private int mExtremaDbUpdateCounter = 0;

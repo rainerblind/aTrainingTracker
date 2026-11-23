@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T05:37:42.644Z" hostname="rainer-HP-EliteBook-850-G5" time="1.985">
+  <properties/>
+  <testcase name="testTick_updatesSimulatedRadarDeviceWhenPresent" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.201"/>
+  <testcase name="testHighSpeedThreatScenario_triggersFastApproachingRedThreat" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.089"/>
+  <testcase name="testSingleCarScenario_kinematicsAndVehicleOvertakeHysteresis" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.092"/>
+  <testcase name="testConcurrentTelemetryVsControlUpdates_zeroLostUpdatesAndNoNoneSourceLeak" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.658"/>
+  <testcase name="testOnPhysicalHardwareConnected_preservesSnoozeAndLightMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.097"/>
+  <testcase name="testSimulatorLifecycleAndFrames_preserveManualIsAutoModeAndRestoreOnSetAutoMode" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.096"/>
+  <testcase name="testIsSimulatingFlow_reactiveTransitions" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.094"/>
+  <testcase name="testConvoyScenario_generatesThreeSimultaneousTargets" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.099"/>
+  <testcase name="testCountryRoadLoopScenario_cyclesThroughQuietAndActivePhases" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.091"/>
+  <testcase name="testStop_cancelsJobAndResetsState" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.096"/>
+  <testcase name="testDisconnectReconnectScenario_simulatesStarvationAndRecovery" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.09"/>
+  <testcase name="testGenerateV2Targets_createsSyntheticFramesWithLateralOffsetAndSize" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.09"/>
+  <testcase name="testOnPhysicalHardwareConnected_preemptsImmediately" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.092"/>
+  <testcase name="testHardwarePreemption_haltsSimulationImmediately" classname="com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" time="0.098"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

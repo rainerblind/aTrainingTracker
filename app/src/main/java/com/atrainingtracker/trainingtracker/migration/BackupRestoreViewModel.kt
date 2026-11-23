@@ -255,15 +255,19 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     }
 
     fun saveClusteringTolerances() {
-        prefs.edit()
-            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ENDPOINTS, endpointTolerance)
-            .putFloat(TrainingApplication.SP_CLUSTER_TOL_APEX, apexTolerance)
-            .putFloat(TrainingApplication.SP_CLUSTER_TOL_DISTANCE, distanceTolerance)
-            .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
-            .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
-            .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
-            .putFloat(TrainingApplication.SP_CLUSTER_SCORE_THRESHOLD, clusterScoreThreshold)
-            .apply()
+        viewModelScope.launch {
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+                .getInstance(getApplication())
+                .updateClusterTuning(
+                    endpointTol = endpointTolerance,
+                    apexTol = apexTolerance,
+                    distTol = distanceTolerance,
+                    altPosTol = altitudePositionTolerance,
+                    useSport = useSportTypeForClustering,
+                    useAlt = useAltitudePosForClustering,
+                    scoreThreshold = clusterScoreThreshold
+                )
+        }
     }
 
     fun createBackup(context: Context, onBackupReady: (Uri) -> Unit) {

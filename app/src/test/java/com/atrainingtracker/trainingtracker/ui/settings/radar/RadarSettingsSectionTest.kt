@@ -101,7 +101,8 @@ class RadarSettingsSectionTest {
         }
 
         mockkObject(RadarStateRepository)
-        every { RadarStateRepository.radarState } returns radarStateFlow
+        every { RadarStateRepository.observeCombinedState() } returns radarStateFlow
+        every { RadarStateRepository.getState() } answers { radarStateFlow.value }
 
         mockkObject(RadarTrafficSimulator)
         every { RadarTrafficSimulator.isSimulatingFlow } returns simulatingFlow

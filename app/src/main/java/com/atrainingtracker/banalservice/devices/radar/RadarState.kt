@@ -99,17 +99,29 @@ enum class RadarSource(val priority: Int) {
 }
 
 /**
- * Immutable snapshot of cycling radar system state published at 4–8 Hz (REQ-CON-028.4, REQ-TRK-064.1).
+ * Orthogonal high-frequency (4–8 Hz) radar traffic & connection state slice (REQ-CON-056.3, REQ-CON-041).
+ */
+data class RadarThreatState @JvmOverloads constructor(
+    val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,
+    val overallThreatLevel: ThreatLevel = ThreatLevel.NONE,
+    val targets: List<RadarTarget> = emptyList(),
+    val lastUpdateRealtimeMs: Long = 0L,
+    val source: RadarSource = RadarSource.NONE
+)
+
+/**
+ * Orthogonal radar tail-light state slice decoupled from 8-Hz traffic and audio snooze (REQ-CON-056.3).
+ */
+data class RadarLightState @JvmOverloads constructor(
+    val lightMode: RadarLightMode = RadarLightMode.OFF,
+    val isLightControlSupported: Boolean = false,
+    val isAutoMode: Boolean = true
+)
+
+/**
+ * Immutable combined UI snapshot of cycling radar system state (REQ-CON-028.4, REQ-CON-056.3, REQ-TRK-064.1).
  *
- * @property connectionState Current hardware connection state.
- * @property overallThreatLevel Aggregate threat level across all active targets.
- * @property targets List of currently tracked radar targets.
- * @property lastUpdateRealtimeMs SystemClock.elapsedRealtime() when this snapshot was published.
- * @property lightMode Current radar tail light operating mode.
- * @property isLightControlSupported True if peripheral or simulator supports tail light mode commands.
- * @property audioSnoozeState Current audio snooze and alert suppression status.
- * @property source Hardware peripheral or simulation transport source (REQ-CON-041).
- * @property isAutoMode True if tail light is operating under smart automation (REQ-CON-031.8).
+ * Derived on demand or via `combine(threatState, lightState, snoozeState)` at UI/ViewModel boundaries.
  */
 data class RadarState @JvmOverloads constructor(
     val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,

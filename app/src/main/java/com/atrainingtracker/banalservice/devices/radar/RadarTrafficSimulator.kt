@@ -97,7 +97,7 @@ object RadarTrafficSimulator {
 
     fun setSimulatedLightMode(mode: RadarLightMode) {
         simulatedLightMode = mode
-        RadarStateRepository.updateControlState { current ->
+        RadarStateRepository.updateLightState { current ->
             current.copy(lightMode = mode, isLightControlSupported = true)
         }
     }
@@ -379,6 +379,18 @@ object RadarTrafficSimulator {
         }.copy(isAutoMode = isAutoMode)
     }
 
+    private fun ensureSimulatedLightCapability() {
+        val targetMode = simulatedLightMode
+        RadarStateRepository.updateLightState { current ->
+            val nextMode = if (targetMode != RadarLightMode.OFF) targetMode else current.lightMode
+            if (current.isLightControlSupported && current.lightMode == nextMode) {
+                current
+            } else {
+                current.copy(lightMode = nextMode, isLightControlSupported = true)
+            }
+        }
+    }
+
     /**
      * Executes a single simulation step at [elapsedMs] synchronously, pushing to repository and aggregator.
      */
@@ -387,14 +399,18 @@ object RadarTrafficSimulator {
         elapsedMs: Long,
         aggregator: RadarWindowAggregator = windowAggregator
     ): RadarState {
-        val frame = RadarStateRepository.updateTelemetryState { currentState ->
-            generateFrame(scenario, elapsedMs, isAutoMode = currentState.isAutoMode).copy(
-                lightMode = if (simulatedLightMode != RadarLightMode.OFF) simulatedLightMode else currentState.lightMode,
-                isLightControlSupported = true,
-                audioSnoozeState = currentState.audioSnoozeState,
+        ensureSimulatedLightCapability()
+        val generated = generateFrame(scenario, elapsedMs, isAutoMode = RadarStateRepository.lightState.value.isAutoMode)
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = generated.connectionState,
+                overallThreatLevel = generated.overallThreatLevel,
+                targets = generated.targets,
+                lastUpdateRealtimeMs = generated.lastUpdateRealtimeMs,
                 source = RadarSource.SIMULATOR
             )
-        }
+        )
+        val frame = RadarStateRepository.getState()
         aggregator.onTargetsUpdated(frame.targets)
         val snapshot = aggregator.sampleAndResetWindow()
         simulatedDevice?.updateMetrics(snapshot)
@@ -463,14 +479,18 @@ object RadarTrafficSimulator {
                         break
                     }
                     val elapsed = clock() - startTime
-                    val frame = RadarStateRepository.updateTelemetryState { currentState ->
-                        generateFrame(scenario, elapsed, isAutoMode = currentState.isAutoMode).copy(
-                            lightMode = if (simulatedLightMode != RadarLightMode.OFF) simulatedLightMode else currentState.lightMode,
-                            isLightControlSupported = true,
-                            audioSnoozeState = currentState.audioSnoozeState,
+                    ensureSimulatedLightCapability()
+                    val generated = generateFrame(scenario, elapsed, isAutoMode = RadarStateRepository.lightState.value.isAutoMode)
+                    RadarStateRepository.updateThreatState(
+                        RadarThreatState(
+                            connectionState = generated.connectionState,
+                            overallThreatLevel = generated.overallThreatLevel,
+                            targets = generated.targets,
+                            lastUpdateRealtimeMs = generated.lastUpdateRealtimeMs,
                             source = RadarSource.SIMULATOR
                         )
-                    }
+                    )
+                    val frame = RadarStateRepository.getState()
                     aggregator.onTargetsUpdated(frame.targets)
                     val snapshot = aggregator.sampleAndResetWindow()
                     simulatedDevice?.updateMetrics(snapshot)
@@ -501,16 +521,12 @@ object RadarTrafficSimulator {
         _isSimulatingFlow.value = false
         activeScenario = null
         simulatedLightMode = RadarLightMode.OFF
-        RadarStateRepository.updateTelemetryState { currentState ->
-            RadarState(
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
                 connectionState = RadarConnectionState.DISCONNECTED,
-                lightMode = currentState.lightMode,
-                isLightControlSupported = currentState.isLightControlSupported,
-                audioSnoozeState = currentState.audioSnoozeState,
-                source = RadarSource.SIMULATOR,
-                isAutoMode = currentState.isAutoMode
+                source = RadarSource.SIMULATOR
             )
-        }
+        )
         windowAggregator.resetSession()
     }
 

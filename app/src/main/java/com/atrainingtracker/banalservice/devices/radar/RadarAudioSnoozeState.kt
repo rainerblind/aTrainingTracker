@@ -35,21 +35,35 @@ enum class RadarAudioSnoozeMode {
 }
 
 /**
- * Immutable state tracking audio snooze status and remaining duration (REQ-TRK-064.1, REQ-TRK-064.2).
+ * Immutable state tracking audio snooze status and monotonic expiration deadline (REQ-TRK-064.1, REQ-CON-056.3).
  *
  * @property isSnoozed True if any audio snooze or suppression is currently active.
  * @property mode Current active snooze mode.
- * @property remainingSeconds Remaining seconds if timed snooze, null if infinite or inactive.
+ * @property remainingSeconds Optional snapshot remaining seconds (computed on-demand by [RadarSnoozeController.getSnoozeState] or legacy tests).
  * @property isPelotonSyncActive True if currently silenced by Peloton tail light mode.
  * @property isUrbanMuteActive True if currently suppressed by Smart Urban congestion filter.
+ * @property snoozeUntilElapsedRealtimeMs Monotonic `elapsedRealtime()` deadline for timed snooze modes (`SNOOZE_15M`/`SNOOZE_30M`), null if untimed or inactive.
  */
 data class RadarAudioSnoozeState @JvmOverloads constructor(
     val isSnoozed: Boolean = false,
     val mode: RadarAudioSnoozeMode = RadarAudioSnoozeMode.NONE,
     val remainingSeconds: Int? = null,
     val isPelotonSyncActive: Boolean = false,
-    val isUrbanMuteActive: Boolean = false
+    val isUrbanMuteActive: Boolean = false,
+    val snoozeUntilElapsedRealtimeMs: Long? = null
 ) {
+    /**
+     * Computes remaining seconds at [nowElapsedRealtimeMs] from [snoozeUntilElapsedRealtimeMs]
+     * without requiring a 1-Hz background ticker (REQ-CON-056.3).
+     */
+    fun remainingSecondsAt(nowElapsedRealtimeMs: Long = RadarSnoozeController.DEFAULT_TIME_PROVIDER()): Int? {
+        val until = snoozeUntilElapsedRealtimeMs
+        if (until != null) {
+            return ((until - nowElapsedRealtimeMs).coerceAtLeast(0L) / 1000L).toInt()
+        }
+        return remainingSeconds
+    }
+
     companion object {
         @JvmField
         val INACTIVE = RadarAudioSnoozeState()

@@ -590,13 +590,21 @@ class WorkoutClusterRepository internal constructor(
         }
         repositoryScope.launch {
             try {
-                endpointTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolEndpoints(it) }
-                apexTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolApex(it) }
-                distTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolDistance(it) }
-                altPosTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolAltitudePos(it) }
-                useSport?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseSportTypeForClustering(it) }
-                useAlt?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseAltitudePosForClustering(it) }
-                scoreThreshold?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterScoreThreshold(it) }
+                if (endpointTol != null || apexTol != null || distTol != null || altPosTol != null ||
+                    useSport != null || useAlt != null || scoreThreshold != null
+                ) {
+                    com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+                        .getInstance(context)
+                        .updateClusterTuning(
+                            endpointTol = endpointTol,
+                            apexTol = apexTol,
+                            distTol = distTol,
+                            altPosTol = altPosTol,
+                            useSport = useSport,
+                            useAlt = useAlt,
+                            scoreThreshold = scoreThreshold
+                        )
+                }
                 recalculateClustersWithProgress()
             } catch (t: Throwable) {
                 android.util.Log.e("WorkoutClusterRepo", "Error during cluster recalculation", t)

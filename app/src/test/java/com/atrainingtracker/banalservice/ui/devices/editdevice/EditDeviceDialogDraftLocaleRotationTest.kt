@@ -286,7 +286,12 @@ class EditDeviceDialogDraftLocaleRotationTest {
         verify(exactly = 0) { equipRepo.recordManualBaselineResetForDevice(any(), any(), any()) }
 
         // 5. Radar Tail Light: staged in draft -> rotation preserves -> Cancel writes ZERO -> Save commits!
-        RadarLightController.updateCachedPreferences(autoMode = true, defaultMode = RadarLightMode.SOLID)
+        RadarLightController.onPreferencesUpdated(
+            com.atrainingtracker.trainingtracker.settings.TuningConfig(
+                radarLightControlMode = com.atrainingtracker.trainingtracker.settings.RadarLightControlMode.SMART_AUTOMATION,
+                radarLightDefaultMode = RadarLightMode.SOLID
+            )
+        )
         vm.loadInitialDeviceData(14L)
         vm.onRadarLightSelectionChanged(isAutoMode = false, mode = RadarLightMode.DAY_FLASH)
         vm.loadInitialDeviceData(14L) // simulated rotation
