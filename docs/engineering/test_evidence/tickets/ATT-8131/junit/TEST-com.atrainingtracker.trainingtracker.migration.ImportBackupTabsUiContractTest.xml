@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:16:28.252Z" hostname="rainer-HP-EliteBook-850-G5" time="16.735">
+  <properties/>
+  <testcase name="testPositiveImportUiAlignment_omitsLegacyOrRecoveryTerminology_TST_MIG_016" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="8.81"/>
+  <testcase name="testDropboxRestoreConfirmation_showsAlertDialogAndBlocksRestoreUntilConfirmed_TST_MIG_004" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="6.992"/>
+  <testcase name="testInformativeDashboardLabels_rendersBackupAndRestoreDescriptions_TST_MIG_005" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="0.265"/>
+  <testcase name="testTabbedNavigation_rendersFourTabsAndSwitchesBetweenImportBackupRestore_TST_MIG_008" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="0.668"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

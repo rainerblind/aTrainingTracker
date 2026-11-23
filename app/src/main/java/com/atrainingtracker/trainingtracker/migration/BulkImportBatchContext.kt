@@ -23,7 +23,6 @@ import android.util.Log
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.AbstractCoroutineContextElement
@@ -80,7 +79,6 @@ internal suspend fun reconcileBulkImportBatch(
 ) {
     try {
         WorkoutRepository.getInstance(context).loadAllWorkouts()
-        PeriodsRepository.getInstance(context).syncPeriodsIfDiscrepancy()
         WorkoutClusterRepository.getInstance(context).refreshClusters()
         if (refreshClimbs) {
             LiveClimbsRepository.getInstance(context).refreshClimbs()

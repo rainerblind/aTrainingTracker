@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryHrvConsensusTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:18:56.077Z" hostname="rainer-HP-EliteBook-850-G5" time="6.089">
+  <properties/>
+  <testcase name="testGetRecentHrvSessionThresholds_cachesResultsAndInvalidatesOnRefresh" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryHrvConsensusTest" time="1.893"/>
+  <testcase name="testGetRecentHrvSessionThresholds_filters30DayWindowAndExcludesCurrent" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryHrvConsensusTest" time="1.843"/>
+  <testcase name="testRecentHrvThresholdsCache_enforcesLru64CapAndLifecycleEviction" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryHrvConsensusTest" time="2.353"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

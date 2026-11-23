@@ -42,7 +42,6 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -94,7 +93,6 @@ class DatabaseSchemaRegistryParityContractTest {
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         ExportStatusDatabaseManager.resetForTesting(null)
         resetStaticField(ExportStatusDatabaseManager.ExportStatusDbHelper::class.java, "sInstance")
-        PeriodSummariesDatabaseManager.setInstanceForTesting(null)
         ElevationCacheDatabaseManager.resetForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
         RoutesDatabaseManager.resetForTesting(null)
@@ -177,8 +175,8 @@ class DatabaseSchemaRegistryParityContractTest {
         // TST-MIG-057.1
         val helpers = discoverProductionSqliteOpenHelpers()
         assertTrue(
-            "Expected at least 21 concrete SQLiteOpenHelper subclasses, found ${helpers.size}: ${helpers.map { it.name }}",
-            helpers.size >= 21
+            "Expected at least 20 concrete SQLiteOpenHelper subclasses, found ${helpers.size}: ${helpers.map { it.name }}",
+            helpers.size >= 20
         )
 
         val discoveredDbNames = mutableSetOf<String>()
@@ -235,6 +233,10 @@ class DatabaseSchemaRegistryParityContractTest {
             "Decommissioned 'PebbleView.db' must not remain in DatabaseSchemaRegistry (ATT-8130)",
             DatabaseSchemaRegistry.getSupportedDatabases().contains("PebbleView.db")
         )
+        assertFalse(
+            "Decommissioned 'PeriodSummaries.db' must not remain in DatabaseSchemaRegistry (ATT-8131)",
+            DatabaseSchemaRegistry.getSupportedDatabases().contains("PeriodSummaries.db")
+        )
         assertEquals(
             "Legacy alias 'TrackingViews.db' must track TrackingViewsDbHelper.DB_VERSION",
             TrackingViewsDbHelper.DB_VERSION,
@@ -265,7 +267,6 @@ class DatabaseSchemaRegistryParityContractTest {
             DatabaseConnectionManager.getActiveDatabases(context).isEmpty()
         )
         for (dbName in unopenedFiles + listOf(
-            PeriodSummariesDatabaseManager.DATABASE_NAME,
             ElevationCacheDbHelper.DB_NAME,
             AthleteMetricsDbHelper.DB_NAME
         )) {
@@ -275,7 +276,6 @@ class DatabaseSchemaRegistryParityContractTest {
         // 2. Open a representative subset across BaseDatabaseManager, direct mDbHelper (ExportStatus), and Kotlin managers
         WorkoutSummariesDatabaseManager.getInstance(context).database
         ExportStatusDatabaseManager.getInstance(context).getExportRows("sample_workout")
-        PeriodSummariesDatabaseManager.getInstance(context).getDatabase()
         ElevationCacheDatabaseManager.getInstance(context).database
         AthleteMetricsDatabaseManager.getInstance(context).database
         WorkoutClusterDatabaseManager.getInstance(context).getDatabase()
@@ -284,7 +284,6 @@ class DatabaseSchemaRegistryParityContractTest {
         val expectedOpen = setOf(
             WorkoutSummariesDbHelper.DB_NAME,
             ExportStatusDatabaseManager.ExportStatusDbHelper.DB_NAME,
-            PeriodSummariesDatabaseManager.DATABASE_NAME,
             ElevationCacheDbHelper.DB_NAME,
             AthleteMetricsDbHelper.DB_NAME,
             WorkoutClusterDatabaseManager.DB_NAME,
@@ -315,10 +314,8 @@ class DatabaseSchemaRegistryParityContractTest {
 
         // 4. ATT-289 transparent reopen without resetting singletons
         val reopenedSummaries = WorkoutSummariesDatabaseManager.getInstance(context).database
-        val reopenedPeriods = PeriodSummariesDatabaseManager.getInstance(context).getDatabase()
         val reopenedElevation = ElevationCacheDatabaseManager.getInstance(context).database
         assertTrue("WorkoutSummaries must transparently reopen after quiescence", reopenedSummaries.isOpen)
-        assertTrue("PeriodSummaries must transparently reopen after quiescence", reopenedPeriods.isOpen)
         assertTrue("ElevationCache must transparently reopen after quiescence", reopenedElevation.isOpen)
 
         val reopenedNames = DatabaseConnectionManager.getActiveDatabases(context)
@@ -327,7 +324,6 @@ class DatabaseSchemaRegistryParityContractTest {
         assertEquals(
             setOf(
                 WorkoutSummariesDbHelper.DB_NAME,
-                PeriodSummariesDatabaseManager.DATABASE_NAME,
                 ElevationCacheDbHelper.DB_NAME
             ),
             reopenedNames

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:56:00.579Z" hostname="rainer-HP-EliteBook-850-G5" time="13.196">
+  <properties/>
+  <testcase name="testPeriodsViewModel_loadPeriods_triggersWorkoutLoad" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="7.693"/>
+  <testcase name="testPeriodsRepository_hasZeroReceiverOrDatabaseManagerFields" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.124"/>
+  <testcase name="testPeriodsRepository_unfinishedLiveWorkout3600Ticks_triggersZeroRebuilds_TST_STB_020_2_and_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="4.921"/>
+  <testcase name="testWorkoutsInRangeCursor_includesFinishedCondition" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.25"/>
+  <testcase name="testTrackingFinishedIntent_contractConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.104"/>
+  <testcase name="testPeriodProjectionKey_filtersNonPeriodChanges_andDetectsPeriodRelevantChanges" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.104"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

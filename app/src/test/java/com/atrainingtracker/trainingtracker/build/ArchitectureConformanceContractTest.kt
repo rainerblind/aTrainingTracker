@@ -91,8 +91,6 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt",
-            "com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummariesDatabaseManager.kt",
-            "com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteMetricsRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProvider.kt",
@@ -308,8 +306,8 @@ class ArchitectureConformanceContractTest {
     @Test
     fun testBaseline_containsExpectedCount() {
         assertEquals(
-            "Expected exactly 22 recorded legacy UI database callers in ratcheting baseline (REQ-PRO-050.3)",
-            22,
+            "Expected exactly 20 recorded legacy UI database callers in ratcheting baseline (REQ-PRO-050.3, ATT-8131)",
+            20,
             BASELINE_ALLOWED_UI_DB_CALLERS.size
         )
     }
@@ -462,7 +460,7 @@ class ArchitectureConformanceContractTest {
             "MAX_OVERLAY_POINTS = 800",
             "recentHrvThresholdsCache",
             "MAX_SUMMARY_THUMBNAIL_TRACKS = 8",
-            "recentlyFinishedWorkoutIds <= 50",
+            "PeriodSummaries.db",
             "LruCache(64)",
             "MAX_CARD_MINI_MAP_VERTICES = 2_000",
             "MAX_DETAILED_MAP_VERTICES = 8_000",

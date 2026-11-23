@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.DropboxBulkRecoveryFitContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:16:22.957Z" hostname="rainer-HP-EliteBook-850-G5" time="4.454">
+  <properties/>
+  <testcase name="testWorkerChannelRouting_whenFitImportFailsOrSucceeds_talliesAccurately" classname="com.atrainingtracker.trainingtracker.migration.DropboxBulkRecoveryFitContractTest" time="1.221"/>
+  <testcase name="testPreDispatchDropboxEntryDeduplication_filtersFitDuplicatesAcrossFolders" classname="com.atrainingtracker.trainingtracker.migration.DropboxBulkRecoveryFitContractTest" time="1.158"/>
+  <testcase name="testTargetPathsAndExtensions_resolvesCorrectlyPerFormat" classname="com.atrainingtracker.trainingtracker.migration.DropboxBulkRecoveryFitContractTest" time="1.038"/>
+  <testcase name="testPreDownloadDuplicateSkipping_skipsExistingFitWorkouts" classname="com.atrainingtracker.trainingtracker.migration.DropboxBulkRecoveryFitContractTest" time="1.037"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

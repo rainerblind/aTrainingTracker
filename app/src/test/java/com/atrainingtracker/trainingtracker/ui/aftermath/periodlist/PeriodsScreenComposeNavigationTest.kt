@@ -178,7 +178,6 @@ class PeriodsScreenComposeNavigationTest {
                 listOf(emptyList(), listOf(weekSummary), emptyList(), emptyList())
             )
             every { migrationStatus } returns MutableStateFlow<MigrationStatus?>(null)
-            coEvery { checkIntegrityAndSync() } returns false
         }
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)

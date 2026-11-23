@@ -84,13 +84,9 @@ class PeriodPrimaryRegionSelectionTest {
         every { Log.e(any(), any()) } returns 0
         every { Log.e(any(), any<String>(), any()) } returns 0
 
-        val mockDbManager = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
-        val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
         val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
         every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
 
-        PeriodSummariesDatabaseManager.setInstanceForTesting(mockDbManager)
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
 
         val mockPrefManager = mockk<MyPreferenceManager>(relaxed = true)
@@ -108,8 +104,6 @@ class PeriodPrimaryRegionSelectionTest {
     fun tearDown() {
         repo.scope.cancel()
         clearPeriodCardMapStateCache()
-        PeriodSummariesDatabaseManager.setInstanceForTesting(null)
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         MyPreferenceManager.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         PeriodsRepository.setInstanceForTesting(null)

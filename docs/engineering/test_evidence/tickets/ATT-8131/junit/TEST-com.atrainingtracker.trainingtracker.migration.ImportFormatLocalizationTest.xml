@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ImportFormatLocalizationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:16:07.641Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testRemovedGoogleDriveScanStringsAreAbsentAcrossAllNineLocales" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatLocalizationTest" time="0.001"/>
+  <testcase name="testAllFormatImportStringsExistAndAreNonEmptyAcrossAllNineLocales" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatLocalizationTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

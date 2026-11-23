@@ -20,7 +20,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
-import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.dropbox.core.oauth.DbxCredential
 import io.mockk.*
@@ -73,8 +72,6 @@ class BackupRestoreViewModelFormatScopingTest {
         every { mockStravaDb.allActivityIds } returns emptySet()
         WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummaryDb)
         StravaUploadDbHelper.resetForTesting(mockStravaDb)
-        val mockPeriodDb = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
-        PeriodSummariesDatabaseManager.setInstanceForTesting(mockPeriodDb)
         val mockPeriodsRepo = mockk<PeriodsRepository>(relaxed = true)
         PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
 
@@ -109,7 +106,6 @@ class BackupRestoreViewModelFormatScopingTest {
         Dispatchers.resetMain()
         runCatching { WorkoutSummariesDatabaseManager.setInstanceForTesting(null) }
         runCatching { StravaUploadDbHelper.resetForTesting(null) }
-        runCatching { PeriodSummariesDatabaseManager.setInstanceForTesting(null) }
         runCatching { PeriodsRepository.setInstanceForTesting(null) }
         runCatching { PeriodsRepository.resetInstanceForTesting() }
         unmockkAll()

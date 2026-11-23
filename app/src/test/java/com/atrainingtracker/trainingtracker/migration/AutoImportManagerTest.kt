@@ -149,9 +149,8 @@ class AutoImportManagerTest {
         // - Downstream relay to Health Connect was triggered for workout 999
         verify(exactly = 1) { HealthConnectWorkoutSyncWorker.enqueue(mockContext, 999L) }
 
-        // - Repositories were refreshed
+        // - Repositories were refreshed (PeriodsRepository projects reactively from WorkoutRepository.allWorkouts)
         coVerify(exactly = 1) { mockWorkoutRepo.loadAllWorkouts() }
-        verify(exactly = 1) { mockPeriodsRepo.syncPeriodsIfDiscrepancy() }
         coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
     }
 
@@ -211,7 +210,6 @@ class AutoImportManagerTest {
             assertEquals(2, result.importedCount)
             assertEquals(listOf(true, true), batchSeen)
             coVerify(exactly = 1) { mockWorkoutRepo.loadAllWorkouts() }
-            verify(exactly = 1) { mockPeriodsRepo.syncPeriodsIfDiscrepancy() }
             coVerify(exactly = 1) { mockClusterRepo.refreshClusters() }
             coVerify(exactly = 1) { mockLiveClimbsRepo.refreshClimbs() }
         } finally {

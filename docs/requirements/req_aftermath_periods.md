@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.37  
+**Version**: 1.0.40  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 72
+**Total Requirements**: 73
 
 ---
 
@@ -2192,6 +2192,25 @@
 
 ---
 
+### REQ-PER-056: Stateless Reactive In-Memory Period Projection & PeriodSummaries.db Decommissioning [Verified]
+- **Tests**: `TST-PER-056`
+- **Tickets**: `ATT-8131`
+- **Target Release**: `V5.0.0`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PeriodsRepository.kt`, `PeriodsViewModel.kt`, `WorkoutRepository.kt`, `DatabaseSchemaRegistry.kt`, `MigrationEngine.kt`, `BulkImportBatchContext.kt`, `TrainingApplication.java`
+- **Localization Parity**: `N/A - no new UI strings`
+- **Description**: `PeriodsRepository` SHALL replace the redundant materialized SQLite rollup database (`PeriodSummaries.db` / `PeriodSummariesDatabaseManager`) with a stateless reactive in-memory projection over `WorkoutRepository.allWorkouts` executing on `Dispatchers.Default`, ensuring immediate consistency after `cropWorkout` or workout edits while preserving all UI models, memory/OOM budgets, legacy `.attbackup` restore compatibility, and one-time background disk cleanup of obsolete `PeriodSummaries*.db*` files.
+- **Rationale**: `WorkoutRepository.allWorkouts` already retains all workout summaries in RAM, while `PeriodSummaries.db` (519 LoC, `DB_VERSION = 27`) caused permanent stale period totals after `cropWorkout` or metric edits at unchanged workout counts and duplicated `WorkoutDataMapper`/`BatchMetadataLoader` wiring.
+  1. *Decommission `PeriodSummaries.db` (`REQ-PER-056.1`)*: `PeriodSummariesDatabaseManager` and `PeriodSummaries.db` SHALL be removed from production code and `DatabaseSchemaRegistry` (`21 -> 20` production `SQLiteOpenHelper` subclasses). `PeriodsRepository` SHALL retain zero SQLite / `*DatabaseManager` / `WorkoutDataMapper` references (ratcheting `ArchitectureConformanceContractTest.BASELINE_ALLOWED_UI_DB_CALLERS` `22 -> 20`).
+  2. *Reactive In-Memory Projection on `Dispatchers.Default` (`REQ-PER-056.2`)*: `PeriodsRepository.groupedPeriods` SHALL project finished workouts (`it.finished && it.startTimeS > 0L`) from `WorkoutRepository.allWorkouts` via `distinctUntilChangedBy { it.map(WorkoutData::toPeriodProjectionKey) }` and `flowOn(Dispatchers.Default)`, emitting `[DAY, WEEK, MONTH, YEAR]` sorted `sortKey DESC` with 1:1 parity for DST-safe bounds (`REQ-PER-015`), active-locale labels/ranges (`REQ-PER-028`), `sportStats`/`DetailedStats`/`LongestWorkout`, spatial anchors (`<= 5`), `regionSummaries`/`primaryRegionSummary`/`<= 8` `polylines` (`REQ-PER-039`, `REQ-PER-046`), empty `workoutIdToPathMap`/`workoutIdToAllPolylinesMap`, `yearlySportContributions`/`dailySportContributions` (`REQ-PER-025`, `REQ-PER-027`), and `extremaMarkers`. `migrationStatus` SHALL remain `null`, and `getWorkoutsForRange(startS, endS)` SHALL filter `workoutRepo.allWorkouts.value` sorted ascending by `startTimeS`.
+  3. *Instant Crop/Edit Consistency & Zero-Rebuild Live Guards (`REQ-PER-056.3`)*: Any finished workout mutation (`cropWorkout`, edit, sport change, delete, import, or `finished: false -> true`) updating `WorkoutRepository.allWorkouts` SHALL immediately recompute Day/Week/Month/Year summaries without imperative push hooks (`onWorkoutFinished`, `onWorkoutSportChanged`, `onWorkoutDeleted`, `resyncAllPeriods`, `syncPeriodsIfDiscrepancy`, `checkIntegrityAndSync`), while non-period edits (`REQ-PER-016.1`) and 1-Hz unfinished live ticks (`REQ-STB-020.3`) SHALL trigger zero recomputations.
+  4. *Obsolete Disk Cleanup & Legacy `.attbackup` Compatibility (`REQ-PER-056.4`)*: App startup (`TrainingApplication.onCreate`) SHALL run a one-time async background cleanup gated by a fresh preference key (`period_summaries_db_decommissioned_cleaned`, persisted only when every obsolete file deletion succeeds without I/O error) deleting all `PeriodSummaries*` files (`PeriodSummaries.db`, `-wal`, `-shm`, `-journal`, `PeriodSummaries_v*.db*`) from `databases/`. Restoring older `.attbackup` archives containing `PeriodSummaries.db` SHALL succeed cleanly (`DatabaseSchemaRegistry.isVersionSupported` accepts unregistered legacy filenames) and `MigrationEngine.performFullRestore` SHALL purge restored `PeriodSummaries*` files post-swap.
+- **Invariants**: Exact `PeriodSummary` / `PeriodsViewModel` / `PeriodsScreen` / `PeriodBarGraph` contracts preserved; `REQ-PER-015` DST bounds, `REQ-PER-016.1` projection-key dedup, `REQ-STB-020.3` 0-rebuild live ticks, `REQ-PER-039` OOM bounds, `REQ-PER-046` primary region, and `REQ-MIG-041` `.attbackup` backward compatibility strictly preserved; `0` `strings*.xml` edits.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2234,3 +2253,6 @@
 | `1.0.35` | 2026-11-22 | Lane 2 Author (`ATT-9355`, `--as agent1`) | `ATT-9355` | Refined `REQ-PER-044.4` (`[Verified]`) to swap `CADENCE` and `HEART_RATE` in `TelemetryChartStack.kt` & `MapModels.kt` (`SPEED_PACE → SLOPE → CADENCE → POWER → HEART_RATE → W_PRIME_BAL → HRV_DFA_A1 → HRV_RMSSD`) while preserving DataStore enum-name persistence and `WorkoutSummary.kt` invariants. |
 | `1.0.36` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Added and verified (`[Verified]`) `REQ-PER-047` (`.1`–`.3`) for live-updating active workout card via O(1) `LiveWorkoutCardStateStore` `StateFlow<LiveWorkoutCardSnapshot?>`, strictly card-scoped `collectAsStateWithLifecycle` in `WorkoutSummary`/`WorkoutSummaryCompact`, and zero `_allWorkouts` / downstream OOM churn (`43/43` PASS across 8 suites, `0` `TrackerService.java` edits, Light/Dark AMOLED `Rule 8.5` PNG verified). |
 | `1.0.37` | 2026-11-22 | Lane 2 Author (`ATT-9069`, `--as agent1`) | `ATT-9069` | Stage 6 Bounce 1 heal: tightened `extractSensorSample` to exact canonical/quoted-device/4-location-provider allowlist (preventing sibling derived columns like `POWER_PEAK_5S`/`POWER_TO_WEIGHT` during dropouts), keyed `LiveExtremaLabels` on `TrainingApplication.getUnit()`, and synced sprint branch (`44/44` PASS across 8 suites). |
+| `1.0.38` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Added `REQ-PER-056` (`[Planned]`, `.1`–`.4`) for decommissioning `PeriodSummaries.db` / `PeriodSummariesDatabaseManager`, stateless reactive in-memory `PeriodsRepository` projection on `Dispatchers.Default`, instant crop/edit consistency, one-time background `PeriodSummaries*` disk cleanup, and legacy `.attbackup` restore compatibility. |
+| `1.0.39` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Promoted `REQ-PER-056` to `[Verified]` following Stage 4 implementation (`-1,030` net prod LoC), `611/611` PASS across 123 unit/contract suites (`0` new warnings), live `emulator-5554` verification (`0` crashes, `0` `PeriodSummaries*` files on disk, `Rule 8.5` PNGs inspected), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-8131/`). |
+| `1.0.40` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Stage 6 Bounce 1/5 heal: grounded `REQ-PER-056.4` to authentic `MigrationEngine.performFullRestore` and clarified that `period_summaries_db_decommissioned_cleaned` is persisted strictly when all obsolete deletions succeed without error. |

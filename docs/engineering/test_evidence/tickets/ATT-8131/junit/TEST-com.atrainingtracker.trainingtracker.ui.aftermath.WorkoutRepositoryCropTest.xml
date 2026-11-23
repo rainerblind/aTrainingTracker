@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:18:39.073Z" hostname="rainer-HP-EliteBook-850-G5" time="1.515">
+  <properties/>
+  <testcase name="testTransactionSafetyOnDiskFullOrMidBatchFailure" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.185"/>
+  <testcase name="testFragmentationThresholdEvaluatesCorrectly" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.175"/>
+  <testcase name="testReconcilePendingCropRecoveryDeletesOrphanedSnapshots" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.174"/>
+  <testcase name="testSQLiteTransactionRollback_guaranteesZeroPartialDeletionOnFailure" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.183"/>
+  <testcase name="testCrashRecoveryPreservesBackupOnFailureAndDeletesOnSuccess" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.172"/>
+  <testcase name="testNonContiguousIdPruningPreservesExpectedRows" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.167"/>
+  <testcase name="testCropWorkout_rethrowsCancellationException" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.177"/>
+  <testcase name="testCropMutexSerializesConcurrentExportAndCrop" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest" time="0.281"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

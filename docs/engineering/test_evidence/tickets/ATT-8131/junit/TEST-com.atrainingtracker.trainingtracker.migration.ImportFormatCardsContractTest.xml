@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ImportFormatCardsContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:16:07.575Z" hostname="rainer-HP-EliteBook-850-G5" time="0.056">
+  <properties/>
+  <testcase name="testImportTabContent_rendersStravaBulkExportCardWithActionTitle" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatCardsContractTest" time="0.052"/>
+  <testcase name="testStravaBulkExportArchiveTitleContainsActionVerbAcrossAllNineLocales" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatCardsContractTest" time="0.002"/>
+  <testcase name="testImportTabContent_containsThreeFormatBlocksWithoutGoogleDriveScan" classname="com.atrainingtracker.trainingtracker.migration.ImportFormatCardsContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

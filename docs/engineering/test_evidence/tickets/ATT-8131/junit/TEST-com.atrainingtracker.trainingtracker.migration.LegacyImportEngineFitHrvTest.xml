@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitHrvTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:16:55.950Z" hostname="rainer-HP-EliteBook-850-G5" time="0.919">
+  <properties/>
+  <testcase name="parseFitWithoutHrvMesg_returnsEmptyRawRrIntervals" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitHrvTest" time="0.716"/>
+  <testcase name="parseFitWithHrvMesg_extractsRawRrIntervalsCorrectly" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitHrvTest" time="0.085"/>
+  <testcase name="parseFitWithInterleavedHrvMesg_preservesMonotonicAnchors_andAvoidsDriftCollapse" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitHrvTest" time="0.118"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

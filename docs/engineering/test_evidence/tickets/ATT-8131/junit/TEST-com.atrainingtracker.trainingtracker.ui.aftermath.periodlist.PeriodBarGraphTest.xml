@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:19:24.746Z" hostname="rainer-HP-EliteBook-850-G5" time="0.138">
+  <properties/>
+  <testcase name="testMetricValueDecimalLocalization_TST_PER_036_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.051"/>
+  <testcase name="testXAxisPeriodLabelFormatting" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.021"/>
+  <testcase name="testMetricDistanceFormattingBoundaries_TST_PER_029_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.001"/>
+  <testcase name="testTimelineGapCappingPreventsRunawayAllocation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.006"/>
+  <testcase name="testEmptyAndBoundaryEdgeCases" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.0"/>
+  <testcase name="testPeriodSummaryGetLocalizedDateRange_TST_PER_036_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.039"/>
+  <testcase name="testApplicationPreferenceFallback_TST_PER_029_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.001"/>
+  <testcase name="testSportSegmentsProportions" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.005"/>
+  <testcase name="testSubHourDurationFormatting" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.001"/>
+  <testcase name="testDistanceAndAscentMetricFormatting" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.0"/>
+  <testcase name="testAscentUnitParity_TST_PER_029_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.001"/>
+  <testcase name="testImperialDistanceFormattingBoundaries_TST_PER_029_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.001"/>
+  <testcase name="testNonDecimalAndEdgeMetricValues_TST_PER_036_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.006"/>
+  <testcase name="testTimelineGapInterpolationInsertsRestDays" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodBarGraphTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

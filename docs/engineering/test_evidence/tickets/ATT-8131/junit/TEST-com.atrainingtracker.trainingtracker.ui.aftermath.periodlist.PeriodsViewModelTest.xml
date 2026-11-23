@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:20:48.780Z" hostname="rainer-HP-EliteBook-850-G5" time="4.443">
+  <properties/>
+  <testcase name="testFilterPeriodSummary_filtersYearlySportContributions" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.269"/>
+  <testcase name="testShowPeriodMap_withInitialRegionId_setsSelectedRegionId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.252"/>
+  <testcase name="testShowPeriodMap_sportFilteredWorkoutsAndHeatmapPaths_TST_PER_032_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="1.068"/>
+  <testcase name="testSymmetricDtoPolylineSportFiltering_TST_PER_032_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.207"/>
+  <testcase name="testToggleSportFilter_switchesPeriodMapTracksMarkersAndHeatmapDeterministically_TST_PER_012" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.245"/>
+  <testcase name="testFilterPeriodSummary_filtersPolylinesAndExtremaMarkers" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.207"/>
+  <testcase name="testShowPeriodMap_partialSummaryHydratesDirectlyFromRangeAndPopulatesHeatmap_TST_PERF_008_PER_010" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.255"/>
+  <testcase name="testFilterPeriodSummary_recalculatesTotals_andOmitsZeroWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.202"/>
+  <testcase name="testPeriodsCleanDecoupling_hasNoHrvDependencies" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.233"/>
+  <testcase name="testPeekedWorkout_reconcilesImmediatelyWhenAllWorkoutsEmitsClusterChange_TST_PER_048_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.229"/>
+  <testcase name="testSelectedMetric_defaultAndHoisting" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.196"/>
+  <testcase name="testFilteredGroupedPeriods_emitsTransformedHierarchy" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.201"/>
+  <testcase name="testFilterPeriodSummary_filtersDailySportContributions_TST_PER_035_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.2"/>
+  <testcase name="testDefaultFilterSet_andEmptyGuard" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.2"/>
+  <testcase name="testSpatialRegionClustering_sportSensitivityAndAccuracy_TST_PER_032_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.255"/>
+  <testcase name="testEagerMainDispatcherInit_withEmptyAndPopulatedAllWorkouts_doesNotThrowNpe_TST_PER_051_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsViewModelTest" time="0.224"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

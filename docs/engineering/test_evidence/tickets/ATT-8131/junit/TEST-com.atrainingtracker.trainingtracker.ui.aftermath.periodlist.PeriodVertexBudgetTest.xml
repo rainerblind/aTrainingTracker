@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:19:27.801Z" hostname="rainer-HP-EliteBook-850-G5" time="2.566">
+  <properties/>
+  <testcase name="testBudgetDefaultConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" time="0.0"/>
+  <testcase name="testTstPer034_1_CardMiniMapHardVertexBudget_300Workouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" time="0.709"/>
+  <testcase name="testTstPer034_4_AdaptiveDecimationConvergenceAndStability" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" time="0.128"/>
+  <testcase name="testTstPer034_2_DetailedMapHardVertexBudget_300Workouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" time="0.474"/>
+  <testcase name="testTstPerf001_520WorkoutsHeatmapAndCardScalabilityWithinBudgets" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" time="1.253"/>
+  <testcase name="testTstPer034_3_BaseTolerancePreservationUnderModerateVolume" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodVertexBudgetTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

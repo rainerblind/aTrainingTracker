@@ -39,7 +39,7 @@ import kotlin.math.roundToInt
 
 /**
  * Shared batch metadata loader for [WorkoutDataMapper] (ATT-6038 / REQ-DAT-045.3).
- * Eliminates N+1 per-workout SQLite queries across [WorkoutRepository], [PeriodsRepository],
+ * Eliminates N+1 per-workout SQLite queries across [WorkoutRepository],
  * [WorkoutClusterRepository], and single-item [WorkoutDataMapper.fromCursor] delegation without
  * exposing raw database managers or cursors outside the data layer.
  */

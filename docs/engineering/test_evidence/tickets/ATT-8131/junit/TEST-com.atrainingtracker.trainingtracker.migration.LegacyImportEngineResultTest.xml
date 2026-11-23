@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineResultTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:16:53.823Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="importResult_failed_defaultsWorkoutIdToNull" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineResultTest" time="0.0"/>
+  <testcase name="importResult_equalityAndHashCodeContract" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineResultTest" time="0.001"/>
+  <testcase name="importResult_successWithWorkoutId_holdsExpectedValues" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineResultTest" time="0.0"/>
+  <testcase name="importResult_duplicateSkipped_defaultsWorkoutIdToNull" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineResultTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

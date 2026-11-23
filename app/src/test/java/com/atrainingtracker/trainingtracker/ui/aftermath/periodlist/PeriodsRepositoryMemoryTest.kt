@@ -57,11 +57,8 @@ class PeriodsRepositoryMemoryTest {
         every { Log.w(any(), any(), any()) } returns 0
         every { Log.e(any(), any()) } returns 0
 
-        val mockDbManager = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
-        val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
         val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
-        PeriodSummariesDatabaseManager.setInstanceForTesting(mockDbManager)
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
+        every { mockWorkoutRepo.allWorkouts } returns kotlinx.coroutines.flow.MutableStateFlow(emptyList())
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
 
         mockApp = mockk(relaxed = true)
@@ -73,8 +70,6 @@ class PeriodsRepositoryMemoryTest {
     fun tearDown() {
         repo.scope.cancel()
         clearPeriodCardMapStateCache()
-        PeriodSummariesDatabaseManager.setInstanceForTesting(null)
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         PeriodsRepository.resetInstanceForTesting()
         unmockkStatic(Color::class)

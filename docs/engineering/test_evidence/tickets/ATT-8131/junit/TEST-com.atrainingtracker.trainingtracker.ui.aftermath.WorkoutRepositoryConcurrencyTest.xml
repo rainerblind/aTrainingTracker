@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T01:17:54.530Z" hostname="rainer-HP-EliteBook-850-G5" time="21.107">
+  <properties/>
+  <testcase name="testSkippedRowExceptionShielding_guaranteedTerminalBatchEmission" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" time="4.583"/>
+  <testcase name="testAtomicLoadingGuard_concurrentCallRejected" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" time="3.083"/>
+  <testcase name="testDefensiveDeletionReporting_failureAndExceptionResetIdle" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" time="2.863"/>
+  <testcase name="testDeleteDuringStream_preventsResurrectionOfDeletedWorkout" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" time="4.377"/>
+  <testcase name="testPureFunctionalCasTransformation_contract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" time="3.193"/>
+  <testcase name="testConflatedPerWorkoutReload_marksDirtyAndInvokesLifecycleCallbacks" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest" time="3.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1537,6 +1537,11 @@ public class TrainingApplication extends Application {
 
         runWorkoutClusterMigration();
         KnownLocationsDatabaseManager.getInstance(this).healLegacyLocationsAsync();
+        if (cSharedPreferences != null && !cSharedPreferences.getBoolean(
+                com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.PREF_PERIOD_SUMMARIES_DB_DECOMMISSIONED_CLEANED,
+                false)) {
+            com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.cleanupObsoletePeriodDatabasesAsync(this);
+        }
     }
 
     private void runWorkoutClusterMigration() {

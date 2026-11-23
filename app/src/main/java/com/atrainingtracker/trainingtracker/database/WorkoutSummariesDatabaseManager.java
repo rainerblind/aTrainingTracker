@@ -577,7 +577,7 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
 
     /**
      * Returns the total count of finished workouts in WorkoutSummaries.
-     * Used for O(1) self-healing integrity verification in PeriodsRepository (REQ-MIG-026 / ATT-909).
+     * Used by GarageLeagueDetector and summary analytics.
      */
     public int getFinishedWorkoutCount() {
         String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE + " WHERE " + WorkoutSummaries.FINISHED + " = 1";

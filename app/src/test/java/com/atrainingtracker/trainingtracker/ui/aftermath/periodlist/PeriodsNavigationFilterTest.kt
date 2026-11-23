@@ -77,7 +77,6 @@ class PeriodsNavigationFilterTest {
         val mockPeriodsRepo = mockk<PeriodsRepository>(relaxed = true) {
             every { groupedPeriods } returns MutableStateFlow(listOf(emptyList(), emptyList(), emptyList(), emptyList()))
             every { migrationStatus } returns MutableStateFlow<MigrationStatus?>(null)
-            coEvery { checkIntegrityAndSync() } returns false
         }
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
