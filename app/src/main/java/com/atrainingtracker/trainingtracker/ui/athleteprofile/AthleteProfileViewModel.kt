@@ -39,8 +39,8 @@ import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
 import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
@@ -171,22 +171,68 @@ data class AthleteProfileUiState(
     val hasHrvReadings: Boolean = false
 )
 
-private data class HrvCombinedState(
-    val entries: List<HrvReadinessEntry> = emptyList(),
-    val posture: HrvPosture? = null,
-    val metricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
-    val showTrainingLoad: Boolean = false
-)
-
-private data class ProfileCombinedInputs(
-    val workoutSamples: List<WorkoutTrainingLoadSample>,
-    val tuningConfig: TuningConfig,
-    val cardioState: Triple<List<CardioPowerTrendSample>, CardioTrendMetric, MetricsTimeRange>,
-    val hrvState: HrvCombinedState
+/**
+ * Isolated tab UI state for Tab 1 (Body & Thresholds) (`REQ-UI-2803.3`).
+ */
+data class AthleteBodyTabUiState(
+    val latestWeightEntry: AthleteMetricEntry? = null,
+    val latestHrRestEntry: AthleteMetricEntry? = null,
+    val latestFtpEntry: AthleteMetricEntry? = null,
+    val latestCpEntry: AthleteMetricEntry? = null,
+    val latestWPrimeEntry: AthleteMetricEntry? = null,
+    val currentPowerToWeight: Double? = null,
+    val latestPowerToWeightTimestampMs: Long? = null,
+    val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
+    val selectedTimeRange: MetricsTimeRange = MetricsTimeRange.ALL,
+    val plotPoints: List<MetricPlotPoint> = emptyList(),
+    val historyFilterMetric: AthleteMetricType? = null,
+    val filteredHistory: List<AthleteMetricEntry> = emptyList(),
+    val isImperial: Boolean = false,
+    val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
 )
 
 /**
- * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`, `REQ-UI-403`, `REQ-REV-011`).
+ * Isolated tab UI state for Tab 2 (Banister Performance Management Chart) (`REQ-UI-2803.3`).
+ */
+data class AthletePmcTabUiState(
+    val enablePmcModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
+    val selectedPmcTimeRange: MetricsTimeRange = MetricsTimeRange.SIX_MONTHS,
+    val pmcSummary: PmcSummaryResult = PmcSummaryResult(),
+    val pmcPlotPoints: List<PmcDailyPoint> = emptyList()
+)
+
+/**
+ * Isolated tab UI state for Tab 3 (HRV & Readiness) (`REQ-UI-2803.3`).
+ */
+data class AthleteHrvTabUiState(
+    val hrvReadinessEntries: List<HrvReadinessEntry> = emptyList(),
+    val hrvTrendSeries: HrvTrendSeries? = null,
+    val selectedHrvPosture: HrvPosture = HrvPosture.SUPINE,
+    val selectedHrvMetricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
+    val showHrvTrainingLoad: Boolean = false,
+    val hasHrvReadings: Boolean = false
+)
+
+/**
+ * Isolated tab UI state for Tab 4 (Cardio-Power Dynamics) (`REQ-UI-2803.3`).
+ */
+data class AthleteCardioTabUiState(
+    val enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+    val selectedCardioTrendMetric: CardioTrendMetric = CardioTrendMetric.HR_200W,
+    val selectedCardioTimeRange: MetricsTimeRange = MetricsTimeRange.ALL,
+    val cardioTrendPoints: List<CardioPlotPoint> = emptyList(),
+    val cardioTrendRollingPoints: List<CardioPlotPoint> = emptyList(),
+    val cardioTrendYDomain: Pair<Double, Double> = 110.0 to 170.0
+)
+
+/**
+ * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`, `REQ-UI-403`, `REQ-REV-011`, `REQ-UI-2803.3`).
+ *
+ * Exposes 4 independent tab-specific [StateFlow]s ([bodyUiState], [pmcUiState], [hrvUiState],
+ * [cardioUiState]) so UI interactions on one tab never trigger recomputation of unrelated tabs
+ * (in particular, Banister PMC only recomputes when workout training-load samples, latest
+ * FTP / resting HR thresholds, or reactive `_hrMaxBpm` change). [uiState] projects the 4
+ * precomputed tab states with zero extra math.
  */
 class AthleteProfileViewModel @JvmOverloads constructor(
     application: Application,
@@ -214,41 +260,43 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     private val _selectedHrvMetricMode = MutableStateFlow(HrvTrendMetricMode.LN_RMSSD)
     private val _showHrvTrainingLoad = MutableStateFlow(false)
 
-    private val hrvStateFlow = combine(
-        _hrvReadinessEntries,
-        _selectedHrvPosture,
-        _selectedHrvMetricMode,
-        _showHrvTrainingLoad
-    ) { entries, posture, mode, showLoad ->
-        HrvCombinedState(entries, posture, mode, showLoad)
+    private val enableCriticalPowerFlow = tuningDataStore.tuningConfigFlow
+        .map { it.enableCriticalPowerModel }
+        .distinctUntilChanged()
+
+    private val enablePmcFlow = tuningDataStore.tuningConfigFlow
+        .map { it.enablePmcModel }
+        .distinctUntilChanged()
+
+    private val enableCardioFlow = tuningDataStore.tuningConfigFlow
+        .map { it.enableCardioPowerDynamics }
+        .distinctUntilChanged()
+
+    private val latestFtpAndHrRestFlow = repository.entriesFlow
+        .map { entries ->
+            val ftp = entries.firstOrNull { it.metricType == AthleteMetricType.FTP_WATTS }?.value
+            val hrRest = entries.firstOrNull { it.metricType == AthleteMetricType.HR_REST_BPM }?.value
+            ftp to hrRest
+        }
+        .distinctUntilChanged()
+
+    private val dailyTrainingLoadsFlow = _workoutLoadSamples.map { workoutSamples ->
+        buildDailyTrainingLoadsMap(workoutSamples)
     }
 
-    private val cardioStateFlow = combine(
-        _cardioTrendSamples,
-        _selectedCardioTrendMetric,
-        _selectedCardioTimeRange
-    ) { samples, metric, range ->
-        Triple(samples, metric, range)
-    }
-
-    val uiState: StateFlow<AthleteProfileUiState> = combine(
+    /** Tab 1 (Body & Thresholds) isolated state flow (`REQ-UI-2803.3`). */
+    val bodyUiState: StateFlow<AthleteBodyTabUiState> = combine(
         repository.entriesFlow,
         _selectedPlotMetric,
-        combine(_selectedTimeRange, _selectedPmcTimeRange) { tr, pmcTr -> tr to pmcTr },
+        _selectedTimeRange,
         _historyFilterMetric,
-        combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow, cardioStateFlow, hrvStateFlow) { samples, tuning, cardio, hrv ->
-            ProfileCombinedInputs(samples, tuning, cardio, hrv)
-        }
-    ) { entries, rawPlotMetric, (timeRange, pmcTimeRange), rawHistoryFilter, combinedInputs ->
-        val (workoutSamples, tuningConfig, cardioState, hrvState) = combinedInputs
+        enableCriticalPowerFlow
+    ) { entries, rawPlotMetric, timeRange, rawHistoryFilter, enableCp ->
         val isImperial = try {
             TrainingApplication.getUnit() == MyUnits.IMPERIAL
         } catch (_: Throwable) {
             false
         }
-
-        val enablePmc = tuningConfig.enablePmcModel
-        val enableCp = tuningConfig.enableCriticalPowerModel
         val plotMetric = resolveEffectivePlotMetric(rawPlotMetric, enableCp)
         val historyFilter = resolveEffectiveHistoryFilter(rawHistoryFilter, enableCp)
 
@@ -277,19 +325,6 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             isImperial = isImperial
         )
 
-        val pmcSummary = PowerPhysiologyCalculator.computePerformanceManagementChart(
-            workoutSamples = workoutSamples,
-            nowMs = nowMs,
-            ftpWatts = latestFtp?.value,
-            hrRestBpm = latestHrRest?.value,
-            hrMaxBpm = _hrMaxBpm.value?.toDouble()
-        )
-        val pmcPlotPoints = AthleteMetricsPlotMath.filterPmcPointsByTimeRange(
-            points = pmcSummary.dailyPoints,
-            timeRange = pmcTimeRange,
-            nowMs = nowMs
-        )
-
         val visibleEntries = if (enableCp) {
             entries
         } else {
@@ -297,9 +332,119 @@ class AthleteProfileViewModel @JvmOverloads constructor(
                 it.metricType != AthleteMetricType.CP_WATTS && it.metricType != AthleteMetricType.W_PRIME_KJ
             }
         }
+        val filteredHistory = if (historyFilter == null) {
+            visibleEntries
+        } else {
+            visibleEntries.filter { it.metricType == historyFilter }
+        }
 
-        val enableCardio = tuningConfig.enableCardioPowerDynamics
-        val (cardioSamples, cardioMetric, cardioRange) = cardioState
+        AthleteBodyTabUiState(
+            latestWeightEntry = latestWeight,
+            latestHrRestEntry = latestHrRest,
+            latestFtpEntry = latestFtp,
+            latestCpEntry = latestCp,
+            latestWPrimeEntry = latestWPrime,
+            currentPowerToWeight = currentWPerKg,
+            latestPowerToWeightTimestampMs = latestWPerKgTs,
+            selectedPlotMetric = plotMetric,
+            selectedTimeRange = timeRange,
+            plotPoints = plotPoints,
+            historyFilterMetric = historyFilter,
+            filteredHistory = filteredHistory,
+            isImperial = isImperial,
+            enableCriticalPowerModel = enableCp
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AthleteBodyTabUiState()
+    )
+
+    // Banister PMC summary strictly observes physiological load & threshold inputs (incl. reactive _hrMaxBpm per Rule 39).
+    private val pmcSummaryFlow = combine(
+        _workoutLoadSamples,
+        latestFtpAndHrRestFlow,
+        _hrMaxBpm
+    ) { workoutSamples, (ftpWatts, hrRestBpm), hrMaxBpm ->
+        PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = workoutSamples,
+            nowMs = System.currentTimeMillis(),
+            ftpWatts = ftpWatts,
+            hrRestBpm = hrRestBpm,
+            hrMaxBpm = hrMaxBpm?.toDouble(),
+            zoneId = java.time.ZoneId.systemDefault()
+        )
+    }
+
+    /** Tab 2 (Banister PMC) isolated state flow (`REQ-UI-2803.3`). */
+    val pmcUiState: StateFlow<AthletePmcTabUiState> = combine(
+        pmcSummaryFlow,
+        _selectedPmcTimeRange,
+        enablePmcFlow
+    ) { pmcSummary, pmcTimeRange, enablePmc ->
+        val pmcPlotPoints = AthleteMetricsPlotMath.filterPmcPointsByTimeRange(
+            points = pmcSummary.dailyPoints,
+            timeRange = pmcTimeRange,
+            nowMs = System.currentTimeMillis()
+        )
+        AthletePmcTabUiState(
+            enablePmcModel = enablePmc,
+            selectedPmcTimeRange = pmcTimeRange,
+            pmcSummary = pmcSummary,
+            pmcPlotPoints = pmcPlotPoints
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AthletePmcTabUiState()
+    )
+
+    /** Tab 3 (HRV & Readiness) isolated state flow (`REQ-UI-2803.3`). */
+    val hrvUiState: StateFlow<AthleteHrvTabUiState> = combine(
+        _hrvReadinessEntries,
+        _selectedHrvPosture,
+        _selectedHrvMetricMode,
+        _showHrvTrainingLoad,
+        dailyTrainingLoadsFlow
+    ) { hrvEntries, selectedPosture, metricMode, showTrainingLoad, dailyLoads ->
+        val (defaultPosture, availablePostures) = HrvReadinessTrendMath.resolveAvailablePostures(hrvEntries)
+        val postureToUse = if (selectedPosture != null && (availablePostures.isEmpty() || availablePostures.contains(selectedPosture))) {
+            selectedPosture
+        } else {
+            defaultPosture
+        }
+        val hrvSeries = if (hrvEntries.isNotEmpty()) {
+            HrvReadinessTrendMath.calculateTrendSeries(
+                entries = hrvEntries,
+                selectedPosture = postureToUse,
+                metricMode = metricMode,
+                dailyTrainingLoads = dailyLoads
+            )
+        } else {
+            null
+        }
+        AthleteHrvTabUiState(
+            hrvReadinessEntries = hrvEntries,
+            hrvTrendSeries = hrvSeries,
+            selectedHrvPosture = postureToUse,
+            selectedHrvMetricMode = metricMode,
+            showHrvTrainingLoad = showTrainingLoad,
+            hasHrvReadings = hrvEntries.isNotEmpty()
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AthleteHrvTabUiState()
+    )
+
+    /** Tab 4 (Cardio-Power Dynamics) isolated state flow (`REQ-UI-2803.3`). */
+    val cardioUiState: StateFlow<AthleteCardioTabUiState> = combine(
+        _cardioTrendSamples,
+        _selectedCardioTrendMetric,
+        _selectedCardioTimeRange,
+        enableCardioFlow
+    ) { cardioSamples, cardioMetric, cardioRange, enableCardio ->
+        val nowMs = System.currentTimeMillis()
         val (cardioPoints, cardioRollingPoints, cardioYDomain) = if (enableCardio && cardioSamples.isNotEmpty()) {
             val allPts = CardioPowerTrendsPlotMath.convertSamplesToPoints(cardioSamples, cardioMetric)
             val allRollingPts = CardioPowerTrendsPlotMath.computeRollingTrend(allPts, windowDays = 30)
@@ -310,21 +455,69 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         } else {
             Triple(emptyList(), emptyList(), CardioPowerTrendsPlotMath.computeOutlierResilientDomain(emptyList(), cardioMetric))
         }
+        AthleteCardioTabUiState(
+            enableCardioPowerDynamics = enableCardio,
+            selectedCardioTrendMetric = cardioMetric,
+            selectedCardioTimeRange = cardioRange,
+            cardioTrendPoints = cardioPoints,
+            cardioTrendRollingPoints = cardioRollingPoints,
+            cardioTrendYDomain = cardioYDomain
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AthleteCardioTabUiState()
+    )
 
-        val filteredHistory = if (historyFilter == null) {
-            visibleEntries
-        } else {
-            visibleEntries.filter { it.metricType == historyFilter }
-        }
+    /**
+     * Unified read-only projection assembling the 4 precomputed tab-specific [StateFlow]s with
+     * zero cross-tab recomputation (`REQ-UI-2803.3`).
+     */
+    val uiState: StateFlow<AthleteProfileUiState> = combine(
+        bodyUiState,
+        pmcUiState,
+        hrvUiState,
+        cardioUiState
+    ) { body, pmc, hrv, cardio ->
+        AthleteProfileUiState(
+            latestWeightEntry = body.latestWeightEntry,
+            latestHrRestEntry = body.latestHrRestEntry,
+            latestFtpEntry = body.latestFtpEntry,
+            latestCpEntry = body.latestCpEntry,
+            latestWPrimeEntry = body.latestWPrimeEntry,
+            currentPowerToWeight = body.currentPowerToWeight,
+            latestPowerToWeightTimestampMs = body.latestPowerToWeightTimestampMs,
+            selectedPlotMetric = body.selectedPlotMetric,
+            selectedTimeRange = body.selectedTimeRange,
+            selectedPmcTimeRange = pmc.selectedPmcTimeRange,
+            plotPoints = body.plotPoints,
+            pmcSummary = pmc.pmcSummary,
+            pmcPlotPoints = pmc.pmcPlotPoints,
+            historyFilterMetric = body.historyFilterMetric,
+            filteredHistory = body.filteredHistory,
+            isImperial = body.isImperial,
+            enablePmcModel = pmc.enablePmcModel,
+            enableCriticalPowerModel = body.enableCriticalPowerModel,
+            enableCardioPowerDynamics = cardio.enableCardioPowerDynamics,
+            selectedCardioTrendMetric = cardio.selectedCardioTrendMetric,
+            selectedCardioTimeRange = cardio.selectedCardioTimeRange,
+            cardioTrendPoints = cardio.cardioTrendPoints,
+            cardioTrendRollingPoints = cardio.cardioTrendRollingPoints,
+            cardioTrendYDomain = cardio.cardioTrendYDomain,
+            hrvReadinessEntries = hrv.hrvReadinessEntries,
+            hrvTrendSeries = hrv.hrvTrendSeries,
+            selectedHrvPosture = hrv.selectedHrvPosture,
+            selectedHrvMetricMode = hrv.selectedHrvMetricMode,
+            showHrvTrainingLoad = hrv.showHrvTrainingLoad,
+            hasHrvReadings = hrv.hasHrvReadings
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AthleteProfileUiState()
+    )
 
-        val hrvEntries = hrvState.entries
-        val (defaultPosture, availablePostures) = HrvReadinessTrendMath.resolveAvailablePostures(hrvEntries)
-        val postureToUse = if (hrvState.posture != null && (availablePostures.isEmpty() || availablePostures.contains(hrvState.posture))) {
-            hrvState.posture
-        } else {
-            defaultPosture
-        }
-
+    private fun buildDailyTrainingLoadsMap(workoutSamples: List<WorkoutTrainingLoadSample>): Map<String, Double> {
         val dailyLoads = mutableMapOf<String, Double>()
         for (sample in workoutSamples) {
             if (sample.timestampMs > 0L) {
@@ -340,55 +533,8 @@ class AthleteProfileViewModel @JvmOverloads constructor(
                 } catch (_: Exception) {}
             }
         }
-
-        val hrvSeries = if (hrvEntries.isNotEmpty()) {
-            HrvReadinessTrendMath.calculateTrendSeries(
-                entries = hrvEntries,
-                selectedPosture = postureToUse,
-                metricMode = hrvState.metricMode,
-                dailyTrainingLoads = dailyLoads
-            )
-        } else {
-            null
-        }
-
-        AthleteProfileUiState(
-            latestWeightEntry = latestWeight,
-            latestHrRestEntry = latestHrRest,
-            latestFtpEntry = latestFtp,
-            latestCpEntry = latestCp,
-            latestWPrimeEntry = latestWPrime,
-            currentPowerToWeight = currentWPerKg,
-            latestPowerToWeightTimestampMs = latestWPerKgTs,
-            selectedPlotMetric = plotMetric,
-            selectedTimeRange = timeRange,
-            selectedPmcTimeRange = pmcTimeRange,
-            plotPoints = plotPoints,
-            pmcSummary = pmcSummary,
-            pmcPlotPoints = pmcPlotPoints,
-            historyFilterMetric = historyFilter,
-            filteredHistory = filteredHistory,
-            isImperial = isImperial,
-            enablePmcModel = enablePmc,
-            enableCriticalPowerModel = enableCp,
-            enableCardioPowerDynamics = enableCardio,
-            selectedCardioTrendMetric = cardioMetric,
-            selectedCardioTimeRange = cardioRange,
-            cardioTrendPoints = cardioPoints,
-            cardioTrendRollingPoints = cardioRollingPoints,
-            cardioTrendYDomain = cardioYDomain,
-            hrvReadinessEntries = hrvEntries,
-            hrvTrendSeries = hrvSeries,
-            selectedHrvPosture = postureToUse,
-            selectedHrvMetricMode = hrvState.metricMode,
-            showHrvTrainingLoad = hrvState.showTrainingLoad,
-            hasHrvReadings = hrvEntries.isNotEmpty()
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = AthleteProfileUiState()
-    )
+        return dailyLoads
+    }
 
     init {
         viewModelScope.launch {
@@ -492,9 +638,15 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     }
 
     fun selectTimeRange(range: MetricsTimeRange) {
-        _selectedTimeRange.value = range
-        _selectedPmcTimeRange.value = range
-        _selectedCardioTimeRange.value = range
+        if (_selectedTimeRange.value != range) {
+            _selectedTimeRange.value = range
+        }
+        if (_selectedPmcTimeRange.value != range) {
+            _selectedPmcTimeRange.value = range
+        }
+        if (_selectedCardioTimeRange.value != range) {
+            _selectedCardioTimeRange.value = range
+        }
     }
 
     fun selectPmcTimeRange(range: MetricsTimeRange) {

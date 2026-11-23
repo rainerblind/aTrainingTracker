@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.formater.PaceFormatterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:49:13.385Z" hostname="rainer-HP-EliteBook-850-G5" time="0.179">
+  <properties/>
+  <testcase name="format_imperial_formatsMinutesAndSeconds" classname="com.atrainingtracker.banalservice.sensor.formater.PaceFormatterTest" time="0.167"/>
+  <testcase name="format_null_returnsDashes" classname="com.atrainingtracker.banalservice.sensor.formater.PaceFormatterTest" time="0.001"/>
+  <testcase name="format_metric_formatsMinutesAndSeconds" classname="com.atrainingtracker.banalservice.sensor.formater.PaceFormatterTest" time="0.0"/>
+  <testcase name="format_exceedingMaxPace_returnsTildes" classname="com.atrainingtracker.banalservice.sensor.formater.PaceFormatterTest" time="0.0"/>
+  <testcase name="formatPaceMinutes_negativeAndExceedingMaxPace_matchFormatParity" classname="com.atrainingtracker.banalservice.sensor.formater.PaceFormatterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

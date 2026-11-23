@@ -143,6 +143,162 @@ interface MapDetailLowerContentScope {
 }
 
 /**
+ * Cohesive layout & visibility options for [MapDetailLayout] (`REQ-UI-2803.2`).
+ */
+data class MapDetailDisplayOptions(
+    val useStatusBarsPadding: Boolean = true,
+    val isBottomSheet: Boolean = !useStatusBarsPadding,
+    val showHeader: Boolean = true,
+    val showMap: Boolean = true,
+    val showElevationProfile: Boolean = true,
+    val showZoomControls: Boolean = true,
+    val showTelemetryCharts: Boolean = true,
+    val showElevationHistogram: Boolean = false,
+    val showFloatingShareButton: Boolean = true,
+    val showActivityCarriageBar: Boolean = false
+)
+
+/**
+ * Cohesive telemetry, zone, climb, and overlay inputs for [MapDetailLayout] (`REQ-UI-2803.2`).
+ */
+data class MapDetailAnalyticsOptions(
+    val initialBounds: LatLngBounds? = null,
+    val minAltitudeOverride: Double? = null,
+    val maxAltitudeOverride: Double? = null,
+    val hrZoneDistribution: ZoneDistributionData? = null,
+    val powerZoneDistribution: ZoneDistributionData? = null,
+    val hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
+    val powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
+    val climbs: List<Climb> = emptyList(),
+    val externalScrubDistance: Double? = null,
+    val hrZoneThresholds: HeartRateZoneThresholds? = null,
+    val powerZoneThresholds: PowerZoneThresholds? = null,
+    val workoutData: WorkoutData? = null,
+    val multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
+    val hiddenCharts: Set<TelemetryChartKind> = emptySet(),
+    val activityCarriageTimeline: ActivityCarriageTimeline? = null
+)
+
+/**
+ * Cohesive interaction and lifecycle callbacks for [MapDetailLayout] (`REQ-UI-2803.2`).
+ */
+data class MapDetailInteractionCallbacks(
+    val onMapClick: ((LatLng) -> Unit)? = null,
+    val onHeaderHeightMeasured: ((Dp) -> Unit)? = null,
+    val onCreateLapClick: ((Double) -> Unit)? = null,
+    val onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null,
+    val onSnapshotComplete: (() -> Unit)? = null,
+    val onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null
+)
+
+private data class MapDetailZoomState(
+    val zoomScale: Float,
+    val startDist: Double,
+    val totalSpan: Double,
+    val isPanMode: Boolean,
+    val onZoomChanged: (Float, Double) -> Unit,
+    val onPanModeToggle: () -> Unit
+)
+
+@Composable
+private fun MapDetailZoomToolbar(
+    zoomState: MapDetailZoomState,
+    isLandscape: Boolean,
+    touchModifier: Modifier,
+    modifier: Modifier = Modifier
+) {
+    val layoutModifier = if (isLandscape) {
+        modifier
+            .padding(top = 4.dp, end = 8.dp)
+            .then(touchModifier)
+    } else {
+        modifier
+            .fillMaxWidth()
+            .then(touchModifier)
+    }
+    GlobalTelemetryZoomToolbar(
+        zoomScale = zoomState.zoomScale,
+        startDist = zoomState.startDist,
+        totalSpan = zoomState.totalSpan,
+        onZoomChanged = zoomState.onZoomChanged,
+        isPanMode = zoomState.isPanMode,
+        onPanModeToggle = zoomState.onPanModeToggle,
+        modifier = layoutModifier
+    )
+}
+
+@Composable
+private fun MapDetailLowerViewport(
+    scrollable: Boolean,
+    hasZoomToolbar: Boolean,
+    isLandscape: Boolean,
+    zoomState: MapDetailZoomState,
+    zoomToolbarTouchModifier: Modifier,
+    lowerColumn: @Composable (Modifier) -> Unit,
+    scrubbingOverlay: @Composable BoxScope.() -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (scrollable) {
+        Box(modifier = modifier) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (hasZoomToolbar && !isLandscape) {
+                    MapDetailZoomToolbar(
+                        zoomState = zoomState,
+                        isLandscape = false,
+                        touchModifier = zoomToolbarTouchModifier
+                    )
+                }
+                lowerColumn(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                )
+            }
+            if (hasZoomToolbar && isLandscape) {
+                MapDetailZoomToolbar(
+                    zoomState = zoomState,
+                    isLandscape = true,
+                    touchModifier = zoomToolbarTouchModifier,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                )
+            }
+            scrubbingOverlay()
+        }
+    } else {
+        Column(modifier = modifier.wrapContentHeight()) {
+            if (hasZoomToolbar && !isLandscape) {
+                MapDetailZoomToolbar(
+                    zoomState = zoomState,
+                    isLandscape = false,
+                    touchModifier = zoomToolbarTouchModifier
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
+                lowerColumn(
+                    Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                )
+                if (hasZoomToolbar && isLandscape) {
+                    MapDetailZoomToolbar(
+                        zoomState = zoomState,
+                        isLandscape = true,
+                        touchModifier = zoomToolbarTouchModifier,
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    )
+                }
+                scrubbingOverlay()
+            }
+        }
+    }
+}
+
+/**
  * A unified layout for screen-level map details (Aftermath, Routes, Segments).
  * It manages the standard layout (Header + Map + Profile), shared interaction state,
  * dynamic draggable viewport resizing (REQ-UI-223 / ATT-1890), dynamic peek baseline
@@ -194,6 +350,115 @@ fun MapDetailLayout(
     activityCarriageTimeline: ActivityCarriageTimeline? = null,
     showActivityCarriageBar: Boolean = false
 ) {
+    MapDetailLayout(
+        bSportType = bSportType,
+        zoomFocus = zoomFocus,
+        activeScrubPath = activeScrubPath,
+        header = header,
+        mapContent = mapContent,
+        overlay = overlay,
+        modifier = modifier,
+        displayOptions = MapDetailDisplayOptions(
+            useStatusBarsPadding = useStatusBarsPadding,
+            isBottomSheet = isBottomSheet,
+            showHeader = showHeader,
+            showMap = showMap,
+            showElevationProfile = showElevationProfile,
+            showZoomControls = showZoomControls,
+            showTelemetryCharts = showTelemetryCharts,
+            showElevationHistogram = showElevationHistogram,
+            showFloatingShareButton = showFloatingShareButton,
+            showActivityCarriageBar = showActivityCarriageBar
+        ),
+        analyticsOptions = MapDetailAnalyticsOptions(
+            initialBounds = initialBounds,
+            minAltitudeOverride = minAltitudeOverride,
+            maxAltitudeOverride = maxAltitudeOverride,
+            hrZoneDistribution = hrZoneDistribution,
+            powerZoneDistribution = powerZoneDistribution,
+            hrZoneDisplayMode = hrZoneDisplayMode,
+            powerZoneDisplayMode = powerZoneDisplayMode,
+            climbs = climbs,
+            externalScrubDistance = externalScrubDistance,
+            hrZoneThresholds = hrZoneThresholds,
+            powerZoneThresholds = powerZoneThresholds,
+            workoutData = workoutData,
+            multiSensorOverlays = multiSensorOverlays,
+            hiddenCharts = hiddenCharts,
+            activityCarriageTimeline = activityCarriageTimeline
+        ),
+        callbacks = MapDetailInteractionCallbacks(
+            onMapClick = onMapClick,
+            onHeaderHeightMeasured = onHeaderHeightMeasured,
+            onCreateLapClick = onCreateLapClick,
+            onInteractiveCanvasTouch = onInteractiveCanvasTouch,
+            onSnapshotComplete = onSnapshotComplete,
+            onToggleChartVisibility = onToggleChartVisibility
+        ),
+        analyticsContent = analyticsContent,
+        metadataContent = metadataContent,
+        topEndActions = topEndActions,
+        externalSnapshotTrigger = externalSnapshotTrigger,
+        customLowerContent = customLowerContent
+    )
+}
+
+/**
+ * Grouped-model overload of [MapDetailLayout] bundling display flags, analytics inputs, and
+ * interaction callbacks into cohesive parameter models (`REQ-UI-2803.2`).
+ */
+@Composable
+fun MapDetailLayout(
+    bSportType: BSportType,
+    zoomFocus: MapZoomFocus,
+    activeScrubPath: List<PathPoint>?,
+    header: @Composable () -> Unit,
+    mapContent: MapContentScope.() -> Unit = {},
+    overlay: @Composable BoxScope.() -> Unit = {},
+    modifier: Modifier = Modifier,
+    displayOptions: MapDetailDisplayOptions = MapDetailDisplayOptions(),
+    analyticsOptions: MapDetailAnalyticsOptions = MapDetailAnalyticsOptions(),
+    callbacks: MapDetailInteractionCallbacks = MapDetailInteractionCallbacks(),
+    analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
+    metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
+    topEndActions: (@Composable ColumnScope.() -> Unit)? = null,
+    externalSnapshotTrigger: Boolean = false,
+    customLowerContent: (@Composable MapDetailLowerContentScope.() -> Unit)? = null
+) {
+    val useStatusBarsPadding = displayOptions.useStatusBarsPadding
+    val isBottomSheet = displayOptions.isBottomSheet
+    val showHeader = displayOptions.showHeader
+    val showMap = displayOptions.showMap
+    val showElevationProfile = displayOptions.showElevationProfile
+    val showZoomControls = displayOptions.showZoomControls
+    val showTelemetryCharts = displayOptions.showTelemetryCharts
+    val showElevationHistogram = displayOptions.showElevationHistogram
+    val showFloatingShareButton = displayOptions.showFloatingShareButton
+    val showActivityCarriageBar = displayOptions.showActivityCarriageBar
+
+    val initialBounds = analyticsOptions.initialBounds
+    val minAltitudeOverride = analyticsOptions.minAltitudeOverride
+    val maxAltitudeOverride = analyticsOptions.maxAltitudeOverride
+    val hrZoneDistribution = analyticsOptions.hrZoneDistribution
+    val powerZoneDistribution = analyticsOptions.powerZoneDistribution
+    val hrZoneDisplayMode = analyticsOptions.hrZoneDisplayMode
+    val powerZoneDisplayMode = analyticsOptions.powerZoneDisplayMode
+    val climbs = analyticsOptions.climbs
+    val externalScrubDistance = analyticsOptions.externalScrubDistance
+    val hrZoneThresholds = analyticsOptions.hrZoneThresholds
+    val powerZoneThresholds = analyticsOptions.powerZoneThresholds
+    val workoutData = analyticsOptions.workoutData
+    val multiSensorOverlays = analyticsOptions.multiSensorOverlays
+    val hiddenCharts = analyticsOptions.hiddenCharts
+    val activityCarriageTimeline = analyticsOptions.activityCarriageTimeline
+
+    val onMapClick = callbacks.onMapClick
+    val onHeaderHeightMeasured = callbacks.onHeaderHeightMeasured
+    val onCreateLapClick = callbacks.onCreateLapClick
+    val onInteractiveCanvasTouch = callbacks.onInteractiveCanvasTouch
+    val onSnapshotComplete = callbacks.onSnapshotComplete
+    val onToggleChartVisibility = callbacks.onToggleChartVisibility
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -257,9 +522,10 @@ fun MapDetailLayout(
     val isTrackless = ProfileDomainMath.isTracklessWorkout(activeScrubPath)
     val isElevationTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(tuningConfig.elevationXAxisDomain, activeScrubPath)
     val isTelemetryTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(tuningConfig.telemetryXAxisDomain, activeScrubPath)
-    val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
-    val elevationTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.elevationXAxisDomain, activeScrubPath)
-    val telemetryTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.telemetryXAxisDomain, activeScrubPath)
+    val effectiveElevationDomain = if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+    val activeTelemetryDomain = if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+    val elevationTotalSpan = ProfileDomainMath.calculateTotalSpan(effectiveElevationDomain, activeScrubPath)
+    val telemetryTotalSpan = ProfileDomainMath.calculateTotalSpan(activeTelemetryDomain, activeScrubPath)
     val totalSpan = if (showElevationProfile) elevationTotalSpan else telemetryTotalSpan
 
     val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && hasAnyTelemetryChartSeries(
@@ -270,7 +536,7 @@ fun MapDetailLayout(
         activityCarriageTimeline != null &&
         activityCarriageTimeline.segments.isNotEmpty() &&
         !activeScrubPath.isNullOrEmpty()
-    val carriageBarDomain = if (showElevationProfile) tuningConfig.elevationXAxisDomain else activeTelemetryDomain
+    val carriageBarDomain = if (showElevationProfile) effectiveElevationDomain else activeTelemetryDomain
     val carriageBarTotalSpan = if (showElevationProfile) elevationTotalSpan else telemetryTotalSpan
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs || hasActivityCarriageBar) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || customLowerContent != null || hasTelemetryGraphs
@@ -315,10 +581,14 @@ fun MapDetailLayout(
 
     val activeScrubAltitude = remember(selectedDistance, activeScrubPath, isTrackless, activeScrubPoint) {
         if (selectedDistance != null && !activeScrubPath.isNullOrEmpty() && activeScrubPoint != null) {
+            val activeIndex = TelemetryChartSearch.findFloorIndex(
+                points = activeScrubPath,
+                targetValue = selectedDistance!!,
+                isTimeDomain = isTrackless
+            ).coerceAtLeast(0)
+            val pLeft = activeScrubPath[activeIndex]
+            val pRight = activeScrubPath.getOrNull(activeIndex + 1)
             if (isTrackless) {
-                val activeIndex = activeScrubPath.indexOf(activeScrubPoint).coerceAtLeast(0)
-                val pLeft = activeScrubPath[activeIndex]
-                val pRight = activeScrubPath.getOrNull(activeIndex + 1)
                 if (pRight != null && pRight.timeSec > pLeft.timeSec && pLeft.altitude != null && pRight.altitude != null) {
                     val factor = ((selectedDistance!! - pLeft.timeSec) / (pRight.timeSec - pLeft.timeSec).toDouble()).coerceIn(0.0, 1.0)
                     pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
@@ -326,9 +596,6 @@ fun MapDetailLayout(
                     pLeft.altitude ?: pRight?.altitude
                 }
             } else {
-                val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
-                val pLeft = activeScrubPath[activeIndex]
-                val pRight = activeScrubPath.getOrNull(activeIndex + 1)
                 if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
                     val factor = ((selectedDistance!! - pLeft.distance) / (pRight.distance - pLeft.distance)).coerceIn(0.0, 1.0)
                     pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
@@ -593,7 +860,7 @@ fun MapDetailLayout(
                             maxAltitudeOverride = maxAltitudeOverride,
                             onDistanceSelected = { selectedDistance = it },
                             showZoomControls = showZoomControls,
-                            xAxisDomain = tuningConfig.elevationXAxisDomain,
+                            xAxisDomain = effectiveElevationDomain,
                             bSportType = bSportType,
                             zoomScale = profileZoomScale,
                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, elevationTotalSpan, profileZoomScale),
@@ -914,6 +1181,18 @@ fun MapDetailLayout(
             }
         }
 
+        val toolbarZoomState = MapDetailZoomState(
+            zoomScale = profileZoomScale,
+            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+            totalSpan = totalSpan,
+            isPanMode = isPanMode,
+            onZoomChanged = { z, s ->
+                profileZoomScale = z
+                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+            },
+            onPanModeToggle = { isPanMode = !isPanMode }
+        )
+
         // 2. RESIZABLE VIEWPORT (Map + SplitPaneDivider + Scrollable Lower Section)
         val viewportModifier = if (showMap || hasScrollableContent) {
             Modifier.fillMaxSize()
@@ -975,53 +1254,19 @@ fun MapDetailLayout(
                                 } else Modifier
                             )
 
-                            // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
-                            Box(
+                            // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113, REQ-UI-2803.2)
+                            MapDetailLowerViewport(
+                                scrollable = true,
+                                hasZoomToolbar = hasZoomToolbar,
+                                isLandscape = isLandscape,
+                                zoomState = toolbarZoomState,
+                                zoomToolbarTouchModifier = zoomToolbarTouchModifier,
+                                lowerColumn = lowerColumn,
+                                scrubbingOverlay = scrubbingOverlay,
                                 modifier = Modifier
                                     .weight(1f - splitFraction)
                                     .fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    if (hasZoomToolbar && !isLandscape) {
-                                        GlobalTelemetryZoomToolbar(
-                                            zoomScale = profileZoomScale,
-                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                            totalSpan = totalSpan,
-                                            onZoomChanged = { z, s ->
-                                                profileZoomScale = z
-                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                            },
-                                            isPanMode = isPanMode,
-                                            onPanModeToggle = { isPanMode = !isPanMode },
-                                            modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
-                                        )
-                                    }
-                                    lowerColumn(
-                                        Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                            .verticalScroll(rememberScrollState())
-                                    )
-                                }
-                                if (hasZoomToolbar && isLandscape) {
-                                    GlobalTelemetryZoomToolbar(
-                                        zoomScale = profileZoomScale,
-                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                        totalSpan = totalSpan,
-                                        onZoomChanged = { z, s ->
-                                            profileZoomScale = z
-                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                        },
-                                        isPanMode = isPanMode,
-                                        onPanModeToggle = { isPanMode = !isPanMode },
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(top = 4.dp, end = 8.dp)
-                                            .then(zoomToolbarTouchModifier)
-                                    )
-                                }
-                                scrubbingOverlay()
-                            }
+                            )
                         }
                     }
                 } else {
@@ -1035,155 +1280,45 @@ fun MapDetailLayout(
                             floatingControlsTopOffsetDp
                         )
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight()
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-                                if (hasZoomToolbar && !isLandscape) {
-                                    GlobalTelemetryZoomToolbar(
-                                        zoomScale = profileZoomScale,
-                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                        totalSpan = totalSpan,
-                                        onZoomChanged = { z, s ->
-                                            profileZoomScale = z
-                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                        },
-                                        isPanMode = isPanMode,
-                                        onPanModeToggle = { isPanMode = !isPanMode },
-                                        modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
-                                    )
-                                }
-                                lowerColumn(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentHeight()
-                                )
-                            }
-                            if (hasZoomToolbar && isLandscape) {
-                                GlobalTelemetryZoomToolbar(
-                                    zoomScale = profileZoomScale,
-                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                    totalSpan = totalSpan,
-                                    onZoomChanged = { z, s ->
-                                        profileZoomScale = z
-                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                    },
-                                    isPanMode = isPanMode,
-                                    onPanModeToggle = { isPanMode = !isPanMode },
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 4.dp, end = 8.dp)
-                                        .then(zoomToolbarTouchModifier)
-                                )
-                            }
-                            scrubbingOverlay()
-                        }
+                        MapDetailLowerViewport(
+                            scrollable = false,
+                            hasZoomToolbar = hasZoomToolbar,
+                            isLandscape = isLandscape,
+                            zoomState = toolbarZoomState,
+                            zoomToolbarTouchModifier = zoomToolbarTouchModifier,
+                            lowerColumn = lowerColumn,
+                            scrubbingOverlay = scrubbingOverlay,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
-            } else {
-            // When hasLowerSection is false (Heatmap / Empty map), or when showMap is false (LiveSegmentSheet / Trackless)
-            if (showMap) {
+            } else if (showMap) {
                 mapBox(
                     Modifier.fillMaxSize(),
                     floatingControlsTopOffsetDp
                 )
-            } else if (!showMap && hasScrollableContent) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            if (hasZoomToolbar && !isLandscape) {
-                                GlobalTelemetryZoomToolbar(
-                                    zoomScale = profileZoomScale,
-                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                    totalSpan = totalSpan,
-                                    onZoomChanged = { z, s ->
-                                        profileZoomScale = z
-                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                    },
-                                    isPanMode = isPanMode,
-                                    onPanModeToggle = { isPanMode = !isPanMode },
-                                    modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
-                                )
-                            }
-                            lowerColumn(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
-                            )
-                        }
-                        if (hasZoomToolbar && isLandscape) {
-                            GlobalTelemetryZoomToolbar(
-                                zoomScale = profileZoomScale,
-                                startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                totalSpan = totalSpan,
-                                onZoomChanged = { z, s ->
-                                    profileZoomScale = z
-                                    viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                },
-                                isPanMode = isPanMode,
-                                onPanModeToggle = { isPanMode = !isPanMode },
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 4.dp, end = 8.dp)
-                                    .then(zoomToolbarTouchModifier)
-                            )
-                        }
-                        scrubbingOverlay()
-                    }
-                }
+            } else if (hasScrollableContent) {
+                MapDetailLowerViewport(
+                    scrollable = true,
+                    hasZoomToolbar = hasZoomToolbar,
+                    isLandscape = isLandscape,
+                    zoomState = toolbarZoomState,
+                    zoomToolbarTouchModifier = zoomToolbarTouchModifier,
+                    lowerColumn = lowerColumn,
+                    scrubbingOverlay = scrubbingOverlay,
+                    modifier = Modifier.fillMaxSize()
+                )
             } else if (hasLowerSection) {
-                Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-                    if (hasZoomToolbar && !isLandscape) {
-                        GlobalTelemetryZoomToolbar(
-                            zoomScale = profileZoomScale,
-                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                            totalSpan = totalSpan,
-                            onZoomChanged = { z, s ->
-                                profileZoomScale = z
-                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                            },
-                            isPanMode = isPanMode,
-                            onPanModeToggle = { isPanMode = !isPanMode },
-                            modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                    ) {
-                        lowerColumn(
-                            Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight()
-                        )
-                        if (hasZoomToolbar && isLandscape) {
-                            GlobalTelemetryZoomToolbar(
-                                zoomScale = profileZoomScale,
-                                startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                totalSpan = totalSpan,
-                                onZoomChanged = { z, s ->
-                                    profileZoomScale = z
-                                    viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                },
-                                isPanMode = isPanMode,
-                                onPanModeToggle = { isPanMode = !isPanMode },
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 4.dp, end = 8.dp)
-                                    .then(zoomToolbarTouchModifier)
-                            )
-                        }
-                        scrubbingOverlay()
-                    }
-                }
+                MapDetailLowerViewport(
+                    scrollable = false,
+                    hasZoomToolbar = hasZoomToolbar,
+                    isLandscape = isLandscape,
+                    zoomState = toolbarZoomState,
+                    zoomToolbarTouchModifier = zoomToolbarTouchModifier,
+                    lowerColumn = lowerColumn,
+                    scrubbingOverlay = scrubbingOverlay,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -1203,7 +1338,6 @@ fun MapDetailLayout(
             attachedPhotos = attachedPhotos
         )
     }
-}
 }
 
 internal suspend fun executeSnapshotCaptureAndShare(

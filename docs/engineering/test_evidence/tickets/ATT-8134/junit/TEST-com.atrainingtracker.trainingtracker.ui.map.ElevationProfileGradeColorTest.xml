@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGradeColorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:05:37.525Z" hostname="rainer-HP-EliteBook-850-G5" time="15.654">
+  <properties/>
+  <testcase name="testElevationGradeColor_allZonesAndExactBoundaries" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGradeColorTest" time="11.478"/>
+  <testcase name="testElevationProfile_contractAndLegendSevenZones" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGradeColorTest" time="3.576"/>
+  <testcase name="testElevationGradeColor_descentsAndNonFiniteValues" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGradeColorTest" time="0.153"/>
+  <testcase name="testElevationProfile_marginalAltitudeHistogram_steepStartDoesNotColorHistogramRed" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGradeColorTest" time="0.138"/>
+  <testcase name="testGradeLegendLocalization_allNineLocalesExist" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileGradeColorTest" time="0.308"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

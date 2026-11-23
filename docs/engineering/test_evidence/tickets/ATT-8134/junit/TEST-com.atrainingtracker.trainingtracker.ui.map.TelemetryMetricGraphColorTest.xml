@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:06:48.693Z" hostname="rainer-HP-EliteBook-850-G5" time="1.636">
+  <properties/>
+  <testcase name="telemetryMetricGraph_rendersLightThemeAndSavesScreenshot" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" time="0.491"/>
+  <testcase name="telemetryMetricGraph_rendersDefaultAndUpdatedGlobalColorReactively" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" time="0.233"/>
+  <testcase name="telemetryMetricGraph_rendersAmoledThemeAndSavesScreenshot" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" time="0.405"/>
+  <testcase name="telemetryMetricGraph_rendersDarkThemeAndSavesScreenshot" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" time="0.396"/>
+  <testcase name="resolveAccentColor_defaultsMatchLightDarkAndAmoledSchemes" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphColorTest" time="0.109"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

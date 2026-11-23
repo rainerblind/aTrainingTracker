@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenLayoutTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:07:13.114Z" hostname="rainer-HP-EliteBook-850-G5" time="0.088">
+  <properties/>
+  <testcase name="testElevationProfile_doesNotApplyWeightWhenMapDisabled" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenLayoutTest" time="0.087"/>
+  <testcase name="testElevationProfile_guardedByPathPointsSize" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenLayoutTest" time="0.0"/>
+  <testcase name="testElevationProfile_doesNotPassFillParentHeightOrFillMaxSize" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenLayoutTest" time="0.0"/>
+  <testcase name="testElevationProfileSurface_doesNotApplyStaticScaffoldBottomPadding" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenLayoutTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

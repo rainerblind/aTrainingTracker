@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 6 of 6)
 
 **Document ID**: `DOC-REQ-UI-P6`  
-**Version**: 1.0.30  
+**Version**: 1.0.31  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part6`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 46
+**Total Requirements**: 47
 
 ---
 
@@ -1776,6 +1776,34 @@
   1. *Original Requirement ID & Target*: Consolidates `REQ-UI-262`, `REQ-UI-357`, `REQ-UI-384`, `REQ-UI-441`, `REQ-TRK-061.4`, `REQ-TRK-072`, `REQ-CON-028.4`, `REQ-BLD-001`, `REQ-BLD-003`, `REQ-MIG-057`, `REQ-PRO-053`, `REQ-ARC-003`.
   2. *Preservation of Core Invariants*: Preserves all 12 `AdvancedTuningScreen` sections incl. `SwimmingSection`, `ZoneSettingsScreen` 4-tab layout & `ZoneCalculatorDialog`, inline `CONFIG`-phase `evaluatePreFlightQuality`, `CSVFileWriter` RFC-4180 wire format & cancellation, authentic Garmin Varia V1/V2 BLE parsing, `DatabaseSchemaRegistry` 21-DB + `TrackingViews.db` parity, `res/layout/` 6 active XMLs, and 9-locale `strings*.xml` parity (`0` string changes).
 
+### REQ-UI-2803: Unified Telemetry Chart Gesture/Cache Engine, MapDetailLayout Viewport Deduplication & Tab-Isolated AthleteProfileViewModel Flows (`ATT-8134`) [Verified]
+- **Tests**: `TST-UI-2803`
+- **Tickets**: `ATT-8134`
+- **System Requirement(s)**: Derived (SW-only — post-workout telemetry chart gesture/cache consolidation, `MapDetailLayout` viewport deduplication, and `AthleteProfileViewModel` tab-flow isolation refining `REQ-UI-192`, `REQ-UI-206`, `REQ-UI-226`, `REQ-UI-232`, `REQ-UI-234`, `REQ-UI-260`, `REQ-UI-261`, `REQ-UI-513.4`, `REQ-UI-2789`, `REQ-UI-2793`, `REQ-UI-2795`, `REQ-REV-015`, `REQ-STB-020.4`)
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TelemetryChartGestures.kt`, `TelemetryChartCacheHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `TelemetryOverlayComponents.kt`, `TelemetryChartCanvasHelpers.kt`, `SpeedFormatter.kt`, `PaceFormatter.kt`, `MapDetailLayout.kt`, `TelemetryChartStack.kt`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`
+- **Rationale**: Eliminates gesture feature drift between `ElevationProfile` and `TelemetryMetricGraph`, removes 60-Hz per-frame curve `Path`/`Brush`/`PathEffect` allocations and speed/pace unit conversion round-trips, collapses duplicated `MapDetailLayout` viewports/`GlobalTelemetryZoomToolbar` calls while fixing `isTimeDomain` inconsistency, and isolates `AthleteProfileViewModel` tab flows so non-PMC chip clicks never recompute Banister PMC while `_hrMaxBpm` updates reactively (`ATT-8134`).
+- **Description**:
+  1. *Shared Chart Gesture Modifier, `drawWithCache` & Single-Pass Unit Formatting (`REQ-UI-2803.1`)*:
+     - `TelemetryChartGestures.kt` SHALL provide `Modifier.telemetryChartGestures` shared by `ElevationProfile` and `TelemetryMetricGraph` supporting 2-finger centroid-anchored pinch-zoom + pan, `ChartGestureDisambiguator` slope disambiguation, drag/tap scrub, double-tap zoom reset (`350 ms`), and O(log N) binary search preserving `FLOOR` (`ElevationProfile`) vs `NEAREST` + trackless (`TelemetryMetricGraph`) semantics.
+     - `TelemetryMetricGraph` and `ElevationProfile` SHALL cache viewport-downsampled curve `Path`/`Brush`/`PathEffect` geometry via `Modifier.drawWithCache` keyed strictly on non-scrub inputs so 60-Hz `currentDistance` scrubbing performs zero curve path rebuilds while preserving HRV artifact gap breaks and zoom-edge anchors.
+     - `SpeedFormatter.formatUserUnitWithUnits`, `PaceFormatter.formatPaceMinutesWithUnits`, `TelemetryMetricUtils.formatValue`, and `TelemetryOverlayComponents.formatPrimaryActiveValueText` SHALL format extracted display values directly without `m/s -> userUnit -> m/s -> userUnit` or `min/unit -> sec/m -> min/unit` round-trips.
+  2. *`MapDetailLayout` & `TelemetryChartStack` Deduplication and Domain Consistency (`REQ-UI-2803.2`)*:
+     - `MapDetailLayout.kt` SHALL bundle layout/analytics/callback parameters into cohesive state/config models (preserving backward-compatible call sites), unify the 4 lower-viewport blocks and 8 `GlobalTelemetryZoomToolbar` calls through `MapDetailLowerViewport` and `MapDetailZoomToolbar`, and resolve `isTimeDomain` strictly via `ProfileDomainMath.isEffectiveTimeDomain` across `ElevationProfile`, `ActivityCarriageSyncBar`, `TelemetryChartStack`, and `ScrubbingTelemetryBadge` while preserving `ATT-9168` (`REQ-REV-015`) on-demand offscreen snapshot header isolation.
+     - `TelemetryChartStack.kt` SHALL deduplicate repeated metric-chart invocations via a shared `TelemetryChartViewport` helper while preserving all 8 `TelemetryChartKind` sections, overlays, zone distributions, and `testTag`s.
+  3. *Tab-Isolated `AthleteProfileViewModel` Flows, Reactive `_hrMaxBpm` & Deduplicated Time-Range Callback (`REQ-UI-2803.3`)*:
+     - `AthleteProfileViewModel.kt` SHALL split the 14-flow cross-tab `combine` into 4 independent tab-specific `StateFlow`s (`bodyUiState`, `pmcUiState`, `hrvUiState`, `cardioUiState`) assembled without recomputation into `uiState`, keeping Banister PMC calculation (`PowerPhysiologyCalculator.computePerformanceManagementChart`) subscribed strictly to `_workoutLoadSamples`, distinct `(latestFtp, latestHrRest)`, and reactive `_hrMaxBpm` (`Rule 39`) so unrelated tab chip clicks never recompute PMC while `_hrMaxBpm` changes propagate reactively.
+     - `AthleteProfileScreen.kt` SHALL invoke `onSelectTimeRange(range)` once per time-range selection without redundant double mutation alongside `onSelectPmcTimeRange`/`onSelectCardioTimeRange`, preserving `REQ-UI-513.4` synchronized time ranges and `@JvmOverloads` reflection compatibility.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `ElevationProfile` and `TelemetryMetricGraph`, *When* the user pinch-zooms, double-taps, or scrubs at 60 Hz, *Then* both charts share `Modifier.telemetryChartGestures` with O(log N) search and `drawWithCache` cached curve paths, and `TelemetryMetricUtils` formats speed/pace in one conversion pass.
+  • *Given* `MapDetailLayout` in portrait and landscape, *When* toggling distance/time domains or zooming, *Then* all charts receive consistent `ProfileDomainMath.isEffectiveTimeDomain`, zoom controls route through one shared `MapDetailZoomToolbar` helper, and `ATT-9168` snapshot behavior remains intact.
+  • *Given* `AthleteProfileViewModel` with loaded workouts, *When* toggling a non-PMC filter chip or updating `_hrMaxBpm`, *Then* Banister PMC is not recomputed on unrelated chip clicks while `_hrMaxBpm` changes reactively update `pmcUiState`/`uiState`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-192`, `REQ-UI-206`, `REQ-UI-226`, `REQ-UI-232`, `REQ-UI-234`, `REQ-UI-260`, `REQ-UI-261`, `REQ-UI-513.4`, `REQ-REV-015`, `REQ-STB-020.4`.
+  2. *Preservation of Core Invariants*: Preserves `Rule 64` horizontal plot alignment (`50.dp` start / `72:28` landscape), `Rule 69/70` marginal histograms, `ATT-6037` climb badge Paint/Path hoisting, `ATT-9168` offscreen snapshot isolation, `REQ-UI-513.4` synchronized tab time ranges & tab ordering, `REQ-STB-020.4` unfinished-workout SQL deduplication, and `0` string resource changes.
+
 ---
 
 ## Change History
@@ -1811,3 +1839,4 @@
 | `1.0.28` | 2026-11-22 | Lane 2 Author (`ATT-9553`, `--as agent1`) | `ATT-9553` | Added and verified `REQ-UI-2794` (`[Verified]`, `.1`–`.3`) promoting `MapPeekSelection.Climb` to `isSheetBacked = true` in `MapScreenWithTrack` via `BottomSheetScaffold` + `BottomSheetDesign.PeekHeightClimb` (`192.dp`) + `ClimbOnMapScreen` dynamic `measuredHeaderHeight` + `SheetValue.Hidden` selection cleanup, superseding `REQ-UI-2790.2` modal Climb carve-out while preserving `ClimbDetailSheet` for `RouteOnMapScreen`. |
 | `1.0.29` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Added and verified `REQ-UI-2801` (`[Verified]`, `.1`–`.3`) for physical excision of 27 dead Fragment/SettingsDialogFragment/hybrid-bridge files + `StartOrResumeDialog` `DialogFragment` wrapper, `MainActivityWithNavigation` cleanup, and pure Compose `EditDeviceDialog`, `StartOrResumeAlertDialog`, and `GPSDisabledAlertDialog` (`131/131` PASS across 22 suites, `0` new compiler warnings, Light/Dark Compose + live `emulator-5554` PNGs visually verified via `read_file`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8129/`). |
 | `1.0.30` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `REQ-UI-2802` (`[Verified]`, `.1`–`.3`) for Legacy UI & Package Decommissioning Part 2 (`521/521` targeted unit/Compose/contract tests PASS, `:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` PASS, `0` new compiler warnings, 4 live `emulator-5554` PNGs visually verified via `read_file`, `0` crashes in `logcat -b crash -d`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8130/`). |
+| `1.0.31` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Added and verified `REQ-UI-2803` (`[Verified]`, `.1`–`.3`) for unified `Modifier.telemetryChartGestures` + O(log N) search + `Modifier.drawWithCache` viewport-downsampled curves + single-pass speed/pace formatting, `MapDetailLayout`/`TelemetryChartStack` viewport & toolbar deduplication with consistent `ProfileDomainMath.isEffectiveTimeDomain`, and 4-tab isolated `AthleteProfileViewModel` flows with reactive `_hrMaxBpm` and single-write `onSelectTimeRange` (`332/332` targeted tests PASS + `auto_gate.py` dependent suite PASS, `0` new compiler warnings, 4 PNGs visually verified via `read_file`, live `emulator-5554` `0` crashes, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8134/`). |

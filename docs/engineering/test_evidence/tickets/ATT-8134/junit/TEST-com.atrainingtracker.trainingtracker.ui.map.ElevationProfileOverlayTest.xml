@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:49:47.806Z" hostname="rainer-HP-EliteBook-850-G5" time="18.946">
+  <properties/>
+  <testcase name="testMapDetailLayout_togglingAltitudeOverlayRendersOverlayReadoutInScrubbingBadge" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" time="18.946"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

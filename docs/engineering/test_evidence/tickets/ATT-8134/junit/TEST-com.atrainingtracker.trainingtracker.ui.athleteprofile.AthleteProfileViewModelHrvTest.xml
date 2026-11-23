@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:05:33.874Z" hostname="rainer-HP-EliteBook-850-G5" time="12.342">
+  <properties/>
+  <testcase name="testHrvPostureAndMetricModeSelection" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest" time="6.836"/>
+  <testcase name="testHrvState_emptyOnboardingWhenNoEntries" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest" time="1.375"/>
+  <testcase name="testHrvState_populatedWhenEntriesExist" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest" time="1.382"/>
+  <testcase name="testSelectTimeRange_synchronizesPmcAndCardioRanges" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest" time="1.317"/>
+  <testcase name="testDeleteHrvReading_callsRepositoryAndReloads" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest" time="1.431"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

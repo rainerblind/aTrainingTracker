@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.41  
+**Version**: 1.0.43  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 98
+**Total Tests**: 99
 
 ---
 
@@ -1941,6 +1941,27 @@
   3. *Architecture & System Code-Grounding (`TST-UI-2802.3`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `AdrCompletenessContractTest`, `ArchitectureConformanceContractTest`, `SourceTextReadingAuditContractTest`)*:
      - Verify `ZonesSettingsActivity.kt` removed from monolith allowlist, PebbleKit moved to Domain 5 (`PERMANENTLY DECOMMISSIONED`) in `system_context.md` and removed from `SYS-EL-04`/`SYS-IF-04`, `ADR-006` and `docs/architecture.md` code-grounded, `0` new compiler warnings, and `verify_requirement_governance.py` exit `0`.
 
+### TST-UI-2803: **Unified Telemetry Chart Gestures/Cache, MapDetailLayout Viewport Consolidation & AthleteProfile Tab-Flow Isolation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-2803`
+- **Component**: `TelemetryChartGestures.kt`, `TelemetryChartCacheHelpers.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricUtils.kt`, `TelemetryOverlayComponents.kt`, `SpeedFormatter.kt`, `PaceFormatter.kt`, `MapDetailLayout.kt`, `TelemetryChartStack.kt`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `TelemetryChartGesturesAndCacheTest.kt`, `MapDetailLayoutViewportConsolidationUiTest.kt`, `AthleteProfileTabFlowIsolationTest.kt`
+- **Verification Evidence**:
+  - `TelemetryChartGesturesAndCacheTest#testFindFloorIndex_exactParityWithLinearIndexOfLast_tstUi2803_1`, `#testResolveScrubSelection_preservesFloorNearestAndTracklessSemantics_tstUi2803_1`, `#testDownsampleSegmentMinMax_capsVerticesAndPreservesPeakSpikesAndAnchors_tstUi2803_1`, `#testBuildCachedTelemetryCurveGeometry_preservesHrvArtifactGapsAndCapsDensePoints_tstUi2803_1`, `#testFormatValue_speedAndPaceAvoidRoundTripConversions_tstUi2803_1`, `#testTelemetryMetricGraph_supportsPinchZoomAndDoubleTapResetViaSharedGestures_tstUi2803_1`, `#testDrawWithCache_60HzScrubbingRebuildsCurvePathsZeroExtraTimes_tstUi2803_1`, `#testElevationProfileDrawWithCache_60HzScrubbingRebuildsCurvePathsZeroExtraTimes_tstUi2803_1`, `#testElevationProfile_pinchZoomAndDoubleTapResetViaSharedModifier_tstUi2803_1`, `#testTelemetryMetricGraph_doubleTapZoomResetWorksInPanMode_tstUi2803_1`, `#testBuildCachedTelemetryCurveGeometry_preservesDuplicateStartCoordinateSamples_tstUi2803_1`, `#testBuildCachedTelemetryCurveGeometry_paceOverlayWithTrailingStoppedSampleRetainsCurve_tstUi2803_1` (`12/12` PASS).
+  - `PaceFormatterTest#formatPaceMinutes_negativeAndExceedingMaxPace_matchFormatParity` (`5/5` PASS).
+  - `MapDetailLayoutViewportConsolidationUiTest#testGroupedMapDetailLayout_portraitZoomToolbarAndChartSectionsRenderCleanly_tstUi2803_2`, `#testGroupedMapDetailLayout_landscapeOverlayZoomToolbarAndChartsRenderCleanly_tstUi2803_2`, `#testTelemetryChartStack_resolvesConsistentDomainWhenTimestampsZero_tstUi2803_2`, `#testCaptureUnifiedTelemetryChartsLightAndDarkPng_tstUi2803_2` (`4/4` PASS).
+  - `AthleteProfileTabFlowIsolationTest#testNonPmcChipToggles_triggerZeroPmcRecomputations_andHrMaxFlowUpdatesReactively_tstUi2803_3`, `#testAthleteProfileContent_pmcTimeRangeClickInvokesCallbackOnceWithoutDoubleMutation_tstUi2803_3` (`2/2` PASS).
+  - Fresh Bounce-1 targeted Tier-1 regression (`83` suites, `395/395` PASS, `0` failures/errors/skips) + live `emulator-5554` verification (`sample_workout` `Map & Graphs` tab + `AthleteProfile`, `0` crashes in `logcat -b crash -d`) + 4 `Rule 8.5` PNGs (`ATT-8134_athlete_profile_body.png`, `ATT-8134_athlete_profile_pmc.png`, `ATT-8134_workout_detail_charts.png`, `ATT-8134_telemetry_charts_light_dark.png`) visually verified via `read_file`; SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8134/`.
+- **Jira**: `ATT-8134`
+- **Test Scenarios**:
+  1. *Shared Gestures, O(log N) Search, `drawWithCache` & Single-Pass Formatting (`TST-UI-2803.1`, `TelemetryChartGesturesAndCacheTest`, `TelemetryMetricUtilsTest`, `SpeedConversionContractTest`, `ElevationProfilePerformanceComposeTest`)*:
+     - Verify `TelemetryChartSearch.findFloorIndex` matches linear `indexOfLast` 1:1 in distance and time domains, and `resolveScrubSelection` preserves `FLOOR` (`ElevationProfile`) vs `NEAREST`/trackless (`TelemetryMetricGraph`) semantics.
+     - Verify Robolectric Compose `createComposeRule()` 2-finger pinch-zoom, double-tap zoom reset, and 1-finger scrub work identically on `TelemetryMetricGraph` and `ElevationProfile`, and that repeated 60-Hz `currentDistance` scrub updates invoke `drawWithCache` curve path building exactly once (`buildCount == 1`) with viewport min-max downsampling preserving HRV artifact gaps.
+     - Verify `TelemetryMetricUtils.formatValue` formats speed/pace directly via `SpeedFormatter.formatUserUnitWithUnits` / `PaceFormatter.formatPaceMinutesWithUnits` with zero round-trip `UserUnit2mps` calls and 100% metric/imperial parity.
+  2. *`MapDetailLayout` & `TelemetryChartStack` Deduplication and Domain Consistency (`TST-UI-2803.2`, `MapDetailLayoutViewportConsolidationUiTest`, `MapDetailLayoutOffscreenHeaderUiTest`, `MapDetailLayoutCrossDomainPanTest`, `TelemetryChartStackVisibilityTest`)*:
+     - Verify portrait and landscape `MapDetailLayout` render unified `GlobalTelemetryZoomToolbar`, synchronize zoom/pan/scrub across `ElevationProfile` and `TelemetryChartStack`, resolve `ProfileDomainMath.isEffectiveTimeDomain` consistently (including `TIME` domain with `totalTimeSec == 0L` falling back to `DISTANCE`), and preserve `ATT-9168` offscreen snapshot header isolation.
+  3. *`AthleteProfileViewModel` Tab-Flow Isolation, Reactive `_hrMaxBpm` & Live Emulator Visual Audit (`TST-UI-2803.3`, `AthleteProfileTabFlowIsolationTest`, `AthleteProfileViewModelHrvTest`, `AthleteProfileViewModelCardioPowerTest`, `AthleteProfileContractAndLocalizationTest`, `ArchitectureConformanceContractTest`)*:
+     - Verify switching Body/HRV/Cardio filter chips invokes `PowerPhysiologyCalculator.computePerformanceManagementChart` `0` additional times, while updating `settingsDataStore.hrMaxFlow` reactively recomputes `pmcUiState` & `uiState` immediately, and `AthleteProfileScreen` invokes `onSelectTimeRange` once per click without double mutation.
+     - Verify live `emulator-5554` launch (`com.atrainingtracker.debug`), Athlete Profile tabs & chart rendering, zero crashes in `logcat`, and `read_file` 4-point Visual Self-Inspection (`Rule 8.5`).
+
 ---
 
 ## Change History
@@ -1985,3 +2006,5 @@
 | `1.0.37` | 2026-11-22 | Lane 3 Author (`ATT-8126`, `--as agent1`) | `ATT-8126` | Promoted `TST-UI-2800` to `[Verified]` (`128/128` PASS across 20 suites incl. `BANALServiceRepositoryHotpathTest` 6/6, `RrArtifactFilterPerformanceEquivalenceTest` 3/3, `ProxySensorAndFilterManagerIdKeyTest` 5/5, `CockpitRecompositionBoundsComposeTest` 2/2, `ArchitectureConformanceContractTest` 11/11, `UiReflectionOnlyTestAuditContractTest` 4/4; `0` new warnings; live `emulator-5554` PNGs & `0` crashes; SHA-256 bundle under `docs/engineering/test_evidence/tickets/ATT-8126/`). |
 | `1.0.40` | 2026-11-22 | Lane 1 Author (`ATT-8129`, `--as agent1`) | `ATT-8129` | Added and verified `TST-UI-2801` (`[Verified]`, `.1`–`.3`) covering physical & classpath excision of 27 dead Fragment/SettingsDialogFragment/hybrid-bridge files + `StartOrResumeDialog` `DialogFragment` wrapper, `MainActivityWithNavigation` cleanup, pure Compose `EditDeviceDialog`/`StartOrResumeAlertDialog`/`GPSDisabledAlertDialog` behavioral Compose UI & Light/Dark + `emulator-5554` verification, and governance contract tests (`131/131` PASS across 22 suites, `source-reading-baseline` ratcheted `105 -> 104`, `0` crashes in `logcat -b crash -d`, SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8129/`). |
 | `1.0.41` | 2026-11-22 | Lane 1 Author (`ATT-8130`, `--as agent1`) | `ATT-8130` | Added and verified `TST-UI-2802` (`[Verified]`, `.1`–`.3`, `521/521` PASS across all targeted suites incl. `LegacyPackageDecommissioningTest`, `BTLERadarDeviceTest`, `HardwareHalIngestionIntegrationTest`, `DatabaseSchemaRegistryParityContractTest`, `DeadCodeEliminationContractTest`, `ManifestAndBuildConfigContractTest`, `SystemContextContractTest`, `SystemArchitectureDesignContractTest`, `ProGuardRulesContractTest`, `AdrCompletenessContractTest`, `ArchitectureConformanceContractTest`, `SourceTextReadingAuditContractTest`; 4 live `emulator-5554` PNGs verified via `read_file`; `0` crashes; SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8130/`). |
+| `1.0.42` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Added and verified `TST-UI-2803` (`[Verified]`, `.1`–`.3`, `15/15` new tests across `TelemetryChartGesturesAndCacheTest` `9/9`, `MapDetailLayoutViewportConsolidationUiTest` `4/4`, `AthleteProfileTabFlowIsolationTest` `2/2`; `332/332` targeted tests across `60` suites + `auto_gate.py` dependent tests PASS; live `emulator-5554` `0` crashes; 4 `Rule 8.5` PNGs verified via `read_file`; SHA-256 evidence bundle in `docs/engineering/test_evidence/tickets/ATT-8134/`). |
+| `1.0.43` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Stage 6 Bounce 1 heal on `TST-UI-2803`: added Pan-Mode double-tap zoom reset, lower-bound duplicate-`startDist` scan, trailing-stopped-sample PACE overlay, and `PaceFormatterTest` negative/`MAX_PACE` parity regression tests (`12/12` + `5/5` PASS; `395/395` fresh PASS across `83` targeted JUnit XML suites), removed dead `drawMultiSensorOverlayCurves`/`drawElevationOverlayCurves`/`OverlayXViewport`, and replaced `ATT-8134_workout_detail_charts.png` with populated `sample_workout` `Map & Graphs` tab (`Elevation Profile` + `Speed` + `Cadence` curves) verified via `read_file`. |

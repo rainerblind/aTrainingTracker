@@ -35,11 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -78,51 +74,6 @@ internal fun calculateElevationBoundsWithOverlays(
     }
     if (!hasOverlaySamples) return base
     return ElevationBounds(min, max, (max - min).coerceAtLeast(1.0))
-}
-
-internal fun DrawScope.drawElevationOverlayCurves(
-    activeOverlaySeries: List<TelemetrySourceSeries>,
-    allOverlaySeries: List<TelemetrySourceSeries>,
-    isTimeDomain: Boolean,
-    currentStartDist: Double,
-    visibleSpan: Double,
-    minAlt: Double,
-    altRange: Double,
-    width: Float,
-    height: Float
-) {
-    for (series in activeOverlaySeries) {
-        val colorIdx = allOverlaySeries.indexOfFirst { it.columnName == series.columnName }.coerceAtLeast(0)
-        val color = overlayStrokeColor(colorIdx)
-        val dashLength = if (colorIdx % 2 == 0) 6.dp.toPx() else 3.dp.toPx()
-        val gapLength = 3.dp.toPx()
-        val path = Path()
-        var started = false
-        for (pt in series.points) {
-            if (!pt.value.isFinite()) continue
-            val xVal = if (isTimeDomain) pt.timeSec.toDouble() else pt.distance
-            if (xVal < currentStartDist - visibleSpan || xVal > currentStartDist + visibleSpan * 2.0) continue
-            val x = ElevationProfileZoomMath.distanceToCanvasX(xVal, currentStartDist, visibleSpan, width)
-            val y = height - (((pt.value - minAlt) / altRange).toFloat() * height)
-            if (!started) {
-                path.moveTo(x, y)
-                started = true
-            } else {
-                path.lineTo(x, y)
-            }
-        }
-        if (started) {
-            drawPath(
-                path = path,
-                color = color,
-                style = Stroke(
-                    width = 1.8.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength), 0f),
-                    cap = StrokeCap.Round
-                )
-            )
-        }
-    }
 }
 
 internal fun DrawScope.drawElevationOverlayScrubDots(

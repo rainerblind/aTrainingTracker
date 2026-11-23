@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:05:02.744Z" hostname="rainer-HP-EliteBook-850-G5" time="31.107">
+  <properties/>
+  <testcase name="testAthleteProfileContent_pmcTimeRangeClickInvokesCallbackOnceWithoutDoubleMutation_tstUi2803_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="29.243"/>
+  <testcase name="testNonPmcChipToggles_triggerZeroPmcRecomputations_andHrMaxFlowUpdatesReactively_tstUi2803_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="1.858"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

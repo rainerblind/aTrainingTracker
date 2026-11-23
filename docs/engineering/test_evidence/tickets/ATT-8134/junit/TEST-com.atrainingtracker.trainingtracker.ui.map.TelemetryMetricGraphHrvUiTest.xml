@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T09:06:50.368Z" hostname="rainer-HP-EliteBook-850-G5" time="3.916">
+  <properties/>
+  <testcase name="testRmssdGraph_dynamicYAxisLightDarkPngAndSpatialSpread_TST_HRV_047" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest" time="0.512"/>
+  <testcase name="testDfaA1Graph_invertedYAxisSpatialBandsPortraitAndLandscape_TST_HRV_046" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest" time="0.827"/>
+  <testcase name="testDfaA1Graph_rendersZoneColorsInLightAndDarkAndSavesPng" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest" time="1.131"/>
+  <testcase name="testRmssdGraph_landscapeHistogramAndRestingScaling_TST_HRV_047" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest" time="0.184"/>
+  <testcase name="testDfaA1Graph_outOfRangeMaxT1_andHeartRateSolidInvariance" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphHrvUiTest" time="1.262"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
