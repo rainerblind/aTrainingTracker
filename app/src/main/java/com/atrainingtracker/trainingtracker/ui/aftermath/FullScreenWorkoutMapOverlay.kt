@@ -83,9 +83,14 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
+import com.atrainingtracker.trainingtracker.ui.map.FullScreenScrubberMetric
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
@@ -93,10 +98,13 @@ import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.WorkoutBaseMapType
 import com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerConfig
 import com.atrainingtracker.trainingtracker.ui.map.WorkoutMapSpatialLayer
+import com.atrainingtracker.trainingtracker.ui.map.resolveAvailableScrubberMetrics
+import com.atrainingtracker.trainingtracker.ui.map.resolveDefaultScrubberMetric
 import com.atrainingtracker.trainingtracker.ui.map.resolveFullscreenWorkoutMapContent
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
@@ -145,6 +153,15 @@ fun FullScreenWorkoutMapDialog(
     activeScrubPath: List<PathPoint>? = null,
     selectedDistance: Double? = null,
     activeScrubPoint: PathPoint? = null,
+    onSelectedDistanceChange: ((Double?) -> Unit)? = null,
+    minAltitudeOverride: Double? = null,
+    maxAltitudeOverride: Double? = null,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    hrZoneDistribution: ZoneDistributionData? = null,
+    powerZoneDistribution: ZoneDistributionData? = null,
+    tuningConfig: TuningConfig = TuningConfig(),
+    initialScrubberCollapsed: Boolean = false,
     bottomOverlay: @Composable BoxScope.() -> Unit = {}
 ) {
     Dialog(
@@ -188,6 +205,15 @@ fun FullScreenWorkoutMapDialog(
             activeScrubPath = activeScrubPath,
             selectedDistance = selectedDistance,
             activeScrubPoint = activeScrubPoint,
+            onSelectedDistanceChange = onSelectedDistanceChange,
+            minAltitudeOverride = minAltitudeOverride,
+            maxAltitudeOverride = maxAltitudeOverride,
+            hrZoneThresholds = hrZoneThresholds,
+            powerZoneThresholds = powerZoneThresholds,
+            hrZoneDistribution = hrZoneDistribution,
+            powerZoneDistribution = powerZoneDistribution,
+            tuningConfig = tuningConfig,
+            initialScrubberCollapsed = initialScrubberCollapsed,
             bottomOverlay = bottomOverlay
         )
     }
@@ -195,7 +221,8 @@ fun FullScreenWorkoutMapDialog(
 
 /**
  * Pure full-screen workout map layout hosting the map canvas, floating Close (`X`) and Layers controls,
- * modal [WorkoutMapLayersSheet], system Back handling, and optional [bottomOverlay] slot (`REQ-MAP-069`).
+ * modal [WorkoutMapLayersSheet], system Back handling, collapsible metric scrubber panel (`REQ-MAP-070`),
+ * and optional [bottomOverlay] slot (`REQ-MAP-069`).
  */
 @Composable
 internal fun FullScreenWorkoutMapContent(
@@ -219,34 +246,72 @@ internal fun FullScreenWorkoutMapContent(
     activeScrubPath: List<PathPoint>? = null,
     selectedDistance: Double? = null,
     activeScrubPoint: PathPoint? = null,
+    onSelectedDistanceChange: ((Double?) -> Unit)? = null,
+    minAltitudeOverride: Double? = null,
+    maxAltitudeOverride: Double? = null,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    hrZoneDistribution: ZoneDistributionData? = null,
+    powerZoneDistribution: ZoneDistributionData? = null,
+    tuningConfig: TuningConfig = TuningConfig(),
     initialShowLayersSheet: Boolean = false,
+    initialScrubberCollapsed: Boolean = false,
     bottomOverlay: @Composable BoxScope.() -> Unit = {},
-    mapSlot: @Composable (
+    mapSlot: (@Composable (
         modifier: Modifier,
         baseMapType: WorkoutBaseMapType,
         resolvedContent: com.atrainingtracker.trainingtracker.ui.map.ResolvedFullscreenWorkoutMapContent,
         mapContentBlock: MapContentScope.() -> Unit
-    ) -> Unit = { mapModifier, baseMapType, _, mapContentBlock ->
-        val noLocation = remember { MutableStateFlow<LatLng?>(null) }
-        ATrainingTrackerMap(
-            zoomFocus = MapZoomFocus.FIT_PRIMARY,
-            bSportType = bSportType,
-            currentLocationFlow = noLocation,
-            selectedDistance = selectedDistance,
-            activeScrubPath = activeScrubPath,
-            activeScrubPoint = activeScrubPoint,
-            mapTypeOverride = baseMapType.mapType,
-            contentPadding = WindowInsets.navigationBars.asPaddingValues(),
-            modifier = mapModifier,
-            content = mapContentBlock
-        )
-    }
+    ) -> Unit)? = null
 ) {
     var showLayersSheet by rememberSaveable { mutableStateOf(initialShowLayersSheet) }
+    var localSelectedDistance by rememberSaveable { mutableStateOf(selectedDistance) }
+    LaunchedEffect(selectedDistance) {
+        if (onSelectedDistanceChange == null) {
+            localSelectedDistance = selectedDistance
+        }
+    }
+    val effectiveSelectedDistance = if (onSelectedDistanceChange != null) selectedDistance else localSelectedDistance
+    val handleDistanceSelected: (Double?) -> Unit = onSelectedDistanceChange ?: { localSelectedDistance = it }
+
+    val availableScrubberMetrics = remember(activeScrubPath, tuningConfig.enableCriticalPowerModel) {
+        resolveAvailableScrubberMetrics(
+            path = activeScrubPath,
+            enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel
+        )
+    }
+    var userSelectedMetric by rememberSaveable { mutableStateOf<FullScreenScrubberMetric?>(null) }
+    val effectiveScrubberMetric = remember(userSelectedMetric, availableScrubberMetrics) {
+        userSelectedMetric?.takeIf { it in availableScrubberMetrics }
+            ?: resolveDefaultScrubberMetric(availableScrubberMetrics)
+    }
+    var isScrubberCollapsed by rememberSaveable { mutableStateOf(initialScrubberCollapsed) }
+    var scrubberDockHeightDp by remember { mutableStateOf(0.dp) }
+
+    val resolvedScrubPoint = remember(activeScrubPoint, effectiveSelectedDistance, activeScrubPath) {
+        if (activeScrubPoint != null && effectiveSelectedDistance == selectedDistance) {
+            activeScrubPoint
+        } else if (effectiveSelectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
+            TelemetryMetricUtils.findNearestPoint(
+                points = activeScrubPath,
+                targetValue = effectiveSelectedDistance,
+                isTimeDomain = false
+            )
+        } else {
+            null
+        }
+    }
+
     val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val effectiveBaseMapType = layerConfig.effectiveBaseMapType(isDarkTheme)
     val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
     val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
+    val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val effectiveMapBottomPadding = if (availableScrubberMetrics.isNotEmpty()) {
+        navBarBottomPadding + scrubberDockHeightDp
+    } else {
+        navBarBottomPadding
+    }
 
     val resolvedContent = remember(
         tracks,
@@ -316,12 +381,28 @@ internal fun FullScreenWorkoutMapContent(
             .background(MaterialTheme.colorScheme.surface)
             .testTag(FullScreenWorkoutMapTestTags.ROOT)
     ) {
-        mapSlot(
-            Modifier.fillMaxSize(),
-            effectiveBaseMapType,
-            resolvedContent,
-            mapContentBlock
-        )
+        if (mapSlot != null) {
+            mapSlot(
+                Modifier.fillMaxSize(),
+                effectiveBaseMapType,
+                resolvedContent,
+                mapContentBlock
+            )
+        } else {
+            val noLocation = remember { MutableStateFlow<LatLng?>(null) }
+            ATrainingTrackerMap(
+                zoomFocus = MapZoomFocus.FIT_PRIMARY,
+                bSportType = bSportType,
+                currentLocationFlow = noLocation,
+                selectedDistance = effectiveSelectedDistance,
+                activeScrubPath = activeScrubPath,
+                activeScrubPoint = resolvedScrubPoint,
+                mapTypeOverride = effectiveBaseMapType.mapType,
+                contentPadding = PaddingValues(bottom = effectiveMapBottomPadding),
+                modifier = Modifier.fillMaxSize(),
+                content = mapContentBlock
+            )
+        }
 
         // Floating Top-Start Close (X) Button (REQ-MAP-069.2)
         Box(
@@ -390,7 +471,39 @@ internal fun FullScreenWorkoutMapContent(
             }
         }
 
-        // Extensibility slot for ATT-9030 bottom collapsible metric scrubber
+        // Collapsible bottom metric scrubber panel & live floating readout pill (REQ-MAP-070 / ATT-9030)
+        if (activeScrubPath != null && effectiveScrubberMetric != null) {
+            FullScreenWorkoutMapScrubberPanel(
+                path = activeScrubPath,
+                bSportType = bSportType,
+                availableMetrics = availableScrubberMetrics,
+                selectedMetric = effectiveScrubberMetric,
+                onSelectMetric = { userSelectedMetric = it },
+                isCollapsed = isScrubberCollapsed,
+                onCollapsedChange = { isScrubberCollapsed = it },
+                selectedDistance = effectiveSelectedDistance,
+                activeScrubPoint = resolvedScrubPoint,
+                onDistanceSelected = handleDistanceSelected,
+                minAltitudeOverride = minAltitudeOverride,
+                maxAltitudeOverride = maxAltitudeOverride,
+                climbs = resolvedContent.climbs,
+                hrZoneThresholds = hrZoneThresholds,
+                powerZoneThresholds = powerZoneThresholds,
+                hrZoneDistribution = hrZoneDistribution,
+                powerZoneDistribution = powerZoneDistribution,
+                tuningConfig = tuningConfig,
+                onDockHeightChanged = { measuredHeight ->
+                    if (measuredHeight != scrubberDockHeightDp) {
+                        scrubberDockHeightDp = measuredHeight
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .zIndex(1f)
+            )
+        }
+
+        // Additional extensibility slot
         bottomOverlay()
     }
 

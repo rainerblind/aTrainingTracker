@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeAlignmentTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:33.397Z" hostname="rainer-HP-EliteBook-850-G5" time="0.008">
+  <properties/>
+  <testcase name="testZeroExtraRowZoomControls_MapDetailLayoutAndToolbarPill_TST_UI_398_3" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeAlignmentTest" time="0.007"/>
+  <testcase name="testLandscapeStackedCharts_72PercentPlotWidthAndZeroDoublePadding_TST_UI_398_4" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeAlignmentTest" time="0.001"/>
+  <testcase name="testMathematicalScrubberAlignment_1to1CoordinateParityAcrossStackedCharts" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphLandscapeAlignmentTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:03.980Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testClimbBadge_accessibilityFontScaling_metrics" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_fixedHeight_rescalesChartWithoutOverflow" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.001"/>
+  <testcase name="testClimbBadge_zeroTopClearance_whenClimbsEmpty" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_preservesExistingLayoutAndClimbContracts" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_dynamicTopClearance_allocatesRequiredPadding" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_directEngine_clampedPillTopAndLeft_ltrAndRtl" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.003"/>
+  <testcase name="testClimbBadge_zeroTopClearance_inDetailView" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.001"/>
+  <testcase name="testClimbBadge_verticalCeilingAndHorizontalSafetyMargins" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_directEngine_clearanceAndEffectivePadding" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_constrainedHeight_minimumChartHeightGuarantee" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <testcase name="testClimbBadge_containerHeightStability_preservesTotalCanvasHeight" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileClimbBadgeClippingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

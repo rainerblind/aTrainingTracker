@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenSectionSlottingContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:57:53.529Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testPartitioningLogic_chartsAndZonesBeforeMap" classname="com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenSectionSlottingContractTest" time="0.0"/>
+  <testcase name="testTrackOnMapScreen_structuralContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenSectionSlottingContractTest" time="0.001"/>
+  <testcase name="testPartitioningLogic_defaultOrder" classname="com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenSectionSlottingContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

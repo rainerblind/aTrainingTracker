@@ -51,4 +51,9 @@
     <string name="workout_map_layer_primary_track">Traza del entrenamiento</string>
     <string name="workout_map_layer_markers">Marcadores y lugares favoritos</string>
     <string name="workout_map_layer_lap_highlights">Resaltado de vueltas</string>
+    <string name="workout_map_scrubber_metric_elevation">Elevación</string>
+    <string name="workout_map_scrubber_collapse">Contraer gráfico de métricas</string>
+    <string name="workout_map_scrubber_expand">Expandir gráfico de métricas</string>
+    <string name="workout_map_scrubber_clear_selection">Borrar posición seleccionada</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Seleccionar métrica del gráfico</string>
 </resources>

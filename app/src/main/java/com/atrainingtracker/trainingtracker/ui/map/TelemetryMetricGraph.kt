@@ -148,7 +148,8 @@ fun TelemetryMetricGraph(
     dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     overlaySeries: List<TelemetrySourceSeries> = emptyList(),
     enabledOverlayIds: Set<String> = emptySet(),
-    onToggleOverlay: ((String) -> Unit)? = null
+    onToggleOverlay: ((String) -> Unit)? = null,
+    clearSelectionOnDragEnd: Boolean = true
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -496,7 +497,8 @@ fun TelemetryMetricGraph(
             indexSemantics = ChartScrubIndexSemantics.NEAREST,
             onZoomChanged = onZoomChanged,
             onDistanceSelected = onDistanceSelected,
-            onPointSelected = onPointSelected
+            onPointSelected = onPointSelected,
+            clearSelectionOnDragEnd = clearSelectionOnDragEnd
         )
 
     val nonZonedHistogram = remember(rawValues, pathPoints, dataMin, dataMax, accentColor, zoneDistribution, metricType, dfaA1ThresholdT1, dfaA1ThresholdT2) {

@@ -51,4 +51,9 @@
     <string name="workout_map_layer_primary_track">Trainingsstrecke</string>
     <string name="workout_map_layer_markers">Marker &amp; Lieblingsorte</string>
     <string name="workout_map_layer_lap_highlights">Runden-Hervorhebungen</string>
+    <string name="workout_map_scrubber_metric_elevation">Höhe</string>
+    <string name="workout_map_scrubber_collapse">Metrikdiagramm einklappen</string>
+    <string name="workout_map_scrubber_expand">Metrikdiagramm ausklappen</string>
+    <string name="workout_map_scrubber_clear_selection">Ausgewählte Position zurücksetzen</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Diagrammmetrik auswählen</string>
 </resources>

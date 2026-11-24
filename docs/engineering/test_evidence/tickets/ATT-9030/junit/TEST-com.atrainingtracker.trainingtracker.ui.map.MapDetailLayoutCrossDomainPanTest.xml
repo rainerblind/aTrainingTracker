@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:23.312Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testCrossDomainSynchronizedPanning_elevationDragUpdatesTelemetryInLockstep" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" time="0.002"/>
+  <testcase name="testZeroAndNegativeSpanRobustness" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" time="0.0"/>
+  <testcase name="testFractionToDomain_mapsTimeAndClampsWithinZoomLimits" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" time="0.0"/>
+  <testcase name="testCrossDomainSynchronizedPanning_telemetryDragUpdatesElevationInLockstep" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" time="0.001"/>
+  <testcase name="testFractionToDomain_mapsDistanceAndClampsWithinZoomLimits" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" time="0.0"/>
+  <testcase name="testDomainToFraction_mapsDistanceToNormalizedFraction" classname="com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutCrossDomainPanTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

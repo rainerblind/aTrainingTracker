@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTracklessScrubbingTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:36.851Z" hostname="rainer-HP-EliteBook-850-G5" time="0.004">
+  <properties/>
+  <testcase name="testTracklessTelemetryScrubbingMath" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTracklessScrubbingTest" time="0.0"/>
+  <testcase name="testTracklessScrubbing_contractEnforcesTimeDomainAndDirectTimeDispatch" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTracklessScrubbingTest" time="0.002"/>
+  <testcase name="testTracklessCursor_contractEvaluatesDirectlyAgainstTimeSpan" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTracklessScrubbingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

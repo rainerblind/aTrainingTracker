@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbAdaptiveHeightTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:10.192Z" hostname="rainer-HP-EliteBook-850-G5" time="0.091">
+  <properties/>
+  <testcase name="testLiveClimbSheet_sourceCodeDoesNotContainHardcodedFixedHeight" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbAdaptiveHeightTest" time="0.001"/>
+  <testcase name="testLiveClimbElevationBounds_computesAdaptiveHeightFromPathPoints" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbAdaptiveHeightTest" time="0.09"/>
+  <testcase name="testCalculateElevationProfileHeight_acrossClimbCategories" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbAdaptiveHeightTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

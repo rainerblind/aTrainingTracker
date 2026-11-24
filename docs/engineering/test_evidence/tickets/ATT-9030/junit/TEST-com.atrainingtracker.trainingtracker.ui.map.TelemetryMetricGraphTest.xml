@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:33.440Z" hostname="rainer-HP-EliteBook-850-G5" time="0.361">
+  <properties/>
+  <testcase name="testWorkoutSummary_telemetryGraphOrdering_speedPrecedesHeartRate" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testHasPowerData_validation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testBoundaryLabels_rendersStartAndEnd" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testUniversalMarginalHistogram_REQ_UI_446_contract" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testFormatPaceMinutes_standardAndEdgeCases" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.001"/>
+  <testcase name="testHasHeartRateData_validation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testExtractMetricValue_paceStoppedThreshold" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testHasSpeedData_validation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testExtractMetricValue_speedAndPace" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.018"/>
+  <testcase name="testExtractMetricValue_heartRateAndPower" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testTelemetryMetricGraph_paceYAxisLabelsAreMmSs" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testLayoutInvariants_matchesElevationProfilePadding" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testComputeLinearMarginalHistogram_functionalValidation" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.01"/>
+  <testcase name="testMapDetailLayout_integrationContracts" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.001"/>
+  <testcase name="testTelemetryMetricGraph_zoomedCoordinateMappingAndScrubbing" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testXAxisMilestoneDecimation_preventsLabelCollisions" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testMilestoneLabelFormatting_omitsRedundantUnit" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.0"/>
+  <testcase name="testFormatValue_paceFormattingMetricAndImperial" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphTest" time="0.33"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

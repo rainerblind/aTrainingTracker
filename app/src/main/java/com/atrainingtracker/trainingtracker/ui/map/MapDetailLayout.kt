@@ -191,7 +191,8 @@ data class MapDetailInteractionCallbacks(
     val onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null,
     val onSnapshotComplete: (() -> Unit)? = null,
     val onToggleChartVisibility: ((TelemetryChartKind) -> Unit)? = null,
-    val onLowerScrollViewportPositioned: ((Float) -> Unit)? = null
+    val onLowerScrollViewportPositioned: ((Float) -> Unit)? = null,
+    val onScrubDistanceChange: ((Double?) -> Unit)? = null
 )
 
 private data class MapDetailZoomState(
@@ -363,7 +364,8 @@ fun MapDetailLayout(
     activityCarriageTimeline: ActivityCarriageTimeline? = null,
     showActivityCarriageBar: Boolean = false,
     lowerScrollState: ScrollState? = null,
-    onLowerScrollViewportPositioned: ((Float) -> Unit)? = null
+    onLowerScrollViewportPositioned: ((Float) -> Unit)? = null,
+    onScrubDistanceChange: ((Double?) -> Unit)? = null
 ) {
     MapDetailLayout(
         bSportType = bSportType,
@@ -409,7 +411,8 @@ fun MapDetailLayout(
             onInteractiveCanvasTouch = onInteractiveCanvasTouch,
             onSnapshotComplete = onSnapshotComplete,
             onToggleChartVisibility = onToggleChartVisibility,
-            onLowerScrollViewportPositioned = onLowerScrollViewportPositioned
+            onLowerScrollViewportPositioned = onLowerScrollViewportPositioned,
+            onScrubDistanceChange = onScrubDistanceChange
         ),
         analyticsContent = analyticsContent,
         metadataContent = metadataContent,
@@ -477,6 +480,7 @@ fun MapDetailLayout(
     val onSnapshotComplete = callbacks.onSnapshotComplete
     val onToggleChartVisibility = callbacks.onToggleChartVisibility
     val onLowerScrollViewportPositioned = callbacks.onLowerScrollViewportPositioned
+    val onScrubDistanceChange = callbacks.onScrubDistanceChange
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -527,10 +531,14 @@ fun MapDetailLayout(
         }
     }
     var showShareModeSheet by remember { mutableStateOf(false) }
-    var selectedDistance by remember { mutableStateOf<Double?>(null) }
+    var selectedDistance by remember { mutableStateOf(externalScrubDistance) }
 
     LaunchedEffect(externalScrubDistance) {
         selectedDistance = externalScrubDistance
+    }
+    val updateSelectedDistance: (Double?) -> Unit = { nextDistance ->
+        selectedDistance = nextDistance
+        onScrubDistanceChange?.invoke(nextDistance)
     }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
@@ -832,7 +840,7 @@ fun MapDetailLayout(
                     timeline = activityCarriageTimeline,
                     pathPoints = activeScrubPath,
                     currentDistance = selectedDistance,
-                    onDistanceSelected = { selectedDistance = it },
+                    onDistanceSelected = updateSelectedDistance,
                     xAxisDomain = carriageBarDomain,
                     zoomScale = profileZoomScale,
                     startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, carriageBarTotalSpan, profileZoomScale),
@@ -877,7 +885,7 @@ fun MapDetailLayout(
                             currentDistance = selectedDistance,
                             minAltitudeOverride = minAltitudeOverride,
                             maxAltitudeOverride = maxAltitudeOverride,
-                            onDistanceSelected = { selectedDistance = it },
+                            onDistanceSelected = updateSelectedDistance,
                             showZoomControls = showZoomControls,
                             xAxisDomain = effectiveElevationDomain,
                             bSportType = bSportType,
@@ -924,7 +932,7 @@ fun MapDetailLayout(
                         bSportType = bSportType,
                         tuningConfig = tuningConfig,
                         selectedDistance = selectedDistance,
-                        onDistanceSelected = { selectedDistance = it },
+                        onDistanceSelected = updateSelectedDistance,
                         activeTelemetryDomain = activeTelemetryDomain,
                         isTrackless = isTrackless,
                         zoomScale = profileZoomScale,

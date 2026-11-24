@@ -51,4 +51,9 @@
     <string name="workout_map_layer_primary_track">Trainingstrack</string>
     <string name="workout_map_layer_markers">Markeringen &amp; favoriete locaties</string>
     <string name="workout_map_layer_lap_highlights">Rondemarkeringen</string>
+    <string name="workout_map_scrubber_metric_elevation">Hoogte</string>
+    <string name="workout_map_scrubber_collapse">Metriekgrafiek samenvouwen</string>
+    <string name="workout_map_scrubber_expand">Metriekgrafiek uitvouwen</string>
+    <string name="workout_map_scrubber_clear_selection">Geselecteerde positie wissen</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Grafiekmetriek selecteren</string>
 </resources>

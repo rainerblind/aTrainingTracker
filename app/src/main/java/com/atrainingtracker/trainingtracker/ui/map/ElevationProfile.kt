@@ -268,6 +268,7 @@ fun ElevationProfile(
     overlaySeries: List<TelemetrySourceSeries> = emptyList(),
     enabledOverlayIds: Set<String> = emptySet(),
     onToggleOverlay: ((String) -> Unit)? = null,
+    clearSelectionOnDragEnd: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -304,6 +305,7 @@ fun ElevationProfile(
         overlaySeries = overlaySeries,
         enabledOverlayIds = enabledOverlayIds,
         onToggleOverlay = onToggleOverlay,
+        clearSelectionOnDragEnd = clearSelectionOnDragEnd,
         modifier = modifier
     )
 }
@@ -337,7 +339,8 @@ fun ElevationProfile(
     alignWithTelemetryCharts: Boolean = false,
     overlaySeries: List<TelemetrySourceSeries> = emptyList(),
     enabledOverlayIds: Set<String> = emptySet(),
-    onToggleOverlay: ((String) -> Unit)? = null
+    onToggleOverlay: ((String) -> Unit)? = null,
+    clearSelectionOnDragEnd: Boolean = true
 ) {
     if (pathPoints.size < 2 && showEmptyState) {
         ElevationProfileEmptyState(
@@ -573,7 +576,8 @@ fun ElevationProfile(
             indexSemantics = ChartScrubIndexSemantics.FLOOR,
             onZoomChanged = updateZoom,
             onDistanceSelected = onDistanceSelected,
-            onPointSelected = onPointSelected
+            onPointSelected = onPointSelected,
+            clearSelectionOnDragEnd = clearSelectionOnDragEnd
         )
 
         val elevationDrawCacheBuilder: CacheDrawScope.() -> DrawResult = remember(

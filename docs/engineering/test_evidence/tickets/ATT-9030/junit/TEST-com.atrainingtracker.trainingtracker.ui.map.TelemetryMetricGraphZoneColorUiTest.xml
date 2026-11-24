@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:33.841Z" hostname="rainer-HP-EliteBook-850-G5" time="3.163">
+  <properties/>
+  <testcase name="calculateNiceIntermediateTicks_selectsDynamicRoundStepsForUnzonedHrAndPower" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" time="0.155"/>
+  <testcase name="zoneStrokeColor_meetsWcagContrastAcrossLightDarkAndAmoledForAll7Zones" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" time="0.102"/>
+  <testcase name="renderZoneColoredGraphsGallery_lightAndDarkAmoled_verifiesPixelsAndSavesPng" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" time="2.436"/>
+  <testcase name="overlayStrokeColor_avoidsZoneColorsWhenPrimaryCurveIsZoneColored" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" time="0.164"/>
+  <testcase name="resolveMetricZoneStrokeColor_resolvesZoneColorsAndNullFallbackWhenUnzoned" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" time="0.191"/>
+  <testcase name="buildZoneBandsVerticalGradientStops_producesMonotonicHardSteppedStopsForHrAndPower" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphZoneColorUiTest" time="0.115"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

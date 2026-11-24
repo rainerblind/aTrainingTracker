@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:28.772Z" hostname="rainer-HP-EliteBook-850-G5" time="2.866">
+  <properties/>
+  <testcase name="testBuildCachedTelemetryCurveGeometry_preservesHrvArtifactGapsAndCapsDensePoints_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.151"/>
+  <testcase name="testElevationProfile_pinchZoomAndDoubleTapResetViaSharedModifier_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.187"/>
+  <testcase name="testFormatValue_speedAndPaceAvoidRoundTripConversions_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.455"/>
+  <testcase name="testBuildCachedTelemetryCurveGeometry_preservesDuplicateStartCoordinateSamples_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.094"/>
+  <testcase name="testResolveScrubSelection_preservesFloorNearestAndTracklessSemantics_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.077"/>
+  <testcase name="testBuildCachedTelemetryCurveGeometry_paceOverlayWithTrailingStoppedSampleRetainsCurve_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.106"/>
+  <testcase name="testTelemetryMetricGraph_supportsPinchZoomAndDoubleTapResetViaSharedGestures_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.15"/>
+  <testcase name="testDrawWithCache_60HzScrubbingRebuildsCurvePathsZeroExtraTimes_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.86"/>
+  <testcase name="testFindFloorIndex_exactParityWithLinearIndexOfLast_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.085"/>
+  <testcase name="testTelemetryMetricGraph_doubleTapZoomResetWorksInPanMode_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.097"/>
+  <testcase name="testDownsampleSegmentMinMax_capsVerticesAndPreservesPeakSpikesAndAnchors_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.103"/>
+  <testcase name="testElevationProfileDrawWithCache_60HzScrubbingRebuildsCurvePathsZeroExtraTimes_tstUi2803_1" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartGesturesAndCacheTest" time="0.499"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>
