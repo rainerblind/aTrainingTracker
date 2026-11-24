@@ -115,7 +115,7 @@ class RadarBrakeLightConcurrencyStressTest {
         val inMemory = InMemoryPreferencesDataStore()
         val store = TuningPreferencesDataStore.createForTesting(
             context = mockContext,
-            testScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
+            testScope = TestScope(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)),
             dataStoreOverride = inMemory
         )
         TuningPreferencesDataStore.setInstanceForTesting(store)
@@ -450,5 +450,146 @@ class RadarBrakeLightConcurrencyStressTest {
         assertFalse("AB-BA deadlock detected by ThreadMXBean!", deadlockDetected.get())
         assertTrue("Concurrency stress test timed out (possible deadlock)", finished)
         assertNull("Unexpected exception during concurrency stress test: ${failure.get()}", failure.get())
+    }
+
+    /**
+     * TST-CON-059.2 / REQ-CON-059.2 (ATT-8673):
+     * With real InMemoryPreferencesDataStore, rapid cycleNextMode() (`OFF -> AUTO -> PELOTON -> SOLID`)
+     * defers both hardware dispatch AND DataStore persistence strictly into flushDebounce() (zero premature
+     * editAndSync GATT writes during tapping; strictly 1 SOLID hardware write on flush).
+     */
+    @Test
+    fun debouncedCycleNextModeWithRealDataStore_coalescesToSingleHardwareWrite_tstCon059_2() = runTest {
+        val mockContext = mockk<Context>(relaxed = true)
+        val tempFilesDir = java.nio.file.Files.createTempDirectory("radar-debounce-").toFile()
+        every { mockContext.applicationContext } returns mockContext
+        every { mockContext.filesDir } returns tempFilesDir
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
+
+        val testScope = TestScope(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val store = TuningPreferencesDataStore.createForTesting(
+            context = mockContext,
+            testScope = testScope,
+            dataStoreOverride = InMemoryPreferencesDataStore()
+        )
+        TuningPreferencesDataStore.setInstanceForTesting(store)
+        SmartRadarLightEngine.coroutineDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        RadarLightController.setPersistenceScopeForTesting(testScope)
+
+        val dispatchedModes = mutableListOf<RadarLightMode>()
+        val mockDevice = object : RadarLightDeviceClient {
+            override fun setLightMode(mode: RadarLightMode): Boolean {
+                dispatchedModes.add(mode)
+                return true
+            }
+        }
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.OFF))
+        testScheduler.advanceUntilIdle()
+        dispatchedModes.clear()
+
+        // Rapid taps: OFF -> AUTO -> PELOTON -> SOLID
+        val sAuto = RadarLightController.cycleNextMode()
+        assertTrue(sAuto.isAuto)
+        testScheduler.advanceUntilIdle()
+        assertTrue("Zero premature hardware writes allowed when passing through AUTO", dispatchedModes.isEmpty())
+
+        RadarLightController.cycleNextMode() // PELOTON
+        val sSolid = RadarLightController.cycleNextMode() // SOLID
+        assertEquals(RadarLightMode.SOLID, sSolid.mode)
+        testScheduler.advanceUntilIdle()
+        assertTrue("Zero premature hardware writes allowed before debounce flush", dispatchedModes.isEmpty())
+
+        // Flush debounce -> strictly 1 hardware write (SOLID) and persisted FIXED_WORKOUT_MODE / SOLID
+        RadarLightController.flushDebounce()
+        testScheduler.advanceUntilIdle()
+        assertEquals(listOf(RadarLightMode.SOLID), dispatchedModes)
+        assertEquals(RadarLightControlMode.FIXED_WORKOUT_MODE, store.getTuningConfig().radarLightControlMode)
+        assertEquals(RadarLightMode.SOLID, store.getTuningConfig().radarLightDefaultMode)
+        SmartRadarLightEngine.stop()
+    }
+
+    /**
+     * TST-CON-059.3 / REQ-CON-059.3 (ATT-8673):
+     * Mid-ride setAutoMode() after starting a workout in FIXED_WORKOUT_MODE is immune to initial stale `false`
+     * emissions from radarSmartLightAutomationFlow.collectLatest and unrelated editAndSync() callbacks;
+     * rapid setManualLightMode -> setAutoMode converges cleanly to SMART_AUTOMATION; external DataStore updates
+     * clear isManualOverridden strictly before enabling and propagate immediately.
+     */
+    @Test
+    fun rapidManualToAutoAndMidRideCollectLatest_neverRevertAutoModeWhileExternalUpdatesPropagate_tstCon059_3() = runTest {
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockSensorManager = mockk<android.hardware.SensorManager>(relaxed = true)
+        val mockLightSensor = mockk<android.hardware.Sensor>(relaxed = true)
+        val tempFilesDir = java.nio.file.Files.createTempDirectory("radar-persist-").toFile()
+        every { mockContext.applicationContext } returns mockContext
+        every { mockContext.filesDir } returns tempFilesDir
+        every { mockContext.getSystemService(Context.SENSOR_SERVICE) } returns mockSensorManager
+        every { mockSensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_LIGHT) } returns mockLightSensor
+        every { mockSensorManager.registerListener(any(), any<android.hardware.Sensor>(), any()) } returns true
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
+
+        val storeScope = TestScope(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val delayedPersistDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        val delayedPersistScope = TestScope(delayedPersistDispatcher)
+        val store = TuningPreferencesDataStore.createForTesting(
+            context = mockContext,
+            testScope = storeScope,
+            dataStoreOverride = InMemoryPreferencesDataStore()
+        )
+        TuningPreferencesDataStore.setInstanceForTesting(store)
+        SmartRadarLightEngine.coroutineDispatcher = UnconfinedTestDispatcher(testScheduler)
+        RadarLightController.setPersistenceScopeForTesting(delayedPersistScope)
+
+        val mockDevice = object : RadarLightDeviceClient {
+            override fun setLightMode(mode: RadarLightMode): Boolean = true
+        }
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // Pre-seed DataStore to FIXED_WORKOUT_MODE / SOLID, then start cycling workout in manual mode
+        store.updateRadarLightSelection(isAuto = false, mode = RadarLightMode.SOLID)
+        testScheduler.advanceUntilIdle()
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertFalse(RadarLightController.isAutoMode.value)
+        assertFalse(SmartRadarLightEngine.isListening)
+
+        // Mid-ride setAutoMode(): persistence coroutine is queued on StandardTestDispatcher (NOT yet executed),
+        // while SmartRadarLightEngine.start(ctx) runs immediately on UnconfinedTestDispatcher and collects stale `false`!
+        RadarLightController.setAutoMode()
+        assertTrue("Initial stale false from collectLatest must NOT kill isAutomationEnabled", SmartRadarLightEngine.isAutomationEnabled)
+        assertTrue("Initial stale false from collectLatest must NOT kill sensor listening", SmartRadarLightEngine.isListening)
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        // Simulate unrelated editAndSync() while internal persist is still in flight
+        store.updateAutoPauseBikeEnabled(false)
+        assertTrue("Unrelated editAndSync with old FIXED_WORKOUT_MODE must NOT revert isAutoMode", RadarLightController.isAutoMode.value)
+        assertTrue(SmartRadarLightEngine.isAutomationEnabled)
+
+        // Drain delayed persistence -> DataStore commits SMART_AUTOMATION and clears pending guard
+        testScheduler.advanceUntilIdle()
+        assertEquals(RadarLightControlMode.SMART_AUTOMATION, store.getTuningConfig().radarLightControlMode)
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertTrue(SmartRadarLightEngine.isAutomationEnabled)
+
+        // Rapid setManualLightMode(SOLID) -> setAutoMode() converges to SMART_AUTOMATION
+        RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+        RadarLightController.setAutoMode()
+        testScheduler.advanceUntilIdle()
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertTrue(SmartRadarLightEngine.isAutomationEnabled)
+        assertFalse(SmartRadarLightEngine.isManualOverridden)
+        assertEquals(RadarLightControlMode.SMART_AUTOMATION, store.getTuningConfig().radarLightControlMode)
+
+        // External DataStore updates propagate immediately and clear isManualOverridden before enabling
+        store.updateRadarLightSelection(isAuto = false, mode = RadarLightMode.PELOTON)
+        assertFalse(RadarLightController.isAutoMode.value)
+        SmartRadarLightEngine.onManualOverride(RadarLightMode.PELOTON)
+        store.updateRadarLightControlMode(RadarLightControlMode.SMART_AUTOMATION)
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertTrue(SmartRadarLightEngine.isAutomationEnabled)
+        assertFalse("External SMART_AUTOMATION update must clear isManualOverridden before enabling", SmartRadarLightEngine.isManualOverridden)
+
+        SmartRadarLightEngine.stop()
     }
 }

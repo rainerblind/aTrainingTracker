@@ -289,4 +289,98 @@ class SmartRadarLightEngineTest {
         SmartRadarLightEngine.onLocationAndTimeChanged(0.0, 0.0, 1700050000000L)
         assertFalse(SmartRadarLightEngine.isTunnelActive)
     }
+
+    /**
+     * TST-CON-059.1 / REQ-CON-059.1 (ATT-8673):
+     * resumeAutomation() syncs live RadarStateRepository.threatState and dispatches immediately
+     * even when elapsedRealtime < RATE_LIMIT_INTERVAL_MS (1000L) or < 1500ms after prior dispatch.
+     */
+    @Test
+    fun testResumeAutomation_syncsLiveThreatAndBypassesRateLimit_tstCon059_1() {
+        // setUp() mocks SystemClock.elapsedRealtime() == 1000L (< 1500ms rate-limit interval)
+        SmartRadarLightEngine.onManualOverride(RadarLightMode.SOLID)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+
+        // Publish live APPROACHING threat into RadarStateRepository while engine is NOT observing
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.APPROACHING,
+                targets = listOf(RadarTarget(1, 45f, 14f, ThreatLevel.APPROACHING)),
+                lastUpdateRealtimeMs = 1000L,
+                source = RadarSource.BLE
+            )
+        )
+        // Override with PELOTON manually, then resumeAutomation() -> must sync Stage 1 (SOLID) immediately
+        SmartRadarLightEngine.onManualOverride(RadarLightMode.PELOTON)
+        SmartRadarLightEngine.resumeAutomation()
+        assertFalse(SmartRadarLightEngine.isManualOverridden)
+        assertEquals(1, SmartRadarLightEngine.currentThreatStage)
+        assertEquals(RadarLightMode.SOLID, SmartRadarLightEngine.lastDispatchedMode)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        verify { mockClient.setLightMode(RadarLightMode.SOLID) }
+
+        // Clear threat and switch manual -> resumeAutomation() < 1500ms later still dispatches OFF immediately
+        every { android.os.SystemClock.elapsedRealtime() } returns 5000L
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.NONE,
+                targets = emptyList(),
+                lastUpdateRealtimeMs = 5000L,
+                source = RadarSource.BLE
+            )
+        )
+        SmartRadarLightEngine.onManualOverride(RadarLightMode.DAY_FLASH)
+        SmartRadarLightEngine.resumeAutomation()
+        assertEquals(RadarLightMode.OFF, SmartRadarLightEngine.lastDispatchedMode)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockClient.setLightMode(RadarLightMode.OFF) }
+    }
+
+    /**
+     * TST-CON-059.2 / REQ-CON-059.2 (ATT-8673):
+     * onManualOverride() cancels pending rate-limit flush, guarded flushPendingDispatch() never overwrites
+     * manual/brake mode, stop() resets lastDispatchedMode, and hardware drift is reconciled.
+     */
+    @Test
+    fun testManualOverrideAndStop_cancelPendingRateLimitAndResetDispatchedCache_tstCon059_2() {
+        // Dispatch SOLID at t = 10_000ms
+        val approach = RadarThreatState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(RadarTarget(1, 50f, 12f, ThreatLevel.APPROACHING))
+        )
+        SmartRadarLightEngine.onThreatStateChanged(approach, nowMs = 10_000L)
+        assertEquals(RadarLightMode.SOLID, SmartRadarLightEngine.lastDispatchedMode)
+
+        // Rapid FAST_APPROACHING at t = 10_500ms queues pending DAY_FLASH
+        val fast = RadarThreatState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(RadarTarget(1, 25f, 22f, ThreatLevel.FAST_APPROACHING))
+        )
+        SmartRadarLightEngine.onThreatStateChanged(fast, nowMs = 10_500L)
+        assertTrue("Pending dispatch must be queued inside 1.5s rate limit", SmartRadarLightEngine.hasPendingDispatch())
+
+        // User switches to manual PELOTON -> must cancel queued rate-limit dispatch
+        SmartRadarLightEngine.onManualOverride(RadarLightMode.PELOTON)
+        assertFalse("onManualOverride must clear pending rate-limit dispatch", SmartRadarLightEngine.hasPendingDispatch())
+        assertFalse("Flushing after manual override must not dispatch", SmartRadarLightEngine.flushPendingDispatch(nowMs = 15_000L))
+        assertEquals(RadarLightMode.PELOTON, SmartRadarLightEngine.lastDispatchedMode)
+
+        // Hardware drift reconciliation: external physical button changes mode to SOLID while lastDispatchedMode == OFF
+        SmartRadarLightEngine.resumeAutomation()
+        SmartRadarLightEngine.onThreatStateChanged(RadarThreatState(overallThreatLevel = ThreatLevel.NONE), nowMs = 30_000L)
+        assertEquals(RadarLightMode.OFF, SmartRadarLightEngine.lastDispatchedMode)
+        RadarLightController.updateHardwareLightMode(RadarLightMode.SOLID)
+        SmartRadarLightEngine.evaluateAndDispatch(nowMs = 35_000L)
+        assertEquals("Hardware drift must be reconciled back to OFF", RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        // stop() clears lastDispatchedMode and disables automation cleanly
+        SmartRadarLightEngine.stop()
+        assertEquals(null, SmartRadarLightEngine.lastDispatchedMode)
+        assertFalse(SmartRadarLightEngine.isAutomationEnabled)
+        assertFalse(SmartRadarLightEngine.hasPendingDispatch())
+    }
 }

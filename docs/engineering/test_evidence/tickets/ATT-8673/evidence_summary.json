@@ -1,0 +1,47 @@
+{
+  "android_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "checks": [
+    {
+      "details": "Android: Skipped (--skip-tests). | Python: Skipped (--skip-tests).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12300 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "08d9a910c0b6fba542da6833b3f719953689fc8b",
+  "junit_xml_files": [],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T13:33:39.305137+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-8673",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

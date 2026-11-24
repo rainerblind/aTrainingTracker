@@ -976,4 +976,230 @@ class RadarLightControllerTest {
         assertFalse(RadarLightController.isLightControlAvailable.value)
         assertFalse("isStvzo must reset to false on disconnect", RadarLightController.isStvzo.value)
     }
+
+    /**
+     * TST-CON-059.1 / REQ-CON-059.1 (ATT-8673):
+     * Switching from manual light mode to Automatik outside a workout, mid-ride (after starting in manual mode),
+     * and while paused immediately applies the computed automatic mode across Daytime, Night/Tunnel, StVZO,
+     * live threat, and offline states without leaking sensor listeners while paused.
+     */
+    @Test
+    fun testSetAutoMode_outsideMidRideAndPaused_immediatelyAppliesAutoWithoutPausedSensorLeak_tstCon059_1() {
+        var fakeNowMs = 1000L
+        mockkStatic(android.os.SystemClock::class)
+        every { android.os.SystemClock.elapsedRealtime() } answers { fakeNowMs }
+        try {
+            val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+            every { mockDevice.setLightMode(any()) } returns true
+            RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+            // 1. Outside active workout (Daytime Stage 0): manual SOLID -> setAutoMode() immediately dispatches OFF
+            assertTrue(RadarLightController.setManualLightMode(RadarLightMode.SOLID))
+            assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+            assertFalse(SmartRadarLightEngine.isAutomationEnabled)
+
+            RadarLightController.setAutoMode()
+            assertTrue(RadarLightController.isAutoMode.value)
+            assertTrue(SmartRadarLightEngine.isAutomationEnabled)
+            assertFalse(SmartRadarLightEngine.isManualOverridden)
+            assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+            assertEquals(RadarLightMode.OFF, RadarStateRepository.lightState.value.lightMode)
+            verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+
+            // 2. Outside workout with live FAST_APPROACHING threat in Daytime: manual PELOTON -> setAutoMode() -> DAY_FLASH
+            fakeNowMs = 2000L
+            RadarStateRepository.updateThreatState(
+                RadarThreatState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+                    targets = listOf(RadarTarget(1, 30f, 22f, ThreatLevel.FAST_APPROACHING)),
+                    lastUpdateRealtimeMs = fakeNowMs,
+                    source = RadarSource.BLE
+                )
+            )
+            assertTrue(RadarLightController.setManualLightMode(RadarLightMode.PELOTON))
+            RadarLightController.setAutoMode()
+            assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+            verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+
+            // 3. Outside workout in Night (DUSK_NIGHT) with clear road after cooldown: manual DAY_FLASH -> setAutoMode() -> PELOTON
+            fakeNowMs = 20_000L
+            RadarStateRepository.updateThreatState(
+                RadarThreatState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.NONE,
+                    targets = emptyList(),
+                    lastUpdateRealtimeMs = fakeNowMs,
+                    source = RadarSource.BLE
+                )
+            )
+            SmartRadarLightEngine.onLocationAndTimeChanged(52.52, 13.405, epochTimeMs = 1782083160000L, nowMs = fakeNowMs)
+            assertEquals(SolarElevationCalculator.SolarProfile.DUSK_NIGHT, SmartRadarLightEngine.currentSolarProfile)
+            assertTrue(RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH))
+            RadarLightController.setAutoMode()
+            assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+            verify { mockDevice.setLightMode(RadarLightMode.PELOTON) }
+
+            // 4. StVZO hardware in Night/Tunnel: manual OFF -> setAutoMode() clamps PELOTON to SOLID
+            RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+            assertTrue(RadarLightController.setManualLightMode(RadarLightMode.OFF))
+            RadarLightController.setAutoMode()
+            assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+            verify { mockDevice.setLightMode(RadarLightMode.SOLID) }
+
+            // 5. Mid-ride switch from Manual workout start -> setAutoMode() starts SmartRadarLightEngine sensors,
+            //    while calling setAutoMode() while PAUSED dispatches baseline with ZERO sensor listener registration
+            RadarLightController.reset()
+            val mockSensorManager = mockk<SensorManager>(relaxed = true)
+            val mockLightSensor = mockk<Sensor>(relaxed = true)
+            val mockProxSensor = mockk<Sensor>(relaxed = true)
+            every { mockSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) } returns mockLightSensor
+            every { mockSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) } returns mockProxSensor
+            every { mockSensorManager.registerListener(any(), any<Sensor>(), any()) } returns true
+            val mockContext = mockk<Context>(relaxed = true)
+            every { mockContext.applicationContext } returns mockContext
+            every { mockContext.getSystemService(Context.SENSOR_SERVICE) } returns mockSensorManager
+
+            RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+            assertTrue(RadarLightController.setManualLightMode(RadarLightMode.SOLID))
+            RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+            assertFalse("Engine must not start sensors while workout started in manual mode", SmartRadarLightEngine.isListening)
+
+            // Mid-ride switch to Automatik starts sensors AND transitions light from SOLID -> OFF
+            RadarLightController.setAutoMode()
+            assertTrue("Mid-ride setAutoMode must start SmartRadarLightEngine sensor listeners", SmartRadarLightEngine.isListening)
+            assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+            // Pause workout -> sensors stop; switch manual SOLID -> setAutoMode() while paused dispatches OFF without re-registering sensors
+            RadarLightController.onWorkoutPaused()
+            assertFalse(SmartRadarLightEngine.isListening)
+            assertTrue(SmartRadarLightEngine.isWorkoutPaused)
+            assertTrue(RadarLightController.setManualLightMode(RadarLightMode.SOLID))
+            assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+            RadarLightController.setAutoMode()
+            assertEquals("Paused setAutoMode must still immediately update light mode", RadarLightMode.OFF, RadarLightController.currentMode.value)
+            assertFalse("Paused setAutoMode must NOT re-register ambient/proximity sensors", SmartRadarLightEngine.isListening)
+
+            // Resume workout -> sensors cleanly re-register
+            RadarLightController.onWorkoutResumed(mockContext)
+            assertTrue("Resuming workout must re-register SmartRadarLightEngine sensors", SmartRadarLightEngine.isListening)
+            assertFalse(SmartRadarLightEngine.isWorkoutPaused)
+
+            // 6. Offline setAutoMode() preserves gated OFF mutation without poisoning lastDispatchedMode
+            RadarLightController.reset()
+            RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+            RadarLightController.setAutoMode()
+            assertTrue(RadarLightController.isAutoMode.value)
+            assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+            assertEquals(null, SmartRadarLightEngine.lastDispatchedMode)
+        } finally {
+            unmockkStatic(android.os.SystemClock::class)
+        }
+    }
+
+    /**
+     * TST-CON-059.2 / REQ-CON-059.2 (ATT-8673):
+     * Debounced cycleNextMode() (`DAY_FLASH -> OFF -> AUTO` flush dispatch & rapid `OFF -> AUTO -> PELOTON -> SOLID`
+     * single-write coalescing) plus Night/Tunnel onWorkoutStopped() post-stop non-resuscitation.
+     */
+    @Test
+    fun testCycleNextMode_debouncedOffToAutoAndPostStopNonResuscitation_tstCon059_2() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        val dispatchedModes = mutableListOf<RadarLightMode>()
+        every { mockDevice.setLightMode(any()) } answers {
+            dispatchedModes.add(firstArg())
+            true
+        }
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // 1. DAY_FLASH -> cycleNextMode() [OFF debounced] -> cycleNextMode() [AUTO] within < 400ms
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH))
+        dispatchedModes.clear()
+
+        val stepOff = RadarLightController.cycleNextMode()
+        assertFalse(stepOff.isAuto)
+        assertEquals(RadarLightMode.OFF, stepOff.mode)
+        assertTrue("Debounced step must not dispatch before flush", dispatchedModes.isEmpty())
+
+        val stepAuto = RadarLightController.cycleNextMode()
+        assertTrue(stepAuto.isAuto)
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertTrue("Debounced OFF -> AUTO must not dispatch before 400ms flush", dispatchedModes.isEmpty())
+
+        // Flush debounce: hardware MUST receive OFF (not remain stuck on DAY_FLASH!)
+        RadarLightController.flushDebounce()
+        assertEquals(listOf(RadarLightMode.OFF), dispatchedModes)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        assertTrue(SmartRadarLightEngine.isAutomationEnabled)
+        assertFalse(SmartRadarLightEngine.isManualOverridden)
+
+        // 2. Rapid OFF -> AUTO -> PELOTON -> SOLID coalesces to strictly 1 hardware write (SOLID)
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.OFF))
+        dispatchedModes.clear()
+        RadarLightController.cycleNextMode() // AUTO
+        RadarLightController.cycleNextMode() // PELOTON
+        val stepSolid = RadarLightController.cycleNextMode() // SOLID
+        assertEquals(RadarLightMode.SOLID, stepSolid.mode)
+        assertTrue("Zero hardware writes permitted during rapid taps", dispatchedModes.isEmpty())
+
+        RadarLightController.flushDebounce()
+        assertEquals("Rapid OFF->AUTO->PELOTON->SOLID must emit strictly 1 write (SOLID)", listOf(RadarLightMode.SOLID), dispatchedModes)
+
+        // 3. Night/Tunnel onWorkoutStopped() non-resuscitation (< 1500ms & > 1500ms after prior dispatch)
+        RadarLightController.reset()
+        dispatchedModes.clear()
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+        SmartRadarLightEngine.onLocationAndTimeChanged(52.52, 13.405, epochTimeMs = 1782083160000L, nowMs = 5000L)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        RadarLightController.setAutoMode()
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+
+        dispatchedModes.clear()
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals("Stop in night AUTO mode must emit ONLY OFF with zero spurious PELOTON", listOf(RadarLightMode.OFF), dispatchedModes)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        assertFalse("Automation must be disabled after stop", SmartRadarLightEngine.isAutomationEnabled)
+        assertFalse("Pending rate-limit dispatch must be cleared on stop", SmartRadarLightEngine.hasPendingDispatch())
+        assertFalse("Flushing pending dispatch post-stop must never resuscitate light", SmartRadarLightEngine.flushPendingDispatch(nowMs = 100_000L))
+        assertEquals(listOf(RadarLightMode.OFF), dispatchedModes)
+    }
+
+    /**
+     * TST-CON-059.4 / REQ-CON-059.4 (ATT-8673):
+     * Switching to Automatik during active braking & 2.0s hold never preempts brake light,
+     * and hold expiry immediately transitions to the computed automatic mode without stalling on stale preBrakeMode.
+     */
+    @Test
+    fun testSetAutoMode_duringActiveBrakeLight_preservesBrakeAndAppliesAutoAfterHold_tstCon059_4() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // Start in manual SOLID, then trigger hard braking -> DAY_FLASH
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.SOLID))
+        assertTrue(RadarLightController.triggerBrakeLight(active = true, brakeMode = RadarLightMode.DAY_FLASH, nowMs = 1000L))
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+
+        // Switch to Automatik during active braking -> MUST NOT preempt brake light
+        RadarLightController.setAutoMode()
+        assertTrue(RadarLightController.isAutoMode.value)
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals("Active brake light must NOT be preempted by setAutoMode()", RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarStateRepository.lightState.value.lightMode)
+
+        // Release brake into 2.0s hold window
+        RadarLightController.triggerBrakeLight(active = false, nowMs = 1500L)
+        assertFalse("setAutomationLightMode must return false while brake hold active", RadarLightController.setAutomationLightMode(RadarLightMode.OFF))
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+
+        // Hold expires at 3500ms -> immediately dispatches computed automatic Daytime Stage 0 (OFF), NOT stale SOLID
+        assertTrue(RadarLightController.checkAndRestorePreBrakeMode(nowMs = 3500L))
+        assertFalse(RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.OFF, RadarStateRepository.lightState.value.lightMode)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
 }

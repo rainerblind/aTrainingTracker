@@ -28,7 +28,9 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,32 +69,35 @@ object SmartRadarLightEngine : SensorEventListener {
     const val TUNNEL_EXIT_BRIGHT_THRESHOLD_LX = 300.0f
     const val TUNNEL_EXIT_HYSTERESIS_MS = 10000L
 
-    var isAutomationEnabled: Boolean = false
+    private val engineLock = Any()
+    private var listenEpoch: Long = 0L
+
+    @Volatile
+    private var isAutomationEnabledField: Boolean = false
+
+    var isAutomationEnabled: Boolean
+        get() = isAutomationEnabledField
         set(value) {
-            field = value
-            if (value) {
-                val ctx = appContext
-                if (isWorkoutActive && ctx != null) {
-                    startListening(ctx)
-                }
-                evaluateAndDispatch(safeElapsedRealtime())
-            } else {
-                stopListening()
-            }
+            setAutomationEnabledInternal(value, evaluate = true)
         }
 
+    @Volatile
     var isTunnelActive: Boolean = false
         private set
 
+    @Volatile
     var currentSolarProfile: SolarElevationCalculator.SolarProfile = SolarElevationCalculator.SolarProfile.DAY
         private set
 
+    @Volatile
     var currentThreatStage: Int = 0
         private set
 
+    @Volatile
     var isManualOverridden: Boolean = false
         private set
 
+    @Volatile
     var lastDispatchedMode: RadarLightMode? = null
         private set
 
@@ -111,6 +116,10 @@ object SmartRadarLightEngine : SensorEventListener {
     var isWorkoutActive: Boolean = false
         private set
 
+    @Volatile
+    var isWorkoutPaused: Boolean = false
+        private set
+
     private var sensorManager: SensorManager? = null
     private var powerManager: PowerManager? = null
     private var observationScope: CoroutineScope? = null
@@ -125,6 +134,43 @@ object SmartRadarLightEngine : SensorEventListener {
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val rateLimitFlushRunnable = Runnable {
         flushPendingDispatch()
+    }
+
+    private fun cancelPendingRateLimit() {
+        synchronized(engineLock) {
+            pendingModeToDispatch = null
+        }
+        try {
+            handler.removeCallbacks(rateLimitFlushRunnable)
+        } catch (_: Exception) {
+            // Headless test fallback
+        }
+    }
+
+    private fun setAutomationEnabledInternal(enabled: Boolean, evaluate: Boolean) {
+        val ctxToStart: Context?
+        synchronized(engineLock) {
+            isAutomationEnabledField = enabled
+            ctxToStart = if (enabled && isWorkoutActive && !isWorkoutPaused) appContext else null
+        }
+        if (enabled) {
+            if (ctxToStart != null) {
+                startListening(ctxToStart)
+            }
+            if (evaluate) {
+                evaluateAndDispatchInternal(safeElapsedRealtime(), forceImmediate = false)
+            }
+        } else {
+            cancelPendingRateLimit()
+            stopListening()
+        }
+    }
+
+    /**
+     * Clears manual override prior to enabling automation from an external preference update (`REQ-CON-059.3`).
+     */
+    internal fun clearManualOverrideForExternalAuto() {
+        isManualOverridden = false
     }
 
     /**
@@ -199,16 +245,11 @@ object SmartRadarLightEngine : SensorEventListener {
         }
     }
 
-    /**
-     * Orthogonal threat-state callback for 3-stage escalation (REQ-CON-034.4, REQ-CON-034.5, REQ-CON-056.3).
-     * Never triggered by audio snooze countdowns or tail-light state changes.
-     */
-    @JvmStatic
-    @JvmOverloads
-    fun onThreatStateChanged(
+    private fun resolveLiveThreatStage(
         state: RadarThreatState,
-        nowMs: Long = safeElapsedRealtime()
-    ) {
+        nowMs: Long,
+        mutate: Boolean
+    ): Int {
         val rawStage = when {
             state.overallThreatLevel == ThreatLevel.FAST_APPROACHING ||
                 state.targets.any { it.threatLevel == ThreatLevel.FAST_APPROACHING } -> 2
@@ -219,18 +260,49 @@ object SmartRadarLightEngine : SensorEventListener {
             else -> 0
         }
 
-        if (rawStage > 0) {
-            threatCooldownUntilRealtimeMs = nowMs + COOLDOWN_HYSTERESIS_MS
-            currentThreatStage = rawStage
-        } else {
-            // Hold previous elevated state until cooldown expires
-            currentThreatStage = if (nowMs < threatCooldownUntilRealtimeMs) {
-                1
+        return synchronized(engineLock) {
+            val resolved = if (rawStage > 0) {
+                if (mutate) {
+                    threatCooldownUntilRealtimeMs = nowMs + COOLDOWN_HYSTERESIS_MS
+                }
+                rawStage
             } else {
-                0
+                // Hold previous elevated state until cooldown expires
+                if (nowMs < threatCooldownUntilRealtimeMs) 1 else 0
             }
+            if (mutate) {
+                currentThreatStage = resolved
+            }
+            resolved
         }
+    }
 
+    /**
+     * Synchronizes [currentThreatStage] from live [RadarStateRepository.threatState] (`REQ-CON-059.1`).
+     */
+    internal fun syncThreatStageFromRepository(nowMs: Long = safeElapsedRealtime()) {
+        resolveLiveThreatStage(RadarStateRepository.threatState.value, nowMs, mutate = true)
+    }
+
+    /**
+     * Computes a side-effect-free preview of the automatic target [RadarLightMode] using live threat state (`REQ-CON-059.2`).
+     */
+    internal fun previewTargetMode(nowMs: Long = safeElapsedRealtime()): RadarLightMode {
+        val liveStage = resolveLiveThreatStage(RadarStateRepository.threatState.value, nowMs, mutate = false)
+        return computeTargetMode(isTunnelActive, currentSolarProfile, liveStage)
+    }
+
+    /**
+     * Orthogonal threat-state callback for 3-stage escalation (REQ-CON-034.4, REQ-CON-034.5, REQ-CON-056.3).
+     * Never triggered by audio snooze countdowns or tail-light state changes.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun onThreatStateChanged(
+        state: RadarThreatState,
+        nowMs: Long = safeElapsedRealtime()
+    ) {
+        resolveLiveThreatStage(state, nowMs, mutate = true)
         evaluateAndDispatch(nowMs)
     }
 
@@ -287,38 +359,89 @@ object SmartRadarLightEngine : SensorEventListener {
      * Evaluates current state and dispatches mode command subject to rate-limiting.
      */
     fun evaluateAndDispatch(nowMs: Long = safeElapsedRealtime()) {
-        if (!isAutomationEnabled || isManualOverridden || RadarLightController.isBrakeActive) return
+        evaluateAndDispatchInternal(nowMs, forceImmediate = false)
+    }
+
+    /**
+     * Core automatic light evaluation and dispatch routine (`REQ-CON-034`, `REQ-CON-059.1`/`.2`).
+     *
+     * When [forceImmediate] is `true` (explicit user switch to Automatik or post-brake hold expiry),
+     * bypasses the 1.5s autonomous rate-limit window and ignores stale [lastDispatchedMode] drift,
+     * while strictly respecting active brake preemption.
+     */
+    internal fun evaluateAndDispatchInternal(
+        nowMs: Long = safeElapsedRealtime(),
+        forceImmediate: Boolean = false
+    ): Boolean {
+        if (!isAutomationEnabledField || isManualOverridden || RadarLightController.isBrakeActive) return false
 
         val targetMode = computeTargetMode(isTunnelActive, currentSolarProfile, currentThreatStage)
-        if (targetMode == lastDispatchedMode) return
+        val effectiveTarget = RadarLightController.resolveStvzoMode(targetMode)
+        if (!forceImmediate && targetMode == lastDispatchedMode && effectiveTarget == RadarLightController.currentMode.value) {
+            return false
+        }
 
-        val elapsedSinceLastDispatch = nowMs - lastDispatchRealtimeMs
-        if (elapsedSinceLastDispatch >= RATE_LIMIT_INTERVAL_MS) {
+        val shouldDispatchNow: Boolean
+        val delayMs: Long
+        synchronized(engineLock) {
+            val elapsedSinceLastDispatch = nowMs - lastDispatchRealtimeMs
+            if (forceImmediate || elapsedSinceLastDispatch >= RATE_LIMIT_INTERVAL_MS) {
+                pendingModeToDispatch = null
+                shouldDispatchNow = true
+                delayMs = 0L
+            } else {
+                // Queue pending dispatch at the expiration of the rate-limit window
+                pendingModeToDispatch = targetMode
+                shouldDispatchNow = false
+                delayMs = RATE_LIMIT_INTERVAL_MS - elapsedSinceLastDispatch
+            }
+        }
+
+        return if (shouldDispatchNow) {
+            try {
+                handler.removeCallbacks(rateLimitFlushRunnable)
+            } catch (_: Exception) {}
             dispatchMode(targetMode, nowMs)
         } else {
-            // Queue pending dispatch at the expiration of the rate-limit window
-            pendingModeToDispatch = targetMode
-            val delayMs = RATE_LIMIT_INTERVAL_MS - elapsedSinceLastDispatch
             try {
                 handler.removeCallbacks(rateLimitFlushRunnable)
                 handler.postDelayed(rateLimitFlushRunnable, delayMs)
             } catch (_: Exception) {
                 // Headless test fallback
             }
+            false
         }
     }
 
-    private fun dispatchMode(mode: RadarLightMode, nowMs: Long) {
-        lastDispatchedMode = mode
-        lastDispatchRealtimeMs = nowMs
-        pendingModeToDispatch = null
-        RadarLightController.setLightMode(mode)
+    private fun dispatchMode(mode: RadarLightMode, nowMs: Long): Boolean {
+        val committed = RadarLightController.setAutomationLightMode(mode)
+        synchronized(engineLock) {
+            if (committed) {
+                lastDispatchedMode = mode
+                lastDispatchRealtimeMs = nowMs
+                pendingModeToDispatch = null
+            } else {
+                lastDispatchedMode = null
+            }
+        }
+        return committed
     }
 
-    private fun flushPendingDispatch() {
-        val mode = pendingModeToDispatch ?: return
-        val nowMs = safeElapsedRealtime()
-        dispatchMode(mode, nowMs)
+    @VisibleForTesting
+    internal fun flushPendingDispatch(nowMs: Long = safeElapsedRealtime()): Boolean {
+        val hasPending = synchronized(engineLock) {
+            val had = pendingModeToDispatch != null
+            pendingModeToDispatch = null
+            had
+        }
+        if (!hasPending) return false
+        if (!isAutomationEnabledField || isManualOverridden || RadarLightController.isBrakeActive) return false
+        return evaluateAndDispatchInternal(nowMs, forceImmediate = false)
+    }
+
+    @VisibleForTesting
+    internal fun hasPendingDispatch(): Boolean = synchronized(engineLock) {
+        pendingModeToDispatch != null
     }
 
     /**
@@ -326,70 +449,99 @@ object SmartRadarLightEngine : SensorEventListener {
      */
     @JvmStatic
     fun onManualOverride(mode: RadarLightMode) {
-        isManualOverridden = true
-        lastDispatchedMode = mode
+        synchronized(engineLock) {
+            isManualOverridden = true
+            lastDispatchedMode = mode
+            pendingModeToDispatch = null
+        }
+        try {
+            handler.removeCallbacks(rateLimitFlushRunnable)
+        } catch (_: Exception) {}
         Log.i(TAG, "Manual override active: $mode (smart light automation suspended)")
     }
 
     /**
-     * Resumes smart automation following a manual override.
+     * Resumes smart automation following a manual override (`REQ-CON-059.1`).
+     * Syncs live threat state, enables automation without duplicate evaluation, and dispatches immediately.
      */
     @JvmStatic
     fun resumeAutomation() {
+        val nowMs = safeElapsedRealtime()
+        cancelPendingRateLimit()
+        syncThreatStageFromRepository(nowMs)
         isManualOverridden = false
+        setAutomationEnabledInternal(enabled = true, evaluate = false)
         Log.i(TAG, "Smart light automation resumed")
-        evaluateAndDispatch(safeElapsedRealtime())
+        evaluateAndDispatchInternal(nowMs, forceImmediate = true)
     }
 
     /**
-     * Starts smart tail light automation and observers for active workout session (REQ-CON-034).
+     * Starts smart tail light automation and observers for active workout session (REQ-CON-034, REQ-CON-059.1/4).
+     * Uses pure leaf [engineLock] (never held across coroutine launches or [SensorManager] calls).
      */
     @JvmStatic
-    @Synchronized
     fun start(context: Context) {
-        val appCtx = context.applicationContext
-        appContext = appCtx
-        isWorkoutActive = true
+        val appCtx = context.applicationContext ?: context
+        val newScope: CoroutineScope?
+        val shouldListen: Boolean
+        synchronized(engineLock) {
+            appContext = appCtx
+            isWorkoutActive = true
+            isWorkoutPaused = false
+            newScope = if (observationScope == null) {
+                CoroutineScope(SupervisorJob() + coroutineDispatcher).also { observationScope = it }
+            } else {
+                null
+            }
+            shouldListen = isAutomationEnabledField
+        }
 
-        if (observationScope == null) {
-            val scope = CoroutineScope(SupervisorJob() + coroutineDispatcher)
-            observationScope = scope
-
-            scope.launch {
+        if (newScope != null) {
+            newScope.launch {
                 RadarStateRepository.threatState.collectLatest { state ->
                     onThreatStateChanged(state)
                 }
             }
 
-            scope.launch {
+            newScope.launch {
                 try {
                     if (TuningPreferencesDataStore.hasInitializedInstance()) {
                         TuningPreferencesDataStore.getInstance(appCtx).radarSmartLightAutomationFlow.collectLatest { enabled ->
-                            isAutomationEnabled = enabled
+                            if (!RadarLightController.shouldIgnoreStaleDataStoreAutoMode(enabled)) {
+                                if (enabled) {
+                                    clearManualOverrideForExternalAuto()
+                                }
+                                isAutomationEnabled = enabled
+                            }
                         }
                     }
+                } catch (ce: CancellationException) {
+                    throw ce
                 } catch (e: Throwable) {
-                    Log.w(TAG, "Error collecting radarSmartLightAutomationFlow", e)
+                    runCatching { Log.w(TAG, "Error collecting radarSmartLightAutomationFlow", e) }
                 }
             }
         }
 
-        if (isAutomationEnabled) {
+        if (shouldListen) {
             startListening(appCtx)
         }
     }
 
     /**
      * Registers ambient light (Sensor.TYPE_LIGHT) and proximity (Sensor.TYPE_PROXIMITY) listeners.
+     * Executes all [SensorManager] operations strictly outside [engineLock] with [listenEpoch] race protection.
      */
     @JvmStatic
-    @Synchronized
     fun startListening(
         context: Context,
         customSensorManager: SensorManager? = null,
         customPowerManager: PowerManager? = null
     ) {
-        if (isListening) return
+        val expectedEpoch = synchronized(engineLock) {
+            if (isListening) return
+            ++listenEpoch
+        }
         val sm = customSensorManager ?: (context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager) ?: return
         val pm = customPowerManager ?: (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
 
@@ -403,41 +555,86 @@ object SmartRadarLightEngine : SensorEventListener {
             sm.registerListener(this, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL)
         }
 
-        sensorManager = sm
-        powerManager = pm
-        isListening = true
+        val committed = synchronized(engineLock) {
+            if (listenEpoch == expectedEpoch && !isListening) {
+                sensorManager = sm
+                powerManager = pm
+                isListening = true
+                true
+            } else {
+                false
+            }
+        }
+        if (!committed) {
+            try {
+                sm.unregisterListener(this)
+            } catch (_: Exception) {}
+            return
+        }
         Log.i(TAG, "SmartRadarLightEngine registered sensor listeners (light=${lightSensor != null}, prox=${proximitySensor != null})")
     }
 
     /**
      * Unregisters sensor listeners to prevent battery drain when paused or stopped.
+     * Executes [SensorManager.unregisterListener] strictly outside [engineLock].
      */
     @JvmStatic
-    @Synchronized
     fun stopListening() {
-        if (!isListening) return
+        val smToUnregister = synchronized(engineLock) {
+            listenEpoch++
+            val sm = sensorManager
+            val wasListening = isListening
+            sensorManager = null
+            powerManager = null
+            isListening = false
+            if (wasListening) sm else null
+        } ?: return
         try {
-            sensorManager?.unregisterListener(this)
+            smToUnregister.unregisterListener(this)
         } catch (e: Exception) {
             Log.w(TAG, "Error unregistering light/proximity sensor listeners", e)
         }
-        sensorManager = null
-        powerManager = null
-        isListening = false
         Log.i(TAG, "SmartRadarLightEngine unregistered sensor listeners")
     }
 
     /**
-     * Stops automation, unregisters sensors, and terminates background coroutine observers.
+     * Marks workout as paused, cancelling queued rate-limit dispatches and unregistering ambient/proximity
+     * sensors so calling [resumeAutomation] while paused does not re-register hardware listeners (`REQ-CON-059.1`).
      */
     @JvmStatic
-    @Synchronized
-    fun stop() {
-        isWorkoutActive = false
+    fun onWorkoutPaused() {
+        synchronized(engineLock) {
+            isWorkoutPaused = true
+            pendingModeToDispatch = null
+        }
+        try {
+            handler.removeCallbacks(rateLimitFlushRunnable)
+        } catch (_: Exception) {}
         stopListening()
-        observationScope?.cancel()
-        observationScope = null
-        appContext = null
+    }
+
+    /**
+     * Stops automation, unregisters sensors, clears cached dispatch state, and terminates observers (`REQ-CON-059.2`).
+     * Never dispatches mode commands during teardown.
+     */
+    @JvmStatic
+    fun stop() {
+        val scopeToCancel: CoroutineScope?
+        synchronized(engineLock) {
+            isWorkoutActive = false
+            isWorkoutPaused = false
+            isAutomationEnabledField = false
+            lastDispatchedMode = null
+            pendingModeToDispatch = null
+            scopeToCancel = observationScope
+            observationScope = null
+            appContext = null
+        }
+        try {
+            handler.removeCallbacks(rateLimitFlushRunnable)
+        } catch (_: Exception) {}
+        stopListening()
+        scopeToCancel?.cancel()
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -464,18 +661,22 @@ object SmartRadarLightEngine : SensorEventListener {
     @JvmStatic
     fun reset() {
         stop()
-        isAutomationEnabled = false
-        isTunnelActive = false
-        currentSolarProfile = SolarElevationCalculator.SolarProfile.DAY
-        currentThreatStage = 0
-        isManualOverridden = false
-        isProximityNear = false
-        lastDispatchedMode = null
-        lastDispatchRealtimeMs = 0L
-        threatCooldownUntilRealtimeMs = 0L
-        tunnelDarkSinceRealtimeMs = 0L
-        tunnelBrightSinceRealtimeMs = 0L
-        pendingModeToDispatch = null
+        synchronized(engineLock) {
+            coroutineDispatcher = Dispatchers.Default
+            isAutomationEnabledField = false
+            isTunnelActive = false
+            currentSolarProfile = SolarElevationCalculator.SolarProfile.DAY
+            currentThreatStage = 0
+            isManualOverridden = false
+            isProximityNear = false
+            isWorkoutPaused = false
+            lastDispatchedMode = null
+            lastDispatchRealtimeMs = 0L
+            threatCooldownUntilRealtimeMs = 0L
+            tunnelDarkSinceRealtimeMs = 0L
+            tunnelBrightSinceRealtimeMs = 0L
+            pendingModeToDispatch = null
+        }
         try {
             handler.removeCallbacks(rateLimitFlushRunnable)
         } catch (_: Exception) {}
