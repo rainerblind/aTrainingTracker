@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.53  
+**Version**: 1.0.56  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 108
+**Total Tests**: 109
 
 ---
 
@@ -2251,6 +2251,23 @@
   4. *9-Language Localization Parity, Color Centralization & LoC Ceilings (`TST-CON-061.4` — `TranslationParityTest.kt`, `ui.theme.ThemeColorCentralizationAuditTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • Verify 100% parity (zero emojis) across all 9 `values*/strings_radar.xml` files for all 6 `radar_v2_bonding_*` keys, zero hardcoded hex colors, and compliance with all monolith LoC ceilings.
 
+### TST-CON-062: **Universal `MyBTLEDevice` DIS Reconnect Backfill & Polar Deduplication Verification Suite (`ATT-8723`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-062` (`REQ-CON-062.1`–`REQ-CON-062.3`)
+- **Component**: `BleDisReconnectBackfillHelper.kt`, `MyBTLEDevice.java`, `BTLEHeartRateDevice.java`
+- **Jira**: `ATT-8723` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `BleDisReconnectBackfillHelperTest#testNeedsManufacturerBackfill_matrix_TST_CON_062_1`, `BleDisReconnectBackfillHelperTest#testEnqueueMissingManufacturerRead_enqueuesAfterConfigureServicesAcrossAllSubclassesAndSkipsWhenGuarded_TST_CON_062_1`, `BleDisReconnectBackfillHelperTest#testOnDisCharacteristicRead_sanitizesPostsToHandlerAndGuardsFailureBlankStale_TST_CON_062_2`, `BleDisReconnectBackfillHelperTest#testEnqueueMissingPolarDisReads_conditionalBackfillAndColdStartAliasHydration_TST_CON_062_3`, `MyBTLEDeviceQueueTest#testOnCharacteristicRead_manufacturerNameBackfillsAndAdvancesQueue_TST_CON_062_2`, `BTLEHeartRateDeviceTest#testConfigureServices_skipsPopulatedPolarDisReadsAndHydratesColdStartAliases_TST_CON_062_3`
+- **Test Description**:
+  1. *Universal Post-`configureServices` `0x2A29` Backfill & Guard Matrix (`TST-CON-062.1` — `BleDisReconnectBackfillHelperTest.kt`, `MyBTLEDeviceQueueTest.kt`)*:
+     • Verify `needsManufacturerBackfill()` returns `true` for `null`, `""`, `"   "`, `"\u0000"`, and `"Polar Electro Oy\u0000"`, and `false` for clean strings (`"Polar Electro Oy"`, `"Garmin"`).
+     • Verify `onServicesDiscovered` -> `readNextCharacteristic` enqueues `0x2A29` after `configureServices(gatt)` via `mGattQueue` across generic `MyBTLEDevice` and `BTLERadarDevice`-style subclasses overriding `configureServices` without `super`, while skipping cleanly when `manufacturerName` is clean, `0x180A`/`0x2A29` is absent, `deviceId <= 0`, device is paused/shut-down, or `0x2A29` is already queued.
+  2. *Non-Blocking Sanitized `0x2A29` Persistence & Stale/Failure Isolation (`TST-CON-062.2` — `BleDisReconnectBackfillHelperTest.kt`, `MyBTLEDeviceQueueTest.kt`)*:
+     • Verify `onCharacteristicRead(GATT_SUCCESS)` with `"Wahoo Fitness\u0000"` strips NUL bytes, posts `applyBackfilledManufacturerName(gatt, "Wahoo Fitness")` to `mHandler` (immediately clearing `mGattOperationPending` on Binder), persists via `setManufacturerName`, and causes subsequent reconnects to enqueue `0` `0x2A29` reads.
+     • Verify `status != GATT_SUCCESS`, NUL-only `"\u0000\u0000"`, stale/superseded `BluetoothGatt`, paused, and shut-down states never invoke `setManufacturerName`, never loop retries, and cleanly advance `mGattQueue`.
+  3. *Deduplicated Polar `0x2A24`/`0x2A25` Backfill, Cold-Start Alias Hydration & Contracts (`TST-CON-062.3` — `BleDisReconnectBackfillHelperTest.kt`, `BTLEHeartRateDeviceTest.kt`, `MyBTLEDeviceLifecycleTest.kt`, `BTLERadarDeviceTest.kt`, `DetailedDesignParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify Polar HRM (`hasPmd || hasPftp`) enqueues both `0x2A24` & `0x2A25` before HR CCCD when store is empty, only the missing characteristic when partially populated, and `0` Polar DIS reads when both are clean while still hydrating `PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, mac) == true` after `PolarOfflineGattCoordinator.resetForTesting()`.
+     • Verify non-Polar HRMs enqueue `0` Polar DIS reads (`REQ-CON-049.2`), `BTLERadarDevice` per-connect `0x2A24` registration stays intact with `0` duplicates, and `MyBTLEDevice.java <= 1,500`, `DevicesDatabaseManager.java <= 1,671`, and `my_btle_device.md` SWE.3 parity hold (`Localization Parity: N/A - 0 string changes`).
+
 ---
 
 ## Change History
@@ -2430,3 +2447,5 @@
 | `1.0.51` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Gate 3 (`ATT-9688`) revision on `[Planned]` `TST-CON-061`: added zero-resurrection verification post-`ALREADY_BONDED` clear, `unregisterSensors()` remote-disconnect & `mBondReceiverLock` teardown checks, `FLAG_ACTIVITY_NEW_TASK` non-`Activity` vs `Activity` intent tests, trimmed case-insensitive MAC matching, `READY -> TRACKING` snackbar cancel + non-burning latch test, and corrected `ui.theme.ThemeColorCentralizationAuditTest` FQCN. |
 | `1.0.52` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Promoted `TST-CON-061` (`.1`–`.4`) to `[Verified]` with 11 verbatim method citations (`256/256` PASS across `24` targeted suites: `BTLERadarDeviceTest 66/66`, `RadarStateRepositoryTest 9/9`, `RadarBluetoothBondingHelperTest 3/3`, `EditDeviceDialogRadarBondingTest 4/4`, `EditDeviceDialogRadarLightTest 5/5`, `8` remaining `devices.radar.*` & `7` remaining `editdevice.*` suites, `TranslationParityTest 11/11`, `ThemeColorCentralizationAuditTest 5/5`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `InterfaceSignatureDriftContractTest 3/3`; `Rule 8.5` Light/Dark card + live `emulator-5554` smoke PNGs verified, `0` crashes; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8731/`). |
 | `1.0.53` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Stage 6 Bounce 1/5 heal (`15` verbatim `TST-CON-061` methods, `261/261` PASS across `24` targeted suites incl. `+4` Bounce 1 regressions: `BTLERadarDeviceTest 68/68`, `RadarStateRepositoryTest 10/10`, `RadarBluetoothBondingHelperTest 4/4`, `EditDeviceDialogRadarBondingTest 5/5` covering owned-`RadarV2BondingSnackbarVisuals` dismissal, `BLE == CONNECTED` guard, concurrent `unregisterSensors()`/`shutDown()` mid-`configureServices()` race, and `BOND_BONDING` short-circuit; live `emulator-5554` `Devices.db` v15 smoke `0` crashes; refreshed SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8731/`). |
+| `1.0.54` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Added `[Planned]` `TST-CON-062` (`.1`–`.3`, symmetric with `REQ-CON-062`) covering universal `MyBTLEDevice` post-`configureServices` `0x2A29` reconnect backfill, non-blocking sanitized `mHandler` persistence + stale/failure guards, deduplicated Polar `0x2A24`/`0x2A25` reads with cold-start alias hydration, and monolith/SWE.3 contracts (`N/A - 0 string changes`). |
+| `1.0.55` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Promoted `TST-CON-062` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`178/178` PASS across `12` targeted suites: `BleDisReconnectBackfillHelperTest 4/4`, `BleDisStringSanitizerTest 3/3`, `MyBTLEDeviceQueueTest 9/9`, `MyBTLEDeviceLifecycleTest 16/16`, `BTLEHeartRateDeviceTest 20/20`, `BTLERadarDeviceTest 64/64`, `BTSearchForNewDevicesEngineTest 22/22`, `PolarOfflineCapabilityStoreTest 8/8`, `PolarOfflineGattCoordinatorCoexistenceTest 14/14`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `SystemLiveTrackingRequirementsContractTest 4/4`; clean live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8723/`). |

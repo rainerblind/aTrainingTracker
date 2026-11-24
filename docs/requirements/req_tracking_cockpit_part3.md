@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.51  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 58
+**Total Requirements**: 59
 
 ---
 
@@ -1906,6 +1906,26 @@
 3. *Root Reason for Existing Formulation*: Silent fallback to V1 (`6a4e3203`) keeps life-safety vehicle alerts operational when a V2-capable radar is unbonded rather than deadlocking on encrypted V2.
 4. *Preservation of Core Invariants*: Automatic V1 fallback, 3.5 s starvation watchdog, legacy V1 silence (`v2Char == null`), `radar_v1_only_override` suppression, and uninterrupted live `TRACKING` remain 100% preserved.
 
+### REQ-CON-062: Universal `MyBTLEDevice` DIS (`0x2A29`/`0x2A24`/`0x2A25`) Reconnect Backfill & Deduplication (`ATT-8723`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-062`
+- **System Requirement(s)**: `SYSREQ-TRK-001` — Refines BLE Device Information Service (`0x180A`: `0x2A29` Manufacturer Name, `0x2A24` Model Number, `0x2A25` Serial Number) metadata backfill and GATT queue efficiency on paired sensor reconnects across all BLE device profiles.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BleDisReconnectBackfillHelper.kt`, `MyBTLEDevice.java`, `BTLEHeartRateDevice.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Following `ATT-8717` (`0x2A24`/`0x2A25` Polar discovery/HRM reads) and `ATT-8996` (`BleDisStringSanitizer` + `Devices.db` v15 NUL cleanup), regular `MyBTLEDevice` reconnects still never backfill missing or NUL-dirty `0x2A29` Manufacturer Name across BLE device subclasses (Cycling Speed/Cadence, Power, Footpod, Radar, Heart Rate), while `BTLEHeartRateDevice` unconditionally re-reads Polar `0x2A24`/`0x2A25` on every reconnect even when `PolarOfflineCapabilityStore` is already populated (`ATT-8723`).
+- **Description**:
+  1. *Universal Post-`configureServices` `0x2A29` Manufacturer Backfill (`REQ-CON-062.1`)*: `BleDisReconnectBackfillHelper` (`com.atrainingtracker.banalservice.devices.bluetooth_le`), invoked from `MyBTLEDevice.readNextCharacteristic()` immediately after `configureServices(gatt)`, SHALL cover all `MyBTLEDevice` subclasses (including `BTLERadarDevice`, which overrides `configureServices` without calling `super`) and enqueue a serialized `0x2A29` `ReadCharacteristicOp` via `enqueueReadCharacteristic()` strictly when `!mIsShutDown && !isGattPaused() && deviceId > 0`, `needsManufacturerBackfill(getManufacturerName())` is `true` (`null`, blank, or containing `'\u0000'`), `0x180A`/`0x2A29` exists on `gatt`, and no `0x2A29` read is already queued in `mGattQueue`. Cleanly populated sensors SHALL enqueue `0` `0x2A29` reads on subsequent reconnects.
+  2. *Non-Blocking, Sanitized, Stale-Safe `0x2A29` Persistence (`REQ-CON-062.2`)*: Inside `MyBTLEDevice.mGattCallback.onCharacteristicRead()`, strictly on `status == BluetoothGatt.GATT_SUCCESS` with a non-null `obtainSnapshotCharacteristic` snapshot, `BleDisReconnectBackfillHelper.onDisCharacteristicRead()` SHALL sanitize `0x2A29` via `BleDisStringSanitizer.readSanitizedString(snapshot)` and, when non-null, post `applyBackfilledManufacturerName(gatt, clean)` onto `mHandler` so Binder immediately invokes `onGattOperationCompleted()` without blocking on SQLite. `applyBackfilledManufacturerName()` MUST re-verify `!mIsShutDown && !mIsGattPaused && mBluetoothGatt != null && gatt == mBluetoothGatt` under `mGattLock` before calling `setManufacturerName(clean)`. Failed reads (`status != GATT_SUCCESS`), blank/NUL-only payloads, and stale/disconnected handles SHALL NOT overwrite persistence or loop retries.
+  3. *Deduplicated Polar `0x2A24`/`0x2A25` Backfill & Cold-Start Alias Hydration (`REQ-CON-062.3`)*: `BTLEHeartRateDevice.configureServices(gatt)` SHALL delegate Polar DIS (`hasPmd || hasPftp`) reads to `BleDisReconnectBackfillHelper.enqueueMissingPolarDisReads()` strictly before `super.configureServices(gatt)` (HR CCCD): enqueue `0x2A24` only when `PolarOfflineCapabilityStore.getModelNumber(ctx, mac)` is `null`, and enqueue `0x2A25` only when `PolarOfflineCapabilityStore.getPolarDeviceId(ctx, mac)` is `null`; whenever `existingPolarId != null` skips `0x2A25`, the helper SHALL invoke `PolarOfflineGattCoordinator.registerDeviceAliases(existingPolarId, mac)`. Non-Polar HRMs MUST remain isolated (`REQ-CON-049.2`), `BTLERadarDevice` per-connect `0x2A24` registration (`REQ-CON-031.1`) MUST remain independent with zero duplicate reads, and monolith ceilings (`MyBTLEDevice.java <= 1,500`, `DevicesDatabaseManager.java <= 1,671`) MUST hold.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* any paired `MyBTLEDevice` whose `manufacturerName` is `null`, `""`, or `"Wahoo\u0000"`, *When* `onServicesDiscovered` -> `readNextCharacteristic` runs and `0x2A29` returns `"Wahoo Fitness\u0000"` (`GATT_SUCCESS`), *Then* `0x2A29` is queued after `configureServices(gatt)`, `"Wahoo Fitness"` is persisted via `mHandler`, Binder advances `mGattQueue` immediately, and subsequent reconnects enqueue `0` `0x2A29` reads.
+• *Given* a failed `0x2A29` read (`status != GATT_SUCCESS`), NUL-only `"\u0000"`, or stale/paused/shut-down GATT handle, *When* `onCharacteristicRead` fires, *Then* `setManufacturerName` is not called and `mGattQueue` advances cleanly.
+• *Given* a Polar HRM (`hasPmd || hasPftp`) with empty, partial, or populated `PolarOfflineCapabilityStore`, *When* `BTLEHeartRateDevice.configureServices(gatt)` runs, *Then* only missing `0x2A24`/`0x2A25` characteristics are enqueued before HR CCCD, and populated `polarDeviceId` hydrates `PolarOfflineGattCoordinator` aliases with `0` GATT reads.
+
 ---
 
 ## Change History
@@ -2069,3 +2089,5 @@
 | `1.0.49` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Gate 3 (`ATT-9688`) revision on `[Planned]` `REQ-CON-061`: established `RadarStateRepository` (under `threatLock`) as single source of truth removing cached `mIsV2BondingRequired` (eliminating 4–8 Hz resurrection), added `mBondReceiverLock` + `unregisterSensors()` remote-disconnect teardown in `BTLERadarDevice`, specified `FLAG_ACTIVITY_NEW_TASK` for non-`Activity` contexts, trimmed case-insensitive MAC matching, and `LaunchedEffect(snackbarHostState, isAllowedToShow)` pre-latch gating. |
 | `1.0.50` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Promoted `REQ-CON-061` (`.1`–`.4`) to `[Verified]` following Gate 3 (`ATT-9688`) PASS, Stage 4 implementation (`RadarState.kt` `148`, `RadarStateRepository.kt` `395/1,500`, `RadarBluetoothBondingHelper.kt` `155`, `BTLERadarDevice.java` `1,457/1,500`, `EditDeviceDialog.kt` `1,853/2,004`, `RadarV2BondingHintCard.kt` `228`, `RadarV2BondingSnackbarEffect.kt` `80`, `DevicesTabbedScreen.kt` `815/1,500`, `TrackingTabsScreen.kt` `1,461/1,500`, 9-locale `strings_radar.xml`; `0` new Kotlin warnings), `256/256` PASS across `24` targeted suites, `Rule 8.5` Light/Dark card + live `emulator-5554` smoke PNGs (`0` crashes), SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8731/`, and `docs/engineering/walkthroughs/ATT-8731_walkthrough.md`. |
 | `1.0.51` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Stage 6 Bounce 1/5 heal & rebase onto `sprint/2026-11-24_02_Spät` (`27436048` / `Devices.db` v15): scoped `RadarV2BondingSnackbarEffect` (`93` LoC) dismissal strictly to owned `RadarV2BondingSnackbarVisuals`, enforced `BLE == CONNECTED` guard in `RadarStateRepository.setV2BondingRequired(true, ...)` (`398/1,500`) + `mBondSessionActive`/`mBondDeviceShutDown` concurrent-disconnect/shutdown double-check under `mBondReceiverLock` in `BTLERadarDevice.java` (`1,480/1,500`), short-circuited `BOND_BONDING -> BONDING_INITIATED` in `RadarBluetoothBondingHelper.kt` (`158`), verified `261/261` PASS across `24` suites (`0` new Kotlin warnings) + clean `emulator-5554` `Devices.db` v15 smoke (`0` crashes). |
+| `1.0.52` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Added `[Planned]` `REQ-CON-062` (`.1`–`.3`, linked to `SYSREQ-TRK-001`) for universal post-`configureServices` `MyBTLEDevice` `0x2A29` reconnect backfill via `BleDisReconnectBackfillHelper.kt`, non-blocking `mHandler`-dispatched sanitized persistence, deduplicated Polar `0x2A24`/`0x2A25` reads with cold-start alias hydration, and monolith LoC compliance (`N/A - 0 string changes`). |
+| `1.0.53` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Promoted `REQ-CON-062` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9689`) PASS, Stage 4 implementation (`BleDisReconnectBackfillHelper.kt` `182/1,500`, `MyBTLEDevice.java` `1,498/1,500`, `BTLEHeartRateDevice.java` `583/1,500`, `DevicesDatabaseManager.java` untouched `1,665/1,671`, `BTLERadarDevice.java` untouched `1,333/1,500`), `178/178` PASS across `12` targeted unit & contract suites (`0` new production warnings, `0` string edits), clean live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8723_walkthrough.md`. |

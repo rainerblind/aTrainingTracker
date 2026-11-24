@@ -346,4 +346,33 @@ class MyBTLEDeviceQueueTest {
         assertEquals(BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION, testDevice.lastWriteCompletedStatus)
         assertFalse("Pending flag must clear after write error callback", testDevice.isGattOperationPendingForTesting)
     }
+
+    /**
+     * REQ-CON-062.2 / TST-CON-062.2: Verify onCharacteristicRead for 0x2A29 Manufacturer Name
+     * sanitizes NUL bytes, persists through MyDevice.setManufacturerName on mHandler, and advances mGattQueue.
+     */
+    @Suppress("DEPRECATION")
+    @Test
+    fun testOnCharacteristicRead_manufacturerNameBackfillsAndAdvancesQueue_TST_CON_062_2() {
+        val mfgBytes = "Polar Electro Oy\u0000".toByteArray(java.nio.charset.StandardCharsets.UTF_8)
+        val mfgChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mfgChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME
+        every { mfgChar.value } returns mfgBytes
+        every { mockGatt.readCharacteristic(any()) } returns true
+
+        // Override setUp's global BluetoothGattCharacteristic constructor mock for 0x2A29 snapshot (Gate 3 Tip #2)
+        every { anyConstructed<BluetoothGattCharacteristic>().uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME
+        every { anyConstructed<BluetoothGattCharacteristic>().getUuid() } returns BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME
+        every { anyConstructed<BluetoothGattCharacteristic>().value } returns mfgBytes
+        every { anyConstructed<BluetoothGattCharacteristic>().getValue() } returns mfgBytes
+        every { anyConstructed<BluetoothGattCharacteristic>().getStringValue(0) } returns "Polar Electro Oy\u0000"
+
+        testDevice.enqueueReadCharacteristic(mfgChar)
+        assertTrue(testDevice.isGattOperationPendingForTesting)
+
+        testDevice.gattCallbackForTesting.onCharacteristicRead(mockGatt, mfgChar, BluetoothGatt.GATT_SUCCESS)
+
+        assertFalse("Pending flag must clear after 0x2A29 read callback", testDevice.isGattOperationPendingForTesting)
+        assertEquals("Polar Electro Oy", testDevice.manufacturerName)
+    }
 }

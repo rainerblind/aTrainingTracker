@@ -962,4 +962,52 @@ class BTLEHeartRateDeviceTest {
             PolarOfflineGattCoordinator.resetForTesting()
         }
     }
+
+    @Test
+    fun testConfigureServices_skipsPopulatedPolarDisReadsAndHydratesColdStartAliases_TST_CON_062_3() {
+        // REQ-CON-062.3 / TST-CON-062.3
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        try {
+            val polarMac = "AA:BB:CC:DD:EE:80"
+            PolarOfflineCapabilityStore.recordGattServiceCapabilities(mockContext, polarMac, hasPmdService = true, hasPftpService = true)
+            PolarOfflineCapabilityStore.recordDisMetadata(mockContext, polarMac, "Verity Sense", "CAFE5678", confirmedPolarService = true)
+            // Simulate cold-start process restart where in-memory aliases were cleared
+            PolarOfflineGattCoordinator.resetForTesting()
+            assertFalse(PolarOfflineGattCoordinator.matchesDeviceIdentifier("CAFE5678", polarMac))
+
+            val device = TestBTLEHeartRateDevice(mockContext, mockSensorManager, 105L, polarMac)
+            val polarGatt = mockk<BluetoothGatt>(relaxed = true)
+            val hrService = mockk<BluetoothGattService>(relaxed = true)
+            val hrChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val hrDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+            val disService = mockk<BluetoothGattService>(relaxed = true)
+            val modelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+            val serialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+            every { polarGatt.getService(BluetoothConstants.getServiceUUID(DeviceType.HRM)) } returns hrService
+            every { hrService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)) } returns hrChar
+            every { hrChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns hrDescriptor
+            every { polarGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PMD) } returns mockk(relaxed = true)
+            every { polarGatt.getService(BluetoothConstants.UUID_SERVICE_POLAR_PFTP) } returns mockk(relaxed = true)
+            every { polarGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns disService
+            every { disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER) } returns modelChar
+            every { disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER) } returns serialChar
+            every { modelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+            every { serialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+
+            device.callConfigureServices(polarGatt)
+
+            // Only HR CCCD write was executed (popped immediately as pending op); 0 extra 0x2A24/0x2A25 reads in queue!
+            assertTrue(device.isGattOperationPendingForTesting)
+            assertEquals("No redundant Polar DIS reads may remain queued", 0, device.gattQueueForTesting.size)
+            assertTrue(
+                "Cold-start reconnect must re-hydrate PolarOfflineGattCoordinator alias map",
+                PolarOfflineGattCoordinator.matchesDeviceIdentifier("CAFE5678", polarMac)
+            )
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
 }

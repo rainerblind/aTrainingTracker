@@ -257,21 +257,7 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
             if (hasPmd || hasPftp || hasHrService) {
                 PolarOfflineCapabilityStore.recordGattServiceCapabilities(mContext, getAddress(), hasPmd, hasPftp);
             }
-            if (hasPmd || hasPftp) {
-                BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
-                if (disService != null) {
-                    BluetoothGattCharacteristic modelChar =
-                            disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
-                    if (modelChar != null) {
-                        enqueueReadCharacteristic(modelChar);
-                    }
-                    BluetoothGattCharacteristic serialChar =
-                            disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER);
-                    if (serialChar != null) {
-                        enqueueReadCharacteristic(serialChar);
-                    }
-                }
-            }
+            BleDisReconnectBackfillHelper.enqueueMissingPolarDisReads(this, mContext, gatt, hasPmd, hasPftp);
         }
         super.configureServices(gatt);
         mHrCccdFailureRetried = false;

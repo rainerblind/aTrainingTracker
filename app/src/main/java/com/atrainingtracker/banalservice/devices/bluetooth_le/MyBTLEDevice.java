@@ -752,6 +752,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 byte[] cloned = characteristic.getValue().clone();
                 BluetoothGattCharacteristic snapshot = obtainSnapshotCharacteristic(characteristic, cloned);
                 if (snapshot != null) {
+                    BleDisReconnectBackfillHelper.onDisCharacteristicRead(MyBTLEDevice.this, gatt, snapshot);
                     characteristicUpdate(gatt, snapshot);
                 }
             } else if (characteristic != null && !mIsShutDown) {
@@ -1452,10 +1453,13 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         if (gatt == null || (expectedGatt != null && gatt != expectedGatt)) return;
                     }
                     configureServices(gatt);
+                    BleDisReconnectBackfillHelper.enqueueMissingManufacturerRead(this, gatt);
                 });
             }
         }
     }
+
+    void applyBackfilledManufacturerName(BluetoothGatt gatt, String name) { synchronized (mGattLock) { if (mIsShutDown || mIsGattPaused || mBluetoothGatt == null || gatt != mBluetoothGatt) return; } setManufacturerName(name); }
 
     @android.annotation.SuppressLint("MissingPermission")
     protected void configureServices(BluetoothGatt gatt) {

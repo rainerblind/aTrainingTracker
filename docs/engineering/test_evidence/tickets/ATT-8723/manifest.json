@@ -1,0 +1,30 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "4afd4ef3fe2400cdd68e5aed101ac507f9da5641",
+  "files": {
+    "evidence_summary.json": "deeb9da67ef8e960845312931fe95936609b67807bc7617e2113310543b4fc9b",
+    "junit/TEST-com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.xml": "1a2ba37791caa4aa97b46bd935f6841e3538908a1170fad81ae2bd91f2864d74",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest.xml": "985dba2ea4a81ec05130ba127671e2d793cab160433ccaf152453fc6fe27fd8a",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest.xml": "50dcbdc022c42342a303e356d919a93f9e4219e46ef4fee3df613e761f78d003",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest.xml": "ffe0e977ec63f683e2eacee57f2ee7f248b4e4d17cb16c94f0112a521395d9a8",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest.xml": "7c4081fbf0626f19252da21e01802cf0b36f5edd8c0de7b61c5618941e42cc4d",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest.xml": "3c1ee3506d1d1953fbce0bf15eb7b082c97043107d0f4d8d1752d525966c903f",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest.xml": "b08eb2925b738be6757922d3a28ee89193720761ac620b37ba3d533d9f23d34a",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest.xml": "ec3737fbd53fe5c4bfb3b0179fd48a0d270f72476877742738f114858230e118",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest.xml": "a58de26204fc5f99ddd49fc6bcd468ca2a851346ebfb8c31b2de6aab35ece353",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisReconnectBackfillHelperTest.xml": "807f7e598054a6c998733863563eb482c55b813e575e7fbc0044753f1929a107",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest.xml": "5eb5ce7ecacc3dc28a56b89a972c9f72c935b4e1e210edb177e39565fd1ced7f",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest.xml": "5a909f748306564445315621eed524745ce398588fc7c2a426a47bede091bc66",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest.xml": "4a78b3ebf293a9025415ed04cd2ee7cf957476889cbbc828dc49bf3e5373f9d1",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest.xml": "5cc021fb9c04de2c4ff8e7a0e294ce042f96d5c2b3172b590de3d071267915f1",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridgeTest.xml": "1307fab50f274e4c2d18e68d646ee2741209d2a609154a5a853cafce605b702d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AdrCompletenessContractTest.xml": "a177752a3f2a9a75b9839254433ce280104eff817ce8c1ce0317a2c213f9e6bd",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml": "2522215cf1721fde788498ed5451925f56c70dddf54892630af597ad882c118f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest.xml": "7a8bb16476aeaee26828cb67dc74af573d3b62fd6df82b18322b39437a877fc6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest.xml": "d9533393b3923b6b0f846433d1e3284ffa272b40a1e6f69fdead88419af22432",
+    "screenshots/ATT-8723_emulator_smoke.png": "ddca61ee82aa43d5f363932ea58327fb2cc95256412c2907096047eb83866a1c"
+  },
+  "run_started_utc": "2026-11-24T22:57:26.720139+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8723"
+}
