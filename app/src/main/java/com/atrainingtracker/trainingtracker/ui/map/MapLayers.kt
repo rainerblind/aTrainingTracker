@@ -357,16 +357,37 @@ fun LiveTrackLayer(path: List<LatLng>) {
 }
 
 /**
- * Renders static sensor markers (Start, End, Lap, etc.)
+ * Computes a collision-free Compose slot key for a standard [LocationMarker] (`ATT-8735`).
+ * Non-draggable markers include [LocationMarker.position] + [index] so markers with identical
+ * titles never collide; draggable markers omit position so `MarkerState` survives active drags.
+ */
+internal fun resolveStandardMarkerIdentityKey(markerData: LocationMarker, index: Int): Any =
+    if (markerData.draggable) {
+        listOf(markerData.title, markerData.iconResId, true, index)
+    } else {
+        listOf(markerData.title, markerData.iconResId, false, markerData.position, index)
+    }
+
+/**
+ * Renders static sensor markers (Start, End, Lap, etc.) and delegates radar vehicle pass
+ * markers (`marker.radarPass != null`) to the zoom-scaled, viewport-culled [RadarPassMarkerLayer]
+ * (`REQ-RAD-006`, `ATT-8735`).
  */
 @Composable
 fun MarkerLayer(
     markers: List<LocationMarker>,
     primaryColor: Color,
-    context: Context
+    context: Context,
+    currentZoom: Float = RADAR_MARKER_DEFAULT_ZOOM,
+    visibleBounds: MapViewportBounds? = null
 ) {
-    markers.forEach { markerData ->
-        key(markerData.title, markerData.iconResId, markerData.draggable) {
+    val (radarMarkers, standardMarkers) = remember(markers) {
+        markers.partition { it.radarPass != null }
+    }
+
+    standardMarkers.forEachIndexed { index, markerData ->
+        val markerKey = resolveStandardMarkerIdentityKey(markerData, index)
+        key(markerKey) {
             val icon = markerData.iconDescriptor ?: remember(markerData.iconResId, primaryColor) {
                 val color = when (markerData.iconResId) {
                     R.drawable.control_start -> TTColor.StartPoint
@@ -376,8 +397,9 @@ fun MarkerLayer(
                 }
                 createSensorMarker(context, markerData.iconResId, color, Color.White)
             }
-            // Use a composite key for marker identity including draggable state
-            val markerState = remember(markerData.title, markerData.iconResId, markerData.draggable) { MarkerState(position = markerData.position) }
+            val markerState = remember(markerKey) {
+                MarkerState(position = markerData.position)
+            }
             val haptic = LocalHapticFeedback.current
 
             // Sync marker position with external state changes (e.g. Cancel)
@@ -419,6 +441,72 @@ fun MarkerLayer(
                         wasDragging = isDragging
                     }
             }
+        }
+    }
+
+    if (radarMarkers.isNotEmpty()) {
+        RadarPassMarkerLayer(
+            radarMarkers = radarMarkers,
+            currentZoom = currentZoom,
+            visibleBounds = visibleBounds,
+            context = context
+        )
+    }
+}
+
+/**
+ * High-scalability map layer for 1,000+ radar vehicle pass icons (`REQ-RAD-006`, `ATT-8735`):
+ * - Emits `0` markers when zoomed out below [RADAR_MARKER_MIN_VISIBLE_ZOOM].
+ * - Culls active markers to [visibleBounds] (plus margin) when zoomed in.
+ * - Shares `O(1)` cached `BitmapDescriptor`s keyed by `(colorCategory, isLargeVehicle, zoomBucket)`.
+ * - Keys markers stably by `(passIndex, lat, lng)` with zero drag-coroutine overhead.
+ */
+@Composable
+internal fun RadarPassMarkerLayer(
+    radarMarkers: List<LocationMarker>,
+    currentZoom: Float,
+    visibleBounds: MapViewportBounds?,
+    context: Context
+) {
+    val zoomBucket = resolveRadarPassZoomBucket(currentZoom) ?: return
+    val visibleMarkers = remember(radarMarkers, zoomBucket, visibleBounds) {
+        cullRadarPassMarkers(
+            markers = radarMarkers,
+            currentZoom = currentZoom,
+            visibleBounds = visibleBounds,
+            marginFraction = 0.10
+        )
+    }
+    if (visibleMarkers.isEmpty()) return
+
+    visibleMarkers.forEach { markerData ->
+        val radarPass = markerData.radarPass ?: return@forEach
+        key(radarPass.passIndex, markerData.position.latitude, markerData.position.longitude, markerData.title) {
+            val icon = markerData.iconDescriptor ?: remember(
+                radarPass.colorCategory,
+                radarPass.isLargeVehicle,
+                zoomBucket,
+                context
+            ) {
+                RadarPassMarkerIconCache.getOrCreate(
+                    context = context,
+                    colorCategory = radarPass.colorCategory,
+                    isLargeVehicle = radarPass.isLargeVehicle,
+                    zoomBucket = zoomBucket
+                )
+            }
+            val markerState = remember(radarPass.passIndex, markerData.position.latitude, markerData.position.longitude) {
+                MarkerState(position = markerData.position)
+            }
+            Marker(
+                state = markerState,
+                icon = icon,
+                title = markerData.title,
+                anchor = Offset(0.5f, 0.5f),
+                alpha = markerData.alpha,
+                zIndex = resolveRadarPassZIndex(radarPass.colorCategory),
+                onClick = { markerData.onClick() }
+            )
         }
     }
 }

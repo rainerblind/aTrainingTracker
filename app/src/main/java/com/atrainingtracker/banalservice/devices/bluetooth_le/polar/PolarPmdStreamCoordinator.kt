@@ -23,6 +23,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.polar.androidcommunications.api.ble.exceptions.BleControlPointCommandError
 import com.polar.androidcommunications.api.ble.model.gatt.client.pmd.PmdControlPointResponse
@@ -210,9 +211,8 @@ class PolarPmdStreamCoordinator(
 
         /** Persists DIS model/serial characteristics and returns `true` when model metadata updated. */
         fun recordDisCharacteristic(context: Context, macAddress: String, key: String, value: String): Boolean {
-            val lowerKey = key.trim().lowercase(Locale.ROOT)
-            val trimmedValue = value.trim()
-            if (trimmedValue.isEmpty()) return false
+            val lowerKey = BleDisStringSanitizer.sanitize(key)?.lowercase(Locale.ROOT) ?: return false
+            val trimmedValue = BleDisStringSanitizer.sanitize(value) ?: return false
             return when {
                 lowerKey == BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.toString() ||
                     lowerKey.contains("2a24") || lowerKey.contains("model") -> {

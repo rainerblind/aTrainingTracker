@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 5 of 6)
 
 **Document ID**: `DOC-REQ-UI-P5`  
-**Version**: 1.0.37  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -829,7 +829,7 @@
   4. *Nine-Icon Header Budget & Radar Vector Icon (`REQ-UI-451.4`)*:
      - `sensorDefinitions` in `SensorStatus.kt` SHALL include `SensorType.RADAR_THREAT_COUNT` as the 9th sensor icon (following `POWER`) in both portrait and compact landscape modes.
      - In portrait mode (`!isCompactLandscape`), horizontal padding per sensor icon in the central container SHALL be adjusted to `4.dp` (`size(22.dp)` + `padding(horizontal = 4.dp)` = `30.dp` per icon slot), ensuring all 9 icons fit cleanly within the 272 dp central container (`9 * 30.dp = 270.dp <= 272.dp`) without clipping on compact 360 dp viewports.
-     - The radar icon SHALL render at `1.0f` alpha when `RADAR_THREAT_COUNT` is present in `activeSensors` (indicating active BLE/ANT+ radar hardware connected or `RadarTrafficSimulator` active) and at `INACTIVE_SENSOR_ALPHA = 0.38f` when inactive.
+     - The radar icon SHALL render at `1.0f` alpha when `RADAR_THREAT_COUNT` is present in `activeSensors` (indicating active BLE/ANT+ radar hardware connected) and at `INACTIVE_SENSOR_ALPHA = 0.38f` when inactive.
      - `SensorType.getIconResId()` SHALL return dedicated 24dp vector drawable `R.drawable.ic_radar` for `SensorType.RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT`.
      - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point, rotated 90 degrees counter-clockwise (to the left) so waves radiate horizontally to the left representing rearview vehicular radar detection horizon (`ATT-7736`).
   5. *Bike Radar Sensor Source Dialog & Scalar Metric Omission (`REQ-UI-451.5`)*:

@@ -38,7 +38,6 @@ import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.RadarThreatState
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
@@ -326,11 +325,6 @@ class ANTBikeRadarDevice(
     }
 
     private fun parseTargetsPage(payload: ByteArray, baseId: Int) {
-        // Physical hardware preemption (REQ-CON-029.3, REQ-CON-032.6, REQ-CON-042.4)
-        if (RadarTrafficSimulator.isSimulating) {
-            RadarTrafficSimulator.onPhysicalHardwareConnected()
-        }
-
         // Restart 3.5s watchdog
         handler.removeCallbacks(watchdogRunnable)
         handler.postDelayed(watchdogRunnable, WATCHDOG_TIMEOUT_MS)

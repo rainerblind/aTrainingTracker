@@ -1,7 +1,7 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.10  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1225,14 +1225,16 @@
   4. *Targeted Regression Verification Suite (`TST-MAP-069.4`)*:
   • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel*" --tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest"` asserting 100% pass rate.
 
-### TST-RAD-006: **Aftermath Map Traffic Hotspot Markers Extraction & Geo-Location Test** [Verified]
-- **Requirement(s)**: `REQ-RAD-006`
-- **Component**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModelTest.kt`
-- **Jira**: `ATT-5088`
+### TST-RAD-006: **Aftermath Map Zoom-Scaled Radar Car/Truck Markers, Color Priority, 1,000+ Culling & Bounded Cache Test** [Verified]
+- **Requirement(s)**: `REQ-RAD-006` (`REQ-RAD-006.1`..`REQ-RAD-006.5`), `REQ-TRK-073.5`
+- **Component**: `RadarPassMarkerMath.kt`, `MapLayers.kt`, `MapContentScope.kt`, `ATrainingTrackerMap.kt`, `WorkoutRepository.kt`, `RadarPassMarkerMathTest.kt`, `WorkoutRepositoryMarkerTest.kt`
+- **Jira**: `ATT-5088`, `ATT-8735` | **Target Release**: `V5.0.0`
 - **Test Description**:
-  1. *Pass Event Extraction Contract Test*: Verify `WorkoutRepository.getWorkoutMarkers()` identifies sample points where $\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$ and creates `LocationMarker` instances with valid coordinates and speed metadata.
-  2. *High-Threat Visual Distinction Test*: Verify high-threat passes (`FAST_APPROACHING`) are tagged with distinct threat level metadata for visual differentiation on `TrackOnMapScreen.kt`.
-  3. *Non-Radar Isolation Invariant Test*: Verify workouts without radar samples yield zero traffic hotspot markers and preserve all standard track markers.
+  1. *Pass Event & Delta Large-Vehicle Extraction Test (`TST-RAD-006.1`, `WorkoutRepositoryMarkerTest.kt`)*: Verify `WorkoutRepository.getWorkoutMarkers()` emits centered (`Offset(0.5f, 0.5f)`) `ic_radar_map_car` / `ic_radar_map_truck` markers (zero legacy `bike_radar` pins) with monotonic `passIndex`, accurate color categories, and per-pass delta `radarLargeVehicleCount` tracking (a car passing after a truck must NOT be mislabeled as a truck).
+  2. *Closing-Speed & Close-Pass Color Priority Test (`TST-RAD-006.2`, `RadarPassMarkerMathTest.kt`)*: Verify Brown (`Close Pass < threshold`) overrides all speed tiers, Red covers `>= 15.0 m/s`, Amber covers `[7.0, 15.0) m/s`, Green covers `< 7.0 m/s`, centralized `TTColor` tokens match, and `zIndex` layers severe hazards above benign passes.
+  3. *Zoom Cutoff, Half-Road-Width Scaling & 1,500-Pass Viewport Culling Test (`TST-RAD-006.3`, `RadarPassMarkerMathTest.kt`)*: Verify `currentZoom < 14.5f` yields `0` markers, buckets `0..4` scale monotonically (`8..18 dp`), 1,500 synthetic passes cull cleanly to visible bounds + margin (including antimeridian & hysteresis stability), and duplicate-title `MarkerLayer` keys never collide.
+  4. *Bounded `O(1)` `RadarPassMarkerIconCache` & Dual-Contrast Vector Rendering Test (`TST-RAD-006.4`, `RadarPassMarkerMathTest.kt`)*: Verify 1,500+ lookups across all colors, vehicle shapes, and zoom buckets allocate at most `20` car bitmaps (`<= 40` total car+truck) with instance reuse, render crisp colored + white-halo + dark-hairline pixels for both car and truck silhouettes, and export `ATT-8735_radar_map_icons_preview.png` for `Rule 8.5` inspection.
+  5. *Non-Radar Isolation & Compose Strong Skipping Test (`TST-RAD-006.5`, `WorkoutRepositoryMarkerTest.kt`, `ElevationProfilePerformanceComposeTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*: Verify non-radar workouts emit `0` radar markers, Strong Skipping stays intact on `MapContentScopeImpl.Render`, and `Color.kt` centralization passes with 0 inline hex literals.
 
 ### TST-CLM-008: **Live Climb Detection Movement-Bearing Gating & Cache Reconciliation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CLM-008` (`REQ-CLM-008.1`..`REQ-CLM-008.3`)

@@ -1,7 +1,7 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -2612,28 +2612,39 @@
 **Invariants**: Route-filtered live tracking state in `LiveClimbsRepository.allClimbs` preserved; zero direct database manager imports in `ui/map/` ViewModels; 100% test pass rate.
 
 ### REQ-RAD-006: Aftermath Map Traffic Hotspot Markers [Verified]
+- **Target Release**: `V5.0.0`
 - **Tests**: `TST-RAD-006`
 - **System Requirement(s)**: Derived (SW-only) — Post-workout aftermath map traffic hotspot visualization
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`
-- **Rationale**: Athletes reviewing cycling workouts need visual spatial context on where overtaking vehicles passed and where high-speed vehicular threats occurred along the route. The system SHALL detect vehicle passes from recorded radar telemetry and render discrete traffic hotspot markers on `TrackOnMapScreen.kt`.
+- **Implementation**: `WorkoutRepository.kt`, `MapModels.kt`, `RadarPassMarkerMath.kt`, `MapLayers.kt`, `MapContentScope.kt`, `ATrainingTrackerMap.kt`, `Color.kt`, `ic_radar_map_car.xml`, `ic_radar_map_truck.xml`
+- **Rationale**: Athletes reviewing cycling workouts need visual spatial context on where overtaking vehicles passed and where high-speed or close-pass threats occurred along the route without giant teardrop pins obscuring the road or 1,000+ pass events causing map frame drops (`ATT-5088`, refined by `ATT-8735`). The system SHALL detect vehicle passes from recorded radar telemetry and render compact, zoom-scaled, viewport-culled car/truck silhouette icons centered on the road across all aftermath map views.
 - **Description**:
-  1. *Pass Event Extraction*: `WorkoutRepository.getWorkoutMarkers()` and `TrackOnMapAftermathViewModel` SHALL identify sample intervals where $\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$ with valid GPS coordinates.
-  2. *Spatial Marker Presentation*: For each detected pass, the system SHALL generate a `LocationMarker` positioned along the workout track polyline, indicating vehicle approach speed ($v_{\text{app}}$), absolute speed ($v_{\text{abs}}$), and threat level.
-  3. *High-Threat Highlighting*: Overtaking events classified as high-threat (`FAST_APPROACHING` / red alert) SHALL be visually highlighted on the aftermath map.
-  4. *Non-Radar Invariant*: Workouts recorded without radar telemetry SHALL omit traffic markers with zero regressions to standard mile/km split and technical markers.
+  1. *Pass Event & Per-Pass Large-Vehicle Delta Extraction (`REQ-RAD-006.1`)*: `WorkoutRepository.getWorkoutMarkers()` SHALL identify sample intervals where $\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$ with valid GPS coordinates, track per-pass `radarLargeVehicleCount` delta (`> prevLargeVehicles` rather than cumulative `> 0`) to distinguish heavy trucks/buses from cars accurately, and emit centered (`anchor = Offset(0.5f, 0.5f)`) `LocationMarker` instances carrying `RadarPassMarkerData` (`passIndex`, `colorCategory`, `isLargeVehicle`, `approachSpeedMps`, `passingDistanceM`).
+  2. *Compact Dual-Contrast Car & Truck Silhouettes (`REQ-RAD-006.2`)*: Radar pass markers SHALL replace legacy `36 dp` `ic_map_pin_base` + `bike_radar` teardrops with compact symmetric vector drawables (`ic_radar_map_car.xml` for cars, `ic_radar_map_truck.xml` for V2 large vehicles) rendered with an outer dark contrast hairline (`TTColor.RadarMapIconOutlineDark`) and opaque white halo (`TTColor.RadarMapIconOutlineLight`) for crisp legibility on both light and dark map tiles and over route polylines.
+  3. *Hazard & Closing-Speed Color Priority (`REQ-RAD-006.3`)*: `resolveRadarPassColorCategory()` and `resolveRadarPassColor()` SHALL encode marker color via centralized `Color.kt` tokens in strict priority order: (1) Brown (`TTColor.RadarClosePassBrown`) when `passingDistanceM != null && passingDistanceM < closePassThresholdM`; (2) Red (`TTColor.RadarThreatRed`) when relative closing speed `>= 15.0 m/s` (`54 km/h`); (3) Amber/Orange (`TTColor.RadarThreatAmber`) when `[7.0, 15.0) m/s`; (4) Green (`TTColor.RadarClearGreen`) when `< 7.0 m/s`. Higher-severity passes SHALL layer above lower-severity passes (`zIndex = 60f..63f`).
+  4. *Zoom-Out Suppression, Half-Road-Width Scaling, Viewport Culling & Bounded `O(1)` Cache (`REQ-RAD-006.4`)*: `RadarPassMarkerLayer` SHALL hide all radar icons (`0` markers) when `currentZoom < 14.5f`, scale icon dimensions monotonically across 5 quantized zoom buckets (`8, 10, 12, 15, 18 dp`, staying `<=` half rendered Google Maps road width), cull active markers to hysteresis-buffered visible viewport bounds (`MapViewportBounds`) for smooth 1,000+ pass performance, share `BitmapDescriptor`s strictly via bounded `O(1)` `RadarPassMarkerIconCache` (`<= 40` entries max across `4 colors x 2 vehicle shapes x 5 zoom buckets`; `<= 20` for V1 car-only rides), and eliminate duplicate-title `MarkerLayer` `key(...)` collisions.
+  5. *Non-Radar Invariant (`REQ-RAD-006.5`)*: Workouts recorded without radar telemetry SHALL emit `0` radar markers with zero viewport-bounds recomposition overhead and zero regressions to standard start/stop/extrema/draggable markers.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* a completed workout containing recorded vehicle passes with valid GPS coordinates,
-• *When* the athlete views the track in `TrackOnMapScreen.kt`,
-• *Then* vehicle pass locations and high-speed threat hotspots are rendered along the GPS track.
+• *Given* a completed workout containing recorded vehicle passes across low (`< 7 m/s`), moderate (`7–15 m/s`), high (`>= 15 m/s`), and V2 close-pass (`< closePassThresholdM`) speeds/distances,
+• *When* the athlete views the track on `TrackOnMapScreen.kt` / `FullScreenWorkoutMapOverlay.kt`,
+• *Then* zoomed-out overview levels (`< 14.5`) show `0` radar markers, zoomed-in street levels show compact centered car/truck silhouettes scaled to `<=` half road width in Green/Amber/Red/Brown priority order, and subsequent cars after a truck pass are accurately marked as cars via per-pass delta tracking.
+• *Given* a workout with 1,000+ recorded radar passes,
+• *When* panning and zooming across zoom buckets,
+• *Then* active `Marker` composables are strictly culled to visible viewport bounds + margin and `RadarPassMarkerIconCache` stays bounded (`<= 40` entries total).
 • *Given* a workout recorded without radar data,
 • *When* inspecting the aftermath map,
 • *Then* zero traffic markers are generated and standard track markers render unaffected.
 
-**Invariants**: Exact GPS trackpoint correlation; zero extraneous markers on non-radar sessions.
+**Invariants**: Exact GPS trackpoint correlation; zero `ic_map_pin_base`/`bike_radar` pin regression; `O(1)` bounded bitmap cache; zero extraneous markers or recomposition churn on non-radar sessions; Compose Strong Skipping preserved on `MapContentScopeImpl.Render`.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines `REQ-RAD-006` in `docs/requirements/req_maps_navigation.md` (and aligns `REQ-TRK-073.5` in `docs/requirements/req_tracking_cockpit_part2.md`).
+2. *Historical Origin & Commit Trace*: Commit `624bea5e` (`ATT-5088`, initial aftermath map radar hotspot markers) and commit `f2c2e15e` (`ATT-5096`, V2 close-pass hazard markers).
+3. *Root Reason for Existing Formulation*: `ATT-5088` reused `createSensorMarker` with `ic_map_pin_base` + `bike_radar` to deliver rapid initial hotspot visibility before `bike_radar.xml` acquired a solid `#000000` rounded-square background (`ATT-6699`) and before multi-hour 1,000-pass rides exposed teardrop clutter, uniform blue tinting, missing zoom scaling/culling, `MarkerLayer` title-key collisions, and cumulative `radarLargeVehicleCount > 0` mislabeling.
+4. *Preservation of Core Invariants*: Preserves exact GPS trackpoint correlation, localized tooltip titles (`radar_marker_*_title`), non-radar workout isolation, draggable fingerprint marker stability, and cross-surface parity across all `ATrainingTrackerMap` aftermath screens.
 
 ### REQ-CLM-008: Live Climb Detection Movement-Bearing Gating & Cache Reconciliation [Verified]
 - **Target Release**: `V5.0.0`

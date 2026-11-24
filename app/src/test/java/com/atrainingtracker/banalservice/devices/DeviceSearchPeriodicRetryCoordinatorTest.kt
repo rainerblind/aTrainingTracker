@@ -21,7 +21,13 @@ package com.atrainingtracker.banalservice.devices
 import android.content.Context
 import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SensorSearchSettings
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -33,9 +39,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Unit tests for [DeviceSearchPeriodicRetryCoordinator] verifying extended re-search backoff
- * scheduling, disable toggle enforcement, and clean cancellation on connect/removal/shutdown
- * (`ATT-8965`, `REQ-CON-052.2`, `TST-CON-052.2`).
+ * Unit tests for [DeviceSearchPeriodicRetryCoordinator] verifying MIA-only periodic re-search
+ * gating, clean give-up for never-connected sensors, workout-end session reset, identity guard,
+ * and `15s/30s/1m/2m` backoff progression (`ATT-8965`, `ATT-9178`, `REQ-CON-052.2`, `TST-CON-052.2`).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -49,8 +55,14 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
         scheduled.clear()
         cancelled.clear()
+    }
+
+    @After
+    fun tearDown() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
     }
 
     private fun newCoordinator(): DeviceSearchPeriodicRetryCoordinator =
@@ -61,34 +73,37 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         )
 
     @Test
-    fun testScheduleRetry_progressesThroughExtendedStepsAndResetsOnSuccess() {
+    fun testScheduleRetry_progressesThroughConfiguredPresetsAndResetsOnSuccess() {
+        // Default 1m (60s): 32s -> 60s -> 60s
         val coordinator = newCoordinator()
         var retryInvocations = 0
-
-        val delays = mutableListOf<Long>()
-        repeat(5) {
+        val defaultDelays = mutableListOf<Long>()
+        repeat(3) {
             assertTrue(coordinator.scheduleRetryIfEnabled(42L) { retryInvocations++ })
             val (delayMs, runnable) = scheduled.last()
-            delays.add(delayMs)
+            defaultDelays.add(delayMs)
             runnable.run()
         }
+        assertEquals(listOf(32_000L, 60_000L, 60_000L), defaultDelays)
+        assertEquals(3, retryInvocations)
 
-        assertEquals(listOf(32_000L, 64_000L, 128_000L, 300_000L, 300_000L), delays)
-        assertEquals(5, retryInvocations)
-
-        // Next schedule starts pending timer, then search succeeds -> cancels and resets backoff
+        // Reset on success then configure 2m (120s): 32s -> 64s -> 120s -> 120s
         assertTrue(coordinator.scheduleRetryIfEnabled(42L) { retryInvocations++ })
-        assertTrue(coordinator.hasPendingRetryForTesting(42L))
         val pendingRunnable = scheduled.last().second
-
         coordinator.onDeviceSearchSucceeded(42L)
         assertFalse(coordinator.hasPendingRetryForTesting(42L))
         assertNull(coordinator.getLastDelayMsForTesting(42L))
         assertTrue(cancelled.contains(pendingRunnable))
 
-        // Subsequent exhaustion starts cleanly at 32s again
-        assertTrue(coordinator.scheduleRetryIfEnabled(42L) { retryInvocations++ })
-        assertEquals(32_000L, scheduled.last().first)
+        SensorSearchSettings.setPeriodicResearchFinalPeriodSec(context, 120)
+        val twoMinDelays = mutableListOf<Long>()
+        repeat(4) {
+            assertTrue(coordinator.scheduleRetryIfEnabled(42L) { retryInvocations++ })
+            val (delayMs, runnable) = scheduled.last()
+            twoMinDelays.add(delayMs)
+            runnable.run()
+        }
+        assertEquals(listOf(32_000L, 64_000L, 120_000L, 120_000L), twoMinDelays)
     }
 
     @Test
@@ -116,7 +131,6 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         assertTrue(cancelled.containsAll(listOf(r1, r2)))
         assertFalse(coordinator.scheduleRetryIfEnabled(3L) { invoked++ })
 
-        // Even if a stalled runnable fires after shutdown, callback MUST NOT execute
         r1.run()
         r2.run()
         assertEquals(0, invoked)
@@ -132,7 +146,6 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         assertEquals(32_000L, coordinator.getLastDelayMsForTesting(99L))
         val pending = scheduled.last().second
 
-        // User disables periodic re-search while timer is queued
         SensorSearchSettings.setPeriodicResearchEnabled(context, false)
         pending.run()
 
@@ -154,7 +167,6 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         assertTrue(coordinator.scheduleRetryIfEnabled(55L) { retries++ })
         val replacementRunnable = scheduled[1].second
 
-        // Stale firstRunnable runs asynchronously -> MUST NOT remove replacementRunnable or fire retry
         firstRunnable.run()
         assertEquals(0, retries)
         assertTrue(coordinator.hasPendingRetryForTesting(55L))
@@ -162,6 +174,137 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         replacementRunnable.run()
         assertEquals(1, retries)
         assertFalse(coordinator.hasPendingRetryForTesting(55L))
+    }
+
+    @Test
+    fun testHandleSearchStopped_neverConnectedDeviceGivesUpWithZeroTimers_whileMiaDeviceSchedulesRetry() {
+        val coordinator = newCoordinator()
+        val neverConnected = mockk<MyRemoteDevice>(relaxed = true)
+        every { neverConnected.shouldKeepAliveOnSearchTimeout() } returns false
+        every { neverConnected.hasConnectedInSession() } returns false
+
+        val miaDevice = mockk<MyRemoteDevice>(relaxed = true)
+        every { miaDevice.shouldKeepAliveOnSearchTimeout() } returns false
+        every { miaDevice.hasConnectedInSession() } returns true
+        every { miaDevice.isReceivingData } returns false
+
+        val remoteDevices = mutableMapOf<Long, MyRemoteDevice>(201L to neverConnected, 202L to miaDevice)
+        val deviceTries = mutableMapOf<MyRemoteDevice, Int>(neverConnected to 1, miaDevice to 1)
+        val searchQueue = java.util.ArrayDeque<MyRemoteDevice>()
+        var detachNever = 0
+        var detachMia = 0
+
+        coordinator.handleSearchStoppedForCurrentDevice(
+            current = neverConnected,
+            deviceId = 201L,
+            success = false,
+            remoteDevices = remoteDevices,
+            deviceTries = deviceTries,
+            searchQueue = searchQueue,
+            currentlySearchingSupplier = { null },
+            detachAndGiveUpDevice = { detachNever++ },
+            searchNextRunnable = {}
+        )
+        assertEquals("Never-connected sensor must detach and give up cleanly", 1, detachNever)
+        assertFalse("Never-connected sensor must NOT schedule periodic retry", coordinator.hasPendingRetryForTesting(201L))
+        assertFalse("deviceTries must be cleared on give-up", deviceTries.containsKey(neverConnected))
+        assertTrue(scheduled.isEmpty())
+
+        coordinator.handleSearchStoppedForCurrentDevice(
+            current = miaDevice,
+            deviceId = 202L,
+            success = false,
+            remoteDevices = remoteDevices,
+            deviceTries = deviceTries,
+            searchQueue = searchQueue,
+            currentlySearchingSupplier = { null },
+            detachAndGiveUpDevice = { detachMia++ },
+            searchNextRunnable = {}
+        )
+        assertEquals("MIA sensor must NOT detach while periodic retry is enabled", 0, detachMia)
+        assertTrue("MIA sensor must schedule periodic retry", coordinator.hasPendingRetryForTesting(202L))
+        assertEquals(32_000L, scheduled.single().first)
+    }
+
+    @Test
+    fun testEnqueueDeviceForPeriodicResearch_enforcesIdentityGuardAndClearsDelayWhenSessionReset() {
+        val coordinator = newCoordinator()
+        var miaConnectedInSession = true
+        val original = mockk<MyRemoteDevice>(relaxed = true)
+        every { original.shouldKeepAliveOnSearchTimeout() } returns false
+        every { original.hasConnectedInSession() } answers { miaConnectedInSession }
+        every { original.isReceivingData } returns false
+
+        val remoteDevices = mutableMapOf<Long, MyRemoteDevice>(301L to original)
+        val deviceTries = mutableMapOf<MyRemoteDevice, Int>(original to 1)
+        val searchQueue = java.util.ArrayDeque<MyRemoteDevice>()
+        var detachCount = 0
+
+        coordinator.handleSearchStoppedForCurrentDevice(
+            current = original,
+            deviceId = 301L,
+            success = false,
+            remoteDevices = remoteDevices,
+            deviceTries = deviceTries,
+            searchQueue = searchQueue,
+            currentlySearchingSupplier = { null },
+            detachAndGiveUpDevice = { detachCount++ },
+            searchNextRunnable = {}
+        )
+        assertEquals(32_000L, coordinator.getLastDelayMsForTesting(301L))
+
+        // Case 1: device was replaced in remoteDevices before timer fired -> identity guard ignores cleanly
+        val replacement = mockk<MyRemoteDevice>(relaxed = true)
+        every { replacement.hasConnectedInSession() } returns false
+        remoteDevices[301L] = replacement
+        scheduled.last().second.run()
+        assertEquals("Replacement instance must NOT be detached by stale timer", 0, detachCount)
+        assertTrue(searchQueue.isEmpty())
+
+        // Case 2: same device instance had session connection state reset -> clears delay & detaches cleanly
+        remoteDevices[301L] = original
+        miaConnectedInSession = true
+        coordinator.handleSearchStoppedForCurrentDevice(
+            current = original,
+            deviceId = 301L,
+            success = false,
+            remoteDevices = remoteDevices,
+            deviceTries = deviceTries,
+            searchQueue = searchQueue,
+            currentlySearchingSupplier = { null },
+            detachAndGiveUpDevice = { detachCount++ },
+            searchNextRunnable = {}
+        )
+        miaConnectedInSession = false
+        scheduled.last().second.run()
+        assertEquals("Reset MIA device must detach when timer fires", 1, detachCount)
+        assertNull("Stale delay state must be cleared on reset give-up", coordinator.getLastDelayMsForTesting(301L))
+        assertTrue(searchQueue.isEmpty())
+    }
+
+    @Test
+    fun testOnTrackingModeChanged_workoutEndCancelsPendingAndResetsOnlyDisconnectedDevices() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val coordinator = newCoordinator()
+
+        val disconnectedMia = mockk<MyRemoteDevice>(relaxed = true)
+        every { disconnectedMia.isReceivingData } returns false
+        val connectedLive = mockk<MyRemoteDevice>(relaxed = true)
+        every { connectedLive.isReceivingData } returns true
+        val remoteDevices = mapOf(1L to disconnectedMia, 2L to connectedLive)
+
+        assertTrue(coordinator.scheduleRetryIfEnabled(1L) {})
+        assertTrue(coordinator.hasPendingRetryForTesting(1L))
+
+        // Workout ends (TRACKING -> READY)
+        coordinator.onTrackingModeChanged(TrackingMode.READY, remoteDevices)
+        assertFalse(coordinator.hasPendingRetryForTesting(1L))
+        verify(exactly = 1) { disconnectedMia.resetSessionConnectionState() }
+        verify(exactly = 0) { connectedLive.resetSessionConnectionState() }
+
+        // Subsequent READY -> READY does NOT reset pre-workout disconnected MIA sensors
+        coordinator.onTrackingModeChanged(TrackingMode.READY, remoteDevices)
+        verify(exactly = 1) { disconnectedMia.resetSessionConnectionState() }
     }
 
     /**
@@ -172,8 +315,8 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
     @Test
     fun testHandleSearchStopped_keepAliveDevice_removesDeviceTriesAndSkipsTries2ToN_TST_SET_125_3() {
         val coordinator = newCoordinator()
-        val keepAliveDevice = io.mockk.mockk<MyRemoteDevice>(relaxed = true)
-        io.mockk.every { keepAliveDevice.shouldKeepAliveOnSearchTimeout() } returns true
+        val keepAliveDevice = mockk<MyRemoteDevice>(relaxed = true)
+        every { keepAliveDevice.shouldKeepAliveOnSearchTimeout() } returns true
 
         val remoteDevices = mutableMapOf<Long, MyRemoteDevice>(101L to keepAliveDevice)
         val deviceTries = mutableMapOf<MyRemoteDevice, Int>(keepAliveDevice to 3)
@@ -197,9 +340,8 @@ class DeviceSearchPeriodicRetryCoordinatorTest {
         assertFalse("Keep-alive device must NOT schedule periodic retry", coordinator.hasPendingRetryForTesting(101L))
         assertEquals("Keep-alive device must NOT be detached", 0, detachCount)
 
-        // Contrast: non-keep-alive device (READY startup) with tries = 3 still decrements & re-enqueues
-        val readyDevice = io.mockk.mockk<MyRemoteDevice>(relaxed = true)
-        io.mockk.every { readyDevice.shouldKeepAliveOnSearchTimeout() } returns false
+        val readyDevice = mockk<MyRemoteDevice>(relaxed = true)
+        every { readyDevice.shouldKeepAliveOnSearchTimeout() } returns false
         remoteDevices[102L] = readyDevice
         deviceTries[readyDevice] = 3
 

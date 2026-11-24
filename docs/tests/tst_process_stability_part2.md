@@ -1,7 +1,7 @@
 # Living Test Specification: Engineering Process, Stability & Architecture (Part 2 of 2)
 
 **Document ID**: `DOC-TST-PRO-P2`  
-**Version**: 1.0.58  
+**Version**: 1.0.59  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1516,7 +1516,7 @@
   3. *Coding Standard & Stage 4/5 Behavioral Compose Mandate Parity (`TST-PRO-132.3`, `AspiceSweAuditContractTest.kt` & `UiReflectionOnlyTestAuditContractTest.kt`)*:
      • *Given* `docs/coding_standards.md` §5.4, `.agents/skills/stage4-implementation/SKILL.md`, and `.agents/skills/stage5-verification/SKILL.md` updated with the mandatory `createComposeRule()` rule while preserving existing governance markers, *When* `AspiceSweAuditContractTest` and governance marker assertions execute, *Then* all assertions pass `100%` (`Localization Parity: N/A - no UI strings`). Tag tests with `TST-PRO-132.3`.
   4. *`RadarSettingsSectionTest` Robolectric Compose Remediation (`TST-PRO-132.4`, `RadarSettingsSectionTest.kt`, strengthening `TST-CON-031.5b` & `TST-TRK-062.5`)*:
-     • *Given* `RadarSettingsSection` composed via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()` with isolated `TuningPreferencesDataStore` / mocked `TrainingApplication` & `RadarTrafficSimulator` and stale `RadarLightControlMode` tautologies retired, *When* `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest"` runs, *Then* `FULL_SCREEN` hides `radar_overlay_clear_mode` (`assertDoesNotExist()`), `RIGHT` displays it, `radarSpatialAudioEnabled` toggles `radar_traffic_orientation_title` / `radar_lane_change_tick_title`, retired `RadarLightControlMode` controls remain absent while `radar_brake_light_title` is displayed and interactive, `onSimulationToggled` / DataStore callbacks fire on click, and all preserved 9-locale XML checks (`:131-226`) pass with `0` `src/main/` reads. Tag tests with `TST-PRO-132.4`.
+     • *Given* `RadarSettingsSection` composed via `@RunWith(RobolectricTestRunner::class)` + `createComposeRule()` with isolated `TuningPreferencesDataStore` / mocked `TrainingApplication` and stale `RadarLightControlMode` tautologies retired, *When* `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSectionTest"` runs, *Then* `FULL_SCREEN` hides `radar_overlay_clear_mode` (`assertDoesNotExist()`), `RIGHT` displays it, `radarSpatialAudioEnabled` toggles `radar_traffic_orientation_title` / `radar_lane_change_tick_title`, retired `RadarLightControlMode` and simulator controls remain absent while `radar_brake_light_title` is displayed and interactive, DataStore callbacks fire on click, and all preserved 9-locale XML checks pass with `0` `src/main/` reads. Tag tests with `TST-PRO-132.4`.
 
 ### TST-STB-020: **Live Tracking 1-Hz Heap/OOM Churn Elimination, Discrete Lifecycle Edges & Consumer Filtering Verification Suite (ATT-8999)** [Verified]
 - **Requirement(s)**: `REQ-STB-020`

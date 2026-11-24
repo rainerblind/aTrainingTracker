@@ -436,17 +436,13 @@ fun AdvancedTuningScreen(
                 )
             }
 
-            // Section 6: Fahrrad-Radar & Simulator (REQ-UI-512, ATT-6702)
-            val isRadarSimRunning by com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulatingFlow.collectAsState()
-            val activeRadarScenario = com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.activeScenario
+            // Section 6: Fahrrad-Radar (REQ-UI-512, ATT-6702)
             TuningAccordionSection(
                 icon = Icons.Default.Sensors, title = stringResource(R.string.tuning_cat_cycling_radar),
                 subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
                     edgeSide = persistedConfig?.radarEdgeSide ?: TuningPreferencesDefaults.RADAR_EDGE_SIDE,
                     alertMode = persistedConfig?.radarAudioAlertMode ?: TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
                     lightMode = persistedConfig?.radarLightDefaultMode ?: TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
-                    isRunning = isRadarSimRunning,
-                    scenario = activeRadarScenario,
                     context = context
                 ),
                 isExpanded = isSectionExpanded(TuningSection.CYCLING_RADAR), onToggle = { toggleSection(TuningSection.CYCLING_RADAR) }

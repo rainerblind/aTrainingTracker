@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-24T20:07:06.938Z" hostname="rainer-HP-EliteBook-850-G5" time="1.535">
+  <properties/>
+  <testcase name="testLocationAndTimeChanged_updatesSolarProfile" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.186"/>
+  <testcase name="testFastTunnelEntryAndExitHysteresis_tstCon034_3" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.141"/>
+  <testcase name="testManualOverride_suspendsAutomationUntilResumed" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.142"/>
+  <testcase name="testCommandRateLimitingAndCooldown_tstCon034_5" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.144"/>
+  <testcase name="testStartAndStopListening_managesSensorsAndLifecycle" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.218"/>
+  <testcase name="testPocketAndScreenOffGating_tstCon034_1" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.135"/>
+  <testcase name="testManualOverrideAndStop_cancelPendingRateLimitAndResetDispatchedCache_tstCon059_2" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.143"/>
+  <testcase name="testResumeAutomation_syncsLiveThreatAndBypassesRateLimit_tstCon059_1" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.142"/>
+  <testcase name="test3StageThreatEscalationMatrix_nightAntiGlareCap_tstCon034_4" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.141"/>
+  <testcase name="testSetManualLightMode_overridesAutomation" classname="com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest" time="0.142"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

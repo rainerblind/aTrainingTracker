@@ -239,6 +239,7 @@ class BLEReconnectRobustnessTest {
     @Test
     fun testExponentialReconnectBackoffOnDisconnect() {
         val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 203L, "AA:BB:CC:DD:EE:13")
+        device.setHasConnectedInSession(true)
         injectTrackingHandler(device)
 
         val callback = device.gattCallbackForTesting
@@ -266,8 +267,8 @@ class BLEReconnectRobustnessTest {
         assertEquals(8000L, postedDelayedRunnables.last().second)
         assertEquals(16000L, device.currentReconnectDelayMs)
 
-        // 5th-9th Disconnects: extend 16s -> 32s -> 64s -> 128s -> 300s (5 min default final period, ATT-8965)
-        val expectedExtendedSchedule = listOf(16_000L, 32_000L, 64_000L, 128_000L, 300_000L, 300_000L)
+        // 5th-7th Disconnects: extend 16s -> 32s -> 60s (1 min default final period, ATT-9178)
+        val expectedExtendedSchedule = listOf(16_000L, 32_000L, 60_000L, 60_000L)
         for (idx in 0 until expectedExtendedSchedule.size - 1) {
             callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
             assertEquals(expectedExtendedSchedule[idx], postedDelayedRunnables.last().second)
@@ -288,6 +289,7 @@ class BLEReconnectRobustnessTest {
         every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } returns false
 
         val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 211L, "AA:BB:CC:DD:EE:19")
+        device.setHasConnectedInSession(true)
         injectTrackingHandler(device)
         val callback = device.gattCallbackForTesting
 
@@ -307,24 +309,25 @@ class BLEReconnectRobustnessTest {
         every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC) } returns true
 
         var enabledSetting = true
-        var periodSecSetting = 600
+        var periodSecSetting = 600 // legacy 10m clamps to 120s (2m)
         every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } answers { enabledSetting }
-        every { mockPrefs.getInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300) } answers { periodSecSetting }
+        every { mockPrefs.getInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 60) } answers { periodSecSetting }
 
         val device = TestReconnectBTLEDevice(mockContext, mockSensorManager, 212L, "AA:BB:CC:DD:EE:20")
+        device.setHasConnectedInSession(true)
         injectTrackingHandler(device)
         val callback = device.gattCallbackForTesting
 
-        // Back off all the way to 10 min (600,000 ms)
-        repeat(9) {
+        // Back off all the way to 2 min (120,000 ms) from legacy 600s preference
+        repeat(8) {
             callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
         }
-        assertEquals(600_000L, device.currentReconnectDelayMs)
+        assertEquals(120_000L, device.currentReconnectDelayMs)
 
-        // User lowers final period to 60s -> next retry clamps immediately to 60,000 ms
-        periodSecSetting = 60
+        // User lowers final period to 30s -> next retry clamps immediately to 30,000 ms
+        periodSecSetting = 30
         callback.onConnectionStateChange(mockGatt, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED)
-        assertEquals(60_000L, postedDelayedRunnables.last().second)
+        assertEquals(30_000L, postedDelayedRunnables.last().second)
 
         // User disables periodic re-search -> next retry clamps immediately to 16,000 ms
         enabledSetting = false
@@ -802,5 +805,131 @@ class BLEReconnectRobustnessTest {
         postedDelayedRunnables.clear()
         readyDevice.reconnectRunnable.run()
         assertTrue("READY attemptBackgroundReconnect must retain mSearchTimeoutRunnable", postedDelayedRunnables.any { it.first == readyDevice.searchTimeoutRunnable })
+    }
+
+    /**
+     * TST-CON-052.2 (ATT-9178): Never-connected BLE device in READY receiving STATE_DISCONNECTED
+     * MUST NOT schedule mReconnectRunnable (both when isSearching==true and isSearching==false),
+     * and MUST call notifyStopSearching(false) when isSearching==true so DeviceManager never stalls.
+     */
+    @Test
+    fun testNeverConnectedReadyDisconnect_schedulesZeroReconnectsAndStopsInitialSearch() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        every { mockRemoteDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE) } returns mockGatt
+
+        // Case A: isSearching == true (immediate GATT 133 during initial search)
+        val searchingDevice = TestReconnectBTLEDevice(mockContext, mockSensorManager, 408L, "AA:BB:CC:DD:EE:48")
+        injectTrackingHandler(searchingDevice, runPosted = true)
+        searchingDevice.startSearching()
+        assertTrue(searchingDevice.isSearching)
+        postedDelayedRunnables.clear()
+
+        searchingDevice.gattCallbackForTesting.onConnectionStateChange(mockGatt, 133, BluetoothProfile.STATE_DISCONNECTED)
+        assertFalse("Initial READY GATT 133 disconnect must release search queue", searchingDevice.isSearching)
+        assertFalse("Never-connected READY disconnect must schedule 0 mReconnectRunnable", postedDelayedRunnables.any { it.first == searchingDevice.reconnectRunnable })
+
+        // Case B: isSearching == false (spurious disconnect on never-connected READY device)
+        val idleDevice = TestReconnectBTLEDevice(mockContext, mockSensorManager, 409L, "AA:BB:CC:DD:EE:49")
+        injectTrackingHandler(idleDevice, runPosted = true)
+        assertFalse(idleDevice.isSearching)
+        postedDelayedRunnables.clear()
+
+        idleDevice.gattCallbackForTesting.onConnectionStateChange(mockGatt, 133, BluetoothProfile.STATE_DISCONNECTED)
+        assertFalse("Never-connected READY !isSearching disconnect must schedule 0 mReconnectRunnable", postedDelayedRunnables.any { it.first == idleDevice.reconnectRunnable })
+    }
+
+    /**
+     * TST-CON-052.2 (ATT-9178): resetSessionConnectionState() preserves live connected devices,
+     * never cancels mSearchTimeoutRunnable while SEARCHING (no queue wedge), and clears/closes
+     * passive GATT handles when DISCONNECTED && !isSearching().
+     */
+    @Test
+    fun testResetSessionConnectionState_safeAcrossConnectedSearchingAndDisconnectedStates() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+
+        // 1. CONNECTED_WITH_SERVICE -> preserved intact
+        val live = TestReconnectBTLEDevice(mockContext, mockSensorManager, 410L, "AA:BB:CC:DD:EE:50")
+        injectTrackingHandler(live, runPosted = true)
+        live.setHasConnectedInSession(true)
+        live.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        live.setBluetoothGattForTesting(mockGatt)
+        live.resetSessionConnectionState()
+        assertTrue("Connected device must keep hasConnectedInSession", live.hasConnectedInSession())
+
+        // 2. SEARCHING -> clears session flag & reconnectRunnable WITHOUT cancelling mSearchTimeoutRunnable
+        val searching = TestReconnectBTLEDevice(mockContext, mockSensorManager, 411L, "AA:BB:CC:DD:EE:51")
+        injectTrackingHandler(searching, runPosted = true)
+        every { mockRemoteDevice.connectGatt(mockContext, any(), any(), BluetoothDevice.TRANSPORT_LE) } returns mockGatt
+        searching.setHasConnectedInSession(true)
+        searching.startSearching()
+        removedRunnables.clear()
+        searching.resetSessionConnectionState()
+        assertFalse("SEARCHING reset must clear hasConnectedInSession", searching.hasConnectedInSession())
+        assertTrue("SEARCHING reset must remove mReconnectRunnable", removedRunnables.contains(searching.reconnectRunnable))
+        assertFalse("SEARCHING reset must NOT cancel mSearchTimeoutRunnable (no queue wedge)", removedRunnables.contains(searching.searchTimeoutRunnable))
+        assertTrue("SEARCHING reset must keep isSearching true until timeout/callback", searching.isSearching)
+
+        // 3. DISCONNECTED && !isSearching() -> clears flags and closes passive GATT handle atomically
+        val disconnected = TestReconnectBTLEDevice(mockContext, mockSensorManager, 412L, "AA:BB:CC:DD:EE:52")
+        injectTrackingHandler(disconnected, runPosted = true)
+        val passiveGatt = mockk<BluetoothGatt>(relaxed = true)
+        disconnected.setHasConnectedInSession(true)
+        disconnected.setStateForTesting(MyBTLEDevice.State.DISCONNECTED)
+        disconnected.setBluetoothGattForTesting(passiveGatt)
+        disconnected.resetSessionConnectionState()
+        assertFalse(disconnected.hasConnectedInSession())
+        assertFalse(disconnected.isBackgroundReconnecting())
+        verify(atLeast = 1) { passiveGatt.disconnect() }
+        verify(atLeast = 1) { passiveGatt.close() }
+
+        // 4. CONNECTED_TO_GATT (mid-handshake) -> preserved intact with zero GATT close
+        val connecting = TestReconnectBTLEDevice(mockContext, mockSensorManager, 413L, "AA:BB:CC:DD:EE:53")
+        injectTrackingHandler(connecting, runPosted = true)
+        val liveGatt = mockk<BluetoothGatt>(relaxed = true)
+        connecting.setHasConnectedInSession(true)
+        connecting.setStateForTesting(MyBTLEDevice.State.CONNECTED_TO_GATT)
+        connecting.setBluetoothGattForTesting(liveGatt)
+        connecting.resetSessionConnectionState()
+        assertTrue("CONNECTED_TO_GATT must keep hasConnectedInSession", connecting.hasConnectedInSession())
+        verify(exactly = 0) { liveGatt.disconnect() }
+        verify(exactly = 0) { liveGatt.close() }
+    }
+
+    /**
+     * TST-CON-052.2 (ATT-9178 Bounce 1): GATT-133 during active search in TRACKING (never-connected)
+     * and during MIA periodic re-search MUST release the search queue via notifyStopSearching(false)
+     * while scheduling the appropriate reconnect backoff (preventing search-queue deadlock).
+     */
+    @Test
+    fun testMidWorkoutAndMiaGatt133DuringActiveSearch_releasesSearchQueueAndSchedulesBackoff() {
+        TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        every { mockRemoteDevice.connectGatt(mockContext, any(), any(), BluetoothDevice.TRANSPORT_LE) } returns mockGatt
+
+        // Case A: Never-connected sensor during active TRACKING search hits GATT-133
+        val neverConnected = TestReconnectBTLEDevice(mockContext, mockSensorManager, 414L, "AA:BB:CC:DD:EE:54")
+        injectTrackingHandler(neverConnected, runPosted = true)
+        neverConnected.startSearching()
+        assertTrue(neverConnected.isSearching)
+        postedDelayedRunnables.clear()
+
+        neverConnected.gattCallbackForTesting.onConnectionStateChange(mockGatt, 133, BluetoothProfile.STATE_DISCONNECTED)
+        assertFalse("Never-connected TRACKING GATT-133 must call notifyStopSearching(false)", neverConnected.isSearching)
+        val neverConnectedDelay = postedDelayedRunnables.last { it.first == neverConnected.reconnectRunnable }.second
+        assertTrue("Never-connected TRACKING GATT-133 must floor reconnect >= 60s", neverConnectedDelay >= 60_000L)
+
+        // Case B: MIA sensor during periodic re-search hits GATT-133
+        val miaSensor = TestReconnectBTLEDevice(mockContext, mockSensorManager, 415L, "AA:BB:CC:DD:EE:55")
+        injectTrackingHandler(miaSensor, runPosted = true)
+        miaSensor.setHasConnectedInSession(true)
+        miaSensor.startSearching()
+        assertTrue(miaSensor.isSearching)
+        postedDelayedRunnables.clear()
+
+        miaSensor.gattCallbackForTesting.onConnectionStateChange(mockGatt, 133, BluetoothProfile.STATE_DISCONNECTED)
+        assertFalse("MIA GATT-133 during active re-search must call notifyStopSearching(false)", miaSensor.isSearching)
+        assertTrue(
+            "MIA GATT-133 must still schedule reconnect backoff",
+            postedDelayedRunnables.any { it.first == miaSensor.reconnectRunnable }
+        )
     }
 }

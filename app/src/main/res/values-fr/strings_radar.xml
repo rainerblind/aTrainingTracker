@@ -40,28 +40,6 @@
     <string name="radar_passing_distance_short">Dist dépas</string>
     <string name="radar_large_vehicle_count">Véhicules lourds radar</string>
     <string name="radar_large_vehicle_count_short">Véh lourds</string>
-
-    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
-    <string name="radar_simulator_title">Simulateur de trafic radar</string>
-    <string name="radar_simulator_subtitle">Simuler des scénarios de circulation pour l\'entraînement en intérieur et les tests d\'interface</string>
-    <string name="radar_simulator_start">Démarrer la simulation</string>
-    <string name="radar_simulator_stop">Arrêter la simulation</string>
-    <string name="radar_simulator_running">Simulation active</string>
-    <string name="radar_simulator_idle">Simulation arrêtée</string>
-    <string name="radar_simulator_status">%1$s • %2$d cibles</string>
-    <string name="radar_simulator_scenario_label">Scénario</string>
-    <string name="radar_scenario_single_car">Véhicule seul</string>
-    <string name="radar_scenario_single_car_desc">Un véhicule doublant à 12 m/s</string>
-    <string name="radar_scenario_convoy">Convoi</string>
-    <string name="radar_scenario_convoy_desc">3 véhicules doublant simultanément</string>
-    <string name="radar_scenario_high_speed">Danger à grande vitesse</string>
-    <string name="radar_scenario_high_speed_desc">Véhicule rapide approchant à 25 m/s</string>
-    <string name="radar_scenario_disconnect">Déconnexion et reconnexion</string>
-    <string name="radar_scenario_disconnect_desc">Simule la coupure puis le rétablissement de connexion</string>
-    <string name="radar_scenario_country_road">Boucle route de campagne</string>
-    <string name="radar_scenario_country_road_desc">Boucle continue avec trafic aléatoire</string>
-    <string name="radar_simulator_preempted">Simulation arrêtée par le radar physique</string>
-
     <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
     <string name="radar_overlay_settings_title">Superposition radar</string>
     <string name="radar_overlay_edge_side">Bord d\'écran</string>
@@ -202,4 +180,11 @@
     <string name="developer_menu_radar_section_title">Débogage du radar vélo</string>
     <string name="developer_menu_radar_v1_only_title">Forcer le protocole radar V1 (hérité)</string>
     <string name="developer_menu_radar_v1_only_desc">Ignore la détection des caractéristiques Garmin Varia V2 et bascule immédiatement sur le streaming V1 hérité (6a4e3203).</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">Appairage Bluetooth requis pour V2</string>
+    <string name="radar_v2_bonding_hint_desc">Ce radar prend en charge la télémétrie 2D V2 (taille des véhicules et distance latérale), mais fonctionne actuellement en mode V1. Appairez-le via Bluetooth Android pour activer V2 à la prochaine connexion.</string>
+    <string name="radar_v2_bonding_pair_action">Appairer via Bluetooth</string>
+    <string name="radar_v2_bonding_pair_action_short">Appairer</string>
+    <string name="radar_v2_bonding_initiated_hint">Appairage Bluetooth lancé. La télémétrie V2 s\'activera une fois appairé et à la prochaine connexion.</string>
+    <string name="radar_v2_bonding_snackbar_message">Radar en mode V1. Appairez via Bluetooth pour activer la télémétrie 2D V2.</string>
 </resources>

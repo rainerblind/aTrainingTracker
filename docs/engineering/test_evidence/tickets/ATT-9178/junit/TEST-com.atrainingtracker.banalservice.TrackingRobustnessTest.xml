@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.TrackingRobustnessTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:56:05.163Z" hostname="rainer-HP-EliteBook-850-G5" time="23.697">
+  <properties/>
+  <testcase name="testBanalServiceGetSportTypeId_withEmptyList_fallsBackToDefaultSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="4.903"/>
+  <testcase name="testBatterySaverControllerRelease_cancelsCoroutineScope" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.609"/>
+  <testcase name="testClockDeviceMonotonicTimeAdvancement" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.667"/>
+  <testcase name="testDeviceManagerCreatePairedRemoteDevices_closesCursorDeterministically" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="2.468"/>
+  <testcase name="testBanalServiceNewLap_withPositiveLapTime_computesAccurateLapSpeed" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.79"/>
+  <testcase name="testBanalServiceGetSportTypeId_withNonEmptyList_returnsFirstMatchingSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.62"/>
+  <testcase name="testClockDeviceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.579"/>
+  <testcase name="testAltitudeFromPressureDeviceShutDown_doesNotRegisterReceiver" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.601"/>
+  <testcase name="testTrackerServiceRateLimitsErrorLogging" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.646"/>
+  <testcase name="testMyDevice_inMemoryDeviceNameCachingAndInvalidation" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.58"/>
+  <testcase name="testBanalServiceGetSportTypeId_withNullList_fallsBackToDefaultSportTypeId" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.622"/>
+  <testcase name="testBanalServiceNewLap_withZeroLapTime_computesZeroSpeedWithoutNaNOrInfinity" classname="com.atrainingtracker.banalservice.TrackingRobustnessTest" time="1.609"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-24T19:32:40.877Z" hostname="rainer-HP-EliteBook-850-G5" time="2.356">
+  <properties/>
+  <testcase name="testCollectBounded_dropsOldestFramesWhenConsumerSlow_TST_STB_023_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.173"/>
+  <testcase name="testCancelledJobFinally_neverClobbersNewerSlotOrCleanup_TST_CON_053_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.265"/>
+  <testcase name="testExhaustionDeduplicatesWarningAndRespectsMultiDeviceOwnership_TST_CON_053_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.122"/>
+  <testcase name="testLaunchStream_enforcesAtomicSingleFlightAndPreAcquireRollback_TST_CON_053_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.098"/>
+  <testcase name="testRenegotiateSlot_cancelledByCancelAllRenegotiationsAndCancelAllStreamsPreventsLateRelaunch_TST_SET_124_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.083"/>
+  <testcase name="testAtomicSlotCleanupAndPreAcquireException_preservesAccChannelOwnership_TST_CON_053_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.091"/>
+  <testcase name="testOneShotTimer_supersededTimerNeverInvokesStaleOnElapsed" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.087"/>
+  <testcase name="testRenegotiateSlot_atomicSlotLockHandoffAndOnAbortedOnCancelOrYield_TST_SET_124_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.124"/>
+  <testcase name="testRecordDisCharacteristic_stripsNulBytesFromKeyAndValue_TST_CON_060_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="1.043"/>
+  <testcase name="testRenegotiateSlot_siblingCoroutineSurvivesCollectorSelfTriggerReleasesAccLeaseAndDedupes_TST_SET_124_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.076"/>
+  <testcase name="testLaunchStream_doesNotSpeculativelyActivateSlotDuringPreAcquire_TST_SET_124_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.09"/>
+  <testcase name="testCollectPmdRecovery_handlesTypedCauseMessageAndResetsCounterOnSample_TST_CON_053_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest" time="0.102"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

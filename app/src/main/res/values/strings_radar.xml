@@ -40,28 +40,6 @@
     <string name="radar_passing_distance_short">Pass Dist</string>
     <string name="radar_large_vehicle_count">Radar Large Vehicle Count</string>
     <string name="radar_large_vehicle_count_short">Large Veh</string>
-
-    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
-    <string name="radar_simulator_title">Radar Traffic Simulator</string>
-    <string name="radar_simulator_subtitle">Simulate traffic scenarios for indoor workouts and UI testing</string>
-    <string name="radar_simulator_start">Start Simulation</string>
-    <string name="radar_simulator_stop">Stop Simulation</string>
-    <string name="radar_simulator_running">Simulation active</string>
-    <string name="radar_simulator_idle">Simulation stopped</string>
-    <string name="radar_simulator_status">%1$s • %2$d targets</string>
-    <string name="radar_simulator_scenario_label">Scenario</string>
-    <string name="radar_scenario_single_car">Single Car</string>
-    <string name="radar_scenario_single_car_desc">Single overtaking vehicle at 12 m/s</string>
-    <string name="radar_scenario_convoy">Convoy</string>
-    <string name="radar_scenario_convoy_desc">3 simultaneous overtaking vehicles</string>
-    <string name="radar_scenario_high_speed">High-Speed Threat</string>
-    <string name="radar_scenario_high_speed_desc">Fast vehicle approaching at 25 m/s</string>
-    <string name="radar_scenario_disconnect">Disconnect &amp; Reconnect</string>
-    <string name="radar_scenario_disconnect_desc">Simulates connection loss and recovery</string>
-    <string name="radar_scenario_country_road">Country Road Loop</string>
-    <string name="radar_scenario_country_road_desc">Continuous randomized traffic loop</string>
-    <string name="radar_simulator_preempted">Simulation halted by physical radar</string>
-
     <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
     <string name="radar_overlay_settings_title">Radar Overlay</string>
     <string name="radar_overlay_edge_side">Screen Edge</string>
@@ -202,4 +180,11 @@
     <string name="developer_menu_radar_section_title">Bike Radar Debugging</string>
     <string name="developer_menu_radar_v1_only_title">Force Radar V1 Protocol (Legacy)</string>
     <string name="developer_menu_radar_v1_only_desc">Bypasses Garmin Varia V2 characteristic discovery and immediately falls back to legacy V1 streaming (6a4e3203).</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">Bluetooth pairing required for V2</string>
+    <string name="radar_v2_bonding_hint_desc">This radar supports 2D V2 telemetry (vehicle sizing and passing distance), but is currently running in legacy V1 mode. Pair it via Android Bluetooth to unlock V2 on next connection.</string>
+    <string name="radar_v2_bonding_pair_action">Pair via Bluetooth</string>
+    <string name="radar_v2_bonding_pair_action_short">Pair</string>
+    <string name="radar_v2_bonding_initiated_hint">Bluetooth pairing started. V2 telemetry activates once paired and on next connection.</string>
+    <string name="radar_v2_bonding_snackbar_message">Radar running in V1 mode. Pair via Bluetooth to unlock 2D V2 telemetry.</string>
 </resources>

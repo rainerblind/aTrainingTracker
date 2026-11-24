@@ -1,44 +1,28 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.44  
+**Version**: 1.0.53  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 106
+**Total Tests**: 108
 
 ---
 
-### TST-CON-029: **Cycling Radar Traffic Simulator, Pipeline Integration & Parity Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-029` (`REQ-CON-029.1`..`REQ-CON-029.5`)
-- **Component**: `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5087`, `ATT-6704`
+### TST-CON-029: **Cycling Radar Traffic Simulator Excision & UI Removal Verification Suite (Retired in ATT-8672)** [Verified]
+- **Requirement(s)**: `REQ-CON-029` (`REQ-CON-029.1`)
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `RadarLightController.kt`, `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TrackingTabsScreen.kt`, `EditDeviceDialog.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `TrackerService.java`, `TrainingApplication.java`, `strings_radar.xml`
+- **Jira**: `ATT-5087`, `ATT-6704`, `ATT-8672`
 - **Test Description**:
-  1. *Scenario Generation & 8 Hz Stream Unit Tests (`TST-CON-029.1`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify all 5 scenario presets emit synthetic target vectors at 8 Hz with correct kinematics (range, approach speed, threat level).
-  • Verify Single Overtaking Car passing increments `RADAR_VEHICLE_COUNT` via hysteresis.
-  • Verify Multi-Vehicle Convoy generates 3 simultaneous distinct target IDs.
-  • Verify High-Speed Threat closes at 25 m/s with `FAST_APPROACHING` threat level.
-  • Verify Mid-Ride Disconnect transitions to `DISCONNECTED_ERROR` and recovers after 5 seconds.
-  2. *Scalar MySensor Publishing & Bridge Unit Tests (`TST-CON-029.2`, `SimulatedRadarDeviceTest.kt`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify `SimulatedRadarDevice` registers 6 scalar `MySensor` channels (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`, `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`) on `MySensorManager`.
-  • Verify 1 Hz window aggregator snapshot triggers `newValue()` publishing to each registered sensor.
-  • Verify `stop()` unregisters sensors cleanly without leaking in `MySensorManager`.
-  3. *Hardware Precedence, Preemption & Workout Teardown Unit Tests (`TST-CON-029.3`, `BTLERadarDeviceTest.kt`, `TrackerServiceTest.kt`)*:
-  • Verify simulation halts immediately and yields when physical radar streams data (`onPhysicalHardwareConnected()`).
-  • Verify `TrackerService.handleActionStop()` and `onDestroy()` trigger simulator `stop()`, guaranteeing zero lingering simulation or phantom DB writes post-workout.
-  4. *Reactive StateFlow & Monotonic Clock Tests (`TST-CON-029.4`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify `isSimulatingFlow: StateFlow<Boolean>` emits `true` when simulation starts and `false` when stopped or preempted.
-  • Verify elapsed simulation timing relies strictly on `SystemClock.elapsedRealtime()` or monotonic time source, immune to wall-clock shifts.
-  • Verify coroutines run under `SupervisorJob` and cancel cleanly without unhandled exceptions.
-  5. *UI ExposedDropdownMenuBox & 9-Language Localization Tests (`TST-CON-029.5`, `TranslationParityTest.kt`)*:
-  • Verify `RadarSettingsSection.kt` renders scenario selection using `ExposedDropdownMenuBox` with 5 scenarios, obeying Design Guidelines §1.3 and Rule 38.
-  • Verify status text formatting `radar_simulator_status_format` and all scenario names maintain 100% key and format parity across partitioned `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
-  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-029.6`)*:
-  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.audio.radar.*`, `com.atrainingtracker.trainingtracker.ui.settings.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  1. *Classpath & Enum Excision Verification (`TST-CON-029`, `RadarStateRepositoryTest.kt#testSimulatorRemoval_classpathAndRadarSourceEnum`)*:
+  • Verify `RadarSource.values()` contains strictly `[NONE, ANT_PLUS, BLE]` (zero `SIMULATOR` entry) and `Class.forName` throws `ClassNotFoundException` for removed `RadarTrafficSimulator`, `RadarScenario`, and `SimulatedRadarDevice`.
+  2. *UI & 9-Language String Removal Verification (`TST-CON-029`, `RadarSettingsSectionTest.kt#testRadarSettingsSection_simulatorControlsAndStringsCompletelyRemoved`)*:
+  • Compose `RadarSettingsSection` via Robolectric `createComposeRule()` and verify `RadarSimulatorScenarioDropdown` and simulator controls do not exist while preserved settings (`radar_strava_summary_title`) remain visible, and verify all obsolete `radar_simulator_*` / `radar_scenario_*` string keys are absent across all 9 `strings_radar.xml` locales.
+  3. *Clean-Room Targeted Test Suite Execution (`TST-CON-029`)*:
+  • Execute targeted radar, settings, and `TranslationParityTest` suites asserting 100% pass rate with zero regressions to physical BLE/ANT+ radar & light control.
 
 
 ### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
@@ -105,7 +89,7 @@
 
 ### TST-CON-030: **Garmin Varia BLE V2 High-Resolution Radar Stream Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.8`)
-- **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`, `tools/ble_radar_simulator.py`
 - **Jira**: `ATT-5095`, `ATT-6706`, `ATT-7542`, `ATT-7659`
 - **Test Description**:
   1. *V2 Handshake Choreography, MTU Negotiation & Notification Routing Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`, `MyBTLEDeviceTest.kt`)*:
@@ -120,8 +104,8 @@
   • Verify latching of minimum lateral passing clearance when $y \le 3.0\text{ m}$ and cumulative tracking of large vehicle counts.
   5. *SensorType Enum, DeviceType Mapping & Unit Formatter Tests (`TST-CON-030.5`, `SensorTypeTest.kt`, `DeviceTypeTest.kt`)*:
   • Verify `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` sensor definitions, `DeviceType.getSensorDeviceTypes()` mappings to `BIKE_RADAR`, and formatting parity.
-  6. *Traffic Simulator V2 Trajectory Tests (`TST-CON-030.6`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify generation of simulated V2 frames with lateral offsets and vehicle classifications.
+  6. *Developer V2 Trajectory Tests (`TST-CON-030.6`, `tools/test_ble_radar_simulator.py`)*:
+  • Verify generation of simulated V2 frames with lateral offsets and vehicle classifications via the external BLE radar simulator (in-app simulator retired in `ATT-8672`).
   7. *9-Language Localization Parity Test (`TST-CON-030.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-030.8`)*:
@@ -150,9 +134,8 @@
   • Verify DataStore migration from legacy `RadarLightControlMode` to unified `isAutoMode: Boolean` + `radarLightDefaultMode: RadarLightMode` with fallback defaults (`true` and `DAY_FLASH`).
   • Verify retirement of redundant 3-way mode segmented button and default mode dropdown in `RadarSettingsSection.kt`, and preservation of `radarBrakeLightEnabled` toggle.
   • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`; offline `BIKE_RADAR` visibility extended by `TST-CON-048`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, StVZO option restriction, and UI binding consistency with `RadarLightController.currentMode` / `isAutoMode` on dialog close and reopen.
-  6. *Traffic Simulator & BLE Peripheral Simulator Fidelity Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`, `tools/test_ble_radar_simulator.py`)*:
-  • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
-  • Verify `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) exposes `['write', 'indicate']` properties (never `write-without-response`) and rejects writes when `6a4e2f11` CCCD indications are not subscribed.
+  6. *BLE Peripheral Simulator Fidelity Tests (`TST-CON-031.6`, `tools/test_ble_radar_simulator.py`)*:
+  • Verify `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) exposes `['write', 'indicate']` properties (never `write-without-response`) and rejects writes when `6a4e2f11` CCCD indications are not subscribed (in-app `RadarTrafficSimulator` retired in `ATT-8672`).
   7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity for light mode, Automatik, and status string resources across all 9 supported locales.
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
@@ -183,9 +166,8 @@
   4. *Wildcard Discovery & Device Number Extraction Tests (`TST-CON-032.4`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`)*:
   • Verify wildcard `AntChannel` initialization (`DeviceNumber = 0`, `DeviceType = 40`) and extended data parsing (device number extraction and RSSI) when searching for `BIKE_RADAR`.
   • Verify `DeviceType.getRemoteDeviceTypes(Protocol.ANT_PLUS)` includes `BIKE_RADAR`.
-  5. *Starvation Watchdog & Hardware Preemption Tests (`TST-CON-032.5`, `ANTBikeRadarDeviceTest.kt`)*:
+  5. *Starvation Watchdog Tests (`TST-CON-032.5`, `ANTBikeRadarDeviceTest.kt`)*:
   • Verify 3.5s timeout triggers transition to `DISCONNECTED_ERROR` and resets scalar sensor latches.
-  • Verify physical frame arrival invokes `RadarTrafficSimulator.onPhysicalHardwareConnected()`.
   6. *Targeted Radar Test Suite Execution (`TST-CON-032.6`)*:
   • Run all radar unit and integration tests under `com.atrainingtracker.banalservice.devices.antplus.*` and `com.atrainingtracker.banalservice.devices.radar.*` asserting 100% pass rate.
 
@@ -357,7 +339,7 @@
 
 ### TST-CON-041: **Concurrent Radar Source Arbitration & Multi-Transport Decoupling Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-041` (`REQ-CON-041.1`..`REQ-CON-041.4`)
-- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarTrafficSimulator.kt`, `RadarStateRepositoryTest.kt`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarStateRepositoryTest.kt`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`
 - **Jira**: `ATT-7575`
 - **Test Description**:
   1. *Prioritized Source Selection Test (`TST-CON-041.1`, `RadarStateRepositoryTest.kt`)*:
@@ -373,22 +355,16 @@
   • When only `BLE` is connected and `ANT_PLUS` has not received data, verify `ANTBikeRadarDevice.isReceivingData()` returns `false`.
   • When `ANT_PLUS` receives data, verify `ANTBikeRadarDevice.isReceivingData()` returns `true`.
 
-### TST-CON-042: **Radar Application State Preservation During Preemption & Hardware Packet Ingestion Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-042` (`REQ-CON-042.1`..`REQ-CON-042.3`)
-- **Component**: `RadarTrafficSimulator.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`, `RadarTrafficSimulatorTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
-- **Jira**: `ATT-7574`
+### TST-CON-042: **Radar Application State Preservation During Hardware Packet Ingestion Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-042` (`REQ-CON-042.3`)
+- **Component**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-7574`, `ATT-8672`
 - **Test Description**:
   1. *Physical Telemetry Packet Application State Preservation (`TST-CON-042.1`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
   • Given `RadarStateRepository` with an active non-default `lightMode` (e.g. `DAY_FLASH`) and active `audioSnoozeState` (e.g. `SNOOZE_15M`),
   • When real BLE packets (`processTargets()`) or ANT+ packets (`parseTargetsPage()` / `publishTargets()`) arrive,
   • Verify that `RadarStateRepository.getState()` continues to report the active `lightMode` and `audioSnoozeState` without being wiped to `OFF` or `INACTIVE`.
-  2. *Simulator Preemption State Preservation (`TST-CON-042.2`, `RadarTrafficSimulatorTest.kt`)*:
-  • Given `RadarTrafficSimulator` actively running a simulation scenario (`isSimulating == true`),
-  • When `onPhysicalHardwareConnected()` is invoked,
-  • Verify that `RadarTrafficSimulator.isSimulating` transitions to `false` and the simulation job terminates immediately,
-  • And verify that `RadarStateRepository.reset()` is NOT invoked, preserving any pre-existing application `lightMode` or `audioSnoozeState`.
-  3. *Gated Simulator Preemption Call-Site Verification (`TST-CON-042.3`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
-  • Verify that when `RadarTrafficSimulator.isSimulating` is `false`, `onPhysicalHardwareConnected()` is bypassed upon incoming target frames.
+  • (`TST-CON-042.2` / `TST-CON-042.3` simulator preemption tests retired upon `RadarTrafficSimulator` removal in `ATT-8672`.)
 
 ### TST-CON-043: **Cockpit Radar Tail Light Button & Action Row Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-043` (`REQ-CON-043.1`..`REQ-CON-043.5`)
@@ -469,8 +445,8 @@
 ### TST-CON-046: **Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration Test Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-CON-046` (`REQ-CON-046.1`..`REQ-CON-046.3`)
-- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
-- **Jira**: `ATT-8455`
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarLightController.kt`
+- **Jira**: `ATT-8455`, `ATT-8672`
 - **Test Type**: Unit & Integration
 - **Verification Method**: Unit
 - **Procedure**:
@@ -478,17 +454,13 @@
      • Given `RadarStateRepository` / `RadarLightController` with `isAutoMode == false`,
      • When exercising all 6 `BTLERadarDevice` emission paths (`startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `mWatchdogRunnable`, `disconnectFromGatt`),
      • Assert `RadarStateRepository.getState().isAutoMode` remains `false`; then invoke `RadarLightController.setAutoMode()` and assert `isAutoMode == true`.
-  2. *RadarTrafficSimulator Lifecycle & Tick Preservation (`TST-CON-046.2`, `RadarTrafficSimulatorTest.kt`)*:
-     • Given `isAutoMode == false` in `RadarStateRepository`,
-     • When running `generateFrame`, `tick`, `start` coroutine loop frames, and `stop`,
-     • Assert `RadarStateRepository.getState().isAutoMode` remains `false` throughout and `setAutoMode()` restores `true`.
-  3. *ANTBikeRadarDevice 3-Site `isAutoMode` Preservation (`TST-CON-046.3`, `ANTBikeRadarDeviceTest.kt`)*:
+  2. *ANTBikeRadarDevice 3-Site `isAutoMode` Preservation (`TST-CON-046.3`, `ANTBikeRadarDeviceTest.kt`)*:
      • Given `isAutoMode == false` in `RadarStateRepository`,
      • When invoking `publishTargets`, `onWatchdogTimeout`, and `shutDown`,
      • Assert `RadarStateRepository.getState().isAutoMode` remains `false` and `setAutoMode()` restores `true`.
-  4. *Repository `sourceStates` Failover & `reset()` Isolation (`TST-CON-046.4`, `RadarStateRepositoryTest.kt`)*:
+  3. *Repository `sourceStates` Failover & `reset()` Isolation (`TST-CON-046.4`, `RadarStateRepositoryTest.kt`)*:
      • Given concurrent `BLE` and `ANT_PLUS` sources with manual override `isAutoMode == false`,
-     • When `BLE` disconnects and `RadarStateRepository` fails over to `ANT_PLUS` (or `SIMULATOR`),
+     • When `BLE` disconnects and `RadarStateRepository` fails over to `ANT_PLUS`,
      • Assert `isAutoMode` stays `false` (and `audioSnoozeState` stays intact per `REQ-CON-042.3`); when `RadarStateRepository.reset()` is invoked, assert clean reset to default `RadarState()` (`isAutoMode == true`).
   5. *Light Controller Manual Override vs Adaptive Automation (`TST-CON-046.5`, `RadarLightControllerTest.kt`)*:
      • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
@@ -1479,22 +1451,24 @@
   3. *BLE Lifecycle, LoC Ceiling & Detailed-Design Parity (`TST-CON-051.3`, `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`)*:
      • Execute `MyBTLEDeviceAddressAndSearchTest`, `MyBTLEDeviceLifecycleTest`, `ArchitectureConformanceContractTest` (verifying `DeviceManager.java <= 1,708` LoC), and `DetailedDesignParityContractTest` (`my_btle_device.md`, `banal_service.md`), asserting 100% pass with `0` new `src/main` test reads (`REQ-PRO-049.1`) and `Localization Parity: N/A - no UI strings`.
 
-### TST-CON-052: **Extended Sensor Reconnect / Re-Search Backoff & Dual Search Settings Verification Suite** [Verified]
+### TST-CON-052: **Lost/MIA-Only Sensor Periodic Re-Search, `15s/30s/1m/2m` Backoff & Dual Search Settings Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-8965`
+- **Tickets**: `ATT-8965`, `ATT-9178`
 - **Requirement(s)**: `REQ-CON-052` (`REQ-CON-052.1`..`REQ-CON-052.3`)
-- **Component**: `SensorReconnectBackoffPolicyTest.kt`, `SensorSearchSettingsTest.kt`, `MyBTLEDeviceLifecycleTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `DeviceManagerSearchQueueTest.kt`, `SearchSettingsDialogTest.kt`, `SensorSearchTuningSectionTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `TranslationParityTest.kt`
+- **Component**: `SensorReconnectBackoffPolicyTest.kt`, `DeviceSearchPeriodicRetryCoordinatorTest.kt`, `DeviceManagerSearchQueueTest.kt`, `BLEReconnectRobustnessTest.kt`, `PolarOnlineStreamingBridgeTest.kt`, `SearchSettingsDialogTest.kt`, `SensorSearchTuningSectionTest.kt`, `SensorSearchTuningContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `ArchitectureConformanceContractTest.kt`, `DetailedDesignParityContractTest.kt`, `TranslationParityTest.kt`
 - **Test Type**: Unit
 - **Verification Method**: Unit
 - **Procedure**:
-  1. *Extended Backoff Schedule, Clamping & Toggle Policy (`TST-CON-052.1`, `SensorReconnectBackoffPolicyTest`, `SensorSearchSettingsTest`)*:
-     • Step through `SensorReconnectBackoffPolicy` with default `5 min` (`300 s`) final period; assert sequence `1_000 -> 2_000 -> 4_000 -> 8_000 -> 16_000 -> 32_000 -> 64_000 -> 128_000 -> 300_000 -> 300_000 ms`, verify smaller final periods (`60 s`, `120 s`) clamp cleanly without overshooting, verify `10 min` (`600 s`) reaches `600_000 ms`, verify disabled mode caps at `16_000 ms`, and verify reset restores `1_000 ms`.
-     • Verify `SensorSearchSettings` defaults (`periodicResearchEnabled = true`, `finalPeriodSec = 300`) and SharedPreferences round-trip read/write.
-  2. *BLE, Polar SDK & DeviceManager Periodic Re-Search + Contract Invariants (`TST-CON-052.2`, `MyBTLEDeviceLifecycleTest`, `PolarOnlineStreamingBridgeTest`, `DeviceManagerSearchQueueTest`, `SystemLiveTrackingRequirementsContractTest`, `ArchitectureConformanceContractTest`)*:
-     • Assert `MyBTLEDevice` mid-session reconnect progresses beyond `16 s` up to configured final period when enabled, caps at `16 s` when disabled, cancels on `shutDown()`, and keeps `MAX_RECONNECT_DELAY_MS == 16000L`.
-     • Assert `DeviceManager` + `PolarOnlineStreamingBridge` re-enqueue search-exhausted sensors with extended backoff when enabled, preserve `REQ-CON-051` non-blocking search-queue release, shut down & remove cleanly when disabled, cancel pending retries on `startSearchForPairedDevices()` / `removeAndStopRemoteDevice()` / `shutDown()`, and keep `DeviceManager.java <= 1,708` LoC & `TrainingApplication.java <= 2,135` LoC.
-  3. *Behavioral Compose Dual Search Settings UI & 9-Locale Parity (`TST-CON-052.3`, `SearchSettingsDialogTest`, `SensorSearchTuningSectionTest`, `TranslationParityTest`, `REQ-PRO-132`, `0` `src/main` reads)*:
-     • Render `SearchSettingsDialog` and `SensorSearchTuningSection` via `createComposeRule()`; verify periodic re-search toggle (`default = true`) and final period selector (`1m`, `2m`, `5m`, `10m`; `default = 5m`) persist changes to SharedPreferences, verify disabled toggle dims/disables final period selector, and assert `TranslationParityTest` passes across all 9 `res/values*/strings_devices.xml` locales.
+  1. *Tighter Backoff Schedule (`15s/30s/1m/2m`), Legacy Clamping & Toggle Policy (`TST-CON-052.1`, `SensorReconnectBackoffPolicyTest`)*:
+     • Step through `SensorReconnectBackoffPolicy` with default `1 min` (`60 s`) and all 4 presets (`15 s`, `30 s`, `60 s`, `120 s`), asserting exact progression (`1s -> 2s -> 4s -> 8s -> 15s`; `1s..16s -> 30s`; `1s..32s -> 60s`; `1s..64s -> 120s`), `nextPeriodicResearchDelayMs` (`15s`, `30s`, `32s -> 60s`, `32s -> 64s -> 120s`), disabled `16 s` fallback ceiling, live `effectiveDelayMs()` clamping, and reset to `1_000 ms`.
+     • Verify `SensorSearchSettings` defaults (`periodicResearchEnabled = true`, `finalPeriodSec = 60`, `FINAL_PERIOD_OPTIONS_SEC = [15, 30, 60, 120]`), round-trip persistence, and legacy clamping/snapping (`300 -> 120`, `600 -> 120`, `10 -> 15`, non-preset -> nearest valid preset).
+  2. *MIA-Only Periodic Re-Search, Clean Give-Up, Session-End Reset & Contract Invariants (`TST-CON-052.2`, `DeviceSearchPeriodicRetryCoordinatorTest`, `DeviceManagerSearchQueueTest`, `BLEReconnectRobustnessTest`, `PolarOnlineStreamingBridgeTest`, `SystemLiveTrackingRequirementsContractTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`)*:
+     • Assert never-connected sensor A (`hasConnectedInSession() == false`, `!shouldKeepAliveOnSearchTimeout()`) in `DeviceSearchPeriodicRetryCoordinator` / `DeviceManager` calls `shutDown()` + removal on `tries <= 1` with `0` periodic retry timers even when periodic re-search is enabled, whereas lost/MIA sensor B (`hasConnectedInSession() == true`) schedules backoff retries (`min(32s, cap) -> ... -> cap`), enforces `device === current` identity guard, and clears `lastScheduledDelayByDeviceId` + gives up cleanly if disabled or reset before timer fires.
+     • Assert `DeviceManager` eagerly initializes `mPeriodicRetryCoordinator` (tracking mid-workout construction) and invokes `onTrackingModeChanged()` unconditionally before `READY`/`IDLE` so `TRACKING -> READY` cancels pending retries and calls `resetSessionConnectionState()` on disconnected MIA sensors (`MyBTLEDevice`: skips GATT close when `mState == SEARCHING || isSearching()` and calls `disconnectFromGattInternal(null, false, true)` when `DISCONNECTED && !isSearching()`; `PolarOnlineStreamingBridge`: cancels `searchTimeoutJob` & disconnects pending `polarApi` under `gattActionLock` when `!isReceivingData() && !isSearching && !isOfflineGattYielded()` while preserving active `isSearching` timeout) without disturbing actively connected (`isReceivingData() == true`) or pre-workout `READY` connected sensors.
+     • Assert `PolarOnlineStreamingBridge` schedules `0` reconnect jobs and returns `shouldKeepAliveOnSearchTimeout() == false` when never connected (both `READY` and `TRACKING`/`PAUSED`, unless `isOfflineGattYielded()`), while previously connected MIA Polar bridges follow `1s..finalPeriodMs` (`60s` default / `120s` max) and cancel cleanly on `resetSessionConnectionState()` / `shutDown()`.
+     • Assert `MyBTLEDevice` schedules `0` `mReconnectRunnable` in `onConnectionStateChange(STATE_DISCONNECTED)` when `!mHasConnectedInSession && !isMidSessionOrWorkoutActive()` (both `isSearching == true` with `notifyStopSearching(false)` AND `isSearching == false`), updates legacy `READY` backoff tests (`L240/L283/L302`) with `setHasConnectedInSession(true)`, preserves `REQ-SET-123` passive workout `autoConnect = true`, preserves `MAX_RECONNECT_DELAY_MS == 16000L` & `mHasConnectedInSession` / `isMidSessionOrWorkoutActive()` parity, and upholds LoC ceilings (`DeviceManager <= 1,708`, `MyBTLEDevice <= 1,500`, `PolarOnlineStreamingBridge <= 1,500`).
+  3. *Behavioral Compose Dual Search Settings UI (`15s/30s/1m/2m`), Legacy Pre-Seed & 9-Locale Parity (`TST-CON-052.3`, `SearchSettingsDialogTest`, `SensorSearchTuningSectionTest`, `SensorSearchTuningContractTest`, `TranslationParityTest`, `REQ-PRO-132`, `0` `src/main` reads)*:
+     • Render `SearchSettingsDialog` and `SensorSearchTuningSection` via `createComposeRule()`; verify default `1m` (`60 s`) selection, all 4 options (`15s / 30s / 1m / 2m`), legacy persisted `300`/`600` highlighting `2m` (`120 s`), disabled-toggle subordination, SharedPreferences round-trip, `TranslationParityTest` across all 9 `res/values*/strings_devices.xml` locales, and live `emulator-5554` Light/Dark PNG verification (`Rule 8.5`).
 
 
 ### TST-TRK-087: **ZonesSettingsActivity HRV Tab Gauge Toggle Removal & Behavioral Compose Verification Suite** [Verified]
@@ -2070,8 +2044,8 @@
      • Run one-time `DataMigration<Preferences>` across all legacy radar-light key permutations, `LEGACY_MAP_CAMERA_KEYS`, and legacy SharedPreferences cluster tolerances; assert exact preservation of prior effective modes, removal of obsolete keys, idempotent `shouldMigrate == false` on rerun, unified fresh-install `SMART_AUTOMATION` consistency, and full `TuningConfig` derived-property agreement after `updateRadarAutoLightControl`/`updateRadarLightControlMode`.
   2. *Zero Stale Caches & Immediate Settings Propagation (`TST-CON-056.2` — `RadarLightControllerTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `TrackerServiceResilienceTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • Verify `RadarLightController` has zero `cached*` fields / `updateCachedPreferences` overloads, reflects DataStore changes immediately, and persists on one long-lived scope; verify `TrackerService.getAutoPauseConfig()` immediately reflects `updateAutoPause{Bike,Run,Other}Enabled` and `resetToDefaults` without `invalidateAutoPauseCache()`; assert `TrackerService.java <= 3,220` LoC and `TrainingApplication.java <= 2,050` LoC.
-  3. *3-StateFlow Split, Zero 1-Hz Snooze Wakeups & Atomic Concurrency (`TST-CON-056.3` — `RadarStateRepositoryTest.kt`, `RadarSnoozeControllerTest.kt`, `SmartRadarLightEngineTest.kt`, `RadarAlertManagerTest.kt`, `RadarEdgeOverlayTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`, `RadarTrafficSimulatorTest.kt`, `RadarSettingsSectionTest.kt`)*:
-     • Activate timed 15m/30m snooze with `TestScope` and advance intermediate seconds -> assert `0` intermediate `snoozeState` emissions, `0` wakeups or cooldown extensions in `SmartRadarLightEngine` and `RadarAlertManager`, and exact 1-shot expiry at `snoozeUntilElapsedRealtimeMs`; verify concurrent 8-Hz threat + snooze/light updates never overwrite targets and preserve failover (`BLE -> ANT_PLUS -> SIMULATOR`); verify `RadarEdgeOverlay` derives badge minutes from `snoozeUntilElapsedRealtimeMs`.
+  3. *3-StateFlow Split, Zero 1-Hz Snooze Wakeups & Atomic Concurrency (`TST-CON-056.3` — `RadarStateRepositoryTest.kt`, `RadarSnoozeControllerTest.kt`, `SmartRadarLightEngineTest.kt`, `RadarAlertManagerTest.kt`, `RadarEdgeOverlayTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`, `RadarSettingsSectionTest.kt`)*:
+     • Activate timed 15m/30m snooze with `TestScope` and advance intermediate seconds -> assert `0` intermediate `snoozeState` emissions, `0` wakeups or cooldown extensions in `SmartRadarLightEngine` and `RadarAlertManager`, and exact 1-shot expiry at `snoozeUntilElapsedRealtimeMs`; verify concurrent 8-Hz threat + snooze/light updates never overwrite targets and preserve failover (`BLE -> ANT_PLUS`); verify `RadarEdgeOverlay` derives badge minutes from `snoozeUntilElapsedRealtimeMs`.
   4. *AB-BA Deadlock-Free Multi-Thread Stress Test (`TST-CON-056.4` — `RadarBrakeLightConcurrencyStressTest.kt`, `SmartBrakeLightDetectorTest.kt`, `RadarLightControllerTest.kt`)*:
      • Run parallel `ExecutorService` threads (`>= 4` threads, `>= 5,000` iterations) concurrently exercising `RadarLightController` (`registerRadarDevice`, `unregisterRadarDevice`, `setManualLightMode`, `setAutoMode`, `checkAndRestorePreBrakeMode`) and `SmartBrakeLightDetector` (`onLinearAccelerationChanged`, `stopListening`, `isAutoBypassed`, `isEnabled`) while checking `ThreadMXBean.findDeadlockedThreads()`; assert bounded completion with `0` deadlocks and `0` uncaught exceptions.
 
@@ -2242,6 +2216,41 @@
   4. *Brake-Light Preemption Atomicity, Post-Hold Automatic Dispatch & Leaf-Lock AB-BA Deadlock Stress (`TST-CON-059.4` — `RadarLightControllerTest.kt`, `RadarBrakeLightConcurrencyStressTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`)*:
      • Verify `setAutoMode()` during active braking & 2.0 s hold never preempts active brake light (`setAutomationLightMode` returns `false` and skips `RadarStateRepository.updateLightState` when `!committed`), and `checkAndRestorePreBrakeMode()` at hold expiry immediately dispatches the computed automatic mode (`OFF`/`PELOTON`/`SOLID`); verify 5,000-iteration parallel `RadarBrakeLightConcurrencyStressTest` (with leaf `engineLock`) reports zero AB-BA deadlocks, zero signature drift, and `<= 1,500` LoC (`Localization Parity: N/A - 0 string changes`).
 
+### TST-CON-060: **BLE GATT/DIS String NUL-Byte Sanitization, Polar Store Self-Healing & `Devices.db` v15 Migration Verification Suite (`ATT-8996`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-060` (`REQ-CON-060.1`–`REQ-CON-060.3`)
+- **Component**: `BleDisStringSanitizer.kt`, `BTSearchForNewDevicesEngine.java`, `BTLEHeartRateDevice.java`, `BTLERadarDevice.java`, `PolarPmdStreamCoordinator.kt`, `PolarOfflineCapabilityStore.kt`, `PolarOfflineGattCoordinator.kt`, `DevicesDatabaseManager.java`, `RawDeviceDataProvider.kt`, `DeviceDataRepository.kt`
+- **Jira**: `ATT-8996` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `BleDisStringSanitizerTest#testSanitize_stripsAllNulBytesAndTrimsWhitespace_TST_CON_060_1`, `BleDisStringSanitizerTest#testContainsNul_detectsNulBytesAccurately_TST_CON_060_1`, `BleDisStringSanitizerTest#testReadSanitizedString_handlesGetStringValueAndRawValueFallback_TST_CON_060_1`, `BTSearchForNewDevicesEngineTest#testOnCharacteristicReadAndDeviceName_stripsNulBytesFromDisAndGap_TST_CON_060_1`, `BTLEHeartRateDeviceTest#testOnOtherCharacteristicUpdate_stripsNulBytesFromPolarDisModelAndSerial_TST_CON_060_1`, `BTLERadarDeviceTest#testOnOtherCharacteristicUpdate_stripsNulBytesFromRadarModelNumber_TST_CON_060_1`, `PolarPmdStreamCoordinatorTest#testRecordDisCharacteristic_stripsNulBytesFromKeyAndValue_TST_CON_060_1`, `PolarOfflineCapabilityStoreTest#testNulTerminatedDisAndLegacyPrefsSelfHealing_TST_CON_060_2`, `DevicesDatabaseManagerMigrationV15Test#testDbVersion15_andSchemaRegistryParity_TST_CON_060_3`, `DevicesDatabaseManagerMigrationV15Test#testOnCreateAndOnUpgrade14To15_identicalSchemasAndIdempotentNulSanitization_TST_CON_060_3`, `DevicesDatabaseManagerMigrationV15Test#testDevicesDatabaseManagerWriteReadAndRawDeviceDataProvider_stripNulBytes_TST_CON_060_3`
+- **Test Description**:
+  1. *Shared `BleDisStringSanitizer` & BLE GATT/GAP/Polar DIS Read-Site Coverage (`TST-CON-060.1` — `BleDisStringSanitizerTest.kt`, `BTSearchForNewDevicesEngineTest.kt`, `BTLEHeartRateDeviceTest.kt`, `BTLERadarDeviceTest.kt`, `PolarPmdStreamCoordinatorTest.kt`)*:
+     • Verify `sanitize()`, `readSanitizedString()`, and `containsNul()` across `null`, `""`, whitespace-only, NUL-only (`"\u0000"`, `"\u0000\u0000"`), leading/embedded/trailing NUL (`"Polar Electro Oy\u0000"`, `"Polar\u0000H10\u0000"`, `"  Sense \u0000 "`), and UTF-8 non-ASCII strings.
+     • Verify `BTSearchForNewDevicesEngine` strips NUL bytes from `0x2A29`, `0x2A24`, `0x2A25`, and `gatt.getDevice().getName()`; `BTLEHeartRateDevice` strips NUL bytes from `0x2A24`/`0x2A25` so `"A1B2C3D4\u0000"` registers canonical Polar ID & aliases; `BTLERadarDevice` strips NUL bytes from `0x2A24` (`"RTL516\u0000"` -> StVZO `true`, `"\u0000"` -> fallback `null`); and `PolarPmdStreamCoordinator.recordDisCharacteristic()` strips NUL bytes from Polar SDK DIS strings.
+  2. *`PolarOfflineCapabilityStore` & `PolarOfflineGattCoordinator` NUL-Safe Read, Compare & Self-Healing (`TST-CON-060.2` — `PolarOfflineCapabilityStoreTest.kt`, `PolarOfflineGattCoordinatorTest.kt`)*:
+     • Verify `isValidCanonicalPolarId("ABCD1234\u0000") == true`, `classifyModelNumber("Sense\u0000", hasPolarServices = true) == VERITY_SENSE`, and clean persistence in `recordDisMetadata()`, `recordSdkDeviceType()`, and `seedLegacyDeviceTypeIfUnknown()`.
+     • Pre-seed dirty `SharedPreferences` (`"Sense\u0000"`, `"abcd1234\u0000"`, `"\u0000"`) and verify `getModelNumber()` / `getPolarDeviceId()` return sanitized values (`"Sense"`, `"ABCD1234"`, `null`) and rewrite/remove the dirty keys on disk; verify `PolarOfflineGattCoordinator.hasExplicitNonPolarManufacturer("\u0000")` is `false` and `isPolarH10Device` / `isPolarVeritySenseDevice` tolerate NUL-terminated names/manufacturers.
+  3. *`Devices.db` Write/Read Sanitization, Idempotent v14->v15 Migration & Contract Parity (`TST-CON-060.3` — `DevicesDatabaseManagerMigrationV15Test.kt`, `DevicesDatabaseManagerMigrationV14Test.kt`, `DevicesDatabaseManagerTest.kt`, `DatabaseSchemaRegistryParityContractTest.kt`, `SystemLiveTrackingRequirementsContractTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify `DevicesDbHelper.DB_VERSION == 15`, `DatabaseSchemaRegistry.getMaxSupportedVersion("Devices.db") == 15`, and 100% column parity between `onCreate()` and `onUpgrade(14, 15)`.
+     • Seed a v14 `Devices4` table with `("Polar H10 12345678\u0000", "Polar Electro Oy\u0000")`, `("Clean Sensor", "Garmin")`, and `("Bad\u0000", "\u0000")`; run `onUpgrade(db, 14, 15)` twice and assert dirty rows become `("Polar H10 12345678", "Polar Electro Oy")` and `("Bad", NULL)`, clean rows stay unchanged, and second run reports `0` updates.
+     • Verify write/read sanitization across `DevicesDatabaseManager` & `RawDeviceDataProvider`, and verify monolith LoC ceilings (`DevicesDatabaseManager <= 1,671`, `MyBTLEDevice <= 1,500`, `PolarOfflineGattCoordinator <= 1,500`; `Localization Parity: N/A - 0 string changes`).
+
+### TST-CON-061: **BLE Radar V2 Bluetooth Bonding Hint, Permission-Safe Pairing & UI Verification Suite (`ATT-8731`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-061` (`REQ-CON-061.1`–`REQ-CON-061.4`)
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `RadarBluetoothBondingHelper.kt`, `RadarV2BondingHintCard.kt`, `RadarV2BondingSnackbarEffect.kt`, `EditDeviceDialog.kt`, `DevicesTabbedScreen.kt`, `TrackingTabsScreen.kt`, `strings_radar.xml`
+- **Jira**: `ATT-8731` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `BTLERadarDeviceTest#testConfigureServices_v2BondingRequiredMatrix_strictlyUnbondedV2WithoutOverride_tstCon061_1`, `BTLERadarDeviceTest#testProcessTargets_preservesV2BondingFlagAndNeverResurrectsAfterExternalClear_tstCon061_1`, `BTLERadarDeviceTest#testV2BondingCleared_onTrimmedBondBonded_v2Packet_unregisterSensors_watchdog_andShutDown_tstCon061_1`, `BTLERadarDeviceTest#testConfigureServices_concurrentDisconnectOrShutDownMidConfigure_neverSticksBondingOrLeaksReceiver_tstCon061_1`, `RadarStateRepositoryTest#testV2BondingState_ssotPreservation_disconnectAutoClear_arbitrationAndOneShotLatch_tstCon061_1`, `RadarStateRepositoryTest#testV2BondingState_setTrueIgnoredWhenBleNotConnected_tstCon061_1`, `RadarBluetoothBondingHelperTest#testRequestBond_api33PlusRandomStaticAndPublicAddress_initiatesCreateBond_tstCon061_2`, `RadarBluetoothBondingHelperTest#testRequestBond_belowApi33UsesGetRemoteDevice_andAlreadyBondedClearsRepository_tstCon061_2`, `RadarBluetoothBondingHelperTest#testFallbackToBluetoothSettings_missingPermissionSecurityExceptionAndFalseCreateBond_setsNewTaskFlagStrictlyForNonActivity_tstCon061_2`, `RadarBluetoothBondingHelperTest#testRequestBond_bondBondingInProgress_shortCircuitsWithoutCreateBondOrSettings_tstCon061_2`, `EditDeviceDialogRadarBondingTest#testShouldShowRadarV2BondingHint_macNormalizationAndProtocolMatrix_tstCon061_3`, `EditDeviceDialogRadarBondingTest#testRadarV2BondingHintCard_rendersInteractiveCtaAndCapturesLightDarkPng_tstCon061_3`, `EditDeviceDialogRadarBondingTest#testRadarV2BondingHintCard_german360dp_singleLineButtonFit_tstCon061_3`, `EditDeviceDialogRadarBondingTest#testRadarV2BondingSnackbarEffect_suppressesTrackingWithoutBurningLatch_andCancelsOnReadyToTracking_tstCon061_3`, `EditDeviceDialogRadarBondingTest#testRadarV2BondingSnackbarEffect_neverDismissesUnrelatedSnackbar_onInitialTrackingOrReadyToTracking_tstCon061_3`
+- **Test Description**:
+  1. *SSoT V2 Bonding Detection, Zero Resurrection & Full Teardown (`TST-CON-061.1` — `BTLERadarDeviceTest.kt`, `RadarStateRepositoryTest.kt`)*:
+     • Verify `BTLERadarDevice.configureServices()` clears prior state and sets `RadarState.isV2BondingRequired = true` + `v2BondingDeviceAddress = mAddress` strictly when `v2Char != null && !isBonded && !isV1Override`; stays `false` for `v2Char == null`, `BOND_BONDED`, and `isV1Override == true`; persists across 4–8 Hz `processTargets()` updates AND never resurrects `true` after external `setV2BondingRequired(false, null)` (`ALREADY_BONDED`); clears to `false`/`null` and unregisters `mBondStateReceiver` under `mBondReceiverLock` on trimmed case-insensitive `BOND_BONDED`, V2 packet receipt, `unregisterSensors()` remote disconnect, `disconnectFromGatt()`, `shutDown()`, repeated `configureServices()`, and 3.5 s watchdog timeout.
+     • Verify `RadarStateRepository` preserves BLE bonding fields across `CONNECTED` updates, auto-clears them & resets `consumeV2BondingPromptIfPending` on `DISCONNECTED`/`DISCONNECTED_ERROR`/`CONNECTING`, and re-arbitrates `BLE > ANT_PLUS` cleanly.
+  2. *Android 12+/13+ Permission-Safe Bonding & Task-Safe Settings Fallback (`TST-CON-061.2` — `RadarBluetoothBondingHelperTest.kt`)*:
+     • Verify API 33+ Random Static vs Public `getRemoteLeDevice`, API <33 `getRemoteDevice`, `createBond() == true` returning `BONDING_INITIATED`, already `BOND_BONDED` returning `ALREADY_BONDED` and clearing repository state, and fallback to `Settings.ACTION_BLUETOOTH_SETTINGS` (missing `BLUETOOTH_CONNECT`, `SecurityException`, disabled adapter, `createBond() == false`) adding `Intent.FLAG_ACTIVITY_NEW_TASK` for non-`Activity` contexts (`applicationContext`) and omitting it for `Activity` contexts.
+  3. *Behavioral Robolectric Compose UI & `READY`-Only Cancellable Snackbar (`TST-CON-061.3` — `EditDeviceDialogRadarBondingTest.kt`)*:
+     • Verify `shouldShowRadarV2BondingHint` trimmed case-insensitive MAC matrix (BLE match/whitespace/case, mismatch, ANT+, non-radar); render `RadarV2BondingHintCard` via `createComposeRule()` in Light/Dark/DE-360dp asserting title, V2-on-next-connection copy, single-line CTA, click callback, and `BONDING_INITIATED` feedback; verify `RadarV2BondingSnackbarEffect` suppresses & preserves the one-shot latch during `TRACKING`/`PAUSED`, fires once in `READY`, and cancels on `READY -> TRACKING`; capture & visually inspect `Rule 8.5` Light/Dark PNG.
+  4. *9-Language Localization Parity, Color Centralization & LoC Ceilings (`TST-CON-061.4` — `TranslationParityTest.kt`, `ui.theme.ThemeColorCentralizationAuditTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify 100% parity (zero emojis) across all 9 `values*/strings_radar.xml` files for all 6 `radar_v2_bonding_*` keys, zero hardcoded hex colors, and compliance with all monolith LoC ceilings.
+
 ---
 
 ## Change History
@@ -2411,3 +2420,13 @@
 | `1.0.41` | 2026-11-24 | Lane 2 Author (`ATT-8673`, `--as agent1`) | `ATT-8673` | Added `[Planned]` `TST-CON-059` (`.1`–`.4`, strictly symmetric `REQ-CON-059`) covering immediate outside/mid-ride `setAutoMode()` across Day/Night/Tunnel/StVZO/live threat/offline, debounced `cycleNextMode()` (`DAY_FLASH -> OFF -> AUTO` flush & rapid multi-tap coalescing), cancelled rate-limit & post-stop reset, generation-guarded serialized DataStore persistence, and brake-light preemption + 5,000-iter AB-BA deadlock stress (`N/A - 0 string changes`). |
 | `1.0.42` | 2026-11-24 | Lane 2 Author (`ATT-8673`, `--as agent1`) | `ATT-8673` | Gate 3 (`ATT-9682`) revision on `[Planned]` `TST-CON-059`: added paused `setAutoMode()` zero-sensor-leak test, `InMemoryPreferencesDataStore` debounced `cycleNextMode()` zero-premature-write test, Night/Tunnel `onWorkoutStopped()` post-stop non-resuscitation test, mid-ride `collectLatest` stale-`false` immunity test, external `clearManualOverrideForExternalAuto()` ordering, and `committed`-gated `setAutomationLightMode()` / leaf `engineLock` assertions. |
 | `1.0.43` | 2026-11-24 | Lane 2 Author (`ATT-8673`, `--as agent1`) | `ATT-8673` | Promoted `TST-CON-059` (`.1`–`.4`) to `[Verified]` with verbatim method citations (`228/228` PASS across `15` targeted suites: `RadarLightControllerTest 42/42`, `SmartRadarLightEngineTest 10/10`, `RadarBrakeLightConcurrencyStressTest 7/7`, `BTLERadarDeviceTest 64/64`, `ANTBikeRadarDeviceTest 22/22`, `ANTBikeLightDeviceTest 11/11`, `RadarTrafficSimulatorTest 14/14`, `SmartBrakeLightDetectorTest 12/12`, `RadarStateRepositoryTest 7/7`, `RadarLightQuickSwitchSheetTest 13/13`, `EditDeviceDialogRadarLightTest 5/5`, `RadarLightButtonContractTest 4/4`, `RadarLightModeGridTest 3/3`, `ArchitectureConformanceContractTest 11/11`, `InterfaceSignatureDriftContractTest 3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8673/`). |
+| `1.0.44` | 2026-11-24 | Lane 1 Author (`ATT-8672`, `--as agent1`) | `ATT-8672` | Retired `RadarTrafficSimulator`, `RadarScenario`, `SimulatedRadarDevice`, `RadarSource.SIMULATOR`, and simulator UI/strings; updated `TST-CON-029` to classpath/enum/UI-absence excision verification and cleaned retired simulator citations in `TST-CON-030`..`032`, `041`, `042`, `046`, `056`. |
+| `1.0.45` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Updated `TST-CON-052` (`.1`–`.3`) to `[Planned]` matching refined `REQ-CON-052` (`ATT-9178`): MIA-only periodic re-search vs never-connected clean give-up, workout-end (`TRACKING -> READY`) disconnected MIA reset preserving live sensors, `MyBTLEDevice` `READY` GATT-133 immediate stop + `REQ-SET-123` passive preservation, `PolarOnlineStreamingBridge` MIA-only reconnect + offline-yield survival, `15s/30s/1m/2m` (default `1m`) presets + legacy `300`/`600 -> 120` clamping, dual Compose UI & 9-locale parity. |
+| `1.0.46` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Gate 3 (`ATT-9686`) revision on `[Planned]` `TST-CON-052.2`: added edge-case verification for `SEARCHING`-safe `resetSessionConnectionState()` (BLE & Polar in-flight background reconnect disconnect), never-connected `READY` `STATE_DISCONNECTED` (`isSearching` true & false) + `BLEReconnectRobustnessTest` `L240/L283/L302` `setHasConnectedInSession(true)` update, eager mid-workout `DeviceManager` coordinator init, and `device === current` identity guard + delay cleanup. |
+| `1.0.47` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Promoted `TST-CON-052` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`154/154` PASS across `13` targeted suites: `SensorReconnectBackoffPolicyTest 6/6` [`testBackoffSequence_defaultOneMinute_progressesAndCapsAtSixtySeconds`, `testBackoffSequence_allFourPresets_15s_30s_1m_2m_clampCleanly`, `testNextPeriodicResearchDelay_honorsAllFourPresets`, `testSensorSearchSettings_defaultsRoundTripAndLegacyClamping`], `DeviceSearchPeriodicRetryCoordinatorTest 9/9` [`testHandleSearchStopped_neverConnectedDeviceGivesUpWithZeroTimers_whileMiaDeviceSchedulesRetry`, `testEnqueueDeviceForPeriodicResearch_enforcesIdentityGuardAndClearsDelayWhenSessionReset`, `testOnTrackingModeChanged_workoutEndCancelsPendingAndResetsOnlyDisconnectedDevices`], `DeviceManagerSearchQueueTest 8/8` [`testTriesExhausted_whenPeriodicResearchEnabled_retainsOnlyMiaDeviceAndGivesUpNeverConnected`, `testWorkoutEndTrackingStateChanged_constructedMidWorkout_resetsDisconnectedMiaAndPreservesConnected`], `BLEReconnectRobustnessTest 18/18` [`testNeverConnectedReadyDisconnect_schedulesZeroReconnectsAndStopsInitialSearch`, `testResetSessionConnectionState_safeAcrossConnectedSearchingAndDisconnectedStates`], `MyBTLEDeviceLifecycleTest 16/16`, `PolarOnlineStreamingBridgeTest 58/58` [`testMidSessionDisconnectAndTimeout_usesExtendedBackoffAndCancelsOnShutDown`], `SearchSettingsDialogTest 3/3` [`testLegacyPersisted300Or600_clampsToTwoMinutesInSelector`], `SensorSearchTuningSectionTest 1/1`, `SensorSearchTuningContractTest 6/6`, `SystemLiveTrackingRequirementsContractTest 4/4`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `TranslationParityTest 11/11`; live `emulator-5554` Light/Dark `Rule 8.5` PNGs verified, `0` crashes; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9178/`). |
+| `1.0.48` | 2026-11-24 | Lane 2 Author (`ATT-8996`, `--as agent1`) | `ATT-8996` | Added `[Planned]` `TST-CON-060` (`.1`–`.3`, symmetric with `REQ-CON-060`) covering shared `BleDisStringSanitizer` & all BLE GATT/GAP/Polar DIS read sites, `PolarOfflineCapabilityStore` self-healing & `PolarOfflineGattCoordinator` NUL-safe matching, and `Devices.db` write/read sanitization + idempotent v14->v15 migration & LoC/schema contracts (`N/A - 0 string changes`). |
+| `1.0.49` | 2026-11-24 | Lane 2 Author (`ATT-8996`, `--as agent1`) | `ATT-8996` | Promoted `TST-CON-060` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`196/196` PASS across `17` targeted suites: `BleDisStringSanitizerTest 3/3`, `DevicesDatabaseManagerMigrationV15Test 3/3`, `DevicesDatabaseManagerMigrationV14Test 3/3`, `DevicesDatabaseManagerMigrationV13Test 4/4`, `DevicesDatabaseManagerMigrationV12Test 3/3`, `DevicesDatabaseManagerMigrationTest 4/4`, `DevicesDatabaseManagerTest 17/17`, `BTSearchForNewDevicesEngineTest 22/22`, `BTLEHeartRateDeviceTest 19/19`, `BTLERadarDeviceTest 64/64`, `PolarOfflineCapabilityStoreTest 8/8`, `PolarPmdStreamCoordinatorTest 12/12`, `PolarOfflineGattCoordinatorCoexistenceTest 14/14`, `DatabaseSchemaRegistryParityContractTest 2/2`, `SystemLiveTrackingRequirementsContractTest 4/4`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8996/`). |
+| `1.0.50` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Added `[Planned]` `TST-CON-061` (`.1`–`.4`, strictly symmetric `REQ-CON-061`) covering `BTLERadarDevice` / `RadarStateRepository` V2 bonding-required detection & clearing, Android 12+/13+ permission-safe `RadarBluetoothBondingHelper`, Robolectric Compose `EditDeviceDialogRadarBondingTest` + `READY`-only snackbar, and 9-locale `strings_radar.xml` / color / LoC parity. |
+| `1.0.51` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Gate 3 (`ATT-9688`) revision on `[Planned]` `TST-CON-061`: added zero-resurrection verification post-`ALREADY_BONDED` clear, `unregisterSensors()` remote-disconnect & `mBondReceiverLock` teardown checks, `FLAG_ACTIVITY_NEW_TASK` non-`Activity` vs `Activity` intent tests, trimmed case-insensitive MAC matching, `READY -> TRACKING` snackbar cancel + non-burning latch test, and corrected `ui.theme.ThemeColorCentralizationAuditTest` FQCN. |
+| `1.0.52` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Promoted `TST-CON-061` (`.1`–`.4`) to `[Verified]` with 11 verbatim method citations (`256/256` PASS across `24` targeted suites: `BTLERadarDeviceTest 66/66`, `RadarStateRepositoryTest 9/9`, `RadarBluetoothBondingHelperTest 3/3`, `EditDeviceDialogRadarBondingTest 4/4`, `EditDeviceDialogRadarLightTest 5/5`, `8` remaining `devices.radar.*` & `7` remaining `editdevice.*` suites, `TranslationParityTest 11/11`, `ThemeColorCentralizationAuditTest 5/5`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `InterfaceSignatureDriftContractTest 3/3`; `Rule 8.5` Light/Dark card + live `emulator-5554` smoke PNGs verified, `0` crashes; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8731/`). |
+| `1.0.53` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Stage 6 Bounce 1/5 heal (`15` verbatim `TST-CON-061` methods, `261/261` PASS across `24` targeted suites incl. `+4` Bounce 1 regressions: `BTLERadarDeviceTest 68/68`, `RadarStateRepositoryTest 10/10`, `RadarBluetoothBondingHelperTest 4/4`, `EditDeviceDialogRadarBondingTest 5/5` covering owned-`RadarV2BondingSnackbarVisuals` dismissal, `BLE == CONNECTED` guard, concurrent `unregisterSensors()`/`shutDown()` mid-`configureServices()` race, and `BOND_BONDING` short-circuit; live `emulator-5554` `Devices.db` v15 smoke `0` crashes; refreshed SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8731/`). |

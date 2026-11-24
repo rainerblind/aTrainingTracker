@@ -22,6 +22,7 @@ import android.database.Cursor
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer
 import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -43,8 +44,8 @@ class RawDeviceDataProvider(
 
         val lastSeen = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.LAST_ACTIVE)
         val batteryPercentage = getSafeInt(cursor, DevicesDatabaseManager.DevicesDbHelper.LAST_BATTERY_PERCENTAGE)
-        val manufacturer = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME)
-        val deviceName = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.NAME)
+        val manufacturer = BleDisStringSanitizer.sanitize(getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME)) ?: ""
+        val deviceName = BleDisStringSanitizer.sanitize(getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.NAME)) ?: ""
         val isPaired = getSafeInt(cursor, DevicesDatabaseManager.DevicesDbHelper.PAIRED) == 1
         
         val calibIdx = cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR)

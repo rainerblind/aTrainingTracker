@@ -277,11 +277,11 @@ fun SensorSearchTuningSection(
             onOptionSelected = onPeriodicResearchFinalPeriodSecChange,
             labelProvider = { optionSec ->
                 when (optionSec) {
+                    15 -> stringResource(R.string.prefs_research_period_15s)
+                    30 -> stringResource(R.string.prefs_research_period_30s)
                     60 -> stringResource(R.string.prefs_research_period_1m)
                     120 -> stringResource(R.string.prefs_research_period_2m)
-                    300 -> stringResource(R.string.prefs_research_period_5m)
-                    600 -> stringResource(R.string.prefs_research_period_10m)
-                    else -> stringResource(R.string.prefs_research_period_5m)
+                    else -> stringResource(R.string.prefs_research_period_1m)
                 }
             },
             helperText = stringResource(R.string.prefs_periodic_research_final_period_summary),

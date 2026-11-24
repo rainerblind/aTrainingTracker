@@ -87,9 +87,9 @@
             android:key="periodicSensorResearchFinalPeriodSec"
             android:title="@string/prefs_periodic_research_final_period_title"
             android:summary="@string/prefs_periodic_research_final_period_summary"
-            android:defaultValue="300"
-            android:max="600"
-            app:min="60"
+            android:defaultValue="60"
+            android:max="120"
+            app:min="15"
             app:showSeekBarValue="true"/>
     </PreferenceCategory>
 

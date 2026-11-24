@@ -23,6 +23,7 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.polar
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
@@ -173,7 +174,7 @@ object PolarOfflineCapabilityStore {
      */
     @JvmStatic
     fun isValidCanonicalPolarId(candidate: String?): Boolean {
-        val trimmed = candidate?.trim() ?: return false
+        val trimmed = BleDisStringSanitizer.sanitize(candidate) ?: return false
         return CANONICAL_POLAR_ID_REGEX.matches(trimmed)
     }
 
@@ -195,8 +196,8 @@ object PolarOfflineCapabilityStore {
         confirmedPolarService: Boolean = false
     ) {
         val normalized = normalizeMac(macAddress) ?: return
-        val trimmedModel = modelNumber?.trim()?.takeIf { it.isNotEmpty() }
-        val canonicalSerial = serialNumber?.trim()?.uppercase(Locale.ROOT)
+        val trimmedModel = BleDisStringSanitizer.sanitize(modelNumber)
+        val canonicalSerial = BleDisStringSanitizer.sanitize(serialNumber)?.uppercase(Locale.ROOT)
             ?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
         if (trimmedModel == null && canonicalSerial == null) return
 
@@ -245,7 +246,7 @@ object PolarOfflineCapabilityStore {
                 editor?.putBoolean(KEY_PREFIX + normalized, true)
             }
         }
-        val normalizedPolarId = polarDeviceId?.trim()?.uppercase(Locale.ROOT)
+        val normalizedPolarId = BleDisStringSanitizer.sanitize(polarDeviceId)?.uppercase(Locale.ROOT)
             ?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
         if (normalizedPolarId != null) {
             polarIdCache[normalized] = normalizedPolarId
@@ -283,7 +284,7 @@ object PolarOfflineCapabilityStore {
             legacyTypeCache[normalized] = deviceType
             editor?.putString(KEY_LEGACY_TYPE_PREFIX + normalized, deviceType.name)
         }
-        val normalizedPolarId = polarDeviceId?.trim()?.uppercase(Locale.ROOT)
+        val normalizedPolarId = BleDisStringSanitizer.sanitize(polarDeviceId)?.uppercase(Locale.ROOT)
             ?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
         if (normalizedPolarId != null && getPolarDeviceId(context, normalized) == null) {
             polarIdCache[normalized] = normalizedPolarId
@@ -343,8 +344,15 @@ object PolarOfflineCapabilityStore {
     fun getModelNumber(context: Context?, macAddress: String?): String? {
         val normalized = normalizeMac(macAddress) ?: return null
         modelNumberCache[normalized]?.let { return it }
-        val stored = getPrefs(context)?.getString(KEY_MODEL_PREFIX + normalized, null)
-            ?.trim()?.takeIf { it.isNotEmpty() }
+        val prefs = getPrefs(context) ?: return null
+        val key = KEY_MODEL_PREFIX + normalized
+        val raw = prefs.getString(key, null) ?: return null
+        val stored = BleDisStringSanitizer.sanitize(raw)
+        if (raw != stored) {
+            val editor = prefs.edit()
+            if (stored != null) editor.putString(key, stored) else editor.remove(key)
+            editor.apply()
+        }
         if (stored != null) {
             modelNumberCache[normalized] = stored
         }
@@ -359,8 +367,16 @@ object PolarOfflineCapabilityStore {
     fun getPolarDeviceId(context: Context?, macAddress: String?): String? {
         val normalized = normalizeMac(macAddress) ?: return null
         polarIdCache[normalized]?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }?.let { return it }
-        val stored = getPrefs(context)?.getString(KEY_POLAR_ID_PREFIX + normalized, null)
-            ?.trim()?.uppercase(Locale.ROOT)?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
+        val prefs = getPrefs(context) ?: return null
+        val key = KEY_POLAR_ID_PREFIX + normalized
+        val raw = prefs.getString(key, null) ?: return null
+        val stored = BleDisStringSanitizer.sanitize(raw)?.uppercase(Locale.ROOT)
+            ?.takeIf { CANONICAL_POLAR_ID_REGEX.matches(it) }
+        if (raw != stored) {
+            val editor = prefs.edit()
+            if (stored != null) editor.putString(key, stored) else editor.remove(key)
+            editor.apply()
+        }
         if (stored != null) {
             polarIdCache[normalized] = stored
         }
@@ -441,7 +457,7 @@ object PolarOfflineCapabilityStore {
     @JvmStatic
     @JvmOverloads
     fun classifyModelNumber(modelNumber: String?, hasPolarServices: Boolean = false): PolarDeviceType {
-        val lower = modelNumber?.trim()?.lowercase(Locale.ROOT) ?: return PolarDeviceType.UNKNOWN
+        val lower = BleDisStringSanitizer.sanitize(modelNumber)?.lowercase(Locale.ROOT) ?: return PolarDeviceType.UNKNOWN
         if (lower.isEmpty()) return PolarDeviceType.UNKNOWN
         return when {
             lower.contains("polar h10") || H10_TOKEN_REGEX.containsMatchIn(lower) -> PolarDeviceType.H10
@@ -484,7 +500,6 @@ object PolarOfflineCapabilityStore {
     }
 
     private fun normalizeMac(macAddress: String?): String? {
-        val trimmed = macAddress?.trim()?.uppercase(Locale.ROOT)
-        return if (trimmed.isNullOrEmpty()) null else trimmed
+        return BleDisStringSanitizer.sanitize(macAddress)?.uppercase(Locale.ROOT)
     }
 }

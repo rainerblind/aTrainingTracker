@@ -57,7 +57,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Behavioral Compose UI tests for [SensorSearchTuningSection] verifying periodic re-search
- * toggle and steady-state period segmented selector (`ATT-8965`, `REQ-CON-052.3`, `TST-CON-052.3`).
+ * toggle and `15s/30s/1m/2m` steady-state period segmented selector (`ATT-8965`, `ATT-9178`,
+ * `REQ-CON-052.3`, `TST-CON-052.3`).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -93,15 +94,21 @@ class SensorSearchTuningSectionTest {
         }
 
         assertTrue(latestPrefs.periodicResearchEnabled)
-        assertEquals(300, latestPrefs.periodicResearchFinalPeriodSec)
+        assertEquals(60, latestPrefs.periodicResearchFinalPeriodSec)
 
         composeRule.onNodeWithText(context.getString(R.string.prefs_periodic_research_enabled_title))
             .performScrollTo()
             .assertExists()
-        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_5m))
+        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_1m))
             .performScrollTo()
             .assertIsSelected()
             .assertIsEnabled()
+
+        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_15s))
+            .performScrollTo()
+            .performClick()
+        assertEquals(15, latestPrefs.periodicResearchFinalPeriodSec)
+        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_15s)).assertIsSelected()
 
         composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_2m))
             .performScrollTo()
@@ -116,7 +123,9 @@ class SensorSearchTuningSectionTest {
             isToggleable() and hasAnyAncestor(hasTestTag("tuning_periodic_research_toggle"))
         ).assertIsOff()
         assertFalse(latestPrefs.periodicResearchEnabled)
+        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_15s)).assertIsNotEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_30s)).assertIsNotEnabled()
         composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_1m)).assertIsNotEnabled()
-        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_10m)).assertIsNotEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.prefs_research_period_2m)).assertIsNotEnabled()
     }
 }

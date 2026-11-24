@@ -54,7 +54,6 @@ class RadarLightControllerTest {
         SmartBrakeLightDetector.isEnabled = true
         RadarLightController.reset()
         RadarStateRepository.reset()
-        RadarTrafficSimulator.stop()
         SmartRadarLightEngine.reset()
         TuningPreferencesDataStore.setInstanceForTesting(null)
     }
@@ -65,7 +64,6 @@ class RadarLightControllerTest {
         SmartBrakeLightDetector.isEnabled = true
         RadarLightController.reset()
         RadarStateRepository.reset()
-        RadarTrafficSimulator.stop()
         SmartRadarLightEngine.reset()
         unmockkStatic(Log::class)
     }
@@ -167,9 +165,8 @@ class RadarLightControllerTest {
 
     @Test
     fun testRadarLightController_gatedStateMutation_whenDispatchFails_stateNotMutated() {
-        // No device connected, simulator inactive
+        // No device connected
         assertFalse(RadarLightController.isLightControlAvailable.value)
-        assertFalse(RadarTrafficSimulator.isSimulating)
 
         val dispatched = RadarLightController.setLightMode(RadarLightMode.DAY_FLASH)
         assertFalse(dispatched)
@@ -277,16 +274,6 @@ class RadarLightControllerTest {
         RadarLightController.onWorkoutStopped(mockContext)
         assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
         verify { mockDevice.setLightMode(RadarLightMode.OFF) }
-    }
-
-    @Test
-    fun testRadarLightController_trafficSimulatorIntegration() {
-        RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 0L)
-        RadarLightController.setLightMode(RadarLightMode.NIGHT_FLASH)
-
-        assertEquals(RadarLightMode.NIGHT_FLASH, RadarTrafficSimulator.simulatedLightMode)
-        assertEquals(RadarLightMode.NIGHT_FLASH, RadarStateRepository.getState().lightMode)
-        assertTrue(RadarStateRepository.getState().isLightControlSupported)
     }
 
     @Test
@@ -882,8 +869,16 @@ class RadarLightControllerTest {
         assertFalse(RadarStateRepository.getState().isAutoMode)
         assertTrue(SmartRadarLightEngine.isManualOverridden)
 
-        // Incoming simulator tick must NOT revert repository isAutoMode to true
-        RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 500L)
+        // Incoming hardware telemetry tick must NOT revert repository isAutoMode to true
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.APPROACHING,
+                targets = listOf(RadarTarget(targetId = 1, rangeMeters = 60f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING)),
+                lastUpdateRealtimeMs = 500L,
+                source = RadarSource.BLE
+            )
+        )
         assertFalse(RadarLightController.isAutoMode.value)
         assertFalse(RadarStateRepository.getState().isAutoMode)
         assertTrue(SmartRadarLightEngine.isManualOverridden)
@@ -895,7 +890,15 @@ class RadarLightControllerTest {
         assertFalse(RadarStateRepository.getState().isAutoMode)
 
         // Another telemetry tick still preserves isAutoMode == false
-        RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 1000L)
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.APPROACHING,
+                targets = listOf(RadarTarget(targetId = 1, rangeMeters = 45f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING)),
+                lastUpdateRealtimeMs = 1000L,
+                source = RadarSource.BLE
+            )
+        )
         assertFalse(RadarStateRepository.getState().isAutoMode)
 
         // 3. Explicit setAutoMode() restores isAutoMode == true and resumes SmartRadarLightEngine

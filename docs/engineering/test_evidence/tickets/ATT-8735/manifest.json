@@ -1,0 +1,12 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "08f185771ed2b5c2614cb5cb7138bc8a15cb2a6b",
+  "files": {
+    "evidence_summary.json": "764ee99ca29a7df41c04690694e2462e4c1439153a9376239f14c29d4aa2b200",
+    "screenshots/ATT-8735_emulator_live.png": "c70adcd3eebe7270dc6ca95783007307c33c279a789ed3a327b3c9d3d54d616d",
+    "screenshots/ATT-8735_radar_map_icons_preview.png": "9afc9edcec75eebf20396b41f727437a94250eddacf82c083a950b4fe4b12496"
+  },
+  "run_started_utc": "2026-11-24T18:03:38.006643+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8735"
+}

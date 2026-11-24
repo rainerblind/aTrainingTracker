@@ -1,0 +1,49 @@
+{
+  "android_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "checks": [
+    {
+      "details": "Android: Skipped (--skip-tests). | Python: Skipped (--skip-tests).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12315 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "143ac55e7ffd9d1805b47791380035857b6e1cc1",
+  "junit_xml_files": [],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-24T16:28:03.000154+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att8672_radar_settings.png"
+  ],
+  "ticket_key": "ATT-8672",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

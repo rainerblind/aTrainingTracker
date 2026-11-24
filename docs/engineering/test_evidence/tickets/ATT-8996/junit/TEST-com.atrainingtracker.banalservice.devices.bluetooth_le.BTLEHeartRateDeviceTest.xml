@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-24T19:32:31.017Z" hostname="rainer-HP-EliteBook-850-G5" time="23.67">
+  <properties/>
+  <testcase name="testUnregisterSensors_cleansUpRrIntervalSensor_andReconnectCreatesNewInstance" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="1.777"/>
+  <testcase name="testParseHeartRateMeasurement_lostContactOrZeroWithRrFlagClearsRrAndDoesNotDispatchRrBeats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.728"/>
+  <testcase name="testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.716"/>
+  <testcase name="testUint16HrAndEnergyExpendedOffset" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.734"/>
+  <testcase name="testSilentHrWatchdog_cccdRetryPauseDeferralDisconnectAndPolarShutDown_TST_CON_054_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="2.594"/>
+  <testcase name="testMultiSecondAndSubMinimumRrIntervals_atLowDriftFlaggedAsArtifactGap" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.732"/>
+  <testcase name="testConfigureServices_enqueuesDisBeforeHrCccdAndIgnoresNonPolarCardioSense" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.748"/>
+  <testcase name="testOnOtherCharacteristicUpdate_stripsNulBytesFromPolarDisModelAndSerial_TST_CON_060_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.728"/>
+  <testcase name="testOpticalHrCompatibilityAndTruncatedPackets" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.735"/>
+  <testcase name="testContinuousDoublePrecisionDriftBounding_3600Beats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="7.403"/>
+  <testcase name="testOnDescriptorWriteCompleted_ignoresStaleGattWithoutBurningRetryFlag_TST_CON_054_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.766"/>
+  <testcase name="testDriftReAnchor_clampsBackwardBundleTimestampsMonotonically" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.756"/>
+  <testcase name="testParseHeartRateMeasurement_zeroAndLostContactPreserveWatchdogClearAfterTenSecondsAndReevaluatePrimaryHr" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.723"/>
+  <testcase name="testMultiRrPacketDecoding_bundledBeats" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.68"/>
+  <testcase name="testCumulativeTimestampsAndDriftGuard" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.685"/>
+  <testcase name="testConfigureServicesAndDisUpdate_hydratesPolarMetadataWithoutNonPolarRegression" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.737"/>
+  <testcase name="testInitialBundledBeatsBackwardAnchoring" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.801"/>
+  <testcase name="testPerDeviceHrv_parallelBtleDevicesComputeDistinctValuesAndClearOnDisconnectAndReset_TST_HRV_050_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.912"/>
+  <testcase name="testReconnectReRegistersRrIntervalSensor" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest" time="0.714"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

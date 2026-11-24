@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:59:27.546Z" hostname="rainer-HP-EliteBook-850-G5" time="10.921">
+  <properties/>
+  <testcase name="testQueue_executesOperationsSequentiallyWithoutDropping" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.409"/>
+  <testcase name="testOnCharacteristicWrite_propagatesFailureStatusToSubclassHook" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.469"/>
+  <testcase name="testBatteryReadRunnable_enqueuesViaGattQueue" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.327"/>
+  <testcase name="testReadNextCharacteristic_drainsLegacyReadQueueIntoGattQueue" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.332"/>
+  <testcase name="testWriteCharacteristicOp_enforcesNoResponseWhenPropertyMatches" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.315"/>
+  <testcase name="testWriteCharacteristicOp_prefersWriteTypeDefaultWhenPropertyWritePresent" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.327"/>
+  <testcase name="testQueue_clearsOnDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.408"/>
+  <testcase name="testQueue_characteristicReadSerializesWithDescriptorWrite" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.333"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

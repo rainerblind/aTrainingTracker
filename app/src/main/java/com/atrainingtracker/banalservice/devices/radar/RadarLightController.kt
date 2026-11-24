@@ -360,10 +360,6 @@ object RadarLightController {
         if (device != null && lightAvailable) {
             dispatched = device.setLightMode(targetMode)
         }
-        if (RadarTrafficSimulator.isSimulating || (device == null && RadarStateRepository.lightState.value.isLightControlSupported)) {
-            RadarTrafficSimulator.setSimulatedLightMode(targetMode)
-            dispatched = true
-        }
         if (!dispatched) return false
 
         val committed = synchronized(controllerLock) {
@@ -381,7 +377,7 @@ object RadarLightController {
     }
 
     /**
-     * Dispatches a light mode command to the active radar peripheral or simulator.
+     * Dispatches a light mode command to the active radar peripheral.
      * Automatically prunes flashing modes under StVZO regulations to [RadarLightMode.SOLID].
      * Mutates [_currentMode] and [RadarStateRepository.lightState] strictly when command dispatch succeeds (REQ-CON-031.2).
      */
@@ -396,11 +392,6 @@ object RadarLightController {
         var dispatched = false
         if (device != null && _isLightControlAvailable.value) {
             dispatched = device.setLightMode(targetMode)
-        }
-
-        if (RadarTrafficSimulator.isSimulating || (device == null && RadarStateRepository.lightState.value.isLightControlSupported)) {
-            RadarTrafficSimulator.setSimulatedLightMode(targetMode)
-            dispatched = true
         }
 
         if (dispatched) {
@@ -507,7 +498,7 @@ object RadarLightController {
             pendingTargetMode = null
             pendingAutoTransition = true
             pendingDebounceGen = gen
-            val canPreview = !isBrakeActive && (_isLightControlAvailable.value || RadarTrafficSimulator.isSimulating)
+            val canPreview = !isBrakeActive && _isLightControlAvailable.value
             if (canPreview) {
                 _currentMode.value = previewMode
             }
@@ -578,9 +569,6 @@ object RadarLightController {
         val device = synchronized(controllerLock) { activeRadarDevice }
         if (device != null && _isLightControlAvailable.value) {
             device.setLightMode(targetMode)
-        }
-        if (RadarTrafficSimulator.isSimulating || (device == null && RadarStateRepository.lightState.value.isLightControlSupported)) {
-            RadarTrafficSimulator.setSimulatedLightMode(targetMode)
         }
     }
 
@@ -710,7 +698,7 @@ object RadarLightController {
             RadarStateRepository.updateLightState { it.copy(isAutoMode = false, lightMode = config.defaultMode) }
         }
         val ctx = context?.applicationContext ?: synchronized(controllerLock) { appContext }
-        val isLightAvailable = _isLightControlAvailable.value || RadarTrafficSimulator.isSimulating
+        val isLightAvailable = _isLightControlAvailable.value
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
@@ -770,7 +758,7 @@ object RadarLightController {
             }
         }
         val ctx = context?.applicationContext ?: synchronized(controllerLock) { appContext }
-        val isLightAvailable = _isLightControlAvailable.value || RadarTrafficSimulator.isSimulating
+        val isLightAvailable = _isLightControlAvailable.value
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }

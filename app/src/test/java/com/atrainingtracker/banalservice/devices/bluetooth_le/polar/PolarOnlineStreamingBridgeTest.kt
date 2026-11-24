@@ -1399,21 +1399,30 @@ class PolarOnlineStreamingBridgeTest {
             )
 
             try {
-                assertTrue(bridge.shouldKeepAliveOnSearchTimeout())
+                // Never-connected Polar bridge MUST NOT keep alive or schedule backoff reconnect even during TRACKING (ATT-9178)
+                assertFalse(bridge.hasConnectedInSession())
+                assertFalse(bridge.shouldKeepAliveOnSearchTimeout())
                 bridge.startSearching()
-                assertEquals(1_000L, bridge.getCurrentReconnectDelayMsForTesting())
                 verify(exactly = 1) { mockApi.connectToDevice("77889900") }
-
-                // Simulate mid-workout timeout chain (5s search watchdog -> 1s -> 2s -> 4s -> 8s -> 16s -> 32s...)
                 testScheduler.advanceTimeBy(5_001L)
                 testScheduler.runCurrent()
-                assertFalse("Queue must unblock on timeout even during TRACKING", bridge.isSearching)
+                assertFalse("Queue must unblock on timeout", bridge.isSearching)
+                assertNull("Never-connected Polar bridge must schedule 0 reconnect jobs on timeout", bridge.getReconnectJobForTesting())
+
+                // Once connected in session and later lost (MIA), extended backoff applies (1m = 60s default)
+                val info = PolarDeviceInfo("77889900", "AA:BB:CC:DD:EE:77", -55, "Polar Sense", true)
+                bridge.getSdkCallbackForTesting().deviceConnected(info)
+                assertTrue(bridge.hasConnectedInSession())
+                assertTrue(bridge.shouldKeepAliveOnSearchTimeout())
+                assertEquals(1_000L, bridge.getCurrentReconnectDelayMsForTesting())
+
+                bridge.getSdkCallbackForTesting().deviceDisconnected(info)
                 assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
                 assertTrue(bridge.getReconnectJobForTesting()?.isActive == true)
 
                 val observedDelays = mutableListOf(2_000L)
-                // Fire 1s backoff -> triggers reconnect attempt -> wait 5s timeout -> advances to 4s -> repeat
-                val waitSteps = listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 64_000L, 128_000L)
+                // Fire 1s backoff -> triggers reconnect attempt -> wait 5s timeout -> advances to 4s -> repeat up to 60s (1m default)
+                val waitSteps = listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L)
                 for (stepMs in waitSteps) {
                     testScheduler.advanceTimeBy(stepMs + 1L)
                     testScheduler.runCurrent()
@@ -1422,25 +1431,28 @@ class PolarOnlineStreamingBridgeTest {
                     observedDelays.add(bridge.getCurrentReconnectDelayMsForTesting())
                 }
                 assertEquals(
-                    listOf(2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 64_000L, 128_000L, 300_000L, 300_000L),
+                    listOf(2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 60_000L, 60_000L),
                     observedDelays
                 )
 
                 // Reconnect succeeds -> delay resets to 1,000 ms
-                bridge.getSdkCallbackForTesting().deviceConnected(
-                    PolarDeviceInfo("77889900", "AA:BB:CC:DD:EE:77", -55, "Polar Sense", true)
-                )
+                bridge.getSdkCallbackForTesting().deviceConnected(info)
                 assertEquals(1_000L, bridge.getCurrentReconnectDelayMsForTesting())
                 assertNull(bridge.getReconnectJobForTesting())
 
                 // When periodic research disabled mid-workout -> caps at 16,000 ms
                 com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.setPeriodicResearchEnabled(context, false)
-                bridge.getSdkCallbackForTesting().deviceDisconnected(
-                    PolarDeviceInfo("77889900", "AA:BB:CC:DD:EE:77", -55, "Polar Sense", true)
-                )
+                bridge.getSdkCallbackForTesting().deviceDisconnected(info)
                 assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
                 val countBeforeShutDown = bridge.getReconnectJobForTesting()
                 assertNotNull(countBeforeShutDown)
+
+                // resetSessionConnectionState() on disconnected !isSearching bridge cancels pending reconnect & clears session flag
+                bridge.resetSessionConnectionState()
+                assertFalse(bridge.hasConnectedInSession())
+                assertNull(bridge.getReconnectJobForTesting())
+                assertFalse(bridge.shouldKeepAliveOnSearchTimeout())
+
                 bridge.shutDown()
                 assertTrue(bridge.getReconnectJobForTesting()?.isCancelled != false)
             } finally {
@@ -1453,7 +1465,7 @@ class PolarOnlineStreamingBridgeTest {
 
     @Test
     fun testTimeoutDisconnectEcho_doesNotDoubleAdvance_andBlePowerStateCancelsReconnect_andExceptionReschedules() = runTest {
-        // ATT-8965 Bounce 2 regression tests for Fix 4a/4b/4c
+        // ATT-8965 Bounce 2 / ATT-9178 regression tests for Fix 4a/4b/4c (MIA sensor after prior session connect)
         androidx.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
         TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
         try {
@@ -1483,17 +1495,19 @@ class PolarOnlineStreamingBridgeTest {
             )
 
             try {
-                // 4b: Timeout arms 1s reconnect (next=2s); synchronous deviceDisconnected echo MUST NOT double-advance to 4s
+                val info = PolarDeviceInfo("88990011", "AA:BB:CC:DD:EE:88", -55, "Polar Sense", true)
+                // Establish prior session connection so bridge is a lost/MIA sensor
                 bridge.startSearching()
-                testScheduler.advanceTimeBy(5_001L)
-                testScheduler.runCurrent()
+                bridge.getSdkCallbackForTesting().deviceConnected(info)
+                assertTrue(bridge.hasConnectedInSession())
+
+                // Disconnect arms 1s reconnect (next=2s); synchronous deviceDisconnected echo MUST NOT double-advance to 4s
+                bridge.getSdkCallbackForTesting().deviceDisconnected(info)
                 assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
                 val armedJob = bridge.getReconnectJobForTesting()
                 assertTrue(armedJob?.isActive == true)
 
-                bridge.getSdkCallbackForTesting().deviceDisconnected(
-                    PolarDeviceInfo("88990011", "AA:BB:CC:DD:EE:88", -55, "Polar Sense", true)
-                )
+                bridge.getSdkCallbackForTesting().deviceDisconnected(info)
                 assertEquals(2_000L, bridge.getCurrentReconnectDelayMsForTesting())
                 assertSame(armedJob, bridge.getReconnectJobForTesting())
 
@@ -1516,6 +1530,32 @@ class PolarOnlineStreamingBridgeTest {
                     bridge.getReconnectJobForTesting()?.isActive == true
                 )
                 assertEquals(8_000L, bridge.getCurrentReconnectDelayMsForTesting())
+
+                // In-flight background reconnect (reconnectJob == null, searchTimeoutJob active, !isSearching) torn down cleanly on resetSessionConnectionState()
+                every { mockApi.connectToDevice("88990011") } answers {}
+                testScheduler.advanceTimeBy(4_001L)
+                testScheduler.runCurrent()
+                assertNull(bridge.getReconnectJobForTesting())
+                assertNotNull("Background reconnect attempt must arm searchTimeoutJob", bridge.getSearchTimeoutJobForTesting())
+                bridge.resetSessionConnectionState()
+                assertFalse(bridge.hasConnectedInSession())
+                assertNull("resetSessionConnectionState must cancel background searchTimeoutJob when !isSearching", bridge.getSearchTimeoutJobForTesting())
+                verify(atLeast = 1) { mockApi.disconnectFromDevice("88990011") }
+
+                // Contrast: while actively searching (isSearching == true), resetSessionConnectionState MUST keep searchTimeoutJob alive (no queue wedge)
+                bridge.startSearching()
+                assertTrue(bridge.isSearching)
+                assertNotNull(bridge.getSearchTimeoutJobForTesting())
+                bridge.resetSessionConnectionState()
+                assertNotNull("SEARCHING reset must keep searchTimeoutJob intact", bridge.getSearchTimeoutJobForTesting())
+                assertTrue(bridge.isSearching)
+
+                // Never-connected resumeAfterOfflineSync() MUST NOT arm reconnectJob
+                testScheduler.advanceTimeBy(5_001L)
+                testScheduler.runCurrent()
+                assertFalse(bridge.isSearching)
+                bridge.resumeAfterOfflineSync()
+                assertNull("Never-connected resumeAfterOfflineSync must schedule 0 reconnectJob", bridge.getReconnectJobForTesting())
             } finally {
                 bridge.shutDown()
             }

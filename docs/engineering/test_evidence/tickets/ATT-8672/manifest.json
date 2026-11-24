@@ -1,0 +1,11 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "143ac55e7ffd9d1805b47791380035857b6e1cc1",
+  "files": {
+    "evidence_summary.json": "7d52989986d4fc6ff95c64610f0b93c45e033276dda544ae0965099ae0b69c33",
+    "screenshots/att8672_radar_settings.png": "7d2c6a5487f68358565ed7191fe36461869ce643eb87476d61b05a369e1b649c"
+  },
+  "run_started_utc": "2026-11-24T16:28:03.000154+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8672"
+}

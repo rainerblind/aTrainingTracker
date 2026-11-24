@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-24T19:34:25.627Z" hostname="rainer-HP-EliteBook-850-G5" time="5.686">
+  <properties/>
+  <testcase name="testFindEnabledPolarDevice_skipsUnwornSecondarySensorWhenAnotherHrmReceives" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="2.956"/>
+  <testcase name="testWithGattYieldAndPolarApi_pausesAndResumesTargetAliasesWithoutHarmingSibling_TST_SET_122_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.699"/>
+  <testcase name="testAcquirePolarApi_disablesDefaultBleLoggerOnSingletonCreation_TST_STB_023_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.112"/>
+  <testcase name="testSingletonRefCounting_creates8FeatureSupersetOnceAndShutsDownOnlyOnLastRelease" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.541"/>
+  <testcase name="testWithGattYieldAndPolarApi_aliasExpansionAcrossOverlappingLeases_transitionsPausedSetOnce_TST_SET_122_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.097"/>
+  <testcase name="testPerChannelAccMutualExclusion_blocksConcurrentOfflineAndOnlineAccOnVeritySense" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.159"/>
+  <testcase name="testConnectWithinTimeout_recoversFromMidWaitDisconnectAndIsolatesSiblingDisconnect_TST_SET_131_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.207"/>
+  <testcase name="testWithGattYieldAndPolarApi_reusesActiveBridgeSessionWithoutTeardown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.084"/>
+  <testcase name="testMultiplexedCallbacks_routeBidirectionalMacAndHexIdsWithoutClobbering" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.144"/>
+  <testcase name="testWithGattYieldAndPolarApi_nestedLeasesAndExceptionOrCancellationReleaseCleanly_TST_SET_122_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.088"/>
+  <testcase name="testConnectWithinTimeout_reusesConnectedAndInFlightConnectingSessionsAndClearsStateOnRelease_TST_SET_131_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.129"/>
+  <testcase name="testForceDisconnectDeviceAndDisconnectUnpairedSessions_clearsTargetAliasesWithoutHarmingSibling_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.098"/>
+  <testcase name="testAwaitFeaturesReady_uses20sDefaultAndResolvesMacHexAliases_TST_SET_131_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.078"/>
+  <testcase name="testConnectWithinTimeout_coalescesConnectedThenDisconnectedBurstBeforeSelectAndDuringBackoff_TST_SET_131_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest" time="0.292"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

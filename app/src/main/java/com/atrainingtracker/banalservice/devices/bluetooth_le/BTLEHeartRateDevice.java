@@ -393,11 +393,13 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource, H
         }
         UUID uuid = characteristic.getUuid();
         if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(uuid)) {
-            String modelNumber = characteristic.getStringValue(0);
-            PolarOfflineCapabilityStore.recordDisMetadata(mContext, getAddress(), modelNumber, null);
+            String modelNumber = BleDisStringSanitizer.readSanitizedString(characteristic);
+            if (modelNumber != null) {
+                PolarOfflineCapabilityStore.recordDisMetadata(mContext, getAddress(), modelNumber, null);
+            }
         } else if (BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.equals(uuid)) {
-            String serialNumber = characteristic.getStringValue(0);
-            if (PolarOfflineCapabilityStore.isValidCanonicalPolarId(serialNumber)) {
+            String serialNumber = BleDisStringSanitizer.readSanitizedString(characteristic);
+            if (serialNumber != null && PolarOfflineCapabilityStore.isValidCanonicalPolarId(serialNumber)) {
                 PolarOfflineCapabilityStore.recordDisMetadata(mContext, getAddress(), null, serialNumber);
                 PolarOfflineGattCoordinator.registerDeviceAliases(serialNumber, getAddress());
             }

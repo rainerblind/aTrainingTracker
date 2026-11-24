@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T17:00:09.432Z" hostname="rainer-HP-EliteBook-850-G5" time="2.314">
+  <properties/>
+  <testcase name="testDisconnectStopsFlatLineSparklineFeedingAcrossRepeatedTicks_TST_FIL_038_4" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.409"/>
+  <testcase name="createFilter_existingFilterWithChangedSensor_rebindsListenerAndDeliversUpdates" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.097"/>
+  <testcase name="rebindFilter_seedsCurrentValueIfPresent" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.08"/>
+  <testcase name="rebindExistingFilters_namedPeripheralDeviceRecreated_migratesFilterListener" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.111"/>
+  <testcase name="testDevicePinnedDisconnect_clearsInstantaneousAndMovingAverage_preservesCumulativeAndStrides_andRebinds_TST_FIL_038_3" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="1.398"/>
+  <testcase name="testBestSensorProxyDisconnect_preservesFallback_clearsOnLastDisconnect_andRetainsProxyBinding_TST_FIL_038_3" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.106"/>
+  <testcase name="testCreateFilter_defersInactiveDevicePinnedSensor_andNeverDefersRetainedProxy_TST_FIL_038_3" classname="com.atrainingtracker.banalservice.filters.FilterManagerRebindTest" time="0.113"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

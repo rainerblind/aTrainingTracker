@@ -96,7 +96,6 @@ class EditDeviceDialogRadarLightTest {
         assertTrue(
             shouldShowRadarLightControlSection(
                 isConnected = false,
-                isSimulating = false,
                 isLightControlAvailable = false,
                 deviceName = "RearVue8"
             )
@@ -105,16 +104,14 @@ class EditDeviceDialogRadarLightTest {
         assertFalse(
             shouldShowRadarLightControlSection(
                 isConnected = false,
-                isSimulating = false,
                 isLightControlAvailable = false,
                 deviceName = "Garmin RVR315"
             )
         )
-        // Live connected without light capability must be hidden unless simulating
+        // Live connected without light capability must be hidden
         assertFalse(
             shouldShowRadarLightControlSection(
                 isConnected = true,
-                isSimulating = false,
                 isLightControlAvailable = false,
                 deviceName = "RearVue8"
             )
@@ -122,17 +119,8 @@ class EditDeviceDialogRadarLightTest {
         assertTrue(
             shouldShowRadarLightControlSection(
                 isConnected = true,
-                isSimulating = false,
                 isLightControlAvailable = true,
                 deviceName = "RearVue8"
-            )
-        )
-        assertTrue(
-            shouldShowRadarLightControlSection(
-                isConnected = false,
-                isSimulating = true,
-                isLightControlAvailable = false,
-                deviceName = "Garmin RVR315"
             )
         )
     }

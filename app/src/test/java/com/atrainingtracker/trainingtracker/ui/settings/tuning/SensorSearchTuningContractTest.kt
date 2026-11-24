@@ -74,7 +74,7 @@ class SensorSearchTuningContractTest {
         assertTrue(defaults.searchOnlyForSportSpecificDevices)
         assertTrue(defaults.changeSportWhenDeviceGetsLost)
         assertTrue(defaults.periodicResearchEnabled)
-        assertEquals(300, defaults.periodicResearchFinalPeriodSec)
+        assertEquals(60, defaults.periodicResearchFinalPeriodSec)
     }
 
     @Test
@@ -90,7 +90,7 @@ class SensorSearchTuningContractTest {
         every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED) } returns true
         every { mockPrefs.getBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) } returns false
         every { mockPrefs.contains(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC) } returns true
-        every { mockPrefs.getInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300) } returns 120
+        every { mockPrefs.getInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 60) } returns 300
 
         val loaded = SensorSearchPreferences.load(mockContext)
         assertEquals(4, loaded.numberOfSearchTries)
@@ -159,7 +159,7 @@ class SensorSearchTuningContractTest {
         verify { mockEditor.putBoolean("searchOnlyForSportSpecificDevices", true) }
         verify { mockEditor.putBoolean("changeSportWhenDeviceGetsLost", true) }
         verify { mockEditor.putBoolean(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_ENABLED, true) }
-        verify { mockEditor.putInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300) }
+        verify { mockEditor.putInt(com.atrainingtracker.trainingtracker.settings.SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 60) }
         verify { mockEditor.apply() }
     }
 

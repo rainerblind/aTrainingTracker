@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning
 import android.content.Context
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
-import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
@@ -57,8 +56,6 @@ class RadarAccordionSectionTest {
             edgeSide = RadarEdgeSide.RIGHT,
             alertMode = RadarAudioAlertMode.ALL_ALERTS,
             lightMode = RadarLightMode.DAY_FLASH,
-            isRunning = false,
-            scenario = null,
             context = mockContext
         )
 
@@ -76,8 +73,6 @@ class RadarAccordionSectionTest {
             edgeSide = RadarEdgeSide.LEFT,
             alertMode = RadarAudioAlertMode.MUTED,
             lightMode = RadarLightMode.SOLID,
-            isRunning = false,
-            scenario = null,
             context = mockContext
         )
 
@@ -95,30 +90,10 @@ class RadarAccordionSectionTest {
             edgeSide = RadarEdgeSide.FULL_SCREEN,
             alertMode = RadarAudioAlertMode.ALL_ALERTS,
             lightMode = RadarLightMode.DAY_FLASH,
-            isRunning = false,
-            scenario = null,
             context = mockContext
         )
 
         assertEquals("Full Screen · All Alerts · Day Flash", subtitle)
-    }
-
-    @Test
-    fun testFormatCyclingRadarSubtitle_runningSimulationState_displaysActiveScenario() {
-        val mockContext = mockk<Context>()
-        every { mockContext.getString(R.string.radar_simulator_running) } returns "Simulation active"
-        every { mockContext.getString(R.string.radar_scenario_single_car) } returns "Single Car"
-
-        val subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
-            edgeSide = RadarEdgeSide.RIGHT,
-            alertMode = RadarAudioAlertMode.ALL_ALERTS,
-            lightMode = RadarLightMode.DAY_FLASH,
-            isRunning = true,
-            scenario = RadarScenario.SINGLE_CAR,
-            context = mockContext
-        )
-
-        assertEquals("Simulation active • Single Car", subtitle)
     }
 
     @Test
@@ -135,11 +110,7 @@ class RadarAccordionSectionTest {
         )
 
         val subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
-            edgeSide = config.radarEdgeSide,
-            alertMode = config.radarAudioAlertMode,
-            lightMode = config.radarLightDefaultMode,
-            isRunning = false,
-            scenario = null,
+            config = config,
             context = mockContext
         )
 

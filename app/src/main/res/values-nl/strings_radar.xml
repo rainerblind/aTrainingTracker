@@ -40,28 +40,6 @@
     <string name="radar_passing_distance_short">Inhaalafst</string>
     <string name="radar_large_vehicle_count">Radar grote voertuigen</string>
     <string name="radar_large_vehicle_count_short">Grote voert</string>
-
-    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
-    <string name="radar_simulator_title">Radar verkeerssimulator</string>
-    <string name="radar_simulator_subtitle">Simuleer verkeersscenario\'s voor binnentrainingen en UI-tests</string>
-    <string name="radar_simulator_start">Simulatie starten</string>
-    <string name="radar_simulator_stop">Simulatie stoppen</string>
-    <string name="radar_simulator_running">Simulatie actief</string>
-    <string name="radar_simulator_idle">Simulatie gestopt</string>
-    <string name="radar_simulator_status">%1$s • %2$d doelen</string>
-    <string name="radar_simulator_scenario_label">Scenario</string>
-    <string name="radar_scenario_single_car">Enkele auto</string>
-    <string name="radar_scenario_single_car_desc">Enkele inhalende auto met 12 m/s</string>
-    <string name="radar_scenario_convoy">Konvooi</string>
-    <string name="radar_scenario_convoy_desc">3 gelijktijdig inhalende voertuigen</string>
-    <string name="radar_scenario_high_speed">Gevaar met hoge snelheid</string>
-    <string name="radar_scenario_high_speed_desc">Snel naderend voertuig met 25 m/s</string>
-    <string name="radar_scenario_disconnect">Verbinding verbreken &amp; herstellen</string>
-    <string name="radar_scenario_disconnect_desc">Simuleert verbindingsverlies en herstel</string>
-    <string name="radar_scenario_country_road">Buitenweg-lus</string>
-    <string name="radar_scenario_country_road_desc">Continue willekeurige verkeerslus</string>
-    <string name="radar_simulator_preempted">Simulatie onderbroken door fysieke radar</string>
-
     <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
     <string name="radar_overlay_settings_title">Radar-overlay</string>
     <string name="radar_overlay_edge_side">Schermrand</string>
@@ -202,4 +180,11 @@
     <string name="developer_menu_radar_section_title">Fietsradar foutopsporing</string>
     <string name="developer_menu_radar_v1_only_title">Radar V1-protocol forceren (verouderd)</string>
     <string name="developer_menu_radar_v1_only_desc">Omzeilt Garmin Varia V2-karakteristiekdetectie en valt onmiddellijk terug op verouderde V1-streaming (6a4e3203).</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">Bluetooth-koppeling vereist voor V2</string>
+    <string name="radar_v2_bonding_hint_desc">Deze radar ondersteunt 2D V2-telemetrie (voertuiggrootte en inhaalafstand), maar werkt momenteel in V1-modus. Koppel via Android-Bluetooth om V2 bij de volgende verbinding te activeren.</string>
+    <string name="radar_v2_bonding_pair_action">Koppelen via Bluetooth</string>
+    <string name="radar_v2_bonding_pair_action_short">Koppelen</string>
+    <string name="radar_v2_bonding_initiated_hint">Bluetooth-koppeling gestart. V2-telemetrie wordt na koppeling bij de volgende verbinding geactiveerd.</string>
+    <string name="radar_v2_bonding_snackbar_message">Radar werkt in V1-modus. Koppel via Bluetooth om 2D V2-telemetrie te ontgrendelen.</string>
 </resources>

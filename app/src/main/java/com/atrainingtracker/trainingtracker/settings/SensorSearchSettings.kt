@@ -20,10 +20,11 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import androidx.preference.PreferenceManager
+import kotlin.math.abs
 
 /**
  * SharedPreferences accessor for periodic long-term sensor re-search and steady-state backoff
- * configuration (ATT-8965, REQ-CON-052.3).
+ * configuration (ATT-8965, ATT-9178, REQ-CON-052.3).
  *
  * Stored in default SharedPreferences alongside legacy search preferences while keeping
  * [com.atrainingtracker.trainingtracker.TrainingApplication] within its ratcheted LoC ceiling.
@@ -33,16 +34,23 @@ object SensorSearchSettings {
     const val DEFAULT_PERIODIC_RESEARCH_ENABLED = true
 
     const val SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC = "periodicSensorResearchFinalPeriodSec"
-    const val MIN_FINAL_PERIOD_SEC = 60
-    const val MAX_FINAL_PERIOD_SEC = 600
-    const val DEFAULT_FINAL_PERIOD_SEC = 300
+    const val MIN_FINAL_PERIOD_SEC = 15
+    const val MAX_FINAL_PERIOD_SEC = 120
+    const val DEFAULT_FINAL_PERIOD_SEC = 60
 
     @JvmField
-    val FINAL_PERIOD_OPTIONS_SEC: List<Int> = listOf(60, 120, 300, 600)
+    val FINAL_PERIOD_OPTIONS_SEC: List<Int> = listOf(15, 30, 60, 120)
 
+    /**
+     * Clamps [valueSec] to `[MIN_FINAL_PERIOD_SEC, MAX_FINAL_PERIOD_SEC]` (mapping legacy `ATT-8965`
+     * `300`/`600` values to `120`) and snaps to the nearest canonical preset in
+     * [FINAL_PERIOD_OPTIONS_SEC] so segmented selectors always highlight a valid option.
+     */
     @JvmStatic
-    fun normalizeFinalPeriodSec(valueSec: Int): Int =
-        valueSec.coerceIn(MIN_FINAL_PERIOD_SEC, MAX_FINAL_PERIOD_SEC)
+    fun normalizeFinalPeriodSec(valueSec: Int): Int {
+        val clamped = valueSec.coerceIn(MIN_FINAL_PERIOD_SEC, MAX_FINAL_PERIOD_SEC)
+        return FINAL_PERIOD_OPTIONS_SEC.minByOrNull { abs(it - clamped) } ?: DEFAULT_FINAL_PERIOD_SEC
+    }
 
     @JvmStatic
     fun isPeriodicResearchEnabled(context: Context?): Boolean {

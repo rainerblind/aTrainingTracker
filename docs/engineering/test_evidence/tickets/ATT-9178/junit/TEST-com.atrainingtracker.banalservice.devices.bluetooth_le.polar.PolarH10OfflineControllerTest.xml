@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:57:59.241Z" hostname="rainer-HP-EliteBook-850-G5" time="50.203">
+  <properties/>
+  <testcase name="testZeroGapFastPath_bypassesPftpDownload" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="4.38"/>
+  <testcase name="testStopAndBackfill_timeout_persistsPendingSyncMetadata" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.481"/>
+  <testcase name="testStopAndBackfillWorkout_trimsTrailingBeats_skipsEmptyDbWrite_andRespectsRunPostBackfillRecompute_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.661"/>
+  <testcase name="testStopAndPendingBackfill_preservesRrOnlyBackfillWhenPatchedHrRowsZeroAndLogsDiagnostics_TST_SET_132_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.615"/>
+  <testcase name="testExecuteArming_success_armsRecording" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.587"/>
+  <testcase name="testStopAndBackfill_zeroPatchedRows_doesNotRecordHrAccumulatedSensorType" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.599"/>
+  <testcase name="testBackfillAndPendingSync_reuseSharedCoordinatorSingletonWithoutCleanup" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.639"/>
+  <testcase name="testSyncPendingWorkout_managedApiRecoversFromMidWaitDisconnectAndAwaitsFeatureReady_TST_SET_131_3" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.67"/>
+  <testcase name="testRemoveExercise_onlyAfterSqliteCommit" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.601"/>
+  <testcase name="testStopAndBackfill_hangingWaitForConnection_timesOutAtStopConnectionTimeoutMs" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.867"/>
+  <testcase name="testExecuteArming_capturesPostStartRecordingAnchorAndResetsLifecycle_TST_TRK_093_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.701"/>
+  <testcase name="testBuildAnchoredSamples_handlesThreeEndTimeCasesAndInvalidRr_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.835"/>
+  <testcase name="testSyncPendingWorkout_trimsByExpectedEndMsAndRunsPhysiologyBeforeHrv_TST_TRK_093_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.874"/>
+  <testcase name="testExecuteArming_failure_handlesGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.933"/>
+  <testcase name="testSyncPendingWorkout_nullBaseFileName_doesNotRecordHrAccumulatedSensorType" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.913"/>
+  <testcase name="testFringeFlapInvariance_alreadyArmed_doesNotRearm" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="2.001"/>
+  <testcase name="testStopAndBackfill_gapsExist_fetchesAndPatchesDb" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.932"/>
+  <testcase name="testDismissPendingSync_clearsPendingFlag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.781"/>
+  <testcase name="testApiLevelBelow33_bypassesBackfill" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.821"/>
+  <testcase name="testSyncPendingWorkout_success_fetchesPatchesAndClearsFlag" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.789"/>
+  <testcase name="testWorkoutStopped_resetsArmedState" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.778"/>
+  <testcase name="testArmForActiveWorkout_skipsUnwornH10WhenOtherHrmReceives" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.895"/>
+  <testcase name="testStopAndBackfillWorkout_staleArmedTokenPreservesNewerWorkoutArmedStateAndSuppressesNotification_tstTrk091_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.778"/>
+  <testcase name="testSyncPendingWorkout_cancellationExceptionIsRethrown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.761"/>
+  <testcase name="testRenamedH10_armsAndSyncsPendingWorkoutViaDisHardwareMetadata" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.834"/>
+  <testcase name="testApiLevelBelow33_doesNotArm" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.708"/>
+  <testcase name="testStopAndBackfill_confirmedDisconnectedDevice_fastFailsWithoutWaitingForConnection" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest" time="1.766"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Exception in thread "DefaultDispatcher-worker-4 @coroutine#85" java.lang.NullPointerException: Cannot invoke "String.isEmpty()" because "parent.path" is null
+	at java.base/java.io.File.<init>(File.java:375)
+	at androidx.datastore.DataStoreFile.dataStoreFile(DataStoreFile.android.kt:35)
+	at androidx.datastore.preferences.PreferenceDataStoreFile.preferencesDataStoreFile(PreferenceDataStoreFile.android.kt:37)
+	at androidx.datastore.preferences.PreferenceDataStoreSingletonDelegate.getValue$lambda$0$0(PreferenceDataStoreDelegate.android.kt:106)
+	at androidx.datastore.preferences.core.PreferenceDataStoreFactory.create$lambda$0(PreferenceDataStoreFactory.jvmAndroid.kt:63)
+	at androidx.datastore.core.FileStorage.createConnection(FileStorage.kt:48)
+	at androidx.datastore.core.DataStoreImpl.storageConnectionDelegate$lambda$0(DataStoreImpl.kt:196)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getStorageConnection$datastore_core(DataStoreImpl.kt:197)
+	at androidx.datastore.core.DataStoreImpl.coordinator_delegate$lambda$0(DataStoreImpl.kt:198)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getCoordinator(DataStoreImpl.kt:198)
+	at androidx.datastore.core.DataStoreImpl.readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:284)
+	at androidx.datastore.core.DataStoreImpl.access$readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:46)
+	at androidx.datastore.core.DataStoreImpl$readState$2.invokeSuspend(DataStoreImpl.kt:232)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(85), "coroutine#85":StandaloneCoroutine{Cancelling}@5da944a, Dispatchers.Default]
+Exception in thread "DefaultDispatcher-worker-2 @coroutine#86" java.lang.NullPointerException: Cannot invoke "String.isEmpty()" because "parent.path" is null
+	at java.base/java.io.File.<init>(File.java:375)
+	at androidx.datastore.DataStoreFile.dataStoreFile(DataStoreFile.android.kt:35)
+	at androidx.datastore.preferences.PreferenceDataStoreFile.preferencesDataStoreFile(PreferenceDataStoreFile.android.kt:37)
+	at androidx.datastore.preferences.PreferenceDataStoreSingletonDelegate.getValue$lambda$0$0(PreferenceDataStoreDelegate.android.kt:106)
+	at androidx.datastore.preferences.core.PreferenceDataStoreFactory.create$lambda$0(PreferenceDataStoreFactory.jvmAndroid.kt:63)
+	at androidx.datastore.core.FileStorage.createConnection(FileStorage.kt:48)
+	at androidx.datastore.core.DataStoreImpl.storageConnectionDelegate$lambda$0(DataStoreImpl.kt:196)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getStorageConnection$datastore_core(DataStoreImpl.kt:197)
+	at androidx.datastore.core.DataStoreImpl.coordinator_delegate$lambda$0(DataStoreImpl.kt:198)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getCoordinator(DataStoreImpl.kt:198)
+	at androidx.datastore.core.DataStoreImpl.readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:284)
+	at androidx.datastore.core.DataStoreImpl.access$readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:46)
+	at androidx.datastore.core.DataStoreImpl$readState$2.invokeSuspend(DataStoreImpl.kt:232)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(86), "coroutine#86":StandaloneCoroutine{Cancelling}@f637db8, Dispatchers.Default]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

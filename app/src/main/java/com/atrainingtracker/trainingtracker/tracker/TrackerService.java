@@ -90,7 +90,6 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineController;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController;
 import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
@@ -1526,7 +1525,6 @@ public class TrackerService extends Service {
         }
         if (!fromOnDestroy) {
             RadarSnoozeController.reset();
-            RadarTrafficSimulator.INSTANCE.stop();
         }
 
         unregisterTransientReceivers();
@@ -2613,7 +2611,7 @@ public class TrackerService extends Service {
         }
 
         boolean isCycling = (banalService.getBSportType() == null || banalService.getBSportType() == BSportType.BIKE);
-        if (isCycling && (RadarLightController.isLightControlAvailable().getValue() || RadarTrafficSimulator.INSTANCE.isSimulating())) {
+        if (isCycling && RadarLightController.isLightControlAvailable().getValue()) {
             SensorData<Number> speedData = banalService.getBestSensorData(SensorType.SPEED_mps);
             if (speedData != null && speedData.getValue() != null) {
                 SmartBrakeLightDetector.onSpeedChanged(speedData.getValue().floatValue());

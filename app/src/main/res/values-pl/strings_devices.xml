@@ -209,15 +209,15 @@
     <string name="carriage_mode_run_bicep_arm">Bieg (Opaska na ramię)</string>
     <string name="carriage_mode_run_handheld">Bieg (W dłoni)</string>
 
-    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, ATT-9178, REQ-CON-052.3) -->
     <string name="prefs_periodic_research_enabled_title">Okresowe ponowne wyszukiwanie</string>
-    <string name="prefs_periodic_research_enabled_summary">Automatycznie ponawiaj wyszukiwanie rozłączonych czujników w rosnących odstępach</string>
+    <string name="prefs_periodic_research_enabled_summary">Automatycznie ponawiaj wyszukiwanie utraconych czujników połączonych w tej sesji w rosnących odstępach</string>
     <string name="prefs_periodic_research_final_period_title">Docelowy interwał wyszukiwania</string>
-    <string name="prefs_periodic_research_final_period_summary">Końcowy interwał po krokach oczekiwania (16s → 32s → 64s → 2 min)</string>
+    <string name="prefs_periodic_research_final_period_summary">Maksymalny interwał po krokach oczekiwania (1s → 2s → 4s → … → 2 min)</string>
+    <string name="prefs_research_period_15s">15 s</string>
+    <string name="prefs_research_period_30s">30 s</string>
     <string name="prefs_research_period_1m">1 min</string>
     <string name="prefs_research_period_2m">2 min</string>
-    <string name="prefs_research_period_5m">5 min</string>
-    <string name="prefs_research_period_10m">10 min</string>
 
     <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
     <string name="devices_wheel_circumference_auto_hint">Początkowy rozmiar opony dla nowych czujników — kalibrowany automatycznie przez GNSS podczas jazdy.</string>

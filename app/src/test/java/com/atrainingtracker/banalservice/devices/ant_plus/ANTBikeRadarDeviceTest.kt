@@ -30,11 +30,9 @@ import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
-import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -69,7 +67,7 @@ import org.junit.Test
  * Unit test suite for ANTBikeRadarDevice (TST-CON-032, REQ-CON-032).
  *
  * Verifies ANT+ channel configuration, Page 0x30/0x31 bit unpacking,
- * fail-safe 3.5s starvation watchdog, and simulator preemption.
+ * and fail-safe 3.5s starvation watchdog.
  */
 class ANTBikeRadarDeviceTest {
 
@@ -124,7 +122,6 @@ class ANTBikeRadarDeviceTest {
         mockSensorManager = mockk(relaxed = true)
 
         RadarStateRepository.reset()
-        RadarTrafficSimulator.stop()
 
         radarDevice = ANTBikeRadarDevice(
             mockContext,
@@ -138,7 +135,6 @@ class ANTBikeRadarDeviceTest {
     fun tearDown() {
         radarDevice.shutDown()
         RadarStateRepository.reset()
-        RadarTrafficSimulator.stop()
         unmockkAll()
     }
 
@@ -255,22 +251,6 @@ class ANTBikeRadarDeviceTest {
         assertEquals(ThreatLevel.NONE, state.overallThreatLevel)
         assertTrue(state.targets.isEmpty())
         assertTrue(radarDevice.getActiveTargets().isEmpty())
-    }
-
-    @Test
-    fun testHardwarePacket_preemptsActiveRadarTrafficSimulator() {
-        RadarTrafficSimulator.start(RadarScenario.SINGLE_CAR)
-        assertTrue(RadarTrafficSimulator.isSimulating)
-
-        val payload = byteArrayOf(
-            0x30.toByte(), 0x01.toByte(), 0x00.toByte(),
-            0x10.toByte(), 0x00.toByte(), 0x00.toByte(),
-            0x05.toByte(), 0x00.toByte()
-        )
-        radarDevice.decodeBroadcastData(payload)
-
-        // Verifies physical hardware packet halted simulation (REQ-CON-029.3, REQ-CON-032.6)
-        assertFalse(RadarTrafficSimulator.isSimulating)
     }
 
     @Test
@@ -768,9 +748,8 @@ class ANTBikeRadarDeviceTest {
     }
 
     /**
-     * TST-CON-042.2 & TST-CON-042.4: ANT+ Packet Ingestion Preserves Snooze & Light Mode.
-     * Verifies parseTargetsPage() and publishTargets() retain active audioSnoozeState and lightMode,
-     * and bypass simulator preemption when isSimulating is false.
+     * TST-CON-042.2: ANT+ Packet Ingestion Preserves Snooze & Light Mode.
+     * Verifies parseTargetsPage() and publishTargets() retain active audioSnoozeState and lightMode.
      */
     @Test
     fun testDecodeBroadcastData_preservesAudioSnoozeAndLightMode() {
@@ -785,9 +764,6 @@ class ANTBikeRadarDeviceTest {
                 source = RadarSource.ANT_PLUS
             )
         )
-
-        // Ensure simulator is not running
-        assertFalse(RadarTrafficSimulator.isSimulating)
 
         // ANT+ receives packet and publishes CONNECTED
         val validPayload = byteArrayOf(

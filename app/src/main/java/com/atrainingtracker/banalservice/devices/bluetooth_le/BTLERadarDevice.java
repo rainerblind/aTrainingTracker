@@ -23,12 +23,17 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -42,7 +47,6 @@ import com.atrainingtracker.banalservice.devices.radar.RadarSource;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
 import com.atrainingtracker.banalservice.devices.radar.RadarThreatState;
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator;
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel;
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory;
@@ -51,6 +55,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -100,6 +105,21 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     protected MySensor<Integer> mLargeVehicleCountSensor;
 
     private boolean mIsV2Stream = false;
+    private final Object mBondReceiverLock = new Object();
+    private boolean mBondReceiverRegistered = false;
+    private boolean mBondSessionActive = false;
+    private boolean mBondDeviceShutDown = false;
+    private final BroadcastReceiver mBondStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent == null || !BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(intent.getAction())) {
+                return;
+            }
+            int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
+            BluetoothDevice device = getBluetoothDeviceExtra(intent);
+            handleBondStateChanged(device != null ? device.getAddress() : null, bondState);
+        }
+    };
     private volatile BluetoothGattCharacteristic mLightControlCharacteristic;
     private volatile BluetoothGattCharacteristic mRadarControlWriteChar;
     private volatile BluetoothGattCharacteristic mRadarControlNotifyChar;
@@ -158,6 +178,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             synchronized (mTrackHistory) {
                 mTrackHistory.clear();
             }
+            deactivateBondSession(false);
             RadarStateRepository.updateThreatState(createBleThreatState(
                     RadarConnectionState.DISCONNECTED_ERROR,
                     ThreatLevel.NONE,
@@ -167,6 +188,106 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             resetSensorsToClear();
         }
     };
+
+    @Nullable
+    @SuppressWarnings("deprecation")
+    private static BluetoothDevice getBluetoothDeviceExtra(@NonNull Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
+        }
+        return intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+    }
+
+    private static boolean matchesDeviceAddress(@Nullable String expected, @Nullable String actual) {
+        String normExpected = expected != null ? expected.trim() : "";
+        String normActual = actual != null ? actual.trim() : "";
+        if (normExpected.isEmpty()) {
+            return true;
+        }
+        if (normActual.isEmpty()) {
+            return false;
+        }
+        return normExpected.equalsIgnoreCase(normActual);
+    }
+
+    private void registerBondStateReceiverLocked() {
+        if (mBondReceiverRegistered || mIsShutDown || mBondDeviceShutDown || mContext == null || Build.VERSION.SDK_INT == 0) {
+            return;
+        }
+        try {
+            IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+            ContextCompat.registerReceiver(mContext, mBondStateReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
+            mBondReceiverRegistered = true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Failed to register ACTION_BOND_STATE_CHANGED receiver", e);
+        }
+    }
+
+    private void unregisterBondStateReceiverLocked() {
+        if (!mBondReceiverRegistered) {
+            return;
+        }
+        mBondReceiverRegistered = false;
+        if (mContext != null) {
+            LifecycleUtils.safeUnregisterReceiver(mContext, mBondStateReceiver, TAG);
+        }
+    }
+
+    private void deactivateBondSession(boolean permanentShutDown) {
+        synchronized (mBondReceiverLock) {
+            if (permanentShutDown) {
+                mBondDeviceShutDown = true;
+            }
+            mBondSessionActive = false;
+            unregisterBondStateReceiverLocked();
+        }
+        RadarStateRepository.setV2BondingRequired(false, null);
+    }
+
+    /**
+     * Synchronizes V2 Bluetooth bonding-required status with [RadarStateRepository] (SSoT) and
+     * manages lazy [BluetoothDevice.ACTION_BOND_STATE_CHANGED] receiver registration (`REQ-CON-061.1`).
+     */
+    private void setV2BondingRequiredState(boolean required) {
+        if (required) {
+            synchronized (mBondReceiverLock) {
+                if (mIsShutDown || mBondDeviceShutDown || !mBondSessionActive) {
+                    return;
+                }
+                registerBondStateReceiverLocked();
+            }
+            RadarStateRepository.setV2BondingRequired(true, mAddress);
+            boolean stillActive;
+            synchronized (mBondReceiverLock) {
+                stillActive = !mIsShutDown && !mBondDeviceShutDown && mBondSessionActive;
+                if (!stillActive) {
+                    unregisterBondStateReceiverLocked();
+                }
+            }
+            if (!stillActive) {
+                RadarStateRepository.setV2BondingRequired(false, null);
+            }
+        } else {
+            synchronized (mBondReceiverLock) {
+                unregisterBondStateReceiverLocked();
+            }
+            RadarStateRepository.setV2BondingRequired(false, null);
+        }
+    }
+
+    /**
+     * Clears V2 bonding-required status when this radar peripheral completes Bluetooth bonding
+     * (`REQ-CON-061.1`). Package-visible for deterministic JVM unit testing.
+     */
+    void handleBondStateChanged(@Nullable String deviceAddress, int bondState) {
+        if (mIsShutDown || bondState != BluetoothDevice.BOND_BONDED) {
+            return;
+        }
+        if (matchesDeviceAddress(mAddress, deviceAddress)) {
+            if (DEBUG) Log.i(TAG, "Radar peripheral bonded (" + deviceAddress + "); clearing V2 bonding hint.");
+            setV2BondingRequiredState(false);
+        }
+    }
 
     private static RadarThreatState createBleThreatState(
             RadarConnectionState connectionState,
@@ -263,12 +384,18 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             return;
         }
 
+        // Clear any prior V2 bonding hint/receiver before re-evaluating capabilities on (re-)connect (REQ-CON-061.1)
+        deactivateBondSession(false);
+
         // Radar service discovered: transition to CONNECTED and arm 3.5s fail-safe watchdog (ATT-7543 / REQ-CON-028.4)
         RadarStateRepository.updateThreatState(createBleThreatState(
                 RadarConnectionState.CONNECTED,
                 ThreatLevel.NONE,
                 Collections.emptyList()
         ));
+        synchronized (mBondReceiverLock) {
+            mBondSessionActive = !mIsShutDown && !mBondDeviceShutDown;
+        }
         syncLightControlSupported();
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
@@ -345,6 +472,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         } else {
             if (v2Char != null && !isBonded) {
                 Log.w(TAG, "Garmin Varia V2 requires LESC bonding, but device is not bonded (bondState=" + (device != null ? device.getBondState() : "null") + "). Falling back to V1.");
+                setV2BondingRequiredState(true);
             }
             fallbackToV1(gatt, btGattService);
         }
@@ -528,6 +656,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             if (mHandler != null) {
                 mHandler.removeCallbacks(mV2SilenceRunnable);
             }
+            if (RadarStateRepository.getV2BondingStatus().isRequired()) {
+                setV2BondingRequiredState(false);
+            }
             byte[] payload = characteristic.getValue();
             List<RadarTarget> targets = parseV2ThreatPacket(payload);
             if (targets != null) {
@@ -541,10 +672,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     private void processTargets(List<RadarTarget> targets) {
         pruneStaleTracks(SystemClock.elapsedRealtime());
-        // Hardware preemption (REQ-CON-029.3, REQ-CON-042.4): physical data preempts simulator immediately
-        if (RadarTrafficSimulator.INSTANCE.isSimulating()) {
-            RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
-        }
 
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
@@ -630,6 +757,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             mHandler.removeCallbacks(mModelNumberFallbackRunnable);
         }
         mIsV2Stream = false;
+        deactivateBondSession(false);
         synchronized (mTrackHistory) {
             mTrackHistory.clear();
         }
@@ -653,6 +781,12 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     }
 
     @Override
+    protected void unregisterSensors() {
+        deactivateBondSession(false);
+        super.unregisterSensors();
+    }
+
+    @Override
     protected void disconnectFromGatt() {
         resetConnectionState();
         RadarStateRepository.updateThreatState(createBleThreatState(
@@ -669,6 +803,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     @Override
     public void shutDown() {
+        deactivateBondSession(true);
         resetConnectionState();
         mWindowAggregator.resetSession();
         super.shutDown();
@@ -785,7 +920,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         if (characteristic == null || characteristic.getUuid() == null) return;
 
         if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
-            String model = characteristic.getStringValue(0);
+            String model = BleDisStringSanitizer.readSanitizedString(characteristic);
             if (model != null && !model.isEmpty()) {
                 completeLightControlRegistration(gatt, model, isStvzoModel(model), RadarLightController.isRearVue820Model(model), false, false);
             } else {
@@ -1334,5 +1469,12 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @androidx.annotation.VisibleForTesting
     public void measurementCharacteristicUpdateForTesting(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         measurementCharacteristicUpdate(gatt, characteristic);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public boolean isBondReceiverRegisteredForTesting() {
+        synchronized (mBondReceiverLock) {
+            return mBondReceiverRegistered;
+        }
     }
 }

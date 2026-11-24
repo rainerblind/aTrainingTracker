@@ -290,18 +290,41 @@ class RadarStateRepositoryTest {
     }
 
     /**
-     * TST-CON-046.4 / REQ-CON-046.2, REQ-CON-046.3 (ATT-8455):
-     * Multi-source failover (BLE -> ANT_PLUS -> SIMULATOR) preserves manual isAutoMode == false
+     * TST-CON-029 (ATT-8672): Verifies built-in RadarTrafficSimulator, RadarScenario,
+     * SimulatedRadarDevice, and RadarSource.SIMULATOR are completely removed from classpath.
+     */
+    @Test
+    fun testSimulatorRemoval_classpathAndRadarSourceEnum() {
+        assertEquals(
+            listOf(RadarSource.NONE, RadarSource.ANT_PLUS, RadarSource.BLE),
+            RadarSource.values().toList()
+        )
+        val removedFqcns = listOf(
+            "com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator",
+            "com.atrainingtracker.banalservice.devices.radar.RadarScenario",
+            "com.atrainingtracker.banalservice.devices.radar.SimulatedRadarDevice"
+        )
+        for (fqcn in removedFqcns) {
+            val missing = try {
+                Class.forName(fqcn, false, javaClass.classLoader)
+                false
+            } catch (_: ClassNotFoundException) {
+                true
+            }
+            assertTrue("Removed simulator class $fqcn must not exist on classpath", missing)
+        }
+    }
+
+    /**
+     * TST-CON-046.4 / REQ-CON-046.2, REQ-CON-046.3 (ATT-8455, updated ATT-8672):
+     * Multi-source failover (BLE -> ANT_PLUS) preserves manual isAutoMode == false
      * and audioSnoozeState across sourceStates, while reset() cleanly restores default RadarState().
      */
     @Test
     fun testMultiSourceFailover_preservesIsAutoModeAndAudioSnooze_andResetIsolatesCleanly() {
         val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_15M)
 
-        // Connect SIMULATOR, ANT_PLUS, and BLE initially in auto mode
-        RadarStateRepository.updateState(
-            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.SIMULATOR, isAutoMode = true)
-        )
+        // Connect ANT_PLUS and BLE initially in auto mode
         RadarStateRepository.updateState(
             RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS, isAutoMode = true)
         )
@@ -316,7 +339,6 @@ class RadarStateRepositoryTest {
         }
         assertFalse(RadarStateRepository.getState().isAutoMode)
         assertFalse(RadarStateRepository.getState(RadarSource.ANT_PLUS).isAutoMode)
-        assertFalse(RadarStateRepository.getState(RadarSource.SIMULATOR).isAutoMode)
 
         // BLE disconnects -> fails over to ANT_PLUS
         RadarStateRepository.updateState(
@@ -330,18 +352,6 @@ class RadarStateRepositoryTest {
         assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
         assertFalse("Failover to ANT_PLUS must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
         assertTrue("Failover to ANT_PLUS must preserve audioSnoozeState", RadarStateRepository.getState().audioSnoozeState.isSnoozed)
-
-        // ANT_PLUS disconnects -> fails over to SIMULATOR
-        RadarStateRepository.updateState(
-            RadarState(
-                connectionState = RadarConnectionState.DISCONNECTED,
-                source = RadarSource.ANT_PLUS,
-                isAutoMode = false,
-                audioSnoozeState = activeSnooze
-            )
-        )
-        assertEquals(RadarSource.SIMULATOR, RadarStateRepository.getActiveSource())
-        assertFalse("Failover to SIMULATOR must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
         assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, RadarStateRepository.getState().audioSnoozeState.mode)
 
         // Explicit auto restoration propagates cleanly
@@ -357,7 +367,7 @@ class RadarStateRepositoryTest {
     }
 
     /**
-     * TST-CON-046.4 / REQ-CON-046.2 (ATT-8455 Bounce 1 Heal):
+     * TST-CON-046.4 / REQ-CON-046.2 (ATT-8455 Bounce 1 Heal, updated ATT-8672):
      * Preemption by higher-priority BLE with default flags (isAutoMode=true, INACTIVE snooze) and
      * disconnect failover with stale default flags must NOT corrupt active manual isAutoMode=false
      * or active audioSnoozeState across any tracked sourceStates.
@@ -366,10 +376,7 @@ class RadarStateRepositoryTest {
     fun testPreemptionAndFailoverWithDefaultSnapshots_preserveControlStateAcrossAllSources() {
         val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_30M)
 
-        // 1. SIMULATOR and ANT_PLUS connect, then user sets manual mode + snooze
-        RadarStateRepository.updateState(
-            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.SIMULATOR)
-        )
+        // 1. ANT_PLUS connects, then user sets manual mode + snooze
         RadarStateRepository.updateState(
             RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS)
         )
@@ -386,7 +393,6 @@ class RadarStateRepositoryTest {
         assertTrue("BLE preemption must preserve active snooze", RadarStateRepository.getState().audioSnoozeState.isSnoozed)
         assertFalse(RadarStateRepository.getState(RadarSource.BLE).isAutoMode)
         assertFalse(RadarStateRepository.getState(RadarSource.ANT_PLUS).isAutoMode)
-        assertFalse(RadarStateRepository.getState(RadarSource.SIMULATOR).isAutoMode)
 
         // 3. BLE disconnects carrying stale default isAutoMode=true & INACTIVE snooze -> fails over to ANT_PLUS
         RadarStateRepository.updateState(
@@ -395,13 +401,130 @@ class RadarStateRepositoryTest {
         assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
         assertFalse("Failover to ANT_PLUS must preserve isAutoMode=false", RadarStateRepository.getState().isAutoMode)
         assertEquals(RadarAudioSnoozeMode.SNOOZE_30M, RadarStateRepository.getState().audioSnoozeState.mode)
-        assertFalse("Standby SIMULATOR must remain isAutoMode=false", RadarStateRepository.getState(RadarSource.SIMULATOR).isAutoMode)
-        assertTrue("Standby SIMULATOR must retain active snooze", RadarStateRepository.getState(RadarSource.SIMULATOR).audioSnoozeState.isSnoozed)
         assertFalse("Disconnected BLE entry must remain synced at isAutoMode=false", RadarStateRepository.getState(RadarSource.BLE).isAutoMode)
 
         // 4. Conditional telemetry returning null leaves repository untouched
         val skipped = RadarStateRepository.updateTelemetryStateIf { null }
         assertEquals(null, skipped)
         assertFalse(RadarStateRepository.getState().isAutoMode)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731):
+     * Single-source-of-truth V2 bonding flag preservation across CONNECTED BLE frames,
+     * zero resurrection after explicit clear, auto-clear + prompt-latch reset on
+     * DISCONNECTED / DISCONNECTED_ERROR / CONNECTING, and clean BLE > ANT_PLUS arbitration.
+     */
+    @Test
+    fun testV2BondingState_ssotPreservation_disconnectAutoClear_arbitrationAndOneShotLatch_tstCon061_1() {
+        // 1. BLE connects and marks V2 bonding required with untrimmed MAC
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "  AA:BB:CC:DD:EE:FF  ")
+
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals("AA:BB:CC:DD:EE:FF", RadarStateRepository.getState().v2BondingDeviceAddress)
+        assertEquals(RadarV2BondingStatus(true, "AA:BB:CC:DD:EE:FF"), RadarStateRepository.getV2BondingStatus())
+
+        // 2. Subsequent 4-8 Hz BLE CONNECTED frame (default false) preserves SSoT true + MAC
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.APPROACHING,
+                targets = listOf(RadarTarget(1, 30f, 10f, ThreatLevel.APPROACHING)),
+                source = RadarSource.BLE
+            )
+        )
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals("AA:BB:CC:DD:EE:FF", RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // 3. One-shot prompt latch fires strictly once per session (case-insensitive)
+        assertTrue(RadarStateRepository.consumeV2BondingPromptIfPending("aa:bb:cc:dd:ee:ff"))
+        assertFalse(RadarStateRepository.consumeV2BondingPromptIfPending("AA:BB:CC:DD:EE:FF"))
+
+        // 4. Explicit clear (ALREADY_BONDED) clears flag & resets latch; subsequent CONNECTED frame never resurrects it
+        RadarStateRepository.setV2BondingRequired(false, null)
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals(null, RadarStateRepository.getState().v2BondingDeviceAddress)
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        assertFalse("Subsequent CONNECTED frame must not resurrect cleared bonding flag", RadarStateRepository.getState().isV2BondingRequired)
+
+        // 5. BLE > ANT_PLUS arbitration + disconnect auto-clear & failover + prompt latch reset
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertTrue(RadarStateRepository.consumeV2BondingPromptIfPending("AA:BB:CC:DD:EE:FF"))
+
+        // BLE disconnects -> auto-clears BLE bonding, resets latch, fails over to ANT_PLUS
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.DISCONNECTED, source = RadarSource.BLE)
+        )
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired)
+
+        // Reconnect unbonded BLE -> prompt latch was reset on disconnect, so prompt can fire once again
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertTrue("Disconnect must reset one-shot prompt latch for next connection", RadarStateRepository.consumeV2BondingPromptIfPending("AA:BB:CC:DD:EE:FF"))
+
+        // DISCONNECTED_ERROR and CONNECTING auto-clear bonding flag
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.DISCONNECTED_ERROR, source = RadarSource.BLE)
+        )
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired)
+
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTING, source = RadarSource.BLE)
+        )
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731 Bounce 1 Heal):
+     * setV2BondingRequired(true, ...) MUST be ignored whenever BLE is absent or not CONNECTED
+     * (DISCONNECTED, DISCONNECTED_ERROR, CONNECTING), preventing stale-disconnect races.
+     */
+    @Test
+    fun testV2BondingState_setTrueIgnoredWhenBleNotConnected_tstCon061_1() {
+        // 1. No BLE source state yet -> ignored
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals(null, RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // 2. Only ANT_PLUS connected -> ignored
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+
+        // 3. BLE DISCONNECTED / DISCONNECTED_ERROR / CONNECTING -> all ignored
+        for (state in listOf(
+            RadarConnectionState.DISCONNECTED,
+            RadarConnectionState.DISCONNECTED_ERROR,
+            RadarConnectionState.CONNECTING
+        )) {
+            RadarStateRepository.updateThreatState(
+                RadarThreatState(connectionState = state, source = RadarSource.BLE)
+            )
+            RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+            assertFalse(
+                "setV2BondingRequired(true) must be ignored when BLE is $state",
+                RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired
+            )
+            assertEquals(null, RadarStateRepository.getState(RadarSource.BLE).v2BondingDeviceAddress)
+        }
     }
 }

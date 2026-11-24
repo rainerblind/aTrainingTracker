@@ -259,4 +259,59 @@ class PolarOfflineCapabilityStoreTest {
         assertFalse(PolarOfflineCapabilityStore.isLegacyNameHeuristicSuppressed(context, renamedMac))
         assertTrue(PolarOfflineGattCoordinator.isPolarH10Device(context, "", "", renamedMac))
     }
+
+    @Test
+    fun testNulTerminatedDisAndLegacyPrefsSelfHealing_TST_CON_060_2() {
+        // REQ-CON-060.2 / TST-CON-060.2
+        assertTrue(PolarOfflineCapabilityStore.isValidCanonicalPolarId("ABCD1234\u0000"))
+        assertTrue(PolarOfflineCapabilityStore.isValidCanonicalPolarId("  abcd1234\u0000 "))
+        assertFalse(PolarOfflineCapabilityStore.isValidCanonicalPolarId("\u0000\u0000"))
+        assertEquals(
+            PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+            PolarOfflineCapabilityStore.classifyModelNumber("Sense\u0000", hasPolarServices = true)
+        )
+        assertEquals(
+            PolarOfflineCapabilityStore.PolarDeviceType.H10,
+            PolarOfflineCapabilityStore.classifyModelNumber("H10\u0000", hasPolarServices = true)
+        )
+
+        // Writing NUL-terminated DIS strings stores clean values and classifies Verity Sense
+        val writeMac = "AA:BB:CC:DD:EE:60"
+        PolarOfflineCapabilityStore.recordGattServiceCapabilities(context, writeMac, hasPmdService = true, hasPftpService = true)
+        PolarOfflineCapabilityStore.recordDisMetadata(context, writeMac, modelNumber = "Sense\u0000", serialNumber = "abcd1234\u0000")
+        assertEquals("Sense", PolarOfflineCapabilityStore.getModelNumber(context, writeMac))
+        assertEquals("ABCD1234", PolarOfflineCapabilityStore.getPolarDeviceId(context, writeMac))
+        assertEquals(PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE, PolarOfflineCapabilityStore.getDeviceType(context, writeMac))
+
+        // Legacy dirty SharedPreferences entries self-heal on first read (rewrite clean / remove blank)
+        val dirtyMac = "AA:BB:CC:DD:EE:61"
+        val blankMac = "AA:BB:CC:DD:EE:62"
+        val prefs = context.getSharedPreferences("polar_offline_capabilities", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("pmd_svc_$dirtyMac", true)
+            .putString("model_num_$dirtyMac", "Sense\u0000")
+            .putString("polar_id_$dirtyMac", "deadbeef\u0000")
+            .putString("model_num_$blankMac", "\u0000\u0000")
+            .putString("polar_id_$blankMac", "\u0000")
+            .commit()
+        PolarOfflineCapabilityStore.resetForTesting()
+
+        assertEquals("Sense", PolarOfflineCapabilityStore.getModelNumber(context, dirtyMac))
+        assertEquals("DEADBEEF", PolarOfflineCapabilityStore.getPolarDeviceId(context, dirtyMac))
+        assertEquals(PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE, PolarOfflineCapabilityStore.getDeviceType(context, dirtyMac))
+        assertEquals("Sense", prefs.getString("model_num_$dirtyMac", null))
+        assertEquals("DEADBEEF", prefs.getString("polar_id_$dirtyMac", null))
+
+        assertNull(PolarOfflineCapabilityStore.getModelNumber(context, blankMac))
+        assertNull(PolarOfflineCapabilityStore.getPolarDeviceId(context, blankMac))
+        assertFalse(prefs.contains("model_num_$blankMac"))
+        assertFalse(prefs.contains("polar_id_$blankMac"))
+
+        // PolarOfflineGattCoordinator treats NUL-only manufacturer as blank and normalizes aliases cleanly
+        val heurMac = "AA:BB:CC:DD:EE:63"
+        assertTrue(PolarOfflineGattCoordinator.isPolarH10Device(context, "Polar H10\u0000", "\u0000", heurMac))
+        assertTrue(PolarOfflineGattCoordinator.isPolarVeritySenseDevice(context, "Polar Verity Sense\u0000", "Polar Electro Oy\u0000", heurMac))
+        PolarOfflineGattCoordinator.registerDeviceAliases("11223344\u0000", "$heurMac\u0000")
+        assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier(heurMac, "11223344"))
+    }
 }
