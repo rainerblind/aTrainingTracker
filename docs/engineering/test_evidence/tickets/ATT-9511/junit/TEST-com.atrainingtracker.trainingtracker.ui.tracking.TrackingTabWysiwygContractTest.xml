@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:57.705Z" hostname="rainer-HP-EliteBook-850-G5" time="0.32">
+  <properties/>
+  <testcase name="testTrackingTabConfigHeader_removedGenericCheckboxes" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.01"/>
+  <testcase name="testSensorGridScreen_configurationMode_fullWidthTogglesEliminatesTwoColumnRows" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.098"/>
+  <testcase name="testSensorGridScreen_enforcesRuntimeGating" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.033"/>
+  <testcase name="testTrackingTabsScreen_suppressesLapButtonInConfigurationMode" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.177"/>
+  <testcase name="testSensorGridScreen_isolatesBottomSheetScaffoldToTrackingMode" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.001"/>
+  <testcase name="testTrackingScreenState_defaultsAreBackwardCompatible" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_configurationMode_excludesLiveMapAndElevationProfile" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.001"/>
+  <testcase name="testSensorGridScreen_definesSpatialWysiwygToggles" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_configurationMode_unifiedScrollableContainer" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabWysiwygContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

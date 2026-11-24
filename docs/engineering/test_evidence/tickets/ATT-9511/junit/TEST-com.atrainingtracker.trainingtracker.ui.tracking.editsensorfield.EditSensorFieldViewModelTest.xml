@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" tests="28" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:52.947Z" hostname="rainer-HP-EliteBook-850-G5" time="10.433">
+  <properties/>
+  <testcase name="testOnSensorTypeChanged_power_defaultsToThreeSecondsMovingAverage" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.352"/>
+  <testcase name="testGraphColor_allMetricScope_persistsGlobalAndResetsTileToGlobalDefault" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.77"/>
+  <testcase name="testOnFilterConfigDismissed_restoresDomainDefaultWhenSensorTypeChanged" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.355"/>
+  <testcase name="testGraphColor_thisTileScope_persistsColorToRepository" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.368"/>
+  <testcase name="testAvailableSensorTypes_reactivelyUpdatesOnDelayedTuningConfigEmission" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.358"/>
+  <testcase name="testDisplayElements_unsupportedSensor_barDisabled" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.344"/>
+  <testcase name="testColWeight_individualWeightSelection_updatesStateAndPersists" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.399"/>
+  <testcase name="testSaveChanges_newField_bestSensor_normalizesDeviceNameToNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.41"/>
+  <testcase name="testIsDynamicZoneSupported_gatedToHrPowerHrvAlpha1" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.409"/>
+  <testcase name="testIsMultiFieldRow_editingFieldInMultiFieldRow_isTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.348"/>
+  <testcase name="testColWeight_editField_updatesColWeightAndPersistsWithoutSiblingUpdate" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.369"/>
+  <testcase name="testSaveChanges_specificDevice_preservesDeviceNameAndId" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.365"/>
+  <testcase name="testDisplayElements_saveChanges_unsupportedBarEnforcesShowValueTrueAndShowBarFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.375"/>
+  <testcase name="testOnSensorTypeChanged_slope_defaultsToFiveSecondsMovingAverage" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.364"/>
+  <testcase name="testOnSensorTypeChanged_pace_defaultsToFiveSecondsMovingAverage" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.343"/>
+  <testcase name="testCalculateIsMultiFieldRow_pureLogic" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.328"/>
+  <testcase name="testOnSensorTypeChanged_accumulator_defaultsToInstantaneous" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.348"/>
+  <testcase name="testDisplayElements_saveChanges_persistsFlags" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.361"/>
+  <testcase name="testIsMultiFieldRow_editingFieldInSingleFieldRow_isFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.348"/>
+  <testcase name="testIsMultiFieldRow_addingFieldToExistingRow_isTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.347"/>
+  <testcase name="testSaveChanges_editField_bestSensor_normalizesDeviceNameToNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.356"/>
+  <testcase name="testDisplayElements_barSupportedSensors_defaultsAndMutualExclusion" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.339"/>
+  <testcase name="testViewSizeSerialization_namesAndValueOf" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.346"/>
+  <testcase name="testAvailableViewSizes_containsAllNineSizesIncludingXXHugeAndXXXHuge" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.344"/>
+  <testcase name="testIsMultiFieldRow_addingFieldToNewRow_isFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.344"/>
+  <testcase name="testOnSensorTypeChanged_verticalSpeed_defaultsToFifteenSecondsMovingAverage" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.346"/>
+  <testcase name="testOnViewSizeChanged_updatesSelectedViewSizeToXXHugeAndXXXHuge" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.34"/>
+  <testcase name="testDisplayElements_sportDependentBarFeasibility" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelTest" time="0.354"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

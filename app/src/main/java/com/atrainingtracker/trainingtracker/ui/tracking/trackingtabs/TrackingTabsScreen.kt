@@ -142,6 +142,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlay
 import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheet
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.resolveTrackingTabTitle
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreen
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
@@ -677,7 +678,7 @@ fun TrackingTabsScreen(
                             unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             text = {
                                 Text(
-                                    text = view.name,
+                                    text = resolveTrackingTabTitle(view.name),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }

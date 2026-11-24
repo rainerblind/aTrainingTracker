@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:57:34.744Z" hostname="rainer-HP-EliteBook-850-G5" time="0.221">
+  <properties/>
+  <testcase name="defaultStringFormatter_formatNull_returnsDashFallback" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest" time="0.08"/>
+  <testcase name="applySensorData_nullStringValue_defensivelyDefaultsToDashWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest" time="0.072"/>
+  <testcase name="sensorData_getStringValue_nullString_returnsDashFallback" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelSensorNullSafetyTest" time="0.069"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

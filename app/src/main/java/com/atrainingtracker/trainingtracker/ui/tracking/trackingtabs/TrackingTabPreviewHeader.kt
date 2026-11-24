@@ -53,6 +53,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
+import com.atrainingtracker.trainingtracker.ui.tracking.resolveTrackingTabTitle
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 
 /**
@@ -94,7 +95,7 @@ fun TrackingTabPreviewHeader(
                     )
                 }
                 Text(
-                    text = viewInfo.name.ifEmpty { stringResource(R.string.app_name) },
+                    text = resolveTrackingTabTitle(viewInfo.name).ifEmpty { stringResource(R.string.app_name) },
                     style = MaterialTheme.typography.titleLarge
                 )
             }

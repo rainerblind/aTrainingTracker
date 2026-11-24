@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:47.186Z" hostname="rainer-HP-EliteBook-850-G5" time="0.032">
+  <properties/>
+  <testcase name="testEditActionTintsArePrimary" classname="com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest" time="0.005"/>
+  <testcase name="testCanonicalEditVectorDrawableExistsAndIsValid" classname="com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest" time="0.001"/>
+  <testcase name="testNoLegacyMenuEditInMenuResources" classname="com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest" time="0.002"/>
+  <testcase name="testNoLegacyTableEditReferencesInEntityHeaders" classname="com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest" time="0.023"/>
+  <testcase name="testTableEditDrawableReservedForDrawerLayouts" classname="com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

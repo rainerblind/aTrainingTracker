@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.37  
+**Version**: 1.0.39  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 103
+**Total Tests**: 104
 
 ---
 
@@ -2189,6 +2189,20 @@
   3. *Multi-Threaded Concurrency Stress, Robolectric `TrackerService` Wiring & `SWE.3`/LoC Contract Parity (`TST-TRK-096.3` — `MultisportLapCoordinatorTest.kt`, `TrackerServiceMultisportMonotonicLapTest.kt`, `DetailedDesignParityContractTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • Execute a multi-threaded sampler vs. Main-thread multisport transition stress test with bounded timeout asserting `0` non-monotonic `LAP_NR` rows and `0` deadlocks; verify via **Robolectric** `TrackerServiceMultisportMonotonicLapTest` (real `ContentValues`) that `TrackerService.sampleAndWriteToDb()` invokes `enforceMonotonicLapNr()` on `mDbExecutor` (off main thread) and `endWorkout()` invokes `reconcileWorkoutSamplesOnFinalization()` prior to post-processing; assert `DetailedDesignParityContractTest`, `ArchitectureConformanceContractTest` (`TrackerService.java <= 3,220`, `MultisportLapCoordinator.kt <= 1,500`, `0` edits to `WorkoutSamplesDatabaseManager.java`), and `InterfaceSignatureDriftContractTest` pass `100%` (`Localization Parity: N/A - 0 string changes`).
 
+### TST-TRK-097: **Tracking Cockpit Default Tab 9-Language Re-Localization & Custom Title Preservation Test Suite (`ATT-9511`)** [Verified]
+- **Requirement(s)**: `REQ-TRK-097` (`REQ-TRK-097.1`–`REQ-TRK-097.3`)
+- **Component**: `TrackingTabTitleResolver.kt`, `TrackingViewsRepository.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, `TrackingTabConfigHeader.kt`
+- **Jira**: `ATT-9511`
+- **Verified Test Methods**: `TrackingTabTitleResolverTest#all9LocaleDefaultTabStrings_mapDeterministicallyToExpectedKey_tstTrk097_1`, `TrackingTabTitleResolverTest#crossLocaleMatrix_all9SourceLocalesRelocalizeToAll9TargetLocales_tstTrk097_1`, `TrackingTabTitleResolverTest#userRenamedAndNumericTitles_neverMatchDefaultKeysAndStayPreserved_tstTrk097_1`, `TrackingTabLocaleSwitchRobolectricTest#repository_reLocalizesFreshlyCreatedAndLegacyDefaultTabsWhilePreservingCustomNames_tstTrk097_2`, `TrackingTabLocaleSwitchRobolectricTest#composeUi_relocalizesRetainedGermanTabViewInfoAcrossLocaleSwitchesAndPreservesCustom_tstTrk097_3`
+- **Test Description**:
+  1. *9-Language XML Resource Parity & Cross-Locale Resolution Matrix (`TST-TRK-097.1`, `TrackingTabTitleResolverTest.kt`)*:
+     • Verify via `LocalizationTestCache` that 100% of translations for `text_default`, `tab_power`, `tab_map`, and `tab_laps` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) resolve deterministically to their exact `DefaultTrackingTabKey` without ambiguity or collisions.
+     • Verify cross-locale re-localization from every source locale A (`de`, `en`, `ja`, etc.) to every target locale B (`es`, `ja`, `pt`, `fr`, `it`, `nl`, `pl`, `en`, `de`).
+  2. *Legacy & Newly Created SQLite Row Resolution & Custom Title Preservation (`TST-TRK-097.2`, `TrackingTabTitleResolverTest.kt`, `TrackingViewsRepositoryTest.kt`)*:
+     • Seed real SQLite `TrackingViewsDatabaseManager` rows under locale A (both freshly initialized `onCreate()` tabs and legacy persisted German/French/Japanese rows) plus user-renamed custom rows (`"Intervalle"`, `"Race Cockpit"`, `"4"`), switch active Robolectric locale to locale B, and assert `TrackingViewsRepository.getTrackingViewsFlow()` and `getTrackingViewInfoFlow()` emit localized default titles in locale B while preserving custom/numeric titles 100% verbatim.
+  3. *Behavioral Compose UI Locale-Switch & Emulator Verification (`TST-TRK-097.3`, `TrackingTabTitleResolverTest.kt`, `ProcessStabilityComposeUiTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Render `TrackingTabPreviewHeader`, `TrackingTabConfigHeader`, and tab bar labels via Robolectric Compose `createComposeRule()` under switched `LocalConfiguration` locales (`de -> es/ja/pt`) asserting default tabs re-localize immediately (even when `TrackingViewInfo.name` carries legacy `"Standard"`/`"Karte"`/`"Runden"`) while custom titles stay intact; verify live `emulator-5554` locale switch (`Rule 8.5` before/after PNGs + clean `logcat`) and `TrackingTabsScreen.kt <= 1,500` LoC (`Localization Parity: N/A - 0 string changes`).
+
 ---
 
 ## Change History
@@ -2350,3 +2364,5 @@
 | `1.0.33` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Added `[Planned]` `TST-TRK-096` (`.1`–`.3`, strictly symmetric `REQ-TRK-096`) covering deterministic `row 425` interleaving, torn intermediate `LAP_NR = 5`, `summaryValues.LAPS`, delayed `[exitS, enterS)` & UTC fallback samples, multi-transition + manual-lap + rapid Stop/Start session isolation + `reconcileWorkoutSamplesOnFinalization()`, multi-threaded concurrency stress, `TrackerService` wiring, and `SWE.3`/LoC contract parity (`N/A - 0 string changes`). |
 | `1.0.34` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Gate 3 (`ATT-9680`) revision on `[Planned]` `TST-TRK-096`: added decoupled `summaryValues.LAPS == 6` assertions for `t = 1299` (`row 4`) & `t = 1320` (`row 5`), dual-column `TIME_TOTAL IS NULL` + UTC `time` test case, `null`/blank short-circuit & mixed `null`+keyed window merge assertions, and retargeted `TrackerService` wiring test from plain-JVM `TrackerServiceLapTest` to Robolectric `TrackerServiceMultisportMonotonicLapTest`. |
 | `1.0.35` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Promoted `TST-TRK-096` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`108/108` PASS across `11` targeted suites: `MultisportLapCoordinatorTest` `10/10`, `TrackerServiceMultisportMonotonicLapTest` `1/1`, `TrackerServiceLapTest` `7/7`, `TrackerServiceResumeTest` `18/18`, `TrackerServiceFinalizationTest` `37/37`, `TrackerServiceIntegrationTest` `6/6`, `TrackerServiceStateMachineCharacterisationTest` `8/8`, `BANALServiceMultisportTransitionTest` `4/4`, `DetailedDesignParityContractTest` `3/3`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9468/`). |
+| `1.0.36` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Added `[Planned]` `TST-TRK-097` (`.1`–`.3`, strictly symmetric `REQ-TRK-097`) covering 9-language XML parity & cross-locale resolution matrix, newly created & legacy SQLite `TrackingViewsRepository` resolution, custom title preservation (`"Intervalle"`, `"Race Cockpit"`, `"4"`), behavioral Compose UI locale-switch rendering, and live `emulator-5554` `Rule 8.5` verification (`N/A - 0 string changes`). |
+| `1.0.37` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Promoted `TST-TRK-097` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`125/125` PASS across `19` targeted suites: `TrackingTabTitleResolverTest` `4/4`, `TrackingTabLocaleSwitchRobolectricTest` `2/2`, `TrackingViewsRepositoryTest` `15/15`, `BikePowerCockpitDefaultsAndGatingTest` `6/6`, `13` `trackingtabs.*` suites `74/74`, `ProcessStabilityComposeUiTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` `de -> es -> ja` locale-switch verification + `3` `Rule 8.5` PNGs audited; `0` crashes). |

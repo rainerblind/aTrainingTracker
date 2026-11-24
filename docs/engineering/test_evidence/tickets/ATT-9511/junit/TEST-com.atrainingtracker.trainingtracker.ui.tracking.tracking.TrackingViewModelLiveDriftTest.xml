@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelLiveDriftTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:57:08.950Z" hostname="rainer-HP-EliteBook-850-G5" time="0.556">
+  <properties/>
+  <testcase name="testLiveHrDrift_colorMapping_distinctSemanticZones" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelLiveDriftTest" time="0.326"/>
+  <testcase name="testLiveHrDrift_colorMapping_nullValueReturnsDefaultColor" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelLiveDriftTest" time="0.23"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

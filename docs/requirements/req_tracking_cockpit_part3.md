@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.35  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 53
+**Total Requirements**: 54
 
 ---
 
@@ -1789,6 +1789,25 @@
 3. *Root Reason for Existing Formulation*: Kept live cockpit updates immediate while avoiding main-thread SQLite and protecting later manual laps via `LAP_NR = oldLapNr`.
 4. *Preservation of Core Invariants*: Preserves zero main-thread SQLite, synchronous `advanceLapsFn()`, manual-lap non-downgrade protection, `REQ-TRK-002` phantom-lap guard, pause/resume in-memory leg retention, `0` edits to `WorkoutSamplesDatabaseManager.java`/`BANALService.java`/`DeviceManager.java`/`WorkoutRepository.kt`, `TrackerService.java <= 3,220` LoC, and `0` string changes.
 
+### REQ-TRK-097: Dynamic 9-Language Re-Localization of Unmodified Default Tracking Cockpit Tab Titles (`ATT-9511`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-097`
+- **System Requirement(s)**: `SYSREQ-TRK-006` — Ensures Tracking Cockpit tab headers localize consistently across all 9 supported languages whenever the device/app locale changes (`TrackingTabTitleResolver.kt`, `TrackingViewsRepository.kt`, `TrackingTabsScreen.kt`).
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackingTabTitleResolver.kt`, `TrackingViewsRepository.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, `TrackingTabConfigHeader.kt`
+- **Localization Parity**: `N/A - 0 string changes` (reuses existing 9-locale `text_default`, `tab_power`, `tab_map`, `tab_laps`)
+- **Rationale**: Observed in the 2026-KW47 9-language emulator sweep (`ATT-9386`, `docs/engineering/emulator_sweeps/2026-11-21_sweep.md`), `TrackingViewsDatabaseManager.TrackingViewsDbHelper.onCreate()` persists localized strings (`R.string.text_default`, `R.string.tab_power`, `R.string.tab_map`, `R.string.tab_laps`) into SQLite `ViewsTable.Name` at DB creation. When the device/app locale changes later (e.g., `de -> es/ja/pt`), Tab 1 localizes via `stringResource(R.string.tab_start)`, while Tabs 2–4 remain stuck in the initial persisted SQLite strings (`"Standard"`, `"Karte"`, `"Runden"`), compounded by `TrackingTabsViewModel.trackingViews` (`WhileSubscribed(5000)`) surviving Activity recreation (`ATT-9511`).
+- **Description**:
+  1. *Canonical 9-Language Default Tab Key Mapping (`REQ-TRK-097.1`)*: `TrackingTabTitleResolver` SHALL define `DefaultTrackingTabKey` (`DEFAULT -> R.string.text_default`, `POWER -> R.string.tab_power`, `MAP -> R.string.tab_map`, `LAPS -> R.string.tab_laps`) and `resolveDefaultTabKey(persistedName: String?)` mapping every exact unmodified default tab title across all 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) deterministically to its `DefaultTrackingTabKey`, returning `null` for any user-renamed custom title or numeric empty tab (`"4"`).
+  2. *Repository & Compose Dynamic Locale Resolution (`REQ-TRK-097.2`)*: `TrackingViewsRepository.toTrackingViewInfo()` SHALL resolve default titles via `TrackingTabTitleResolver.resolveTitle(context, rawName)` (preserving `rawName` fallback if `getString()` is empty/unavailable in mocked tests), and `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, and `TrackingTabConfigHeader.kt` SHALL resolve tab titles via `@Composable fun resolveTrackingTabTitle(name: String)` using `stringResource(key.titleResId)` so locale changes update all unmodified default tab titles immediately even across retained `TrackingTabsViewModel` state (`TrackingTabConfigHeader` keying `localName` on `(viewInfo.tabViewId, currentLocale)`).
+  3. *Custom Title Preservation & Schema/LoC Parity (`REQ-TRK-097.3`)*: User-renamed custom tab titles (e.g. `"Intervalle"`, `"Race Cockpit"`) and numeric empty tabs SHALL remain 100% preserved across locale switches; `TrackingViewsDatabaseManager.DB_VERSION = 22` and `ensurePowerTabExistsForBikePower()` query behavior remain untouched; `TrackingTabsScreen.kt <= 1,500` LoC; `0` string resource edits (`N/A - 0 string changes`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* default tracking tabs initialized in SQLite under locale A (e.g. German `"Standard"`, `"Leistung"`, `"Karte"`, `"Runden"` — either newly created or legacy persisted rows), *When* the user switches device/app locale to locale B across all 9 supported languages (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`), *Then* unmodified default tracking tab titles render in locale B across repository reads, Cockpit tab bar, preview header, and config header.
+• *Given* a user-renamed custom tab title (e.g. `"Intervalle"` or `"Race Cockpit"`) or numeric empty tab (`"4"`), *When* the user switches device/app locale to locale B, *Then* the custom title remains 100% unchanged.
+
 ---
 
 ## Change History
@@ -1935,3 +1954,5 @@
 | `1.0.31` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Added `[Planned]` `REQ-TRK-096` (`.1`–`.3`, linked to `SYSREQ-TRK-003`, `SYSREQ-TRK-005`, extending `REQ-FIL-031.3`/`REQ-TRK-090`) for committed multisport transition window monotonic `LAP_NR` / `summaryValues.LAPS` enforcement on `mDbExecutor`, strict `< targetLapNr` backfill predicates, idempotent `endWorkout()` finalization reconciliation with `baseFileName` isolation, leaf-only lock ordering, and `SWE.3` `tracker_service.md` parity (`N/A - 0 string changes`). |
 | `1.0.32` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Gate 3 (`ATT-9680`) revision on `[Planned]` `REQ-TRK-096`: decoupled workout-wide `summaryValues[WorkoutSummaries.LAPS]` floor (`maxCommittedNewLegLapNr`) from per-sample `requiredLapNr`, added combined `TIME_TOTAL IS NULL` + UTC `time` fallback SQL predicates when both columns exist, and added `baseFileName.isNullOrBlank()` short-circuit + order-preserving deduplicated merge of `null`-scoped & keyed windows in `reconcileWorkoutSamplesOnFinalization()`. |
 | `1.0.33` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Promoted `REQ-TRK-096` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9680`) PASS, Stage 4 implementation (`MultisportLapCoordinator.kt` `783/1,500`, `TrackerService.java` `3,186/3,220` `+2` LoC, `tracker_service.md` `v1.0.13`, `0` edits to `WorkoutSamplesDatabaseManager.java`/`BANALService.java`/`DeviceManager.java`/`WorkoutRepository.kt`, `0` new warnings), `108/108` targeted unit/Robolectric/contract tests PASS across `11` suites (`MultisportLapCoordinatorTest` `10/10`, `TrackerServiceMultisportMonotonicLapTest` `1/1`), and `docs/engineering/walkthroughs/ATT-9468_walkthrough.md`. |
+| `1.0.34` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Added `[Planned]` `REQ-TRK-097` (`.1`–`.3`, linked to `SYSREQ-TRK-006`) for dynamic 9-language re-localization of unmodified default SQLite tracking tab names (`text_default`, `tab_power`, `tab_map`, `tab_laps`) across repository & Compose UI while preserving user-renamed custom tab titles (`N/A - 0 string changes`). |
+| `1.0.35` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Promoted `REQ-TRK-097` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`TrackingTabTitleResolver.kt` `126/1,500`, `TrackingViewsRepository.kt` `707/1,500`, `TrackingTabsScreen.kt` `1,460/1,500`, `TrackingTabPreviewHeader.kt` `122/1,500`, `TrackingTabConfigHeader.kt` `193/1,500`, `0` new production warnings, `0` string changes), `125/125` targeted unit/Robolectric/Compose/contract tests PASS across `19` suites, live `emulator-5554` `de -> es -> ja` locale-switch verification (`3` `Rule 8.5` PNGs inspected, `0` crashes in `logcat`), and `docs/engineering/tickets/ATT-9511.md`. |

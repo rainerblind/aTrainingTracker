@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabTitleResolverTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:30.698Z" hostname="rainer-HP-EliteBook-850-G5" time="1.642">
+  <properties/>
+  <testcase name="crossLocaleMatrix_all9SourceLocalesRelocalizeToAll9TargetLocales_tstTrk097_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabTitleResolverTest" time="1.618"/>
+  <testcase name="all9LocaleDefaultTabStrings_mapDeterministicallyToExpectedKey_tstTrk097_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabTitleResolverTest" time="0.001"/>
+  <testcase name="emptyOrThrowingContextGetString_fallsBackSafelyToPersistedName" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabTitleResolverTest" time="0.019"/>
+  <testcase name="userRenamedAndNumericTitles_neverMatchDefaultKeysAndStayPreserved_tstTrk097_1" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabTitleResolverTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
