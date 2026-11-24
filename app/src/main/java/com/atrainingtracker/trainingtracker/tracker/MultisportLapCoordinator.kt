@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.tracker
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
@@ -32,8 +33,10 @@ import com.atrainingtracker.banalservice.odometry.MultisportTransitionDetector
 import com.atrainingtracker.banalservice.odometry.MultisportTransitionEvent
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -63,6 +66,7 @@ class MultisportLapCoordinator(
         private const val FALLBACK_NAME_BIKE = "Bike"
         private const val FALLBACK_NAME_TRANSITION = "Transition"
         private const val FALLBACK_NAME_RUN = "Run"
+        private const val MAX_PENDING_RECONCILIATION_SESSIONS = 4
 
         private val UTC_TIMESTAMP_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
@@ -76,6 +80,15 @@ class MultisportLapCoordinator(
             return Instant.ofEpochMilli(epochMs.coerceAtLeast(0L))
                 .atOffset(ZoneOffset.UTC)
                 .format(UTC_TIMESTAMP_FORMATTER)
+        }
+
+        private fun parseUtcTimestampEpochSeconds(utcText: String?): Long? {
+            val trimmed = utcText?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            return try {
+                LocalDateTime.parse(trimmed, UTC_TIMESTAMP_FORMATTER).toEpochSecond(ZoneOffset.UTC)
+            } catch (_: Throwable) {
+                null
+            }
         }
 
         @JvmStatic
@@ -139,11 +152,33 @@ class MultisportLapCoordinator(
         val effectiveEnterAnchor: MultisportTelemetryAnchor
     )
 
+    /**
+     * Immutable committed transition boundary recorded atomically before live lap advancement
+     * so concurrent 1-Hz `recordLiveSample` writes and finalization reconciliation enforce
+     * strictly monotonic `LAP_NR` across `WorkoutSamples.db` (`REQ-TRK-096`).
+     */
+    internal data class CommittedTransitionWindow(
+        val baseFileName: String?,
+        val exitTotalS: Long,
+        val enterTotalS: Long,
+        val exitEpochS: Long,
+        val enterEpochS: Long,
+        val hasTransition: Boolean,
+        val transitionLapNr: Int,
+        val newLegLapNr: Int
+    )
+
     private var currentLapStartAnchor: MultisportTelemetryAnchor =
         MultisportTelemetryAnchor(0L, 0, 0, 0.0)
     private var activeLegStartTimeUtc: String? = null
     private var activeLegName: String? = null
     private var pendingUnnamedLapStartUtc: String? = null
+
+    @Volatile
+    private var hasCommittedTransitions: Boolean = false
+    private val committedTransitions: MutableList<CommittedTransitionWindow> = mutableListOf()
+    private val pendingReconciliationByFileName: LinkedHashMap<String, MutableList<CommittedTransitionWindow>> =
+        LinkedHashMap()
 
     @Synchronized
     fun resetForSession(
@@ -162,6 +197,8 @@ class MultisportLapCoordinator(
         activeLegStartTimeUtc = null
         activeLegName = null
         pendingUnnamedLapStartUtc = null
+        committedTransitions.clear()
+        hasCommittedTransitions = false
     }
 
     @Synchronized
@@ -326,7 +363,8 @@ class MultisportLapCoordinator(
     ): RetroactiveLapPlan? {
         val event = MultisportTransitionBridge.fromIntent(intent) ?: return null
         val oldLapNr = readCurrentLapNr(banalService)
-        val plan = planAndCommitAnchorTransition(context, event, oldLapNr)
+        val initialBaseFileName = baseFileNameProvider()
+        val plan = planAndCommitAnchorTransition(context, event, oldLapNr, initialBaseFileName)
 
         // Synchronously advance live accumulators BEFORE enqueueing async DB persistence.
         if (plan.lapAdvanceCount > 0) {
@@ -381,14 +419,17 @@ class MultisportLapCoordinator(
     }
 
     /**
-     * Pure deterministic planner updating [currentLapStartAnchor], [activeLegStartTimeUtc], and
-     * [activeLegName] atomically under lock.
+     * Pure deterministic planner updating [currentLapStartAnchor], [activeLegStartTimeUtc],
+     * [activeLegName], and committed transition windows atomically under the leaf-only lock
+     * (`REQ-FIL-031.3`, `REQ-TRK-096.1`).
      */
     @Synchronized
+    @JvmOverloads
     fun planAndCommitAnchorTransition(
         context: Context?,
         event: MultisportTransitionEvent,
-        oldLapNr: Int
+        oldLapNr: Int,
+        baseFileName: String? = null
     ): RetroactiveLapPlan {
         val start = currentLapStartAnchor
         val effectiveExit = clampAnchor(event.exitAnchor, start)
@@ -428,7 +469,7 @@ class MultisportLapCoordinator(
         activeLegName = newLegName
         pendingUnnamedLapStartUtc = null
 
-        return RetroactiveLapPlan(
+        val plan = RetroactiveLapPlan(
             oldLapNr = oldLapNr,
             hasLeg1 = hasLeg1,
             leg1LapNr = leg1LapNr,
@@ -453,14 +494,157 @@ class MultisportLapCoordinator(
             effectiveExitAnchor = effectiveExit,
             effectiveEnterAnchor = effectiveEnter
         )
+        if (plan.lapAdvanceCount > 0) {
+            val normalizedFileName = baseFileName?.takeIf { it.isNotBlank() }
+            val window = plan.toCommittedWindow(normalizedFileName)
+            committedTransitions.add(window)
+            hasCommittedTransitions = true
+            if (normalizedFileName != null) {
+                val list = pendingReconciliationByFileName.getOrPut(normalizedFileName) { mutableListOf() }
+                list.add(window)
+                while (pendingReconciliationByFileName.size > MAX_PENDING_RECONCILIATION_SESSIONS) {
+                    val oldestKey = pendingReconciliationByFileName.keys.firstOrNull() ?: break
+                    pendingReconciliationByFileName.remove(oldestKey)
+                }
+            }
+        }
+        return plan
     }
 
     /**
+     * Enforces monotonic per-sample `LAP_NR` and decoupled workout-wide `WorkoutSummaries.LAPS`
+     * floors on `mDbExecutor` immediately before `WorkoutRepository.recordLiveSample()`
+     * (`REQ-TRK-096.1`). O(1) lock-free no-op for single-sport workouts.
+     */
+    @JvmOverloads
+    fun enforceMonotonicLapNr(
+        baseFileName: String?,
+        samplingValues: ContentValues,
+        summaryValues: ContentValues? = null,
+        sampleEpochS: Long = System.currentTimeMillis() / 1000L
+    ) {
+        if (!hasCommittedTransitions) return
+        val normalizedFileName = baseFileName?.takeIf { it.isNotBlank() }
+        val matchingWindows: List<CommittedTransitionWindow> = synchronized(this) {
+            if (committedTransitions.isEmpty()) return
+            committedTransitions.filter { w ->
+                w.baseFileName == null || normalizedFileName == null || w.baseFileName == normalizedFileName
+            }
+        }
+        if (matchingWindows.isEmpty()) return
+
+        val timeTotalS = samplingValues.getAsLong(SensorType.TIME_TOTAL.name)
+        val requiredSampleLapNr = if (timeTotalS != null) {
+            resolveRequiredLapNrByTotalTime(matchingWindows, timeTotalS)
+        } else {
+            val parsedEpochS = parseUtcTimestampEpochSeconds(
+                samplingValues.getAsString(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            ) ?: sampleEpochS
+            resolveRequiredLapNrByEpoch(matchingWindows, parsedEpochS)
+        }
+        if (requiredSampleLapNr != null) {
+            val currentLap = samplingValues.getAsInteger(SensorType.LAP_NR.name)
+            if (currentLap == null || currentLap < requiredSampleLapNr) {
+                samplingValues.put(SensorType.LAP_NR.name, requiredSampleLapNr)
+            }
+        }
+
+        if (summaryValues != null && summaryValues.containsKey(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS)) {
+            val maxCommittedNewLegLapNr = matchingWindows.maxOf { it.newLegLapNr }
+            val currentSummaryLaps = summaryValues.getAsInteger(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS)
+            if (currentSummaryLaps == null || currentSummaryLaps < maxCommittedNewLegLapNr) {
+                summaryValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS, maxCommittedNewLegLapNr)
+            }
+        }
+    }
+
+    /**
+     * Idempotently reconciles `WorkoutSamples.db` `LAP_NR` at workout finalization on `mDbExecutor`
+     * strictly before post-processing/export (`REQ-TRK-096.2`). Performs zero SQLite work for
+     * single-sport workouts or blank `baseFileName`, and never throws out of finalization.
+     */
+    fun reconcileWorkoutSamplesOnFinalization(context: Context, baseFileName: String?) {
+        val normalizedFileName = baseFileName?.takeIf { it.isNotBlank() } ?: return
+        val windowsToApply: List<CommittedTransitionWindow> = synchronized(this) {
+            val merged = LinkedHashSet<CommittedTransitionWindow>()
+            for (w in committedTransitions) {
+                if (w.baseFileName == null || w.baseFileName == normalizedFileName) {
+                    merged.add(w)
+                }
+            }
+            pendingReconciliationByFileName.remove(normalizedFileName)?.let { merged.addAll(it) }
+            merged.toList()
+        }
+        if (windowsToApply.isEmpty()) return
+        try {
+            val manager = WorkoutSamplesDatabaseManager.getInstance(context)
+            if (!manager.existsTable(normalizedFileName)) return
+            val db = manager.database
+            val table = WorkoutSamplesDatabaseManager.getTableName(normalizedFileName)
+            reconcileWorkoutSamplesTable(db, table, windowsToApply)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed reconciling WorkoutSamples LAP_NR on finalization for $normalizedFileName: ${t.message}", t)
+        }
+    }
+
+    private fun resolveRequiredLapNrByTotalTime(
+        windows: List<CommittedTransitionWindow>,
+        timeTotalS: Long
+    ): Int? {
+        var required: Int? = null
+        for (w in windows) {
+            val candidate = when {
+                timeTotalS >= w.enterTotalS -> w.newLegLapNr
+                w.hasTransition && w.enterTotalS > w.exitTotalS && timeTotalS >= w.exitTotalS -> w.transitionLapNr
+                else -> null
+            }
+            if (candidate != null && (required == null || candidate > required)) {
+                required = candidate
+            }
+        }
+        return required
+    }
+
+    private fun resolveRequiredLapNrByEpoch(
+        windows: List<CommittedTransitionWindow>,
+        epochS: Long
+    ): Int? {
+        var required: Int? = null
+        for (w in windows) {
+            val candidate = when {
+                epochS >= w.enterEpochS -> w.newLegLapNr
+                w.hasTransition && w.enterEpochS > w.exitEpochS && epochS >= w.exitEpochS -> w.transitionLapNr
+                else -> null
+            }
+            if (candidate != null && (required == null || candidate > required)) {
+                required = candidate
+            }
+        }
+        return required
+    }
+
+    private fun RetroactiveLapPlan.toCommittedWindow(baseFileName: String?): CommittedTransitionWindow =
+        CommittedTransitionWindow(
+            baseFileName = baseFileName?.takeIf { it.isNotBlank() },
+            exitTotalS = effectiveExitAnchor.totalTimeS.toLong(),
+            enterTotalS = effectiveEnterAnchor.totalTimeS.toLong(),
+            exitEpochS = effectiveExitAnchor.timestampMs / 1000L,
+            enterEpochS = effectiveEnterAnchor.timestampMs / 1000L,
+            hasTransition = hasTransition,
+            transitionLapNr = transitionLapNr,
+            newLegLapNr = newLegLapNr
+        )
+
+    /**
      * Retroactively updates `LAP_NR` in `WorkoutSamples.db` without editing
-     * `WorkoutSamplesDatabaseManager.java` (`1,533 / 1,533` LoC ceiling):
-     * - Checks `PRAGMA table_info(table)` for `LAP_NR` (adding `INTEGER DEFAULT 1` if missing) and `TIME_TOTAL`.
-     * - Tags half-open `[exitTotalS, enterTotalS)` for `Transition` and `>= enterTotalS AND (LAP_NR = oldLapNr OR LAP_NR IS NULL)`
-     *   for the new leg (falling back to `CAST(strftime('%s', time) AS INTEGER)` if `TIME_TOTAL` is absent).
+     * `WorkoutSamplesDatabaseManager.java` (`1,533 / 1,533` LoC ceiling) via
+     * [applyTransitionWindowsToTable]:
+     * - Checks `PRAGMA table_info(table)` for `LAP_NR` (adding `INTEGER DEFAULT 1` if missing), `TIME_TOTAL`, and `time`.
+     * - Uses strict monotonic predicates `(LAP_NR < targetLapNr OR LAP_NR IS NULL)` across half-open
+     *   `[exit, enter)` (`transitionLapNr`) and `>= enter` (`newLegLapNr`) so stale `oldLapNr`, torn
+     *   intermediate `oldLapNr + 1`, and `NULL` rows upgrade without ever downgrading higher manual laps.
+     * - Uses combined `TIME_TOTAL IS NULL` + `CAST(strftime('%s', time) AS INTEGER)` fallback predicates
+     *   when both `TIME_TOTAL` and `time` columns exist (and preserves single-column branches).
      */
     fun backfillWorkoutSamplesLapNumbers(
         context: Context,
@@ -470,7 +654,7 @@ class MultisportLapCoordinator(
         try {
             val manager = WorkoutSamplesDatabaseManager.getInstance(context)
             if (!manager.existsTable(baseFileName)) return
-            val db = manager.database ?: return
+            val db = manager.database
             val table = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
             backfillWorkoutSamplesTable(db, table, plan)
         } catch (t: Throwable) {
@@ -483,6 +667,24 @@ class MultisportLapCoordinator(
         table: String,
         plan: RetroactiveLapPlan
     ) {
+        applyTransitionWindowsToTable(db, table, listOf(plan.toCommittedWindow(null)))
+    }
+
+    internal fun reconcileWorkoutSamplesTable(
+        db: SQLiteDatabase,
+        table: String,
+        windows: List<CommittedTransitionWindow>
+    ) {
+        if (windows.isEmpty()) return
+        applyTransitionWindowsToTable(db, table, windows)
+    }
+
+    private fun applyTransitionWindowsToTable(
+        db: SQLiteDatabase,
+        table: String,
+        windows: List<CommittedTransitionWindow>
+    ) {
+        if (windows.isEmpty()) return
         val columns = readTableColumns(db, table)
         if (columns.isEmpty()) return
 
@@ -492,6 +694,9 @@ class MultisportLapCoordinator(
         val hasLapNr = columns.contains(lapNrCol)
         val hasTimeTotal = columns.contains(timeTotalCol)
         val hasTimeCol = columns.contains(timeCol)
+        if (!hasTimeTotal && !hasTimeCol) return
+
+        val epochExpr = "CAST(strftime('%s', $timeCol) AS INTEGER)"
 
         db.beginTransaction()
         try {
@@ -499,32 +704,53 @@ class MultisportLapCoordinator(
                 db.execSQL("ALTER TABLE $table ADD COLUMN $lapNrCol INTEGER DEFAULT 1")
             }
 
-            if (hasTimeTotal) {
-                val exitS = plan.effectiveExitAnchor.totalTimeS.toLong()
-                val enterS = plan.effectiveEnterAnchor.totalTimeS.toLong()
-                if (plan.hasTransition && enterS > exitS) {
+            for (w in windows) {
+                if (hasTimeTotal && hasTimeCol) {
+                    if (w.hasTransition) {
+                        val hasTotalSpan = w.enterTotalS > w.exitTotalS
+                        val hasEpochSpan = w.enterEpochS > w.exitEpochS
+                        when {
+                            hasTotalSpan && hasEpochSpan -> db.execSQL(
+                                "UPDATE $table SET $lapNrCol = ? WHERE (($timeTotalCol >= ? AND $timeTotalCol < ?) OR ($timeTotalCol IS NULL AND $epochExpr >= ? AND $epochExpr < ?)) AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                                arrayOf<Any>(w.transitionLapNr, w.exitTotalS, w.enterTotalS, w.exitEpochS, w.enterEpochS, w.transitionLapNr)
+                            )
+                            hasTotalSpan -> db.execSQL(
+                                "UPDATE $table SET $lapNrCol = ? WHERE $timeTotalCol >= ? AND $timeTotalCol < ? AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                                arrayOf<Any>(w.transitionLapNr, w.exitTotalS, w.enterTotalS, w.transitionLapNr)
+                            )
+                            hasEpochSpan -> db.execSQL(
+                                "UPDATE $table SET $lapNrCol = ? WHERE $timeTotalCol IS NULL AND $epochExpr >= ? AND $epochExpr < ? AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                                arrayOf<Any>(w.transitionLapNr, w.exitEpochS, w.enterEpochS, w.transitionLapNr)
+                            )
+                        }
+                    }
                     db.execSQL(
-                        "UPDATE $table SET $lapNrCol = ? WHERE $timeTotalCol >= ? AND $timeTotalCol < ?",
-                        arrayOf<Any>(plan.transitionLapNr, exitS, enterS)
+                        "UPDATE $table SET $lapNrCol = ? WHERE ($timeTotalCol >= ? OR ($timeTotalCol IS NULL AND $epochExpr >= ?)) AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                        arrayOf<Any>(w.newLegLapNr, w.enterTotalS, w.enterEpochS, w.newLegLapNr)
+                    )
+                } else if (hasTimeTotal) {
+                    if (w.hasTransition && w.enterTotalS > w.exitTotalS) {
+                        db.execSQL(
+                            "UPDATE $table SET $lapNrCol = ? WHERE $timeTotalCol >= ? AND $timeTotalCol < ? AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                            arrayOf<Any>(w.transitionLapNr, w.exitTotalS, w.enterTotalS, w.transitionLapNr)
+                        )
+                    }
+                    db.execSQL(
+                        "UPDATE $table SET $lapNrCol = ? WHERE $timeTotalCol >= ? AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                        arrayOf<Any>(w.newLegLapNr, w.enterTotalS, w.newLegLapNr)
+                    )
+                } else {
+                    if (w.hasTransition && w.enterEpochS > w.exitEpochS) {
+                        db.execSQL(
+                            "UPDATE $table SET $lapNrCol = ? WHERE $epochExpr >= ? AND $epochExpr < ? AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                            arrayOf<Any>(w.transitionLapNr, w.exitEpochS, w.enterEpochS, w.transitionLapNr)
+                        )
+                    }
+                    db.execSQL(
+                        "UPDATE $table SET $lapNrCol = ? WHERE $epochExpr >= ? AND ($lapNrCol < ? OR $lapNrCol IS NULL)",
+                        arrayOf<Any>(w.newLegLapNr, w.enterEpochS, w.newLegLapNr)
                     )
                 }
-                db.execSQL(
-                    "UPDATE $table SET $lapNrCol = ? WHERE $timeTotalCol >= ? AND ($lapNrCol = ? OR $lapNrCol IS NULL)",
-                    arrayOf<Any>(plan.newLegLapNr, enterS, plan.oldLapNr)
-                )
-            } else if (hasTimeCol) {
-                val exitEpochS = plan.effectiveExitAnchor.timestampMs / 1000L
-                val enterEpochS = plan.effectiveEnterAnchor.timestampMs / 1000L
-                if (plan.hasTransition && enterEpochS > exitEpochS) {
-                    db.execSQL(
-                        "UPDATE $table SET $lapNrCol = ? WHERE CAST(strftime('%s', $timeCol) AS INTEGER) >= ? AND CAST(strftime('%s', $timeCol) AS INTEGER) < ?",
-                        arrayOf<Any>(plan.transitionLapNr, exitEpochS, enterEpochS)
-                    )
-                }
-                db.execSQL(
-                    "UPDATE $table SET $lapNrCol = ? WHERE CAST(strftime('%s', $timeCol) AS INTEGER) >= ? AND ($lapNrCol = ? OR $lapNrCol IS NULL)",
-                    arrayOf<Any>(plan.newLegLapNr, enterEpochS, plan.oldLapNr)
-                )
             }
             db.setTransactionSuccessful()
         } finally {
