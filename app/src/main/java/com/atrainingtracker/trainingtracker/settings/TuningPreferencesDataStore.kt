@@ -574,6 +574,7 @@ class TuningPreferencesDataStore private constructor(
 ) {
     private val context: Context = context.applicationContext ?: context
     private val dataStore: DataStore<Preferences> = dataStoreOverride ?: this.context.dataStore
+    private val isRealDataStore: Boolean = (dataStoreOverride == null)
 
     companion object {
         val KEY_ELEVATION_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_elevation_x_axis_domain")
@@ -1152,19 +1153,68 @@ class TuningPreferencesDataStore private constructor(
         fun hasInitializedInstance(): Boolean = INSTANCE != null
     }
 
-    private val _tuningConfigStateFlow = MutableStateFlow(TuningConfig())
+    private fun resolveColdStartMirrorPrefs(): SharedPreferences? {
+        if (!isRealDataStore) return null
+        return try {
+            PreferenceManager.getDefaultSharedPreferences(this.context)
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun readColdStartRawTelemetryMirror(): Boolean {
+        val sp = resolveColdStartMirrorPrefs()
+            ?: return TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+        return try {
+            sp.getBoolean(
+                KEY_RECORD_SMARTPHONE_RAW_TELEMETRY.name,
+                TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+            )
+        } catch (_: Throwable) {
+            TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+        }
+    }
+
+    private fun writeColdStartRawTelemetryMirror(enabled: Boolean) {
+        val sp = resolveColdStartMirrorPrefs() ?: return
+        try {
+            val current = sp.getBoolean(
+                KEY_RECORD_SMARTPHONE_RAW_TELEMETRY.name,
+                TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
+            )
+            if (current != enabled) {
+                sp.edit().putBoolean(KEY_RECORD_SMARTPHONE_RAW_TELEMETRY.name, enabled).apply()
+            }
+        } catch (_: Throwable) {
+            // Best-effort cold-start mirror; authoritative state lives in DataStore
+        }
+    }
+
+    private val initialRecordSmartphoneRawTelemetry: Boolean = readColdStartRawTelemetryMirror()
+
+    private val _tuningConfigStateFlow = MutableStateFlow(
+        TuningConfig(recordSmartphoneRawTelemetryEnabled = initialRecordSmartphoneRawTelemetry)
+    )
     val tuningConfigStateFlow: StateFlow<TuningConfig> = _tuningConfigStateFlow.asStateFlow()
 
+    private val _recordSmartphoneRawTelemetryEnabled = MutableStateFlow(initialRecordSmartphoneRawTelemetry)
+    val recordSmartphoneRawTelemetryEnabled: StateFlow<Boolean> = _recordSmartphoneRawTelemetryEnabled.asStateFlow()
+
     fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
+
+    private fun syncCachedConfig(cfg: TuningConfig) {
+        _tuningConfigStateFlow.value = cfg
+        _recordSmartphoneRawTelemetryEnabled.value = cfg.recordSmartphoneRawTelemetryEnabled
+        writeColdStartRawTelemetryMirror(cfg.recordSmartphoneRawTelemetryEnabled)
+        com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onPreferencesUpdated(cfg)
+    }
 
     private suspend inline fun editAndSync(crossinline transform: (MutablePreferences) -> Unit) {
         val updated = dataStore.edit { prefs ->
             transform(prefs)
         }
-        val cfg = mapPreferencesToConfig(updated)
-        _tuningConfigStateFlow.value = cfg
-        com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
-        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onPreferencesUpdated(cfg)
+        syncCachedConfig(mapPreferencesToConfig(updated))
     }
 
 /**
@@ -1396,9 +1446,7 @@ data class AutoPausePreferences(
     init {
         appScope.launch {
             tuningConfigFlow.collect { cfg ->
-                _tuningConfigStateFlow.value = cfg
-                com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
-                com.atrainingtracker.banalservice.devices.radar.RadarLightController.onPreferencesUpdated(cfg)
+                syncCachedConfig(cfg)
             }
         }
     }
@@ -1771,16 +1819,8 @@ data class AutoPausePreferences(
         prefs[KEY_RECORD_SMARTPHONE_RAW_TELEMETRY] ?: TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
     }
 
-    val recordSmartphoneRawTelemetryEnabled: StateFlow<Boolean> by lazy {
-        recordSmartphoneRawTelemetryFlow.stateIn(
-            scope = appScope,
-            started = SharingStarted.Eagerly,
-            initialValue = TuningPreferencesDefaults.DEFAULT_RECORD_SMARTPHONE_RAW_TELEMETRY_ENABLED
-        )
-    }
-
     suspend fun updateRecordSmartphoneRawTelemetryEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_RECORD_SMARTPHONE_RAW_TELEMETRY] = enabled
         }
     }

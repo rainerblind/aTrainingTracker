@@ -97,4 +97,30 @@ class DataStoreHotPathContractTest {
             methodRegex.containsMatchIn(content)
         )
     }
+
+    // Linked test specs: TST-SET-133.4
+    @Test
+    fun testSmartphoneRawTelemetryRecorder_dataStoreReadsDoNotContainRunBlocking_TST_SET_133_4() {
+        val root = getProjectRoot()
+        val file = File(root, "app/src/main/java/com/atrainingtracker/banalservice/devices/raw/SmartphoneRawTelemetryRecorder.kt")
+        assertTrue("SmartphoneRawTelemetryRecorder.kt must exist", file.exists())
+
+        val lines = file.readLines()
+        for ((index, rawLine) in lines.withIndex()) {
+            val trimmed = rawLine.trim()
+            if (trimmed.startsWith("import ") || trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
+                continue
+            }
+            val codeOnly = rawLine.substringBefore("//")
+            if (codeOnly.contains("runBlocking")) {
+                val isPermittedStopBlocking = lines.subList(maxOf(0, index - 5), minOf(lines.size, index + 5))
+                    .any { it.contains("fun stopBlocking") }
+                assertTrue(
+                    "Unexpected runBlocking in SmartphoneRawTelemetryRecorder.kt at line ${index + 1}: '$rawLine'. " +
+                        "Only timeout-bounded stopBlocking() is permitted to use runBlocking (REQ-SET-131.4 / REQ-SET-079).",
+                    isPermittedStopBlocking
+                )
+            }
+        }
+    }
 }

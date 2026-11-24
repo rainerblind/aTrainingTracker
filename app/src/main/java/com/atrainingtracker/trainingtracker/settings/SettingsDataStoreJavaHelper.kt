@@ -347,12 +347,12 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
-     * Synchronous O(1) bridge to retrieve whether opt-in smartphone raw sensor sidecar recording is enabled
-     * (REQ-EXP-045.1, ATT-9348).
+     * Synchronous O(1) cold-start-safe bridge to retrieve whether opt-in smartphone raw sensor
+     * sidecar recording is enabled (REQ-EXP-045.1, REQ-SET-131.2).
      */
     @JvmStatic
     fun isRecordSmartphoneRawTelemetryEnabled(context: Context): Boolean {
-        return TuningPreferencesDataStore.getInstance(context).recordSmartphoneRawTelemetryEnabled.value
+        return getTuningConfig(context).recordSmartphoneRawTelemetryEnabled
     }
 
     /**

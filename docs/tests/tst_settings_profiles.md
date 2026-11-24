@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.48  
+**Version**: 1.0.50  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 118
+**Total Tests**: 119
 
 ---
 
@@ -1774,6 +1774,23 @@
      • Verify `ArchitectureConformanceContractTest` (`11/11`), `InterfaceSignatureDriftContractTest` (`3/3`), `DeadCodeEliminationContractTest` (`6/6`), `SourceTextReadingAuditContractTest` (`6/6`), and `SystemDataExchangeRequirementsContractTest` (`4/4`) (`Localization Parity: N/A - 0 string changes`).
 - **Verification Evidence**: Tier-1 targeted run `250/250 PASS` (`0` fail, `0` err, `0` skip) across 24 suites (`PolarOfflineHrTimestampAlignerTest` `4/4`, `WorkoutSamplesHrBackfillTest` `3/3`, `PolarVeritySenseOfflineControllerTest` `33/33`, `PolarH10OfflineControllerTest` `27/27`, `PolarOfflineGattCoordinatorCoexistenceTest` `14/14`, `PolarOnlineStreamingBridgeTest` `58/58`, `PolarPmdStreamCoordinatorTest` `11/11`, `PolarRawTelemetryRecorderTest` `9/9`, `PolarHrStreamHealthMonitorTest` `7/7`, `PolarOfflineCapabilityStoreTest` `7/7`, `PolarRawTelemetryPrunerTest` `6/6`, `PolarRawTelemetryReaderTest` `6/6`, `PolarH10RunningDynamicsEstimatorTest` `5/5`, `PolarLiveRunningCadenceEstimatorTest` `5/5`, `PolarPpiStreamProcessorTest` `4/4`, `PolarRetrySyncCoordinatorTest` `3/3`, `PolarDualImuBoundedHeapStressTest` `1/1`, `WorkoutSamplesDatabaseManagerTest` `11/11`, `WorkoutSamplesDatabaseManagerEscapingTest` `6/6`, plus 5 Contract suites `30/30`; `10/10` verbatim `TST-SET-132` methods verified, `0` production compiler warnings); `:app:assembleDebug` PASS; evidence bundle `docs/engineering/test_evidence/tickets/ATT-9611/` and `docs/engineering/walkthroughs/ATT-9611_walkthrough.md`.
 
+### TST-SET-133: **Zero-`runBlocking`, Cold-Start-Safe Smartphone Raw Telemetry Opt-In Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-131`
+- **Component**: `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `SmartphoneRawTelemetryRecorder.kt`, `DataStoreHotPathContractTest.kt`
+- **Jira**: `ATT-9578`
+- **Priority**: Critical | **Type**: Non-Functional | **Verification Method**: Unit / Review
+- **Test Description**:
+  1. *Robolectric Cold-Start Opt-In, Update, Reset & Upgrade Backfill Parity (`TST-SET-133.1`, `SensorsGpsFilterSectionTest#coldStartFreshInstance_isEnabledImmediatelyReturnsTrueAfterPersistedOptIn_TST_EXP_045_1`, `SensorsGpsFilterSectionTest#coldStartFreshInstance_updateAndResetMirrorParity_TST_SET_133_1`)*:
+     • Verify persisting `recordSmartphoneRawTelemetryEnabled = true` via `saveTuningConfig` and via `updateRecordSmartphoneRawTelemetryEnabled(true)` survives a simulated cold launch (`TuningPreferencesDataStore.setInstanceForTesting(null)`), with both `SmartphoneRawTelemetryRecorder.isEnabled(context)` and `SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)` returning `true` immediately without `runBlocking`.
+     • Verify `resetToDefaults()` followed by cold launch immediately returns `false`, and verify upgrade-path backfill populates the cold-start mirror when DataStore holds `true` and the `SharedPreferences` key is absent.
+  2. *Non-Blocking $O(1)$ Bridge & `dataStoreOverride` Isolation (`TST-SET-133.2`, `SettingsDataStoreJavaHelperNonBlockingTest#testIsRecordSmartphoneRawTelemetryEnabled_readsNonBlockingAndSyncsImmediately_TST_SET_133_2`)*:
+     • Verify `SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)` defaults to `false` on mocked `TuningPreferencesDataStore` (`getTuningConfig()`) and synchronously reflects `updateRecordSmartphoneRawTelemetryEnabled(true/false)` and `resetToDefaults()` on `InMemoryPreferencesDataStore` (`dataStoreOverride != null`) without touching `SharedPreferences`.
+  3. *Recorder Delegation & `mockkStatic` Compatibility (`TST-SET-133.3`, `SmartphoneRawTelemetryRecorderTest#isEnabled_delegatesToSettingsDataStoreJavaHelperWithoutRunBlocking_TST_SET_133_3`)*:
+     • Verify `SmartphoneRawTelemetryRecorder.isEnabled(context)` delegates to `SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)` (honoring `mockkStatic` stubs), reflects `InMemoryPreferencesDataStore` mutations synchronously, and safely returns `false` on `null` context or thrown exception.
+  4. *Hot-Path Zero-`runBlocking` & Governance Contracts (`TST-SET-133.4`, `DataStoreHotPathContractTest#testHotPathFiles_containZeroRunBlockingCalls`, `DataStoreHotPathContractTest#testSmartphoneRawTelemetryRecorder_dataStoreReadsDoNotContainRunBlocking_TST_SET_133_4`)*:
+     • Verify zero `runBlocking` in `SettingsDataStoreJavaHelper.kt` and zero `runBlocking` outside `stopBlocking` in `SmartphoneRawTelemetryRecorder.kt`; verify `ArchitectureConformanceContractTest` (`TuningPreferencesDataStore.kt <= 2,410` LoC), `SourceTextReadingAuditContractTest`, and `InterfaceSignatureDriftContractTest` (`Localization Parity: N/A - 0 string changes`).
+- **Verification Evidence**: Tier-1 targeted run `122/122 PASS` (`0` fail, `0` err, `0` skip) across 24 suites (`DataStoreHotPathContractTest` `4/4`, `SettingsDataStoreJavaHelperNonBlockingTest` `8/8`, `SensorsGpsFilterSectionTest` `4/4`, `SmartphoneRawTelemetryRecorderTest` `12/12`, `TuningPreferencesDataStore*` 14 suites `71/71`, `AdvancedTuningErtsContractTest` `1/1`, `AdvancedTuningScreenTest` `1/1`, `StopTrackingCoachmarkTest` `1/1`, `ArchitectureConformanceContractTest` `11/11`, `SourceTextReadingAuditContractTest` `6/6`, `InterfaceSignatureDriftContractTest` `3/3`; `0` new production warnings); `3/3` Python safety linters PASS; live `emulator-5554` (`Pixel_8_Android_15`) `installDebug` + cold launch smoke PASS (`CRASH_LOGCAT_CLEAN`, screenshot `docs/engineering/walkthroughs/img/ATT-9578_emulator_smoke.png` `read_file`-verified); SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9578/` and `docs/engineering/walkthroughs/ATT-9578_walkthrough.md`.
+
 ---
 
 ## Change History
@@ -1827,3 +1844,5 @@
 | `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Added `TST-SET-132` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-130`) covering pure-JVM UTC anchor & timezone alignment (`PolarOfflineHrTimestampAlignerTest`), `<= 5_000 ms` bounded SQLite gap matching (`WorkoutSamplesHrBackfillTest`), commit-gated flash cleanup & H10 sibling parity (`PolarVeritySenseOfflineControllerTest`, `PolarH10OfflineControllerTest`), and monolith/signature/system contracts (`N/A - 0 string changes`). |
 | `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Gate 3 (`ATT-9661`) revision: added DST fall-back `getValidOffsets()` & malformed `timeZoneOffset` range-guard tests (`TST-SET-132.1`), plus both `patchedCount == 0` branches (missing-HR rejection vs. already-complete-HR fast-path & defense-in-depth livelock guard in `TST-SET-132.3`). |
 | `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Promoted `TST-SET-132` to `[Verified]` with all `10/10` verbatim `TestClass#testMethod` citations (`250/250 PASS` across 24 Polar/`WorkoutSamples`/Contract suites, `:app:assembleDebug` PASS, `0` production compiler warnings, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9611/`). |
+| `1.0.49` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Added `TST-SET-133` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-131`) covering Robolectric cold-start opt-in/update/reset/upgrade-backfill parity (`SensorsGpsFilterSectionTest`), non-blocking $O(1)$ bridge & `dataStoreOverride` isolation (`SettingsDataStoreJavaHelperNonBlockingTest`), `SmartphoneRawTelemetryRecorder.isEnabled` delegation & `mockkStatic` parity (`SmartphoneRawTelemetryRecorderTest`), and hot-path zero-`runBlocking` contract enforcement (`DataStoreHotPathContractTest`, `N/A - 0 string changes`). |
+| `1.0.50` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Promoted `TST-SET-133` to `[Verified]` with verbatim method citations (`122/122 PASS` across 24 suites, `0` new production warnings, `3/3` safety linters PASS, live `emulator-5554` smoke `CRASH_LOGCAT_CLEAN`, SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9578/`). |

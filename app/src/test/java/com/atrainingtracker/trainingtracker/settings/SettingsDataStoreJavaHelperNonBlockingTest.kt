@@ -14,8 +14,11 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -126,5 +129,42 @@ class SettingsDataStoreJavaHelperNonBlockingTest {
         val config = SettingsDataStoreJavaHelper.getTuningConfig(mockContext)
         assertNotNull(config)
         assertEquals(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC, config.navigationCueDismissDurationSec)
+    }
+
+    // Linked test specs: TST-SET-133.2
+    @Test
+    fun testIsRecordSmartphoneRawTelemetryEnabled_readsNonBlockingAndSyncsImmediately_TST_SET_133_2() = runBlocking {
+        // 1. Default false on mocked TuningPreferencesDataStore (getTuningConfig() compatibility)
+        assertFalse(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(mockContext))
+
+        // 2. Real in-memory override must stay hermetically isolated from SharedPreferences
+        val isolatedCtx = mockk<Context>(relaxed = true)
+        every { isolatedCtx.applicationContext } returns isolatedCtx
+        val inMemoryStore = TuningPreferencesDataStore.createForTesting(
+            context = isolatedCtx,
+            dataStoreOverride = InMemoryPreferencesDataStore()
+        )
+        TuningPreferencesDataStore.setInstanceForTesting(inMemoryStore)
+
+        assertFalse(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(isolatedCtx))
+        assertFalse(inMemoryStore.recordSmartphoneRawTelemetryEnabled.value)
+
+        inMemoryStore.updateRecordSmartphoneRawTelemetryEnabled(true)
+        assertTrue(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(isolatedCtx))
+        assertTrue(inMemoryStore.recordSmartphoneRawTelemetryEnabled.value)
+
+        inMemoryStore.updateRecordSmartphoneRawTelemetryEnabled(false)
+        assertFalse(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(isolatedCtx))
+        assertFalse(inMemoryStore.recordSmartphoneRawTelemetryEnabled.value)
+
+        inMemoryStore.saveTuningConfig(TuningConfig(recordSmartphoneRawTelemetryEnabled = true))
+        assertTrue(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(isolatedCtx))
+        assertTrue(inMemoryStore.recordSmartphoneRawTelemetryEnabled.value)
+
+        inMemoryStore.resetToDefaults()
+        assertFalse(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(isolatedCtx))
+        assertFalse(inMemoryStore.recordSmartphoneRawTelemetryEnabled.value)
+
+        verify(exactly = 0) { isolatedCtx.getSharedPreferences(any(), any()) }
     }
 }

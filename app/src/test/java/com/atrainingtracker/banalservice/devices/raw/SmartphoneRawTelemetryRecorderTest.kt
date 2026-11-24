@@ -23,8 +23,11 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.location.Location
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -104,6 +107,47 @@ class SmartphoneRawTelemetryRecorderTest {
             )
         } finally {
             com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
+    }
+
+    // Linked test specs: TST-SET-133.3
+    @Test
+    fun isEnabled_delegatesToSettingsDataStoreJavaHelperWithoutRunBlocking_TST_SET_133_3() = runBlocking {
+        assertFalse("null context must safely return false", SmartphoneRawTelemetryRecorder.isEnabled(null))
+
+        val mockCtx = mockk<Context>(relaxed = true)
+        every { mockCtx.applicationContext } returns mockCtx
+        val inMemoryStore = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.createForTesting(
+            context = mockCtx,
+            dataStoreOverride = com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+        )
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(inMemoryStore)
+        try {
+            assertFalse(SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
+            inMemoryStore.updateRecordSmartphoneRawTelemetryEnabled(true)
+            assertTrue(
+                "isEnabled must immediately reflect updateRecordSmartphoneRawTelemetryEnabled(true)",
+                SmartphoneRawTelemetryRecorder.isEnabled(mockCtx)
+            )
+            inMemoryStore.updateRecordSmartphoneRawTelemetryEnabled(false)
+            assertFalse(SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
+        } finally {
+            com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        }
+
+        // Verify mockkStatic(SettingsDataStoreJavaHelper::class) compatibility & exception resilience
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        try {
+            every { SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(mockCtx) } returns true
+            assertTrue(SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
+
+            every { SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(mockCtx) } returns false
+            assertFalse(SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
+
+            every { SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(mockCtx) } throws IllegalStateException("test")
+            assertFalse(SmartphoneRawTelemetryRecorder.isEnabled(mockCtx))
+        } finally {
+            unmockkStatic(SettingsDataStoreJavaHelper::class)
         }
     }
 

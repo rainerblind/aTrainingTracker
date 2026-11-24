@@ -34,18 +34,24 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder
 import com.atrainingtracker.trainingtracker.settings.RawSensorRetentionPolicy
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,6 +69,18 @@ class SensorsGpsFilterSectionTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Before
+    fun setUp() {
+        TuningPreferencesDataStore.setInstanceForTesting(null)
+        SmartphoneRawTelemetryRecorder.setEnabledOverrideForTest(null)
+    }
+
+    @After
+    fun tearDown() {
+        TuningPreferencesDataStore.setInstanceForTesting(null)
+        SmartphoneRawTelemetryRecorder.setEnabledOverrideForTest(null)
+    }
 
     @Test
     fun smartphoneRawTelemetryToggle_rendersAndInvokesCallback_TST_EXP_045_5() {
@@ -147,10 +165,60 @@ class SensorsGpsFilterSectionTest {
 
             assertTrue(
                 "First isEnabled() call on cold start MUST observe persisted opt-in true",
-                com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.isEnabled(context)
+                SmartphoneRawTelemetryRecorder.isEnabled(context)
+            )
+            assertTrue(
+                "SettingsDataStoreJavaHelper cold-start read MUST observe persisted opt-in true",
+                SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)
             )
         } finally {
             TuningPreferencesDataStore.getInstance(context).resetToDefaults()
+        }
+    }
+
+    // Linked test specs: TST-SET-133.1
+    @Test
+    fun coldStartFreshInstance_updateAndResetMirrorParity_TST_SET_133_1() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val dataStore = TuningPreferencesDataStore.getInstance(context)
+        try {
+            // 1. Direct updateRecordSmartphoneRawTelemetryEnabled(true) survives cold start
+            dataStore.updateRecordSmartphoneRawTelemetryEnabled(true)
+            TuningPreferencesDataStore.setInstanceForTesting(null)
+            assertTrue(
+                "updateRecordSmartphoneRawTelemetryEnabled(true) must survive cold start",
+                SmartphoneRawTelemetryRecorder.isEnabled(context)
+            )
+            assertTrue(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context))
+
+            // 2. Upgrade-path backfill: DataStore holds true while SP mirror key is absent
+            val sp = PreferenceManager.getDefaultSharedPreferences(context)
+            sp.edit().remove(TuningPreferencesDataStore.KEY_RECORD_SMARTPHONE_RAW_TELEMETRY.name).commit()
+            TuningPreferencesDataStore.setInstanceForTesting(null)
+            val hydrated = TuningPreferencesDataStore.getInstance(context)
+            withTimeout(5_000L) {
+                hydrated.recordSmartphoneRawTelemetryEnabled.first { it }
+            }
+            assertTrue(
+                "init hydration must backfill SP cold-start mirror when DataStore has true",
+                sp.getBoolean(TuningPreferencesDataStore.KEY_RECORD_SMARTPHONE_RAW_TELEMETRY.name, false)
+            )
+            // Subsequent cold start observes backfilled true immediately
+            TuningPreferencesDataStore.setInstanceForTesting(null)
+            assertTrue(SmartphoneRawTelemetryRecorder.isEnabled(context))
+            assertTrue(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context))
+
+            // 3. resetToDefaults() clears mirror and subsequent cold start returns false
+            TuningPreferencesDataStore.getInstance(context).resetToDefaults()
+            TuningPreferencesDataStore.setInstanceForTesting(null)
+            assertFalse(
+                "resetToDefaults() must clear cold-start mirror to false",
+                SmartphoneRawTelemetryRecorder.isEnabled(context)
+            )
+            assertFalse(SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context))
+        } finally {
+            TuningPreferencesDataStore.getInstance(context).resetToDefaults()
+            TuningPreferencesDataStore.setInstanceForTesting(null)
         }
     }
 }
