@@ -1,7 +1,7 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.50  
+**Version**: 1.0.51  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -961,7 +961,7 @@
 - **Test Description**:
 1. In debug build, set `supporterTierOverride` to `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`; verify `ProFeatureManager.effectiveTier` and `isProActive()` immediately reflect override.
 2. Verify setting override to `NONE` falls back to Pioneer or Subscription status.
-3. *Developer Menu Navigation & Release Isolation (`TST-SET-087.3`)*: Verify `DeveloperMenuScreen` is accessible in the navigation drawer via `R.id.drawer_developer_menu` in debug builds (`BuildConfig.DEBUG == true`), and that the drawer item, route, and debug overrides are completely absent in release builds (`BuildConfig.DEBUG == false`).
+3. *Developer Menu Navigation & Release Isolation (`TST-SET-087.3`)*: Verify `DeveloperMenuScreen` is accessible in the navigation drawer via `R.id.drawer_developer_menu` inside `drawer__settings` directly below `R.id.drawer_advanced_tuning` (and absent from `drawer__info_support`) in debug builds (`BuildConfig.DEBUG == true`), and that the drawer item, route, and debug overrides are completely absent in release builds (`BuildConfig.DEBUG == false`).
 4. *Clean AdvancedTuningScreen (`TST-SET-087.4`)*: Verify `AdvancedTuningScreen` contains zero developer or supporter tier override controls, having relocated them cleanly to `DeveloperMenuScreen`.
 
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]

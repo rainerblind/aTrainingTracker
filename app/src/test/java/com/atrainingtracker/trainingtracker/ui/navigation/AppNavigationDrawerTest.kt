@@ -286,7 +286,7 @@ class AppNavigationDrawerTest {
 
     @Test
     fun testDrawerGroups_expertSettings_placedInDedicatedBottomGroup() {
-        val groups = createDrawerGroups(R.string.tab_start)
+        val groups = createDrawerGroups(R.string.tab_start, isDebug = false)
         assertTrue("Drawer must define groups", groups.isNotEmpty())
         assertFalse(
             "Standalone Expert Settings group must be removed (ATT-3851 / REQ-UI-397.1)",
@@ -299,7 +299,7 @@ class AppNavigationDrawerTest {
         val advancedTuningItem = settingsGroup!!.items.lastOrNull()
         assertTrue("Settings group must have items", advancedTuningItem != null)
         assertEquals(
-            "Final item of Settings group must be drawer_advanced_tuning",
+            "Final non-debug item of Settings group must be drawer_advanced_tuning",
             R.id.drawer_advanced_tuning,
             advancedTuningItem?.id
         )
@@ -325,7 +325,7 @@ class AppNavigationDrawerTest {
 
         val hasAdvancedTuning = settingsGroup!!.items.any { it.id == R.id.drawer_advanced_tuning }
         assertTrue(
-            "General settings group must contain drawer_advanced_tuning at the bottom (ATT-3851 / REQ-UI-397.1)",
+            "General settings group must contain drawer_advanced_tuning (ATT-3851 / REQ-UI-397.1)",
             hasAdvancedTuning
         )
     }
@@ -348,20 +348,43 @@ class AppNavigationDrawerTest {
 
     @Test
     fun testDeveloperMenuDrawerItem_presentWhenDebug_absentWhenRelease() {
-        // REQ-SET-087.2 / TST-SET-087.3
+        // REQ-SET-087.2 / TST-SET-087.3 (ATT-8106: placed in Settings directly below Expert Settings)
         val debugGroups = createDrawerGroups(R.string.tab_start, isDebug = true)
+        val debugSettingsGroup = debugGroups.firstOrNull { it.titleRes == R.string.drawer__settings }
+        assertTrue("Settings group must exist in debug build", debugSettingsGroup != null)
+        val advancedTuningIdx = debugSettingsGroup!!.items.indexOfFirst { it.id == R.id.drawer_advanced_tuning }
+        val devMenuIdx = debugSettingsGroup.items.indexOfFirst { it.id == R.id.drawer_developer_menu }
+        assertTrue("Expert Settings must exist in Settings group", advancedTuningIdx >= 0)
+        assertTrue("Developer menu must be present in Settings group when isDebug == true", devMenuIdx >= 0)
+        assertEquals(
+            "Developer menu must sit directly below Expert Settings",
+            advancedTuningIdx + 1,
+            devMenuIdx
+        )
+        val devMenuItemDebug = debugSettingsGroup.items[devMenuIdx]
+        assertEquals(R.drawable.ic_settings_24, devMenuItemDebug.iconRes)
+        assertEquals(R.string.developer_menu_title, devMenuItemDebug.titleRes)
+
         val debugInfoGroup = debugGroups.firstOrNull { it.titleRes == R.string.drawer__info_support }
         assertTrue("Info & Support group must exist in debug build", debugInfoGroup != null)
-        val devMenuItemDebug = debugInfoGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
-        assertTrue("Developer menu must be present in Info & Support group when isDebug == true", devMenuItemDebug != null)
-        assertEquals(R.drawable.ic_settings_24, devMenuItemDebug?.iconRes)
-        assertEquals(R.string.developer_menu_title, devMenuItemDebug?.titleRes)
+        assertNull(
+            "Developer menu must NOT be present in Info & Support group when isDebug == true",
+            debugInfoGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
+        )
 
         val releaseGroups = createDrawerGroups(R.string.tab_start, isDebug = false)
+        val releaseSettingsGroup = releaseGroups.firstOrNull { it.titleRes == R.string.drawer__settings }
+        assertTrue("Settings group must exist in release build", releaseSettingsGroup != null)
+        assertNull(
+            "Developer menu must NOT be present in Settings group when isDebug == false",
+            releaseSettingsGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
+        )
         val releaseInfoGroup = releaseGroups.firstOrNull { it.titleRes == R.string.drawer__info_support }
         assertTrue("Info & Support group must exist in release build", releaseInfoGroup != null)
-        val devMenuItemRelease = releaseInfoGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
-        assertNull("Developer menu must NOT be present when isDebug == false", devMenuItemRelease)
+        assertNull(
+            "Developer menu must NOT be present in Info & Support group when isDebug == false",
+            releaseInfoGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
+        )
     }
 
     @Test

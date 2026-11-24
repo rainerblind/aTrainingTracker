@@ -1,7 +1,7 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.50  
+**Version**: 1.0.51  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1816,15 +1816,15 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • `ProFeatureManager` SHALL compute effective Pro status via priority order: `BuildConfig.DEBUG` Tier Override > Lifetime Pioneer Status > Active Google Play Subscription.
 • `isProActive()` SHALL return `true` if any tier $\ge$ `BRONZE` or `isPioneerEarlyAdopter == true`.
 2. *Debug Developer Menu & Supporter Tier Override (`REQ-SET-087.2`)*:
-• The system SHALL provide a dedicated `DeveloperMenuScreen` accessible via `R.id.drawer_developer_menu` in the navigation drawer, strictly displayed and accessible when `BuildConfig.DEBUG == true`.
+• The system SHALL provide a dedicated `DeveloperMenuScreen` accessible via `R.id.drawer_developer_menu` inside the *Settings* drawer group (`R.string.drawer__settings`) directly below Expert Settings (`R.id.drawer_advanced_tuning`), strictly displayed and accessible when `BuildConfig.DEBUG == true`.
 • `DeveloperMenuScreen` SHALL host the Supporter Tier Override selector (`[NONE, PIONEER, BRONZE, SILVER, GOLD, DIAMOND]`), Jubilee Celebration dialog preview, and N+1 Garage upgrade previews / flag reset.
 • `AdvancedTuningScreen` SHALL NOT display developer or supporter tier overrides.
 • In release builds (`BuildConfig.DEBUG == false`), the Developer Menu drawer entry, screen route, and override mechanisms SHALL be completely omitted or inert, preventing unauthorized tier escalation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a debug build of the app,
-• *When* the user opens the Navigation Drawer,
-• *Then* `Developer Menu` is displayed, and selecting it opens `DeveloperMenuScreen` containing the Supporter Tier Override, Jubilee Celebration preview, and Garage Detector previews.
+• *When* the user opens the Navigation Drawer and expands *Settings*,
+• *Then* `Developer Menu` is displayed directly below `Expert Settings`, and selecting it opens `DeveloperMenuScreen` containing the Supporter Tier Override, Jubilee Celebration preview, and Garage Detector previews.
 • *Given* a release build,
 • *When* inspected,
 • *Then* the Developer Menu drawer entry and debug overrides are completely absent.
