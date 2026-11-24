@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.45  
+**Version**: 1.0.47  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 56
+**Total Requirements**: 57
 
 ---
 
@@ -1861,6 +1861,25 @@
 3. *Root Reason for Existing Formulation*: `1500 ms` rate-limiting and `400 ms` tap debouncing protect BLE/ANT+ queues; brake preemption and disjoint locking guarantee road safety and deadlock freedom.
 4. *Preservation of Core Invariants*: Autonomous 1.5 s rate-limiting, 400 ms rapid-tap coalescing, StVZO pruning, night anti-glare cap, brake preemption + 2.0 s hold, offline gated mutation, external DataStore live propagation, and deadlock-free lock hierarchy all remain intact.
 
+### REQ-CON-060: BLE GATT/DIS String NUL-Byte Sanitization & Persisted Device Metadata Hygiene (`ATT-8996`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-060`
+- **System Requirement(s)**: `SYSREQ-TRK-001` — Refines standard BLE Device Information Service (`0x180A`: `0x2A29` Manufacturer Name, `0x2A24` Model Number, `0x2A25` Serial Number) and GAP device name decoding hygiene and persisted device metadata integrity.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `BleDisStringSanitizer.kt`, `BTSearchForNewDevicesEngine.java`, `BTLEHeartRateDevice.java`, `BTLERadarDevice.java`, `PolarPmdStreamCoordinator.kt`, `PolarOfflineCapabilityStore.kt`, `PolarOfflineGattCoordinator.kt`, `DevicesDatabaseManager.java`, `RawDeviceDataProvider.kt`, `DeviceDataRepository.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: BLE peripherals (notably Polar H10 and Polar Verity Sense) emit C-string NUL-terminated payloads (`0x00`) in GATT Device Information Service (`0x180A`) characteristics (`0x2A29`, `0x2A24`, `0x2A25`). Android's `BluetoothGattCharacteristic.getStringValue(0)` preserves trailing `'\u0000'` bytes, and Kotlin's `CharSequence.trim()` / `isNotBlank()` treats `'\u0000'` as non-whitespace (`'\u0000'.isWhitespace() == false`). Consequently, `Devices.db` persisted `"Polar Electro Oy\u0000"` on Pixel 10, `PolarOfflineCapabilityStore.isValidCanonicalPolarId()` rejected NUL-terminated 8-hex serial IDs, `classifyModelNumber("Sense\u0000", true)` failed exact `"sense"` matching, and `PolarOfflineGattCoordinator.hasExplicitNonPolarManufacturer("\u0000")` falsely evaluated `true` (`ATT-8996`).
+- **Description**:
+  1. *Shared BLE GATT/DIS Sanitizer & Complete Read-Site Coverage (`REQ-CON-060.1`)*: `BleDisStringSanitizer` (`com.atrainingtracker.banalservice.devices.bluetooth_le`) SHALL provide pure-JVM `@JvmStatic` helpers `sanitize(raw: String?): String?` (removing all `'\u0000'` bytes, trimming leading/trailing whitespace, returning `null` if empty, preserving UTF-8 non-ASCII characters), `readSanitizedString(characteristic: BluetoothGattCharacteristic?): String?`, and `containsNul(value: String?): Boolean`. Every BLE GATT/GAP/Polar DIS string read in `BTSearchForNewDevicesEngine` (`0x2A29`, `0x2A24`, `0x2A25`, `gatt.getDevice().getName()`), `BTLEHeartRateDevice` (`0x2A24`, `0x2A25`), `BTLERadarDevice` (`0x2A24`), and `PolarPmdStreamCoordinator.recordDisCharacteristic()` MUST pass through `BleDisStringSanitizer` prior to storage, classification, or alias registration.
+  2. *`PolarOfflineCapabilityStore` & `PolarOfflineGattCoordinator` NUL-Safe Read, Compare & Self-Healing (`REQ-CON-060.2`)*: `PolarOfflineCapabilityStore` SHALL sanitize all inputs and stored reads across `isValidCanonicalPolarId()`, `recordDisMetadata()`, `recordSdkDeviceType()`, `seedLegacyDeviceTypeIfUnknown()`, `classifyModelNumber()`, `getModelNumber()`, `getPolarDeviceId()`, and `normalizeMac()`, and SHALL self-heal legacy SharedPreferences entries containing `'\u0000'` on read (rewriting clean values or removing blank/invalid entries). `PolarOfflineGattCoordinator` SHALL sanitize `name` and `manufacturer` in `isPolarH10Name()`, `isPolarVeritySenseName()`, and `hasExplicitNonPolarManufacturer()` so `"\u0000"` is treated as blank.
+  3. *`Devices.db` Write/Read Sanitization & Idempotent v14->v15 Migration (`REQ-CON-060.3`)*: `DevicesDatabaseManager` (`insertNewBluetoothDeviceIntoDB`, `insertNewAntDeviceIntoDB`, `setManufacturerName`, `getManufacturerName`, `getDeviceName`, and all `Devices4` cursor mappers), `RawDeviceDataProvider.getDeviceData()`, and `DeviceDataRepository.createContentValuesForUpdate()` SHALL sanitize `manufacturerName` and `name`. `DevicesDbHelper` SHALL increment `DB_VERSION` from `14` to `15` (maintaining 100% `onCreate`/`onUpgrade` schema parity and `DatabaseSchemaRegistry` sync) and run idempotent `BleDisStringSanitizer.sanitizeExistingDevicesTable(db)` in `onUpgrade(oldVersion <= 14 && newVersion >= 15)` to strip `'\u0000'` bytes and surrounding whitespace from existing `Devices4.manufacturerName` and `Devices4.name` rows (writing SQL `NULL` for NUL-only values while leaving clean rows untouched).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* GATT/DIS payloads `"Polar Electro Oy\u0000"`, `"Sense\u0000"`, `"A1B2C3D4\u0000"`, `"RTL516\u0000"`, and `"\u0000\u0000"`, *When* decoded via `BleDisStringSanitizer` across `BTSearchForNewDevicesEngine`, `BTLEHeartRateDevice`, `BTLERadarDevice`, and `PolarPmdStreamCoordinator`, *Then* zero `'\u0000'` bytes persist (`"Polar Electro Oy"`, `"Sense"` -> `VERITY_SENSE`, `"A1B2C3D4"` accepted, `"RTL516"` -> StVZO, `"\u0000\u0000"` -> `null`).
+• *Given* legacy dirty `PolarOfflineCapabilityStore` SharedPreferences entries (`"Sense\u0000"`, `"abcd1234\u0000"`) or a v14 `Devices.db` with `("Polar H10\u0000", "Polar Electro Oy\u0000")` and `("Bad\u0000", "\u0000")`, *When* read or migrated (`onUpgrade(14, 15)`), *Then* dirty entries are returned sanitized and permanently cleaned on disk with 100% idempotency and `onCreate`/`onUpgrade`/`DatabaseSchemaRegistry` parity.
+
 ---
 
 ## Change History
@@ -2018,3 +2037,5 @@
 | `1.0.43` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Refined `REQ-CON-052` (`.1`–`.3`) to `[Planned]` (linked to `SYSREQ-TRK-002`): restricted periodic re-search strictly to lost/MIA sensors (`hasConnectedInSession() == true`), added workout-end (`TRACKING`/`PAUSED -> READY`/`IDLE`) disconnected MIA reset & `READY` GATT-133 initial-search termination, tightened presets to `15s / 30s / 1m / 2m` (default `1m` = `60 s`) with legacy `300`/`600 -> 120 s` clamping/snapping, and updated 9-locale `strings_devices.xml` parity (`ATT-8965` follow-up). |
 | `1.0.44` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Gate 3 (`ATT-9686`) revision on `[Planned]` `REQ-CON-052.2`: hardened `SEARCHING`-safe `resetSessionConnectionState()` in `MyBTLEDevice` & `PolarOnlineStreamingBridge` (preventing search-queue wedge & tearing down in-flight background Polar reconnects under `gattActionLock`), gated `MyBTLEDevice.onConnectionStateChange(STATE_DISCONNECTED)` strictly on `!mHasConnectedInSession && !isMidSessionOrWorkoutActive()` regardless of `isSearching()`, mandated eager `mPeriodicRetryCoordinator` instantiation + unconditional `onTrackingModeChanged()` before `READY`/`IDLE`, and added `device === current` identity guard + delay clear in `enqueueDeviceForPeriodicResearch()`. |
 | `1.0.45` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Promoted `REQ-CON-052` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9686`) PASS, Stage 4 implementation (`DeviceManager.java` `1,681/1,708`, `MyBTLEDevice.java` `1,489/1,500`, `PolarOnlineStreamingBridge.kt` `1,472/1,500`, `MyRemoteDevice.java` `186`, `DeviceSearchPeriodicRetryCoordinator.kt` `291`, `SensorSearchSettings.kt`, `SensorReconnectBackoffPolicy.kt`, `SearchSettingsDialog.kt`, `SensorSearchTuningSection.kt`, `prefs_search.xml`, 9-locale `strings_devices.xml`, `docs/architecture.md` `v1.0.36`, `banal_service.md` `v1.0.11`, `my_btle_device.md` `v1.0.14`), `154/154` PASS across `13` targeted unit/Compose/contract suites, live `emulator-5554` Light/Dark `Rule 8.5` PNG verification (`0` crashes, live legacy `300 -> 120` clamping verified), and `docs/engineering/walkthroughs/ATT-9178_walkthrough.md`. |
+| `1.0.46` | 2026-11-24 | Lane 2 Author (`ATT-8996`, `--as agent1`) | `ATT-8996` | Added `[Planned]` `REQ-CON-060` (`.1`–`.3`, linked to `SYSREQ-TRK-001`) for shared pure-JVM `BleDisStringSanitizer`, NUL-byte stripping across all BLE GATT/GAP/Polar DIS read sites, `PolarOfflineCapabilityStore` self-healing & `PolarOfflineGattCoordinator` NUL-safe matching, and `Devices.db` write/read sanitization + idempotent v14->v15 row-cleanup migration (`N/A - 0 string changes`). |
+| `1.0.47` | 2026-11-24 | Lane 2 Author (`ATT-8996`, `--as agent1`) | `ATT-8996` | Promoted `REQ-CON-060` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9687`) PASS, Stage 4 implementation (`BleDisStringSanitizer.kt` `154/1,500`, `DevicesDatabaseManager.java` `1,665/1,671`, `PolarOfflineGattCoordinator.kt` `1,487/1,500`, `MyBTLEDevice.java` untouched `1,494/1,500`, `PolarOfflineCapabilityStore.kt` `505/1,500`, `BTSearchForNewDevicesEngine.java`, `BTLEHeartRateDevice.java`, `BTLERadarDevice.java`, `PolarPmdStreamCoordinator.kt`, `RawDeviceDataProvider.kt`, `DeviceDataRepository.kt`), `196/196` PASS across `17` targeted unit/Robolectric/migration/contract suites (`0` new warnings, `0` string edits), and `docs/engineering/walkthroughs/ATT-8996_walkthrough.md`. |

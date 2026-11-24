@@ -816,4 +816,50 @@ class PolarPmdStreamCoordinatorTest {
         assertEquals(listOf("second"), fired)
         assertNull(timer.currentJob())
     }
+
+    @Test
+    fun testRecordDisCharacteristic_stripsNulBytesFromKeyAndValue_TST_CON_060_1() {
+        // REQ-CON-060.1 / TST-CON-060.1
+        val context = io.mockk.mockk<android.content.Context>(relaxed = true)
+        val mac = "AA:BB:CC:DD:EE:70"
+        PolarOfflineCapabilityStore.resetForTesting()
+        try {
+            assertTrue(
+                PolarPmdStreamCoordinator.recordDisCharacteristic(
+                    context = context,
+                    macAddress = mac,
+                    key = "00002a24-0000-1000-8000-00805f9b34fb\u0000",
+                    value = "Sense\u0000"
+                )
+            )
+            assertEquals("Sense", PolarOfflineCapabilityStore.getModelNumber(context, mac))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+                PolarOfflineCapabilityStore.getDeviceType(context, mac)
+            )
+
+            assertFalse(
+                PolarPmdStreamCoordinator.recordDisCharacteristic(
+                    context = context,
+                    macAddress = mac,
+                    key = "00002a25-0000-1000-8000-00805f9b34fb\u0000",
+                    value = "a1b2c3d4\u0000"
+                )
+            )
+            assertEquals("A1B2C3D4", PolarOfflineCapabilityStore.getPolarDeviceId(context, mac))
+
+            // NUL-only payload returns false without overwriting valid data
+            assertFalse(
+                PolarPmdStreamCoordinator.recordDisCharacteristic(
+                    context = context,
+                    macAddress = mac,
+                    key = "model",
+                    value = "\u0000\u0000"
+                )
+            )
+            assertEquals("Sense", PolarOfflineCapabilityStore.getModelNumber(context, mac))
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+        }
+    }
 }

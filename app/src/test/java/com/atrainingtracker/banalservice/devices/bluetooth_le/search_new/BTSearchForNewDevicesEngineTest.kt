@@ -913,5 +913,68 @@ class BTSearchForNewDevicesEngineTest {
         assertTrue("BLE scan should still run when only BLUETOOTH_SCAN is granted", engine.isScanning())
         verify(exactly = 0) { mockBluetoothManager.getConnectedDevices(any()) }
     }
+
+    // REQ-CON-060.1 / TST-CON-060.1
+    @Test
+    fun testOnCharacteristicReadAndDeviceName_stripsNulBytesFromDisAndGap_TST_CON_060_1() {
+        val mac = "AA:BB:CC:DD:EE:88"
+        val device = mockk<BluetoothDevice>(relaxed = true)
+        every { device.address } returns mac
+        every { device.name } returns "Polar Sense 24825632\u0000"
+
+        val gatt = mockk<BluetoothGatt>(relaxed = true)
+        every { gatt.device } returns device
+
+        val mfgChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mfgChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME
+        every { mfgChar.value } returns "Polar Electro Oy\u0000".toByteArray()
+        every { mfgChar.getStringValue(0) } returns "Polar Electro Oy\u0000"
+
+        val modelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { modelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { modelChar.value } returns "Sense\u0000".toByteArray()
+        every { modelChar.getStringValue(0) } returns "Sense\u0000"
+
+        val serialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { serialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+        every { serialChar.value } returns "24825632\u0000".toByteArray()
+        every { serialChar.getStringValue(0) } returns "24825632\u0000"
+
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        try {
+            PolarOfflineCapabilityStore.recordGattServiceCapabilities(mockContext, mac, hasPmdService = true, hasPftpService = true)
+
+            val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+            engine.mBTGatts[mac] = gatt
+            engine.mReadCharacteristicQueue[mac] = java.util.LinkedList(listOf(modelChar, serialChar))
+
+            engine.getGattCallback().onConnectionStateChange(gatt, BluetoothGatt.GATT_SUCCESS, android.bluetooth.BluetoothProfile.STATE_CONNECTED)
+            drainPostedRunnables()
+            assertEquals("Polar Sense 24825632", engine.mNameMap[mac])
+
+            engine.getGattCallback().onCharacteristicRead(gatt, mfgChar, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+            engine.getGattCallback().onCharacteristicRead(gatt, modelChar, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+            engine.getGattCallback().onCharacteristicRead(gatt, serialChar, BluetoothGatt.GATT_SUCCESS)
+            drainPostedRunnables()
+
+            assertEquals("Polar Electro Oy", engine.mManufacturerMap[mac])
+            assertEquals("Sense", PolarOfflineCapabilityStore.getModelNumber(mockContext, mac))
+            assertEquals("24825632", PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, mac))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+                PolarOfflineCapabilityStore.getDeviceType(mockContext, mac)
+            )
+            assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier(mac, "24825632"))
+            verify(exactly = 1) {
+                mockCallback.onNewDeviceFound(DeviceType.HRM, mac, "Polar Sense 24825632", "Polar Electro Oy", -1)
+            }
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
 }
 

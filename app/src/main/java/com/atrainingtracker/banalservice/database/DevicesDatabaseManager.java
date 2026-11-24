@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelper;
 import com.atrainingtracker.banalservice.devices.Manufacturer;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.database.CursorProvider;
@@ -123,7 +124,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
         if (cursor != null) {
             while (cursor.moveToNext()) {
                 long id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
-                String name = cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME));
+                String name = BleDisStringSanitizer.sanitize(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
                 DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
                 Protocol protocol = EnumUtils.safeValueOfOrNull(Protocol.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)), TAG);
                 if (deviceType == null || protocol == null) {
@@ -483,8 +484,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                             Protocol protocol = protocolIdx >= 0
                                     ? EnumUtils.safeValueOfOrNull(Protocol.class, cursor.getString(protocolIdx), TAG)
                                     : null;
-                            String name = nameIdx >= 0 ? cursor.getString(nameIdx) : null;
-                            String manufacturer = mfgIdx >= 0 ? cursor.getString(mfgIdx) : null;
+                            String name = nameIdx >= 0 ? BleDisStringSanitizer.sanitize(cursor.getString(nameIdx)) : null;
+                            String manufacturer = mfgIdx >= 0 ? BleDisStringSanitizer.sanitize(cursor.getString(mfgIdx)) : null;
                             String btAddress = btAddrIdx >= 0 ? cursor.getString(btAddrIdx) : null;
                             if (!HrmSensorCapabilityHelper.isSensorSupported(mContext, sensorType, protocol, name, manufacturer, btAddress)) {
                                 continue;
@@ -492,10 +493,10 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                         }
 
                         // now, add the deviceId and the name of the device
-                        if (DEBUG)
-                            Log.i(TAG, "adding deviceId: " + deviceId + ", name: " + cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
+                        String sanitizedDeviceName = BleDisStringSanitizer.sanitize(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
+                        if (DEBUG) Log.i(TAG, "adding deviceId: " + deviceId + ", name: " + sanitizedDeviceName);
                         deviceIdsList.add(deviceId);
-                        namesList.add(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
+                        namesList.add(sanitizedDeviceName);
                     }
                 }
             }
@@ -536,8 +537,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                     values.put(DevicesDbHelper.ANT_DEVICE_NUMBER, antDeviceNumber);
                     values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
                     values.put(DevicesDbHelper.PAIRED, paired);
-                    values.put(DevicesDbHelper.NAME, name);
-                    values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
+                    values.put(DevicesDbHelper.NAME, BleDisStringSanitizer.sanitize(name));
+                    values.put(DevicesDbHelper.MANUFACTURER_NAME, BleDisStringSanitizer.sanitize(manufacturer));
                     values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
                     values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
                     values.put(DevicesDbHelper.LAST_BATTERY_PERCENTAGE, batteryPercentage);
@@ -587,8 +588,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                     values.put(DevicesDbHelper.BT_ADDRESS, bluetoothMACAddress);
                     values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
                     values.put(DevicesDbHelper.PAIRED, paired);
-                    values.put(DevicesDbHelper.NAME, name);
-                    values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
+                    values.put(DevicesDbHelper.NAME, BleDisStringSanitizer.sanitize(name));
+                    values.put(DevicesDbHelper.MANUFACTURER_NAME, BleDisStringSanitizer.sanitize(manufacturer));
                     values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
                     values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
                     if (batteryPercentage >= 0) {
@@ -724,12 +725,12 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
 
     @Nullable
     public String getManufacturerName(long deviceId) {
-        return getString(deviceId, DevicesDbHelper.MANUFACTURER_NAME);
+        return BleDisStringSanitizer.sanitize(getString(deviceId, DevicesDbHelper.MANUFACTURER_NAME));
     }
 
     @Nullable
     public String getDeviceName(long deviceId) {
-        return getString(deviceId, DevicesDbHelper.NAME);
+        return BleDisStringSanitizer.sanitize(getString(deviceId, DevicesDbHelper.NAME));
     }
 
     public int getAntDeviceNumber(long deviceId) {
@@ -745,7 +746,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
     }
 
     public void setManufacturerName(long deviceId, String manufacturerName) {
-        setString(deviceId, DevicesDbHelper.MANUFACTURER_NAME, manufacturerName);
+        setString(deviceId, DevicesDbHelper.MANUFACTURER_NAME, BleDisStringSanitizer.sanitize(manufacturerName));
     }
 
     public void setLastActive(long deviceId) {
@@ -820,7 +821,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                 new String[]{batteryPercentage + ""},
                 null, null, null)) {
             return CursorUtils.mapList(cursor, c -> new NameAndBatteryPercentage(
-                    c.getString(c.getColumnIndex(DevicesDbHelper.NAME)),
+                    BleDisStringSanitizer.sanitize(c.getString(c.getColumnIndex(DevicesDbHelper.NAME))),
                     c.getInt(c.getColumnIndex(DevicesDbHelper.LAST_BATTERY_PERCENTAGE)),
                     c.getLong(c.getColumnIndex(DevicesDbHelper.C_ID))));
         }
@@ -973,7 +974,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                             : null;
                     sensors.add(new SimpleSensorInfo(
                             cursor.getLong(idCol),
-                            cursor.getString(nameCol),
+                            BleDisStringSanitizer.sanitize(cursor.getString(nameCol)),
                             dt
                     ));
                 }
@@ -1013,7 +1014,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                             : null;
                     sensors.add(new SimpleSensorInfo(
                             cursor.getLong(idCol),
-                            cursor.getString(nameCol),
+                            BleDisStringSanitizer.sanitize(cursor.getString(nameCol)),
                             dt
                     ));
                 }
@@ -1169,7 +1170,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
         // static final int DB_VERSION = 11;   // upgraded at 14.11.2026: added SPEED_AND_LOCATION_ATT_FUSED (ATT-7751)
         // static final int DB_VERSION = 12;   // upgraded at 14.11.2026: added ALTITUDE_AND_SLOPE_ATT_FUSED (ATT-6279)
         // static final int DB_VERSION = 13;   // upgraded at 15.11.2026: added polarH10OfflineRecording (ATT-7762)
-        public static final int DB_VERSION = 14;   // upgraded at 16.11.2026: added polarLiveImuEnabled (ATT-8016)
+        // static final int DB_VERSION = 14;   // upgraded at 16.11.2026: added polarLiveImuEnabled (ATT-8016)
+        public static final int DB_VERSION = 15;   // upgraded at 24.11.2026: sanitized NUL bytes in Devices4 (ATT-8996)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1296,6 +1298,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                 case 12:
                 case 13:
                 case 14:
+                case 15:
                     db.execSQL(CREATE_DEVICE_DB_14);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_14);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
@@ -1456,6 +1459,11 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
             if (oldVersion <= 13 && newVersion >= 14) {
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 13 to 14 (adding polarLiveImuEnabled)");
                 addColumnIfMissing(db, POLAR_LIVE_IMU_ENABLED, "int DEFAULT 0");
+            }
+
+            if (oldVersion <= 14 && newVersion >= 15) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 14 to 15 (sanitizing NUL bytes in Devices4)");
+                BleDisStringSanitizer.sanitizeExistingDevicesTable(db);
             }
         }
 

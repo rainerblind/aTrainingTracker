@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProvider
@@ -585,7 +586,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     private fun createContentValuesForUpdate(original: DeviceUiData, final: DeviceUiData): ContentValues {
         return ContentValues().apply {
             if (original.deviceName != final.deviceName) {
-                put(DevicesDatabaseManager.DevicesDbHelper.NAME, final.deviceName)
+                put(DevicesDatabaseManager.DevicesDbHelper.NAME, BleDisStringSanitizer.sanitize(final.deviceName) ?: "")
             }
             if (original.isPaired != final.isPaired) {
                 put(DevicesDatabaseManager.DevicesDbHelper.PAIRED, if (final.isPaired) 1 else 0)

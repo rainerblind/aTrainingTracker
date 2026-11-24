@@ -49,6 +49,7 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.SearchForNewDevicesInterface;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
@@ -114,7 +115,7 @@ public class BTSearchForNewDevicesEngine
                         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                             return;
                         }
-                        mNameMap.put(gatt.getDevice().getAddress(), gatt.getDevice().getName());
+                        mNameMap.put(gatt.getDevice().getAddress(), BleDisStringSanitizer.sanitize(gatt.getDevice().getName()));
                         gatt.discoverServices();
                     }
                 });
@@ -195,19 +196,21 @@ public class BTSearchForNewDevicesEngine
                                 mBatteryPercentage.put(address, batteryPercentage);
                             }
                         } else if (BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME.equals(characteristic.getUuid())) {
-                            String manufacturerName = characteristic.getStringValue(0);
+                            String manufacturerName = BleDisStringSanitizer.readSanitizedString(characteristic);
                             if (DEBUG) Log.d(TAG, "got manufacturer: " + manufacturerName);
-                            mManufacturerMap.put(address, manufacturerName);
+                            if (manufacturerName != null) {
+                                mManufacturerMap.put(address, manufacturerName);
+                            }
                         } else if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
-                            String modelNumber = characteristic.getStringValue(0);
+                            String modelNumber = BleDisStringSanitizer.readSanitizedString(characteristic);
                             if (DEBUG) Log.d(TAG, "got model number: " + modelNumber);
-                            if (PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, address)) {
+                            if (modelNumber != null && PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, address)) {
                                 PolarOfflineCapabilityStore.recordDisMetadata(mContext, address, modelNumber, null);
                             }
                         } else if (BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER.equals(characteristic.getUuid())) {
-                            String serialNumber = characteristic.getStringValue(0);
+                            String serialNumber = BleDisStringSanitizer.readSanitizedString(characteristic);
                             if (DEBUG) Log.d(TAG, "got serial number: " + serialNumber);
-                            if (PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, address)
+                            if (serialNumber != null && PolarOfflineCapabilityStore.hasPolarServiceCapability(mContext, address)
                                     && PolarOfflineCapabilityStore.isValidCanonicalPolarId(serialNumber)) {
                                 PolarOfflineCapabilityStore.recordDisMetadata(mContext, address, null, serialNumber);
                                 PolarOfflineGattCoordinator.registerDeviceAliases(serialNumber, address);

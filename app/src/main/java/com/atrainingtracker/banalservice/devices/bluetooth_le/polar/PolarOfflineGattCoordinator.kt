@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizer
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
@@ -143,7 +144,7 @@ object PolarOfflineGattCoordinator {
     private val offlineYieldListeners = mutableListOf<OfflineYieldListener>()
     private val pausedOfflineYieldListeners = mutableSetOf<OfflineYieldListener>()
 
-    private fun normalizeId(polarId: String): String = polarId.trim().uppercase(Locale.ROOT)
+    private fun normalizeId(polarId: String): String = BleDisStringSanitizer.sanitize(polarId)?.uppercase(Locale.ROOT).orEmpty()
 
     /**
      * Registers bidirectional aliases (e.g., MAC address <-> 8-hex Polar device ID) so SDK
@@ -1042,14 +1043,15 @@ object PolarOfflineGattCoordinator {
     @JvmStatic
     @JvmOverloads
     fun isPolarH10Name(name: String, manufacturer: String = ""): Boolean {
-        val lowerName = name.lowercase(Locale.ROOT)
-        val lowerMfg = manufacturer.lowercase(Locale.ROOT)
+        val lowerName = BleDisStringSanitizer.sanitize(name)?.lowercase(Locale.ROOT).orEmpty()
+        val lowerMfg = BleDisStringSanitizer.sanitize(manufacturer)?.lowercase(Locale.ROOT).orEmpty()
         return lowerName.contains("polar h10") ||
             (lowerName.contains("h10") && (lowerName.contains("polar") || lowerMfg.contains("polar")))
     }
 
     private fun hasExplicitNonPolarManufacturer(manufacturer: String): Boolean {
-        return manufacturer.isNotBlank() && !manufacturer.contains("polar", ignoreCase = true)
+        val sanitized = BleDisStringSanitizer.sanitize(manufacturer) ?: return false
+        return !sanitized.contains("polar", ignoreCase = true)
     }
 
     /**
@@ -1085,8 +1087,8 @@ object PolarOfflineGattCoordinator {
     @JvmStatic
     @JvmOverloads
     fun isPolarVeritySenseName(name: String, manufacturer: String = ""): Boolean {
-        val lowerName = name.lowercase(Locale.ROOT)
-        val lowerMfg = manufacturer.lowercase(Locale.ROOT)
+        val lowerName = BleDisStringSanitizer.sanitize(name)?.lowercase(Locale.ROOT).orEmpty()
+        val lowerMfg = BleDisStringSanitizer.sanitize(manufacturer)?.lowercase(Locale.ROOT).orEmpty()
         val isPolarBrand = lowerName.contains("polar") || lowerMfg.contains("polar")
         val matchesKnownModel = VERITY_MODEL_TOKENS.any { lowerName.contains(it) }
         val matchesOpticalSuffix = isPolarBrand && (lowerName.contains("verity") || lowerName.contains("oh1"))

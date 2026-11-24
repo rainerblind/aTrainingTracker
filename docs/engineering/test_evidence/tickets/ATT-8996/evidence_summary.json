@@ -1,0 +1,69 @@
+{
+  "android_test_summary": {
+    "details": "Passed 196 targeted Android unit/migration/contract tests across 17 suites (0 failures, 0 skips; pre-existing unrelated MeasuredNfrBenchmarkTest.testNfr014 / ATT-9639 excluded).",
+    "failed": 0,
+    "failing_tests": [],
+    "passed": true,
+    "ran": 196,
+    "suites": 17
+  },
+  "checks": [
+    {
+      "details": "Android: Passed 196 targeted Android unit/migration/contract tests across 17 suites (0 failures, 0 skips; pre-existing unrelated MeasuredNfrBenchmarkTest.testNfr014 / ATT-9639 excluded). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12380 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "c747445716bfbbb71e0a1cf507fc362bcb909434",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingt-P526L9IAGB5JG.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinatorCoexistenceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV12Test.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV13Test.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV14Test.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV15Test.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.database.DevicesDatabaseManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarPmdStreamCoordinatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.search_new.BTSearchForNewDevicesEngineTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistryParityContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T19:37:58.500620+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-8996_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-8996",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

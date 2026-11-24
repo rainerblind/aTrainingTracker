@@ -780,7 +780,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         if (characteristic == null || characteristic.getUuid() == null) return;
 
         if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
-            String model = characteristic.getStringValue(0);
+            String model = BleDisStringSanitizer.readSanitizedString(characteristic);
             if (model != null && !model.isEmpty()) {
                 completeLightControlRegistration(gatt, model, isStvzoModel(model), RadarLightController.isRearVue820Model(model), false, false);
             } else {

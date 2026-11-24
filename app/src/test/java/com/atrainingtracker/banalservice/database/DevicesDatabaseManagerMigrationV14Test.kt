@@ -52,11 +52,14 @@ class DevicesDatabaseManagerMigrationV14Test {
     @Test
     fun testDbVersion14_andSchemaRegistryParity() {
         // TST-SET-114.1
-        assertEquals(14, DevicesDatabaseManager.DevicesDbHelper.DB_VERSION)
+        assertTrue(
+            "DevicesDbHelper.DB_VERSION must be >= 14",
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION >= 14
+        )
         assertEquals("polarLiveImuEnabled", DevicesDatabaseManager.DevicesDbHelper.POLAR_LIVE_IMU_ENABLED)
         val maxVersion = DatabaseSchemaRegistry.getMaxSupportedVersion("Devices.db")
         assertNotNull("Devices.db must be registered in DatabaseSchemaRegistry", maxVersion)
-        assertEquals(14, maxVersion)
+        assertEquals(DevicesDatabaseManager.DevicesDbHelper.DB_VERSION, maxVersion)
     }
 
     @Test

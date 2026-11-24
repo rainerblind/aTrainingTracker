@@ -928,4 +928,38 @@ class BTLEHeartRateDeviceTest {
         assertNull("10s invalid HR with 0x10 bit must clear mRrIntervalSensor to null and never overwrite", device.rrIntervalSensor?.value)
         assertEquals("Zero/lost-contact packets with 0x10 must NEVER dispatch RR beats", 0, receivedEvents.size)
     }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_stripsNulBytesFromPolarDisModelAndSerial_TST_CON_060_1() {
+        // REQ-CON-060.1 / TST-CON-060.1
+        val device = createDevice()
+        val mac = device.address
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val modelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { modelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { modelChar.getStringValue(0) } returns "Sense\u0000"
+
+        val serialChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { serialChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_SERIAL_NUMBER
+        every { serialChar.getStringValue(0) } returns "A1B2C3D4\u0000"
+
+        PolarOfflineCapabilityStore.resetForTesting()
+        PolarOfflineGattCoordinator.resetForTesting()
+        try {
+            PolarOfflineCapabilityStore.recordGattServiceCapabilities(mockContext, mac, hasPmdService = true, hasPftpService = true)
+            device.onOtherCharacteristicUpdate(mockGatt, modelChar)
+            device.onOtherCharacteristicUpdate(mockGatt, serialChar)
+
+            assertEquals("Sense", PolarOfflineCapabilityStore.getModelNumber(mockContext, mac))
+            assertEquals("A1B2C3D4", PolarOfflineCapabilityStore.getPolarDeviceId(mockContext, mac))
+            assertEquals(
+                PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE,
+                PolarOfflineCapabilityStore.getDeviceType(mockContext, mac)
+            )
+            assertTrue(PolarOfflineGattCoordinator.matchesDeviceIdentifier(mac, "A1B2C3D4"))
+        } finally {
+            PolarOfflineCapabilityStore.resetForTesting()
+            PolarOfflineGattCoordinator.resetForTesting()
+        }
+    }
 }

@@ -1855,4 +1855,39 @@ class BTLERadarDeviceTest {
         )
         assertEquals(RadarLightMode.OFF, RadarStateRepository.getState().lightMode)
     }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_stripsNulBytesFromRadarModelNumber_TST_CON_060_1() {
+        // REQ-CON-060.1 / TST-CON-060.1
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+        every { mockLegacyLightChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE
+
+        val stvzoModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { stvzoModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { stvzoModelChar.getStringValue(0) } returns "RTL516\u0000"
+
+        val radarDevice = BTLERadarDevice(mockContext, mockSensorManager, 104L, "DC:2C:26:01:02:06")
+        radarDevice.configureServices(mockGatt)
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, stvzoModelChar)
+
+        assertEquals("RTL516", radarDevice.modelNumber)
+        assertTrue(RadarLightController.isStvzo.value)
+
+        // NUL-only payload must fall back to null (never store "\u0000")
+        RadarLightController.reset()
+        RadarStateRepository.reset()
+        val nulOnlyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { nulOnlyChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { nulOnlyChar.getStringValue(0) } returns "\u0000\u0000"
+
+        val fallbackDevice = BTLERadarDevice(mockContext, mockSensorManager, 105L, "DC:2C:26:01:02:07")
+        fallbackDevice.configureServices(mockGatt)
+        fallbackDevice.onOtherCharacteristicUpdateForTesting(mockGatt, nulOnlyChar)
+
+        assertNull(fallbackDevice.modelNumber)
+    }
 }

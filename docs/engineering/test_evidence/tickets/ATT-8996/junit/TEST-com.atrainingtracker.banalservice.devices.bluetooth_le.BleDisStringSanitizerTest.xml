@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T19:34:24.409Z" hostname="rainer-HP-EliteBook-850-G5" time="0.01">
+  <properties/>
+  <testcase name="testContainsNul_detectsNulBytesAccurately_TST_CON_060_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizerTest" time="0.001"/>
+  <testcase name="testSanitize_stripsAllNulBytesAndTrimsWhitespace_TST_CON_060_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizerTest" time="0.0"/>
+  <testcase name="testReadSanitizedString_handlesGetStringValueAndRawValueFallback_TST_CON_060_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BleDisStringSanitizerTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

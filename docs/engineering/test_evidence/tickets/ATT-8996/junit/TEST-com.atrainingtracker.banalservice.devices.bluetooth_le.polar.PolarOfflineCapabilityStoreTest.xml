@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T19:32:39.875Z" hostname="rainer-HP-EliteBook-850-G5" time="0.751">
+  <properties/>
+  <testcase name="testPolarGatedBareSenseDisAndEmptyNameResilience_TST_CON_049_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.171"/>
+  <testcase name="testClassifyModelNumber_rejectsBareSenseLikeCardioSenseAndPreservesCanonical8HexId" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.091"/>
+  <testcase name="testRenamedH10_withPmdAndPftpAndLegacyOfflineRec_neverMisclassifiesAsVeritySense" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.085"/>
+  <testcase name="testConfirmedNonPolarGatt_blocksNameHeuristicsEvenWhenRenamedPolarH10OrVeritySense_TST_CON_049_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.085"/>
+  <testcase name="testNulTerminatedDisAndLegacyPrefsSelfHealing_TST_CON_060_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.092"/>
+  <testcase name="testRenamedVeritySenseAndOh1_classifyDeterministicallyViaDisModel" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.077"/>
+  <testcase name="testLegacySeedSuppressionAndExplicitNonPolarManufacturerGuard_TST_CON_049_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.077"/>
+  <testcase name="testLegacyPreReconnectRowFallback_worksUntilHardwareMetadataHydrated" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStoreTest" time="0.073"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
