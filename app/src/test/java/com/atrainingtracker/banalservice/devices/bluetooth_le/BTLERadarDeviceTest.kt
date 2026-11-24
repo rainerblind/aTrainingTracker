@@ -40,12 +40,10 @@ import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
-import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
@@ -663,27 +661,6 @@ class BTLERadarDeviceTest {
     }
 
     @Test
-    fun testProcessTargets_haltsActiveRadarTrafficSimulator() {
-        RadarTrafficSimulator.start(RadarScenario.SINGLE_CAR)
-        assertTrue(RadarTrafficSimulator.isSimulating)
-
-        val v1Char = mockk<BluetoothGattCharacteristic>()
-        every { v1Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
-        // Authentic Varia V1 sequence-framed payload with 1 target (header 0x12, vid 0x81 -> trackId 1, range 60m)
-        every { v1Char.value } returns byteArrayOf(
-            0x12.toByte(), 0x81.toByte(), 60.toByte(), 0x00.toByte()
-        )
-
-        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
-        radarDevice.setBluetoothGattForTesting(mockGatt)
-        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
-        radarDevice.measurementCharacteristicUpdate(mockGatt, v1Char)
-
-        // Verifies hardware packet arrival halted simulation immediately (REQ-CON-029.3)
-        assertFalse(RadarTrafficSimulator.isSimulating)
-    }
-
-    @Test
     fun testStartSearching_transitionsRadarStateToConnecting() {
         assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
         radarDevice.startSearching()
@@ -1212,9 +1189,8 @@ class BTLERadarDeviceTest {
     }
 
     /**
-     * TST-CON-042.1 & TST-CON-042.4: BLE Packet Ingestion Preserves Snooze & Light Mode.
-     * Verifies processTargets() maintains active audioSnoozeState and lightMode from currentState,
-     * and bypasses simulator preemption when isSimulating is false.
+     * TST-CON-042.1: BLE Packet Ingestion Preserves Snooze & Light Mode.
+     * Verifies processTargets() maintains active audioSnoozeState and lightMode from currentState.
      */
     @Test
     fun testProcessTargets_preservesAudioSnoozeAndLightMode() {
@@ -1229,9 +1205,6 @@ class BTLERadarDeviceTest {
                 source = RadarSource.BLE
             )
         )
-
-        // Ensure simulator is not running
-        assertFalse(RadarTrafficSimulator.isSimulating)
 
         // Process incoming targets
         val targets = listOf(RadarTarget(1, 45f, 10f, ThreatLevel.APPROACHING))

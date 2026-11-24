@@ -1032,34 +1032,13 @@ class TrackerServiceFinalizationTest {
             executionOrder.add("unbindService")
         }
 
-        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.start(com.atrainingtracker.banalservice.devices.radar.RadarScenario.SINGLE_CAR)
-        assertTrue(com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
-
         realService.onDestroy()
 
         realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
 
-        assertTrue("RadarTrafficSimulator must remain running across onDestroy (e.g. on workout pause)", com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
-        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.stop()
         assertTrue("endWorkout must be called during onDestroy", realService.endWorkoutCalled)
         assertEquals("endWorkout must execute before unbindService", listOf("endWorkout", "unbindService"), executionOrder)
         assertTrue("unbindService must be called", realService.unbindServiceCalled)
-    }
-
-    @Test
-    fun testHandleActionStop_stopsRadarTrafficSimulator() {
-        val realService = TestableTrackerService()
-        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
-        workoutIdField.set(realService, 999L)
-        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
-        baseFileNameField.set(realService, "2026-10-18_stop_test")
-
-        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.start(com.atrainingtracker.banalservice.devices.radar.RadarScenario.SINGLE_CAR)
-        assertTrue(com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
-
-        realService.handleActionStop()
-
-        assertFalse("handleActionStop must stop RadarTrafficSimulator", com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
     }
 
     /**

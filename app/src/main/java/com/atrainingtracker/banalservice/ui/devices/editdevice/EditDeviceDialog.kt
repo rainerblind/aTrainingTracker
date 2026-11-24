@@ -58,7 +58,6 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSensor
@@ -1295,11 +1294,9 @@ internal fun isKnownRadarWithoutLight(deviceName: String?): Boolean {
  */
 internal fun shouldShowRadarLightControlSection(
     isConnected: Boolean,
-    isSimulating: Boolean,
     isLightControlAvailable: Boolean,
     deviceName: String?
 ): Boolean {
-    if (isSimulating) return true
     if (isConnected) return isLightControlAvailable
     return !isKnownRadarWithoutLight(deviceName)
 }
@@ -1325,8 +1322,7 @@ private fun RadarLightControlSection(
     }
 
     val isLightControlAvailable by RadarLightController.isLightControlAvailable.collectAsStateWithLifecycle()
-    val isSimulating by RadarTrafficSimulator.isSimulatingFlow.collectAsStateWithLifecycle()
-    if (!shouldShowRadarLightControlSection(isConnected, isSimulating, isLightControlAvailable, deviceName)) {
+    if (!shouldShowRadarLightControlSection(isConnected, isLightControlAvailable, deviceName)) {
         return
     }
 
@@ -1335,7 +1331,7 @@ private fun RadarLightControlSection(
     val preferredMode by RadarLightController.preferredMode.collectAsStateWithLifecycle()
     val isStvzo by RadarLightController.isStvzo.collectAsStateWithLifecycle()
     val radarDraft by viewModel.radarLightDraft.collectAsStateWithLifecycle()
-    val isOffline = !isConnected && !isSimulating
+    val isOffline = !isConnected
     val baseEffectiveMode = if (isOffline) preferredMode else currentMode
     val displayedIsAutoMode = radarDraft?.isAutoMode ?: isAutoMode
     val displayedEffectiveMode = radarDraft?.mode ?: baseEffectiveMode

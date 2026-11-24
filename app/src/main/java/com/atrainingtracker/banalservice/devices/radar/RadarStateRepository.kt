@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Reactive state repository exposing three orthogonal radar state streams (REQ-CON-028.4, REQ-CON-041, REQ-CON-056.3):
- * - [threatState]: 4–8 Hz vehicle targets and multi-source connection arbitration (`BLE > ANT_PLUS > SIMULATOR`, `CONNECTED > CONNECTING`, `sourceStates <= 4`).
+ * - [threatState]: 4–8 Hz vehicle targets and multi-source connection arbitration (`BLE > ANT_PLUS`, `CONNECTED > CONNECTING`, `sourceStates <= 3`).
  * - [lightState]: Tail-light mode, capability, and auto-mode flag (updated atomically via [MutableStateFlow.update]).
  * - [snoozeState]: Audio snooze mode and monotonic expiration deadline (updated atomically via [MutableStateFlow.update]).
  *

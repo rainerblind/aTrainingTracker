@@ -1872,7 +1872,6 @@ public class TrainingApplication extends Application {
     protected void stopTracking() {
         resetPauseLocks(this);
 
-        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
         com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController.reset();
 
         if (TrackerService.isRunning()) {

@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.47  
+**Version**: 1.0.48  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1144,12 +1144,12 @@
 ### TST-UI-512: **Radar Accordion Section, Dynamic Subtitle & Modularity Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-512`
-- **Component**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-6702`
+- **Component**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-6702`, `ATT-8672`
 - **Test Description**:
   1. *Radar Accordion Section & Dynamic Subtitle Test (`TST-UI-512.1`, `RadarAccordionSectionTest.kt`)*:
   • Verify `TuningSection.CYCLING_RADAR` enum presence, ordering in Block 2, and non-null title string resource.
-  • Verify `TuningSubtitleFormatter.formatCyclingRadarSubtitle` produces expected summaries for idle states (edge, alert mode, tail light) and running simulation states.
+  • Verify `TuningSubtitleFormatter.formatCyclingRadarSubtitle` produces expected summaries for edge, alert mode, and tail light configuration (simulator state retired in `ATT-8672`).
   • Verify `RadarSettingsSection` renders stably with `TuningPreferencesDataStore`.
   2. *Tuning Package File Size Modularity Test (`TST-UI-512.2`, `AdvancedTuningModularityTest.kt`)*:
   • Verify all `.kt` files in `ui/settings/tuning/` remain strictly $< 400$ lines.

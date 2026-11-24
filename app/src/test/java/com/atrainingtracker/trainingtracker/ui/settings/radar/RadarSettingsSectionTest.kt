@@ -23,15 +23,12 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.devices.radar.RadarScenario
-import com.atrainingtracker.banalservice.devices.radar.RadarState
-import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
@@ -48,12 +45,12 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
-import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -66,7 +63,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Behavioral Robolectric Compose UI tests and resource contract checks for [RadarSettingsSection]
- * (REQ-PRO-132.4, TST-PRO-132.4, REQ-CON-031.5, TST-CON-031.5b, REQ-TRK-062.5b, TST-TRK-062.5).
+ * (REQ-PRO-132.4, TST-PRO-132.4, REQ-CON-031.5, TST-CON-031.5b, REQ-TRK-062.5b, TST-TRK-062.5, TST-CON-029).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w412dp-h2200dp-xhdpi")
@@ -77,16 +74,12 @@ class RadarSettingsSectionTest {
 
     private lateinit var context: Context
     private lateinit var configFlow: MutableStateFlow<TuningConfig>
-    private lateinit var radarStateFlow: MutableStateFlow<RadarState>
-    private lateinit var simulatingFlow: MutableStateFlow<Boolean>
     private lateinit var mockDataStore: TuningPreferencesDataStore
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         configFlow = MutableStateFlow(TuningConfig())
-        radarStateFlow = MutableStateFlow(RadarState())
-        simulatingFlow = MutableStateFlow(false)
 
         mockDataStore = mockk(relaxed = true)
         every { mockDataStore.tuningConfigFlow } returns configFlow
@@ -104,15 +97,6 @@ class RadarSettingsSectionTest {
             configFlow.value = configFlow.value.copy(radarBrakeLightEnabled = firstArg())
         }
 
-        mockkObject(RadarStateRepository)
-        every { RadarStateRepository.observeCombinedState() } returns radarStateFlow
-        every { RadarStateRepository.getState() } answers { radarStateFlow.value }
-
-        mockkObject(RadarTrafficSimulator)
-        every { RadarTrafficSimulator.isSimulatingFlow } returns simulatingFlow
-        every { RadarTrafficSimulator.start(any()) } just Runs
-        every { RadarTrafficSimulator.stop() } just Runs
-
         mockkObject(RadarAlertManager.Companion)
         every { RadarAlertManager.releasePreviewSynthesizer() } just Runs
 
@@ -127,8 +111,7 @@ class RadarSettingsSectionTest {
     }
 
     private fun renderSection(
-        initialConfig: TuningConfig = TuningConfig(),
-        onSimulationToggled: ((Boolean) -> Unit)? = null
+        initialConfig: TuningConfig = TuningConfig()
     ) {
         configFlow.value = initialConfig
         composeTestRule.setContent {
@@ -136,8 +119,7 @@ class RadarSettingsSectionTest {
                 Surface {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         RadarSettingsSection(
-                            tuningDataStore = mockDataStore,
-                            onSimulationToggled = onSimulationToggled
+                            tuningDataStore = mockDataStore
                         )
                     }
                 }
@@ -249,32 +231,44 @@ class RadarSettingsSectionTest {
     }
 
     /**
-     * TST-PRO-132.4: Verifies Traffic Simulator Start/Stop buttons dispatch simulator actions
-     * and invoke onSimulationToggled with the exact boolean transition.
+     * TST-CON-029 (ATT-8672): Verifies all Traffic Simulator UI controls and obsolete 9-locale
+     * simulator/scenario strings are completely removed while Strava summary remains visible.
      */
     @Test
-    fun testTrafficSimulator_startAndStop_invokesSimulatorAndCallback() {
-        val callbackEvents = mutableListOf<Boolean>()
-        renderSection(onSimulationToggled = { callbackEvents.add(it) })
+    fun testRadarSettingsSection_simulatorControlsAndStringsCompletelyRemoved() {
+        renderSection()
 
-        composeTestRule.onNodeWithText(context.getString(R.string.radar_simulator_start))
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_strava_summary_title))
             .performScrollTo()
-            .performClick()
-        composeTestRule.waitForIdle()
+            .assertIsDisplayed()
 
-        verify { RadarTrafficSimulator.start(RadarScenario.SINGLE_CAR) }
-        assertEquals(listOf(true), callbackEvents)
+        composeTestRule.onNodeWithTag("RadarSimulatorScenarioDropdown").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Radar Traffic Simulator", ignoreCase = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Start Simulation", ignoreCase = true).assertDoesNotExist()
 
-        simulatingFlow.value = true
-        composeTestRule.waitForIdle()
-
-        composeTestRule.onNodeWithText(context.getString(R.string.radar_simulator_stop))
-            .performScrollTo()
-            .performClick()
-        composeTestRule.waitForIdle()
-
-        verify { RadarTrafficSimulator.stop() }
-        assertEquals(listOf(true, false), callbackEvents)
+        val locales = listOf("values", "values-de", "values-es", "values-fr", "values-it", "values-ja", "values-nl", "values-pl", "values-pt")
+        val removedKeys = listOf(
+            "radar_simulator_title",
+            "radar_simulator_subtitle",
+            "radar_simulator_start",
+            "radar_simulator_stop",
+            "radar_simulator_running",
+            "radar_simulator_idle",
+            "radar_simulator_status",
+            "radar_simulator_scenario_label",
+            "radar_simulator_preempted",
+            "radar_scenario_single_car",
+            "radar_scenario_convoy",
+            "radar_scenario_high_speed",
+            "radar_scenario_disconnect",
+            "radar_scenario_country_road"
+        )
+        for (loc in locales) {
+            val file = File("src/main/res/$loc/strings_radar.xml")
+            for (key in removedKeys) {
+                assertNull("Obsolete simulator string $key must be removed from $loc/strings_radar.xml", getXmlString(file, key))
+            }
+        }
     }
 
     private fun getXmlString(file: File, stringName: String): String? {

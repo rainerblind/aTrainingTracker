@@ -43,8 +43,6 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
-import com.atrainingtracker.banalservice.devices.radar.RadarScenario
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
@@ -258,41 +256,26 @@ object TuningSubtitleFormatter {
     )
 
     /**
-     * Formats live active Radar edge, alert mode, tail light mode, and traffic simulator status (REQ-UI-512, ATT-6702).
+     * Formats active Radar edge, alert mode, and tail light mode subtitle (REQ-UI-512, ATT-6702).
      */
     fun formatCyclingRadarSubtitle(
         edgeSide: RadarEdgeSide,
         alertMode: RadarAudioAlertMode,
         lightMode: RadarLightMode,
-        isRunning: Boolean = RadarTrafficSimulator.isSimulating,
-        scenario: RadarScenario? = RadarTrafficSimulator.activeScenario,
         context: Context
     ): String {
-        return if (isRunning) {
-            val scenarioName = when (scenario) {
-                RadarScenario.SINGLE_CAR -> context.getString(R.string.radar_scenario_single_car)
-                RadarScenario.CONVOY -> context.getString(R.string.radar_scenario_convoy)
-                RadarScenario.HIGH_SPEED -> context.getString(R.string.radar_scenario_high_speed)
-                RadarScenario.DISCONNECT_RECONNECT -> context.getString(R.string.radar_scenario_disconnect)
-                RadarScenario.COUNTRY_ROAD_LOOP -> context.getString(R.string.radar_scenario_country_road)
-                null -> ""
-            }
-            val runningLabel = context.getString(R.string.radar_simulator_running)
-            if (scenarioName.isNotEmpty()) "$runningLabel • $scenarioName" else runningLabel
-        } else {
-            val edgeStr = when (edgeSide) {
-                RadarEdgeSide.LEFT -> context.getString(R.string.radar_overlay_edge_left)
-                RadarEdgeSide.FULL_SCREEN -> context.getString(R.string.radar_overlay_mode_fullscreen)
-                RadarEdgeSide.RIGHT -> context.getString(R.string.radar_overlay_edge_right)
-            }
-            val alertStr = when (alertMode) {
-                RadarAudioAlertMode.ALL_ALERTS -> context.getString(R.string.radar_alert_mode_all)
-                RadarAudioAlertMode.APPROACH_AND_FAST -> context.getString(R.string.radar_alert_mode_approach_fast)
-                RadarAudioAlertMode.FAST_ONLY -> context.getString(R.string.radar_alert_mode_fast_only)
-                RadarAudioAlertMode.MUTED -> context.getString(R.string.radar_alert_mode_muted)
-            }
-            "$edgeStr · $alertStr · ${context.getString(lightMode.titleResId)}"
+        val edgeStr = when (edgeSide) {
+            RadarEdgeSide.LEFT -> context.getString(R.string.radar_overlay_edge_left)
+            RadarEdgeSide.FULL_SCREEN -> context.getString(R.string.radar_overlay_mode_fullscreen)
+            RadarEdgeSide.RIGHT -> context.getString(R.string.radar_overlay_edge_right)
         }
+        val alertStr = when (alertMode) {
+            RadarAudioAlertMode.ALL_ALERTS -> context.getString(R.string.radar_alert_mode_all)
+            RadarAudioAlertMode.APPROACH_AND_FAST -> context.getString(R.string.radar_alert_mode_approach_fast)
+            RadarAudioAlertMode.FAST_ONLY -> context.getString(R.string.radar_alert_mode_fast_only)
+            RadarAudioAlertMode.MUTED -> context.getString(R.string.radar_alert_mode_muted)
+        }
+        return "$edgeStr · $alertStr · ${context.getString(lightMode.titleResId)}"
     }
 
     fun formatCyclingRadarSubtitle(config: TuningConfig, context: Context): String =
@@ -300,8 +283,6 @@ object TuningSubtitleFormatter {
             edgeSide = config.radarEdgeSide,
             alertMode = config.radarAudioAlertMode,
             lightMode = config.radarLightDefaultMode,
-            isRunning = RadarTrafficSimulator.isSimulating,
-            scenario = RadarTrafficSimulator.activeScenario,
             context = context
         )
 

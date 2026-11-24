@@ -42,7 +42,6 @@ import com.atrainingtracker.banalservice.devices.radar.RadarSource;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
 import com.atrainingtracker.banalservice.devices.radar.RadarThreatState;
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator;
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel;
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory;
@@ -541,10 +540,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     private void processTargets(List<RadarTarget> targets) {
         pruneStaleTracks(SystemClock.elapsedRealtime());
-        // Hardware preemption (REQ-CON-029.3, REQ-CON-042.4): physical data preempts simulator immediately
-        if (RadarTrafficSimulator.INSTANCE.isSimulating()) {
-            RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
-        }
 
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);

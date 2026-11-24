@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.44  
+**Version**: 1.0.45  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -12,33 +12,17 @@
 
 ---
 
-### TST-CON-029: **Cycling Radar Traffic Simulator, Pipeline Integration & Parity Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-029` (`REQ-CON-029.1`..`REQ-CON-029.5`)
-- **Component**: `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5087`, `ATT-6704`
+### TST-CON-029: **Cycling Radar Traffic Simulator Excision & UI Removal Verification Suite (Retired in ATT-8672)** [Verified]
+- **Requirement(s)**: `REQ-CON-029` (`REQ-CON-029.1`)
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `RadarLightController.kt`, `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TrackingTabsScreen.kt`, `EditDeviceDialog.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `TrackerService.java`, `TrainingApplication.java`, `strings_radar.xml`
+- **Jira**: `ATT-5087`, `ATT-6704`, `ATT-8672`
 - **Test Description**:
-  1. *Scenario Generation & 8 Hz Stream Unit Tests (`TST-CON-029.1`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify all 5 scenario presets emit synthetic target vectors at 8 Hz with correct kinematics (range, approach speed, threat level).
-  • Verify Single Overtaking Car passing increments `RADAR_VEHICLE_COUNT` via hysteresis.
-  • Verify Multi-Vehicle Convoy generates 3 simultaneous distinct target IDs.
-  • Verify High-Speed Threat closes at 25 m/s with `FAST_APPROACHING` threat level.
-  • Verify Mid-Ride Disconnect transitions to `DISCONNECTED_ERROR` and recovers after 5 seconds.
-  2. *Scalar MySensor Publishing & Bridge Unit Tests (`TST-CON-029.2`, `SimulatedRadarDeviceTest.kt`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify `SimulatedRadarDevice` registers 6 scalar `MySensor` channels (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`, `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`) on `MySensorManager`.
-  • Verify 1 Hz window aggregator snapshot triggers `newValue()` publishing to each registered sensor.
-  • Verify `stop()` unregisters sensors cleanly without leaking in `MySensorManager`.
-  3. *Hardware Precedence, Preemption & Workout Teardown Unit Tests (`TST-CON-029.3`, `BTLERadarDeviceTest.kt`, `TrackerServiceTest.kt`)*:
-  • Verify simulation halts immediately and yields when physical radar streams data (`onPhysicalHardwareConnected()`).
-  • Verify `TrackerService.handleActionStop()` and `onDestroy()` trigger simulator `stop()`, guaranteeing zero lingering simulation or phantom DB writes post-workout.
-  4. *Reactive StateFlow & Monotonic Clock Tests (`TST-CON-029.4`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify `isSimulatingFlow: StateFlow<Boolean>` emits `true` when simulation starts and `false` when stopped or preempted.
-  • Verify elapsed simulation timing relies strictly on `SystemClock.elapsedRealtime()` or monotonic time source, immune to wall-clock shifts.
-  • Verify coroutines run under `SupervisorJob` and cancel cleanly without unhandled exceptions.
-  5. *UI ExposedDropdownMenuBox & 9-Language Localization Tests (`TST-CON-029.5`, `TranslationParityTest.kt`)*:
-  • Verify `RadarSettingsSection.kt` renders scenario selection using `ExposedDropdownMenuBox` with 5 scenarios, obeying Design Guidelines §1.3 and Rule 38.
-  • Verify status text formatting `radar_simulator_status_format` and all scenario names maintain 100% key and format parity across partitioned `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
-  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-029.6`)*:
-  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.audio.radar.*`, `com.atrainingtracker.trainingtracker.ui.settings.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  1. *Classpath & Enum Excision Verification (`TST-CON-029`, `RadarStateRepositoryTest.kt#testSimulatorRemoval_classpathAndRadarSourceEnum`)*:
+  • Verify `RadarSource.values()` contains strictly `[NONE, ANT_PLUS, BLE]` (zero `SIMULATOR` entry) and `Class.forName` throws `ClassNotFoundException` for removed `RadarTrafficSimulator`, `RadarScenario`, and `SimulatedRadarDevice`.
+  2. *UI & 9-Language String Removal Verification (`TST-CON-029`, `RadarSettingsSectionTest.kt#testRadarSettingsSection_simulatorControlsAndStringsCompletelyRemoved`)*:
+  • Compose `RadarSettingsSection` via Robolectric `createComposeRule()` and verify `RadarSimulatorScenarioDropdown` and simulator controls do not exist while preserved settings (`radar_strava_summary_title`) remain visible, and verify all obsolete `radar_simulator_*` / `radar_scenario_*` string keys are absent across all 9 `strings_radar.xml` locales.
+  3. *Clean-Room Targeted Test Suite Execution (`TST-CON-029`)*:
+  • Execute targeted radar, settings, and `TranslationParityTest` suites asserting 100% pass rate with zero regressions to physical BLE/ANT+ radar & light control.
 
 
 ### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
@@ -105,7 +89,7 @@
 
 ### TST-CON-030: **Garmin Varia BLE V2 High-Resolution Radar Stream Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.8`)
-- **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`, `tools/ble_radar_simulator.py`
 - **Jira**: `ATT-5095`, `ATT-6706`, `ATT-7542`, `ATT-7659`
 - **Test Description**:
   1. *V2 Handshake Choreography, MTU Negotiation & Notification Routing Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`, `MyBTLEDeviceTest.kt`)*:
@@ -120,8 +104,8 @@
   • Verify latching of minimum lateral passing clearance when $y \le 3.0\text{ m}$ and cumulative tracking of large vehicle counts.
   5. *SensorType Enum, DeviceType Mapping & Unit Formatter Tests (`TST-CON-030.5`, `SensorTypeTest.kt`, `DeviceTypeTest.kt`)*:
   • Verify `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` sensor definitions, `DeviceType.getSensorDeviceTypes()` mappings to `BIKE_RADAR`, and formatting parity.
-  6. *Traffic Simulator V2 Trajectory Tests (`TST-CON-030.6`, `RadarTrafficSimulatorTest.kt`)*:
-  • Verify generation of simulated V2 frames with lateral offsets and vehicle classifications.
+  6. *Developer V2 Trajectory Tests (`TST-CON-030.6`, `tools/test_ble_radar_simulator.py`)*:
+  • Verify generation of simulated V2 frames with lateral offsets and vehicle classifications via the external BLE radar simulator (in-app simulator retired in `ATT-8672`).
   7. *9-Language Localization Parity Test (`TST-CON-030.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-030.8`)*:
@@ -150,9 +134,8 @@
   • Verify DataStore migration from legacy `RadarLightControlMode` to unified `isAutoMode: Boolean` + `radarLightDefaultMode: RadarLightMode` with fallback defaults (`true` and `DAY_FLASH`).
   • Verify retirement of redundant 3-way mode segmented button and default mode dropdown in `RadarSettingsSection.kt`, and preservation of `radarBrakeLightEnabled` toggle.
   • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`; offline `BIKE_RADAR` visibility extended by `TST-CON-048`), inclusion of `Automatik` as first option alongside physical modes, immediate dispatch via `RadarLightController`, draft state decoupling, StVZO option restriction, and UI binding consistency with `RadarLightController.currentMode` / `isAutoMode` on dialog close and reopen.
-  6. *Traffic Simulator & BLE Peripheral Simulator Fidelity Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`, `tools/test_ble_radar_simulator.py`)*:
-  • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
-  • Verify `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) exposes `['write', 'indicate']` properties (never `write-without-response`) and rejects writes when `6a4e2f11` CCCD indications are not subscribed.
+  6. *BLE Peripheral Simulator Fidelity Tests (`TST-CON-031.6`, `tools/test_ble_radar_simulator.py`)*:
+  • Verify `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) exposes `['write', 'indicate']` properties (never `write-without-response`) and rejects writes when `6a4e2f11` CCCD indications are not subscribed (in-app `RadarTrafficSimulator` retired in `ATT-8672`).
   7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity for light mode, Automatik, and status string resources across all 9 supported locales.
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
@@ -183,9 +166,8 @@
   4. *Wildcard Discovery & Device Number Extraction Tests (`TST-CON-032.4`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`)*:
   • Verify wildcard `AntChannel` initialization (`DeviceNumber = 0`, `DeviceType = 40`) and extended data parsing (device number extraction and RSSI) when searching for `BIKE_RADAR`.
   • Verify `DeviceType.getRemoteDeviceTypes(Protocol.ANT_PLUS)` includes `BIKE_RADAR`.
-  5. *Starvation Watchdog & Hardware Preemption Tests (`TST-CON-032.5`, `ANTBikeRadarDeviceTest.kt`)*:
+  5. *Starvation Watchdog Tests (`TST-CON-032.5`, `ANTBikeRadarDeviceTest.kt`)*:
   • Verify 3.5s timeout triggers transition to `DISCONNECTED_ERROR` and resets scalar sensor latches.
-  • Verify physical frame arrival invokes `RadarTrafficSimulator.onPhysicalHardwareConnected()`.
   6. *Targeted Radar Test Suite Execution (`TST-CON-032.6`)*:
   • Run all radar unit and integration tests under `com.atrainingtracker.banalservice.devices.antplus.*` and `com.atrainingtracker.banalservice.devices.radar.*` asserting 100% pass rate.
 
@@ -357,7 +339,7 @@
 
 ### TST-CON-041: **Concurrent Radar Source Arbitration & Multi-Transport Decoupling Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-041` (`REQ-CON-041.1`..`REQ-CON-041.4`)
-- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarTrafficSimulator.kt`, `RadarStateRepositoryTest.kt`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarStateRepositoryTest.kt`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`
 - **Jira**: `ATT-7575`
 - **Test Description**:
   1. *Prioritized Source Selection Test (`TST-CON-041.1`, `RadarStateRepositoryTest.kt`)*:
@@ -373,22 +355,16 @@
   • When only `BLE` is connected and `ANT_PLUS` has not received data, verify `ANTBikeRadarDevice.isReceivingData()` returns `false`.
   • When `ANT_PLUS` receives data, verify `ANTBikeRadarDevice.isReceivingData()` returns `true`.
 
-### TST-CON-042: **Radar Application State Preservation During Preemption & Hardware Packet Ingestion Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-042` (`REQ-CON-042.1`..`REQ-CON-042.3`)
-- **Component**: `RadarTrafficSimulator.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`, `RadarTrafficSimulatorTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
-- **Jira**: `ATT-7574`
+### TST-CON-042: **Radar Application State Preservation During Hardware Packet Ingestion Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-042` (`REQ-CON-042.3`)
+- **Component**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-7574`, `ATT-8672`
 - **Test Description**:
   1. *Physical Telemetry Packet Application State Preservation (`TST-CON-042.1`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
   • Given `RadarStateRepository` with an active non-default `lightMode` (e.g. `DAY_FLASH`) and active `audioSnoozeState` (e.g. `SNOOZE_15M`),
   • When real BLE packets (`processTargets()`) or ANT+ packets (`parseTargetsPage()` / `publishTargets()`) arrive,
   • Verify that `RadarStateRepository.getState()` continues to report the active `lightMode` and `audioSnoozeState` without being wiped to `OFF` or `INACTIVE`.
-  2. *Simulator Preemption State Preservation (`TST-CON-042.2`, `RadarTrafficSimulatorTest.kt`)*:
-  • Given `RadarTrafficSimulator` actively running a simulation scenario (`isSimulating == true`),
-  • When `onPhysicalHardwareConnected()` is invoked,
-  • Verify that `RadarTrafficSimulator.isSimulating` transitions to `false` and the simulation job terminates immediately,
-  • And verify that `RadarStateRepository.reset()` is NOT invoked, preserving any pre-existing application `lightMode` or `audioSnoozeState`.
-  3. *Gated Simulator Preemption Call-Site Verification (`TST-CON-042.3`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
-  • Verify that when `RadarTrafficSimulator.isSimulating` is `false`, `onPhysicalHardwareConnected()` is bypassed upon incoming target frames.
+  • (`TST-CON-042.2` / `TST-CON-042.3` simulator preemption tests retired upon `RadarTrafficSimulator` removal in `ATT-8672`.)
 
 ### TST-CON-043: **Cockpit Radar Tail Light Button & Action Row Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-043` (`REQ-CON-043.1`..`REQ-CON-043.5`)
@@ -469,8 +445,8 @@
 ### TST-CON-046: **Radar `isAutoMode` Preservation Across Telemetry Frames, Simulator & Source Arbitration Test Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-CON-046` (`REQ-CON-046.1`..`REQ-CON-046.3`)
-- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
-- **Jira**: `ATT-8455`
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarLightController.kt`
+- **Jira**: `ATT-8455`, `ATT-8672`
 - **Test Type**: Unit & Integration
 - **Verification Method**: Unit
 - **Procedure**:
@@ -478,17 +454,13 @@
      • Given `RadarStateRepository` / `RadarLightController` with `isAutoMode == false`,
      • When exercising all 6 `BTLERadarDevice` emission paths (`startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `mWatchdogRunnable`, `disconnectFromGatt`),
      • Assert `RadarStateRepository.getState().isAutoMode` remains `false`; then invoke `RadarLightController.setAutoMode()` and assert `isAutoMode == true`.
-  2. *RadarTrafficSimulator Lifecycle & Tick Preservation (`TST-CON-046.2`, `RadarTrafficSimulatorTest.kt`)*:
-     • Given `isAutoMode == false` in `RadarStateRepository`,
-     • When running `generateFrame`, `tick`, `start` coroutine loop frames, and `stop`,
-     • Assert `RadarStateRepository.getState().isAutoMode` remains `false` throughout and `setAutoMode()` restores `true`.
-  3. *ANTBikeRadarDevice 3-Site `isAutoMode` Preservation (`TST-CON-046.3`, `ANTBikeRadarDeviceTest.kt`)*:
+  2. *ANTBikeRadarDevice 3-Site `isAutoMode` Preservation (`TST-CON-046.3`, `ANTBikeRadarDeviceTest.kt`)*:
      • Given `isAutoMode == false` in `RadarStateRepository`,
      • When invoking `publishTargets`, `onWatchdogTimeout`, and `shutDown`,
      • Assert `RadarStateRepository.getState().isAutoMode` remains `false` and `setAutoMode()` restores `true`.
-  4. *Repository `sourceStates` Failover & `reset()` Isolation (`TST-CON-046.4`, `RadarStateRepositoryTest.kt`)*:
+  3. *Repository `sourceStates` Failover & `reset()` Isolation (`TST-CON-046.4`, `RadarStateRepositoryTest.kt`)*:
      • Given concurrent `BLE` and `ANT_PLUS` sources with manual override `isAutoMode == false`,
-     • When `BLE` disconnects and `RadarStateRepository` fails over to `ANT_PLUS` (or `SIMULATOR`),
+     • When `BLE` disconnects and `RadarStateRepository` fails over to `ANT_PLUS`,
      • Assert `isAutoMode` stays `false` (and `audioSnoozeState` stays intact per `REQ-CON-042.3`); when `RadarStateRepository.reset()` is invoked, assert clean reset to default `RadarState()` (`isAutoMode == true`).
   5. *Light Controller Manual Override vs Adaptive Automation (`TST-CON-046.5`, `RadarLightControllerTest.kt`)*:
      • Given `setManualLightMode()` or `cycleNextMode()` followed by incoming telemetry updates,
@@ -2070,8 +2042,8 @@
      • Run one-time `DataMigration<Preferences>` across all legacy radar-light key permutations, `LEGACY_MAP_CAMERA_KEYS`, and legacy SharedPreferences cluster tolerances; assert exact preservation of prior effective modes, removal of obsolete keys, idempotent `shouldMigrate == false` on rerun, unified fresh-install `SMART_AUTOMATION` consistency, and full `TuningConfig` derived-property agreement after `updateRadarAutoLightControl`/`updateRadarLightControlMode`.
   2. *Zero Stale Caches & Immediate Settings Propagation (`TST-CON-056.2` — `RadarLightControllerTest.kt`, `TrackerServiceStateMachineCharacterisationTest.kt`, `TrackerServiceResilienceTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
      • Verify `RadarLightController` has zero `cached*` fields / `updateCachedPreferences` overloads, reflects DataStore changes immediately, and persists on one long-lived scope; verify `TrackerService.getAutoPauseConfig()` immediately reflects `updateAutoPause{Bike,Run,Other}Enabled` and `resetToDefaults` without `invalidateAutoPauseCache()`; assert `TrackerService.java <= 3,220` LoC and `TrainingApplication.java <= 2,050` LoC.
-  3. *3-StateFlow Split, Zero 1-Hz Snooze Wakeups & Atomic Concurrency (`TST-CON-056.3` — `RadarStateRepositoryTest.kt`, `RadarSnoozeControllerTest.kt`, `SmartRadarLightEngineTest.kt`, `RadarAlertManagerTest.kt`, `RadarEdgeOverlayTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`, `RadarTrafficSimulatorTest.kt`, `RadarSettingsSectionTest.kt`)*:
-     • Activate timed 15m/30m snooze with `TestScope` and advance intermediate seconds -> assert `0` intermediate `snoozeState` emissions, `0` wakeups or cooldown extensions in `SmartRadarLightEngine` and `RadarAlertManager`, and exact 1-shot expiry at `snoozeUntilElapsedRealtimeMs`; verify concurrent 8-Hz threat + snooze/light updates never overwrite targets and preserve failover (`BLE -> ANT_PLUS -> SIMULATOR`); verify `RadarEdgeOverlay` derives badge minutes from `snoozeUntilElapsedRealtimeMs`.
+  3. *3-StateFlow Split, Zero 1-Hz Snooze Wakeups & Atomic Concurrency (`TST-CON-056.3` — `RadarStateRepositoryTest.kt`, `RadarSnoozeControllerTest.kt`, `SmartRadarLightEngineTest.kt`, `RadarAlertManagerTest.kt`, `RadarEdgeOverlayTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`, `RadarSettingsSectionTest.kt`)*:
+     • Activate timed 15m/30m snooze with `TestScope` and advance intermediate seconds -> assert `0` intermediate `snoozeState` emissions, `0` wakeups or cooldown extensions in `SmartRadarLightEngine` and `RadarAlertManager`, and exact 1-shot expiry at `snoozeUntilElapsedRealtimeMs`; verify concurrent 8-Hz threat + snooze/light updates never overwrite targets and preserve failover (`BLE -> ANT_PLUS`); verify `RadarEdgeOverlay` derives badge minutes from `snoozeUntilElapsedRealtimeMs`.
   4. *AB-BA Deadlock-Free Multi-Thread Stress Test (`TST-CON-056.4` — `RadarBrakeLightConcurrencyStressTest.kt`, `SmartBrakeLightDetectorTest.kt`, `RadarLightControllerTest.kt`)*:
      • Run parallel `ExecutorService` threads (`>= 4` threads, `>= 5,000` iterations) concurrently exercising `RadarLightController` (`registerRadarDevice`, `unregisterRadarDevice`, `setManualLightMode`, `setAutoMode`, `checkAndRestorePreBrakeMode`) and `SmartBrakeLightDetector` (`onLinearAccelerationChanged`, `stopListening`, `isAutoBypassed`, `isEnabled`) while checking `ThreadMXBean.findDeadlockedThreads()`; assert bounded completion with `0` deadlocks and `0` uncaught exceptions.
 
@@ -2411,3 +2383,4 @@
 | `1.0.41` | 2026-11-24 | Lane 2 Author (`ATT-8673`, `--as agent1`) | `ATT-8673` | Added `[Planned]` `TST-CON-059` (`.1`–`.4`, strictly symmetric `REQ-CON-059`) covering immediate outside/mid-ride `setAutoMode()` across Day/Night/Tunnel/StVZO/live threat/offline, debounced `cycleNextMode()` (`DAY_FLASH -> OFF -> AUTO` flush & rapid multi-tap coalescing), cancelled rate-limit & post-stop reset, generation-guarded serialized DataStore persistence, and brake-light preemption + 5,000-iter AB-BA deadlock stress (`N/A - 0 string changes`). |
 | `1.0.42` | 2026-11-24 | Lane 2 Author (`ATT-8673`, `--as agent1`) | `ATT-8673` | Gate 3 (`ATT-9682`) revision on `[Planned]` `TST-CON-059`: added paused `setAutoMode()` zero-sensor-leak test, `InMemoryPreferencesDataStore` debounced `cycleNextMode()` zero-premature-write test, Night/Tunnel `onWorkoutStopped()` post-stop non-resuscitation test, mid-ride `collectLatest` stale-`false` immunity test, external `clearManualOverrideForExternalAuto()` ordering, and `committed`-gated `setAutomationLightMode()` / leaf `engineLock` assertions. |
 | `1.0.43` | 2026-11-24 | Lane 2 Author (`ATT-8673`, `--as agent1`) | `ATT-8673` | Promoted `TST-CON-059` (`.1`–`.4`) to `[Verified]` with verbatim method citations (`228/228` PASS across `15` targeted suites: `RadarLightControllerTest 42/42`, `SmartRadarLightEngineTest 10/10`, `RadarBrakeLightConcurrencyStressTest 7/7`, `BTLERadarDeviceTest 64/64`, `ANTBikeRadarDeviceTest 22/22`, `ANTBikeLightDeviceTest 11/11`, `RadarTrafficSimulatorTest 14/14`, `SmartBrakeLightDetectorTest 12/12`, `RadarStateRepositoryTest 7/7`, `RadarLightQuickSwitchSheetTest 13/13`, `EditDeviceDialogRadarLightTest 5/5`, `RadarLightButtonContractTest 4/4`, `RadarLightModeGridTest 3/3`, `ArchitectureConformanceContractTest 11/11`, `InterfaceSignatureDriftContractTest 3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8673/`). |
+| `1.0.44` | 2026-11-24 | Lane 1 Author (`ATT-8672`, `--as agent1`) | `ATT-8672` | Retired `RadarTrafficSimulator`, `RadarScenario`, `SimulatedRadarDevice`, `RadarSource.SIMULATOR`, and simulator UI/strings; updated `TST-CON-029` to classpath/enum/UI-absence excision verification and cleaned retired simulator citations in `TST-CON-030`..`032`, `041`, `042`, `046`, `056`. |

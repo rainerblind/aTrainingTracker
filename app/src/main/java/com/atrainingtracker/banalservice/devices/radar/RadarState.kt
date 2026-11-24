@@ -89,11 +89,10 @@ data class RadarTarget @JvmOverloads constructor(
 )
 
 /**
- * Hardware peripheral or simulation transport source for radar state arbitration (REQ-CON-041).
+ * Hardware peripheral transport source for radar state arbitration (REQ-CON-041).
  */
 enum class RadarSource(val priority: Int) {
     NONE(0),
-    SIMULATOR(1),
     ANT_PLUS(2),
     BLE(3)
 }

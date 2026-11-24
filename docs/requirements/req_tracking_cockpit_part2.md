@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.105  
+**Version**: 1.0.106  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -97,43 +97,31 @@
 
 **Invariants**: Existing BLE sensors unaffected; zero schema migrations; 100% 9-language translation parity; Rule 1.8 constructor baseline state parity.
 
-### REQ-CON-029: Built-in Cycling Radar Traffic Simulator & Scenario Engine [Verified]
+### REQ-CON-029: Built-in Cycling Radar Traffic Simulator & Scenario Engine (Retired in ATT-8672) [Verified]
 - **Tests**: `TST-CON-029`
 - **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Rationale**: Developing and testing cycling radar UI overlays (`ATT-5085`), audio/haptic alert synthesis (`ATT-5086`), and post-ride safety analytics (`ATT-5088`) without physical radar hardware on open roads requires a realistic, scriptable traffic simulator. `RadarTrafficSimulator` provides 5 scriptable scenario presets emitting synthetic target vectors at 8 Hz directly into `RadarStateRepository` and `RadarWindowAggregator`, enabling indoor workouts, UI preview, and automated clean-room CI validation. Physical radar hardware retains absolute precedence (ATT-5087, ATT-6704, Parent Epic ATT-1286, extending `REQ-CON-028`):
-1. *Scriptable Scenario Presets (`REQ-CON-029.1`)*:
-• The system SHALL provide 5 scriptable scenario presets: Single Overtaking Car (140m approach at 12 m/s, passing at 0m), Multi-Vehicle Convoy (3 simultaneous targets at 140m, 115m, 85m), High-Speed Threat (rapid approach at 25 m/s, `FAST_APPROACHING`), Mid-Ride Disconnect (starvation to `DISCONNECTED_ERROR` followed by recovery after 5s), and Continuous Country Road Loop (continuous randomized traffic intervals).
-2. *8 Hz Stream Pipeline & Scalar MySensor Bridge (`REQ-CON-029.2`)*:
-• The simulator SHALL emit synthetic target frames at 8 Hz into `RadarStateRepository` (`StateFlow<RadarState>`) and update `RadarWindowAggregator`. When `BANALService` is active, `SimulatedRadarDevice` (extending `MyDevice`) SHALL register and publish the 6 scalar radar `MySensor` channels (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`, `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`), displaying live metrics in cockpit tiles and recording them to `WorkoutSamples.db` during workouts.
-3. *Hardware Preemption & Workout Lifecycle Cleanliness (`REQ-CON-029.3`)*:
-• The simulator SHALL immediately halt when physical radar hardware connects or streams data (`onPhysicalHardwareConnected()`), wired directly into `BTLERadarDevice` measurement notifications. `TrackerService` SHALL invoke `RadarTrafficSimulator.stop()` in `handleActionStop()` and `onDestroy()`, guaranteeing zero lingering simulation or phantom DB writes post-workout.
-4. *Reactive StateFlow, Monotonic Clock & ExposedDropdownMenuBox Controls (`REQ-CON-029.4`)*:
-• `RadarTrafficSimulator` SHALL expose `isSimulatingFlow: StateFlow<Boolean>` for reactive UI observation and evaluate elapsed simulation timing using monotonic `SystemClock.elapsedRealtime()` under a structured `SupervisorJob` scope. `RadarSettingsSection.kt` SHALL render `RadarScenario` selection using a Material 3 `ExposedDropdownMenuBox` per Design Guidelines §1.3.
-5. *9-Language Localization Parity (`REQ-CON-029.5`)*:
-• All simulator UI strings, scenario names, and live target status indicators in `strings_radar.xml` SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis or untranslated concatenations).
+- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `RadarLightController.kt`, `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TrackingTabsScreen.kt`, `EditDeviceDialog.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `TrackerService.java`, `TrainingApplication.java`, `strings_radar.xml`
+- **Rationale**: Originally introduced in `ATT-5087` / `ATT-6704` to unblock UI/audio/analytics verification prior to physical radar hardware delivery (`Garmin Varia RearVue 820`). Following Ceremony 2 PO feedback on `ATT-8455`, `ATT-8672` permanently removes the in-app `RadarTrafficSimulator`, `RadarScenario`, `SimulatedRadarDevice`, `RadarSource.SIMULATOR`, and all simulator UI controls/strings from `app/src/main/` while retaining the external Python BLE peripheral simulator (`tools/ble_radar_simulator.py`) for developer testing:
+1. *Complete App & UI Excision (`REQ-CON-029.1`, `ATT-8672`)*:
+• `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `RadarScenario`, and `RadarSource.SIMULATOR` SHALL be completely absent from `app/src/main/` and the compiled classpath.
+• `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TrackingTabsScreen.kt`, `EditDeviceDialog.kt`, `RadarLightController.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `TrackerService.java`, and `TrainingApplication.java` SHALL contain zero simulator hooks, `isSimulating` branches, or `radar_simulator_*` / `radar_scenario_*` string resources across all 9 locales.
+• Physical BLE (`BTLERadarDevice`), ANT+ (`ANTBikeRadarDevice`), `RadarLightController`, `RadarStateRepository`, and external `tools/ble_radar_simulator.py` SHALL remain intact.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-CON-029` (Built-in Cycling Radar Traffic Simulator & Scenario Engine), targeting `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, and `RadarSettingsSection.kt`.
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-5087` (commit `69fec8e7`) as an indoor simulator and preview tool; refined in `ATT-6704` to wire scalar `MySensor` channels via `SimulatedRadarDevice`, wire physical preemption in `BTLERadarDevice`, stop on workout finish, expose `isSimulatingFlow`, switch to monotonic clock, and upgrade scenario selection to `ExposedDropdownMenuBox`.
-3. *Root Reason for Existing Formulation*: The initial simulator was built as a rapid standalone prototype for visual edge overlay and audio testing prior to hardware arrival, leaving `BANALService` scalar integration and hardware preemption hooks as omissions. Wall-clock timing was used for simplicity, and `FlowRow` chips were used before options grew to 5.
-4. *Preservation of Core Invariants*: Physical hardware retains 100% absolute precedence; zero phantom DB writes outside active workouts; zero SQLite schema modifications; 100% 9-language translation parity.
+1. *Original Requirement ID & Target*: `REQ-CON-029` (Built-in Cycling Radar Traffic Simulator & Scenario Engine), originally targeting `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, and `RadarSettingsSection.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-5087` (`69fec8e7`), refined in `ATT-6704`, and retired/excised in `ATT-8672` per PO Ceremony 2 feedback on `ATT-8455` once physical Garmin Varia RearVue 820 hardware became available.
+3. *Root Reason for Existing Formulation*: Built as a temporary pre-hardware test aid; keeping it in production settings and tracking code added dead UI controls and maintenance overhead once hardware and `tools/ble_radar_simulator.py` were available.
+4. *Preservation of Core Invariants*: Real BLE/ANT+ radar acquisition, `RadarLightController`, `RadarStateRepository`, `RadarTrafficSummaryCard` analytics, external `tools/ble_radar_simulator.py`, and 100% 9-language localization parity remain intact.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* Single Overtaking Car scenario selected and an active indoor workout,
-• *When* simulation runs and 1 Hz window latches,
-• *Then* a vehicle approaches from 140m at 12 m/s, passes at 0m, increments `RADAR_VEHICLE_COUNT`, and records scalar metrics to `WorkoutSamples.db`.
-• *Given* an active simulation,
-• *When* physical radar connects and streams measurement data,
-• *Then* `BTLERadarDevice` immediately triggers `onPhysicalHardwareConnected()`, halting the simulator and yielding control cleanly to physical hardware.
-• *Given* `RadarSettingsSection.kt` displayed,
-• *When* selecting a scenario,
-• *Then* the scenario is selected via an `ExposedDropdownMenuBox` with localized status formatting and reactive button state driven by `isSimulatingFlow`.
+• *Given* the compiled app classpath, `app/src/main/`, and `RadarSettingsSection`,
+• *When* inspecting `RadarSource`, `RadarSettingsSection`, and all 9 `strings_radar.xml` files,
+• *Then* `RadarTrafficSimulator`, `RadarScenario`, `SimulatedRadarDevice`, `RadarSource.SIMULATOR`, and all 19 `radar_simulator_*`/`radar_scenario_*` strings are completely absent while real radar settings and hardware drivers remain operational.
 
-**Invariants**: Real hardware priority; coroutine job cleanup on stop; zero DB writes outside active tracking; 100% 9-language translation parity.
+**Invariants**: Real BLE/ANT+ radar & light control intact; zero SQLite schema modifications; 100% 9-language translation parity.
 
 ### REQ-TRK-062: Live Rearview Radar Vertical Edge Overlay Across Tracking Tabs [Verified]
 - **Tests**: `TST-TRK-062`
@@ -153,7 +141,7 @@
 • In `LEFT`/`RIGHT` edge rail mode, the top `Spacer(8.dp)` and post-badge `Spacer(6.dp)` MUST be guarded on badge visibility (`isDisconnectError || hasActiveThreats`) so `RadarVerticalRail` does not shift downward by `14.dp` when no badge is shown.
 • When `FULL_SCREEN` is active and the road is clear, neither background rail nor `RadarStatusBadgePill` is rendered (zero touch-intercepting hit targets). In `AUTO_HIDE_3S` mode, auto-hiding after 3 seconds of all-clear road SHALL fade out the vertical rail leaving zero clear-state badge; `RadarStatusBadgePill` SHALL render and consume tap events strictly when `isDisconnectError` or `hasActiveThreats` is true, preventing invisible touch-intercepting hit targets.
 4. *Fail-Safe Disconnect, Error State & Active-Threat Badge (`REQ-TRK-062.4`)*:
-• `TrackingTabsScreen` SHALL render the `RadarEdgeOverlay` strictly when `radarState.connectionState == RadarConnectionState.CONNECTED`, `radarState.connectionState == RadarConnectionState.DISCONNECTED_ERROR` (mid-ride connection drop), or `RadarTrafficSimulator.isSimulating == true`. The overlay bar SHALL remain hidden while merely searching for unconnected sensors (`CONNECTING` or initial `DISCONNECTED`).
+• `TrackingTabsScreen` SHALL render the `RadarEdgeOverlay` strictly when `radarState.connectionState == RadarConnectionState.CONNECTED` or `radarState.connectionState == RadarConnectionState.DISCONNECTED_ERROR` (mid-ride connection drop). The overlay bar SHALL remain hidden while merely searching for unconnected sensors (`CONNECTING` or initial `DISCONNECTED`).
 • When radar connection state is `DISCONNECTED_ERROR`, the overlay SHALL NOT render a green "All Clear" state; it SHALL display the amber hazard `RadarStatusBadgePill` with `ic_device_not_available`. Tapping `RadarStatusBadgePill` while in `DISCONNECTED_ERROR` SHALL trigger radar peripheral reconnection via `TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`.
 • When `hasActiveThreats` is true (`APPROACHING` or `FAST_APPROACHING`), `RadarStatusBadgePill` SHALL remain rendered with `targets.size` (plus muted-bell/countdown when `audioSnoozeState.isSnoozed` per `REQ-TRK-064.2`) and invoke `onBadgeClick` on tap.
 • `BTLERadarDevice.startSearching()` SHALL preserve `RadarConnectionState.DISCONNECTED_ERROR` across reconnection attempts rather than overwriting it with `CONNECTING`, maintaining fail-safe amber indication until data resumes or device disconnects (`ATT-7744`).
@@ -250,7 +238,7 @@
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `DeveloperMenuScreen.kt`, `strings_radar.xml`
+- **Implementation**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `SensorType.java`, `BluetoothConstants.java`, `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `DeveloperMenuScreen.kt`, `strings_radar.xml`
 - **Rationale**: Next-generation Garmin Varia radar units (e.g. RearVue 820) introduce a high-resolution 2D BLE telemetry stream on characteristic `6a4e3204-667b-11e3-949a-0800200c9a66` extending radar detection range up to 175 m, providing lateral offset (identifying overtaking trajectory and close passes), and classifying vehicle size (Bikes/Motorcycles vs. Cars vs. Trucks/Busses). The protocol requires LESC bonding, MTU 247 negotiation, and a serialized GATT handshake while enforcing seamless, automatic fallback to legacy V1 characteristic `6a4e3203` on unbonded devices, silent streams, or older hardware (RTL515/516/315/715) without breaking the 3.5s starvation watchdog (ATT-5095, ATT-6706, ATT-7542, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-029`):
 1. *BLE V2 Handshake Choreography (`REQ-CON-030.1`)*:
 • Upon peripheral connection and service discovery, `BTLERadarDevice` SHALL enqueue Battery Level (`0x2A19`) read and CCCD notification subscription *before* proceeding to V2 characteristic `6a4e3204`.
@@ -269,8 +257,8 @@
 5. *Scalar Sensor Publishing & DeviceType Registration (`REQ-CON-030.5`)*:
 • `BTLERadarDevice` SHALL register and publish `SensorType.RADAR_PASSING_DISTANCE_m` and `SensorType.RADAR_LARGE_VEHICLE_COUNT` to `MySensorManager` for live cockpit telemetry and storage.
 • `DeviceType.getSensorDeviceTypes()` SHALL map both `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` to `DeviceType.BIKE_RADAR`.
-6. *Traffic Simulator V2 Extension (`REQ-CON-030.6`)*:
-• `RadarTrafficSimulator` SHALL generate realistic V2 trajectory scenarios including vehicle size diversity, lane positioning, and close-pass overtaking events.
+6. *Developer V2 Trajectory Verification (`REQ-CON-030.6`)*:
+• V2 trajectory scenarios (vehicle size diversity, lane positioning, close-pass overtaking) SHALL be exercised via `tools/ble_radar_simulator.py` and deterministic unit tests (in-app `RadarTrafficSimulator` retired in `ATT-8672`).
 7. *9-Language Localization Parity (`REQ-CON-030.7`)*:
 • All sensor names and short labels in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
 8. *Developer BLE V1-Only Protocol Override (`REQ-CON-030.8`)*:
@@ -335,9 +323,8 @@
 • DataStore deserialization SHALL seamlessly migrate legacy preferences: legacy `SMART_AUTOMATION` maps to `isAutoMode = true`; legacy `FIXED_WORKOUT_MODE` maps to `isAutoMode = false` with existing `radarLightDefaultMode` preserved; legacy `MANUAL` maps to `isAutoMode = false` with `radarLightDefaultMode = OFF` (or last explicit mode).
 • In compliance with Design Guidelines §3.2 (single unambiguous configuration surface), `RadarSettingsSection.kt` SHALL retire the redundant 3-way `Rücklicht-Steuerung` segmented button row and conditional `Lichtmodus` dropdown, while strictly retaining the `Bremslicht-Erkennung` (`radarBrakeLightEnabled`) toggle.
 • `EditDeviceDialog.kt` (`RadarLightControlSection`) SHALL provide parity with `RadarLightQuickSwitchSheet.kt`, exposing `Automatik` as the first selectable option alongside physical modes with live active state indication bound consistently to `RadarLightController.isAutoMode` and `RadarLightController.currentMode` via `collectAsStateWithLifecycle()`, dispatching selection immediately to `RadarLightController` without dirtying device draft state and reflecting active hardware state upon dialog close and reopen.
-6. *Traffic Simulator & BLE Peripheral Simulator Light State Fidelity (`REQ-CON-031.6`)*:
-• `RadarTrafficSimulator` SHALL emulate tail light command reception and state transitions for UI testing without physical peripheral hardware.
-• `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) SHALL faithfully expose GATT flags `['write', 'indicate']` (never `write-without-response`) and enforce `6a4e2f11` CCCD subscription before accepting control writes, preventing simulator tests from masking `WRITE_TYPE_NO_RESPONSE` or missing-CCCD defects.
+6. *BLE Peripheral Simulator Light State Fidelity (`REQ-CON-031.6`)*:
+• `tools/ble_radar_simulator.py` (`RadarControlWriteCharacteristic` on `6a4e2f11`) SHALL faithfully expose GATT flags `['write', 'indicate']` (never `write-without-response`) and enforce `6a4e2f11` CCCD subscription before accepting control writes, preventing simulator tests from masking `WRITE_TYPE_NO_RESPONSE` or missing-CCCD defects (in-app `RadarTrafficSimulator` retired in `ATT-8672`).
 7. *9-Language Localization Parity (`REQ-CON-031.7`)*:
 • All light mode names, dialog titles, and settings strings in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
 8. *StVZO-Aware Debounced Hardware Mode Cycling & Reactive State Separation (`REQ-CON-031.8`)*:
@@ -400,8 +387,8 @@
 • `ANTBikeRadarDevice` SHALL decode Data Page `0x01` (Radar System Status: 0 = Normal, 1 = Limited, 2 = Error) and map errors to `RadarThreatLevel.DISCONNECTED_ERROR` when indicated. Common pages `0x50` (Manufacturer ID), `0x51` (Model & HW Revision), and `0x52` (Battery Status & Operating Time) SHALL be decoded to update device metadata and battery status without throwing exceptions on unrecognized sub-pages.
 5. *Wildcard Discovery & Device Pairing Integration (`REQ-CON-032.5`)*:
 • `DeviceType.getRemoteDeviceTypes(Protocol.ANT_PLUS)` SHALL include `DeviceType.BIKE_RADAR`. `ANTSearchForNewDevicesEngineMultiDeviceSearch` SHALL open a wildcard `AntChannel` scan (`DeviceNumber = 0`, `DeviceType = 40`, `TransType = 0`) on Predefined Network slot 1 with `LibConfig` enabled (extended device number and RSSI) when searching for `DeviceType.BIKE_RADAR` or `DeviceType.ALL`, reporting discovered radar peripherals to `DeviceManager`.
-6. *Starvation Watchdog & Hardware Preemption (`REQ-CON-032.6`)*:
-• `ANTBikeRadarDevice` SHALL maintain a 3.5s starvation watchdog timer. If no valid ANT broadcast frame is received within 3.5 seconds, the state SHALL transition to disconnected error (`RadarState.DISCONNECTED_ERROR`), resetting active scalar sensor telemetry to clear state. Reception of valid ANT+ radar frames SHALL call `RadarTrafficSimulator.onPhysicalHardwareConnected()` to preempt any active simulation.
+6. *Starvation Watchdog (`REQ-CON-032.6`)*:
+• `ANTBikeRadarDevice` SHALL maintain a 3.5s starvation watchdog timer. If no valid ANT broadcast frame is received within 3.5 seconds, the state SHALL transition to disconnected error (`RadarState.DISCONNECTED_ERROR`), resetting active scalar sensor telemetry to clear state.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `android_antlib_4-16-0.aar` linked and an ANT+-capable device,
@@ -772,11 +759,11 @@
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarTrafficSimulator.kt`
-- **Rationale**: Dual-protocol cycling rearview radars (e.g., Garmin Varia RTL515, RearVue 820) broadcast telemetry over Bluetooth LE and ANT+ concurrently. If a cyclist pairs both transports in the application, unarbitrated updates in `RadarStateRepository` cause high-frequency target clobbering, jitter in Cockpit overlays, and erroneous disconnect alerts when one transport experiences transient packet starvation while the other is healthy. Furthermore, drivers inspecting global state for link health misreport their own connectivity. The system must establish deterministic source priority arbitration (`BLE` > `ANT_PLUS` > `SIMULATOR`), isolate watchdog disconnect states, provide per-source state inspection, and scope driver link telemetry strictly to its own transport (ATT-7575, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-032`):
+- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`
+- **Rationale**: Dual-protocol cycling rearview radars (e.g., Garmin Varia RTL515, RearVue 820) broadcast telemetry over Bluetooth LE and ANT+ concurrently. If a cyclist pairs both transports in the application, unarbitrated updates in `RadarStateRepository` cause high-frequency target clobbering, jitter in Cockpit overlays, and erroneous disconnect alerts when one transport experiences transient packet starvation while the other is healthy. Furthermore, drivers inspecting global state for link health misreport their own connectivity. The system must establish deterministic source priority arbitration (`BLE` > `ANT_PLUS`), isolate watchdog disconnect states, provide per-source state inspection, and scope driver link telemetry strictly to its own transport (ATT-7575, updated ATT-8672, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-032`):
 - **Description**:
   1. *RadarSource Classification & Priority Hierarchy (`REQ-CON-041.1`)*:
-     - The system SHALL define `RadarSource` enum (`NONE`, `SIMULATOR`, `ANT_PLUS`, `BLE`) with priority order `BLE` (3) > `ANT_PLUS` (2) > `SIMULATOR` (1) > `NONE` (0).
+     - The system SHALL define `RadarSource` enum (`NONE`, `ANT_PLUS`, `BLE`) with priority order `BLE` (3) > `ANT_PLUS` (2) > `NONE` (0).
      - Every `RadarState` published SHALL include `source: RadarSource`.
   2. *Active Source Arbitration & Clashing Prevention (`REQ-CON-041.2`)*:
      - In `RadarStateRepository`, updates from a lower-priority source SHALL NOT overwrite the active prioritized source's `targets` or `connectionState` while the active prioritized source remains in `CONNECTED` state and has received updates within 3,500 ms.
@@ -810,32 +797,23 @@
 
 **Invariants**: Predefined Network Slot 1 isolation; thread-safe state synchronization; zero memory leaks; 100% test pass rate.
 
-### REQ-CON-042: Radar Application State Preservation During Preemption & Hardware Packet Ingestion [Verified]
+### REQ-CON-042: Radar Application State Preservation During Hardware Packet Ingestion [Verified]
 - **Tests**: `TST-CON-042`
 - **System Requirement(s)**: `SYSREQ-TRK-002`
 - **Priority**: Critical
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `RadarTrafficSimulator.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`
-- **Rationale**: Cyclists setting active 1-tap audio snooze (`RadarAudioSnoozeState`) or active tail light operating modes (`RadarLightMode`) expect these user-configured application states to persist when connecting real radar hardware or when receiving 4–8 Hz physical telemetry frames. Unconditional invocation of simulator preemption and destructive `RadarStateRepository.reset()` during simulator shutdown wiped these states to defaults (`INACTIVE`, `OFF`). The system must guarantee that hardware packet processing and simulator preemption non-destructively preserve active audio snooze and tail light modes (ATT-7574, Parent Epic ATT-1286, extending `REQ-CON-029`, `REQ-CON-031`, and `REQ-TRK-064`):
+- **Implementation**: `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`
+- **Rationale**: Cyclists setting active 1-tap audio snooze (`RadarAudioSnoozeState`) or active tail light operating modes (`RadarLightMode`) expect these user-configured application states to persist when connecting real radar hardware or when receiving 4–8 Hz physical telemetry frames. The system must guarantee that hardware packet processing non-destructively preserves active audio snooze and tail light modes (`ATT-7574`, updated `ATT-8672` removing retired simulator preemption, Parent Epic `ATT-1286`, extending `REQ-CON-031` and `REQ-TRK-064`):
 - **Description**:
-  1. *Non-Destructive Simulator Shutdown (`REQ-CON-042.1`)*:
-     - When `RadarTrafficSimulator.stop()` or `onPhysicalHardwareConnected()` terminates an active simulation, it SHALL NOT invoke `RadarStateRepository.reset()`.
-     - It SHALL update `RadarSource.SIMULATOR` connection state to `DISCONNECTED` while preserving `lightMode`, `audioSnoozeState`, and `isLightControlSupported`.
-  2. *Gated Simulator Preemption & Inverted State Sampling (`REQ-CON-042.2`)*:
-     - `RadarTrafficSimulator.onPhysicalHardwareConnected()` SHALL be invoked only when `RadarTrafficSimulator.isSimulating` is true.
-     - In `BTLERadarDevice.java`, `currentState = RadarStateRepository.getState()` SHALL be sampled before any simulator preemption invocation.
-     - In `ANTBikeRadarDevice.kt`, preemption invocation SHALL be gated with `if (RadarTrafficSimulator.isSimulating)`.
-  3. *Application State Preservation Invariant (`REQ-CON-042.3`)*:
+  1. *Application State Preservation Invariant (`REQ-CON-042.3`)*:
      - In `RadarStateRepository`, an active `audioSnoozeState` or `lightMode` SHALL NOT be reset to defaults by physical radar telemetry packets arriving over BLE or ANT+.
+     - (`REQ-CON-042.1` and `REQ-CON-042.2` simulator preemption rules retired upon complete removal of `RadarTrafficSimulator` in `ATT-8672`.)
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an active audio snooze or non-default tail light mode in `RadarStateRepository`,  
 • *When* real BLE or ANT+ radar packets arrive,  
 • *Then* `audioSnoozeState` and `lightMode` remain preserved in `RadarStateRepository.getState()`.  
-• *Given* `RadarTrafficSimulator` is running,  
-• *When* physical radar hardware connects or emits packets,  
-• *Then* simulation stops immediately and physical hardware state is active without wiping repository snooze or light state.  
 
 **Invariants**: Predefined Network Slot 1 isolation; thread safety via repository synchronization lock; zero memory leaks; 100% test pass rate.
 
@@ -985,29 +963,29 @@
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarLightController.kt`
-- **Rationale**: When a cyclist selects a manual tail-light mode (`RadarLightController.setManualLightMode()` / `cycleNextMode()`), `isAutoMode = false` is published to `RadarStateRepository`. However, telemetry and lifecycle `RadarState` constructions in `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, and `RadarTrafficSimulator.kt` omit `isAutoMode`, falling back to the Kotlin default `isAutoMode = true` at 4–8 Hz and causing Cockpit UI (`TrackingTabsScreen.kt`) to revert immediately to `Automatik` (`ATT-8455`, extending `REQ-CON-031.8` and `REQ-CON-042.3`):
+- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarLightController.kt`
+- **Rationale**: When a cyclist selects a manual tail-light mode (`RadarLightController.setManualLightMode()` / `cycleNextMode()`), `isAutoMode = false` is published to `RadarStateRepository`. However, telemetry and lifecycle `RadarState` constructions in `BTLERadarDevice.java` and `ANTBikeRadarDevice.kt` omit `isAutoMode`, falling back to the Kotlin default `isAutoMode = true` at 4–8 Hz and causing Cockpit UI (`TrackingTabsScreen.kt`) to revert immediately to `Automatik` (`ATT-8455`, updated `ATT-8672`, extending `REQ-CON-031.8` and `REQ-CON-042.3`):
 - **Description**:
-  1. *Driver & Simulator `isAutoMode` Preservation (`REQ-CON-046.1`)*:
-     - All 6 `RadarState` emission sites in `BTLERadarDevice.java` (`mWatchdogRunnable`, `startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `disconnectFromGatt`), all 3 sites in `ANTBikeRadarDevice.kt` (`publishTargets`, `onWatchdogTimeout`, `shutDown`), and `RadarTrafficSimulator.kt` (`generateFrame`, `tick`, `start`, `stop`) SHALL propagate the current `isAutoMode` flag without resetting manual overrides to `true`.
+  1. *Driver `isAutoMode` Preservation (`REQ-CON-046.1`)*:
+     - All 6 `RadarState` emission sites in `BTLERadarDevice.java` (`mWatchdogRunnable`, `startSearching`, `notifyStopSearching`, `configureServices`, `processTargets`, `disconnectFromGatt`) and all 3 sites in `ANTBikeRadarDevice.kt` (`publishTargets`, `onWatchdogTimeout`, `shutDown`) SHALL propagate the current `isAutoMode` flag without resetting manual overrides to `true`.
   2. *Cross-Source Control-State Sync & Failover Continuity (`REQ-CON-046.2`)*:
-     - `RadarStateRepository` SHALL preserve and synchronize `isAutoMode` (and `audioSnoozeState` per `REQ-CON-042.3`) across `sourceStates` entries during multi-source arbitration and failover (`BLE` <-> `ANT_PLUS` <-> `SIMULATOR`), while explicit `RadarLightController.setAutoMode()` transitions SHALL restore `isAutoMode = true` and manual overrides SHALL keep `SmartRadarLightEngine` automation suspended.
+     - `RadarStateRepository` SHALL preserve and synchronize `isAutoMode` (and `audioSnoozeState` per `REQ-CON-042.3`) across `sourceStates` entries during multi-source arbitration and failover (`BLE` <-> `ANT_PLUS`), while explicit `RadarLightController.setAutoMode()` transitions SHALL restore `isAutoMode = true` and manual overrides SHALL keep `SmartRadarLightEngine` automation suspended.
   3. *Repository Isolation & Reset Contract (`REQ-CON-046.3`)*:
      - `RadarStateRepository.reset()` SHALL remain cleanly decoupled from `RadarLightController`, clearing `sourceStates` and resetting `_radarState` to default `RadarState()` without leaking state across unit tests (`REQ-CON-042.3`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new `REQ-CON-046` extending `REQ-CON-031.8` and `REQ-CON-042.3`; targets `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`, `RadarStateRepository.kt`, and `RadarLightController.kt`.
-2. *Historical Origin & Commit Trace*: Commit `a3783bd7` (`ATT-7574`, `REQ-CON-042`) established `lightMode`/`audioSnoozeState` preservation; commit `c422e1b6` (`ATT-7991`, `REQ-CON-031.8`) appended `val isAutoMode: Boolean = true` to `RadarState.kt:123`.
-3. *Root Reason for Existing Formulation*: `ATT-7991` added `isAutoMode = true` as a 9th `@JvmOverloads` parameter, leaving existing 8-arg Java calls (`BTLERadarDevice.java`) and Kotlin constructor/copy sites (`ANTBikeRadarDevice.kt`, `RadarTrafficSimulator.kt`) silently defaulting to `true`.
-4. *Preservation of Core Invariants*: Preserves `REQ-CON-041` source priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.2` pre-preemption state sampling, `REQ-CON-042.3` application state preservation, `SmartRadarLightEngine` manual override suspension, and `RadarStateRepository.reset()` isolation.
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-046` extending `REQ-CON-031.8` and `REQ-CON-042.3`; targets `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`, and `RadarLightController.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a3783bd7` (`ATT-7574`, `REQ-CON-042`) established `lightMode`/`audioSnoozeState` preservation; commit `c422e1b6` (`ATT-7991`, `REQ-CON-031.8`) appended `val isAutoMode: Boolean = true` to `RadarState.kt:123` (`ATT-8672` removed retired `RadarTrafficSimulator`).
+3. *Root Reason for Existing Formulation*: `ATT-7991` added `isAutoMode = true` as a 9th `@JvmOverloads` parameter, leaving existing 8-arg Java calls (`BTLERadarDevice.java`) and Kotlin constructor/copy sites (`ANTBikeRadarDevice.kt`) silently defaulting to `true`.
+4. *Preservation of Core Invariants*: Preserves `REQ-CON-041` source priority (`BLE > ANT_PLUS`), `REQ-CON-042.3` application state preservation, `SmartRadarLightEngine` manual override suspension, and `RadarStateRepository.reset()` isolation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Criterion 1 (Telemetry & Lifecycle Frame Preservation)*:
   - *Given* `RadarStateRepository` has `isAutoMode == false` after manual light selection,
-  - *When* telemetry or lifecycle frames are emitted by `BTLERadarDevice`, `ANTBikeRadarDevice`, or `RadarTrafficSimulator` (`generateFrame`/`tick`/`start`/`stop`),
+  - *When* telemetry or lifecycle frames are emitted by `BTLERadarDevice` or `ANTBikeRadarDevice`,
   - *Then* `RadarStateRepository.getState().isAutoMode` remains `false`.
 • *Criterion 2 (Explicit Auto Restoration & Multi-Source Failover)*:
-  - *Given* `isAutoMode == false` across active `BLE`/`ANT_PLUS`/`SIMULATOR` streams,
+  - *Given* `isAutoMode == false` across active `BLE`/`ANT_PLUS` streams,
   - *When* the active source fails over to another transport in `RadarStateRepository.sourceStates`,
   - *Then* `isAutoMode` remains `false`, and *When* `RadarLightController.setAutoMode()` is invoked, *Then* `isAutoMode` transitions cleanly to `true` and resumes `SmartRadarLightEngine`.
 • *Criterion 3 (Reset Isolation)*:
@@ -1015,7 +993,7 @@
   - *When* `RadarStateRepository.reset()` is called,
   - *Then* `sourceStates` clears and `RadarStateRepository.getState()` resets to default `RadarState()` (`isAutoMode == true`).
 
-**Invariants**: `REQ-CON-041` priority (`BLE > ANT_PLUS > SIMULATOR`), `REQ-CON-042.3` `lightMode`/`audioSnoozeState` preservation, `SmartRadarLightEngine` override gating, zero SQLite schema changes, zero localization changes.
+**Invariants**: `REQ-CON-041` priority (`BLE > ANT_PLUS`), `REQ-CON-042.3` `lightMode`/`audioSnoozeState` preservation, `SmartRadarLightEngine` override gating, zero SQLite schema changes, zero localization changes.
 
 ### REQ-CON-047: Compact Quick-Switch Sheet & Shared 2-Column RadarLightModeGrid, Button-Matching Icons & Ascending Mode Order [Verified]
 - **Target Release**: `V5.0.0`

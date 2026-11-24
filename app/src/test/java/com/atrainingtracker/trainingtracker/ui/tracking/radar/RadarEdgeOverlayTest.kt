@@ -458,41 +458,35 @@ class RadarEdgeOverlayTest {
     /**
      * TST-TRK-062.8: Live Rearview Radar Overlay Visibility Gating (ATT-7744 / REQ-TRK-062.4).
      * Strictly suppresses overlay rendering during initial sensor search (CONNECTING) and idle disconnect,
-     * while rendering on CONNECTED, DISCONNECTED_ERROR, or indoor simulator.
+     * while rendering on CONNECTED or DISCONNECTED_ERROR.
      */
     @Test
     fun isRadarOverlayVisible_suppressesOverlayDuringSearchAndDisconnected() {
         // Suppressed while searching for sensor
         assertFalse(
             "Overlay must be hidden while searching (CONNECTING)",
-            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.CONNECTING, isSimulating = false)
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.CONNECTING)
         )
 
-        // Suppressed when disconnected and not simulating
+        // Suppressed when disconnected
         assertFalse(
             "Overlay must be hidden when idle DISCONNECTED",
-            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED, isSimulating = false)
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED)
         )
     }
 
     @Test
-    fun isRadarOverlayVisible_rendersOnConnectedDisconnectedErrorAndSimulation() {
+    fun isRadarOverlayVisible_rendersOnConnectedAndDisconnectedError() {
         // Visible on CONNECTED
         assertTrue(
             "Overlay must be visible when CONNECTED",
-            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.CONNECTED, isSimulating = false)
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.CONNECTED)
         )
 
         // Visible on DISCONNECTED_ERROR (fail-safe amber warning)
         assertTrue(
             "Overlay must be visible on DISCONNECTED_ERROR",
-            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED_ERROR, isSimulating = false)
-        )
-
-        // Visible when simulator is active regardless of connection state
-        assertTrue(
-            "Overlay must be visible when simulator is running",
-            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED, isSimulating = true)
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED_ERROR)
         )
     }
 
@@ -501,7 +495,7 @@ class RadarEdgeOverlayTest {
         // Suppressed when not in ScreenMode.TRACKING
         assertFalse(
             "Overlay must be suppressed outside ScreenMode.TRACKING even if connected",
-            isRadarOverlayVisible(ScreenMode.CONFIGURATION, RadarConnectionState.CONNECTED, isSimulating = false)
+            isRadarOverlayVisible(ScreenMode.CONFIGURATION, RadarConnectionState.CONNECTED)
         )
     }
 
@@ -627,13 +621,11 @@ class RadarEdgeOverlayTest {
 
         val startTabVisible = isRadarOverlayVisible(
             screenMode = ScreenMode.TRACKING,
-            connectionState = clearState.connectionState,
-            isSimulating = false
+            connectionState = clearState.connectionState
         )
         val liveTabVisible = isRadarOverlayVisible(
             screenMode = ScreenMode.TRACKING,
-            connectionState = clearState.connectionState,
-            isSimulating = false
+            connectionState = clearState.connectionState
         )
         assertTrue("Overlay visible on Start tab (page 0) under ScreenMode.TRACKING", startTabVisible)
         assertTrue("Overlay visible on Live Tracking tab (page > 0) under ScreenMode.TRACKING", liveTabVisible)
@@ -1123,7 +1115,7 @@ class RadarEdgeOverlayTest {
                 RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING),
                 RadarTarget(targetId = 2, rangeMeters = 123f, approachSpeedMps = 14f, threatLevel = ThreatLevel.APPROACHING)
             ),
-            source = RadarSource.SIMULATOR
+            source = RadarSource.ANT_PLUS
         )
         val v2State = RadarState(
             connectionState = RadarConnectionState.CONNECTED,

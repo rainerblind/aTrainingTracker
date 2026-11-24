@@ -22,15 +22,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -40,15 +36,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.devices.radar.RadarScenario
-import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
-import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAudioPreviewType
@@ -60,7 +52,6 @@ import com.atrainingtracker.trainingtracker.settings.RadarFullScreenMarkerStyle
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningDropdownRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
@@ -68,15 +59,14 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Settings and preview composable for cycling radar edge overlay and traffic simulator (REQ-TRK-062.5, REQ-CON-029.4).
+ * Settings composable for cycling radar edge overlay, audio/haptic alerts, brake light, and Strava summary (REQ-TRK-062.5).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Suppress("LongMethod")
 @Composable
 fun RadarSettingsSection(
     modifier: Modifier = Modifier,
-    tuningDataStore: TuningPreferencesDataStore? = null,
-    onSimulationToggled: ((Boolean) -> Unit)? = null
+    tuningDataStore: TuningPreferencesDataStore? = null
 ) {
     val context = LocalContext.current
     val actualDataStore = remember(tuningDataStore, context) {
@@ -84,10 +74,6 @@ fun RadarSettingsSection(
     }
     val tuningConfig by actualDataStore.tuningConfigFlow.collectAsState(initial = actualDataStore.getTuningConfig())
     val coroutineScope = rememberCoroutineScope()
-
-    var selectedScenario by remember { mutableStateOf(RadarScenario.SINGLE_CAR) }
-    val radarState by remember { RadarStateRepository.observeCombinedState() }.collectAsState(initial = RadarStateRepository.getState())
-    val isRunning by RadarTrafficSimulator.isSimulatingFlow.collectAsState()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -481,123 +467,5 @@ fun RadarSettingsSection(
             },
             summary = stringResource(R.string.radar_strava_summary_desc)
         )
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-        // 6. Traffic Simulator (REQ-CON-029.4)
-        Text(
-            text = stringResource(R.string.radar_simulator_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Text(
-            text = stringResource(R.string.radar_simulator_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        // Scenario selection dropdown (Design Guidelines §1.3: >4 options -> TuningDropdownRow)
-        TuningDropdownRow(
-            title = stringResource(R.string.radar_simulator_scenario_label),
-            options = RadarScenario.values().toList(),
-            selectedOption = selectedScenario,
-            onOptionSelected = { scenario ->
-                selectedScenario = scenario
-                if (isRunning) {
-                    RadarTrafficSimulator.start(scenario)
-                }
-            },
-            labelProvider = { scenario -> getScenarioTitle(scenario) },
-            testTag = "RadarSimulatorScenarioDropdown",
-            itemTestTagPrefix = "RadarScenarioItem"
-        )
-
-        // Active scenario description
-        Text(
-            text = getScenarioDescription(selectedScenario),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        // Controls and status
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = if (isRunning) {
-                        stringResource(R.string.radar_simulator_running)
-                    } else {
-                        stringResource(R.string.radar_simulator_idle)
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isRunning) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-
-                if (isRunning) {
-                    Text(
-                        text = stringResource(
-                            R.string.radar_simulator_status,
-                            radarState.connectionState.name,
-                            radarState.targets.size
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            if (isRunning) {
-                OutlinedButton(
-                    onClick = {
-                        RadarTrafficSimulator.stop()
-                        onSimulationToggled?.invoke(false)
-                    },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(text = stringResource(R.string.radar_simulator_stop))
-                }
-            } else {
-                Button(
-                    onClick = {
-                        RadarTrafficSimulator.start(selectedScenario)
-                        onSimulationToggled?.invoke(true)
-                    }
-                ) {
-                    Text(text = stringResource(R.string.radar_simulator_start))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun getScenarioTitle(scenario: RadarScenario): String {
-    return when (scenario) {
-        RadarScenario.SINGLE_CAR -> stringResource(R.string.radar_scenario_single_car)
-        RadarScenario.CONVOY -> stringResource(R.string.radar_scenario_convoy)
-        RadarScenario.HIGH_SPEED -> stringResource(R.string.radar_scenario_high_speed)
-        RadarScenario.DISCONNECT_RECONNECT -> stringResource(R.string.radar_scenario_disconnect)
-        RadarScenario.COUNTRY_ROAD_LOOP -> stringResource(R.string.radar_scenario_country_road)
-    }
-}
-
-@Composable
-private fun getScenarioDescription(scenario: RadarScenario): String {
-    return when (scenario) {
-        RadarScenario.SINGLE_CAR -> stringResource(R.string.radar_scenario_single_car_desc)
-        RadarScenario.CONVOY -> stringResource(R.string.radar_scenario_convoy_desc)
-        RadarScenario.HIGH_SPEED -> stringResource(R.string.radar_scenario_high_speed_desc)
-        RadarScenario.DISCONNECT_RECONNECT -> stringResource(R.string.radar_scenario_disconnect_desc)
-        RadarScenario.COUNTRY_ROAD_LOOP -> stringResource(R.string.radar_scenario_country_road_desc)
     }
 }
