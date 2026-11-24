@@ -113,9 +113,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     companion object {
         /**
          * Merges asynchronously refreshed telemetry/derived fields from [fresh] into [current]
-         * while strictly preserving all 19 user-editable metadata fields and any explicit warning
+         * while strictly preserving all 20 user-editable metadata fields and any explicit warning
          * clearance or Polar retry banner dismissal performed in the editor
-         * (`REQ-TRK-091.2`, `ATT-9154`, `REQ-SET-127`, `ATT-9174`).
+         * (`REQ-TRK-091.2`, `ATT-9154`, `REQ-SET-127`, `ATT-9174`, `REQ-DAT-050.2`, `ATT-9021`).
          */
         internal fun mergeTelemetryPreservingUserEdits(
             current: WorkoutData,
@@ -140,6 +140,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             commute = current.commute,
             trainer = current.trainer,
             race = current.race,
+            epic = current.epic,
             uploadToStrava = current.uploadToStrava,
             syncToHealthConnect = current.syncToHealthConnect,
             recordingErrors = if (preserveClearedRecordingErrors) null else fresh.recordingErrors,
@@ -490,6 +491,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
 
     fun updateIsRace(isChecked: Boolean) {
         _workoutData.update { it?.copy(race = isChecked) }
+    }
+
+    /**
+     * Updates the independent `epic` workout classification flag (`REQ-DAT-050.2`, `ATT-9021`).
+     */
+    fun updateIsEpic(isChecked: Boolean) {
+        _workoutData.update { it?.copy(epic = isChecked) }
     }
 
     /**

@@ -753,4 +753,51 @@ class EditWorkoutViewModelTest {
         assertEquals("Edited Morning Run", merged.workoutName)
         assertEquals("Felt strong", merged.description)
     }
+
+    @Test
+    fun testUpdateIsEpic_operatesIndependentlyOfCommuteTrainerAndRace_tstDat050_2() {
+        val initial = createTestWorkout(commute = true, trainer = false, race = true)
+        val viewModel = createViewModel(initial)
+
+        assertFalse("Initially epic should be false", viewModel.workoutData.value?.epic == true)
+
+        viewModel.updateIsEpic(true)
+        var updated = viewModel.workoutData.value!!
+        assertTrue("Epic must be true after updateIsEpic(true)", updated.epic)
+        assertTrue("Race must remain true alongside epic", updated.race)
+        assertTrue("Commute must remain true alongside epic", updated.commute)
+        assertFalse("Trainer must remain false", updated.trainer)
+
+        // Switching commute -> trainer must keep epic and race intact
+        viewModel.updateIsTrainer(true)
+        updated = viewModel.workoutData.value!!
+        assertTrue("Trainer must be true", updated.trainer)
+        assertFalse("Commute must be cleared by trainer", updated.commute)
+        assertTrue("Epic must remain true when trainer toggled", updated.epic)
+        assertTrue("Race must remain true when trainer toggled", updated.race)
+
+        // Toggling epic off must not affect race or trainer
+        viewModel.updateIsEpic(false)
+        updated = viewModel.workoutData.value!!
+        assertFalse("Epic must be false after updateIsEpic(false)", updated.epic)
+        assertTrue("Race must remain true when epic toggled off", updated.race)
+        assertTrue("Trainer must remain true when epic toggled off", updated.trainer)
+    }
+
+    @Test
+    fun testMergeTelemetryPreservingUserEdits_preservesEpicFlag_tstDat050_2() {
+        val current = createTestWorkout(commute = false, trainer = false, race = true).copy(epic = true)
+        val fresh = createTestWorkout(commute = false, trainer = false, race = false).copy(
+            epic = false,
+            totalDistance = 123456.0,
+            ascentMeters = 3200L
+        )
+
+        val merged = EditWorkoutViewModel.mergeTelemetryPreservingUserEdits(current, fresh)
+
+        assertTrue("User-edited epic flag must survive telemetry refresh", merged.epic)
+        assertTrue("User-edited race flag must survive telemetry refresh", merged.race)
+        assertEquals(123456.0, merged.totalDistance, 0.001)
+        assertEquals(3200L, merged.ascentMeters)
+    }
 }

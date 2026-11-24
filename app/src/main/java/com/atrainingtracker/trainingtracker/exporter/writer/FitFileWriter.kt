@@ -560,6 +560,14 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             }
             activeEncoder.write(isRaceDesc)
 
+            val isEpicDesc = FieldDescriptionMesg().apply {
+                developerDataIndex = 1.toShort()
+                fieldDefinitionNumber = 8.toShort()
+                fitBaseTypeId = Fit.BASE_TYPE_UINT8.toShort()
+                setFieldName(0, "is_epic")
+            }
+            activeEncoder.write(isEpicDesc)
+
             val finalHaveRadar = haveRadar
             val finalDevDataIdMesg = devDataIdMesg
             val finalRadarCurrentDesc = radarCurrentDesc
@@ -1057,6 +1065,10 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                 val fRace = DeveloperField(isRaceDesc, metaDevDataIdMesg)
                 fRace.setValue((if (header.race) 1 else 0).toShort())
                 sessionMesg.addDeveloperField(fRace)
+
+                val fEpic = DeveloperField(isEpicDesc, metaDevDataIdMesg)
+                fEpic.setValue((if (header.epic) 1 else 0).toShort())
+                sessionMesg.addDeveloperField(fEpic)
             }
 
             encoder.write(sessionMesg)

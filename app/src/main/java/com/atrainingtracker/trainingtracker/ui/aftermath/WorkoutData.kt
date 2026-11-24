@@ -81,6 +81,7 @@ data class WorkoutData(
     val commute: Boolean,
     val trainer: Boolean,
     val race: Boolean = false,
+    val epic: Boolean = false,
     val source: WorkoutSource = WorkoutSource.TRACKED,
     val mapPolyline: String,
     val encodedAltitudes: String,

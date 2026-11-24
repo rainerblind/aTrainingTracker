@@ -1026,6 +1026,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val feelIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL)
                 val commuteIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
                 val raceIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
+                val epicIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.EPIC)
                 val eqIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
 
                 val wId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID
@@ -1062,6 +1063,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     feel = if (feelIdx >= 0 && !cursor.isNull(feelIdx)) cursor.getInt(feelIdx) else null,
                     commute = commuteIdx >= 0 && !cursor.isNull(commuteIdx) && cursor.getInt(commuteIdx) > 0,
                     race = raceIdx >= 0 && !cursor.isNull(raceIdx) && cursor.getInt(raceIdx) > 0,
+                    epic = epicIdx >= 0 && !cursor.isNull(epicIdx) && cursor.getInt(epicIdx) > 0,
                     equipmentId = eqId,
                     equipmentName = eqName,
                     normalizedPower = np,
@@ -1296,7 +1298,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         feel: Int? = null,
         method: String? = null,
         isTrainer: Boolean = false,
-        isRace: Boolean = false
+        isRace: Boolean = false,
+        isEpic: Boolean = false
     ): Long {
         val summaryValues = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
@@ -1322,6 +1325,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
             if (isRace) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE, 1)
+            }
+            if (isEpic) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EPIC, 1)
             }
             if (rpe != null) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE, rpe)
@@ -4656,6 +4662,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
+                            epic = userEditedWorkout.epic,
                             source = current.source,
                             uploadToStrava = userEditedWorkout.uploadToStrava,
                             syncToHealthConnect = userEditedWorkout.syncToHealthConnect

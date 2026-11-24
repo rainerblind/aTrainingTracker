@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.53  
+**Version**: 1.0.55  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 39
+**Total Requirements**: 40
 
 ---
 
@@ -1303,12 +1303,43 @@
 
 **Invariants**: Zero SQLite schema migrations; `0` UI/Compose or `strings*.xml` edits; `0` 1-Hz unfinished live-tick re-queries (`REQ-STB-020.4`); Rule 74 (`REQ-STB-018.4`) preserved; `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, and `AndroidViewModelReflectionContractTest` pass 100%.
 
+### REQ-DAT-050: Epic Workout Classification Flag with SQLite Schema v32 Persistence & Lossless Garmin FIT 2.0 Developer Field Round-Trip (`ATT-9021`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-050`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-002`, `SYSREQ-DEX-005`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `WorkoutData.kt`, `WorkoutExportHeader.kt`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `EditWorkoutViewModel.kt`, `FitFileWriter.kt`, `ParsedWorkoutData.kt`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Athletes can tag workouts as `Commute`, `Indoor` (`trainer`), or `Race`, but lack an independent `Epic` classification flag for standout, memorable endurance efforts. Persisting `epic` in `WorkoutSummaries.db` (schema v32), exposing it symmetrically across domain models, mappers, repository, and `EditWorkoutViewModel`, and serializing/parsing it via Garmin FIT 2.0 Developer Field `8` (`is_epic`, `developerDataIndex = 1`) ensures the flag survives backups, device migrations, and FIT export/import cycles without data loss (`ATT-9021`, extending `REQ-DAT-036` and `REQ-MIG-053`; UI presentation and filtering belong to `ATT-9022`).
+- **Description**:
+  1. *SQLite Schema v32 & `onCreate`/`onUpgrade` Parity (`REQ-DAT-050.1`)*: `WorkoutSummariesDatabaseManager.WorkoutSummaries` SHALL define `public static final String EPIC = "epic"`. `WorkoutSummariesDbHelper.DB_VERSION` SHALL increment from `31` to `32` (automatically reflected by `DatabaseSchemaRegistry`). `CREATE_TABLE` SHALL include `WorkoutSummaries.EPIC + " int DEFAULT 0"`, and `onUpgrade(db, oldVersion, newVersion)` (`oldVersion < 32`) SHALL execute `addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.EPIC, "int", "0")`, guaranteeing exact `onCreate`/`onUpgrade` parity with existing rows defaulting to `0` (`false`) and zero data loss. `WorkoutSummariesDatabaseManager.updateWorkoutData(WorkoutData)` SHALL persist `values.put(WorkoutSummaries.EPIC, workoutData.getEpic() ? 1 : 0)`.
+  2. *Domain Models, Symmetric Cursor Mapping & Repository Persistence (`REQ-DAT-050.2`)*: `WorkoutData`, `WorkoutExportHeader`, and `WorkoutDataMapper.RawCursorSnapshot` SHALL include `val epic: Boolean = false`. `WorkoutDataMapper.readCursorSnapshot(cursor)` SHALL extract `epic` null-safely (`!cursor.isNull(idx) && cursor.getInt(idx) == 1`, defaulting to `false` if column absent) and `fromSnapshot(...)` SHALL forward `epic = snapshot.epic` symmetrically across single-item and batch `fromCursor` pathways (`Rule 20`). `WorkoutRepository` SHALL populate `WorkoutExportHeader.epic` in `getWorkoutExportHeader`, accept `isEpic: Boolean = false` in `insertImportedWorkout` (writing `EPIC = 1` when `true`), and propagate `epic = userEditedWorkout.epic` in `saveWorkout`'s in-memory `_allWorkouts` merge. `EditWorkoutViewModel` SHALL expose `updateIsEpic(isChecked: Boolean)` independently of `commute`/`trainer`/`race`, and `mergeTelemetryPreservingUserEdits` SHALL preserve `epic = current.epic`.
+  3. *Garmin FIT 2.0 Developer Field Export & Import Round-Trip (`REQ-DAT-050.3`)*: Under `APP_METADATA_DEVELOPER_DATA_ID` (`developerDataIndex = 1`), `FitFileWriter` SHALL register `FieldDescriptionMesg` with `fieldDefinitionNumber = 8`, `fitBaseTypeId = Fit.BASE_TYPE_UINT8`, and field name `"is_epic"`, and write `DeveloperField(isEpicDesc, metaDevDataIdMesg)` (`1` if `header.epic`, else `0`) onto `SessionMesg`. `ParsedWorkoutData` SHALL include `val isEpic: Boolean = false`. Within the `matchesAppId(..., APP_METADATA_DEVELOPER_DATA_ID)` guard, `FitWorkoutParser` SHALL decode `fieldName == "is_epic" || num == 8` into `ParsedWorkoutData.isEpic` (`(raw ?: 0) > 0`), defaulting to `false` on legacy or third-party FIT files lacking field 8. `LegacyImportEngine.persistParsedWorkout` SHALL pass `isEpic = parsedWorkout.isEpic` into `workoutRepo.insertImportedWorkout(...)`.
+  4. *Backward Compatibility, Scope & Governance Invariants (`REQ-DAT-050.4`)*: `COMMUTE`/`TRAINER` mutual exclusion, `RACE` semantics, FIT developer fields `0..7` & Bike Radar fields (`developerDataIndex = 0`), third-party `.fit` parsing without developer fields, `StravaUploader` payload, `DatabaseSchemaRegistry` classpath parity, and `ArchitectureConformanceContractTest` LoC/layering ceilings MUST remain strictly preserved. Zero UI/Compose/resource edits (`ATT-9022` boundary).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Extends `REQ-MIG-053` (*Lossless FIT Round-Trip for Workout Metadata, HRV Protocol Tags & Bike Radar Developer Fields*) and `REQ-DAT-036` (*SQLite Schema Evolution & `onCreate`/`onUpgrade` Parity*) across `WorkoutSummariesDatabaseManager.java`, `FitFileWriter.kt`, `FitWorkoutParser.kt`, `ParsedWorkoutData.kt`, and `LegacyImportEngine.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-2005` (`WorkoutSummaries.RACE`, v23), `ATT-7747` (FIT metadata developer fields `0..7`), `ATT-8127` (`APP_METADATA_DEVELOPER_DATA_ID` scoping), `ATT-7919` (`WorkoutSummaries.db` v31).
+3. *Root Reason for Existing Formulation*: Preserves backward compatibility with legacy databases and third-party FIT files while allowing lossless app-to-app metadata round-trips under `developerDataIndex = 1`.
+4. *Preservation of Core Invariants*: Existing `COMMUTE`/`TRAINER` mutual exclusion, `RACE` semantics, FIT fields `0..7` & radar index `0`, third-party FIT compatibility, `StravaUploader` payload, `onCreate`/`onUpgrade` parity, and `Rule 20` mapping symmetry remain strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing `WorkoutSummaries.db` at version `<= 31` lacking the `epic` column, *When* `WorkoutSummariesDbHelper.onUpgrade` upgrades to version `32`, *Then* the `epic` column exists (`int DEFAULT 0`), all existing rows read `0` (`false`) without data loss, and schema matches `onCreate`.
+• *Given* a workout marked as `race = true` (or `commute = true` / `trainer = true`), *When* `EditWorkoutViewModel.updateIsEpic(true)` is called, live telemetry refreshes, and `WorkoutRepository.saveWorkout` persists the workout, *Then* both flags remain `true` simultaneously in memory and across SQLite reloads.
+• *Given* a workout with `epic = true`, *When* exported to `.fit` via `FitFileWriter` and parsed/imported via `FitWorkoutParser` + `LegacyImportEngine`, *Then* `ParsedWorkoutData.isEpic == true` and the imported SQLite row persists `epic = 1` (`true`); third-party/legacy `.fit` files lacking `is_epic` import cleanly with `isEpic = false`.
+
+**Invariants**: `onCreate` == `onUpgrade` SQLite parity; `DatabaseSchemaRegistry` == `DB_VERSION` (`32`); `Rule 20` cursor symmetry; `COMMUTE`/`TRAINER` mutual exclusion; FIT developer fields `0..7` & radar index `0` untouched; `0` UI/strings edits (`ATT-9022`); `ArchitectureConformanceContractTest` passes 100%.
+
 ---
 
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.55` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Promoted `REQ-DAT-050` to `[Verified]` after Gate 3 (`ATT-9672`) PASS implementation (`WorkoutSummaries.db` v32 `EPIC` column + `onCreate`/`onUpgrade` parity + `updateWorkoutData`, `WorkoutData`/`WorkoutExportHeader`/`WorkoutDataMapper`/`WorkoutRepository`/`EditWorkoutViewModel.updateIsEpic` + `mergeTelemetryPreservingUserEdits` 20-field preservation, FIT 2.0 field `8` `is_epic` export/parse/import round-trip), `120/120` targeted Tier-1 unit & contract tests PASS across 14 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`PRAGMA user_version = 32`, `epic` column verified, `ATT-9021_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9021/`). |
+| `1.0.54` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Added `[Planned]` `REQ-DAT-050` (`SYSREQ-DEX-001`, `SYSREQ-DEX-002`, `SYSREQ-DEX-005`, `.1`–`.4`) for `WorkoutSummaries.db` v32 `EPIC` column (`int DEFAULT 0`), symmetric `WorkoutData`/`WorkoutExportHeader`/`WorkoutDataMapper`/`WorkoutRepository`/`EditWorkoutViewModel.updateIsEpic` persistence, and Garmin FIT 2.0 Developer Field `8` (`is_epic`, `UINT8`, `developerDataIndex = 1`) export/import round-trip (`N/A - 0 string changes`). |
 | `1.0.53` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Promoted `REQ-DAT-049` to `[Verified]` after Gate 3 (`ATT-9666`) PASS implementation incorporating all 6 guardrails (`.tmp.salvage` + `.gz.salvage` sidecars, private DB providers in `WorkoutDeletionCoordinator`, zero production mock catchers per `ATT-8136`, transactional 5-table `WorkoutSummariesDatabaseManager.deleteWorkout` + `ActiveDevicesDbHelper.deleteWorkout`, synchronous bulk `deleteOldWorkoutsCascade`, bounded `workoutMutationEvents`, and reactive refresh across all 5 ViewModels & `WorkoutClusterRepository`), `250/250` targeted Tier-1 tests PASS across 54 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`ATT-9607_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9607/`). |
 | `1.0.52` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Added `[Planned]` `REQ-DAT-049` (`Derived (SW-only)`, `.1`–`.5`) for authoritative pre-delete DB snapshot, transactional `WorkoutSummaries.db` + `ActiveDevices.db` + `.salvage` sidecar purge, synchronous awaited `deleteOldWorkoutsCascade`, bounded post-commit `WorkoutMutationEvent` stream, `WorkoutClusterRepository.syncClusterAfterWorkoutDeletion`, and reactive refresh across `AthleteProfileViewModel`, `TrackingViewModel`, `EquipmentViewModel`, `SportTypeViewModel`, and `SportingJourneyViewModel` (`N/A - 0 string changes`). |
 | `1.0.50` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Promoted `REQ-MIG-061` to `[Verified]` after Gate 3 (`ATT-9660`) PASS implementation incorporating all 6 guardrails (direct streaming `TcxParser`/`GpxTrackpointParser`, deleted `TcxTrackpointParser.kt`/`ParsedTcxData`/`TCXFileWriter.buildLap`, `WorkoutParser`, `HrvRmssdCalculator` NaN guard, Windows-backslash/root-entry-hardened `SecureZipExtractor.extractWorkoutArchive`, `CloudWorkoutSourceScanner` in `AutoImportManager` & `LegacyImportEngine.executeBulkCloudRecovery` `-280` LoC, `BackupOrchestrator`, and SHA-256 single-unzip `StagedBackupSession` reuse in `ImportEngine`/`BackupRestoreViewModel`), `386/386` focused Tier-1 tests PASS across 70 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`ATT-8135_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-8135/`). |

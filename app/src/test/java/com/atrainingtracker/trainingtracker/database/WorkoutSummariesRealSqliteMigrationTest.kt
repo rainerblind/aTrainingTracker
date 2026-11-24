@@ -690,8 +690,11 @@ class WorkoutSummariesRealSqliteMigrationTest {
     }
 
     @Test
-    fun testSchemaRegistryMatchesV31() {
-        assertEquals(31, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
+    fun testSchemaRegistryMatchesDbVersion() {
+        assertEquals(
+            WorkoutSummariesDbHelper.DB_VERSION,
+            DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db")
+        )
     }
 }
 

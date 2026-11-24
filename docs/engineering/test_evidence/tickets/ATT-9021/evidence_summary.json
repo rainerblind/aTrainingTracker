@@ -1,0 +1,64 @@
+{
+  "android_test_summary": {
+    "details": "120 Android unit tests passed (14 JUnit XML; targeted Tier-1 + Robolectric SQLite + FIT round-trip + contract suites; full 261-suite fan-out timed out at 1800s without -Xmx4096m override).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 120
+  },
+  "checks": [
+    {
+      "details": "Android: 120 Android unit tests passed (14 JUnit XML; targeted Tier-1 + Robolectric SQLite + FIT round-trip + contract suites; full 261-suite fan-out timed out at 1800s without -Xmx4096m override). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11649 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "7d9485145fbe8b8d2cced6137034717a76242d28",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistryParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T00:23:17.975484+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9021_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-9021",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

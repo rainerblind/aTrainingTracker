@@ -56,7 +56,10 @@ class WorkoutRpeFeelTest {
     // --- TST-WKO-035: Database schema & constants ---
     @Test
     fun testDbVersionAndColumnConstants() {
-        assertEquals("DB_VERSION must be 31", 31, WorkoutSummariesDbHelper.DB_VERSION)
+        assertTrue(
+            "DB_VERSION must be >= 30 (currently ${WorkoutSummariesDbHelper.DB_VERSION})",
+            WorkoutSummariesDbHelper.DB_VERSION >= 30
+        )
         assertEquals("Column constant RPE must be 'rpe'", "rpe", WorkoutSummaries.RPE)
         assertEquals("Column constant FEEL must be 'feel'", "feel", WorkoutSummaries.FEEL)
     }

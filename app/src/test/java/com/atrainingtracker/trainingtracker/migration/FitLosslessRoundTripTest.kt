@@ -533,4 +533,108 @@ class FitLosslessRoundTripTest {
         assertEquals(26.0, s2.getAsDouble(SensorType.PEDAL_SMOOTHNESS_R.name)!!, 0.1)
         assertEquals(25.5, s2.getAsDouble(SensorType.PEDAL_SMOOTHNESS.name)!!, 0.1)
     }
+
+    /**
+     * TST-DAT-050.3 (REQ-DAT-050.3, ATT-9021): Verify FIT 2.0 Developer Field 8 (`is_epic`)
+     * export/import round-trip for `epic = true` (combined with `race = true`), `epic = false`,
+     * and third-party FIT files lacking `APP_METADATA_DEVELOPER_DATA_ID` field 8.
+     */
+    @Test
+    fun testEpicFlagFitRoundTripAndLegacyImportPropagation_tstDat050_3() {
+        fun exportAndParse(baseName: String, epicFlag: Boolean, raceFlag: Boolean): ParsedWorkoutData {
+            val header = WorkoutExportHeader(
+                workoutId = 301L,
+                fileBaseName = baseName,
+                startTime = "2026-11-23 06:00:00",
+                totalTime = "3600",
+                data = "DSHCP",
+                workoutName = "Alpine Epic",
+                sportTypeId = 1L,
+                indoorTrainerSession = false,
+                commute = false,
+                race = raceFlag,
+                epic = epicFlag
+            )
+            every { mockRepo.getWorkoutExportHeader(baseName) } returns header
+            every { mockRepo.getWorkoutIdByBaseFileName(baseName) } returns 301L
+            every { mockRepo.hasRadarData(any(), any()) } returns false
+            every { mockRepo.streamSamples(any(), any()) } answers {
+                val consumer = secondArg<SampleConsumer>()
+                consumer.accept(
+                    WorkoutSampleRecord(
+                        time = "2026-11-23 06:00:01",
+                        speedMps = 8.0,
+                        hr = 152,
+                        power = 230.0
+                    )
+                )
+            }
+            val exportInfo = ExportInfo(baseName, FileFormat.FIT, ExportType.FILE)
+            val exportResult = FitFileWriter(mockContext).doExport(exportInfo)
+            assertTrue("FIT export must succeed: ${exportResult.answer()}", exportResult.success())
+            val outputFile = File(tempDir, exportInfo.shortPath)
+            assertTrue("Exported FIT must exist", outputFile.exists() && outputFile.length() > 0)
+            val parseResult = FitWorkoutParser.parse(outputFile, mockContext)
+            assertTrue("FIT parse must succeed: ${parseResult.exceptionOrNull()?.message}", parseResult.isSuccess)
+            return parseResult.getOrThrow()
+        }
+
+        // 1. epic = true combined with race = true round-trips cleanly
+        val parsedEpicTrue = exportAndParse("epic_true_roundtrip", epicFlag = true, raceFlag = true)
+        assertTrue("isEpic must round-trip true", parsedEpicTrue.isEpic)
+        assertTrue("isRace must remain true alongside isEpic", parsedEpicTrue.isRace)
+        assertFalse("isCommute must remain false", parsedEpicTrue.isCommute)
+        assertFalse("isTrainer must remain false", parsedEpicTrue.isTrainer)
+        assertEquals("Alpine Epic", parsedEpicTrue.workoutName)
+
+        // 2. epic = false round-trips cleanly
+        val parsedEpicFalse = exportAndParse("epic_false_roundtrip", epicFlag = false, raceFlag = false)
+        assertFalse("isEpic must round-trip false", parsedEpicFalse.isEpic)
+        assertFalse("isRace must round-trip false", parsedEpicFalse.isRace)
+
+        // 3. Third-party FIT file lacking APP_METADATA_DEVELOPER_DATA_ID field 8 defaults isEpic = false
+        val foreignFitFile = File(tempDir, "foreign_third_party.fit")
+        val encoder = com.garmin.fit.FileEncoder(foreignFitFile, com.garmin.fit.Fit.ProtocolVersion.V2_0)
+        encoder.write(com.garmin.fit.FileIdMesg().apply {
+            type = com.garmin.fit.File.ACTIVITY
+            manufacturer = com.garmin.fit.Manufacturer.GARMIN
+            timeCreated = com.garmin.fit.DateTime(java.util.Date(1795413600000L))
+        })
+        val foreignDevId = com.garmin.fit.DeveloperDataIdMesg().apply {
+            developerDataIndex = 1.toShort()
+            for (i in 0 until 16) setApplicationId(i, 0x2A.toByte())
+        }
+        encoder.write(foreignDevId)
+        val foreignField8 = com.garmin.fit.FieldDescriptionMesg().apply {
+            developerDataIndex = 1.toShort()
+            fieldDefinitionNumber = 8.toShort()
+            fitBaseTypeId = com.garmin.fit.Fit.BASE_TYPE_UINT8.toShort()
+            setFieldName(0, "is_epic")
+        }
+        encoder.write(foreignField8)
+        encoder.write(com.garmin.fit.RecordMesg().apply {
+            timestamp = com.garmin.fit.DateTime(java.util.Date(1795413610000L))
+            distance = 100f
+            speed = 8.0f
+            heartRate = 148.toShort()
+        })
+        val foreignSession = com.garmin.fit.SessionMesg().apply {
+            sport = com.garmin.fit.Sport.CYCLING
+            startTime = com.garmin.fit.DateTime(java.util.Date(1795413600000L))
+            timestamp = com.garmin.fit.DateTime(java.util.Date(1795413660000L))
+            totalElapsedTime = 60f
+            totalTimerTime = 60f
+            addDeveloperField(com.garmin.fit.DeveloperField(foreignField8, foreignDevId).apply {
+                setValue(1.toShort())
+            })
+        }
+        encoder.write(foreignSession)
+        encoder.close()
+
+        val parsedForeign = FitWorkoutParser.parse(foreignFitFile, mockContext).getOrThrow()
+        assertFalse(
+            "Foreign APP_ID developer field 8 must be ignored so isEpic defaults to false",
+            parsedForeign.isEpic
+        )
+    }
 }

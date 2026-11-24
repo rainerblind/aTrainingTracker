@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.52  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 140
+**Total Tests**: 141
 
 ---
 
@@ -2657,12 +2657,28 @@
   4. *Reactive Downstream ViewModel Refresh & 1-Hz Isolation (`TST-DAT-045.4`)*: Verify `AthleteProfileViewModel` with empty `_allWorkouts` recalculates `pmcUiState` (`CTL`/`ATL`/`TSB`), `cardioUiState`, and `hrvUiState` (daily loads) upon `WorkoutMutationEvent.Deleted` / `BulkDeleted`; verify `TrackingViewModel` refreshes `cachedPowerBenchmarks`; verify `EquipmentViewModel`, `SportTypeViewModel`, and `SportingJourneyViewModel` reload derived stats; verify 1-Hz unfinished live workout updates emit `0` mutation events and `0` historical SQLite re-queries (`REQ-STB-020.4`).
   5. *Architecture, Reflection & Detailed-Design Contracts (`TST-DAT-045.5`)*: Verify `ArchitectureConformanceContractTest` (LoC ceilings & layering), `DetailedDesignParityContractTest`, `AndroidViewModelReflectionContractTest`, and `Repository*CleanlinessContractTest` pass 100%.
 
+### TST-DAT-050: Epic Workout Flag SQLite v32 Migration, Symmetric Mapping & FIT 2.0 Round-Trip Verification (`ATT-9021`) [Verified]
+- **Requirement(s)**: `REQ-DAT-050`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `WorkoutData.kt`, `WorkoutExportHeader.kt`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `EditWorkoutViewModel.kt`, `FitFileWriter.kt`, `ParsedWorkoutData.kt`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`
+- **Jira**: `ATT-9021`
+- **Test Code**:
+  - `WorkoutSummariesEpicMigrationTest.kt`, `WorkoutSummariesRealSqliteMigrationTest.kt`, `SqliteSchemaParityContractTest.kt`, `DatabaseMigrationIndexTest.kt`, `WorkoutSummariesDatabaseManagerMigrationV31Test.kt`, `DatabaseSchemaRegistryParityContractTest.kt`, `WorkoutRpeFeelTest.kt`
+  - `WorkoutDataMappingSymmetryTest.kt`, `EditWorkoutViewModelTest.kt`, `FitLosslessRoundTripTest.kt`, `TcxImportPeriodAndClusterIntegrationTest.kt`, `FitFileWriterTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Verification Evidence**: Verified (`ATT-9021`, `tier-a`, Gate 3 `ATT-9672` PASSED; `120/120` targeted Tier-1 unit, Robolectric SQLite integration & contract tests PASS across 14 suites — `0` fail, `0` err, `0` skip, `0` new compiler warnings; `3/3` safety linters PASS; live `emulator-5554` installDebug & cold boot smoke `CRASH_LOGCAT_CLEAN` confirming live `WorkoutSummaries.db` `user_version = 32` & `epic` column with `Rule 8.5`-inspected `docs/engineering/walkthroughs/img/ATT-9021_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9021/`).
+- **Test Description**:
+  1. *SQLite v31->v32 Real Migration, `onCreate`/`onUpgrade` Parity & Persistence (`TST-DAT-050.1`)*: Verify `WorkoutSummaries.EPIC == "epic"`, `DB_VERSION == 32`, and `DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db") == 32`; seed a real Robolectric SQLite v31 `WorkoutSummaries` table lacking `epic`, execute `onUpgrade(db, 31, 32)`, assert `epic` column exists with `DEFAULT 0`, pre-existing rows read `0`, writing `1` persists, re-running `onUpgrade` is idempotent, `onCreate` vs. upgraded schema parity passes 100%, and `updateWorkoutData` writes `1`/`0`.
+  2. *Domain Model, Cursor Symmetry & `EditWorkoutViewModel.updateIsEpic` (`TST-DAT-050.2`)*: Verify single-item `WorkoutDataMapper.fromCursor` and batch `fromSnapshot`/`fromCursor(cursor, batch)` symmetrically map `epic = true`/`false` (defaulting to `false` when column absent or NULL); verify `WorkoutRepository.getWorkoutExportHeader` and `saveWorkout` preserve `epic`; verify `EditWorkoutViewModel.updateIsEpic(true/false)` combines freely with `race`, `commute`, and `trainer` (preserving `commute`/`trainer` mutual exclusion) and `mergeTelemetryPreservingUserEdits` retains `epic`.
+  3. *Garmin FIT 2.0 `is_epic` (Field 8) Export/Import Round-Trip & Third-Party Compatibility (`TST-DAT-050.3`)*: Export FIT via `FitFileWriter` with `epic = true` (combined with `race = true`) and `epic = false`; parse via `FitWorkoutParser` verifying `ParsedWorkoutData.isEpic` matches (`true`/`false`) while fields `0..7` remain intact; verify third-party/foreign-`APP_ID` FIT files yield `isEpic == false`; verify `LegacyImportEngine.persistParsedWorkout` passes `isEpic` to `WorkoutRepository.insertImportedWorkout` and persists `EPIC = 1` in SQLite.
+  4. *Architecture & Registry Contract Verification (`TST-DAT-050.4`)*: Verify `ArchitectureConformanceContractTest` (LoC ceilings & layering) and `DatabaseSchemaRegistryParityContractTest` pass 100%.
+
 ---
 
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.54` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Promoted `TST-DAT-050` to `[Verified]` (`120/120` targeted Tier-1 unit, Robolectric SQLite migration & contract tests PASS across 14 suites incl. `WorkoutSummariesEpicMigrationTest` `4/4`, `FitLosslessRoundTripTest` `7/7`, `WorkoutDataMappingSymmetryTest` `11/11`, `EditWorkoutViewModelTest` `18/18`, `SqliteSchemaParityContractTest` `6/6`, `DatabaseSchemaRegistryParityContractTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `user_version = 32` + `ATT-9021_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9021/`). |
+| `1.0.53` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Added `[Planned]` `TST-DAT-050` (`TST-DAT-050.1`–`TST-DAT-050.4`, symmetric with `REQ-DAT-050`) covering real Robolectric SQLite v31->v32 migration & `onCreate`/`onUpgrade` parity, `DatabaseSchemaRegistry` v32 sync, `WorkoutDataMapper` single/batch symmetry, `WorkoutRepository` + `EditWorkoutViewModel.updateIsEpic`/`mergeTelemetryPreservingUserEdits`, Garmin FIT 2.0 field 8 (`is_epic`) export/parse/import round-trip + third-party compatibility, and architecture/registry contracts. |
 | `1.0.52` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Promoted `TST-DAT-045` to `[Verified]` (`250/250` targeted Tier-1 unit, Robolectric SQLite integration & contract tests PASS across 54 suites incl. `WorkoutDeletionCascadeIntegrationTest` `4/4`, `AthleteProfileViewModelPmcDeletionTest` `5/5`, `TrackingViewModelMmpTest` `4/4`, `SportTypeViewModelRetiredTest` `3/3`, `WorkoutRepositoryConcurrencyTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, `AndroidViewModelReflectionContractTest`, `SourceTextReadingAuditContractTest`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `ATT-9607_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9607/`). |
 | `1.0.51` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Added `[Planned]` `TST-DAT-045` (`TST-DAT-045.1`–`TST-DAT-045.5`, strictly symmetric with `REQ-DAT-049`) covering end-to-end 7-DB + `.salvage` sidecar cascade, cold-start DB snapshot lookup, synchronous awaited bulk `deleteOldWorkoutsCascade`, `WorkoutClusterRepository` in-memory sync, unhydrated `AthleteProfileViewModel` PMC/Cardio/HRV recalculation, `TrackingViewModel`/`EquipmentViewModel`/`SportTypeViewModel`/`SportingJourneyViewModel` reactive cache invalidation, `REQ-STB-020.4` 1-Hz isolation, and architecture/reflection/detailed-design contracts. |
 | `1.0.50` | 2026-11-23 | Lane 1 Author (`ATT-8135`, `--as agent1`) | `ATT-8135` | Promoted `TST-MIG-061` to `[Verified]` (`386/386` focused Tier-1 unit & contract tests PASS across 70 suites incl. `HrvRmssdCalculatorTest`, `BackupOrchestratorTest`, `BackupStagingReuseTest`, `AutoImportManagerTest`, `BackupImportSecurityTest`, `LegacyImportEngineCloudRecoveryTest`, `TrackpointXmlParserTest`, `TcxLeadingWhitespaceSanitizationTest`, `ArchitectureConformanceContractTest`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `ATT-8135_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8135/`). |

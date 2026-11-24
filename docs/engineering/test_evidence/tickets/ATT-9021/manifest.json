@@ -1,0 +1,25 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "7d9485145fbe8b8d2cced6137034717a76242d28",
+  "files": {
+    "evidence_summary.json": "9993825325fae60387b578ab2b3bc21cf56ec234dbcc09431b3e53cbf02e430b",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "4d1cf959fb7507951d0412bf1052826483765f78fc50bea68b7d6e9f1637a75d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest.xml": "6a5b64cbd53720e5d888a10361ae249b0086b2745147f920cbb910094bdf24be",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.SqliteSchemaParityContractTest.xml": "237b96d82d34dfec5f4d6cfc416adc5c3ae39debc61aee588b488a0928c5c13e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerMigrationV31Test.xml": "64aa816f41298f5dccdcd55bb40064a0fca5527d09b72e528a2550535cd14484",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest.xml": "7afeefac21e541aea92e579ce9cc1cc268760d39c1240111278c9869f582eb99",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest.xml": "b97ec39f9cf168afc5429cce09c45bf9f426b7fc825e11250b289f7637711ebc",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest.xml": "d338a3cccd613d22631c1d441d6fc8bd8d6a3b2e1ffc8099c97b2e471c2dd818",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest.xml": "27ed0147de7f7d5da99fbce3f07dcffe9d0fbc31f69a61b9eb9296ab03e48923",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistryParityContractTest.xml": "848f2bf21ec293cde8bf6df1458b343e611ec81a5dbf9085b1606c12e8655e31",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest.xml": "5b2a46cdf15d58985d9a4bf4aed6896f31509a4208694c081c199c3cf53f845f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest.xml": "68991647825ace3336119c08213f7d1fc2b7d82ba24da89f78cd3bc8c07060fa",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest.xml": "48e3ab5ceda7dd86487e51ec33bb2743bca25d2cf561900c4201fa3944ff137f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest.xml": "9c77c9950b8cc27a0eabb47fb002a3c7d0cc8ba09b27635c724f52ef6cb51e7a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml": "d416e62a1e8714aedd0580241a1882e3568991406d1a01c69e1090527a80cc08",
+    "screenshots/ATT-9021_emulator_smoke.png": "fc79488f1c5f40a88ec1e47b9f5dde34356e5da178f6cd3e61546111f8415367"
+  },
+  "run_started_utc": "2026-11-24T00:23:17.975484+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9021"
+}

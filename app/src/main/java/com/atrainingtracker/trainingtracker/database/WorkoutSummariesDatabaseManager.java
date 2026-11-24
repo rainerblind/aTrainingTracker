@@ -164,6 +164,9 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
         // race (ATT-2005)
         values.put(WorkoutSummaries.RACE, workoutData.getRace() ? 1 : 0);
 
+        // epic (ATT-9021 / REQ-DAT-050.1)
+        values.put(WorkoutSummaries.EPIC, workoutData.getEpic() ? 1 : 0);
+
         // rpe and feel (ATT-6879)
         if (workoutData.getRpe() != null) {
             values.put(WorkoutSummaries.RPE, workoutData.getRpe());
@@ -2414,6 +2417,7 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
         public static final String POLAR_EXPECTED_START_MS = "polarExpectedStartMs"; // added in Version 31 (ATT-7919)
         public static final String POLAR_EXPECTED_END_MS = "polarExpectedEndMs"; // added in Version 31 (ATT-7919)
         public static final String POLAR_SYNC_PENDING = "polarSyncPending"; // added in Version 31 (ATT-7919)
+        public static final String EPIC = "epic"; // added in Version 32 (ATT-9021 / REQ-DAT-050.1)
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -2501,7 +2505,8 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
         // public static final int DB_VERSION = 28; // 08.11.2026 Added recordingErrors column (ATT-5886)
         // public static final int DB_VERSION = 29; // 10.11.2026 Added cardio_power_dynamics table (ATT-3904)
         // public static final int DB_VERSION = 30; // 11.11.2026 Added rpe and feel columns (ATT-6879)
-        public static final int DB_VERSION = 31; // 15.11.2026 Added Polar H10 retry sync pending columns (ATT-7919)
+        // public static final int DB_VERSION = 31; // 15.11.2026 Added Polar H10 retry sync pending columns (ATT-7919)
+        public static final int DB_VERSION = 32; // 23.11.2026 Added epic workout flag column (ATT-9021 / REQ-DAT-050.1)
         
 
 
@@ -2551,7 +2556,8 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 + WorkoutSummaries.POLAR_EXERCISE_ID + " text, "  // added in Version 31 (ATT-7919)
                 + WorkoutSummaries.POLAR_EXPECTED_START_MS + " int DEFAULT 0, "  // added in Version 31 (ATT-7919)
                 + WorkoutSummaries.POLAR_EXPECTED_END_MS + " int DEFAULT 0, "  // added in Version 31 (ATT-7919)
-                + WorkoutSummaries.POLAR_SYNC_PENDING + " int DEFAULT 0)";  // added in Version 31 (ATT-7919)
+                + WorkoutSummaries.POLAR_SYNC_PENDING + " int DEFAULT 0, "  // added in Version 31 (ATT-7919)
+                + WorkoutSummaries.EPIC + " int DEFAULT 0)";  // added in Version 32 (ATT-9021)
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -2915,6 +2921,11 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_EXPECTED_START_MS, "int", "0");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_EXPECTED_END_MS, "int", "0");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.POLAR_SYNC_PENDING, "int", "0");
+            }
+
+            if (oldVersion < 32) {
+                Log.i(TAG, "upgrading to DB version 32 (Adding epic column)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.EPIC, "int", "0");
             }
         }
 
