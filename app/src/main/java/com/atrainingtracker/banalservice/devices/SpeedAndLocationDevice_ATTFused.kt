@@ -1326,7 +1326,8 @@ open class SpeedAndLocationDevice_ATTFused(
         }
         if (!shouldTick) return
         val event = com.atrainingtracker.banalservice.odometry.MultisportTransitionBridge.evaluateAndDispatch(
-            mContext, multisportDetector, mode, kinematicSport, timestampNormalizer.toWallClockEpochMs(timestampMs)
+            mContext, multisportDetector, mode, kinematicSport, timestampNormalizer.toWallClockEpochMs(timestampMs),
+            carriageClassifier.hasActiveRunFootstrike(timestampMs)
         )
         if (event != null) handleSportTypeChanged(timestampMs)
     }

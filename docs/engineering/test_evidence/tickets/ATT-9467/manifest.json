@@ -1,0 +1,17 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "e64564a874b55ab1bb22046984f5f933be0efa2f",
+  "files": {
+    "evidence_summary.json": "7a64df659819ed7f82915517fceed9c19242157d5b928bb6b8b3d5b1515d5083",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceMultisportTransitionTest.xml": "31eb8267098731b242795e4d9b3b9aed34e7897d47a7ba41f872409a301c9675",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml": "febd579cedddeff3bb03a07bcb1b42f72337245bb24ba2efd1f80e2e220ce0b5",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml": "a33593a01c3373ccb25da3363cda6c5e48e4df26d23c6e1af3c2cc92885d6467",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest.xml": "570e279b143a37d72ef8a0f8232c044ff752614bd0373e364f434ea37d760aa4",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml": "1788fa6e8205fc99f63890eee87e0ec1ef60afec91f71dbf8bfbff00747e204d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml": "77b5b809a5c852e53316fd1d985299433b5524ad220b790059c6077a9ed21a9f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest.xml": "765ef2796ad49e4f3bd224e71e9ce097ba1fc1231a59ca6db28775436b2047c7"
+  },
+  "run_started_utc": "2026-11-24T05:33:21.232151+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9467"
+}

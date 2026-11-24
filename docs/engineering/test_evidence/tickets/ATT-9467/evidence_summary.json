@@ -1,0 +1,61 @@
+{
+  "android_test_summary": {
+    "details": "Failed Android test(s): com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds, com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod",
+    "failing_tests": [
+      "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+      "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod"
+    ],
+    "passed": false,
+    "ran": 103
+  },
+  "checks": [
+    {
+      "details": "Android: Failed Android test(s): com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds, com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod | Python: No Python tests selected.",
+      "failing_tests": [
+        "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds",
+        "com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.classMethod"
+      ],
+      "name": "dependent_unit_tests",
+      "passed": false
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11827 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "e64564a874b55ab1bb22046984f5f933be0efa2f",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceMultisportTransitionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.MeasuredNfrBenchmarkTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T05:33:21.232151+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-9467",
+  "ui_touching": false,
+  "verdict": "FAIL"
+}

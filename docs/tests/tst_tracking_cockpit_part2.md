@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.26  
+**Version**: 1.0.29  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 99
+**Total Tests**: 100
 
 ---
 
@@ -2131,6 +2131,22 @@
 
 ---
 
+### TST-FIL-044: **False `RUN_HANDHELD` Suppression & Multisport `RUN` Kinematic/Footstrike Guardrails Verification (`ATT-9467`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-044` (`REQ-FIL-044.1`, `REQ-FIL-044.2`, `REQ-FIL-044.3`)
+- **Component**: `PhoneCarriageClassifier.kt`, `MultisportTransitionDetector.kt`, `MultisportTransitionBridge.kt`, `SpeedAndLocationDevice_ATTFused.kt`
+- **Jira**: `ATT-9467` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `PhoneCarriageClassifierTest#testCyclingStartPhoneHandlingAndZeroStrideErrandRoll_neverEmitRunHandheld_TST_FIL_044_1`, `PhoneCarriageClassifierTest#testTriathlonT2SlowJoggerWithHandheldGlance_crossDeviceHardwareAndAccelFootstrikes_TST_FIL_044_2`, `MultisportTransitionDetectorTest#testRunEstablishmentAndBikeToRunGuardrails_blockLowSpeedAndZeroStrideRollsWhilePreservingSlowT2_TST_FIL_044_3`
+- **Test Description**:
+  1. *Cycling Start Phone Handling & Zero-Stride Errand Roll Replay (`TST-FIL-044.1` — `PhoneCarriageClassifierTest#testCyclingStartPhoneHandlingAndZeroStrideErrandRoll_neverEmitRunHandheld_TST_FIL_044_1`)*:
+     • Reproduce `2026-11-21_081228` `rows 1..25` (phone-handling + `glanceCount >= 1` + brief `acc > 15 m` GNSS spike `5.71..7.46..5.89 m/s` + `0.32..0.75 m/s` bike-pushing with `0` steps & non-pendulum handling) and `rows 310..340` (`Metzger -> Bank` `47.8 m` roll at `2.0..4.0 m/s` for `19 s` with phone glance & `0–1` steps, across both `stepDetectorRegistered = true` and `false` + 50-Hz non-footstrike accel, with and without barometer); assert `0` ticks emit `RUN_HANDHELD` (or any `RUN_*`), low-speed pushing resolves to `WALKING_TRANSITION`, rolling resolves to `BIKE_*`, `< 2 s` cold-start glance without accel warmup never overrides `BIKE_FRONT_POCKET`, and `hasActiveRunFootstrike()` returns `false` on fresh classifier, post-`reset()`, and explicit `Long.MIN_VALUE` without signed underflow.
+  2. *Cross-Device Genuine Triathlon `T2` Slow Jogger & Handheld Glance Preservation (`TST-FIL-044.2` — `PhoneCarriageClassifierTest#testTriathlonT2SlowJoggerWithHandheldGlance_crossDeviceHardwareAndAccelFootstrikes_TST_FIL_044_2`)*:
+     • Verify genuine `T2` dismount (`BIKE_FRONT_POCKET -> WALKING_TRANSITION -> RUN`) for a slow jogger (`2.0 m/s`, `2.55 Hz` / `153 spm`, incl. wrist glance to `RUN_HANDHELD`) across 4 device profiles (hardware `TYPE_STEP_DETECTOR` vs permission-free 50-Hz accel footstrikes, with and without barometer, under `UNKNOWN` and `CYCLING` hints); assert `hasActiveRunFootstrike() == true`, `RUN_HANDHELD` / `RUN_*` commits cleanly, and existing `Sport = RUN` & trail-batching tests remain green.
+  3. *`MultisportTransitionDetector` Bounded Trailing Sliding-Window `RUN` Guardrails (`TST-FIL-044.3` — `MultisportTransitionDetectorTest#testRunEstablishmentAndBikeToRunGuardrails_blockLowSpeedAndZeroStrideRollsWhilePreservingSlowT2_TST_FIL_044_3`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`)*:
+     • Verify directly and coupled with `PhoneCarriageClassifier` that: (a) `rows 1..25` (`0.46 m/s`, `10.9 m`, `0` footstrikes) & direct low-speed `RUN_HANDHELD` injection never lock `establishedSport = RUN` and emit `0` `Laufen -> Rad` splits; (b) `rows 310..340` (`47.8 m` roll at `2.0..4.0 m/s`, `19 s`, `0` footstrikes, `kinematicSport = BIKE`, `hasActiveRunFootstrike = false` or `null`) emits `0` `BIKE -> RUN` transitions; (c) Phase 1 & Phase 2 corroboration-dilution immunity (`60 s` uncorroborated zero-stride roll followed by brief `5 s` noise burst) emits `0` `RUN` establishment or `BIKE -> RUN` transitions; (d) Phase 2 post-low-speed recovery (`15 s` slow `0.5 m/s` ticks followed by `15 s` real `2.0 m/s` `T2` jog) confirms cleanly at `+15 s` of real jogging with `enterAnchor` anchored to the qualifying jog start and `exitAnchor` preserved intact (plus Phase 1 slow-start recovery & mid-confirm pause); (e) `NaN`/negative distance deltas and zero-duration (`windowActiveSec == 0.0`) ticks are guarded safely, `reset()` clears sliding windows, `@JvmStatic @JvmOverloads` 5/6-arg bridge compatibility holds, all touched files stay `<= 1,500` LoC, and `100%` of adjacent `ATTFused`/multisport/replay/contract suites pass (`Localization Parity: N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2279,3 +2295,6 @@
 | `1.0.24` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Added `[Planned]` `TST-FIL-043` (`.1`–`.3`, strictly symmetric `REQ-FIL-043`) covering Bank-stop departure continuous non-stationary dwell & `<= 1 s` fast exit, barometer-free/wheel-free/wheel-active/rigid-handlebar portability, indoor `acc > 20 m` multipath & stagnant-position spike immunity, lagged-timestamp monotonic guard, and `PhoneCarriageClassifier.kt <= 1,500` LoC (`N/A - 0 string changes`). |
 | `1.0.25` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Gate 3 (`ATT-9674`) revision on `[Planned]` `TST-FIL-043`: expanded verification to cover invalid `accuracyMeters` (`Double.NaN`, `±Infinity`, `0.0`, `-1.0`) vs omitted `null` compatibility, empty/stale `positionSamples` behavior, non-poisoning of `isPositionStagnant(nowMs)` by coarse/invalid coordinate jumps, `UNKNOWN`-gap `nonStationarySinceMs` reset, and post-exit `candidateMode`/`candidateSinceMs` sync. |
 | `1.0.26` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Promoted `TST-FIL-043` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`149/149` PASS across `12` targeted suites: `PhoneCarriageClassifierTest` `19/19`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `MultisportTransitionDetectorTest` `10/10`, `BANALServiceMultisportTransitionTest` `4/4`, `KinematicSportTypeDiscriminatorTest` `6/6`, `OfflineTelemetryReplayHarnessTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; `3/3` safety linters PASS; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9469/`). |
+| `1.0.27` | 2026-11-24 | Lane 1 Author (`ATT-9467`, `--as agent1`) | `ATT-9467` | Added `[Planned]` `TST-FIL-044` (`.1`–`.3`, strictly symmetric `REQ-FIL-044`) covering `2026-11-21_081228` `rows 1..25` start phone-handling/bike-pushing & `rows 310..340` `Metzger -> Bank` zero-stride roll replay, cross-device `T2` slow `2.0 m/s` jogger + handheld glance preservation, `MultisportTransitionDetector` `RUN` establishment & `BIKE -> RUN` kinematic/corroboration guardrails, and `<= 1,500` LoC / contract parity (`N/A - 0 string changes`). |
+| `1.0.28` | 2026-11-24 | Lane 1 Author (`ATT-9467`, `--as agent1`) | `ATT-9467` | Gate 3 (`ATT-9678`) revision on `[Planned]` `TST-FIL-044`: added fresh/`reset()`/`Long.MIN_VALUE` underflow assertions for `hasActiveRunFootstrike()`, Phase 1/2 `60 s + 5 s` corroboration-dilution immunity tests, Phase 2 `15 s` slow-start -> `15 s` `2.0 m/s` `T2` recovery test verifying qualifying-head `enterAnchor` & intact `exitAnchor`, zero-duration `windowActiveSec == 0.0` guard, and `@JvmStatic @JvmOverloads` 5/6-arg bridge verification. |
+| `1.0.29` | 2026-11-24 | Lane 1 Author (`ATT-9467`, `--as agent1`) | `ATT-9467` | Promoted `TST-FIL-044` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`119/119` PASS across `10` targeted suites: `PhoneCarriageClassifierTest` `21/21`, `MultisportTransitionDetectorTest` `11/11`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `BANALServiceMultisportTransitionTest` `4/4`, `MultisportLapCoordinatorTest` `7/7`, `KinematicSportTypeDiscriminatorTest` `6/6`, `OfflineTelemetryReplayHarnessTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9467/`). |
