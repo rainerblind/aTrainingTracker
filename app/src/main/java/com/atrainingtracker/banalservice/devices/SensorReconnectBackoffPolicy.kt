@@ -23,10 +23,10 @@ import com.atrainingtracker.trainingtracker.settings.SensorSearchSettings
 
 /**
  * Shared exponential backoff schedule for BLE / Polar / DeviceManager reconnect & periodic re-search
- * (ATT-8965, REQ-CON-052.1).
+ * of lost/MIA sensors (ATT-8965, ATT-9178, REQ-CON-052.1).
  *
- * Sequence when periodic re-search is enabled (default final period 5 min = 300,000 ms):
- * `1s -> 2s -> 4s -> 8s -> 16s -> 32s -> 64s -> 128s (~2 min) -> <finalPeriodMs>`
+ * Sequence when periodic re-search is enabled (presets `15s / 30s / 1m / 2m`, default `1m = 60,000 ms`):
+ * `1s -> 2s -> 4s -> 8s -> 16s -> 32s -> 64s -> 120s` capped at `<finalPeriodMs>`.
  *
  * When periodic re-search is disabled, delays cap cleanly at [LEGACY_FAST_MAX_DELAY_MS] (16,000 ms)
  * matching `MyBTLEDevice.MAX_RECONNECT_DELAY_MS` (`SYSREQ-TRK-002`).
@@ -36,7 +36,7 @@ object SensorReconnectBackoffPolicy {
     const val LEGACY_FAST_MAX_DELAY_MS = 16_000L
     const val INITIAL_PERIODIC_RESEARCH_DELAY_MS = 32_000L
     const val EXTENDED_DOUBLING_CEILING_MS = 128_000L
-    const val DEFAULT_FINAL_PERIOD_MS = 300_000L
+    const val DEFAULT_FINAL_PERIOD_MS = 60_000L
 
     /**
      * Clamps [currentDelayMs] immediately against the live settings ceiling (`16,000 ms` when

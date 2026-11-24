@@ -45,8 +45,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Behavioral Compose UI tests for [SearchSettingsDialog] verifying periodic re-search toggle,
- * final steady-state period selection, disabled state, and SharedPreferences persistence
- * (`ATT-8965`, `REQ-CON-052.3`, `TST-CON-052.3`, `REQ-PRO-132`).
+ * `15s/30s/1m/2m` steady-state period selection, legacy `300/600` clamping, disabled state, and
+ * SharedPreferences persistence (`ATT-8965`, `ATT-9178`, `REQ-CON-052.3`, `TST-CON-052.3`, `REQ-PRO-132`).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -65,7 +65,7 @@ class SearchSettingsDialogTest {
     }
 
     @Test
-    fun testDefaultRender_selectsFiveMinutes_andPersistsPeriodChangeOnSave() {
+    fun testDefaultRender_selectsOneMinute_andPersistsPeriodChangeOnSave() {
         var dismissed = false
         composeRule.setContent {
             ATrainingTrackerTheme {
@@ -75,15 +75,34 @@ class SearchSettingsDialogTest {
 
         composeRule.onNodeWithTag("periodic_research_toggle").performScrollTo()
         composeRule.onNodeWithText(context.getString(R.string.prefs_periodic_research_enabled_title)).assertExists()
-        composeRule.onNodeWithTag("periodic_research_period_300").performScrollTo().assertIsSelected().assertIsEnabled()
+        composeRule.onNodeWithTag("periodic_research_period_15").performScrollTo().assertIsEnabled()
+        composeRule.onNodeWithTag("periodic_research_period_30").assertIsEnabled()
+        composeRule.onNodeWithTag("periodic_research_period_60").assertIsSelected().assertIsEnabled()
+        composeRule.onNodeWithTag("periodic_research_period_120").assertIsEnabled()
 
-        composeRule.onNodeWithTag("periodic_research_period_120").performClick()
-        composeRule.onNodeWithTag("periodic_research_period_120").assertIsSelected()
+        composeRule.onNodeWithTag("periodic_research_period_30").performClick()
+        composeRule.onNodeWithTag("periodic_research_period_30").assertIsSelected()
 
         composeRule.onNodeWithText(context.getString(R.string.save)).performClick()
         assertTrue(dismissed)
         assertTrue(SensorSearchSettings.isPeriodicResearchEnabled(context))
-        assertEquals(120, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+        assertEquals(30, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+    }
+
+    @Test
+    fun testLegacyPersisted300Or600_clampsToTwoMinutesInSelector() {
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .edit()
+            .putInt(SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 600)
+            .commit()
+
+        composeRule.setContent {
+            ATrainingTrackerTheme {
+                SearchSettingsDialog(onDismiss = {})
+            }
+        }
+
+        composeRule.onNodeWithTag("periodic_research_period_120").performScrollTo().assertIsSelected().assertIsEnabled()
     }
 
     @Test
@@ -95,8 +114,9 @@ class SearchSettingsDialogTest {
         }
 
         composeRule.onNodeWithTag("periodic_research_toggle").performScrollTo().performClick()
-        composeRule.onNodeWithTag("periodic_research_period_300").performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag("periodic_research_period_15").performScrollTo().assertIsNotEnabled()
         composeRule.onNodeWithTag("periodic_research_period_60").assertIsNotEnabled()
+        composeRule.onNodeWithTag("periodic_research_period_120").assertIsNotEnabled()
 
         composeRule.onNodeWithText(context.getString(R.string.save)).performClick()
         assertFalse(SensorSearchSettings.isPeriodicResearchEnabled(context))

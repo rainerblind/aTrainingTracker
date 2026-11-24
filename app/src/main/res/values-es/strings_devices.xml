@@ -209,15 +209,15 @@
     <string name="carriage_mode_run_bicep_arm">Carrera (Brazalete)</string>
     <string name="carriage_mode_run_handheld">Carrera (En mano)</string>
 
-    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, REQ-CON-052.3) -->
+    <!-- Extended Periodic Sensor Re-Search & Backoff (ATT-8965, ATT-9178, REQ-CON-052.3) -->
     <string name="prefs_periodic_research_enabled_title">Rebúsqueda periódica a largo plazo</string>
-    <string name="prefs_periodic_research_enabled_summary">Reintentar automáticamente sensores desconectados con intervalos crecientes</string>
+    <string name="prefs_periodic_research_enabled_summary">Reintentar automáticamente sensores perdidos que estuvieron conectados en esta sesión con intervalos crecientes</string>
     <string name="prefs_periodic_research_final_period_title">Intervalo final de rebúsqueda</string>
-    <string name="prefs_periodic_research_final_period_summary">Intervalo máximo tras los pasos de espera (16s → 32s → 64s → 2 min)</string>
+    <string name="prefs_periodic_research_final_period_summary">Intervalo máximo tras los pasos de espera (1s → 2s → 4s → … → 2 min)</string>
+    <string name="prefs_research_period_15s">15 s</string>
+    <string name="prefs_research_period_30s">30 s</string>
     <string name="prefs_research_period_1m">1 min</string>
     <string name="prefs_research_period_2m">2 min</string>
-    <string name="prefs_research_period_5m">5 min</string>
-    <string name="prefs_research_period_10m">10 min</string>
 
     <!-- Wheel Circumference Auto-Calibration & History (ATT-8422, REQ-SEN-033) -->
     <string name="devices_wheel_circumference_auto_hint">Tamaño inicial de neumático para sensores nuevos — calibrado automáticamente por GNSS durante las salidas.</string>

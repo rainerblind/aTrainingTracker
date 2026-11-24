@@ -310,11 +310,12 @@ class DeviceManagerSearchQueueTest {
 
     /**
      * TST-CON-052.2: When periodic re-search is enabled (default), tries <= 1 exhaustion retains
-     * offline sensor and schedules extended backoff re-enqueue (32s -> 64s -> ... -> 5m) while still
-     * advancing the active queue immediately (REQ-CON-051).
+     * a previously connected MIA sensor (hasConnectedInSession() == true) and schedules extended
+     * backoff re-enqueue (32s -> 60s default) while advancing the active queue immediately (REQ-CON-051),
+     * whereas a never-connected sensor gives up cleanly with 0 timers.
      */
     @Test
-    fun testTriesExhausted_whenPeriodicResearchEnabled_retainsDeviceAndSchedulesBackoffReenqueue() {
+    fun testTriesExhausted_whenPeriodicResearchEnabled_retainsOnlyMiaDeviceAndGivesUpNeverConnected() {
         val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
         val scheduled = mutableListOf<Pair<Long, Runnable>>()
         deviceManager.periodicRetryCoordinator.setSchedulerForTesting(
@@ -322,12 +323,21 @@ class DeviceManagerSearchQueueTest {
             cancelScheduled = {}
         )
 
-        val polarSensor = mockk<MyRemoteDevice>(relaxed = true)
-        every { polarSensor.deviceId } returns 301L
-        every { polarSensor.deviceType } returns DeviceType.HRM
-        every { polarSensor.shouldKeepAliveOnSearchTimeout() } returns false
-        every { polarSensor.isReceivingData } returns false
-        every { polarSensor.isSearching } returns false
+        val neverConnectedSensor = mockk<MyRemoteDevice>(relaxed = true)
+        every { neverConnectedSensor.deviceId } returns 300L
+        every { neverConnectedSensor.deviceType } returns DeviceType.HRM
+        every { neverConnectedSensor.shouldKeepAliveOnSearchTimeout() } returns false
+        every { neverConnectedSensor.hasConnectedInSession() } returns false
+        every { neverConnectedSensor.isReceivingData } returns false
+        every { neverConnectedSensor.isSearching } returns false
+
+        val miaSensor = mockk<MyRemoteDevice>(relaxed = true)
+        every { miaSensor.deviceId } returns 301L
+        every { miaSensor.deviceType } returns DeviceType.HRM
+        every { miaSensor.shouldKeepAliveOnSearchTimeout() } returns false
+        every { miaSensor.hasConnectedInSession() } returns true
+        every { miaSensor.isReceivingData } returns false
+        every { miaSensor.isSearching } returns false
 
         val nextDevice = mockk<MyRemoteDevice>(relaxed = true)
         every { nextDevice.deviceId } returns 302L
@@ -336,27 +346,39 @@ class DeviceManagerSearchQueueTest {
         every { nextDevice.isSearching } returns false
 
         val devicesMap = getRemoteDevicesMap(deviceManager)
-        devicesMap[301L] = polarSensor
+        devicesMap[300L] = neverConnectedSensor
+        devicesMap[301L] = miaSensor
         devicesMap[302L] = nextDevice
 
-        setCurrentlySearching(deviceManager, polarSensor)
-        setDeviceTries(deviceManager, polarSensor, 1)
+        setCurrentlySearching(deviceManager, neverConnectedSensor)
+        setDeviceTries(deviceManager, neverConnectedSensor, 1)
+        setDeviceTries(deviceManager, miaSensor, 1)
         deviceManager.searchQueue.clear()
+        deviceManager.searchQueue.addLast(miaSensor)
         deviceManager.searchQueue.addLast(nextDevice)
 
+        // 1. Never-connected sensor A exhausts tries -> shuts down & removed with ZERO periodic timers
+        val neverTimeout = mockk<Intent>()
+        every { neverTimeout.getLongExtra(BANALService.DEVICE_ID, -1) } returns 300L
+        every { neverTimeout.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
+        deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, neverTimeout)
+
+        verify(exactly = 1) { neverConnectedSensor.shutDown() }
+        assertEquals(false, devicesMap.containsKey(300L))
+        assertEquals(0, scheduled.size)
+        assertSame(miaSensor, deviceManager.currentlySearchingForRemoteDevice)
+
+        // 2. MIA sensor B exhausts tries -> retained & schedules 32s retry while advancing to nextDevice
         val timeoutIntent = mockk<Intent>()
         every { timeoutIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns 301L
         every { timeoutIntent.getBooleanExtra(BANALService.SEARCHING_FINISHED_SUCCESS, false) } returns false
-
         deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, timeoutIntent)
 
-        // Queue advances to nextDevice cleanly without shutting down polarSensor
-        verify(exactly = 0) { polarSensor.shutDown() }
+        verify(exactly = 0) { miaSensor.shutDown() }
         assertTrue(devicesMap.containsKey(301L))
         assertSame(nextDevice, deviceManager.currentlySearchingForRemoteDevice)
         verify(exactly = 1) { nextDevice.startSearching() }
 
-        // First periodic re-search scheduled at 32s
         assertEquals(1, scheduled.size)
         assertEquals(32_000L, scheduled[0].first)
 
@@ -367,19 +389,20 @@ class DeviceManagerSearchQueueTest {
         deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, nextDone)
         assertEquals(null, deviceManager.currentlySearchingForRemoteDevice)
 
-        // Fire periodic retry -> polarSensor is re-enqueued and started; next exhaustion steps to 64s
+        // Fire periodic retry -> miaSensor is re-enqueued and started; next exhaustion steps to 60s (1m default)
         scheduled[0].second.run()
-        assertSame(polarSensor, deviceManager.currentlySearchingForRemoteDevice)
-        verify(exactly = 1) { polarSensor.startSearching() }
+        assertSame(miaSensor, deviceManager.currentlySearchingForRemoteDevice)
+        verify(exactly = 2) { miaSensor.startSearching() }
 
         deviceManager.searchingStoppedForOneReceiver.onReceive(mockBanalService, timeoutIntent)
         assertEquals(2, scheduled.size)
-        assertEquals(64_000L, scheduled[1].first)
+        assertEquals(60_000L, scheduled[1].first)
     }
 
     /**
-     * ATT-8965 Bounce 2: If periodic re-search is disabled while a retry timer is pending, firing
-     * the runnable MUST clean up delay state, invoke shutDown(), and remove the zombie device from mMyRemoteDevices.
+     * ATT-8965 Bounce 2 / ATT-9178: If periodic re-search is disabled while a retry timer is pending
+     * for a lost/MIA device, firing the runnable MUST clean up delay state, invoke shutDown(), and
+     * remove the zombie device from mMyRemoteDevices.
      */
     @Test
     fun testTriesExhausted_whenDisabledWhileRetryPending_givesUpAndRemovesZombieDevice() {
@@ -397,16 +420,17 @@ class DeviceManagerSearchQueueTest {
             cancelScheduled = {}
         )
 
-        val offlineSensor = mockk<MyRemoteDevice>(relaxed = true)
-        every { offlineSensor.deviceId } returns 401L
-        every { offlineSensor.deviceType } returns DeviceType.HRM
-        every { offlineSensor.shouldKeepAliveOnSearchTimeout() } returns false
-        every { offlineSensor.isReceivingData } returns false
+        val miaSensor = mockk<MyRemoteDevice>(relaxed = true)
+        every { miaSensor.deviceId } returns 401L
+        every { miaSensor.deviceType } returns DeviceType.HRM
+        every { miaSensor.shouldKeepAliveOnSearchTimeout() } returns false
+        every { miaSensor.hasConnectedInSession() } returns true
+        every { miaSensor.isReceivingData } returns false
 
         val devicesMap = getRemoteDevicesMap(deviceManager)
-        devicesMap[401L] = offlineSensor
-        setCurrentlySearching(deviceManager, offlineSensor)
-        setDeviceTries(deviceManager, offlineSensor, 1)
+        devicesMap[401L] = miaSensor
+        setCurrentlySearching(deviceManager, miaSensor)
+        setDeviceTries(deviceManager, miaSensor, 1)
 
         val timeoutIntent = mockk<Intent>()
         every { timeoutIntent.getLongExtra(BANALService.DEVICE_ID, -1) } returns 401L
@@ -420,9 +444,44 @@ class DeviceManagerSearchQueueTest {
         enabled = false
         scheduled[0].second.run()
 
-        verify(exactly = 1) { offlineSensor.shutDown() }
+        verify(exactly = 1) { miaSensor.shutDown() }
         assertEquals(false, devicesMap.containsKey(401L))
-        verify(exactly = 0) { offlineSensor.startSearching() }
+        verify(exactly = 0) { miaSensor.startSearching() }
+    }
+
+    /**
+     * TST-CON-052.2 (ATT-9178): DeviceManager eagerly constructs mPeriodicRetryCoordinator capturing
+     * mid-workout TRACKING mode; on TRACKING -> READY broadcast, pending retries cancel and
+     * resetSessionConnectionState() runs strictly on disconnected MIA devices while live sensors remain untouched.
+     */
+    @Test
+    fun testWorkoutEndTrackingStateChanged_constructedMidWorkout_resetsDisconnectedMiaAndPreservesConnected() {
+        every { TrainingApplication.getTrackingMode() } returns com.atrainingtracker.trainingtracker.TrackingMode.TRACKING
+        every { TrainingApplication.getNumberOfSearchTries() } returns 3
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+
+        val disconnectedMia = mockk<MyRemoteDevice>(relaxed = true)
+        every { disconnectedMia.deviceId } returns 501L
+        every { disconnectedMia.isReceivingData } returns false
+        val liveConnected = mockk<MyRemoteDevice>(relaxed = true)
+        every { liveConnected.deviceId } returns 502L
+        every { liveConnected.isReceivingData } returns true
+
+        val devicesMap = getRemoteDevicesMap(deviceManager)
+        devicesMap[501L] = disconnectedMia
+        devicesMap[502L] = liveConnected
+
+        // Trigger TRACKING -> READY via mTrackingStateChangedReceiver
+        every { TrainingApplication.getTrackingMode() } returns com.atrainingtracker.trainingtracker.TrackingMode.READY
+        val receiverField = DeviceManager::class.java.getDeclaredField("mTrackingStateChangedReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(deviceManager) as android.content.BroadcastReceiver
+        setCurrentlySearching(deviceManager, liveConnected) // prevent startSearchForPairedDevices DB queries
+        receiver.onReceive(mockBanalService, mockk(relaxed = true))
+
+        verify(exactly = 1) { disconnectedMia.resetSessionConnectionState() }
+        verify(exactly = 0) { liveConnected.resetSessionConnectionState() }
+        setCurrentlySearching(deviceManager, null)
     }
 
     /**

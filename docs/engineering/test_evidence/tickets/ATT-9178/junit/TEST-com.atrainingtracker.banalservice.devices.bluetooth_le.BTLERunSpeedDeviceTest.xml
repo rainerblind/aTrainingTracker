@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:57:33.519Z" hostname="rainer-HP-EliteBook-850-G5" time="3.427">
+  <properties/>
+  <testcase name="testUnregisterSensors_resetsSpeedAndTimestamp" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.676"/>
+  <testcase name="testDistanceCalculator_packetTimeoutGating_suppressesStaleSpeedAccumulation" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.671"/>
+  <testcase name="testFieldShadowing_noShadowAddressOrTotalDistance" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.706"/>
+  <testcase name="testMeasurementCharacteristicUpdate_recordsTimestampAndSpeed" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.684"/>
+  <testcase name="testShutDown_cancelsHandleAndShutsDownScheduler" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.69"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningSectionTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-24T17:00:35.209Z" hostname="rainer-HP-EliteBook-850-G5" time="0.504">
+  <properties/>
+  <testcase name="testPeriodicResearchControls_selectAndDisableUpdatePreferences" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningSectionTest" time="0.504"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

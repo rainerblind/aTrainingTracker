@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.MySensorManagerHrvPriorityTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:59:47.041Z" hostname="rainer-HP-EliteBook-850-G5" time="0.82">
+  <properties/>
+  <testcase name="testBestSensorResolution_remainsOnHrvMetricsEvenWhenHrmRegistersFirst_TST_HRV_050_1" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerHrvPriorityTest" time="0.622"/>
+  <testcase name="testHrvPriorityArray_prefersHrvMetricsOverHrmForAllFourHrvTypes_TST_HRV_050_1" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerHrvPriorityTest" time="0.197"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

@@ -341,11 +341,11 @@ private fun PeriodicResearchFinalPeriodSelector(
 
 @Composable
 private fun periodOptionLabel(periodSec: Int): String = when (periodSec) {
+    15 -> stringResource(R.string.prefs_research_period_15s)
+    30 -> stringResource(R.string.prefs_research_period_30s)
     60 -> stringResource(R.string.prefs_research_period_1m)
     120 -> stringResource(R.string.prefs_research_period_2m)
-    300 -> stringResource(R.string.prefs_research_period_5m)
-    600 -> stringResource(R.string.prefs_research_period_10m)
-    else -> stringResource(R.string.prefs_research_period_5m)
+    else -> stringResource(R.string.prefs_research_period_1m)
 }
 
 @Composable

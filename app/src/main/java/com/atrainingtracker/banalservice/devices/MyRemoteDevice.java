@@ -53,6 +53,7 @@ public abstract class MyRemoteDevice extends MyDevice {
         }
     };
     private volatile boolean mSearching = false;
+    private volatile boolean mEverConnectedInSession = false;
 
     public MyRemoteDevice(Context context, MySensorManager mySensorManager, DeviceType deviceType, long deviceId) {
         super(context, mySensorManager, deviceType);
@@ -85,6 +86,9 @@ public abstract class MyRemoteDevice extends MyDevice {
     protected void notifyStopSearching(boolean success) {
         myLog("notifyStopSearching(" + success + ")");
         mSearching = false;
+        if (success) {
+            mEverConnectedInSession = true;
+        }
         mContext.sendBroadcast(addSearchDetails(new Intent(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT))
                 .putExtra(BANALService.SEARCHING_FINISHED_SUCCESS, success)
                 .setPackage(mContext.getPackageName()));
@@ -93,6 +97,28 @@ public abstract class MyRemoteDevice extends MyDevice {
 
     public boolean isSearching() {
         return mSearching;
+    }
+
+    /**
+     * Returns {@code true} if this sensor has connected at least once during the current session
+     * and is therefore eligible for lost/MIA periodic re-search ({@code REQ-CON-052.2}).
+     */
+    public boolean hasConnectedInSession() {
+        return mEverConnectedInSession;
+    }
+
+    protected void markConnectedInSession() {
+        mEverConnectedInSession = true;
+    }
+
+    /**
+     * Clears disconnected session-connected tracking and cancels background reconnect timers on
+     * workout end while preserving actively connected devices ({@code REQ-CON-052.2}).
+     */
+    public void resetSessionConnectionState() {
+        if (!isReceivingData()) {
+            mEverConnectedInSession = false;
+        }
     }
 
     /**
@@ -117,6 +143,7 @@ public abstract class MyRemoteDevice extends MyDevice {
     @Override
     public void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown()");
+        mEverConnectedInSession = false;
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mCalibrationFactorChangedReceiver, TAG);
         super.shutDown();

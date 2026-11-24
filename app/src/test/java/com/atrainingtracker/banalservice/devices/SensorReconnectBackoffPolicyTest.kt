@@ -33,7 +33,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Unit tests for [SensorReconnectBackoffPolicy] and [SensorSearchSettings]
- * (`ATT-8965`, `REQ-CON-052.1`, `REQ-CON-052.3`, `TST-CON-052.1`).
+ * (`ATT-8965`, `ATT-9178`, `REQ-CON-052.1`, `REQ-CON-052.3`, `TST-CON-052.1`).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -48,10 +48,10 @@ class SensorReconnectBackoffPolicyTest {
     }
 
     @Test
-    fun testBackoffSequence_defaultFiveMinutes_progressesThroughTwoMinutesAndCapsAtFiveMinutes() {
+    fun testBackoffSequence_defaultOneMinute_progressesAndCapsAtSixtySeconds() {
         val observed = mutableListOf(SensorReconnectBackoffPolicy.INITIAL_DELAY_MS)
         var delay = SensorReconnectBackoffPolicy.INITIAL_DELAY_MS
-        repeat(9) {
+        repeat(7) {
             delay = SensorReconnectBackoffPolicy.nextDelayMs(
                 currentDelayMs = delay,
                 periodicResearchEnabled = true,
@@ -61,31 +61,28 @@ class SensorReconnectBackoffPolicyTest {
         }
 
         assertEquals(
-            listOf(
-                1_000L,
-                2_000L,
-                4_000L,
-                8_000L,
-                16_000L,
-                32_000L,
-                64_000L,
-                128_000L,
-                300_000L,
-                300_000L
-            ),
+            listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 60_000L, 60_000L),
             observed
         )
     }
 
     @Test
-    fun testBackoffSequence_customFinalPeriods_clampCleanlyFor60sAnd120sAndReach600s() {
-        var d60 = 1_000L
-        val seq60 = mutableListOf(d60)
-        repeat(7) {
-            d60 = SensorReconnectBackoffPolicy.nextDelayMs(d60, true, 60_000L)
-            seq60.add(d60)
+    fun testBackoffSequence_allFourPresets_15s_30s_1m_2m_clampCleanly() {
+        var d15 = 1_000L
+        val seq15 = mutableListOf(d15)
+        repeat(5) {
+            d15 = SensorReconnectBackoffPolicy.nextDelayMs(d15, true, 15_000L)
+            seq15.add(d15)
         }
-        assertEquals(listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 60_000L, 60_000L), seq60)
+        assertEquals(listOf(1_000L, 2_000L, 4_000L, 8_000L, 15_000L, 15_000L), seq15)
+
+        var d30 = 1_000L
+        val seq30 = mutableListOf(d30)
+        repeat(6) {
+            d30 = SensorReconnectBackoffPolicy.nextDelayMs(d30, true, 30_000L)
+            seq30.add(d30)
+        }
+        assertEquals(listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 30_000L, 30_000L), seq30)
 
         var d120 = 1_000L
         val seq120 = mutableListOf(d120)
@@ -94,12 +91,6 @@ class SensorReconnectBackoffPolicyTest {
             seq120.add(d120)
         }
         assertEquals(listOf(1_000L, 2_000L, 4_000L, 8_000L, 16_000L, 32_000L, 64_000L, 120_000L, 120_000L), seq120)
-
-        var d600 = 1_000L
-        repeat(10) {
-            d600 = SensorReconnectBackoffPolicy.nextDelayMs(d600, true, 600_000L)
-        }
-        assertEquals(600_000L, d600)
     }
 
     @Test
@@ -107,7 +98,7 @@ class SensorReconnectBackoffPolicyTest {
         var delay = SensorReconnectBackoffPolicy.INITIAL_DELAY_MS
         val observed = mutableListOf(delay)
         repeat(6) {
-            delay = SensorReconnectBackoffPolicy.nextDelayMs(delay, false, 300_000L)
+            delay = SensorReconnectBackoffPolicy.nextDelayMs(delay, false, 120_000L)
             observed.add(delay)
         }
         assertEquals(
@@ -117,37 +108,61 @@ class SensorReconnectBackoffPolicyTest {
     }
 
     @Test
-    fun testNextPeriodicResearchDelay_startsAt32sAndAdvancesToFinalPeriod() {
-        val d1 = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(null, 300_000L)
-        val d2 = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(d1, 300_000L)
-        val d3 = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(d2, 300_000L)
-        val d4 = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(d3, 300_000L)
-        val d5 = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(d4, 300_000L)
-        assertEquals(listOf(32_000L, 64_000L, 128_000L, 300_000L, 300_000L), listOf(d1, d2, d3, d4, d5))
+    fun testNextPeriodicResearchDelay_honorsAllFourPresets() {
+        // 15s & 30s start immediately capped at finalPeriodMs
+        assertEquals(15_000L, SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(null, 15_000L))
+        assertEquals(15_000L, SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(15_000L, 15_000L))
+        assertEquals(30_000L, SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(null, 30_000L))
+        assertEquals(30_000L, SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(30_000L, 30_000L))
+
+        // 1m (60s default): 32s -> 60s -> 60s
+        val m1a = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(null, 60_000L)
+        val m1b = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(m1a, 60_000L)
+        val m1c = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(m1b, 60_000L)
+        assertEquals(listOf(32_000L, 60_000L, 60_000L), listOf(m1a, m1b, m1c))
+
+        // 2m (120s): 32s -> 64s -> 120s -> 120s
+        val m2a = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(null, 120_000L)
+        val m2b = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(m2a, 120_000L)
+        val m2c = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(m2b, 120_000L)
+        val m2d = SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs(m2c, 120_000L)
+        assertEquals(listOf(32_000L, 64_000L, 120_000L, 120_000L), listOf(m2a, m2b, m2c, m2d))
     }
 
     @Test
-    fun testSensorSearchSettings_defaultsRoundTripAndClamping() {
+    fun testSensorSearchSettings_defaultsRoundTripAndLegacyClamping() {
+        assertEquals(listOf(15, 30, 60, 120), SensorSearchSettings.FINAL_PERIOD_OPTIONS_SEC)
         assertTrue(SensorSearchSettings.isPeriodicResearchEnabled(context))
-        assertEquals(300, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
-        assertEquals(300_000L, SensorSearchSettings.getPeriodicResearchFinalPeriodMs(context))
+        assertEquals(60, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+        assertEquals(60_000L, SensorSearchSettings.getPeriodicResearchFinalPeriodMs(context))
 
         SensorSearchSettings.setPeriodicResearchEnabled(context, false)
-        SensorSearchSettings.setPeriodicResearchFinalPeriodSec(context, 120)
+        SensorSearchSettings.setPeriodicResearchFinalPeriodSec(context, 30)
         assertFalse(SensorSearchSettings.isPeriodicResearchEnabled(context))
-        assertEquals(120, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
-        assertEquals(120_000L, SensorSearchSettings.getPeriodicResearchFinalPeriodMs(context))
+        assertEquals(30, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+        assertEquals(30_000L, SensorSearchSettings.getPeriodicResearchFinalPeriodMs(context))
 
-        SensorSearchSettings.setPeriodicResearchFinalPeriodSec(context, 10)
-        assertEquals(60, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
-        SensorSearchSettings.setPeriodicResearchFinalPeriodSec(context, 9999)
-        assertEquals(600, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+        // Legacy ATT-8965 persisted 300s & 600s values clamp cleanly to 120s (2m)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        prefs.edit().putInt(SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 300).commit()
+        assertEquals(120, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+        prefs.edit().putInt(SensorSearchSettings.SP_PERIODIC_RESEARCH_FINAL_PERIOD_SEC, 600).commit()
+        assertEquals(120, SensorSearchSettings.getPeriodicResearchFinalPeriodSec(context))
+
+        // Lower bound, upper bound, and intermediate non-preset values snap cleanly to valid presets
+        assertEquals(15, SensorSearchSettings.normalizeFinalPeriodSec(5))
+        assertEquals(15, SensorSearchSettings.normalizeFinalPeriodSec(15))
+        assertEquals(30, SensorSearchSettings.normalizeFinalPeriodSec(40))
+        assertEquals(60, SensorSearchSettings.normalizeFinalPeriodSec(50))
+        assertEquals(120, SensorSearchSettings.normalizeFinalPeriodSec(100))
+        assertEquals(120, SensorSearchSettings.normalizeFinalPeriodSec(9999))
     }
 
     @Test
     fun testEffectiveDelayMs_clampsStaleBackoffImmediatelyOnLiveSettingsChange() {
-        assertEquals(60_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(600_000L, true, 60_000L))
-        assertEquals(16_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(300_000L, false, 300_000L))
-        assertEquals(120_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(120_000L, true, 300_000L))
+        assertEquals(15_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(120_000L, true, 15_000L))
+        assertEquals(30_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(120_000L, true, 30_000L))
+        assertEquals(16_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(120_000L, false, 120_000L))
+        assertEquals(60_000L, SensorReconnectBackoffPolicy.effectiveDelayMs(60_000L, true, 120_000L))
     }
 }

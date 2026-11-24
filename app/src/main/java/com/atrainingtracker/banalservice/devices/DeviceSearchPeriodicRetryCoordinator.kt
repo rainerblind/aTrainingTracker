@@ -22,17 +22,20 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SensorSearchSettings
 import java.util.Deque
 import java.util.function.Supplier
 
 /**
- * Coordinates periodic long-term re-search scheduling outside [DeviceManager] after initial
- * sequential search tries (`mMyRemoteDeviceTries`) are exhausted (ATT-8965, REQ-CON-052.2).
+ * Coordinates periodic long-term re-search scheduling outside [DeviceManager] strictly for
+ * previously connected lost/MIA sensors after sequential search tries (`mMyRemoteDeviceTries`)
+ * are exhausted (ATT-8965, ATT-9178, REQ-CON-052.2).
  *
  * Keeps [DeviceManager] within its ratcheted monolith LoC ceiling while applying
- * [SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs] (`32s -> 64s -> 128s -> <finalPeriodMs>`)
- * uniformly across BLE and Polar streaming devices.
+ * [SensorReconnectBackoffPolicy.nextPeriodicResearchDelayMs] (`min(32s, cap) -> 64s -> 120s`,
+ * capped at `15s/30s/1m/2m`) and resetting disconnected MIA state on workout end.
  */
 class DeviceSearchPeriodicRetryCoordinator @JvmOverloads constructor(
     private val context: Context,
@@ -42,6 +45,13 @@ class DeviceSearchPeriodicRetryCoordinator @JvmOverloads constructor(
     private val lock = Any()
     private val lastScheduledDelayByDeviceId = HashMap<Long, Long>()
     private val pendingRunnablesByDeviceId = HashMap<Long, Runnable>()
+    private var lastTrackingMode: TrackingMode = readCurrentTrackingModeSafely()
+
+    private fun readCurrentTrackingModeSafely(): TrackingMode = try {
+        TrainingApplication.getTrackingMode()
+    } catch (_: Throwable) {
+        TrackingMode.READY
+    }
 
     private val defaultHandler: Handler? by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         try {
@@ -98,6 +108,12 @@ class DeviceSearchPeriodicRetryCoordinator @JvmOverloads constructor(
         }
         val tries = deviceTries[current]
         if (tries == null || tries <= 1) {
+            if (!current.hasConnectedInSession()) {
+                cancelDevice(deviceId)
+                deviceTries.remove(current)
+                detachAndGiveUpDevice.run()
+                return
+            }
             val scheduled = scheduleRetryIfEnabled(
                 deviceId = deviceId,
                 onDisabledGiveUp = {
@@ -111,16 +127,19 @@ class DeviceSearchPeriodicRetryCoordinator @JvmOverloads constructor(
                 },
                 onRetryDue = {
                     enqueueDeviceForPeriodicResearch(
+                        current = current,
                         deviceId = deviceId,
                         remoteDevices = remoteDevices,
                         deviceTries = deviceTries,
                         searchQueue = searchQueue,
                         currentlySearchingSupplier = currentlySearchingSupplier,
+                        detachAndGiveUpDevice = detachAndGiveUpDevice,
                         searchNextRunnable = searchNextRunnable
                     )
                 }
             )
             if (!scheduled) {
+                deviceTries.remove(current)
                 detachAndGiveUpDevice.run()
             }
         } else {
@@ -129,18 +148,54 @@ class DeviceSearchPeriodicRetryCoordinator @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Tracks [TrackingMode] transitions and, when an active workout ends (`TRACKING|PAUSED ->
+     * READY|IDLE`), cancels pending periodic retries and resets disconnected MIA remote devices
+     * strictly outside [lock] while leaving actively connected sensors untouched (`REQ-CON-052.2`).
+     */
+    fun onTrackingModeChanged(
+        newMode: TrackingMode,
+        remoteDevices: Map<Long, MyRemoteDevice>
+    ) {
+        val isWorkoutEnded = synchronized(lock) {
+            if (isShutDown) return
+            val wasWorkoutActive =
+                lastTrackingMode == TrackingMode.TRACKING || lastTrackingMode == TrackingMode.PAUSED
+            lastTrackingMode = newMode
+            wasWorkoutActive && (newMode == TrackingMode.READY || newMode == TrackingMode.IDLE)
+        }
+        if (!isWorkoutEnded) return
+        cancelAllPending()
+        val snapshot = remoteDevices.values.toList()
+        for (device in snapshot) {
+            if (!device.isReceivingData) {
+                device.resetSessionConnectionState()
+            }
+        }
+    }
+
     private fun enqueueDeviceForPeriodicResearch(
+        current: MyRemoteDevice,
         deviceId: Long,
         remoteDevices: MutableMap<Long, MyRemoteDevice>,
         deviceTries: MutableMap<MyRemoteDevice, Int>,
         searchQueue: Deque<MyRemoteDevice>,
         currentlySearchingSupplier: Supplier<MyRemoteDevice?>,
+        detachAndGiveUpDevice: Runnable,
         searchNextRunnable: Runnable
     ) {
         synchronized(searchQueue) {
             if (isShutDown) return
             val device = remoteDevices[deviceId] ?: return
-            if (device.isReceivingData || searchQueue.contains(device) || currentlySearchingSupplier.get() === device) {
+            if (device !== current || device.isReceivingData || searchQueue.contains(device) || currentlySearchingSupplier.get() === device) {
+                return
+            }
+            if (!device.hasConnectedInSession()) {
+                synchronized(lock) {
+                    lastScheduledDelayByDeviceId.remove(deviceId)
+                }
+                deviceTries.remove(device)
+                detachAndGiveUpDevice.run()
                 return
             }
             deviceTries[device] = 1

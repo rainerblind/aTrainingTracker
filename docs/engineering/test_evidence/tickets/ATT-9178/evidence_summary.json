@@ -1,0 +1,99 @@
+{
+  "android_test_summary": {
+    "details": "422 Android unit tests passed (48 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 422
+  },
+  "checks": [
+    {
+      "details": "Android: 422 Android unit tests passed (48 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12322 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "714c3f7036a37d8fbc60a6bcad39e73c22e66cbb",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceMultisportTransitionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceSportInferenceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.TrackingRobustnessTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerLocationInitTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerRrSourceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.DeviceSearchPeriodicRetryCoordinatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.FreshInstallLocationInitTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.PressureSensorRegistrationAndIconTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.ant_plus.ANTDeviceLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarH10OfflineControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOnlineStreamingBridgeTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryRecorderTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.filters.FilterManagerAccumulatorResetTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.filters.FilterManagerRebindTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.MySensorManagerCadenceArbitrationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.sensor.MySensorManagerHrvPriorityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AdrCompletenessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.integration.HardwareHalIngestionIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryServiceCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialogSuppressionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.core.ModalBottomSheetDialogsIntegrityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialogTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.SensorSearchTuningSectionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T16:55:44.274468+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9178_sensor_search_tuning_light.png",
+    "screenshots/ATT-9178_sensor_search_tuning_dark.png"
+  ],
+  "ticket_key": "ATT-9178",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

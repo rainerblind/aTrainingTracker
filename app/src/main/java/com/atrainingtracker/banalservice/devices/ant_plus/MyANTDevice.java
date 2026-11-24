@@ -170,6 +170,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
                 break;
 
             case TRACKING: // The device has an open connection, and can receive and transmit data.
+                markConnectedInSession();
                 setLastActive();
 
                 registerSensors();

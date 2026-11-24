@@ -221,6 +221,7 @@ public class DeviceManager {
         @Override
         public void onReceive(Context context, Intent intent) {
             TrackingMode mode = TrainingApplication.getTrackingMode();
+            getPeriodicRetryCoordinator().onTrackingModeChanged(mode, mMyRemoteDevices);
             if (mode == TrackingMode.READY || mode == TrackingMode.IDLE) {
                 // Direct state check protects against broadcast timing delays
                 startSearchForPairedDevices();
@@ -371,6 +372,7 @@ public class DeviceManager {
     public DeviceManager(BANALService banalService, MySensorManager mySensorManager, DeviceDataRepository deviceDataRepository) {
         mContext = banalService;
         mBanalService = banalService;
+        mPeriodicRetryCoordinator = new DeviceSearchPeriodicRetryCoordinator(mContext);
         mDeviceDataRepository = deviceDataRepository != null ? deviceDataRepository : DeviceDataRepository.Companion.getInstance(mContext);
         
         // ATT-353: Eager registration of the pressure sensor to ensure ID resolution works 

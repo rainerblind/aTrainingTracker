@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:59:50.329Z" hostname="rainer-HP-EliteBook-850-G5" time="1.222">
+  <properties/>
+  <testcase name="testSignatureDriftChecker_catchesArityAndNullabilityDrift" classname="com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest" time="0.071"/>
+  <testcase name="testArchitectureDoc_wakeLockSymbolAnchorsExistInTrackerServiceViaReflection" classname="com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest" time="0.079"/>
+  <testcase name="testInterfacesDoc_allDocumentedSignaturesMatchCompiledBytecodeViaReflection" classname="com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest" time="1.072"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

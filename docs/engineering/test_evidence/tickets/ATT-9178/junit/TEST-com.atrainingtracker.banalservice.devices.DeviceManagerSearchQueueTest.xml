@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:56:39.052Z" hostname="rainer-HP-EliteBook-850-G5" time="14.561">
+  <properties/>
+  <testcase name="testWorkoutEndTrackingStateChanged_constructedMidWorkout_resetsDisconnectedMiaAndPreservesConnected" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.73"/>
+  <testcase name="testThreeAbsentKeepAliveDevices_withTries3_searchedOnceAndDeviceTriesCleared_TST_SET_125_3" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.801"/>
+  <testcase name="testMatchingDeviceEventAdvancesQueueToNextDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.741"/>
+  <testcase name="testTriesExhausted_whenPeriodicResearchEnabled_retainsOnlyMiaDeviceAndGivesUpNeverConnected" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.903"/>
+  <testcase name="testMultiSensorQueue_radarTimeoutDuringWorkout_advancesToSecondHrAndPreservesRadarOnTriesExhausted" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.783"/>
+  <testcase name="testTriesExhausted_whenDisabledWhileRetryPending_givesUpAndRemovesZombieDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.896"/>
+  <testcase name="testTriesExhausted_whenKeepAliveFalseAndPeriodicDisabled_shutsDownAndRemovesOfflineDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.946"/>
+  <testcase name="testAlienDeviceEventIgnoredAndQueueNotPreempted" classname="com.atrainingtracker.banalservice.devices.DeviceManagerSearchQueueTest" time="1.76"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

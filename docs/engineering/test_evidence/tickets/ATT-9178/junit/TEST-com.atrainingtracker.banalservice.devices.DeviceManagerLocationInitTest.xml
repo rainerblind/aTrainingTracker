@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerLocationInitTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:56:31.299Z" hostname="rainer-HP-EliteBook-850-G5" time="1.562">
+  <properties/>
+  <testcase name="testCheckOrInitializeLocationDevices_whenFinePermissionGranted_createsGpsDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerLocationInitTest" time="1.064"/>
+  <testcase name="testCheckOrInitializeLocationDevices_idempotentWhenAlreadyInitialized" classname="com.atrainingtracker.banalservice.devices.DeviceManagerLocationInitTest" time="0.066"/>
+  <testcase name="testCheckOrInitializeLocationDevices_whenPermissionDenied_doesNotCreateGpsDevice" classname="com.atrainingtracker.banalservice.devices.DeviceManagerLocationInitTest" time="0.032"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@4fc21c3e], context=[android.app.ContextImpl@16e0ae4b], intentFilter=[android.content.IntentFilter@10ab891e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@4fc21c3e], context=[android.app.ContextImpl@16e0ae4b], intentFilter=[android.content.IntentFilter@10ab891e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@4fc21c3e], context=[android.app.ContextImpl@16e0ae4b], intentFilter=[android.content.IntentFilter@10ab891e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@4fc21c3e], context=[android.app.ContextImpl@16e0ae4b], intentFilter=[android.content.IntentFilter@10ab891e]]]
+]]></system-err>
+</testsuite>

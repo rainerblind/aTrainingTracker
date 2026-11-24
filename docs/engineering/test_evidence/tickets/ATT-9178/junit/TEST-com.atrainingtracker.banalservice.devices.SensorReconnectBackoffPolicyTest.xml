@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:57:02.792Z" hostname="rainer-HP-EliteBook-850-G5" time="0.678">
+  <properties/>
+  <testcase name="testSensorSearchSettings_defaultsRoundTripAndLegacyClamping" classname="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" time="0.171"/>
+  <testcase name="testBackoffSequence_whenPeriodicResearchDisabled_capsAtLegacy16Seconds" classname="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" time="0.123"/>
+  <testcase name="testBackoffSequence_defaultOneMinute_progressesAndCapsAtSixtySeconds" classname="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" time="0.109"/>
+  <testcase name="testBackoffSequence_allFourPresets_15s_30s_1m_2m_clampCleanly" classname="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" time="0.11"/>
+  <testcase name="testEffectiveDelayMs_clampsStaleBackoffImmediatelyOnLiveSettingsChange" classname="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" time="0.084"/>
+  <testcase name="testNextPeriodicResearchDelay_honorsAllFourPresets" classname="com.atrainingtracker.banalservice.devices.SensorReconnectBackoffPolicyTest" time="0.081"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

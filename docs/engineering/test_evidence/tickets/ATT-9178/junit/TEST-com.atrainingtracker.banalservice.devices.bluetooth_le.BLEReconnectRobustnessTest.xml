@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-24T16:56:59.278Z" hostname="rainer-HP-EliteBook-850-G5" time="31.842">
+  <properties/>
+  <testcase name="testOnScanFailed_fallsBackToGattConnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="2.547"/>
+  <testcase name="testSearchTimeout_whenAlreadyConnectedToGatt_abortsWithoutReconnectOrStopSearching" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.659"/>
+  <testcase name="testMidWorkoutDisconnect_persistsReconnectionAfterSearchTimeout_reconnectsSuccessfully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.623"/>
+  <testcase name="testInitialStartupSearch_offlineSensor_terminatesCleanlyWithoutInfiniteRetry" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.581"/>
+  <testcase name="testNeverConnectedReadyDisconnect_schedulesZeroReconnectsAndStopsInitialSearch" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.636"/>
+  <testcase name="testBackgroundReconnect_afterDisconnect_reArmsWithoutSettingSearchingOrStateSearching" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.606"/>
+  <testcase name="testSearchTimeout_readyToTrackingEdge_replacesNonAutoConnectGattAndGuardsConcurrentRaces_TST_SET_125_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.783"/>
+  <testcase name="testNeverConnectedWorkoutDisconnect_floorsDelay60sAndSkipsScanAssistAndTimeout_TST_SET_125_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.631"/>
+  <testcase name="testMidWorkoutAndMiaGatt133DuringActiveSearch_releasesSearchQueueAndSchedulesBackoff" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.601"/>
+  <testcase name="testNotifyStopSearchingSuccessCancelsTimeoutAndResetsBackoff" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.661"/>
+  <testcase name="testShutDownSetsFlagRemovesCallbacksAndSuppressesDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.712"/>
+  <testcase name="testReconnectBackoff_whenPeriodicResearchDisabled_capsAt16sAndPreservesConstant" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.802"/>
+  <testcase name="testSearchTimeout_duringTrackingAndPaused_clearsSearchingAndReleasesQueueWhilePersistingReconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.706"/>
+  <testcase name="testStartSearchingCancelsPriorTimeoutAndSchedulesNew" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.621"/>
+  <testcase name="testScanQuotaExceeded_throttlesScanAndFallsBackToDirectConnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.618"/>
+  <testcase name="testExponentialReconnectBackoffOnDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.643"/>
+  <testcase name="testNeverConnectedThreeAbsentSensors_duringWorkout_convergePassiveAndUpgradeOnWakeUp_TST_SET_125_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.535"/>
+  <testcase name="testResetSessionConnectionState_safeAcrossConnectedSearchingAndDisconnectedStates" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.365"/>
+  <testcase name="testLiveSettingsChange_clampsStaleBackoffImmediatelyOnNextRetry" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEReconnectRobustnessTest" time="1.511"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>
