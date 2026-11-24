@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:42:35.224Z" hostname="rainer-HP-EliteBook-850-G5" time="21.715">
+  <properties/>
+  <testcase name="testCreateNewClusterFromWorkout_formatsClusterWorkoutName_forcesIdentity" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="9.315"/>
+  <testcase name="testUnassignClusterFromWorkout_hitCountDropsToZero_clearsPreviewPaths" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.193"/>
+  <testcase name="testStripHitCount_removesSequentialCounters" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.174"/>
+  <testcase name="testUnassignClusterFromWorkout_decrementsOldClusterHitCountAndClearsClusterId" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.169"/>
+  <testcase name="testGetClusterScores_reconcilesStaleHitCountAgainstWorkoutSummaries" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.296"/>
+  <testcase name="testMoveWorkoutToCluster_updatesAltitudeExtremaAndRecalculatesBounds" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.395"/>
+  <testcase name="testCreateNewClusterFromWorkout_withCustomWorkoutName_preservesCustomName" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.203"/>
+  <testcase name="testCreateNewClusterFromWorkout_insertsNewClusterAndAssignsWorkout" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.195"/>
+  <testcase name="testAssignClusterToWorkout_usesAuthoritativeCountFromWorkoutSummaries" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.184"/>
+  <testcase name="testAssignClusterToWorkout_negativeOrZeroClusterId_delegatesToUnassign" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.273"/>
+  <testcase name="testMoveWorkoutToCluster_preservesUpdatedCentroidsAndSynchronizesSport" classname="com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" time="1.309"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

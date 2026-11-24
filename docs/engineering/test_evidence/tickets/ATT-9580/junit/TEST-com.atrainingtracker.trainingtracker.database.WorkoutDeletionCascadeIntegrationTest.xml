@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:43:33.767Z" hostname="rainer-HP-EliteBook-850-G5" time="7.951">
+  <properties/>
+  <testcase name="testBulkDeleteOldWorkoutsCascade_executesSynchronouslyBeforeReturnAndEmitsSingleBulkEvent" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" time="7.298"/>
+  <testcase name="testDirectDeleteWorkoutCascade_leavesZeroThreadLocalResidue" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" time="0.133"/>
+  <testcase name="testRawSidecarSalvageFiles_preservedByExportInvalidation_deletedByWorkoutCascade" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" time="0.106"/>
+  <testcase name="testMarkWorkoutFinished_emitsFinalizedEvent" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" time="0.14"/>
+  <testcase name="testSingleDelete_withUnhydratedAllWorkouts_purgesAll7StoresSidecarsAndSyncsCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" time="0.149"/>
+  <testcase name="testBulkDeleteOldWorkoutsCascade_emptyMatch_emitsZeroEvents" classname="com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest" time="0.124"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@1f94416c], context=[android.app.ContextImpl@56b44c30], intentFilter=[android.content.IntentFilter@4ee2124e]]]
+]]></system-err>
+</testsuite>

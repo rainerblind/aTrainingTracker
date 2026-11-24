@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningUiBehaviorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:44:16.342Z" hostname="rainer-HP-EliteBook-850-G5" time="13.226">
+  <properties/>
+  <testcase name="clusterTuningSection_masterSliderDetailsToggleAndRecalculateConfirm_TST_SET_003" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningUiBehaviorTest" time="13.226"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

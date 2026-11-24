@@ -621,15 +621,17 @@ class WorkoutClusterRepositoryTest {
         val enriched = unenriched.copy(previewPaths = listOf("encoded_poly_1"))
 
         val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
-        val repo = WorkoutClusterRepository(mockContext, testScope)
+        every { mockClusterDb.getAllClusters() } returns listOf(unenriched)
+        val repo = WorkoutClusterRepository(mockContext, testScope, Dispatchers.Unconfined)
         val statusLog = mutableListOf<MigrationStatus?>()
-        val collector = async(start = CoroutineStart.UNDISPATCHED) {
+        val collector = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
             repo.migrationStatus.collect { statusLog.add(it) }
         }
 
         try {
-            // 1. Cold initial load with un-enriched cluster -> emits loading/healing/previews -> null
-            every { mockClusterDb.getAllClusters() } returns listOf(unenriched)
+            // 1. Cold initial load with un-enriched cluster (even after init lightweight load) -> emits progress -> null
+            assertEquals(1, repo.allClusters.value.size)
+            assertTrue(repo.allClusters.value.first().previewPaths.isEmpty())
             repo.refreshClusters(forceShowProgress = false)
 
             assertTrue(
@@ -656,6 +658,273 @@ class WorkoutClusterRepositoryTest {
                 statusLog.filterNotNull().isNotEmpty()
             )
             assertNull(repo.migrationStatus.value)
+        } finally {
+            collector.cancel()
+            testScope.cancel()
+        }
+    }
+
+    /**
+     * TST-PER-057.2 (REQ-PER-057.2):
+     * Stale `loadAllClustersLightweight()` reading an untrimmed/un-enriched row while `refreshClusters()`
+     * commits fresher enriched state MUST abort stale SQLite writebacks and MUST NOT overwrite
+     * `_allClusters` or `_clusterStats`.
+     */
+    @Test
+    fun testLoadAllClustersLightweight_staleReadAbortsWritebackAndDoesNotClobberRefresh_TST_PER_057_2() = runBlocking {
+        every { mockContext.getString(R.string.cluster_migration_loading) } returns "Loading"
+        every { mockContext.getString(R.string.cluster_migration_previews, any(), any()) } returns "Generating previews"
+
+        val staleCluster = WorkoutCluster(
+            id = 77L, name = "  Valley Loop  ", probableSportId = 1L,
+            startLat = 48.0, startLng = 9.0, endLat = 48.0, endLng = 9.0,
+            maxDispLat = 48.1, maxDispLng = 9.1, refDistance = 6000.0,
+            hitCount = 0, bSportType = BSportType.BIKE, previewPaths = emptyList()
+        )
+        val enrichedCluster = staleCluster.copy(
+            name = "Valley Loop",
+            hitCount = 3,
+            previewPaths = listOf("enriched_poly")
+        )
+        val freshStats = mapOf(
+            77L to WorkoutClusterStats(77L, workoutCount = 3, bestDurationSec = 1000L, lastHitTimestampS = 1700000000L, totalAscentMeters = 100L)
+        )
+
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        every { mockClusterDb.getAllClusters() } returns emptyList()
+        val repo = WorkoutClusterRepository(mockContext, testScope, Dispatchers.Unconfined)
+
+        var injectedConcurrentRefresh = false
+        every { mockClusterDb.getAllClusters() } answers {
+            if (!injectedConcurrentRefresh) {
+                injectedConcurrentRefresh = true
+                // Simulate refreshClusters() committing enriched state while lightweight load just read stale rows
+                every { mockClusterDb.getAllClusters() } returns listOf(enrichedCluster)
+                every { mockSummariesManager.getWorkoutClusterStatsForAllClusters() } returns freshStats
+                runBlocking { repo.refreshClusters(forceShowProgress = false) }
+                listOf(staleCluster)
+            } else {
+                listOf(enrichedCluster)
+            }
+        }
+
+        try {
+            val result = repo.loadAllClustersLightweight()
+
+            assertEquals("Valley Loop", repo.allClusters.value.first().name)
+            assertEquals(3, repo.allClusters.value.first().hitCount)
+            assertEquals(listOf("enriched_poly"), repo.allClusters.value.first().previewPaths)
+            assertEquals(repo.allClusters.value, result)
+            assertEquals(freshStats, repo.clusterStats.value)
+            verify(exactly = 0) {
+                mockClusterDb.updateCluster(match { it.id == 77L && it.previewPaths.isEmpty() })
+            }
+        } finally {
+            testScope.cancel()
+        }
+    }
+
+    /**
+     * TST-PER-057.2 (REQ-PER-057.2):
+     * (a) Concurrent `syncClusterAfterWorkoutDeletion()` during `loadAllClustersLightweight()` is never
+     * clobbered by stale pre-deletion rows.
+     * (b) When `syncClusterAfterWorkoutDeletion()` bumps `clusterStateVersion` while `_allClusters` is
+     * still empty and `!hasCompletedFullRefresh`, `loadAllClustersLightweight()` performs one bounded
+     * retry and hydrates fresh rows instead of returning `emptyList()`.
+     */
+    @Test
+    fun testLoadAllClustersLightweight_respectsDeletionSyncAndRetriesOnceWhenEmpty_TST_PER_057_2() = runBlocking {
+        val c1 = WorkoutCluster(
+            id = 11L, name = "Loop A", probableSportId = 1L,
+            startLat = 48.0, startLng = 9.0, endLat = 48.0, endLng = 9.0,
+            maxDispLat = 48.1, maxDispLng = 9.1, refDistance = 5000.0,
+            hitCount = 2, bSportType = BSportType.RUN, previewPaths = listOf("poly_a")
+        )
+        val c2 = c1.copy(id = 12L, name = "Loop B", hitCount = 1, previewPaths = listOf("poly_b"))
+
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        every { mockClusterDb.getAllClusters() } returns emptyList()
+        val repo = WorkoutClusterRepository(mockContext, testScope, Dispatchers.Unconfined)
+
+        // Case (b): empty cache + concurrent deletion bumps version -> single bounded retry hydrates [c1]
+        var readAttempts = 0
+        every { mockClusterDb.getClusterById(12L) } returns null
+        every { mockClusterDb.getAllClusters() } answers {
+            readAttempts++
+            if (readAttempts == 1) {
+                repo.syncClusterAfterWorkoutDeletion(12L)
+                listOf(c1, c2)
+            } else {
+                listOf(c1)
+            }
+        }
+
+        try {
+            val hydrated = repo.loadAllClustersLightweight()
+            assertEquals("Single bounded retry must re-read fresh rows when _allClusters is empty", 2, readAttempts)
+            assertEquals(listOf(11L), hydrated.map { it.id })
+            assertEquals(listOf(11L), repo.allClusters.value.map { it.id })
+
+            // Case (a): populated cache [c1, c2] + concurrent deletion of c2 during lightweight read -> c2 stays gone
+            every { mockClusterDb.getAllClusters() } returns listOf(c1, c2)
+            repo.loadAllClustersLightweight()
+            assertEquals(listOf(11L, 12L), repo.allClusters.value.map { it.id })
+
+            every { mockClusterDb.getClusterById(12L) } returns null
+            every { mockClusterDb.getAllClusters() } answers {
+                repo.syncClusterAfterWorkoutDeletion(12L)
+                listOf(c1, c2)
+            }
+            val afterDeleteRace = repo.loadAllClustersLightweight()
+            assertEquals(listOf(11L), repo.allClusters.value.map { it.id })
+            assertEquals(listOf(11L), afterDeleteRace.map { it.id })
+        } finally {
+            testScope.cancel()
+        }
+    }
+
+    /**
+     * TST-PER-057.3 (REQ-PER-057.1):
+     * An un-enrichable indoor cluster (`hitCount > 0`, no GPS polylines in `WorkoutSummaries`)
+     * emits progress on the first `refreshClusters()` and remains strictly silent on a second
+     * same-session `refreshClusters()`.
+     */
+    @Test
+    fun testRefreshClusters_indoorUnenrichableClusterSilentOnRevisit_TST_PER_057_3() = runBlocking {
+        every { mockContext.getString(R.string.cluster_migration_loading) } returns "Loading"
+        every { mockContext.getString(R.string.cluster_migration_previews, any(), any()) } returns "Generating previews"
+
+        val indoorCluster = WorkoutCluster(
+            id = 42L, name = "Indoor Trainer", probableSportId = 1L,
+            startLat = 0.0, startLng = 0.0, endLat = 0.0, endLng = 0.0,
+            maxDispLat = 0.0, maxDispLng = 0.0, refDistance = 10000.0,
+            hitCount = 2, bSportType = BSportType.BIKE, previewPaths = emptyList()
+        )
+        every { mockClusterDb.getAllClusters() } returns listOf(indoorCluster)
+        every { mockRoutesDb.getRouteByClusterId(42L) } returns null
+        every { mockSummariesManager.getWorkoutClusterStatsForAllClusters() } returns emptyMap()
+
+        val countsCursor = mockk<Cursor>(relaxed = true)
+        every { countsCursor.moveToNext() } returnsMany listOf(true, false, true, false)
+        every { countsCursor.getLong(0) } returns 42L
+        every { countsCursor.getInt(1) } returns 2
+        val emptyPolyCursor = mockk<Cursor>(relaxed = true)
+        every { emptyPolyCursor.moveToNext() } returns false
+
+        every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any()) } returns countsCursor
+        every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any(), any()) } returns emptyPolyCursor
+
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repo = WorkoutClusterRepository(mockContext, testScope, Dispatchers.Unconfined)
+        val statusLog = mutableListOf<MigrationStatus?>()
+        val collector = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            repo.migrationStatus.collect { statusLog.add(it) }
+        }
+
+        try {
+            // 1st refresh emits progress even though init already hydrated _allClusters
+            repo.refreshClusters()
+            assertTrue("First cold refresh must emit progress", statusLog.filterNotNull().isNotEmpty())
+            assertNull(repo.migrationStatus.value)
+
+            // 2nd same-session refresh stays silent even though indoorCluster still has previewPaths.isEmpty()
+            statusLog.clear()
+            repo.refreshClusters()
+            assertTrue(
+                "Second same-session refresh must stay silent for un-enrichable indoor clusters (TST-PER-057.3)",
+                statusLog.filterNotNull().isEmpty()
+            )
+            assertNull(repo.migrationStatus.value)
+        } finally {
+            collector.cancel()
+            testScope.cancel()
+        }
+    }
+
+    /**
+     * TST-PER-057.3 (REQ-PER-057.3):
+     * Exception during Phase 1 and cooperative cancellation at a `yield()` progress checkpoint both
+     * clear `migrationStatus` to `null` via `finally` and leave `hasCompletedFullRefresh == false`
+     * so a subsequent retry still emits cold enrichment progress.
+     */
+    @Test
+    fun testRefreshClusters_exceptionAndCancellationClearMigrationStatusAndPreserveRetryProgress_TST_PER_057_3() = runBlocking {
+        every { mockContext.getString(R.string.cluster_migration_loading) } returns "Loading"
+        every { mockContext.getString(R.string.cluster_migration_previews, any(), any()) } returns "Generating previews"
+
+        val unenriched = WorkoutCluster(
+            id = 88L, name = "Hill Climb", probableSportId = 1L,
+            startLat = 48.0, startLng = 9.0, endLat = 48.1, endLng = 9.1,
+            maxDispLat = 48.2, maxDispLng = 9.2, refDistance = 7000.0,
+            hitCount = 2, bSportType = BSportType.BIKE, previewPaths = emptyList()
+        )
+        every { mockClusterDb.getAllClusters() } returns listOf(unenriched)
+        every { mockRoutesDb.getRouteByClusterId(88L) } returns null
+        every { mockSummariesManager.getWorkoutClusterStatsForAllClusters() } returns emptyMap()
+
+        // Part 1: Exception during Phase 1 clears migrationStatus and preserves retry progress
+        every {
+            mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any())
+        } throws IllegalStateException("Simulated SQLite read failure")
+
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repo = WorkoutClusterRepository(mockContext, testScope, Dispatchers.Unconfined)
+        val statusLog = mutableListOf<MigrationStatus?>()
+        val collector = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            repo.migrationStatus.collect { statusLog.add(it) }
+        }
+
+        try {
+            var caught: Throwable? = null
+            try {
+                repo.refreshClusters()
+            } catch (e: IllegalStateException) {
+                caught = e
+            }
+            assertNotNull("Expected simulated Phase 1 exception", caught)
+            assertNull("finally must clear migrationStatus on exception", repo.migrationStatus.value)
+
+            // Part 2: Cancellation at cooperative yield() checkpoint also clears migrationStatus
+            val countsCursor = mockk<Cursor>(relaxed = true)
+            every { countsCursor.moveToNext() } returnsMany listOf(true, false)
+            every { countsCursor.getLong(0) } returns 88L
+            every { countsCursor.getInt(1) } returns 2
+            val polyCursor = mockk<Cursor>(relaxed = true)
+            every { polyCursor.moveToNext() } returnsMany listOf(true, false)
+            every { polyCursor.getString(0) } returns "poly_retry"
+            every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any()) } returns countsCursor
+            every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any(), any()) } returns polyCursor
+
+            val cancelableRefreshJob = async(Dispatchers.Unconfined, start = CoroutineStart.LAZY) {
+                repo.refreshClusters()
+            }
+            var cancelledAtProgress = false
+            val cancelCollector = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+                repo.migrationStatus.collect { status ->
+                    if (status != null) {
+                        cancelledAtProgress = true
+                        cancelableRefreshJob.cancel()
+                    }
+                }
+            }
+            cancelableRefreshJob.start()
+            runCatching { cancelableRefreshJob.await() }
+            cancelCollector.cancel()
+            assertTrue("Collector must observe Loading progress at yield() checkpoint and cancel job", cancelledAtProgress)
+            assertNull("finally must clear migrationStatus on cooperative cancellation", repo.migrationStatus.value)
+
+            // Part 3: Subsequent retry succeeds and STILL emits progress because hasCompletedFullRefresh remained false
+            statusLog.clear()
+            every { countsCursor.moveToNext() } returnsMany listOf(true, false)
+            every { polyCursor.moveToNext() } returnsMany listOf(true, false)
+            repo.refreshClusters()
+
+            assertTrue(
+                "Retry after failure/cancellation must still emit cold enrichment progress (TST-PER-057.3)",
+                statusLog.filterNotNull().isNotEmpty()
+            )
+            assertNull(repo.migrationStatus.value)
+            assertEquals(listOf("poly_retry"), repo.allClusters.value.first { it.id == 88L }.previewPaths)
         } finally {
             collector.cancel()
             testScope.cancel()
