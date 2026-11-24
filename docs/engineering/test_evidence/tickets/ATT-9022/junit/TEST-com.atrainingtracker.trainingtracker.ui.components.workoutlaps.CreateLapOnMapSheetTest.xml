@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:57.138Z" hostname="rainer-HP-EliteBook-850-G5" time="0.03">
+  <properties/>
+  <testcase name="testCreateLapValidationAndPreviewLogic" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest" time="0.011"/>
+  <testcase name="testLapSplitVisualizer_exposesOnSplitLapClick" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest" time="0.0"/>
+  <testcase name="testCreateLapOnMapSheet_sourceStructureAndContract" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest" time="0.002"/>
+  <testcase name="testWorkoutLaps_exposesOnSplitLapClick" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest" time="0.0"/>
+  <testcase name="testCreateLapOnMapSheet_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheetTest" time="0.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

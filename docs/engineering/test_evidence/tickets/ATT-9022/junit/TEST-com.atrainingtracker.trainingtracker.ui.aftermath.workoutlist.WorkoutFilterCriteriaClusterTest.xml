@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:45.706Z" hostname="rainer-HP-EliteBook-850-G5" time="0.009">
+  <properties/>
+  <testcase name="matches_unclusteredWorkoutAgainstClusterFilter_returnsFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.0"/>
+  <testcase name="matches_clusterDoesNotMatch_returnsFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.0"/>
+  <testcase name="jsonSerialization_roundTrip_preservesClusterFields" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.007"/>
+  <testcase name="matches_clusterMatches_returnsTrue" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.001"/>
+  <testcase name="jsonDeserialization_legacyJsonWithoutCluster_defaultsToNull" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.0"/>
+  <testcase name="activeFilterCount_incrementsWhenClusterFilterIsActive" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.0"/>
+  <testcase name="matches_noClusterFilterActive_returnsTrueForAnyWorkout" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaClusterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

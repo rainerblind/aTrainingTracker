@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:24:02.807Z" hostname="rainer-HP-EliteBook-850-G5" time="1.84">
+  <properties/>
+  <testcase name="testInteractiveMaps_isolateLiteMode_retainingFullVectorInteractivity" classname="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" time="0.369"/>
+  <testcase name="testPathPreviewMap_enforcesLiteMode" classname="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" time="0.299"/>
+  <testcase name="testClickHandler_callbackExecution" classname="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" time="0.288"/>
+  <testcase name="testBoundsBuilder_forLiteModePreviewCamera" classname="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" time="0.298"/>
+  <testcase name="testWorkoutClusterComponents_enforcesLiteModeInListThumbnails" classname="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" time="0.289"/>
+  <testcase name="testGoogleMapOptions_liteModeFlag" classname="com.atrainingtracker.trainingtracker.ui.map.MapPreviewLiteModeTest" time="0.297"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

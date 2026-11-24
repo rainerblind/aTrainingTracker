@@ -1,14 +1,14 @@
 # Living Test Specification: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-TST-REVIEWS`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 18
+**Total Tests**: 19
 
 ---
 
@@ -238,6 +238,24 @@
   3. *Targeted Cluster & Contract Regression (`TST-REV-018.3`)*:
   • Execute `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.database.WorkoutCluster*" --tests "com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`, confirming `WorkoutClusterEngine.kt` LoC ratchet compliance and `0` `.ui.*` imports.
 
+### TST-REV-019: **Two-Tier Workout Classification UI, Epic Header Badge & Epic Filter Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Requirement(s)**: `REQ-REV-018` (`REQ-REV-018.1`..`REQ-REV-018.4`)
+- **Component**: `Color.kt`, `EditWorkoutScreen.kt`, `WorkoutHeaderData.kt`, `WorkoutData.kt`, `WorkoutHeader.kt`, `WorkoutFilterCriteria.kt`, `WorkoutFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`, `WorkoutFilterCriteriaEpicTest.kt`, `WorkoutClassificationAndEpicUiTest.kt`
+- **Jira**: `ATT-9022` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *`WorkoutFilterCriteria` Epic Matching, Active Count & JSON Round-Trip (`TST-REV-019.1`, `WorkoutFilterCriteriaEpicTest.kt`)*:
+  • Verify `isEpic = true`, `isEpic = false`, `isEpic = null`, combined `isRace = true && isEpic = true`, `activeFilterCount`, `toJson()`/`fromJson()` round-trip, and legacy JSON backward compatibility without `"isEpic"`.
+  • Verify `WorkoutData.headerData` propagates `epic = true/false` to `WorkoutHeaderData.epic`, and `TTColor.resolveEpicBadgeColors(isDark)` returns distinct WCAG-compliant Light vs Dark palettes.
+  2. *Behavioral Compose UI Two-Tier Classification, Epic Header Badge & Filter Sheet/Chips (`TST-REV-019.2`, `WorkoutClassificationAndEpicUiTest.kt`)*:
+  • Render `WorkoutClassificationSection` via Robolectric `createComposeRule()` verifying Routine Context (`Commute`, `Indoor`) mutual exclusion vs Special Distinction (`Race`, `Epic`) independent & simultaneous toggling (`Race + Epic`).
+  • Render `WorkoutHeader` verifying prominent `Epic` badge alongside `Race` badge while `Commute`/`Indoor` stay secondary text, and omitting `Epic` badge when `epic = false`.
+  • Render `WorkoutFilterBottomSheet` and `ActiveFilterChipsRow` verifying `Epic` chip selection, apply callback (`isEpic = true`), active chip display, and single-tap removal (`isEpic = null`).
+  3. *Localization, Theme, Contract & Live Emulator Visual Inspection (`TST-REV-019.3`)*:
+  • Run `TranslationParityTest`, `ThemeColorCentralizationAuditTest`, `EditWorkoutClassificationLayoutContractTest`, `WorkoutHeaderRaceBadgeVisualContractTest`, `WorkoutFilterCriteriaRaceTest`, and `ArchitectureConformanceContractTest`, plus live `emulator-5554` Light & Dark screenshots inspected via `read_file` (`Rule 8.5`).
+
 ---
 
 ## Change History
@@ -256,3 +274,4 @@
 | `1.0.9` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Added `[Planned]` `TST-REV-018` verification suite for `REQ-REV-017` (`WorkoutCluster` encapsulation, move/delete altitude extrema & bounds, and contract checks). |
 | `1.0.10` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `TST-REV-018` to `[Implemented]` following Stage 4 unit test additions in `WorkoutClusterApexTest.kt` and `EditWorkoutClusterTest.kt`. |
 | `1.0.11` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `TST-REV-018` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9407`) `106/106` & Stage 4 `131/131` PASS (`+1/1` isolated `WorkoutClusterPreviewPersistenceTest`) + `4/4` linters PASS @ `e9af7578`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6047_walkthrough.md`. |
+| `1.0.12` | 2026-11-24 | Lane 2 Author (`ATT-9022`, `--as agent1`) | `ATT-9022` | Added and verified `TST-REV-019` (`TST-REV-019.1`..`TST-REV-019.3`): `WorkoutFilterCriteriaEpicTest` (`8/8`), `WorkoutClassificationAndEpicUiTest` (`4/4` Robolectric Compose), plus `WorkoutFilterCriteriaRaceTest`, `ActiveFilterChipsRowTest`, `EditWorkoutClassificationLayoutContractTest`, `EditWorkoutViewModelTest`, `WorkoutHeaderRaceBadgeVisualContractTest`, `TranslationParityTest`, `ThemeColorCentralizationAuditTest`, and `ArchitectureConformanceContractTest` (`72/72 PASS`, `0` new warnings), plus 6 Light/Dark `emulator-5554` screenshots inspected via `read_file` (`Rule 8.5`). |

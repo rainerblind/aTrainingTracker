@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:55.184Z" hostname="rainer-HP-EliteBook-850-G5" time="0.087">
+  <properties/>
+  <testcase name="testZoneDistributionData_withHistogram" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.007"/>
+  <testcase name="testTelemetryHistogram_independentYScalingAndReadoutFormats_tst_ui_382_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.031"/>
+  <testcase name="testTelemetryHistogramChart_streamlinedReadoutContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.001"/>
+  <testcase name="testZoneDistributionData_backwardCompatibilityWithoutHistogram" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.0"/>
+  <testcase name="testZoneCardDisplayMode_values" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.0"/>
+  <testcase name="testHeartRateZoneDistributionCard_headerAndToggleLayoutContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.016"/>
+  <testcase name="testDarkModeContrast_zone7ReadoutAndOutlineMeetWcagThresholds_tst_ui_383_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.024"/>
+  <testcase name="testTelemetryHistogramModels_backwardCompatibility_tst_ui_382_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.0"/>
+  <testcase name="testPowerZoneDistributionCard_headerAndToggleLayoutContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.003"/>
+  <testcase name="testHistogramReadoutFormat_calculations" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCardTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

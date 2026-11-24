@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:24:13.568Z" hostname="rainer-HP-EliteBook-850-G5" time="9.07">
+  <properties/>
+  <testcase name="testInvalidTileCoordinatesReturnNoTile" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="7.263"/>
+  <testcase name="testConcurrentWorkerThreadSafety" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.457"/>
+  <testcase name="testMultiWorkoutCoincidentAccumulation_TST_MAP_058_8" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.126"/>
+  <testcase name="testThermalColorLutProgression_TST_MAP_058_3" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.086"/>
+  <testcase name="testDisjointTileReturnsNoTileImmediately" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.078"/>
+  <testcase name="testAdaptiveCorridorFrequencyNormalization" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.078"/>
+  <testcase name="testEmptyPathsReturnsNoTile" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.073"/>
+  <testcase name="testStandstillJitterSingleCountMasking_TST_MAP_058_7" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.071"/>
+  <testcase name="testWorkoutClustersDecoupling_TST_MAP_059_4" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.069"/>
+  <testcase name="testDynamicZoomStrokeScaling_TST_MAP_059_1" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.076"/>
+  <testcase name="testCoarseSpatialGridEstimator_TST_MAP_058_11" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.076"/>
+  <testcase name="testCollinearMultiVertexUniformIntensity_TST_MAP_058_6" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.094"/>
+  <testcase name="testLogarithmicCorridorFrequencyTransferCurve_TST_MAP_058_10" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.184"/>
+  <testcase name="testIntersectingTileGeneratesValidPngTile" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.084"/>
+  <testcase name="testClassicStepIntensityThresholds_TST_MAP_060_2" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.084"/>
+  <testcase name="testClusterProviderWithClassicIntensityAndClassicBlue_TST_MAP_060_3" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.08"/>
+  <testcase name="testBoundedScratchBufferAndDirtyRectClearing_TST_MAP_058_9" classname="com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProviderTest" time="0.085"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

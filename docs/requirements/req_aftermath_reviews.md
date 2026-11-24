@@ -1,14 +1,14 @@
 # Living Requirements: Jubilee Milestones & App Reviews
 
 **Document ID**: `DOC-REQ-REVIEWS`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 17
+**Total Requirements**: 18
 
 ---
 
@@ -524,6 +524,27 @@
 
 **Invariants**: `clusterLock` synchronization; `ATT-6159` post-move `assignClusterToWorkout` ordering; `0` `.ui.*` imports in `WorkoutClusterEngine.kt`; `ArchitectureConformanceContractTest` LoC ratchet parity; `Localization Parity: N/A - no new or modified UI strings`.
 
+### REQ-REV-018: Two-Tier Workout Classification UI (Routine vs Special), Prominent Epic Header Badge & Epic Workout Filter (`ATT-9022`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-REV-019`
+- **System Requirement(s)**: Derived (SW-only) — Refining `SYSREQ-DEX-001`, `SYSREQ-TRK-004` (Post-workout classification, header visibility & list filtering)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `Color.kt`, `EditWorkoutScreen.kt`, `WorkoutHeaderData.kt`, `WorkoutData.kt`, `WorkoutHeader.kt`, `WorkoutFilterCriteria.kt`, `WorkoutFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`, `strings_workout_details.xml`
+- **Localization Parity**: All 9 locales (`values*/strings_workout_details.xml`: `en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`)
+- **Rationale**: Grouping everyday routine tags (`Commute`, `Indoor`) identically with memorable efforts (`Race`, `Epic`) obscured workout hierarchy and left the persisted `epic` flag (`REQ-DAT-050` / `ATT-9021`) inaccessible in Edit Workout, Workout Headers, and Workout List filtering (`ATT-9022`).
+- **Description**:
+  1. *Two-Tier Classification UI in `EditWorkoutScreen` (`REQ-REV-018.1`)*: `EditWorkoutScreen` SHALL organize workout classification tags into two distinct visual tiers: (a) **Routine Context** (`Commute` with `Icons.Default.Commute` and `Indoor` with `Icons.Default.Home` / `R.string.indoor_short`) styled in calm low-emphasis tones while preserving mutual exclusion (`updateIsCommute` / `updateIsTrainer`), and (b) **Special Distinction** (`Race` with `Icons.Filled.EmojiEvents` in `tertiaryContainer`/`tertiary` and `Epic` with `Icons.Filled.AutoAwesome` in centralized warm gold/amber `TTColor.resolveEpicBadgeColors`) styled with elevated accent emphasis and independently toggleable (including simultaneously via `updateIsRace` / `updateIsEpic`).
+  2. *Prominent `Epic` Badge in `WorkoutHeader` (`REQ-REV-018.2`)*: `WorkoutHeaderData` SHALL carry `var epic: Boolean = false` mapped from `WorkoutData.epic`. When `data.epic == true`, `WorkoutHeader` SHALL render a prominent high-visibility `Epic` badge (`Icons.Filled.AutoAwesome` + `R.string.epic_badge` + `TTColor.resolveEpicBadgeColors`) alongside any `Race` badge in both workout list summaries and workout detail headers (Portrait `FlowRow` & Landscape), while `Commute` and `Indoor` remain subtle muted secondary text.
+  3. *`Epic` Workout List Filtering & Persistence (`REQ-REV-018.3`)*: `WorkoutFilterCriteria` SHALL include `val isEpic: Boolean? = null` participating in `activeFilterCount`, `matches(workout)`, `toJson()`, and `fromJson()` with backward-compatible omission when `null`. `WorkoutFilterBottomSheet` SHALL expose an `Epic` `FilterChip` under Workout Attributes (`R.string.filter_epic_only`), and `ActiveFilterChipsRow` SHALL render a removable active `Epic` chip clearing `isEpic = null` on tap.
+  4. *Centralized Theme Tokens & 9-Language Localization Parity (`REQ-REV-018.4`)*: All `Epic` Light/Dark/AMOLED colors SHALL reside in `Color.kt` (`TTColor`), and all 5 new strings (`epic`, `epic_badge`, `filter_epic_only`, `workout_classification_routine_header`, `workout_classification_special_header`) SHALL maintain 100% parity across all 9 locales in `values*/strings_workout_details.xml`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the user opens `EditWorkoutScreen` for any workout, *When* viewing and toggling classification tags, *Then* `Commute` and `Indoor` appear grouped as calm routine tags (mutually exclusive) while `Race` and `Epic` appear elevated as special distinction tags toggleable independently (including both active).
+  • *Given* a workout has `epic = true` (alone or alongside `race = true`), *When* rendered in `WorkoutHeader` (list or detail), *Then* a distinct prominent `Epic` badge appears alongside any `Race` badge while `Commute`/`Indoor` stay subtle secondary text.
+  • *Given* the user selects the `Epic` filter chip in `WorkoutFilterBottomSheet` and applies it, *When* viewing the workouts list and persisting/restoring filter criteria JSON, *Then* only `epic == true` workouts match, an active removable `Epic` chip appears in `ActiveFilterChipsRow`, and JSON round-trip preserves `isEpic`.
+- **Invariants**: Preserves `EditWorkoutClassificationLayoutContractTest` (`weight(1f)`, `defaultMinSize(minHeight = 42.dp)`, `Role.Checkbox`, `Commute`/`Home`/`EmojiEvents`, `indoor_short`, `tertiaryContainer`/`tertiary`), `Commute`/`Indoor` mutual exclusion, `WorkoutHeaderRaceBadgeVisualContractTest`, `WorkoutFilterCriteriaRaceTest`, `ThemeColorCentralizationAuditTest`, and `TranslationParityTest`.
+
 ---
 
 ## Change History
@@ -542,3 +563,4 @@
 | `1.0.9` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Added `[Planned]` `REQ-REV-017` (`WorkoutCluster` centroid/altitude/bounds encapsulation, move/delete extrema & bounds fixes, and `createNewClusterFromWorkout`/hit-count deduplication). |
 | `1.0.10` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `REQ-REV-017` to `[Implemented]` following Stage 4 implementation in `WorkoutClusterDatabaseManager.kt` (`withAddedWorkout`, `withRemovedWorkout`) and `WorkoutClusterEngine.kt` (`1,634 -> 1,562` LoC). |
 | `1.0.11` | 2026-11-21 | Lane B Flash (`ATT-6047`, `--as agent1`) | `ATT-6047` | Promoted `REQ-REV-017` to `[Verified]` in Rule 7.5 doc-only Stage 5 reusing Gate 4 (`ATT-9407`) `106/106` & Stage 4 `131/131` PASS (`+1/1` isolated `WorkoutClusterPreviewPersistenceTest`) + `4/4` linters PASS @ `e9af7578`, `--check-verified-evidence` `exit 0`, and `docs/engineering/walkthroughs/ATT-6047_walkthrough.md`. |
+| `1.0.12` | 2026-11-24 | Lane 2 Author (`ATT-9022`, `--as agent1`) | `ATT-9022` | Added and verified `REQ-REV-018` (`REQ-REV-018.1`..`REQ-REV-018.4`): two-tier Routine vs Special classification UI in `EditWorkoutScreen.kt`, prominent `Epic` badge in `WorkoutHeader.kt`, `isEpic` filter in `WorkoutFilterCriteria.kt`/`WorkoutFilterBottomSheet.kt`/`ActiveFilterChipsRow.kt`, centralized `TTColor` Epic tokens, 9-language localization parity, `72/72` targeted unit/Compose UI tests PASS (`0` new warnings), and live `emulator-5554` Light & Dark visual verification (`Rule 8.5`). |

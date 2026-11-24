@@ -507,6 +507,53 @@ object TTColor {
     val CarriageStationary = Color(0xFF6B7C93)
     val CarriageUnknown = Color(0xFF827B75)
 
+    // Special Distinction: Epic Workout Badge & Tile Tokens (REQ-REV-018, ATT-9022)
+    // Calibrated for WCAG AAA text contrast (> 9:1) on Light, Dark, and AMOLED surfaces,
+    // clearly distinguished from Race's Royal Blue tertiaryContainer accent.
+    val EpicContainerLight = Color(0xFFFFF3CD)
+    val EpicOnContainerLight = Color(0xFF4E3000)
+    val EpicAccentLight = Color(0xFFB45309)
+    val EpicContainerDark = Color(0xFF422A00)
+    val EpicOnContainerDark = Color(0xFFFFE082)
+    val EpicAccentDark = Color(0xFFF59E0B)
+
+    /**
+     * Theme-aware color triple for the prominent `Epic` workout badge and Special Distinction
+     * classification tile (`REQ-REV-018.1`, `REQ-REV-018.2`, `ATT-9022`).
+     */
+    data class EpicBadgeColors(
+        val container: Color,
+        val onContainer: Color,
+        val accent: Color
+    )
+
+    /**
+     * Pure theme-aware resolver for [EpicBadgeColors] supporting Light, Dark, and AMOLED surfaces.
+     */
+    fun resolveEpicBadgeColors(isDark: Boolean): EpicBadgeColors = if (isDark) {
+        EpicBadgeColors(
+            container = EpicContainerDark,
+            onContainer = EpicOnContainerDark,
+            accent = EpicAccentDark
+        )
+    } else {
+        EpicBadgeColors(
+            container = EpicContainerLight,
+            onContainer = EpicOnContainerLight,
+            accent = EpicAccentLight
+        )
+    }
+
+    /**
+     * Composable convenience returning [EpicBadgeColors] derived from the active [MaterialTheme.colorScheme]
+     * surface luminance (works seamlessly across Light, Dark, and AMOLED themes).
+     */
+    @Composable
+    fun epicBadgeColors(): EpicBadgeColors {
+        val isDark = relativeLuminance(MaterialTheme.colorScheme.surface) < 0.5
+        return resolveEpicBadgeColors(isDark)
+    }
+
     fun getCarriageModeColor(
         mode: com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
     ): Color = when (mode) {

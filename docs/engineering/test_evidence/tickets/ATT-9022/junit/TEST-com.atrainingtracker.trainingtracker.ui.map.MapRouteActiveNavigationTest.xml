@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapRouteActiveNavigationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:29.997Z" hostname="rainer-HP-EliteBook-850-G5" time="0.011">
+  <properties/>
+  <testcase name="testToMapRoute_propagatesIsActiveNavigationFlag" classname="com.atrainingtracker.trainingtracker.ui.map.MapRouteActiveNavigationTest" time="0.005"/>
+  <testcase name="testXRayPolylineHierarchy_preservesSegmentInterleavingInvariants" classname="com.atrainingtracker.trainingtracker.ui.map.MapRouteActiveNavigationTest" time="0.0"/>
+  <testcase name="testMapRoute_whenSelectedPassive_usesStandardStyling" classname="com.atrainingtracker.trainingtracker.ui.map.MapRouteActiveNavigationTest" time="0.006"/>
+  <testcase name="testMapRoute_whenUnselected_usesSubordinateStyling" classname="com.atrainingtracker.trainingtracker.ui.map.MapRouteActiveNavigationTest" time="0.0"/>
+  <testcase name="testMapRoute_whenActiveNavigation_usesProminentStyling" classname="com.atrainingtracker.trainingtracker.ui.map.MapRouteActiveNavigationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

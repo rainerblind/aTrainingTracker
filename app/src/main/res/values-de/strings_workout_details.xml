@@ -56,4 +56,9 @@
     <string name="workout_map_scrubber_expand">Metrikdiagramm ausklappen</string>
     <string name="workout_map_scrubber_clear_selection">Ausgewählte Position zurücksetzen</string>
     <string name="workout_map_scrubber_metric_selector_cd">Diagrammmetrik auswählen</string>
+    <string name="epic">Episch</string>
+    <string name="epic_badge">Episch</string>
+    <string name="filter_epic_only">Nur Episch</string>
+    <string name="workout_classification_routine_header">Trainingskontext</string>
+    <string name="workout_classification_special_header">Besondere Auszeichnung</string>
 </resources>

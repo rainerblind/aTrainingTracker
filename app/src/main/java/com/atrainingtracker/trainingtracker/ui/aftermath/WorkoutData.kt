@@ -179,6 +179,7 @@ data class WorkoutData(
             commute = commute,
             trainer = trainer,
             race = race,
+            epic = epic,
             source = source,
             uploadToStrava = uploadToStrava,
             stravaSportName = stravaSportName,

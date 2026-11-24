@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:18.014Z" hostname="rainer-HP-EliteBook-850-G5" time="3.879">
+  <properties/>
+  <testcase name="testEnrich_setsWorkoutIdToPathMapEmpty_eliminatingEagerLatLngRetention" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" time="0.633"/>
+  <testcase name="testEnrich_withOver500Workouts_maintainsBoundedMemoryStructures" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" time="0.684"/>
+  <testcase name="testEnrich_boundsPolylinesCountToMaxSummaryThumbnailTracks" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" time="0.63"/>
+  <testcase name="testPrepareCardMapPreview_boundsCacheSizeTo64" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" time="0.642"/>
+  <testcase name="testPrepareCardMapPreview_servesFromLruCacheOnHit" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" time="0.62"/>
+  <testcase name="testPeriodSummaryCard_configuresLiteModeForVectorPolylines" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositoryMemoryTest" time="0.67"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

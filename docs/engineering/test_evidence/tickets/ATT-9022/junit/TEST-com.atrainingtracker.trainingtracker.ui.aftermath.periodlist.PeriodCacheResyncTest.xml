@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCacheResyncTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:12.875Z" hostname="rainer-HP-EliteBook-850-G5" time="0.032">
+  <properties/>
+  <testcase name="testPeriodResync_purgesOldPeriodsAndRecalculatesBoundary" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCacheResyncTest" time="0.032"/>
+  <testcase name="testPeriodResync_emptyWorkoutsProducesZeroPeriods" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodCacheResyncTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

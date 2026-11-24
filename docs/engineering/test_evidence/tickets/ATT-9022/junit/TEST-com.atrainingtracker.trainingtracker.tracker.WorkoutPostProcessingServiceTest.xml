@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:03.956Z" hostname="rainer-HP-EliteBook-850-G5" time="2.85">
+  <properties/>
+  <testcase name="testOnStartCommand_rendersActiveCurrentProgressInsteadOfResettingToZeroOfOne_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.607"/>
+  <testcase name="testActionStopPendingFgsAndPromoteFailureCleanup_TST_TRK_095_2" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.771"/>
+  <testcase name="testDetermineForegroundServiceType_api34ReturnsShortService_api33ReturnsZero_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.254"/>
+  <testcase name="testFastDrainBeforeOnStartCommand_suppressesStopServiceThenPromotesAndStopsWithStartId_TST_TRK_095_2" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.25"/>
+  <testcase name="testOnTimeout_stopsForegroundCleanlyWithoutCancellingActiveCoordinatorWork_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.237"/>
+  <testcase name="testReEnqueueBeforeOnStartCommand_clearsPendingStopAndAllowsPostPromotionStop_TST_TRK_095_2" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.265"/>
+  <testcase name="testOnTimeoutSingleArg_api34ShortServiceStopsForegroundWithoutCancellingCoordinatorWork_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.235"/>
+  <testcase name="testStartForPostProcessing_fgsStartDisallowed_fallsBackCleanlyWithoutThrowing_tstTrk091_3" classname="com.atrainingtracker.trainingtracker.tracker.WorkoutPostProcessingServiceTest" time="0.228"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

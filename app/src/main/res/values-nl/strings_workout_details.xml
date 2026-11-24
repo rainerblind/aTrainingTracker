@@ -56,4 +56,9 @@
     <string name="workout_map_scrubber_expand">Metriekgrafiek uitvouwen</string>
     <string name="workout_map_scrubber_clear_selection">Geselecteerde positie wissen</string>
     <string name="workout_map_scrubber_metric_selector_cd">Grafiekmetriek selecteren</string>
+    <string name="epic">Episch</string>
+    <string name="epic_badge">Episch</string>
+    <string name="filter_epic_only">Alleen episch</string>
+    <string name="workout_classification_routine_header">Dagelijkse context</string>
+    <string name="workout_classification_special_header">Bijzondere onderscheiding</string>
 </resources>

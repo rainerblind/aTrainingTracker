@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaRaceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:45.720Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testMatches_isRaceTrue_filtersOnlyRaceWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaRaceTest" time="0.0"/>
+  <testcase name="testMatches_isRaceNull_matchesAllWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaRaceTest" time="0.001"/>
+  <testcase name="testActiveFilterCount_incrementsWhenIsRaceNotNull" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaRaceTest" time="0.0"/>
+  <testcase name="testJsonSerialization_roundtripsIsRaceCorrectly" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaRaceTest" time="0.0"/>
+  <testcase name="testMatches_isRaceFalse_filtersOnlyNonRaceWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaRaceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

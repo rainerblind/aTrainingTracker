@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchFieldTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:57.037Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="testAllFilterBottomSheets_delegateToFilterSearchField" classname="com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchFieldTest" time="0.002"/>
+  <testcase name="testFilterSearchField_structuralContract" classname="com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchFieldTest" time="0.0"/>
+  <testcase name="testQueryClearing_resetsToEmptyString" classname="com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchFieldTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

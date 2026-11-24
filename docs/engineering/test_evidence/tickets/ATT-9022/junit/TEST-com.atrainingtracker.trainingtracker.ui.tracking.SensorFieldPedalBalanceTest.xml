@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:25:18.401Z" hostname="rainer-HP-EliteBook-850-G5" time="0.004">
+  <properties/>
+  <testcase name="sensorFieldState_withMildAsymmetryPedalBalanceState_isPreserved" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" time="0.003"/>
+  <testcase name="sensorFieldState_withSevereAsymmetryPedalBalanceState_isPreserved" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" time="0.0"/>
+  <testcase name="sensorFieldState_copyMutation_updatesPedalBalanceStateIndependently" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" time="0.0"/>
+  <testcase name="sensorFieldState_defaultsToNoPedalBalanceState" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" time="0.001"/>
+  <testcase name="sensorFieldState_withOptimalPedalBalanceState_isPreserved" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" time="0.0"/>
+  <testcase name="sensorFieldState_stalePedalBalanceState_hasNullIndicatorFractionAndIsStale" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldPedalBalanceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -56,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -461,6 +462,13 @@ fun WorkoutFilterBottomSheet(
                     selected = (draft.isRace == true),
                     onClick = { draft = draft.copy(isRace = if (draft.isRace == true) null else true) },
                     label = { Text(stringResource(R.string.filter_race_only)) }
+                )
+
+                FilterChip(
+                    selected = (draft.isEpic == true),
+                    onClick = { draft = draft.copy(isEpic = if (draft.isEpic == true) null else true) },
+                    label = { Text(stringResource(R.string.filter_epic_only)) },
+                    modifier = Modifier.testTag("workout_filter_chip_epic")
                 )
 
                 FilterChip(

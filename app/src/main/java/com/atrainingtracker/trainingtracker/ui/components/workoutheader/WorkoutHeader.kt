@@ -19,12 +19,14 @@
 package com.atrainingtracker.trainingtracker.ui.components.workoutheader
 
 import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -67,9 +69,10 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.dialogs.SensorDiagnosticShareSheet
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
- * Test tags for [WorkoutHeader] action buttons and global-vs-unit visual grouping (`REQ-UI-2786`).
+ * Test tags for [WorkoutHeader] action buttons, special distinction badges, and global-vs-unit visual grouping (`REQ-UI-2786`, `REQ-REV-018`).
  */
 object WorkoutHeaderTestTags {
     const val GLOBAL_TABS_PILL = "workout_header_global_tabs_pill"
@@ -78,6 +81,8 @@ object WorkoutHeaderTestTags {
     const val CHANGE_CLUSTER_BUTTON = "workout_header_change_cluster_button"
     const val EDIT_BUTTON = "workout_header_edit_button"
     const val SHARE_BUTTON = "workout_header_share_button"
+    const val RACE_BADGE = "workout_header_race_badge"
+    const val EPIC_BADGE = "workout_header_epic_badge"
 }
 
 /**
@@ -454,6 +459,13 @@ fun WorkoutHeader(
                         overflow = TextOverflow.Ellipsis
                     )
 
+                    if (data.race) {
+                        WorkoutRaceBadge()
+                    }
+                    if (data.epic) {
+                        WorkoutEpicBadge()
+                    }
+
                     Spacer(modifier = Modifier.weight(1f))
 
                     actionButtonsContent()
@@ -562,11 +574,12 @@ fun WorkoutHeader(
                     }
 
                     // 2. BOTTOM CONTENT: Organized in horizontal rows
-                    // Row A: Sport Specific Info (Sport Name, Equipment, Commute/Trainer)
-                    Row(
+                    // Row A: Sport Specific Info (Sport Name, Equipment, Routine Commute/Indoor, Special Race/Epic Badges, Source)
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = data.sportName,
@@ -581,7 +594,7 @@ fun WorkoutHeader(
                             )
                         }
 
-                        // Trainer / Commute Logic
+                        // Routine Context: Trainer / Commute remain subtle muted secondary text
                         if (data.trainer || data.commute) {
                             val label = when {
                                 data.commute -> stringResource(R.string.commute)
@@ -594,30 +607,14 @@ fun WorkoutHeader(
                             )
                         }
 
-                        // Race Badge (ATT-2005)
+                        // Special Distinction: Prominent Race Badge (ATT-2005)
                         if (data.race) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.tertiaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.EmojiEvents,
-                                        contentDescription = stringResource(R.string.race_badge),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.race_badge),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            WorkoutRaceBadge()
+                        }
+
+                        // Special Distinction: Prominent Epic Badge (ATT-9022 / REQ-REV-018.2)
+                        if (data.epic) {
+                            WorkoutEpicBadge()
                         }
 
                         // Origin Source Badge (ATT-2186)
@@ -997,6 +994,101 @@ private fun PreviewWorkoutHeaderWithEditAndShare() {
                     trainer = false,
                     startTimeS = 0,
                     equipmentName = null,
+                    uploadToStrava = 1,
+                    stravaSportName = "Ride"
+                ),
+                onClicked = {},
+                onExport = {},
+                onSaveAsRoute = {},
+                onDeleteRequest = {},
+                onEditWorkout = {},
+                onShareWorkout = {}
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorkoutRaceBadge(modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = modifier.testTag(WorkoutHeaderTestTags.RACE_BADGE)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.EmojiEvents,
+                contentDescription = stringResource(R.string.race_badge),
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(R.string.race_badge),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorkoutEpicBadge(modifier: Modifier = Modifier) {
+    val epicColors = TTColor.epicBadgeColors()
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = epicColors.container,
+        contentColor = epicColors.onContainer,
+        border = BorderStroke(0.75.dp, epicColors.accent.copy(alpha = 0.55f)),
+        modifier = modifier.testTag(WorkoutHeaderTestTags.EPIC_BADGE)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AutoAwesome,
+                contentDescription = stringResource(R.string.epic_badge),
+                tint = epicColors.accent,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(R.string.epic_badge),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+    }
+}
+
+@Preview(name = "Epic & Race Badges - Light", showBackground = true)
+@Preview(name = "Epic & Race Badges - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PreviewWorkoutHeaderEpicAndRaceBadges() {
+    ATrainingTrackerTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            WorkoutHeader(
+                data = WorkoutHeaderData(
+                    workoutName = "Ötztaler Radmarathon",
+                    formattedDate = "Aug 30, 2026",
+                    formattedTime = "06:30",
+                    sportName = "Road Cycling",
+                    bSportType = BSportType.BIKE,
+                    finished = true,
+                    commute = false,
+                    trainer = false,
+                    race = true,
+                    epic = true,
+                    startTimeS = 0,
+                    equipmentName = "Canyon Ultimate",
                     uploadToStrava = 1,
                     stravaSportName = "Ride"
                 ),

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:57.049Z" hostname="rainer-HP-EliteBook-850-G5" time="0.064">
+  <properties/>
+  <testcase name="testWithBottomBaselineAlignment_disablesFontPaddingAndAlignsBottom" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderTest" time="0.062"/>
+  <testcase name="testWithBottomBaselineAlignment_preservesExistingProperties" classname="com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

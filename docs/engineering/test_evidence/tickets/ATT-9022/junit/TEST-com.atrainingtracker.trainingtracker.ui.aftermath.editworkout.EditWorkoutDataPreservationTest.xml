@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutDataPreservationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:02.160Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="updatingEquipment_preservesHiddenNotesAndGoal" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutDataPreservationTest" time="0.001"/>
+  <testcase name="updatingWorkoutName_preservesAllHiddenFields" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutDataPreservationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

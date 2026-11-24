@@ -56,4 +56,9 @@
     <string name="workout_map_scrubber_expand">メトリクスグラフを展開</string>
     <string name="workout_map_scrubber_clear_selection">選択位置をクリア</string>
     <string name="workout_map_scrubber_metric_selector_cd">グラフのメトリクスを選択</string>
+    <string name="epic">エピック</string>
+    <string name="epic_badge">エピック</string>
+    <string name="filter_epic_only">エピックのみ</string>
+    <string name="workout_classification_routine_header">日常の分類</string>
+    <string name="workout_classification_special_header">特別な記録</string>
 </resources>

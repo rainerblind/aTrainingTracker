@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:34.667Z" hostname="rainer-HP-EliteBook-850-G5" time="0.129">
+  <properties/>
+  <testcase name="HrvThresholdSummaryCard exists and has Composable contract (REQ-PER-036_5)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.064"/>
+  <testcase name="TST-UI-527_5 power comparison is suppressed when workout has no power data even with configured FTP" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.0"/>
+  <testcase name="WorkoutDetailTabbedContent wires configuredFtp, configuredHrMax and callbacks (Rule 81)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.0"/>
+  <testcase name="WorkoutData resolves protocolType from metadata (Finding 3)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.001"/>
+  <testcase name="TST-UI-527 localization parity for workout_detail_tab_hrv and settings_workout_card_hrv across all 9 locales" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.0"/>
+  <testcase name="all zone comparison and consensus string keys exist across canonical resources (TST-PER-045_7)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.005"/>
+  <testcase name="TST-UI-527_4 card mounting under HRV section and preset mapping" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.027"/>
+  <testcase name="all threshold card string keys exist across canonical resources (TST-PER-044_6)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.0"/>
+  <testcase name="HrvThresholdSummaryCard exposes Zone Comparison and Consensus test tags (REQ-PER-037_4)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.0"/>
+  <testcase name="diagnostic string resources format positional arguments cleanly across all 9 locales (Finding 1)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.031"/>
+  <testcase name="HrvThresholdSummaryCard is mounted in WorkoutDetailTabbedContent under ZONES (Rule 81)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCardTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

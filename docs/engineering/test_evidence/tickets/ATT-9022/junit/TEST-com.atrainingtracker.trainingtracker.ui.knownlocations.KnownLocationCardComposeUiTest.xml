@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardComposeUiTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:26.503Z" hostname="rainer-HP-EliteBook-850-G5" time="0.795">
+  <properties/>
+  <testcase name="testNarrow360DpViewport_130PercentFontScale_noOverlapOrOverflow" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardComposeUiTest" time="0.33"/>
+  <testcase name="testPreviewMapBounds_are175x120Dp" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardComposeUiTest" time="0.121"/>
+  <testcase name="testCaptureLightAndDarkPreviewPng" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardComposeUiTest" time="0.212"/>
+  <testcase name="testCardCallbacks_editShowOnMapAndSportStartsDispatch" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardComposeUiTest" time="0.131"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

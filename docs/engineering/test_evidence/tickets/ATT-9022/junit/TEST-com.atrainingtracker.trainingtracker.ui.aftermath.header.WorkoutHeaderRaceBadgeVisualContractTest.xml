@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.header.WorkoutHeaderRaceBadgeVisualContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:10.611Z" hostname="rainer-HP-EliteBook-850-G5" time="0.057">
+  <properties/>
+  <testcase name="testWorkoutHeaderSourceExists" classname="com.atrainingtracker.trainingtracker.ui.aftermath.header.WorkoutHeaderRaceBadgeVisualContractTest" time="0.056"/>
+  <testcase name="testRaceBadge_usesLocalizedResource" classname="com.atrainingtracker.trainingtracker.ui.aftermath.header.WorkoutHeaderRaceBadgeVisualContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

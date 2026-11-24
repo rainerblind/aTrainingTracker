@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:10.758Z" hostname="rainer-HP-EliteBook-850-G5" time="1.449">
+  <properties/>
+  <testcase name="testObsoletePeriodSummariesDiskCleanup_doesNotSetPrefFlagWhenDeleteFails_TST_PER_056_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.094"/>
+  <testcase name="testPeriodSummariesDatabaseManagerExcised_andRegistryExcludesIt_TST_PER_056_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.255"/>
+  <testcase name="testReactiveProjection_multiSportMultiYearDstLocaleEmptyGapsAndRange_TST_PER_056_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.239"/>
+  <testcase name="testReactiveProjection_5000WorkoutsCompletesQuicklyInMemory_TST_PER_056_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.639"/>
+  <testcase name="testReactiveProjection_cropEditSportChangeDeleteAndNonPeriodDedup_TST_PER_056_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.063"/>
+  <testcase name="testObsoletePeriodSummariesDiskCleanup_deletesAllVariantsOnceEvenWithLegacyPref_TST_PER_056_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.048"/>
+  <testcase name="testLegacyAttBackupContainingPeriodSummariesDb_validatesRestoresAndPurges_TST_PER_056_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodReactiveProjectionTest" time="0.109"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

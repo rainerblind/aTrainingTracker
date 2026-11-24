@@ -56,4 +56,9 @@
     <string name="workout_map_scrubber_expand">Expandir gráfico de métricas</string>
     <string name="workout_map_scrubber_clear_selection">Borrar posición seleccionada</string>
     <string name="workout_map_scrubber_metric_selector_cd">Seleccionar métrica del gráfico</string>
+    <string name="epic">Épico</string>
+    <string name="epic_badge">Épico</string>
+    <string name="filter_epic_only">Solo épicos</string>
+    <string name="workout_classification_routine_header">Contexto habitual</string>
+    <string name="workout_classification_special_header">Distinción especial</string>
 </resources>

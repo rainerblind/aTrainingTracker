@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionErgonomicsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:45.618Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testCompactViewContextMenu_whenActivelyTracked_contextMenuIsDisabled" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionErgonomicsTest" time="0.0"/>
+  <testcase name="testCompletedWorkout_whenIdle_isDeletableAndExportableWithHighAlpha" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionErgonomicsTest" time="0.0"/>
+  <testcase name="testLiveActiveWorkout_whenTracking_cannotBeDeletedViaUI" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionErgonomicsTest" time="0.0"/>
+  <testcase name="testOldUnfinishedWorkout_whenIdle_isDeletableAndRenderedWithAlpha" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionErgonomicsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

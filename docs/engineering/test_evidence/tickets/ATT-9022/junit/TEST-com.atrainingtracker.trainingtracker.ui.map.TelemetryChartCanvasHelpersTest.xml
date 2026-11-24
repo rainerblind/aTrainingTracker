@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:58.398Z" hostname="rainer-HP-EliteBook-850-G5" time="1.615">
+  <properties/>
+  <testcase name="computeMarginalBarVerticalBounds_filtersOutOfDomainAndClampsWithoutZeroHeightStacking" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.22"/>
+  <testcase name="drawXAxisTicks_separatesGridlinesFromLabelCollisionGating" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.257"/>
+  <testcase name="formatElevationDistanceTickLabel_formatsMetricAndImperialWithLocale" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.125"/>
+  <testcase name="captureChartsMarginalHistogramsAndTicksLightDarkPng_forRule85" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.587"/>
+  <testcase name="drawMarginalHistogramBars_rendersUnconditionalTrackAndGatesForegroundOnDuration" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.205"/>
+  <testcase name="computeMarginalBarVerticalBounds_appliesMinBarHeightOnlyToPositiveInDomainBins" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.108"/>
+  <testcase name="computeXAxisTickValues_handlesValidStepAndGuardsInvalidInputs" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryChartCanvasHelpersTest" time="0.11"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

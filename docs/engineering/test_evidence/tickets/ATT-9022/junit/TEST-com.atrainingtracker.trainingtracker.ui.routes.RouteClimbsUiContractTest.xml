@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RouteClimbsUiContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:25.797Z" hostname="rainer-HP-EliteBook-850-G5" time="0.054">
+  <properties/>
+  <testcase name="testMapRoute_climbsContract" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteClimbsUiContractTest" time="0.004"/>
+  <testcase name="testClimbCategoryColors_allCategoriesMappedWithContrastColors" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteClimbsUiContractTest" time="0.014"/>
+  <testcase name="testRouteClimbsBreakdownSection_isAccessible" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteClimbsUiContractTest" time="0.032"/>
+  <testcase name="testClimbCategoryChip_isAccessible" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteClimbsUiContractTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:35.604Z" hostname="rainer-HP-EliteBook-850-G5" time="0.011">
+  <properties/>
+  <testcase name="testNullStartCoordinateRejection" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="testJsonDeserializationLegacyWithoutSpatial" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.001"/>
+  <testcase name="testWithinRadiusMatch" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="testJsonSerializationParity" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.009"/>
+  <testcase name="testOutsideRadiusRejection" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="testExactLocationMatch" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="testActiveFilterCountIncludesSpatialDimension" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.0"/>
+  <testcase name="testCustomRadiusOverride" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaSpatialTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

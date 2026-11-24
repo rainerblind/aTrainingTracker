@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.ActiveFilterChipsRowTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:34.818Z" hostname="rainer-HP-EliteBook-850-G5" time="0.042">
+  <properties/>
+  <testcase name="testFunctionalTransformer_clearsStartLocation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.ActiveFilterChipsRowTest" time="0.001"/>
+  <testcase name="testActiveFilterChipsRow_structuralContract_and_deadAliasPurge" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.ActiveFilterChipsRowTest" time="0.039"/>
+  <testcase name="testFunctionalTransformer_clearsCluster" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.ActiveFilterChipsRowTest" time="0.0"/>
+  <testcase name="testFunctionalTransformer_clearsDistanceRange" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.ActiveFilterChipsRowTest" time="0.001"/>
+  <testcase name="testFunctionalTransformer_clearsQuery" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.ActiveFilterChipsRowTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
