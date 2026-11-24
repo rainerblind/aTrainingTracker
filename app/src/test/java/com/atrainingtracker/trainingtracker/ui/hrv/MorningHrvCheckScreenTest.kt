@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -458,5 +459,124 @@ class MorningHrvCheckScreenTest {
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
         assertTrue(outFile.exists() && outFile.length() > 0)
+    }
+
+    @Test
+    fun testNoHrSensorConnected_disablesStartShowsGuidanceAndKeepsStandaloneWellnessEnabled_TST_HRV_052() {
+        // REQ-HRV-052.3 / TST-HRV-052.2
+        var startClicked = 0
+        var saveWellnessClicked = 0
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = true,
+                        enableMorningSleepAndWellness = true,
+                        enableSleepDurationAndQuality = true,
+                        enableMorningEnergy = true,
+                        currentHeartRateBpm = null,
+                        isHrSensorAvailable = false
+                    ),
+                    onNavigateBack = {},
+                    onStart = { startClicked++ },
+                    onSaveStandaloneWellness = { saveWellnessClicked++ }
+                )
+            }
+        }
+
+        // Disconnected status badge and connection hint are displayed; misleading Ready badge is hidden
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_state_no_sensor))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_no_sensor_guidance")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_no_sensor_hint))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_state_ready))
+            .assertDoesNotExist()
+
+        // Start Measurement button is disabled and does not fire onStart
+        composeTestRule.onNodeWithTag("morning_hrv_start_button")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+            .performClick()
+        assertEquals(0, startClicked)
+
+        // Standalone Morning Wellness save remains enabled and clickable without HR sensor
+        composeTestRule.onNodeWithTag("morning_hrv_save_wellness_secondary_button")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+        assertEquals(1, saveWellnessClicked)
+    }
+
+    @Test
+    fun testHrSensorAvailable_enablesStartAndHidesDisconnectedGuidance_TST_HRV_052() {
+        // REQ-HRV-052.3 / TST-HRV-052.2
+        var startClicked = 0
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = true,
+                        enableMorningSleepAndWellness = true,
+                        currentHeartRateBpm = 56,
+                        isHrSensorAvailable = true
+                    ),
+                    onNavigateBack = {},
+                    onStart = { startClicked++ }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_state_ready))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_state_no_sensor))
+            .assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_no_sensor_guidance")
+            .assertDoesNotExist()
+
+        composeTestRule.onNodeWithTag("morning_hrv_start_button")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
+            .performClick()
+        assertEquals(1, startClicked)
+    }
+
+    @Test
+    fun testHrSensorConnectedBeforeFirstBeat_enablesStartWithoutDisconnectedGuidance_TST_HRV_052() {
+        // REQ-HRV-052.1 / REQ-HRV-052.3 / TST-HRV-052.2
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = true,
+                        enableMorningSleepAndWellness = false,
+                        currentHeartRateBpm = null,
+                        isHrSensorAvailable = true
+                    ),
+                    onNavigateBack = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_state_ready))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("morning_hrv_no_sensor_guidance")
+            .assertDoesNotExist()
+        composeTestRule.onNodeWithTag("morning_hrv_start_button")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
     }
 }

@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
@@ -49,6 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -100,8 +102,16 @@ data class MorningHrvUiState(
     val morningEnergy1To5: Int = 3,
     val muscleSoreness1To5: Int = 1,
     val selectedContextTags: Set<String> = emptySet(),
-    val isOpticalPpiSession: Boolean = false
-)
+    val isOpticalPpiSession: Boolean = false,
+    val isHrSensorAvailable: Boolean = currentHeartRateBpm != null
+) {
+    /**
+     * Whether a morning HRV measurement may be started (`REQ-HRV-052.1`).
+     */
+    val canStartMeasurement: Boolean
+        get() = (phase == MorningHrvPhase.READY || phase == MorningHrvPhase.COMPLETED) &&
+            isHrSensorAvailable
+}
 
 /**
  * ViewModel orchestrating the standardized waking resting HRV measurement protocol (`REQ-PER-032`).
@@ -119,6 +129,7 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
     private val bufferedBeats = CopyOnWriteArrayList<RrBeatEvent>()
     private val artifactFilter = RrArtifactFilter()
     private var timerJob: Job? = null
+    private var hadActiveHrSensorInRepo: Boolean = false
 
     private val _uiState: MutableStateFlow<MorningHrvUiState>
     val uiState: StateFlow<MorningHrvUiState>
@@ -145,6 +156,47 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         banalServiceRepository.bindToBANALService()
         banalServiceRepository.startSearchingForPairedDevices()
         banalServiceRepository.addRrBeatListener(rrBeatListener)
+
+        viewModelScope.launch(dispatcher) {
+            combine(
+                banalServiceRepository.activeSensors,
+                banalServiceRepository.allFilteredSensorData
+            ) { sensors, sensorDataList ->
+                val hasRepoHrSensor = SensorType.HR in sensors || SensorType.RR_INTERVAL in sensors
+                val liveHr = (
+                    sensorDataList.firstOrNull {
+                        it.sensorType == SensorType.HR && it.deviceName == null
+                    }?.value as? Number
+                        ?: sensorDataList.firstOrNull {
+                            it.sensorType == SensorType.HR
+                        }?.value as? Number
+                    )?.toInt()?.takeIf { it > 0 }
+                Pair(hasRepoHrSensor || liveHr != null, liveHr)
+            }.collect { (repoHrAvailable, liveHr) ->
+                if (repoHrAvailable) {
+                    hadActiveHrSensorInRepo = true
+                    _uiState.update { current ->
+                        current.copy(
+                            isHrSensorAvailable = true,
+                            currentHeartRateBpm = current.currentHeartRateBpm ?: liveHr
+                        )
+                    }
+                } else if (hadActiveHrSensorInRepo) {
+                    hadActiveHrSensorInRepo = false
+                    _uiState.update { current ->
+                        if (current.phase == MorningHrvPhase.READY) {
+                            current.copy(
+                                isHrSensorAvailable = false,
+                                currentHeartRateBpm = null,
+                                isOpticalPpiSession = false
+                            )
+                        } else {
+                            current.copy(isHrSensorAvailable = false)
+                        }
+                    }
+                }
+            }
+        }
 
         viewModelScope.launch(dispatcher) {
             tuningDataStore.tuningConfigFlow.collect { config ->
@@ -279,11 +331,12 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Starts the standardized measurement protocol (`REQ-PER-032.1`).
+     * Starts the standardized measurement protocol (`REQ-PER-032.1`, `REQ-HRV-052.2`).
      * Transitions: READY -> STABILIZING -> MEASURING -> COMPLETED.
+     * Guarded against invocation when no compatible HR/HRV sensor is available.
      */
     fun startMeasurement() {
-        if (_uiState.value.phase != MorningHrvPhase.READY && _uiState.value.phase != MorningHrvPhase.COMPLETED) {
+        if (!_uiState.value.canStartMeasurement) {
             return
         }
 
@@ -348,6 +401,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 phase = MorningHrvPhase.READY,
                 remainingSec = 0,
                 beatCount = 0,
+                currentHeartRateBpm = if (it.isHrSensorAvailable) it.currentHeartRateBpm else null,
+                isOpticalPpiSession = if (it.isHrSensorAvailable) it.isOpticalPpiSession else false,
                 signalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
                 signalQualityResult = null,
                 errorMessageResId = null,
@@ -364,10 +419,11 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Handles real-time RR beat events from [banalServiceRepository] (`REQ-PER-032.3`, `REQ-HRV-049.2`).
+     * Handles real-time RR beat events from [banalServiceRepository] (`REQ-PER-032.3`, `REQ-HRV-049.2`, `REQ-HRV-052.1`).
      */
     fun handleRrBeat(event: RrBeatEvent) {
         val hr = if (event.rrMs > 0.0) (60000.0 / event.rrMs).roundToInt() else null
+        val hasValidBeat = hr != null
 
         if (_uiState.value.phase == MorningHrvPhase.MEASURING) {
             bufferedBeats.add(event)
@@ -387,14 +443,16 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                     beatCount = currentBeats.size,
                     artifactRatePct = rate,
                     highArtifactWarning = isHigh,
-                    isOpticalPpiSession = isOptical
+                    isOpticalPpiSession = isOptical,
+                    isHrSensorAvailable = if (hasValidBeat) true else it.isHrSensorAvailable
                 )
             }
         } else {
             _uiState.update {
                 it.copy(
                     currentHeartRateBpm = hr,
-                    isOpticalPpiSession = event.isOpticalPpi
+                    isOpticalPpiSession = event.isOpticalPpi,
+                    isHrSensorAvailable = if (hasValidBeat) true else it.isHrSensorAvailable
                 )
             }
         }
@@ -409,6 +467,9 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
             _uiState.update {
                 it.copy(
                     phase = MorningHrvPhase.READY,
+                    remainingSec = 0,
+                    currentHeartRateBpm = if (it.isHrSensorAvailable) it.currentHeartRateBpm else null,
+                    isOpticalPpiSession = if (it.isHrSensorAvailable) it.isOpticalPpiSession else false,
                     errorMessageResId = R.string.morning_hrv_error_no_rr,
                     errorMessage = "No RR intervals recorded. Please check heart rate sensor connection."
                 )

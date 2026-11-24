@@ -69,6 +69,8 @@
     <string name="morning_hrv_duration_60s">60 s (Standard)</string>
     <string name="morning_hrv_duration_120s">120 s (Erweitert)</string>
     <string name="morning_hrv_state_ready">Bereit zur Messung</string>
+    <string name="morning_hrv_state_no_sensor">Kein Herzfrequenzsensor verbunden</string>
+    <string name="morning_hrv_no_sensor_hint">Verbinde einen kompatiblen Herzfrequenzsensor (EKG-Brustgurt oder optischer PPI-Sensor), um die HRV-Messung zu starten.</string>
     <string name="morning_hrv_state_stabilizing">Stabilisierung: %1$ds</string>
     <string name="morning_hrv_state_measuring">Messung: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Messung abgeschlossen</string>

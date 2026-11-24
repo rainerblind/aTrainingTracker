@@ -69,6 +69,8 @@
     <string name="morning_hrv_duration_60s">60 s (Standard)</string>
     <string name="morning_hrv_duration_120s">120 s (Étendu)</string>
     <string name="morning_hrv_state_ready">Prêt à mesurer</string>
+    <string name="morning_hrv_state_no_sensor">Aucun capteur FC connecté</string>
+    <string name="morning_hrv_no_sensor_hint">Connectez un capteur de fréquence cardiaque compatible (ceinture pectorale ECG ou capteur optique PPI) pour démarrer la mesure VRC.</string>
     <string name="morning_hrv_state_stabilizing">Stabilisation : %1$ds</string>
     <string name="morning_hrv_state_measuring">Mesure : %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Mesure terminée</string>

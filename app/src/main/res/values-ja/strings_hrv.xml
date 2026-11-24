@@ -69,6 +69,8 @@
     <string name="morning_hrv_duration_60s">60秒（標準）</string>
     <string name="morning_hrv_duration_120s">120秒（延長）</string>
     <string name="morning_hrv_state_ready">測定準備完了</string>
+    <string name="morning_hrv_state_no_sensor">心拍センサー未接続</string>
+    <string name="morning_hrv_no_sensor_hint">HRV測定を開始するには、対応する心拍センサー（ECG胸部ストラップまたは光学式PPIセンサー）を接続してください。</string>
     <string name="morning_hrv_state_stabilizing">安静安定化中: %1$ds</string>
     <string name="morning_hrv_state_measuring">測定中: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">測定完了</string>
