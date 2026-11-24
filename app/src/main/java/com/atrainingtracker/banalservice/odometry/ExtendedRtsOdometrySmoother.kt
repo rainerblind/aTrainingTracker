@@ -66,7 +66,8 @@ data class RawOdometrySample(
     val accuracyMeters: Double? = null,
     val worldYawRateRadPerSec: Double? = null,
     val wheelSpeedMps: Double? = null,
-    val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
+    val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN,
+    val isPauseGap: Boolean = false
 ) {
     /**
      * Checks whether this sample contains a physically valid, non-Null-Island GNSS position fix (REQ-FIL-019.1).
@@ -86,6 +87,7 @@ object ExtendedRtsOdometrySmoother {
 
     const val STATE_DIM = 5
     const val EARTH_RADIUS_METERS = 6371000.0
+    const val MAX_ACTIVE_SAMPLE_GAP_MS = 5_000L
     private const val MIN_CHORD_DISPLACEMENT_METERS = 5.0
     private const val MIN_RUNNING_HEADING_SPEED_MPS = 0.8
     private const val MIN_BEARING_HEADING_SPEED_MPS = 1.2
@@ -138,6 +140,15 @@ object ExtendedRtsOdometrySmoother {
     }
 
     /**
+     * Overflow-safe check for whether two consecutive sample timestamps span a pause gap (`dt > 5 s`, REQ-FIL-045.2).
+     */
+    internal fun isTimestampPauseGap(prevTimestampMs: Long, currTimestampMs: Long): Boolean {
+        return currTimestampMs > prevTimestampMs &&
+            prevTimestampMs <= Long.MAX_VALUE - MAX_ACTIVE_SAMPLE_GAP_MS &&
+            currTimestampMs > prevTimestampMs + MAX_ACTIVE_SAMPLE_GAP_MS
+    }
+
+    /**
      * Checks whether the given coordinates represent a physically valid GNSS fix (REQ-FIL-019.2).
      *
      * Returns false if coordinates are null, NaN, out of geographic bounds ([-90, 90], [-180, 180]),
@@ -167,7 +178,8 @@ object ExtendedRtsOdometrySmoother {
         refLon: Double,
         stationaryMask: BooleanArray? = null,
         discontinuityMask: BooleanArray? = null,
-        maxSpeedEnvelope: DoubleArray? = null
+        maxSpeedEnvelope: DoubleArray? = null,
+        pauseGapMask: BooleanArray? = null
     ): List<SmoothedOdometryPoint> {
         val n = snapshots.size
         if (n == 0) return emptyList()
@@ -194,6 +206,12 @@ object ExtendedRtsOdometrySmoother {
                     deltaDistanceMeters = 0.0
                 )
             )
+        }
+
+        fun isPauseBoundary(idx: Int): Boolean {
+            if (idx <= 0) return false
+            if (pauseGapMask != null && idx < pauseGapMask.size && pauseGapMask[idx]) return true
+            return isTimestampPauseGap(snapshots[idx - 1].timestampMs, snapshots[idx].timestampMs)
         }
 
         // Smoothed state arrays
@@ -239,6 +257,25 @@ object ExtendedRtsOdometrySmoother {
             val curr = snapshots[k]
             val next = snapshots[k + 1]
             val currStationary = stationaryMask != null && k < stationaryMask.size && stationaryMask[k]
+
+            // REQ-FIL-045.2: Decouple backward RTS completely across pause boundaries (C_k = 0)
+            if (isPauseBoundary(k + 1)) {
+                for (i in 0 until STATE_DIM) {
+                    smoothedStates[k][i] = curr.statePosterior[i]
+                    for (j in 0 until STATE_DIM) {
+                        smoothedCovs[k][i][j] = curr.covariancePosterior[i][j]
+                    }
+                }
+                smoothedStates[k][3] = UnicycleOdometryEkf.normalizeAngle(smoothedStates[k][3])
+                var decoupledSpeed = if (currStationary) 0.0 else sanitizeNonNegativeFinite(smoothedStates[k][2])
+                val envLimit = maxSpeedEnvelope?.getOrNull(k)
+                if (!currStationary && envLimit != null && envLimit.isFinite()) {
+                    decoupledSpeed = min(decoupledSpeed, envLimit)
+                }
+                smoothedStates[k][2] = decoupledSpeed
+                continue
+            }
+
             val nextStationary = stationaryMask != null && (k + 1) < stationaryMask.size && stationaryMask[k + 1]
             val currDiscontinuity = discontinuityMask != null && k < discontinuityMask.size && discontinuityMask[k]
             val nextDiscontinuity = discontinuityMask != null && (k + 1) < discontinuityMask.size && discontinuityMask[k + 1]
@@ -312,7 +349,8 @@ object ExtendedRtsOdometrySmoother {
             val (lat, lon) = enuToLatLng(xk[0], xk[1], refLat, refLon)
             val bearing = headingToBearingDeg(xk[3])
 
-            val deltaDist = if (k == 0) {
+            // REQ-FIL-045.2: Never integrate distance across a pause gap
+            val deltaDist = if (k == 0 || isPauseBoundary(k)) {
                 0.0
             } else {
                 val dt = (snapshots[k].timestampMs - snapshots[k - 1].timestampMs) / 1000.0
@@ -358,13 +396,93 @@ object ExtendedRtsOdometrySmoother {
         val firstValidFix = samples[firstValidIdx]
         val refLat = firstValidFix.latitude!!
         val refLon = firstValidFix.longitude!!
-        val resolvedInitialHeading = resolveInitialHeadingRad(
+        val resolvedGlobalHeading = resolveInitialHeadingRad(
             samples = samples,
             firstValidIdx = firstValidIdx,
             refLat = refLat,
             refLon = refLon,
             explicitHeadingRad = initialHeadingRad
         )
+
+        // REQ-FIL-045.2: Partition contiguous active segments at every pause boundary (isPauseGap or dt > 5 s)
+        val result = ArrayList<SmoothedOdometryPoint>(samples.size)
+        var segStart = 0
+        var fallbackEast = 0.0
+        var fallbackNorth = 0.0
+        var fallbackHeadingRad = resolvedGlobalHeading
+
+        while (segStart < samples.size) {
+            var segEnd = segStart + 1
+            while (segEnd < samples.size) {
+                val curr = samples[segEnd]
+                val prev = samples[segEnd - 1]
+                if (curr.isPauseGap || isTimestampPauseGap(prev.timestampMs, curr.timestampMs)) {
+                    break
+                }
+                segEnd++
+            }
+
+            val segment = samples.subList(segStart, segEnd)
+            val segSmoothed = smoothContiguousSegment(
+                samples = segment,
+                refLat = refLat,
+                refLon = refLon,
+                fallbackEast = fallbackEast,
+                fallbackNorth = fallbackNorth,
+                fallbackHeadingRad = fallbackHeadingRad,
+                explicitInitialHeadingRad = if (segStart == 0) initialHeadingRad else Double.NaN
+            )
+            result.addAll(segSmoothed)
+            val lastPt = segSmoothed.lastOrNull()
+            if (lastPt != null) {
+                if (lastPt.eastMeters.isFinite() && lastPt.northMeters.isFinite()) {
+                    fallbackEast = lastPt.eastMeters
+                    fallbackNorth = lastPt.northMeters
+                }
+                if (lastPt.headingRad.isFinite()) {
+                    fallbackHeadingRad = lastPt.headingRad
+                }
+            }
+            segStart = segEnd
+        }
+
+        return result
+    }
+
+    private fun smoothContiguousSegment(
+        samples: List<RawOdometrySample>,
+        refLat: Double,
+        refLon: Double,
+        fallbackEast: Double,
+        fallbackNorth: Double,
+        fallbackHeadingRad: Double,
+        explicitInitialHeadingRad: Double
+    ): List<SmoothedOdometryPoint> {
+        val segFirstValidIdx = samples.indexOfFirst { it.hasValidGnssFix() }
+        val initEast: Double
+        val initNorth: Double
+        val resolvedInitialHeading: Double
+        if (segFirstValidIdx >= 0) {
+            val segFirstFix = samples[segFirstValidIdx]
+            val (e, n) = latLngToEnu(segFirstFix.latitude!!, segFirstFix.longitude!!, refLat, refLon)
+            initEast = e
+            initNorth = n
+            resolvedInitialHeading = resolveInitialHeadingRad(
+                samples = samples,
+                firstValidIdx = segFirstValidIdx,
+                refLat = refLat,
+                refLon = refLon,
+                explicitHeadingRad = explicitInitialHeadingRad
+            )
+        } else {
+            initEast = fallbackEast
+            initNorth = fallbackNorth
+            resolvedInitialHeading = if (explicitInitialHeadingRad.isFinite()) {
+                UnicycleOdometryEkf.normalizeAngle(explicitInitialHeadingRad)
+            } else {
+                fallbackHeadingRad
+            }
+        }
         val filteredYawRates = computeFilteredYawRates(samples)
 
         val stationaryMask = BooleanArray(samples.size) { isStationarySample(samples[it]) }
@@ -374,8 +492,8 @@ object ExtendedRtsOdometrySmoother {
         // Initialize forward EKF (disable internal snapshotList copies since smoothSamples records its own)
         val initialGatedSpeed = gatedSpeeds.firstOrNull()?.takeIf { it.isFinite() } ?: 0.0
         val ekf = UnicycleOdometryEkf(
-            initialEast = 0.0,
-            initialNorth = 0.0,
+            initialEast = initEast,
+            initialNorth = initNorth,
             initialSpeed = if (stationaryMask[0]) 0.0 else sanitizeNonNegativeFinite(initialGatedSpeed),
             initialHeadingRad = resolvedInitialHeading,
             recordSnapshots = false
@@ -682,7 +800,9 @@ object ExtendedRtsOdometrySmoother {
             return UnicycleOdometryEkf.normalizeAngle(explicitHeadingRad)
         }
 
-        val firstFixTimeMs = samples[firstValidIdx].timestampMs
+        val firstFix = samples[firstValidIdx]
+        val (firstEast, firstNorth) = latLngToEnu(firstFix.latitude!!, firstFix.longitude!!, refLat, refLon)
+        val firstFixTimeMs = firstFix.timestampMs
         for (j in (firstValidIdx + 1) until samples.size) {
             val s = samples[j]
             if (!s.hasValidGnssFix()) continue
@@ -690,10 +810,12 @@ object ExtendedRtsOdometrySmoother {
             if (acc > UnicycleOdometryEkf.MAX_GNSS_ACCURACY_METERS) continue
 
             val (eastM, northM) = latLngToEnu(s.latitude!!, s.longitude!!, refLat, refLon)
-            val dist = hypot(eastM, northM)
+            val dE = eastM - firstEast
+            val dN = northM - firstNorth
+            val dist = hypot(dE, dN)
             val dtSec = (s.timestampMs - firstFixTimeMs) / 1000.0
             if (dist >= MIN_CHORD_DISPLACEMENT_METERS && (dtSec <= 0.0 || dist / dtSec >= 0.4)) {
-                return atan2(northM, eastM)
+                return atan2(dN, dE)
             }
         }
 

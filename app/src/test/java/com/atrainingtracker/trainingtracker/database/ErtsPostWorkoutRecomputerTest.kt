@@ -1180,28 +1180,28 @@ class ErtsPostWorkoutRecomputerTest {
         val latStepDeg = Math.toDegrees(6.0 / 6371000.0)
         var lat = 48.6567
 
-        // Timeline (32 rows):
+        // Timeline (41 rows):
         // 0..2: leading NULL TIME_TOTAL (1s wall-clock steps)
         // 3..9: valid TIME_TOTAL = 1..7 (1s steps)
         // 10..16: >=6s SQLite batch-flush stall (wall-clock frozen at T0+9s for 10..15, then +8s flush catch-up to T0+17s at row 16 while TIME_TOTAL = 8..14 advances 1s/row)
         // 17..20: normal 1s progression (isolates row 16 flush catch-up from pause boundary)
-        // 21..25: genuine 30s wall-clock pause before row 21 (wall jumps +31s while TIME_TOTAL advances +1s to 19..23)
-        // 26..31: genuine 25s second wall-clock pause before row 26 (wall jumps +26s while TIME_TOTAL advances +1s to 24..29)
+        // 21..30: genuine 30s wall-clock pause before row 21 (wall jumps +31s while TIME_TOTAL advances +1s to 19..28; 10 active rows so 7-tap baro median warms up cleanly on decoupled segment)
+        // 31..40: genuine 25s second wall-clock pause before row 31 (wall jumps +26s while TIME_TOTAL advances +1s to 29..38; 10 active rows)
         samplesDb.beginTransaction()
         try {
-            for (i in 0 until 32) {
+            for (i in 0 until 41) {
                 val wallOffsetSec = when {
                     i <= 9 -> i
                     i in 10..15 -> 9 // frozen SQLite flush timestamp across 6 rows
                     i == 16 -> 17 // +8s flush catch-up (old parsedTs-prevParsedTs check falsely tripped >6s!)
                     i in 17..20 -> i // normal 1s steps (17..20)
-                    i in 21..25 -> 51 + (i - 21) // +30s genuine pause
-                    else -> 82 + (i - 26) // +25s second genuine pause
+                    i in 21..30 -> 51 + (i - 21) // +30s genuine pause (wall 51..60)
+                    else -> 86 + (i - 31) // +25s second genuine pause (wall 86..95)
                 }
                 val stepCount = when (i) {
                     0 -> 0
                     21 -> 31
-                    26 -> 26
+                    31 -> 26
                     else -> 1
                 }
                 lat += stepCount * latStepDeg
@@ -1248,7 +1248,7 @@ class ErtsPostWorkoutRecomputerTest {
                 speeds.add(cursor.getDouble(1))
                 dists.add(cursor.getDouble(2))
             }
-            assertEquals(32, vams.size)
+            assertEquals(41, vams.size)
             // Leading null TIME_TOTAL (0..2), normal (3..9), and 6s batch-flush stall + catch-up (10..16):
             // dt must stay 1.0 s everywhere (deltaDist ~ 6.0 m, speed ~ 6.0 m/s, VAM > 1000 m/h)
             for (i in 1..20) {
@@ -1259,23 +1259,49 @@ class ErtsPostWorkoutRecomputerTest {
                 }
                 assertTrue("Row $i speed must stay near 6.0 m/s (was ${speeds[i]})", speeds[i] > 4.5)
             }
-            // Row 21 (genuine 30s pause) must preserve ~31s dt (deltaDist > 100 m),
-            // and rows 22..25 must re-anchor and resume 1s dt (~6.0 m/row)
-            assertTrue("Row 21 genuine 30s pause must yield > 100 m deltaDist (was ${dists[21] - dists[20]})", (dists[21] - dists[20]) > 100.0)
-            for (i in 22..25) {
+            // Row 21 (genuine 30s pause) must emit 0.0 m pause distance (REQ-FIL-045.1/.2) while preserving 31s dt,
+            // and rows 22..30 must re-anchor and resume 1s dt (~6.0 m/row) with VAM > 1000 m/h post-7-tap baro warmup
+            assertEquals("Row 21 genuine 30s pause must emit 0.0 m deltaDist", 0.0, dists[21] - dists[20], 1e-9)
+            assertEquals("Row 21 genuine 30s pause must emit 0 m/h VAM", 0.0, vams[21], 1e-9)
+            for (i in 22..30) {
                 val deltaDist = dists[i] - dists[i - 1]
                 assertTrue("Post-pause-1 row $i must resume ~1s dt (deltaDist=$deltaDist)", deltaDist in 4.0..8.5)
-                assertTrue("Post-pause-1 row $i VAM must stay > 1000 m/h (was ${vams[i]})", vams[i] > 1000.0)
+                if (i >= 26) {
+                    assertTrue("Post-pause-1 row $i VAM must stay > 1000 m/h (was ${vams[i]})", vams[i] > 1000.0)
+                }
             }
-            // Row 26 (second genuine 25s pause) must preserve ~26s dt (deltaDist > 100 m),
-            // and rows 27..31 must re-anchor cleanly again and resume 1s dt
-            assertTrue("Row 26 genuine 25s pause must yield > 100 m deltaDist (was ${dists[26] - dists[25]})", (dists[26] - dists[25]) > 100.0)
-            for (i in 27..31) {
+            // Row 31 (second genuine 25s pause) must emit 0.0 m pause distance while preserving 26s dt,
+            // and rows 32..40 must re-anchor cleanly again and resume 1s dt
+            assertEquals("Row 31 genuine 25s pause must emit 0.0 m deltaDist", 0.0, dists[31] - dists[30], 1e-9)
+            assertEquals("Row 31 genuine 25s pause must emit 0 m/h VAM", 0.0, vams[31], 1e-9)
+            for (i in 32..40) {
                 val deltaDist = dists[i] - dists[i - 1]
                 assertTrue("Post-pause-2 row $i must resume ~1s dt (deltaDist=$deltaDist)", deltaDist in 4.0..8.5)
-                assertTrue("Post-pause-2 row $i VAM must stay > 500 m/h (was ${vams[i]})", vams[i] > 500.0)
+                if (i >= 36) {
+                    assertTrue("Post-pause-2 row $i VAM must stay > 500 m/h (was ${vams[i]})", vams[i] > 500.0)
+                }
             }
         }
+
+        // Directly verify reconstructTimestamps() preserved the 31 s and 26 s genuine wall pauses while resisting the 6 s flush stall
+        val timingPairs = (0 until 41).map { i ->
+            val wallOffsetSec = when {
+                i <= 9 -> i
+                i in 10..15 -> 9
+                i == 16 -> 17
+                i in 17..20 -> i
+                i in 21..30 -> 51 + (i - 21)
+                else -> 86 + (i - 31)
+            }
+            val tt = if (i < 3) null else (i - 2).toLong()
+            (startTs + wallOffsetSec * 1000L) to tt
+        }
+        val reconTs = ErtsPostWorkoutRecomputer.reconstructTimestamps(timingPairs, startTs)
+        for (i in 1..20) {
+            assertEquals("Row $i flush-stall/normal step must reconstruct to 1000 ms", 1_000L, reconTs[i] - reconTs[i - 1])
+        }
+        assertEquals("Row 21 genuine 30s pause must preserve 31000 ms gap", 31_000L, reconTs[21] - reconTs[20])
+        assertEquals("Row 31 genuine 25s pause must preserve 26000 ms gap", 26_000L, reconTs[31] - reconTs[30])
     }
 
     // TST-FIL-028.2 & TST-FIL-028.4: 1-Hz ACTIVITY_AND_CARRIAGE_MODE persistence, ERTS ingestion & preservation
@@ -2216,5 +2242,289 @@ class ErtsPostWorkoutRecomputerTest {
         assertFalse("Genuine 10% climb must NOT trigger baroResetStep", resolvedClimb.any { it.baroResetStep })
         val climbGain = (resolvedClimb.last().rawAltitude ?: 0.0) - (resolvedClimb.first().rawAltitude ?: 0.0)
         assertTrue("Genuine 10% climb must pass unattenuated (~19.6 m, got $climbGain m)", climbGain >= 17.0)
+    }
+
+    // REQ-FIL-045.1 / TST-FIL-045.1: Zum Bäcker #59 (134 s bakery auto-pause + 17 s + 4 s + 610 s pauses),
+    // Laps.db / DISTANCE_m_LAP parity, repeated 4 s auto-pause timestamp sync, null-TIME_ACTIVE pause reset,
+    // per-segment baro reset-step isolation, and updateExtrema() pauseGapMask parity.
+    @Test
+    fun testZumBaecker59AndMultiPauseRecomputation_zeroPauseDistanceAndLapsAndTimingParity_TST_FIL_045_1() = runBlocking {
+        // --- Part A: Full SQLite end-to-end Zum Bäcker #59 profile (391 active rows, 4 pauses incl. 4 s, 17 s, 134 s, 610 s) ---
+        val baseFileName = "2026-11-20_055902"
+        val cvWorkout = ContentValues().apply {
+            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+            put(WorkoutSummaries.TIME_START, "2026-11-20 05:59:02")
+            put(WorkoutSummaries.TIME_ACTIVE_s, 391)
+            put(WorkoutSummaries.TIME_TOTAL_s, 1180)
+            put(WorkoutSummaries.SPORT_ID, 1L)
+        }
+        val workoutId = summariesDbManager.database.insertOrThrow(WorkoutSummaries.TABLE, null, cvWorkout)
+
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        samplesDbManager.createNewTable(
+            baseFileName,
+            listOf(
+                SensorType.TIME_TOTAL,
+                SensorType.TIME_ACTIVE,
+                SensorType.LATITUDE,
+                SensorType.LONGITUDE,
+                SensorType.SPEED_mps,
+                SensorType.PACE_spm,
+                SensorType.DISTANCE_m,
+                SensorType.DISTANCE_m_LAP,
+                SensorType.BEARING,
+                SensorType.ACCURACY,
+                SensorType.ALTITUDE,
+                SensorType.SLOPE,
+                SensorType.VERTICAL_SPEED,
+                SensorType.ASCENT,
+                SensorType.DESCENT,
+                SensorType.LAP_NR
+            )
+        )
+        val attDistCol = "DISTANCE_m (att_fused)"
+        val baroCol = "ALTITUDE (Höhe aus Luftdruck)"
+        val demCol = "ALTITUDE (Topografische Höhe (DEM))"
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$attDistCol\" REAL")
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$baroCol\" REAL")
+        samplesDb.execSQL("ALTER TABLE $tableName ADD COLUMN \"$demCol\" REAL")
+
+        val lapsDbManager = LapsDatabaseManager.getInstance(context)
+        lapsDbManager.saveLap(workoutId, 1L, "2026-11-20 05:59:02", 218, 950.0, 4.35, "To Bakery", "")
+        lapsDbManager.saveLap(workoutId, 2L, "2026-11-20 06:05:17", 173, 998.0, 5.77, "Home", "")
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val startTs = 1_795_154_342_000L
+        val originLat = 48.6567
+        val originLon = 9.0545
+
+        val pauseRow4s = 100
+        val pauseRow17s = 199
+        val pauseRow134s = 218
+        val pauseRow610s = 320
+
+        var wallSec = 0L
+        var timeTotal = 0L
+        var timeActive = 0L
+        var eastM = 0.0
+        var liveDistM = 0.0
+        val expectedAttDist = mutableListOf<Double>()
+        val expectedBaro = mutableListOf<Double>()
+
+        samplesDb.beginTransaction()
+        try {
+            for (rowIdx in 0 until 391) {
+                val lapNr = if (rowIdx < pauseRow134s) 1L else 2L
+                val isGoingHome = rowIdx >= pauseRow134s
+                val spd = when (rowIdx) {
+                    pauseRow17s -> 0.88
+                    pauseRow134s -> 3.84
+                    else -> 5.0
+                }
+                if (rowIdx > 0) {
+                    val extraPauseSec = when (rowIdx) {
+                        pauseRow4s -> 4L
+                        pauseRow17s -> 17L
+                        pauseRow134s -> 133L // TIME_TOTAL +134 s (241->375), TIME_ACTIVE +1 s (218->219)
+                        pauseRow610s -> 610L
+                        else -> 0L
+                    }
+                    wallSec += 1L + extraPauseSec
+                    timeTotal += 1L + extraPauseSec
+                    timeActive += 1L
+                    if (extraPauseSec == 0L) {
+                        liveDistM += spd
+                        eastM += if (isGoingHome) -spd else spd
+                    }
+                }
+                val (lat, lon) = ExtendedRtsOdometrySmoother.enuToLatLng(eastM, 0.0, originLat, originLon)
+                val baroVal = if (rowIdx >= pauseRow610s) 450.0 else 440.0 // +10 m weather drift during 10-min pause
+                expectedAttDist.add(liveDistM)
+                expectedBaro.add(baroVal)
+
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(Date(startTs + wallSec * 1000L)))
+                    put(SensorType.TIME_TOTAL.name, timeTotal)
+                    put(SensorType.TIME_ACTIVE.name, timeActive)
+                    put(SensorType.LATITUDE.name, lat)
+                    put(SensorType.LONGITUDE.name, lon)
+                    put(SensorType.SPEED_mps.name, spd)
+                    put(SensorType.PACE_spm.name, 1.0 / spd)
+                    put(SensorType.DISTANCE_m.name, liveDistM)
+                    put(SensorType.DISTANCE_m_LAP.name, 0.0)
+                    put(SensorType.BEARING.name, if (isGoingHome) 270.0 else 90.0)
+                    put(SensorType.ACCURACY.name, 3.5)
+                    put(SensorType.ALTITUDE.name, 440.0)
+                    put(SensorType.SLOPE.name, 0.0)
+                    put(SensorType.VERTICAL_SPEED.name, 0)
+                    put(SensorType.ASCENT.name, 0.0)
+                    put(SensorType.DESCENT.name, 0.0)
+                    put(SensorType.LAP_NR.name, lapNr)
+                    put("\"$attDistCol\"", liveDistM)
+                    put("\"$baroCol\"", baroVal)
+                    put("\"$demCol\"", 440.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        assertTrue("Recomputation must succeed on Zum Bäcker #59 multi-pause workout", ErtsPostWorkoutRecomputer.recomputeWorkout(context, workoutId))
+
+        // Verify per-row pause zero-integration, VAM = 0, LAP distance parity, and untouched device columns
+        var lap1LastDist = 0.0
+        var lap2LastDist = 0.0
+        val dists = mutableListOf<Double>()
+        val vams = mutableListOf<Long>()
+        val alts = mutableListOf<Double>()
+        samplesDb.query(
+            tableName,
+            arrayOf(
+                SensorType.DISTANCE_m.name,
+                SensorType.DISTANCE_m_LAP.name,
+                SensorType.VERTICAL_SPEED.name,
+                SensorType.ALTITUDE.name,
+                SensorType.LAP_NR.name,
+                "\"$attDistCol\"",
+                "\"$baroCol\""
+            ),
+            null, null, null, null, "_id ASC"
+        ).use { cursor ->
+            var idx = 0
+            while (cursor.moveToNext()) {
+                val dist = cursor.getDouble(0)
+                val lapDist = cursor.getDouble(1)
+                val vam = cursor.getLong(2)
+                val alt = cursor.getDouble(3)
+                val lapNr = cursor.getLong(4)
+                assertEquals("Device column $attDistCol untouched at $idx", expectedAttDist[idx], cursor.getDouble(5), 1e-9)
+                assertEquals("Device column $baroCol untouched at $idx", expectedBaro[idx], cursor.getDouble(6), 1e-9)
+                dists.add(dist)
+                vams.add(vam)
+                alts.add(alt)
+                if (lapNr == 1L) lap1LastDist = lapDist else lap2LastDist = lapDist
+                idx++
+            }
+            assertEquals(391, idx)
+        }
+
+        for (pRow in listOf(pauseRow4s, pauseRow17s, pauseRow134s, pauseRow610s)) {
+            assertEquals("Pause row $pRow must add 0.0 m DISTANCE_m", 0.0, dists[pRow] - dists[pRow - 1], 1e-9)
+            assertEquals("Pause row $pRow must emit 0 m/h VERTICAL_SPEED", 0L, vams[pRow])
+            assertTrue("Pause row $pRow altitude must stay near 440 m (was ${alts[pRow]})", kotlin.math.abs(alts[pRow] - 440.0) <= 2.5)
+        }
+
+        // Verify WorkoutSummaries distance within +-3% of live active distance (~1,930 m), true active avg speed (~4.94 m/s), and Laps.db parity
+        var summaryDist = 0.0
+        var summaryAvgSpeed = 0.0
+        summariesDbManager.database.query(
+            WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummaries.DISTANCE_TOTAL_m, WorkoutSummaries.SPEED_AVERAGE_mps),
+            "${WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            summaryDist = cursor.getDouble(0)
+            summaryAvgSpeed = cursor.getDouble(1)
+        }
+        val relError = kotlin.math.abs(summaryDist - liveDistM) / liveDistM
+        assertTrue(
+            "Smoothed total distance ($summaryDist m) must stay within +-3% of live active distance ($liveDistM m, err=${relError * 100}%)",
+            relError <= 0.03
+        )
+        val expectedAvg = summaryDist / 391.0
+        assertEquals("SPEED_AVERAGE_mps must reflect true active moving average (~5.0 m/s)", expectedAvg, summaryAvgSpeed, 0.02)
+        val extremaAvg = summariesDbManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG)
+        assertNotNull(extremaAvg)
+        assertEquals("Extrema(SPEED_mps, AVG) must match WorkoutSummaries.SPEED_AVERAGE_mps", expectedAvg, extremaAvg!!, 0.02)
+
+        val laps = lapsDbManager.getLaps(workoutId)
+        assertEquals(2, laps.size)
+        assertEquals("Laps.db sum must match WorkoutSummaries.DISTANCE_TOTAL_m", summaryDist, laps.sumOf { it.distanceTotalM }, 1e-3)
+        assertEquals("Lap 1 Laps.db must match final DISTANCE_m_LAP", laps[0].distanceTotalM, lap1LastDist, 1e-3)
+        assertEquals("Lap 2 Laps.db must match final DISTANCE_m_LAP", laps[1].distanceTotalM, lap2LastDist, 1e-3)
+
+        // --- Part B: Direct reconstructTimingWithPauses() checks ---
+        val t0 = 1_795_200_000_000L
+        // B1. Repeated 4 s auto-pauses advance timestampMs cleanly (+5000 ms each) without wall-clock desync
+        val wallB1 = listOf<Long?>(t0, t0 + 1_000L, t0 + 6_000L, t0 + 7_000L, t0 + 12_000L, t0 + 13_000L)
+        val ttB1 = listOf<Long?>(0L, 1L, 6L, 7L, 12L, 13L)
+        val taB1 = listOf<Long?>(0L, 1L, 2L, 3L, 4L, 5L)
+        val timingB1 = ErtsPostWorkoutRecomputer.reconstructTimingWithPauses(wallB1, ttB1, taB1, t0)
+        assertTrue("First 4 s auto-pause at idx 2 must be flagged", timingB1.pauseGapMask[2])
+        assertTrue("Second 4 s auto-pause at idx 4 must be flagged", timingB1.pauseGapMask[4])
+        assertEquals("First 4 s auto-pause must advance ts by +5000 ms", 5_000L, timingB1.timestampsMs[2] - timingB1.timestampsMs[1])
+        assertEquals("Second 4 s auto-pause must advance ts by +5000 ms", 5_000L, timingB1.timestampsMs[4] - timingB1.timestampsMs[3])
+        assertFalse("Normal step idx 3 must not be flagged", timingB1.pauseGapMask[3])
+        assertFalse("Normal step idx 5 must not be flagged", timingB1.pauseGapMask[5])
+
+        // B2. TIME_TOTAL pause (+30 s) landing on a TIME_ACTIVE == null row resets prevPair* so next row does NOT false-trip
+        val wallB2 = listOf<Long?>(t0, t0 + 1_000L, null, t0 + 32_000L, t0 + 33_000L)
+        val ttB2 = listOf<Long?>(0L, 1L, 31L, 32L, 33L)
+        val taB2 = listOf<Long?>(0L, 1L, null, 2L, 3L)
+        val timingB2 = ErtsPostWorkoutRecomputer.reconstructTimingWithPauses(wallB2, ttB2, taB2, t0)
+        assertTrue("Row 2 (+30 s TIME_TOTAL pause with null TIME_ACTIVE) must flag pause", timingB2.pauseGapMask[2])
+        assertFalse("Row 3 after null-TIME_ACTIVE pause must NOT false-trip a second pause", timingB2.pauseGapMask[3])
+        assertFalse("Row 4 must NOT false-trip", timingB2.pauseGapMask[4])
+
+        // B3. {0, 2} clock-beat skew & constant TIME_ACTIVE=0 with mid-stream nulls produce 0 false pauses
+        val wallB3 = listOf<Long?>(t0, t0 + 1_000L, t0 + 2_000L, t0 + 3_000L, t0 + 4_000L, t0 + 5_000L, t0 + 6_000L)
+        val ttB3 = listOf<Long?>(0L, 2L, 2L, null, null, null, 6L)
+        val taB3 = listOf<Long?>(0L, 0L, 2L, null, null, null, 0L)
+        val timingB3 = ErtsPostWorkoutRecomputer.reconstructTimingWithPauses(wallB3, ttB3, taB3, t0)
+        assertFalse("Clock-beat {0,2} skew & constant TIME_ACTIVE with nulls must not false-trip pauses", timingB3.pauseGapMask.any { it })
+
+        // --- Part C: Per-segment detectAndCompensateBaroResetSteps() isolation & pauseGapMask in computeAuthoritativeAverageSpeedMps ---
+        val segRows = (0 until 20).map { i ->
+            val isPause = i == 10
+            val ts = if (i < 10) t0 + i * 1_000L else t0 + (i + 60) * 1_000L
+            // Seg 0 has a genuine +20 m baro reset step at idx 5; Seg 1 starts at 440 m (with null baro at pause row 10)
+            val baro = when {
+                i < 5 -> 430.0
+                i < 10 -> 450.0
+                i == 10 -> null // Null baro at pause boundary must NOT mask pause segmentation!
+                else -> 440.0
+            }
+            ErtsPostWorkoutRecomputer.RawSampleRow(
+                rowId = i + 1L,
+                timestampMs = ts,
+                latitude = 48.65,
+                longitude = 9.05,
+                speedMps = 4.0,
+                bearingDeg = 90.0,
+                accuracyM = 3.0,
+                yawRateRadPerSec = 0.0,
+                rawAltitude = baro,
+                referenceAltitude = 440.0,
+                wheelSpeedMps = null,
+                rawBaroAltitude = baro,
+                isPauseGap = isPause
+            )
+        }
+        val (compBaro, resetSet) = ErtsPostWorkoutRecomputer.detectAndCompensateBaroResetSteps(segRows)
+        assertTrue("Seg 0 +20 m reset step at idx 5 must still be detected", resetSet.contains(5))
+        assertEquals("Seg 0 post-step must be compensated back to ~430 m", 430.0, compBaro[8]!!, 1e-6)
+        assertEquals("Seg 1 baro must NOT inherit Seg 0 cumulativeShift (must remain 440.0 m)", 440.0, compBaro[12]!!, 1e-6)
+
+        // computeAuthoritativeAverageSpeedMps excludes 4 s flagged pause (dt = 5.0 s <= 5.0 s) when TIME_ACTIVE_s is null
+        val shortPausePts = listOf(
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(t0, 0.0, 0.0, 5.0, 0.0, 0.0, 48.65, 9.05, 90.0, 0.0),
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(t0 + 1_000L, 5.0, 0.0, 5.0, 0.0, 0.0, 48.65, 9.05, 90.0, 5.0),
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(t0 + 6_000L, 5.0, 0.0, 5.0, 0.0, 0.0, 48.65, 9.05, 90.0, 0.0), // 4 s pause!
+            com.atrainingtracker.banalservice.odometry.SmoothedOdometryPoint(t0 + 7_000L, 10.0, 0.0, 5.0, 0.0, 0.0, 48.65, 9.05, 90.0, 5.0)
+        )
+        val shortPauseMask = booleanArrayOf(false, false, true, false)
+        assertEquals(
+            "Null TIME_ACTIVE_s fallback must exclude flagged 4 s pause from activeDtSec (10 m / 2 s = 5.0 m/s, not 10/7)",
+            5.0,
+            ErtsPostWorkoutRecomputer.computeAuthoritativeAverageSpeedMps(10.0, null, shortPausePts, shortPauseMask),
+            1e-9
+        )
     }
 }

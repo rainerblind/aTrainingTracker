@@ -1,0 +1,15 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "53678ad7556228122a72c5b1c8c530e586cd7598",
+  "files": {
+    "evidence_summary.json": "542057e8ff28db647da97084684d5eb243f0057cd55eaaa21ad0613660cb9803",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest.xml": "867f404576adabc20db6c2e3497227c06801ab40f6de648b166a9f9f7452286b",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml": "d1e4eccc57da17302b91569acb35e3285350091c66bc4bcc05e3894b474ebe70",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest.xml": "d94e31ca2b6680f2304cd93d2fef28ae9136d80ebd4887790c2621915f3994c9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest.xml": "58b0d8f1c32bb5eca3b06c69028320593e2bffb1e2709e1f7e53aa7ba93e91b6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceErtsFinalizationTest.xml": "9566d03c71f30db41a58194cd320d5754fc55da2c1978d4528e63705e2282f35"
+  },
+  "run_started_utc": "2026-11-24T06:26:48.243710+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9242"
+}

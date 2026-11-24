@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.29  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 100
+**Total Tests**: 101
 
 ---
 
@@ -2147,6 +2147,22 @@
 
 ---
 
+### TST-FIL-045: Post-Workout ERTS Pause-Gap Zero-Distance & Segment Decoupling Suite (`ATT-9242`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-045` (`REQ-FIL-045.1`, `REQ-FIL-045.2`, `REQ-FIL-045.3`)
+- **Component**: `ErtsPostWorkoutRecomputer.kt`, `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Jira**: `ATT-9242` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `ErtsPostWorkoutRecomputerTest#testZumBaecker59AndMultiPauseRecomputation_zeroPauseDistanceAndLapsAndTimingParity_TST_FIL_045_1`, `ErtsPostWorkoutRecomputerTest#testLeadingNullTimeTotal_batchFlushStall6s_andDoubleWallClockPause_tstFil027_1`, `ExtendedRtsOdometrySmootherTest#testPauseGapDecouplingAndOutAndBackHeading_zeroPauseDistanceAndNoCrossPauseBleed_TST_FIL_045_2`, `ExtendedRtsAltitudeSlopeSmootherTest#testPauseGapSegmentation_zeroPhantomJumpAndTrailingSingleSampleAndBiasCarryover_TST_FIL_045_3`
+- **Test Description**:
+  1. *`Zum Bäcker #59` & Multi-Pause End-to-End SQLite / `Laps.db` / Timing Parity (`TST-FIL-045.1` — `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Replay a `Zum Bäcker #59` profile (`TIME_ACTIVE_s = 391`, `TIME_TOTAL_s = 570`) with `4 s`, `17 s` (`0.88 m/s` resume), `134 s` (`TIME_TOTAL: 241 -> 375`, `TIME_ACTIVE: 218 -> 219`, `3.84 m/s` resume), and `> 10 min` (`610 s`) pauses across 2 laps (`LAP_NR = 1, 2`) plus untouched device-attributed columns; assert `0.0 m` `DISTANCE_m` delta and `0 m/h` `VERTICAL_SPEED` on every pause-resume row, total `DISTANCE_TOTAL_m` within `±3%` of live active distance (`~1,948 m`), `SPEED_AVERAGE_mps` and `Extrema(SPEED_mps, AVG)` reflecting true active average (`~5.0 m/s`, incl. null-`TIME_ACTIVE_s` fallback parity), `Laps.db` / `DISTANCE_m_LAP` exact parity, byte-identical device columns, `reconstructTimingWithPauses()` wall-clock timestamp advancement across repeated `4 s` auto-pauses, `prevPair*` reset across a `TIME_TOTAL` pause landing on a `TIME_ACTIVE == null` row (zero false pause on next row), immunity to `{0, 2}` beats / `6 s` flush stalls / constant `TIME_ACTIVE` with nulls, per-segment `detectAndCompensateBaroResetSteps()` isolation (zero cross-pause shift leakage or null-baro masking), and aligned `TST-FIL-027.1` assertions.
+  2. *Out-and-Back Heading, Segment-Independent Odometry ERTS & Direct `smoothSnapshots()` Defense (`TST-FIL-045.2` — `ExtendedRtsOdometrySmootherTest.kt`)*:
+     • Verify an out-and-back ride (`950 m` East, `134 s` pause, turnaround heading West with explicit `initialHeadingRad = 0.0`) resolves Segment 2 initial heading West (`~±PI`, not `0 rad` East), plus `4 s` (`isPauseGap`), `17 s`, `134 s`, and `610 s` pauses, 1-sample & no-GNSS post-pause segments, direct `smoothSnapshots()` pause-gap call, and `Long.MIN_VALUE` / `Long.MAX_VALUE` / backwards-timestamp overflow guards; assert `deltaDistanceMeters == 0.0` at every pause boundary, zero cross-pause RTS/EKF bleed (exact parity with independently smoothed segments), `result.size == samples.size`, and all outputs finite.
+  3. *Segment-Independent Altitude/Slope ERTS, 1-Sample Tail & Bias Carryover (`TST-FIL-045.3` — `ExtendedRtsAltitudeSlopeSmootherTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`)*:
+     • Verify `4 s` (`isPauseGap`), `17 s`, `134 s` (at `3.84 m/s`), and `610 s` manual pause (with `+12 m` baro weather drift during pause), trailing 1-sample post-pause segment (preserving cumulative `ascentM`/`descentM`, baro-only bias subtraction, and all-`NaN` `fallbackInitialAlt` — never resetting to `0.0`), and DEM-only middle segment forwarding `inheritedBaroBias` to a baro-only final segment; assert `verticalSpeedMps == 0.0` on pause-resume rows, zero phantom `g * v * dt_pause` elevation jump (`|alt - trueAlt| <= 2.0 m`), zero phantom pause ascent/descent, monotonic cumulative `ascentM`/`descentM` across active segments, bounded `|slopePercent| <= 35%`, `<= 1,500` LoC caps, and `100%` pass across adjacent ERTS/Laps/contract suites (`Localization Parity: N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2298,3 +2314,6 @@
 | `1.0.27` | 2026-11-24 | Lane 1 Author (`ATT-9467`, `--as agent1`) | `ATT-9467` | Added `[Planned]` `TST-FIL-044` (`.1`–`.3`, strictly symmetric `REQ-FIL-044`) covering `2026-11-21_081228` `rows 1..25` start phone-handling/bike-pushing & `rows 310..340` `Metzger -> Bank` zero-stride roll replay, cross-device `T2` slow `2.0 m/s` jogger + handheld glance preservation, `MultisportTransitionDetector` `RUN` establishment & `BIKE -> RUN` kinematic/corroboration guardrails, and `<= 1,500` LoC / contract parity (`N/A - 0 string changes`). |
 | `1.0.28` | 2026-11-24 | Lane 1 Author (`ATT-9467`, `--as agent1`) | `ATT-9467` | Gate 3 (`ATT-9678`) revision on `[Planned]` `TST-FIL-044`: added fresh/`reset()`/`Long.MIN_VALUE` underflow assertions for `hasActiveRunFootstrike()`, Phase 1/2 `60 s + 5 s` corroboration-dilution immunity tests, Phase 2 `15 s` slow-start -> `15 s` `2.0 m/s` `T2` recovery test verifying qualifying-head `enterAnchor` & intact `exitAnchor`, zero-duration `windowActiveSec == 0.0` guard, and `@JvmStatic @JvmOverloads` 5/6-arg bridge verification. |
 | `1.0.29` | 2026-11-24 | Lane 1 Author (`ATT-9467`, `--as agent1`) | `ATT-9467` | Promoted `TST-FIL-044` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`119/119` PASS across `10` targeted suites: `PhoneCarriageClassifierTest` `21/21`, `MultisportTransitionDetectorTest` `11/11`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `BANALServiceMultisportTransitionTest` `4/4`, `MultisportLapCoordinatorTest` `7/7`, `KinematicSportTypeDiscriminatorTest` `6/6`, `OfflineTelemetryReplayHarnessTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9467/`). |
+| `1.0.30` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Added `[Planned]` `TST-FIL-045` (`.1`–`.3`, strictly symmetric `REQ-FIL-045`) covering `Zum Bäcker #59` `134 s` auto-pause & `4 s`/`17 s`/`>10 min` multi-pause SQLite/`Laps.db` parity, `reconstructTimingWithPauses()` beat/stall/null immunity, segment-independent odometry & altitude/slope ERTS decoupling, `Long` overflow guards, and aligned `TST-FIL-027.1` assertions (`N/A - 0 string changes`). |
+| `1.0.31` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Gate 3 (`ATT-9679`) revision on `[Planned]` `TST-FIL-045`: added out-and-back 180° heading-reversal test (Segment 2 West with Segment 0 explicit East), repeated `4 s` auto-pause timestamp sync & `TIME_TOTAL` pause on `TIME_ACTIVE == null` row tests, trailing 1-sample altitude segment (`ascentM`/`descentM`/bias/`fallbackInitialAlt`) & DEM-only bias handoff tests, per-segment `detectAndCompensateBaroResetSteps()` isolation, and `updateExtrema()` `pauseGapMask` parity. |
+| `1.0.32` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Promoted `TST-FIL-045` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`106/106` PASS across `11` targeted suites: `ErtsPostWorkoutRecomputerTest` `22/22`, `ExtendedRtsOdometrySmootherTest` `15/15`, `ExtendedRtsAltitudeSlopeSmootherTest` `11/11`, `UnicycleOdometryEkfTest` `21/21`, `BarometricAltitudeFilterTest` `7/7`, `TrackerServiceErtsFinalizationTest` `2/2`, `LapsDatabaseManagerTest` `11/11`, `WorkoutDataMapperLapsTest` `1/1`, `AdvancedTuningErtsContractTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9242/`). |

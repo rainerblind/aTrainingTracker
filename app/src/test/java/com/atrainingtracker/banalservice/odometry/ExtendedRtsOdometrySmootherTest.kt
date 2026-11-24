@@ -871,6 +871,156 @@ class ExtendedRtsOdometrySmootherTest {
         assertTrue("Genuine multi-second 6.0 m/s sprint must preserve peak >= 5.5 m/s (was $peakSprintSpeed)", peakSprintSpeed >= 5.5)
     }
 
+    // REQ-FIL-045.2 / TST-FIL-045.2: Segment-independent pause-gap decoupling, out-and-back heading,
+    // 1-sample & no-GNSS post-pause segments, direct smoothSnapshots() defense, and Long overflow guards.
+    @Test
+    fun testPauseGapDecouplingAndOutAndBackHeading_zeroPauseDistanceAndNoCrossPauseBleed_TST_FIL_045_2() {
+        // 1. Overflow-safe isTimestampPauseGap boundary checks
+        org.junit.Assert.assertFalse(ExtendedRtsOdometrySmoother.isTimestampPauseGap(1_000L, 6_000L))
+        assertTrue(ExtendedRtsOdometrySmoother.isTimestampPauseGap(1_000L, 6_001L))
+        assertTrue(ExtendedRtsOdometrySmoother.isTimestampPauseGap(Long.MIN_VALUE, 0L))
+        org.junit.Assert.assertFalse(ExtendedRtsOdometrySmoother.isTimestampPauseGap(Long.MAX_VALUE - 1_000L, Long.MAX_VALUE))
+        org.junit.Assert.assertFalse(ExtendedRtsOdometrySmoother.isTimestampPauseGap(10_000L, 5_000L))
+
+        // 2. Out-and-back multi-pause ride:
+        //    Seg 0 (0..59): 60 s East at 5.0 m/s (0 -> 300 m)
+        //    4 s auto-pause (explicit isPauseGap = true, dt = 5 s) -> Seg 1 (60..79): 20 s East at 5.0 m/s (300 -> 400 m)
+        //    17 s auto-pause (dt = 17 s, resume 0.88 m/s) -> Seg 2 (80..94): 15 s East
+        //    134 s bakery auto-pause (dt = 134 s, resume 3.84 m/s heading WEST back toward origin!) -> Seg 3 (95..144)
+        //    610 s (> 10 min) manual pause -> Seg 4 (145..145): single-sample trailing segment
+        //    20 s pause -> Seg 5 (146..150): no-GNSS post-pause segment (lat/lon = null)
+        val samples = mutableListOf<RawOdometrySample>()
+        var tMs = 10_000_000L
+        var eastM = 0.0
+
+        fun addSample(
+            speed: Double,
+            bearingDeg: Double?,
+            hasGps: Boolean = true,
+            isPauseGap: Boolean = false
+        ) {
+            val (lat, lon) = if (hasGps) {
+                ExtendedRtsOdometrySmoother.enuToLatLng(eastM, 0.0, originLat, originLon)
+            } else {
+                null to null
+            }
+            samples.add(
+                RawOdometrySample(
+                    timestampMs = tMs,
+                    latitude = lat,
+                    longitude = lon,
+                    speedMps = speed,
+                    bearingDeg = bearingDeg,
+                    accuracyMeters = if (hasGps) 3.5 else null,
+                    worldYawRateRadPerSec = 0.0,
+                    isPauseGap = isPauseGap
+                )
+            )
+        }
+
+        // Seg 0: 60 s East at 5.0 m/s
+        for (i in 0 until 60) {
+            if (i > 0) {
+                tMs += 1_000L
+                eastM += 5.0
+            }
+            addSample(5.0, 90.0)
+        }
+        val pauseIdx4s = samples.size
+        tMs += 5_000L // 4 s auto-pause flagged via isPauseGap (dt = 5 s)
+        for (i in 0 until 20) {
+            if (i > 0) {
+                tMs += 1_000L
+                eastM += 5.0
+            }
+            addSample(5.0, 90.0, isPauseGap = (i == 0))
+        }
+        val pauseIdx17s = samples.size
+        tMs += 17_000L // 17 s auto-pause (lock-bike)
+        for (i in 0 until 15) {
+            val spd = if (i == 0) 0.88 else 4.0
+            if (i > 0) {
+                tMs += 1_000L
+                eastM += spd
+            }
+            addSample(spd, 90.0)
+        }
+        val pauseIdx134s = samples.size
+        tMs += 134_000L // 134 s bakery auto-pause; rider turns around heading WEST back toward origin!
+        for (i in 0 until 50) {
+            val spd = if (i == 0) 3.84 else 5.0
+            if (i > 0) {
+                tMs += 1_000L
+                eastM -= spd // Moving West (heading = +-PI, bearing = 270 deg)
+            }
+            addSample(spd, 270.0)
+        }
+        val pauseIdx610s = samples.size
+        tMs += 610_000L // > 10 min manual pause -> 1-sample segment
+        addSample(4.5, 270.0)
+
+        val pauseIdxNoGps = samples.size
+        tMs += 20_000L // 20 s pause -> no-GNSS post-pause segment
+        for (i in 0 until 5) {
+            if (i > 0) tMs += 1_000L
+            addSample(3.0, null, hasGps = false)
+        }
+
+        // Call with explicit initialHeadingRad = 0.0 (East for Seg 0 only!)
+        val smoothed = ExtendedRtsOdometrySmoother.smoothSamples(samples, initialHeadingRad = 0.0)
+        assertEquals("Output cardinality must stay 1:1 with input", samples.size, smoothed.size)
+        assertTrue(
+            "All smoothed outputs must stay finite",
+            smoothed.all { it.latitude.isFinite() && it.longitude.isFinite() && it.speedMps.isFinite() && it.deltaDistanceMeters.isFinite() }
+        )
+
+        // Every pause-resume sample must emit strictly 0.0 m distance (never v * dt_pause!)
+        for (pIdx in listOf(pauseIdx4s, pauseIdx17s, pauseIdx134s, pauseIdx610s, pauseIdxNoGps)) {
+            assertEquals("Pause boundary at index $pIdx must emit 0.0 m deltaDistanceMeters", 0.0, smoothed[pIdx].deltaDistanceMeters, 1e-12)
+        }
+
+        // Out-and-back Seg 3 must resolve initial heading WEST (~+-PI, NOT 0.0 East!)
+        val seg3InitialHeadingErr = abs(UnicycleOdometryEkf.normalizeAngle(smoothed[pauseIdx134s].headingRad - PI))
+        assertTrue(
+            "Seg 3 turnaround heading must resolve West (~PI, not 180-deg inverted East; err=$seg3InitialHeadingErr rad)",
+            seg3InitialHeadingErr < 0.35
+        )
+        assertTrue(
+            "Seg 3 post-pause speed must stay healthy (~5 m/s, was ${smoothed[pauseIdx134s + 10].speedMps})",
+            smoothed[pauseIdx134s + 10].speedMps in 4.0..6.0
+        )
+
+        // Zero cross-pause bleed: Seg 0 smoothed independently must match Seg 0 inside multi-pause output identically
+        val seg0Independent = ExtendedRtsOdometrySmoother.smoothSamples(samples.subList(0, pauseIdx4s), initialHeadingRad = 0.0)
+        for (i in seg0Independent.indices) {
+            assertEquals("Seg 0 speed bleed at $i", seg0Independent[i].speedMps, smoothed[i].speedMps, 1e-9)
+            assertEquals("Seg 0 deltaDist bleed at $i", seg0Independent[i].deltaDistanceMeters, smoothed[i].deltaDistanceMeters, 1e-9)
+        }
+
+        // 3. Direct smoothSnapshots() defense-in-depth with 134 s timestamp gap & explicit pauseGapMask
+        val ekf = UnicycleOdometryEkf(initialEast = 0.0, initialNorth = 0.0, initialSpeed = 5.0, initialHeadingRad = 0.0, recordSnapshots = false)
+        val snaps = mutableListOf<OdometrySnapshot>()
+        val snapTimes = longArrayOf(1_000L, 2_000L, 3_000L, 137_000L, 138_000L, 143_000L, 144_000L)
+        for (i in snapTimes.indices) {
+            val dt = if (i == 0) 1.0 else (snapTimes[i] - snapTimes[i - 1]) / 1000.0
+            ekf.predict(dtSec = dt.coerceAtMost(1.0), gyroYawRateRadPerSec = 0.0, timestampMs = snapTimes[i])
+            val priorS = doubleArrayOf(ekf.eastMeters, ekf.northMeters, ekf.speedMps, ekf.headingRad, ekf.gyroBiasRadPerSec)
+            val priorC = ekf.getCovarianceCopy()
+            val jac = ekf.getTransitionJacobianCopy()
+            val spd = if (i < 3) 5.0 else 3.84
+            ekf.updateSpeed(spd, 0.25, snapTimes[i])
+            val postS = doubleArrayOf(ekf.eastMeters, ekf.northMeters, ekf.speedMps, ekf.headingRad, ekf.gyroBiasRadPerSec)
+            val postC = ekf.getCovarianceCopy()
+            snaps.add(OdometrySnapshot(snapTimes[i], dt, priorS, priorC, jac, postS, postC))
+        }
+        val explicitPauseMask = booleanArrayOf(false, false, false, false, false, true, false) // idx 5 is 5 s explicit pause
+        val directSmoothed = ExtendedRtsOdometrySmoother.smoothSnapshots(snaps, originLat, originLon, pauseGapMask = explicitPauseMask)
+        assertEquals("Direct smoothSnapshots() must emit 0.0 m at 134 s timestamp pause", 0.0, directSmoothed[3].deltaDistanceMeters, 1e-12)
+        assertEquals("Direct smoothSnapshots() must emit 0.0 m at explicit pauseGapMask row", 0.0, directSmoothed[5].deltaDistanceMeters, 1e-12)
+        // Decoupled backward RTS (C_k = 0): index 2 smoothed speed must equal its forward posterior exactly
+        assertEquals("Direct smoothSnapshots() must decouple backward RTS across pause at idx 2", snaps[2].statePosterior[2], directSmoothed[2].speedMps, 1e-12)
+    }
+
     private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)

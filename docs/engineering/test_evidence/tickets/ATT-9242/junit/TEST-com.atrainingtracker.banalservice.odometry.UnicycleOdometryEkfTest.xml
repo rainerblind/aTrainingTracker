@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-24T06:26:55.615Z" hostname="rainer-HP-EliteBook-850-G5" time="0.561">
+  <properties/>
+  <testcase name="testPostPauseAndPostStandstillDecoupling_blocksSnapSpikeAndRecouplesOnFix4_TST_FIL_041_2" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.02"/>
+  <testcase name="testPredict_stationaryFreezesPositionAndCovarianceWhileRemainingInvertible_tstFil032_3" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.023"/>
+  <testcase name="testPrediction_straightMotion_propagatesPositionAlongHeading" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testSnapshotCapture_recordsValidSnapshotsForRtsSmoother" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.001"/>
+  <testcase name="testReanchorPosition_resetsCovarianceWithoutCollapsingHeadingOrGyroBias_tstFil023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.007"/>
+  <testcase name="testInterleavedLaggedGnssTimestamp_keepsCurrentTimestampMonotonicAndResetClearsIt_TST_FIL_042_3" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.003"/>
+  <testcase name="testGnssPositionUpdate_accuracyGating_rejectsDegradedFixes" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testDopplerHeadingAnchoring_gatedAtLowSpeed" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testSpeedUpdate_huberRejection_neutralizesSprintSlip" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.002"/>
+  <testcase name="testGnssPositionUpdate_movingOutlierHuberDamped_tstFil023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testZeroVelocityUpdate_blocksStationaryGnssJumpVelocityLeak_tstFil023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.002"/>
+  <testcase name="testSeedInitialHeadingAndVelocityDecoupling_snaps180DegAndBlocksOutageSpeedKick_tstFil036_2" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.001"/>
+  <testcase name="testPrediction_curvedMotion_updatesHeadingAndArc" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.001"/>
+  <testcase name="testSpeedUpdate_sequentialFusion_reducesVariance" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testInitialization_setsCorrectInitialStateAndVariances" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testPostOutageMovingRecovery_convergesRapidlyAfter15sGap_tstFil023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.002"/>
+  <testcase name="testSnapshotRingBuffer_capsAtMaxSnapshotsAndDisablesCleanly_TST_STB_023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.495"/>
+  <testcase name="testStationaryGnssCluster_recoversFromOffTargetAnchorWithoutVelocityLeak_tstFil023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testUpdateSpeed_rejectsNonFiniteInputsWithoutPoisoningState_tstFil027_3" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testStationaryOutlierTemporalGuard_rejectsSeparatedGlitchesAndClearsMovingOutliers_tstFil023_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.0"/>
+  <testcase name="testOfflineHeading_updatesAtRunningPaceWhileLiveDopplerRemainsGated_tstFil025_1" classname="com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkfTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
