@@ -684,9 +684,9 @@ class RadarLightControllerTest {
     }
 
     /**
-     * TST-CON-031.9a / REQ-CON-031.8: Debounced mode cycling and StVZO capability filtering.
-     * Non-StVZO: AUTO -> DAY_FLASH -> SOLID -> PELOTON -> NIGHT_FLASH -> OFF -> AUTO.
-     * StVZO: AUTO -> SOLID -> OFF -> AUTO.
+     * TST-CON-031.9a / REQ-CON-031.8 / ATT-8674: Debounced mode cycling and StVZO capability filtering.
+     * Non-StVZO: OFF -> AUTO -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> OFF.
+     * StVZO: OFF -> AUTO -> SOLID -> OFF.
      */
     @Test
     fun testRadarLightController_debouncedCycleNextMode_andStvzo() {
@@ -696,16 +696,20 @@ class RadarLightControllerTest {
 
         assertTrue("Initial state must be AUTO", RadarLightController.isAutoMode.value)
 
-        // Non-StVZO ascending intensity cycle: AUTO -> OFF -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> AUTO
-        var selection = RadarLightController.cycleNextMode()
-        assertFalse(selection.isAuto)
-        assertEquals(RadarLightMode.OFF, selection.mode)
-        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        // Start from OFF for full Non-StVZO cycle: OFF -> AUTO -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> OFF
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.OFF))
         assertFalse(RadarLightController.isAutoMode.value)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        var selection = RadarLightController.cycleNextMode()
+        assertTrue(selection.isAuto)
+        assertTrue(RadarLightController.isAutoMode.value)
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
         assertEquals(RadarLightMode.PELOTON, selection.mode)
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+        assertFalse(RadarLightController.isAutoMode.value)
 
         selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
@@ -720,21 +724,29 @@ class RadarLightControllerTest {
         assertEquals(RadarLightMode.DAY_FLASH, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
-        assertTrue(selection.isAuto)
-        assertTrue(RadarLightController.isAutoMode.value)
-
-        // StVZO ascending intensity cycle: AUTO -> OFF -> SOLID -> AUTO
-        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
-        RadarLightController.setAutoMode()
-        assertTrue(RadarLightController.isAutoMode.value)
-
-        selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
         assertEquals(RadarLightMode.OFF, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
+        assertTrue(selection.isAuto)
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        // StVZO cycle: OFF -> AUTO -> SOLID -> OFF (and AUTO -> SOLID -> OFF -> AUTO)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+        assertTrue(RadarLightController.setManualLightMode(RadarLightMode.OFF))
+        assertFalse(RadarLightController.isAutoMode.value)
+
+        selection = RadarLightController.cycleNextMode()
+        assertTrue(selection.isAuto)
+        assertTrue(RadarLightController.isAutoMode.value)
+
+        selection = RadarLightController.cycleNextMode()
         assertFalse(selection.isAuto)
         assertEquals(RadarLightMode.SOLID, selection.mode)
+
+        selection = RadarLightController.cycleNextMode()
+        assertFalse(selection.isAuto)
+        assertEquals(RadarLightMode.OFF, selection.mode)
 
         selection = RadarLightController.cycleNextMode()
         assertTrue(selection.isAuto)

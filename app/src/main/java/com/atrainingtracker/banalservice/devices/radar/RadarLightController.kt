@@ -375,33 +375,34 @@ object RadarLightController {
     }
 
     /**
-     * Cycles through available radar tail light modes in ascending intensity order with ~400 ms hardware command debouncing.
+     * Cycles through available radar tail light modes in canonical quick-switch order with ~400 ms hardware
+     * command debouncing (`REQ-CON-031.8`, `REQ-CON-047.3`, `ATT-8674`):
+     * - Non-StVZO: `OFF -> AUTO -> PELOTON -> SOLID -> NIGHT_FLASH -> DAY_FLASH -> OFF`
+     * - StVZO: `OFF -> AUTO -> SOLID -> OFF`
      */
     @JvmStatic
     fun cycleNextMode(): RadarLightSelection {
         val availableModes = RadarLightMode.getAvailableModes(_isStvzo.value)
+        val nonOffModes = availableModes.filter { it != RadarLightMode.OFF }
         val currentIsAuto = _isAutoMode.value
         val currentExplicit = synchronized(controllerLock) { pendingTargetMode } ?: _currentMode.value
 
         if (currentIsAuto) {
-            return applyDebouncedModeStep(availableModes.first())
-        } else {
-            val currentIndex = availableModes.indexOf(currentExplicit)
-            val nextMode: RadarLightMode? = if (currentIndex in 0 until availableModes.lastIndex) {
-                availableModes[currentIndex + 1]
-            } else if (currentIndex < 0) {
-                availableModes.first()
-            } else {
-                null // back to AUTO
-            }
-
-            return if (nextMode == null) {
-                setAutoMode()
-                RadarLightSelection(isAuto = true, mode = _currentMode.value)
-            } else {
-                applyDebouncedModeStep(nextMode)
-            }
+            return applyDebouncedModeStep(nonOffModes.firstOrNull() ?: RadarLightMode.OFF)
         }
+
+        if (currentExplicit == RadarLightMode.OFF) {
+            setAutoMode()
+            return RadarLightSelection(isAuto = true, mode = _currentMode.value)
+        }
+
+        val currentIndex = nonOffModes.indexOf(currentExplicit)
+        val nextMode = if (currentIndex in 0 until nonOffModes.lastIndex) {
+            nonOffModes[currentIndex + 1]
+        } else {
+            RadarLightMode.OFF
+        }
+        return applyDebouncedModeStep(nextMode)
     }
 
     private fun applyDebouncedModeStep(targetMode: RadarLightMode): RadarLightSelection {

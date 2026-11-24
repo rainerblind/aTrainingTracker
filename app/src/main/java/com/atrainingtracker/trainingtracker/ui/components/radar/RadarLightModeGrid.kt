@@ -68,12 +68,13 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
  * Shared stateless 2-column compact radar tail light mode selector grid (`REQ-CON-047.2`, `REQ-CON-047.3`,
- * `REQ-CON-048.3`).
+ * `REQ-CON-048.3`, `ATT-8674`).
  *
- * Displays the optional StVZO compliance notice (`testTag("RadarLightStvzoNotice")`), the `Automatik` tile
- * (`testTag("RadarLightMode_AUTO")`, with optional live active-mode subtitle controlled by
- * [showActiveModeSubtitle]), and ascending-intensity manual [RadarLightMode] tiles
- * (`testTag("RadarLightMode_<MODE>")`) in a row-major 2-column grid.
+ * Displays the optional StVZO compliance notice (`testTag("RadarLightStvzoNotice")`), followed by a
+ * row-major 2-column grid with `Off (Radar Only)` (`testTag("RadarLightMode_OFF")`) top-left and
+ * `Smart Auto` (`testTag("RadarLightMode_AUTO")`, with optional live active-mode subtitle controlled by
+ * [showActiveModeSubtitle]) top-right, then remaining ascending-intensity manual [RadarLightMode] tiles
+ * (`testTag("RadarLightMode_<MODE>")`: `PELOTON`, `SOLID`, `NIGHT_FLASH`, `DAY_FLASH`; StVZO: `SOLID`).
  */
 @Composable
 fun RadarLightModeGrid(
@@ -113,48 +114,44 @@ fun RadarLightModeGrid(
         } else {
             null
         }
-        val lightTiles = buildList {
-            add(
-                LightTileSpec(
-                    testTag = "RadarLightMode_AUTO",
-                    label = stringResource(R.string.radar_light_control_mode_smart),
-                    subtitle = activeAutoSubtitle,
-                    icon = Icons.Default.AutoAwesome,
-                    iconTint = TTColor.RadarLightBadgeAuto,
-                    isSelected = isAutoMode,
-                    onClick = onAutoSelected
-                )
-            )
-            availableModes.forEach { mode ->
+        val autoTile = LightTileSpec(
+            testTag = "RadarLightMode_AUTO",
+            label = stringResource(R.string.radar_light_control_mode_smart),
+            subtitle = activeAutoSubtitle,
+            icon = Icons.Default.AutoAwesome,
+            iconTint = TTColor.RadarLightBadgeAuto,
+            isSelected = isAutoMode,
+            onClick = onAutoSelected
+        )
+        val orderedModes = buildList<RadarLightMode?> {
+            if (RadarLightMode.OFF in availableModes) {
+                add(RadarLightMode.OFF)
+            }
+            add(null) // Smart Auto (top-right when OFF is present)
+            availableModes.filterTo(this) { it != RadarLightMode.OFF }
+        }
+        val lightTiles = orderedModes.map { mode ->
+            if (mode == null) {
+                autoTile
+            } else {
                 val (modeIcon, modeColor) = resolveLightVisuals(mode)
-                add(
-                    LightTileSpec(
-                        testTag = "RadarLightMode_${mode.name}",
-                        label = stringResource(mode.titleResId),
-                        subtitle = null,
-                        icon = modeIcon,
-                        iconTint = modeColor,
-                        isSelected = !isAutoMode && mode == currentMode,
-                        onClick = { onModeSelected(mode) }
-                    )
+                LightTileSpec(
+                    testTag = "RadarLightMode_${mode.name}",
+                    label = stringResource(mode.titleResId),
+                    subtitle = null,
+                    icon = modeIcon,
+                    iconTint = modeColor,
+                    isSelected = !isAutoMode && mode == currentMode,
+                    onClick = { onModeSelected(mode) }
                 )
             }
         }
 
-        // When availableModes has an even count (e.g. StVZO: OFF, SOLID), Automatik spans row 1
-        // and physical modes fill row 2 evenly; when odd (5 modes), Automatik + 5 modes form 3 even 2-col rows.
-        if (availableModes.size % 2 == 0) {
-            RadarLightModeTile(
-                spec = lightTiles.first(),
-                modifier = Modifier.fillMaxWidth()
-            )
-            lightTiles.drop(1).chunked(2).forEach { pair ->
-                RadarLightTileRow(pair = pair)
-            }
-        } else {
-            lightTiles.chunked(2).forEach { pair ->
-                RadarLightTileRow(pair = pair)
-            }
+        // Row 1 places OFF (top-left) and Smart Auto (top-right), followed by ascending-intensity manual modes
+        // in 2-column row-major order: Non-StVZO [OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH];
+        // StVZO [OFF, AUTO], [SOLID].
+        lightTiles.chunked(2).forEach { pair ->
+            RadarLightTileRow(pair = pair)
         }
     }
 }

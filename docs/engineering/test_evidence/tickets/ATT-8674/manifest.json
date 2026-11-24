@@ -1,0 +1,12 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "3801a2b3d31b31ea0016058b7307792d92d49560",
+  "files": {
+    "evidence_summary.json": "310a778a05e7592c7d668f09f1957f197edf596b9265122c7ea015fa20ae6451",
+    "screenshots/ATT-8674_quick_switch_dark.png": "055f9753f02ba3cf63b2c7b54333e0a0d092e47629e7c13cb7983f83e2b4354f",
+    "screenshots/ATT-8674_quick_switch_light.png": "84ef3fde590de7232648ae92d4f93496953cc89c3ec342b84efd6347b4b205bf"
+  },
+  "run_started_utc": "2026-11-24T12:04:55.131163+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8674"
+}

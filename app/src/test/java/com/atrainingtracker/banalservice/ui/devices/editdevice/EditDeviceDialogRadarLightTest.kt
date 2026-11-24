@@ -177,7 +177,7 @@ class EditDeviceDialogRadarLightTest {
         composeTestRule.onNodeWithTag("RadarLightMode_OFF").assertIsNotSelected()
         composeTestRule.onNodeWithTag("RadarLightMode_AUTO").assertIsNotSelected()
 
-        // Verify row-major 2-column ascending order: [AUTO, OFF], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]
+        // Verify row-major 2-column order: [OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]
         val bAuto = composeTestRule.onNodeWithTag("RadarLightMode_AUTO").getBoundsInRoot()
         val bOff = composeTestRule.onNodeWithTag("RadarLightMode_OFF").getBoundsInRoot()
         val bPeloton = composeTestRule.onNodeWithTag("RadarLightMode_PELOTON").getBoundsInRoot()
@@ -185,10 +185,10 @@ class EditDeviceDialogRadarLightTest {
         val bNight = composeTestRule.onNodeWithTag("RadarLightMode_NIGHT_FLASH").getBoundsInRoot()
         val bDay = composeTestRule.onNodeWithTag("RadarLightMode_DAY_FLASH").getBoundsInRoot()
 
-        assertEquals("AUTO and OFF must share row 1 top", bAuto.top, bOff.top)
-        assertTrue("AUTO must be left of OFF on row 1", bAuto.left < bOff.left)
+        assertEquals("OFF and AUTO must share row 1 top", bOff.top, bAuto.top)
+        assertTrue("OFF must be left of AUTO on row 1", bOff.left < bAuto.left)
         assertEquals("PELOTON and SOLID must share row 2 top", bPeloton.top, bSolid.top)
-        assertTrue("PELOTON must be below AUTO and left of SOLID on row 2", bPeloton.top > bAuto.top && bPeloton.left < bSolid.left)
+        assertTrue("PELOTON must be below OFF and left of SOLID on row 2", bPeloton.top > bOff.top && bPeloton.left < bSolid.left)
         assertEquals("NIGHT_FLASH and DAY_FLASH must share row 3 top", bNight.top, bDay.top)
         assertTrue("NIGHT_FLASH must be below PELOTON and left of DAY_FLASH on row 3", bNight.top > bPeloton.top && bNight.left < bDay.left)
 
@@ -264,13 +264,13 @@ class EditDeviceDialogRadarLightTest {
         composeTestRule.onNodeWithTag("RadarLightMode_NIGHT_FLASH").assertDoesNotExist()
         composeTestRule.onNodeWithTag("RadarLightMode_DAY_FLASH").assertDoesNotExist()
 
-        // Verify StVZO 2-col geometry: AUTO full-width row 1 above [OFF, SOLID] row 2
+        // Verify StVZO 2-col geometry: [OFF, AUTO] row 1 above SOLID row 2
         val bAuto = composeTestRule.onNodeWithTag("RadarLightMode_AUTO").getBoundsInRoot()
         val bOff = composeTestRule.onNodeWithTag("RadarLightMode_OFF").getBoundsInRoot()
         val bSolid = composeTestRule.onNodeWithTag("RadarLightMode_SOLID").getBoundsInRoot()
-        assertEquals("OFF and SOLID must share row 2 top", bOff.top, bSolid.top)
-        assertTrue("OFF must be below AUTO and left of SOLID", bOff.top > bAuto.top && bOff.left < bSolid.left)
-        assertTrue("AUTO must span full width across both columns", bAuto.right > bOff.right)
+        assertEquals("OFF and AUTO must share row 1 top", bOff.top, bAuto.top)
+        assertTrue("OFF must be left of AUTO on row 1", bOff.left < bAuto.left)
+        assertTrue("SOLID must be below OFF on row 2", bSolid.top > bOff.top)
 
         composeTestRule.onNodeWithTag("RadarLightMode_OFF").performClick()
         assertEquals(RadarLightMode.OFF, selectedMode)

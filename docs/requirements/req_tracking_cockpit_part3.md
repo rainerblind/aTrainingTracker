@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.37  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -242,10 +242,10 @@
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a paired, disconnected `RearVue8` (`DeviceType.BIKE_RADAR`, `isOffline = true`, `isStvzo = false`),
 • *When* `RadarLightControlSectionContent` renders and the user selects `SOLID` or `Automatik`,
-• *Then* `RadarLightModeGrid` renders the 2-column row-major tile grid (`[AUTO, OFF]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]`) with `RadarLightOfflineHint` (zero `RadarLightStvzoNotice`, zero `radar_light_active_mode_format` subtitle when `isOffline = true`), highlights `SOLID` / `Automatik`, and invokes `onSelectMode(SOLID)` / `onSelectAuto()`.
+• *Then* `RadarLightModeGrid` renders the 2-column row-major tile grid (`[OFF, AUTO]`, `[PELOTON, SOLID]`, `[NIGHT_FLASH, DAY_FLASH]`) with `RadarLightOfflineHint` (zero `RadarLightStvzoNotice`, zero `radar_light_active_mode_format` subtitle when `isOffline = true`), highlights `SOLID` / `Automatik`, and invokes `onSelectMode(SOLID)` / `onSelectAuto()`.
 • *Given* `RadarLightControlSectionContent` online (`isOffline = false`, `isAutoMode = true`),
 • *When* rendered in Light/Dark mode (non-StVZO or StVZO),
-• *Then* `showActiveModeSubtitle = true` displays `radar_light_active_mode_format` on `RadarLightMode_AUTO`, and StVZO renders `RadarLightStvzoNotice` + full-width `AUTO` row 1 + `[OFF, SOLID]` row 2 while pruning flashing modes.
+• *Then* `showActiveModeSubtitle = true` displays `radar_light_active_mode_format` on `RadarLightMode_AUTO`, and StVZO renders `RadarLightStvzoNotice` + `[OFF, AUTO]` row 1 + `[SOLID]` row 2 while pruning flashing modes.
 • *Given* a radar-only unit (`RVR315`) or live-connected radar with `isLightControlAvailable = false` (not simulating),
 • *When* `shouldShowRadarLightControlSection` evaluates,
 • *Then* `RadarLightControlSection` is omitted completely, and `unregisterRadarDevice()` resets `_isStvzo` to `false`.
@@ -1956,3 +1956,4 @@
 | `1.0.33` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Promoted `REQ-TRK-096` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9680`) PASS, Stage 4 implementation (`MultisportLapCoordinator.kt` `783/1,500`, `TrackerService.java` `3,186/3,220` `+2` LoC, `tracker_service.md` `v1.0.13`, `0` edits to `WorkoutSamplesDatabaseManager.java`/`BANALService.java`/`DeviceManager.java`/`WorkoutRepository.kt`, `0` new warnings), `108/108` targeted unit/Robolectric/contract tests PASS across `11` suites (`MultisportLapCoordinatorTest` `10/10`, `TrackerServiceMultisportMonotonicLapTest` `1/1`), and `docs/engineering/walkthroughs/ATT-9468_walkthrough.md`. |
 | `1.0.34` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Added `[Planned]` `REQ-TRK-097` (`.1`–`.3`, linked to `SYSREQ-TRK-006`) for dynamic 9-language re-localization of unmodified default SQLite tracking tab names (`text_default`, `tab_power`, `tab_map`, `tab_laps`) across repository & Compose UI while preserving user-renamed custom tab titles (`N/A - 0 string changes`). |
 | `1.0.35` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Promoted `REQ-TRK-097` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`TrackingTabTitleResolver.kt` `126/1,500`, `TrackingViewsRepository.kt` `707/1,500`, `TrackingTabsScreen.kt` `1,460/1,500`, `TrackingTabPreviewHeader.kt` `122/1,500`, `TrackingTabConfigHeader.kt` `193/1,500`, `0` new production warnings, `0` string changes), `125/125` targeted unit/Robolectric/Compose/contract tests PASS across `19` suites, live `emulator-5554` `de -> es -> ja` locale-switch verification (`3` `Rule 8.5` PNGs inspected, `0` crashes in `logcat`), and `docs/engineering/tickets/ATT-9511.md`. |
+| `1.0.38` | 2026-11-24 | Lane 2 Author (`ATT-8674`, `--as agent1`) | `ATT-8674` | Aligned `REQ-CON-048` `[Verified]` Acceptance Criteria with `REQ-CON-047.3` (`ATT-8674`): `OFF` top-left & `AUTO` top-right (`[OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]`; StVZO `[OFF, AUTO], [SOLID]`). |
