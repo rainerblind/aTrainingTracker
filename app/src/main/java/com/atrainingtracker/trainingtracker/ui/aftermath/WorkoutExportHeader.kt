@@ -45,6 +45,7 @@ data class WorkoutExportHeader(
     val feel: Int? = null,
     val commute: Boolean = false,
     val race: Boolean = false,
+    val epic: Boolean = false,
     val equipmentId: Long? = null,
     val equipmentName: String? = null,
     val normalizedPower: Double? = null,

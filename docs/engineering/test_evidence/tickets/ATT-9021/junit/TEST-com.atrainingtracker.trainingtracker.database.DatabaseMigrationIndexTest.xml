@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:46:43.217Z" hostname="rainer-HP-EliteBook-850-G5" time="8.197">
+  <properties/>
+  <testcase name="testRoutesDb_freshOnCreate_createsIndexAndUsesQueryPlan" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="7.722"/>
+  <testcase name="testSchemaVersionConstants" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="0.076"/>
+  <testcase name="testLapsDb_freshOnCreate_createsIndexAndUsesQueryPlan" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="0.077"/>
+  <testcase name="testWorkoutSummariesDb_onUpgradeV25ToV26_createsIndexesIdempotently" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="0.107"/>
+  <testcase name="testRoutesDb_onUpgradeV10ToV11_createsIndexIdempotently" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="0.068"/>
+  <testcase name="testWorkoutSummariesDb_freshOnCreate_createsAllThreeIndexes" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="0.071"/>
+  <testcase name="testLapsDb_onUpgradeV2ToV3_createsIndexIdempotently" classname="com.atrainingtracker.trainingtracker.database.DatabaseMigrationIndexTest" time="0.076"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

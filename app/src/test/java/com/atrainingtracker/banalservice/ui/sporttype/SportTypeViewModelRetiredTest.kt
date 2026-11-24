@@ -37,6 +37,7 @@ class SportTypeViewModelRetiredTest {
     private lateinit var mockApplication: Application
     private lateinit var mockEquipmentDbHelper: EquipmentDbHelper
     private lateinit var mockWorkoutRepository: WorkoutRepository
+    private lateinit var mockSportTypeManager: SportTypeDatabaseManager
 
     @Before
     fun setUp() {
@@ -45,13 +46,14 @@ class SportTypeViewModelRetiredTest {
         mockkStatic(SportTypeDatabaseManager::class)
         mockkObject(SportTypeEquipmentLinkManager.Companion)
 
-        val mockSportTypeManager = mockk<SportTypeDatabaseManager>(relaxed = true)
+        mockSportTypeManager = mockk(relaxed = true)
         val mockLinksHelper = mockk<SportTypeEquipmentLinkManager>(relaxed = true)
 
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeManager
         every { SportTypeEquipmentLinkManager.getInstance(any()) } returns mockLinksHelper
 
         mockWorkoutRepository = mockk(relaxed = true)
+        every { mockWorkoutRepository.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         WorkoutRepository.resetForTesting(mockWorkoutRepository)
 
         mockEquipmentDbHelper = mockk(relaxed = true)
@@ -98,5 +100,18 @@ class SportTypeViewModelRetiredTest {
         val statsList = viewModel.getDetailedStats("Cycling", 1L, "2026-01-01")
 
         verify(atLeast = 1) { mockWorkoutRepository.getSportTypeStatsForPeriod(1L, any(), any()) }
+    }
+
+    @Test
+    fun testWorkoutDeletedMutationEvent_reloadsSportTypes() {
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutMutationEvent>(extraBufferCapacity = 8)
+        every { mockWorkoutRepository.workoutMutationEvents } returns events
+
+        val viewModel = SportTypeViewModel(mockApplication, mockWorkoutRepository)
+        verify(timeout = 2000, atLeast = 1) { mockSportTypeManager.database }
+
+        events.tryEmit(com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutMutationEvent.Deleted(workoutId = 77L, sportId = 1L))
+        verify(timeout = 2000, atLeast = 2) { mockSportTypeManager.database }
+        assertEquals(emptyList<SportTypeItem>(), viewModel.sportTypes.value)
     }
 }

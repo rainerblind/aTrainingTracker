@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -53,9 +54,11 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
@@ -76,6 +79,8 @@ fun TrackOnMapScreen(
     segments: List<MapSegment> = emptyList(),
     routes: List<MapRoute> = emptyList(),
     markers: List<LocationMarker> = emptyList(),
+    climbs: List<Climb> = emptyList(),
+    knownLocations: List<KnownLocationItem> = emptyList(),
     enabledTrackTypes: Set<TrackType> = setOf(TrackType.BEST),
     onToggleTrackType: (TrackType) -> Unit = {},
     showTechnicalTracks: Boolean = false,
@@ -101,7 +106,9 @@ fun TrackOnMapScreen(
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null,
     multiSensorOverlays: Map<TelemetryMetricType, List<TelemetrySourceSeries>> = emptyMap(),
-    activityCarriageTimeline: ActivityCarriageTimeline? = null
+    activityCarriageTimeline: ActivityCarriageTimeline? = null,
+    initialSection: WorkoutDetailSectionType? = null,
+    isAftermathLoading: Boolean = false
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -110,9 +117,12 @@ fun TrackOnMapScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
     val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
-    val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
-    val activeTabsConfig = tabsConfig ?: persistedTabsConfig
+    val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = null)
+    val isTabsConfigReady = tabsConfig != null || persistedTabsConfig != null
+    val activeTabsConfig = tabsConfig ?: persistedTabsConfig ?: WorkoutDetailTabConfig.DEFAULT_TABS
     val persistedHiddenCharts by preferenceManager.hiddenTelemetryChartsFlow.collectAsState(initial = emptySet())
+    val workoutMapLayerConfig by preferenceManager.workoutMapLayerConfigFlow.collectAsState(initial = WorkoutMapLayerConfig())
+    var showFullscreenMap by rememberSaveable(workoutData.id) { mutableStateOf(false) }
     val handleToggleChartVisibility: (TelemetryChartKind) -> Unit = { chartKind ->
         val nextVisible = chartKind in persistedHiddenCharts
         coroutineScope.launch {
@@ -370,6 +380,9 @@ fun TrackOnMapScreen(
         isSmoothedStream = isSmoothedStream,
         multiSensorOverlays = multiSensorOverlays,
         activityCarriageTimeline = activityCarriageTimeline,
+        initialSection = initialSection,
+        isTabsConfigReady = isTabsConfigReady,
+        isSectionDataLoading = isAftermathLoading,
         hiddenCharts = persistedHiddenCharts,
         onToggleChartVisibility = handleToggleChartVisibility,
         onUpdateFtp = effectiveOnUpdateFtp,
@@ -402,6 +415,11 @@ fun TrackOnMapScreen(
         },
         mapOverlay = {},
         mapTopEndActions = {
+            if (showMap && hasGpsTrack && !initialAutoShareSnapshot) {
+                WorkoutMapExpandButton(
+                    onClick = { showFullscreenMap = true }
+                )
+            }
             if (showTechnicalTracks) {
                 TrackLayersMenuButton(
                     availableTrackTypes = availableTrackTypes,
@@ -409,6 +427,11 @@ fun TrackOnMapScreen(
                     onToggleTrackType = onToggleTrackType
                 )
             }
+        },
+        onMapClick = if (showMap && hasGpsTrack && !initialAutoShareSnapshot) {
+            { showFullscreenMap = true }
+        } else {
+            null
         },
         onSplitLapClick = {
             candidateSplitIndex = null
@@ -428,6 +451,36 @@ fun TrackOnMapScreen(
         },
         modifier = modifier
     )
+
+    if (showFullscreenMap && showMap && hasGpsTrack) {
+        FullScreenWorkoutMapDialog(
+            bSportType = workoutData.bSportType,
+            tracks = tracks,
+            availableTrackTypes = availableTrackTypes,
+            enabledTrackTypes = enabledTrackTypes,
+            onToggleTrackType = onToggleTrackType,
+            showTechnicalTracks = showTechnicalTracks,
+            segments = segments,
+            routes = routes,
+            markers = markers,
+            knownLocations = knownLocations,
+            climbs = climbs,
+            lapSegment = lapSegment,
+            layerConfig = workoutMapLayerConfig,
+            onToggleSpatialLayer = { layer ->
+                coroutineScope.launch {
+                    preferenceManager.toggleWorkoutMapSpatialLayer(layer)
+                }
+            },
+            onSelectBaseMapType = { baseType ->
+                coroutineScope.launch {
+                    preferenceManager.setWorkoutMapBaseType(baseType)
+                }
+            },
+            onClose = { showFullscreenMap = false },
+            activeScrubPath = activeScrubPath
+        )
+    }
 
     if (showClusterSelectionDialog) {
         val targetWorkout = effectiveWorkoutData
@@ -542,9 +595,40 @@ private fun getTrackTypeName(type: TrackType): String {
  * Deterministic semantics test tags for [TrackLayersMenuButton] (`REQ-REV-016.2` / `TST-REV-017`).
  */
 internal object TrackOnMapTestTags {
+    const val EXPAND_FULLSCREEN_BUTTON = "track_expand_fullscreen_button"
     const val LAYERS_BUTTON = "track_layers_button"
     const val LAYERS_MENU = "track_layers_menu"
     fun layerMenuItem(type: TrackType): String = "track_layers_item_${type.name}"
+}
+
+/**
+ * Subtle floating circular button on the embedded Workout Details map launching full-screen workout map mode
+ * (`REQ-MAP-069.1`).
+ */
+@Composable
+internal fun WorkoutMapExpandButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .size(44.dp)
+            .testTag(TrackOnMapTestTags.EXPAND_FULLSCREEN_BUTTON),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+        shadowElevation = 6.dp,
+        tonalElevation = 2.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.OpenInFull,
+                contentDescription = stringResource(R.string.workout_map_open_fullscreen),
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
 }
 
 /**

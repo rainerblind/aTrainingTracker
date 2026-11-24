@@ -80,6 +80,10 @@ class PhoneCarriageClassifier(
         private const val GLANCE_ACTIVE_HOLD_MS = 1_200L
         private const val STATIONARY_SPEED_MPS = 0.15
         private const val QUIET_IMU_STATIONARY_SPEED_MPS = 1.8
+        private const val STATIONARY_FAST_EXIT_SPEED_MPS = 3.2
+        private const val STATIONARY_FAST_EXIT_MAX_GNSS_ACCURACY_M = 20.0
+        private const val STATIONARY_FAST_EXIT_DWELL_MS = 1_000L
+        private const val STATIONARY_FAST_EXIT_MIN_DISPLACEMENT_M = 10.0
         private const val STAGNANT_POSITION_MIN_SPAN_MS = 4_000L
         private const val STAGNANT_POSITION_MAX_SPREAD_M = 2.0
         private const val EARTH_RADIUS_METERS = 6_371_000.0
@@ -124,6 +128,10 @@ class PhoneCarriageClassifier(
         val confirmedNoFootstrikes: Boolean,
         val impactRmsMps2: Double? = null
     )
+    private data class RawEvaluation(
+        val mode: PhoneCarriageMode,
+        val unambiguousMotionExit: Boolean = false
+    )
 
     private val gravitySamples = ArrayDeque<GravitySample>()
     private val gyroSamples = ArrayDeque<GyroSample>()
@@ -141,6 +149,7 @@ class PhoneCarriageClassifier(
 
     private var lastGnssSpeedMps: Double? = null
     private var lastGnssTimestampMs: Long = Long.MIN_VALUE
+    private var lastGnssAccuracyMeters: Double? = null
     private var lastGnssBearingDeg: Double? = null
     private var lastGnssBearingTimestampMs: Long = Long.MIN_VALUE
     private var estimatedGnssYawRateRadPerSec: Double = 0.0
@@ -156,6 +165,7 @@ class PhoneCarriageClassifier(
     private var committedMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
     private var candidateMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN
     private var candidateSinceMs: Long = Long.MIN_VALUE
+    private var nonStationarySinceMs: Long = Long.MIN_VALUE
 
     val currentMode: PhoneCarriageMode
         @Synchronized get() = committedMode
@@ -189,6 +199,7 @@ class PhoneCarriageClassifier(
         lastAccelTimestampMs = Long.MIN_VALUE
         lastGnssSpeedMps = null
         lastGnssTimestampMs = Long.MIN_VALUE
+        lastGnssAccuracyMeters = null
         lastGnssBearingDeg = null
         lastGnssBearingTimestampMs = Long.MIN_VALUE
         estimatedGnssYawRateRadPerSec = 0.0
@@ -200,6 +211,7 @@ class PhoneCarriageClassifier(
         committedMode = PhoneCarriageMode.UNKNOWN
         candidateMode = PhoneCarriageMode.UNKNOWN
         candidateSinceMs = Long.MIN_VALUE
+        nonStationarySinceMs = Long.MIN_VALUE
     }
 
     @Synchronized
@@ -306,8 +318,10 @@ class PhoneCarriageClassifier(
         if (isNewerOrEqualGnss && speedMps.isFinite() && speedMps >= 0.0) {
             lastGnssSpeedMps = speedMps
             lastGnssTimestampMs = timestampMs
+            lastGnssAccuracyMeters = accuracyMeters
         }
-        if (latitude != null && longitude != null &&
+        if (isAccuracyTrusted(accuracyMeters) &&
+            latitude != null && longitude != null &&
             latitude.isFinite() && longitude.isFinite() &&
             latitude in -90.0..90.0 && longitude in -180.0..180.0 &&
             !(abs(latitude) < 1e-6 && abs(longitude) < 1e-6)
@@ -395,8 +409,10 @@ class PhoneCarriageClassifier(
         }
         pruneWindows(effectiveNowMs)
 
-        val rawCandidate = evaluateRawCandidate(effectiveNowMs)
+        val rawEval = evaluateRawCandidate(effectiveNowMs)
+        val rawCandidate = rawEval.mode
         if (rawCandidate == PhoneCarriageMode.UNKNOWN) {
+            nonStationarySinceMs = Long.MIN_VALUE
             return committedMode
         }
 
@@ -406,6 +422,7 @@ class PhoneCarriageClassifier(
                 committedMode = rawCandidate
                 candidateMode = rawCandidate
                 candidateSinceMs = effectiveNowMs
+                nonStationarySinceMs = Long.MIN_VALUE
             }
             return committedMode
         }
@@ -413,6 +430,7 @@ class PhoneCarriageClassifier(
         if (rawCandidate == committedMode) {
             candidateMode = committedMode
             candidateSinceMs = Long.MIN_VALUE
+            nonStationarySinceMs = Long.MIN_VALUE
             return committedMode
         }
 
@@ -420,8 +438,33 @@ class PhoneCarriageClassifier(
             committedMode = rawCandidate
             candidateMode = rawCandidate
             candidateSinceMs = Long.MIN_VALUE
+            nonStationarySinceMs = Long.MIN_VALUE
             return committedMode
         }
+
+        // REQ-FIL-043.1 / REQ-FIL-043.2: Track continuous non-stationary dwell while committedMode == STATIONARY
+        // so subclass shifts (WALKING_TRANSITION -> BIKE_JERSEY_BACK -> BIKE_FRONT_POCKET) never reset the exit timer,
+        // and shorten exit dwell to <= 1.0 s when unambiguous high-confidence motion holds.
+        if (committedMode == PhoneCarriageMode.STATIONARY) {
+            if (nonStationarySinceMs == Long.MIN_VALUE) {
+                nonStationarySinceMs = effectiveNowMs
+            }
+            candidateMode = rawCandidate
+            candidateSinceMs = nonStationarySinceMs
+            val exitDwellMs = if (rawEval.unambiguousMotionExit) {
+                minOf(dismountHysteresisMs, STATIONARY_FAST_EXIT_DWELL_MS)
+            } else {
+                dismountHysteresisMs
+            }
+            if (effectiveNowMs - nonStationarySinceMs >= exitDwellMs) {
+                committedMode = rawCandidate
+                candidateMode = rawCandidate
+                candidateSinceMs = Long.MIN_VALUE
+                nonStationarySinceMs = Long.MIN_VALUE
+            }
+            return committedMode
+        }
+        nonStationarySinceMs = Long.MIN_VALUE
 
         if (candidateMode != rawCandidate || candidateSinceMs == Long.MIN_VALUE) {
             candidateMode = rawCandidate
@@ -464,11 +507,13 @@ class PhoneCarriageClassifier(
             gravitySamples.size >= 5
     }
 
-    private fun evaluateRawCandidate(nowMs: Long): PhoneCarriageMode {
+    private fun evaluateRawCandidate(nowMs: Long): RawEvaluation {
         val wheelFresh = lastWheelTimestampMs > Long.MIN_VALUE && (nowMs - lastWheelTimestampMs) <= WHEEL_STALENESS_MS
         val wheelSpeed = if (wheelFresh) lastWheelSpeedMps else null
         val gnssFresh = lastGnssTimestampMs > Long.MIN_VALUE && (nowMs - lastGnssTimestampMs) <= STALENESS_MS
         val gnssSpeed = if (gnssFresh) lastGnssSpeedMps else null
+        val gnssAccuracyTrusted = isAccuracyTrusted(lastGnssAccuracyMeters)
+        val poorGnssAccuracy = gnssFresh && !gnssAccuracyTrusted
         val effectiveSpeed = effectiveSpeedMps(nowMs)
 
         val stepFreqHz = currentStepFrequencyHz(nowMs)
@@ -495,30 +540,42 @@ class PhoneCarriageClassifier(
         // once a speed source/mode existed, while keeping pure IMU-only unit checks at neutral UNKNOWN (REQ-FIL-034.1).
         if (effectiveSpeed == null && effectiveRunStepFreqHz == null) {
             return if (hadPriorSpeedOrMode && (hasOrientation || hasGyro) && quietImu) {
-                PhoneCarriageMode.STATIONARY
+                RawEvaluation(PhoneCarriageMode.STATIONARY)
             } else {
-                PhoneCarriageMode.UNKNOWN
+                RawEvaluation(PhoneCarriageMode.UNKNOWN)
             }
         }
 
         if (effectiveSpeed == null && !hasOrientation && !hasGyro && baroStepRms == null && effectiveRunStepFreqHz == null) {
-            return PhoneCarriageMode.UNKNOWN
+            return RawEvaluation(PhoneCarriageMode.UNKNOWN)
         }
 
         val newerWalkEvidenceThanWheel = lastWheelTimestampMs == Long.MIN_VALUE ||
             (lastGnssTimestampMs > lastWheelTimestampMs + 1_500L && gnssSpeed != null && gnssSpeed <= WALK_MAX_SPEED_MPS)
         val wheelActiveMoving = wheelSpeed != null && wheelSpeed > 0.5 && !newerWalkEvidenceThanWheel
 
-        // 1. Stationary detection (bakery counter, indoor outage, stagnant cached fix, traffic light stop; REQ-FIL-034.1)
+        // 1. Stationary detection (bakery counter, indoor outage, stagnant cached fix, poor-accuracy spike; REQ-FIL-034.1, REQ-FIL-043.3)
         val lowSpeed = effectiveSpeed != null && effectiveSpeed <= STATIONARY_SPEED_MPS
         if (lowSpeed && (quietImu || (effectiveSpeed <= 0.10 && (wheelSpeed == null || wheelSpeed <= 0.10)))) {
-            return PhoneCarriageMode.STATIONARY
+            return RawEvaluation(PhoneCarriageMode.STATIONARY)
         }
+        val positionStagnant = isPositionStagnant(nowMs)
         if (!wheelActiveMoving && (hasOrientation || hasGyro) && quietImu &&
-            ((effectiveSpeed != null && effectiveSpeed <= QUIET_IMU_STATIONARY_SPEED_MPS) || isPositionStagnant(nowMs))
+            ((effectiveSpeed != null && effectiveSpeed <= QUIET_IMU_STATIONARY_SPEED_MPS) ||
+                positionStagnant ||
+                poorGnssAccuracy)
         ) {
-            return PhoneCarriageMode.STATIONARY
+            return RawEvaluation(PhoneCarriageMode.STATIONARY)
         }
+
+        // REQ-FIL-043.2: Unambiguous high-confidence motion qualifies for <= 1.0 s STATIONARY exit.
+        val gnssFastExit = effectiveSpeed != null &&
+            effectiveSpeed >= STATIONARY_FAST_EXIT_SPEED_MPS &&
+            gnssFresh &&
+            gnssAccuracyTrusted &&
+            !positionStagnant &&
+            (!quietImu || hasConfirmedDisplacement(nowMs))
+        val unambiguousMotionExit = wheelActiveMoving || gnssFastExit
 
         // Distinguish stepDetectorActiveAndZero / confirmed zero-footstrike accel from stepDetectorUnavailable
         // without misclassifying SensorHub step-batching gaps during high-impact trail running (REQ-FIL-034.4, REQ-FIL-039.1)
@@ -551,7 +608,7 @@ class PhoneCarriageClassifier(
             )
         if (!wheelActiveMoving) {
             if (!easyRunSuppressWalk && walkingStepBand && (effectiveSpeed == null || effectiveSpeed <= WALK_MAX_SPEED_MPS)) {
-                return PhoneCarriageMode.WALKING_TRANSITION
+                return RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)
             }
             if (!easyRunSuppressWalk && walkingSpeedBand) {
                 val suppressWalkForNoFootstrikeClimb = !suppressCyclingForRun &&
@@ -567,7 +624,7 @@ class PhoneCarriageClassifier(
                     gyroOrSwingPresent &&
                     (isPendulumWalking || isStepHarmonicWalking)
                 ) {
-                    return PhoneCarriageMode.WALKING_TRANSITION
+                    return RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)
                 }
             }
         }
@@ -598,11 +655,14 @@ class PhoneCarriageClassifier(
 
         // Handlebar vs other fallback if zero IMU is available
         if (!hasOrientation && !hasGyro && baroStepRms == null) {
-            return if (suppressCycling || runningPrior > cyclingPrior) {
-                PhoneCarriageMode.RUN_WAIST_HIP
-            } else {
-                PhoneCarriageMode.BIKE_HANDLEBAR
-            }
+            return RawEvaluation(
+                mode = if (suppressCycling || runningPrior > cyclingPrior) {
+                    PhoneCarriageMode.RUN_WAIST_HIP
+                } else {
+                    PhoneCarriageMode.BIKE_HANDLEBAR
+                },
+                unambiguousMotionExit = unambiguousMotionExit
+            )
         }
 
         val sBikeHandlebar = if (suppressCycling) {
@@ -650,9 +710,9 @@ class PhoneCarriageClassifier(
             else -> Double.NEGATIVE_INFINITY
         }
         if (committedScore.isFinite() && bestMode != committedMode && bestScore < committedScore + SCORE_MARGIN) {
-            return committedMode
+            return RawEvaluation(committedMode, unambiguousMotionExit)
         }
-        return bestMode
+        return RawEvaluation(bestMode, unambiguousMotionExit)
     }
 
     private fun scoreBikeHandlebar(
@@ -1054,6 +1114,35 @@ class PhoneCarriageClassifier(
             if (hypot(dE, dN) >= STAGNANT_POSITION_MAX_SPREAD_M) return false
         }
         return true
+    }
+
+    /**
+     * Validates GNSS horizontal accuracy for stationary fast-exit & position-buffer admission (`REQ-FIL-043.2`, `REQ-FIL-043.3`).
+     * Omitted `null` remains trusted for speed-only callers (`triggerDecayTick` and legacy tests), whereas
+     * `Double.NaN`, `±Infinity`, `0.0` (Android unknown-accuracy sentinel), `< 0.0`, and `> 20.0 m` are rejected.
+     */
+    private fun isAccuracyTrusted(accuracyMeters: Double?): Boolean {
+        return accuracyMeters == null ||
+            (accuracyMeters.isFinite() && accuracyMeters > 0.0 && accuracyMeters <= STATIONARY_FAST_EXIT_MAX_GNSS_ACCURACY_M)
+    }
+
+    /**
+     * Returns `true` when buffered trusted-accuracy GNSS coordinates show fresh (`<= STALENESS_MS`)
+     * real physical movement (`>= 10.0 m` Euclidean spread across `>= 2` fixes), corroborating
+     * fast `STATIONARY` exit on quiet-IMU rigid handlebar mounts (`REQ-FIL-043.2`).
+     */
+    private fun hasConfirmedDisplacement(nowMs: Long): Boolean {
+        if (positionSamples.size < 2) return false
+        val first = positionSamples.peekFirst() ?: return false
+        val last = positionSamples.peekLast() ?: return false
+        if ((nowMs - last.timestampMs) > STALENESS_MS) return false
+        val cosLat = cos(Math.toRadians(first.lat))
+        for (s in positionSamples) {
+            val dN = Math.toRadians(s.lat - first.lat) * EARTH_RADIUS_METERS
+            val dE = Math.toRadians(s.lon - first.lon) * EARTH_RADIUS_METERS * cosLat
+            if (hypot(dE, dN) >= STATIONARY_FAST_EXIT_MIN_DISPLACEMENT_M) return true
+        }
+        return false
     }
 
     private fun detectGlanceShift(nowMs: Long) {

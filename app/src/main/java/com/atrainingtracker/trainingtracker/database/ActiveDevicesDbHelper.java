@@ -152,6 +152,23 @@ public class ActiveDevicesDbHelper extends TrackingSQLiteOpenHelper {
         }
     }
 
+    /**
+     * Deletes all persisted active-device rows associated with the given workout ID (REQ-DAT-049.1).
+     *
+     * @param workoutId The workout ID whose active-device rows should be purged.
+     * @return The number of deleted rows.
+     */
+    public synchronized int deleteWorkout(long workoutId) {
+        if (workoutId <= 0) {
+            return 0;
+        }
+        SQLiteDatabase db = getWritableDatabase();
+        if (db == null || !db.isOpen()) {
+            return 0;
+        }
+        return db.delete(ActiveDevices.TABLE, ActiveDevices.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
 
     public static final class ActiveDevices {
         public static final String TABLE = "ActiveDevices";

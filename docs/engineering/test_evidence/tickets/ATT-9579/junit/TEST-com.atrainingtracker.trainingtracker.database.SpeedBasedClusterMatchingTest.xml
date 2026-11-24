@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:16:26.817Z" hostname="rainer-HP-EliteBook-850-G5" time="3.321">
+  <properties/>
+  <testcase name="testCalculateSimilarity_ZeroPenaltyWhenClusterMatchesCandidateSports" classname="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" time="0.428"/>
+  <testcase name="testCalculateSimilarity_BackwardCompatibilitySingleSportOverload" classname="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" time="0.436"/>
+  <testcase name="testCandidateBSportTypes_DiscoveryManager" classname="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" time="1.2"/>
+  <testcase name="testCalculateSimilarity_UserPreSelectionPrecedence" classname="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" time="0.424"/>
+  <testcase name="testCalculateSimilarity_HardwareSensorSovereignty" classname="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" time="0.422"/>
+  <testcase name="testCalculateSimilarity_PenaltyAppliedWhenClusterNotInCandidateSports" classname="com.atrainingtracker.trainingtracker.database.SpeedBasedClusterMatchingTest" time="0.41"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

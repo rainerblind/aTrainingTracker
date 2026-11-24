@@ -1,0 +1,93 @@
+{
+  "android_test_summary": null,
+  "checks": [
+    {
+      "detail": "253/253 PASS across 54 suites (incl. 61/61 fresh Bounce 1 suites)",
+      "name": "unit_tests_bounce1_and_stage5",
+      "status": "PASS"
+    },
+    {
+      "detail": "lint_cursor_safety, lint_lifecycle_safety, lint_safe_enum PASS",
+      "name": "static_safety_linters",
+      "status": "PASS"
+    },
+    {
+      "detail": "verify_requirement_governance.py --base sprint/2026-11-23_02_Sp\u00e4t PASS",
+      "name": "requirement_governance",
+      "status": "PASS"
+    },
+    {
+      "detail": "installDebug + cold boot CRASH_LOGCAT_CLEAN + ATT-9607_emulator_smoke.png",
+      "name": "emulator_smoke_pixel8",
+      "status": "PASS"
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "b17e2804d3a2d95a9d252b3860f0d2d20fe5c7ef",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPrunerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.EditSportTypeDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.MyHelperRadarUnitsTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.ExportManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryHotpathTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryConcurrencyTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeleteTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryHrvConsensusTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsDtoAndMathTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelHrvTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsCardTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EditEquipmentDialogContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentCardSpacingContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixScreenTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixWheelPositionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorsUiPolishContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorCompatibilityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentTabsScreenContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelMatrixTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelSyncTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.WheelCircumferenceHistoryChartTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionDialogsTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyCalculatorTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyComponentsTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyLocalizationContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyShareHelperTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelMmpTest.xml"
+  ],
+  "python_test_summary": null,
+  "risk_tier": null,
+  "run_started_utc": "2026-11-23T20:57:57Z",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9607_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-9607",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

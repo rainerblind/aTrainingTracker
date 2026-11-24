@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:16:50.282Z" hostname="rainer-HP-EliteBook-850-G5" time="0.291">
+  <properties/>
+  <testcase name="testCorridorScoring_accuratelyRanksForestWorkoutForForestCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.106"/>
+  <testcase name="testCorridorScoring_accuratelyRanksCityWorkoutForCityCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.091"/>
+  <testcase name="testApexDiscrimination_separatesCorridorsEvenWithoutPolyline" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.093"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

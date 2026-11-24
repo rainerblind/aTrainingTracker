@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.45  
+**Version**: 1.0.48  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 79
+**Total Tests**: 80
 
 ---
 
@@ -1452,6 +1452,25 @@
      • Seed `PeriodSummaries.db`, `-wal`, `-shm`, `-journal`, and `PeriodSummaries_v25.db` with legacy `legacy_period_dbs_cleaned = true`; verify one-time cleanup deletes all `PeriodSummaries*` files while preserving unrelated DBs and sets `period_summaries_db_decommissioned_cleaned = true`, and verify failed deletions do NOT persist the flag so subsequent retries succeed; validate and restore an older `.attbackup` archive containing `PeriodSummaries.db` (v27) via `MigrationEngine.performFullRestore` (with `appRestarter` stubbed cleanly in test isolation) without schema errors and confirm restored `PeriodSummaries*` files are purged post-swap.
 - **Verification Evidence**: `612/612` PASS (`0` failed, `0` errors, `0` skipped) across `123` JUnit XML suites (including standalone `PeriodReactiveProjectionTest` `7/7` PASS, `0` skipped) + `:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` (`0` new warnings); live `emulator-5554` (`Pixel_8_Android_15`) Periods screen verification (`0` crashes, `0` `PeriodSummaries*` files in `databases/`, `att8131_periods_screen.png` & `att8131_periods_months_tab.png` inspected via `read_file`); SHA-256 evidence bundle at `docs/engineering/test_evidence/tickets/ATT-8131/`.
 
+### TST-PER-057: **WorkoutClusterRepository Init Lightweight Load vs refreshClusters Concurrency & Progress Determinism** [Verified]
+- **Requirement(s)**: `REQ-PER-057`
+- **Component**: `WorkoutClusterRepository.kt`, `WorkoutClusterPreviewPersistenceTest.kt`, `WorkoutClusterRepositoryTest.kt`
+- **Jira**: ``ATT-9580``
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Localization Parity**: `N/A - no new UI strings`
+- **Test Description**: Deterministically verify cold preview-enrichment progress gating, stale lightweight non-clobbering, exception/cancellation cleanup, and zero-flakiness `TST-PERF-010` execution across 4 sub-suites:
+  1. *Cold Enrichment Progress After Completed Lightweight Init & Warm Restart Silence (`TST-PER-057.1`, `WorkoutClusterPreviewPersistenceTest#refreshClusters_persistsEnrichedPreviewsToSqlite_andReloadsSilentlyAfterRestart_TST_PERF_010`, `WorkoutClusterRepositoryTest#testRefreshClusters_initialEnrichmentEmitsProgress_thenSilentOnRevisit_TST_PERF_003_009`)*:
+     • Seed Robolectric SQLite with an un-enriched cluster (`previewPaths = emptyList()`, `hitCount = 1`) and workout polyline. Inject `ioDispatcher = Dispatchers.Unconfined` and collect `migrationStatus` on `Dispatchers.Unconfined`; verify `init`'s `loadAllClustersLightweight()` has ALREADY hydrated `_allClusters.value` with empty `previewPaths` prior to `refreshClusters()`, then execute `refreshClusters()` and assert non-null `MigrationStatus` updates emit deterministically (via `yield()`), `previewPaths` persist to SQLite, and `migrationStatus` clears to `null`. Reset singletons for simulated restart (`TST-PERF-010`) and assert warm `refreshClusters()` emits zero non-null `MigrationStatus` updates.
+  2. *Version-Guarded Non-Clobber, Stale SQLite Writeback Guard & Bounded Empty-Cache Retry (`TST-PER-057.2`, `WorkoutClusterRepositoryTest#testLoadAllClustersLightweight_staleReadAbortsWritebackAndDoesNotClobberRefresh_TST_PER_057_2`, `WorkoutClusterRepositoryTest#testLoadAllClustersLightweight_respectsDeletionSyncAndRetriesOnceWhenEmpty_TST_PER_057_2`)*:
+     • Interleave `loadAllClustersLightweight()` reading stale un-enriched/untrimmed or pre-deletion rows while `refreshClusters()` (and `ATT-9607`'s `syncClusterAfterWorkoutDeletion()`) commits fresher state; verify `loadAllClustersLightweight()` aborts stale SQLite writebacks (`clusterDb.updateCluster` not called with stale rows) and discards stale `_allClusters`/`_clusterStats` writes. Also verify that when `clusterStateVersion` advances while `_allClusters` is empty (`!hasCompletedFullRefresh`), `loadAllClustersLightweight()` performs 1 bounded retry and hydrates fresh rows instead of returning `emptyList()`.
+  3. *Indoor Un-Enrichable Revisit Silence & Failure/Cancellation `finally` Progress Cleanup (`TST-PER-057.3`, `WorkoutClusterRepositoryTest#testRefreshClusters_indoorUnenrichableClusterSilentOnRevisit_TST_PER_057_3`, `WorkoutClusterRepositoryTest#testRefreshClusters_exceptionAndCancellationClearMigrationStatusAndPreserveRetryProgress_TST_PER_057_3`)*:
+     • Verify an un-enrichable indoor cluster (`hitCount > 0`, no polylines) emits progress on 1st `refreshClusters()` and remains strictly silent (`0` non-null emissions) on 2nd same-session `refreshClusters()`; inject an exception during Phase 1 and coroutine cancellation at a `yield()` checkpoint when `showProgress == true`, asserting `finally` resets `migrationStatus` to `null` while leaving `hasCompletedFullRefresh == false` so retry emits progress.
+  4. *Multi-Run Real-`Dispatchers.IO` State-Invariant Stress & Adjacent Regression Suite (`TST-PER-057.4`, `WorkoutClusterPreviewPersistenceTest#refreshClusters_realIoStress_enrichesWithoutStaleOverwrite_andRestartsSilently_TST_PER_057_4`, `WorkoutDeletionCascadeIntegrationTest`, `WorkoutClusterDeleteTest`, `WorkoutClustersViewModelTest`, `ArchitectureConformanceContractTest`, `SourceTextReadingAuditContractTest`, `RepositoryEngineCleanlinessContractTest#testTST_DAT_038_1_repositoryReflection_zeroPublicDatabaseBackdoors`)*:
+     • Execute 8 back-to-back real-`Dispatchers.IO` cold/warm persistence runs asserting deterministic state/persistence invariants (`previewPaths` enriched, persisted in SQLite, and published in `_allClusters.value` without stale overwrite; `migrationStatus.value == null` on exit; warm restart strictly silent) alongside `TST-PERF-003`/`007`/`009`/`010`, `ATT-9607` deletion cascade, and architecture contracts.
+- **Verification Evidence**: `62/62` PASS (`0` fail, `0` err, `0` skip, `0` new compiler warnings) across 8 Tier-1 targeted & contract suites (`WorkoutClusterPreviewPersistenceTest` `2/2`, `WorkoutClusterRepositoryTest` `14/14`, `WorkoutDeletionCascadeIntegrationTest` `6/6`, `WorkoutClusterDeleteTest` `2/2`, `WorkoutClustersViewModelTest` `20/20`, `ArchitectureConformanceContractTest` `11/11`, `SourceTextReadingAuditContractTest` `6/6`, `RepositoryEngineCleanlinessContractTest#testTST_DAT_038_1` `1/1`); `3/3` static safety linters PASS; live `emulator-5554` (`Pixel_8_Android_15`) install & cold start (`0` crashes, `ATT-9580_emulator_smoke.png` inspected via `read_file`); SHA-256 evidence bundle at `docs/engineering/test_evidence/tickets/ATT-9580/`.
+
 ---
 
 ## Change History
@@ -1504,3 +1523,6 @@
 | `1.0.43` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Promoted `TST-PER-056` to `[Verified]` with verbatim `PeriodReactiveProjectionTest`, `PeriodsRepositorySyncTest`, `TcxImportPeriodAndClusterIntegrationTest`, `DatabaseSchemaRegistryParityContractTest`, and `ArchitectureConformanceContractTest` citations (`611/611` PASS across 123 suites, live `emulator-5554` PNGs & `0` crashes, SHA-256 evidence bundle). |
 | `1.0.44` | 2026-11-23 | Lane 1 Author (`ATT-8131`, `--as agent1`) | `ATT-8131` | Stage 6 Bounce 1/5 heal: stubbed `MigrationEngine.appRestarter` in `PeriodReactiveProjectionTest` for standalone JVM safety, added `testObsoletePeriodSummariesDiskCleanup_doesNotSetPrefFlagWhenDeleteFails_TST_PER_056_4` (`7/7` standalone PASS, `612/612` total across 123 suites), and grounded `MigrationEngine.performFullRestore`. |
 | `1.0.45` | 2026-11-23 | Sprint Coordinator (`ATT-9648`) | `ATT-9648` | Tier-2 evidence grounding: updated `TST-PERF-004`, `TST-PERF-005`, `TST-PER-020`, `TST-PER-026` citations to `PeriodReactiveProjectionTest.kt` & `PeriodsRepositorySyncTest.kt` following `PeriodSummaries.db` decommissioning (`ATT-8131`, `TST-PRO-101`). |
+| `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Added `TST-PER-057` (`[Planned]`, `.1`–`.4`) covering cold enrichment progress after lightweight init & warm restart silence (`TST-PERF-010`), version-guarded non-clobber vs `refreshClusters()` / `ATT-9607` `syncClusterAfterWorkoutDeletion()`, indoor revisit silence & failure `finally` cleanup, and real-`Dispatchers.IO` regression verification. |
+| `1.0.47` | 2026-11-24 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Gate 3 (`ATT-9671`) revision: aligned `TST-PER-057.1`–`.4` with `yield()` progress delivery, stale SQLite writeback guard & 1-attempt empty-cache retry, cancellation `finally` cleanup, and deterministic real-`Dispatchers.IO` state-invariant stress assertions. |
+| `1.0.48` | 2026-11-24 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Promoted `TST-PER-057` to `[Verified]` with verbatim test method citations (`62/62` PASS across 8 Tier-1 & contract suites, `0` fail, `0` skip, `0` new warnings), `3/3` static linters PASS, live `emulator-5554` smoke (`0` crashes, `ATT-9580_emulator_smoke.png` inspected), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9580/`). |

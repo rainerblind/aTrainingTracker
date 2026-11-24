@@ -1378,4 +1378,524 @@ class PhoneCarriageClassifierTest {
             clf.classify(7_600L)
         )
     }
+
+    // REQ-FIL-043.1, REQ-FIL-043.2 / TST-FIL-043.1: Bank-stop departure continuous non-stationary dwell,
+    // <= 1.0 s fast exit across shifting subclasses (WALK -> BIKE_JERSEY -> BIKE_FRONT_POCKET), post-exit
+    // candidate sync, and brief fidget reset on return to STATIONARY.
+    @Test
+    fun testBankStopDeparture_continuousNonStationaryDwellAndFastExitWithinOneSecond_TST_FIL_043_1() {
+        val clf = PhoneCarriageClassifier()
+        clf.setSportContext(SportContextHint.CYCLING)
+        val baseLat = 48.7800
+        val baseLon = 9.1800
+        val degLatPerMeter = 1.0 / 111_195.0
+
+        // 1. Establish steady STATIONARY at Bank stop (t = 0..6_000 ms)
+        for (t in 0L..6_000L step 20L) {
+            clf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            clf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                clf.ingestGnssSpeed(0.0, bearingDeg = 90.0, accuracyMeters = 16.0, timestampMs = t, latitude = baseLat, longitude = baseLon)
+                clf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, clf.currentMode)
+
+        // 2. Accelerate out of stop mirroring 2026-11-21_081228 rows 404..409:
+        //    t=6..7s: pushing off (1.6 m/s -> WALKING_TRANSITION)
+        //    t=7..8s: accelerating (2.42 m/s, acc=15.8 m -> BIKE_JERSEY_BACK)
+        //    t=8..9s: crossing 3.2 m/s (3.88 m/s, acc=13.7 m -> BIKE_FRONT_POCKET)
+        //    t=9..11s: 4.60 -> 5.50 -> 6.10 m/s (acc=12.2 m, > 38 m displacement)
+        val gnssProfile = mapOf(
+            7_000L to Triple(1.60, 15.8, 3.0),
+            8_000L to Triple(2.42, 15.8, 8.0),
+            9_000L to Triple(3.88, 13.7, 15.0),
+            10_000L to Triple(4.60, 12.2, 24.0),
+            11_000L to Triple(5.50, 12.2, 34.0),
+            12_000L to Triple(6.10, 12.2, 42.0)
+        )
+        var firstExitedAtMs: Long? = null
+        var stationaryAbove5MpsSeconds = 0
+        for (t in 6_020L..12_000L step 20L) {
+            val sec = t / 1000.0
+            when {
+                t <= 7_000L -> {
+                    // Pushing off: slow walking pendulum
+                    val phase = 2.0 * PI * 0.9 * sec
+                    clf.ingestRotationVector(quaternionFromEulerXDeg(74.0 + 8.0 * sin(phase)), t)
+                    clf.ingestGyro(0.25 * sin(phase), 0.25, t)
+                }
+                t <= 8_000L -> {
+                    // Jersey back moderate torso tilt
+                    val phase = 2.0 * PI * 1.1 * sec
+                    clf.ingestRotationVector(quaternionFromEulerXDeg(50.0 + 5.0 * sin(phase)), t)
+                    clf.ingestGyro(0.28 * sin(phase), 0.28, t)
+                }
+                else -> {
+                    // Front pocket thigh pedaling 1.3 Hz
+                    val phase = 2.0 * PI * 1.3 * sec
+                    clf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+                    clf.ingestGyro(0.75 * sin(phase), 0.75, t)
+                }
+            }
+            val fix = gnssProfile[t]
+            if (fix != null) {
+                val (speed, acc, distM) = fix
+                clf.ingestGnssSpeed(
+                    speedMps = speed,
+                    bearingDeg = 0.0,
+                    accuracyMeters = acc,
+                    timestampMs = t,
+                    latitude = baseLat + distM * degLatPerMeter,
+                    longitude = baseLon
+                )
+                val mode = clf.classify(t)
+                if (firstExitedAtMs == null && mode != PhoneCarriageMode.STATIONARY) {
+                    firstExitedAtMs = t
+                }
+                if (speed > 5.0 && mode == PhoneCarriageMode.STATIONARY) {
+                    stationaryAbove5MpsSeconds++
+                }
+            }
+        }
+        assertTrue(
+            "Must exit STATIONARY within <= 1 s of crossing 3.2 m/s (at 9_000 ms), got exit at $firstExitedAtMs",
+            firstExitedAtMs != null && firstExitedAtMs <= 10_000L
+        )
+        assertEquals("0 seconds above 5.0 m/s may remain STATIONARY", 0, stationaryAbove5MpsSeconds)
+        assertTrue("Final committed mode must be active cycling, got ${clf.currentMode}", clf.currentMode.isCyclingMode())
+
+        // 3. Verify post-exit state sync: immediate 1.0 s non-matching candidate after STATIONARY exit
+        //    must NOT inherit old nonStationarySinceMs and bypass 2.0 s dismountHysteresisMs
+        val syncClf = PhoneCarriageClassifier()
+        syncClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..5_000L step 20L) {
+            syncClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            syncClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                syncClf.ingestGnssSpeed(0.0, bearingDeg = 0.0, accuracyMeters = 8.0, timestampMs = t, latitude = baseLat, longitude = baseLon)
+                syncClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, syncClf.currentMode)
+        // Cold launch straight to >= 3.2 m/s with subclass flip (t=6s JERSEY -> t=7s FRONT_POCKET):
+        // 0 ms dwell at t=6_000 stays STATIONARY; 1_000 ms dwell at t=7_000 exits despite subclass flip!
+        for (t in 5_020L..7_000L step 20L) {
+            val sec = t / 1000.0
+            if (t <= 6_000L) {
+                syncClf.ingestRotationVector(quaternionFromEulerXDeg(50.0 + 5.0 * sin(2.0 * PI * 1.1 * sec)), t)
+                syncClf.ingestGyro(0.28 * sin(2.0 * PI * 1.1 * sec), 0.28, t)
+            } else {
+                syncClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(2.0 * PI * 1.35 * sec)), t)
+                syncClf.ingestGyro(0.75 * sin(2.0 * PI * 1.35 * sec), 0.75, t)
+            }
+            if (t == 6_000L) {
+                syncClf.ingestGnssSpeed(3.88, bearingDeg = 0.0, accuracyMeters = 10.0, timestampMs = t, latitude = baseLat + 12.0 * degLatPerMeter, longitude = baseLon)
+                assertEquals("Single-sample launch must hold 1.0 s fast-exit dwell", PhoneCarriageMode.STATIONARY, syncClf.classify(t))
+            } else if (t == 7_000L) {
+                syncClf.ingestGnssSpeed(5.50, bearingDeg = 0.0, accuracyMeters = 10.0, timestampMs = t, latitude = baseLat + 20.0 * degLatPerMeter, longitude = baseLon)
+                assertTrue("Continuous 1.0 s fast exit across subclass flip must commit cycling", syncClf.classify(t).isCyclingMode())
+            }
+        }
+        val exitedMode = syncClf.currentMode
+        // Feed 1.0 s of walking cues (< 2.0 s dismountHysteresisMs) immediately post-exit -> must stay in exitedMode
+        for (t in 7_020L..8_000L step 20L) {
+            val sec = t / 1000.0
+            syncClf.ingestRotationVector(quaternionFromEulerXDeg(74.0 + 8.0 * sin(2.0 * PI * 0.9 * sec)), t)
+            syncClf.ingestGyro(0.25 * sin(2.0 * PI * 0.9 * sec), 0.25, t)
+            if (t % 550L == 0L) syncClf.ingestStepEvent(t)
+        }
+        syncClf.ingestGnssSpeed(1.2, bearingDeg = 0.0, accuracyMeters = 6.0, timestampMs = 8_000L)
+        assertEquals(
+            "Post-exit candidateMode/candidateSinceMs sync must preserve full 2.0 s dismount dwell",
+            exitedMode,
+            syncClf.classify(8_000L)
+        )
+
+        // 4. Brief 1 s standstill fidget returning to STATIONARY clears nonStationarySinceMs (no accumulation)
+        val fidgetClf = PhoneCarriageClassifier()
+        for (t in 0L..5_000L step 20L) {
+            fidgetClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            fidgetClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                fidgetClf.ingestGnssSpeed(0.0, accuracyMeters = 8.0, timestampMs = t)
+                fidgetClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, fidgetClf.currentMode)
+        // Fidget #1 (1.0 s at 1.2 m/s) -> still STATIONARY
+        for (t in 5_020L..6_000L step 20L) {
+            fidgetClf.ingestRotationVector(quaternionFromEulerXDeg(74.0 + 8.0 * sin(2.0 * PI * 0.9 * t / 1000.0)), t)
+            fidgetClf.ingestGyro(0.25, 0.25, t)
+        }
+        fidgetClf.ingestGnssSpeed(1.2, accuracyMeters = 8.0, timestampMs = 6_000L)
+        assertEquals(PhoneCarriageMode.STATIONARY, fidgetClf.classify(6_000L))
+        // Return to STATIONARY at t = 7_000 ms -> clears nonStationarySinceMs
+        for (t in 6_020L..7_000L step 20L) {
+            fidgetClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            fidgetClf.ingestGyro(0.01, 0.02, t)
+        }
+        fidgetClf.ingestGnssSpeed(0.0, accuracyMeters = 8.0, timestampMs = 7_000L)
+        assertEquals(PhoneCarriageMode.STATIONARY, fidgetClf.classify(7_000L))
+        // Fidget #2 (1.0 s at 1.2 m/s at t = 8_000 ms) -> must still stay STATIONARY (timer was cleared!)
+        for (t in 7_020L..8_000L step 20L) {
+            fidgetClf.ingestRotationVector(quaternionFromEulerXDeg(74.0 + 8.0 * sin(2.0 * PI * 0.9 * t / 1000.0)), t)
+            fidgetClf.ingestGyro(0.25, 0.25, t)
+        }
+        fidgetClf.ingestGnssSpeed(1.2, accuracyMeters = 8.0, timestampMs = 8_000L)
+        assertEquals(
+            "Returning to STATIONARY must clear nonStationarySinceMs so disjoint 1 s fidgets never accumulate",
+            PhoneCarriageMode.STATIONARY,
+            fidgetClf.classify(8_000L)
+        )
+    }
+
+    // REQ-FIL-043.1, REQ-FIL-043.2 / TST-FIL-043.2: Cross-device portability — barometer-free/wheel-free/
+    // permission-denied cycling & running (incl. omitted null accuracy & empty positionSamples), wheel-active
+    // launch, rigid handlebar empty/stale vs >= 10 m fresh displacement, and slow-walk continuous 2.0 s exit.
+    @Test
+    fun testCrossDeviceStationaryFastExit_baroFreeWheelFreeWheelActiveAndRigidHandlebar_TST_FIL_043_2() {
+        val baseLat = 48.7800
+        val baseLon = 9.1800
+        val degLatPerMeter = 1.0 / 111_195.0
+
+        // (a1) Barometer-free, wheel-free, stepDetectorRegistered=false cycling with omitted accuracyMeters=null & empty positionSamples
+        val bikeClf = PhoneCarriageClassifier()
+        bikeClf.setSportContext(SportContextHint.CYCLING)
+        bikeClf.setStepDetectorRegistered(false)
+        for (t in 0L..4_000L step 20L) {
+            bikeClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            bikeClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                bikeClf.ingestGnssSpeed(0.0, accuracyMeters = null, timestampMs = t)
+                bikeClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, bikeClf.currentMode)
+        for (t in 4_020L..6_000L step 20L) {
+            val phase = 2.0 * PI * 1.35 * (t / 1000.0)
+            bikeClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            bikeClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+            if (t == 5_000L || t == 6_000L) {
+                bikeClf.ingestGnssSpeed(4.2, bearingDeg = 90.0, accuracyMeters = null, timestampMs = t)
+                bikeClf.classify(t)
+            }
+        }
+        assertTrue(
+            "Baro-free/wheel-free cycling with omitted null accuracy & empty positionSamples must fast-exit <= 1 s",
+            bikeClf.currentMode.isCyclingMode()
+        )
+
+        // (a2) Barometer-free, wheel-free, permission-denied running acceleration >= 3.2 m/s
+        val runClf = PhoneCarriageClassifier()
+        runClf.setSportContext(SportContextHint.RUNNING)
+        runClf.setStepDetectorRegistered(false)
+        for (t in 0L..4_000L step 20L) {
+            runClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            runClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                runClf.ingestGnssSpeed(0.0, accuracyMeters = 8.0, timestampMs = t)
+                runClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, runClf.currentMode)
+        for (t in 4_020L..6_000L step 20L) {
+            val sec = t / 1000.0
+            val osc = 2.0 * PI * 1.4 * sec
+            val strike = 2.0 * PI * 2.8 * sec
+            runClf.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 18.0 * sin(osc)), t)
+            runClf.ingestGyro(0.85 * sin(osc), 0.85, t)
+            runClf.ingestAccelerometer(0.4 * sin(strike), 0.3 * cos(strike), 9.81 + 3.6 * sin(strike), t)
+            if (t == 5_000L || t == 6_000L) {
+                runClf.ingestGnssSpeed(3.5, bearingDeg = 90.0, accuracyMeters = 8.0, timestampMs = t)
+                runClf.classify(t)
+            }
+        }
+        assertTrue(
+            "Baro-free/wheel-free/permission-denied running >= 3.2 m/s must fast-exit <= 1 s",
+            runClf.currentMode.isRunningMode()
+        )
+
+        // (b) wheelActiveMoving cycling launch exits <= 1 s even with quiet handlebar IMU & coarse GNSS
+        val wheelClf = PhoneCarriageClassifier()
+        wheelClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..4_000L step 20L) {
+            wheelClf.ingestRotationVector(quaternionFromEulerXDeg(20.0), t)
+            wheelClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                wheelClf.ingestWheelSpeed(0.0, t)
+                wheelClf.ingestGnssSpeed(0.0, accuracyMeters = 45.0, timestampMs = t)
+                wheelClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, wheelClf.currentMode)
+        for (t in 4_020L..6_000L step 20L) {
+            wheelClf.ingestRotationVector(quaternionFromEulerXDeg(20.0), t)
+            wheelClf.ingestGyro(0.01, 0.02, t)
+            if (t == 5_000L || t == 6_000L) {
+                wheelClf.ingestWheelSpeed(4.5, t)
+                wheelClf.classify(t)
+            }
+        }
+        assertEquals(
+            "wheelActiveMoving launch must exit STATIONARY within <= 1 s into BIKE_HANDLEBAR",
+            PhoneCarriageMode.BIKE_HANDLEBAR,
+            wheelClf.currentMode
+        )
+
+        // (c1) Rigid handlebar (quietImu=true, no wheel/baro): empty positionSamples blocks 1.0 s fast exit
+        val emptyPosBarClf = PhoneCarriageClassifier()
+        emptyPosBarClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..4_000L step 20L) {
+            emptyPosBarClf.ingestRotationVector(quaternionFromEulerXDeg(20.0), t)
+            emptyPosBarClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                emptyPosBarClf.ingestGnssSpeed(0.0, accuracyMeters = 6.0, timestampMs = t)
+                emptyPosBarClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, emptyPosBarClf.currentMode)
+        for (t in 4_020L..6_000L step 20L) {
+            emptyPosBarClf.ingestRotationVector(quaternionFromEulerXDeg(20.0), t)
+            emptyPosBarClf.ingestGyro(0.01, 0.02, t)
+            if (t == 5_000L || t == 6_000L) {
+                emptyPosBarClf.ingestGnssSpeed(5.0, bearingDeg = 0.0, accuracyMeters = 6.0, timestampMs = t)
+                emptyPosBarClf.classify(t)
+            }
+        }
+        assertEquals(
+            "Quiet-IMU rigid handlebar with empty positionSamples must NOT fast-exit at 1.0 s",
+            PhoneCarriageMode.STATIONARY,
+            emptyPosBarClf.currentMode
+        )
+
+        // (c2) Rigid handlebar (quietImu=true, no wheel/baro): fresh >= 10 m trusted displacement DOES fast-exit <= 1.0 s
+        val dispBarClf = PhoneCarriageClassifier()
+        dispBarClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..4_000L step 20L) {
+            dispBarClf.ingestRotationVector(quaternionFromEulerXDeg(20.0), t)
+            dispBarClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                dispBarClf.ingestGnssSpeed(0.0, accuracyMeters = 6.0, timestampMs = t, latitude = baseLat, longitude = baseLon)
+                dispBarClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, dispBarClf.currentMode)
+        for (t in 4_020L..6_000L step 20L) {
+            dispBarClf.ingestRotationVector(quaternionFromEulerXDeg(20.0), t)
+            dispBarClf.ingestGyro(0.01, 0.02, t)
+            if (t == 5_000L) {
+                dispBarClf.ingestGnssSpeed(4.5, bearingDeg = 0.0, accuracyMeters = 6.0, timestampMs = t, latitude = baseLat + 6.0 * degLatPerMeter, longitude = baseLon)
+                assertEquals(PhoneCarriageMode.STATIONARY, dispBarClf.classify(t))
+            } else if (t == 6_000L) {
+                dispBarClf.ingestGnssSpeed(5.0, bearingDeg = 0.0, accuracyMeters = 6.0, timestampMs = t, latitude = baseLat + 14.0 * degLatPerMeter, longitude = baseLon)
+                assertEquals(
+                    "Rigid handlebar with fresh >= 10 m trusted displacement must fast-exit <= 1.0 s",
+                    PhoneCarriageMode.BIKE_HANDLEBAR,
+                    dispBarClf.classify(t)
+                )
+            }
+        }
+
+        // (d) Slow non-stationary walk (1.2 m/s -> 2.6 m/s < 3.2 m/s) shifting subclasses exits at 2.0 s (not 1.0 s, not reset!)
+        val walkClf = PhoneCarriageClassifier()
+        walkClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..4_000L step 20L) {
+            walkClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            walkClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                walkClf.ingestGnssSpeed(0.0, accuracyMeters = 6.0, timestampMs = t)
+                walkClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, walkClf.currentMode)
+        for (t in 4_020L..7_000L step 20L) {
+            val sec = t / 1000.0
+            if (t <= 6_000L) {
+                walkClf.ingestRotationVector(quaternionFromEulerXDeg(74.0 + 8.0 * sin(2.0 * PI * 0.9 * sec)), t)
+                walkClf.ingestGyro(0.25 * sin(2.0 * PI * 0.9 * sec), 0.25, t)
+            } else {
+                walkClf.ingestRotationVector(quaternionFromEulerXDeg(50.0 + 5.0 * sin(2.0 * PI * 1.1 * sec)), t)
+                walkClf.ingestGyro(0.28 * sin(2.0 * PI * 1.1 * sec), 0.28, t)
+            }
+            if (t == 5_000L) {
+                walkClf.ingestGnssSpeed(1.2, accuracyMeters = 6.0, timestampMs = t)
+                assertEquals(PhoneCarriageMode.STATIONARY, walkClf.classify(t))
+            } else if (t == 6_000L) {
+                walkClf.ingestGnssSpeed(1.3, accuracyMeters = 6.0, timestampMs = t)
+                assertEquals("Sub-3.2 m/s walk must still hold 2.0 s dwell at +1.0 s", PhoneCarriageMode.STATIONARY, walkClf.classify(t))
+            } else if (t == 7_000L) {
+                walkClf.ingestGnssSpeed(2.6, accuracyMeters = 6.0, timestampMs = t)
+                assertTrue(
+                    "Continuous 2.0 s dwell across shifting sub-3.2 m/s subclasses must exit STATIONARY at +2.0 s",
+                    walkClf.classify(t) != PhoneCarriageMode.STATIONARY
+                )
+            }
+        }
+    }
+
+    // REQ-FIL-043.1, REQ-FIL-043.3, REQ-FIL-042.3 / TST-FIL-043.3: Indoor coarse (> 20 m) & invalid
+    // (NaN, Infinity, 0.0, < 0.0) GNSS spikes never poison isPositionStagnant or exit STATIONARY,
+    // stagnant optimistic-accuracy spikes stay STATIONARY, UNKNOWN dropout gap resets nonStationarySinceMs,
+    // and lagged timestamps & reset() preserve monotonic hygiene.
+    @Test
+    fun testStationaryIndoorMultipathSpikeAndLaggedTimestamp_preservesStationaryImmunity_TST_FIL_043_3() {
+        val baseLat = 48.7800
+        val baseLon = 9.1800
+        val degLatPerMeter = 1.0 / 111_195.0
+
+        // 1. Coarse (> 20 m) & invalid (NaN, +Inf, 0.0, -1.0) accuracy spikes with +50 m jumps must NOT
+        //    poison positionSamples / isPositionStagnant or trigger false exit from STATIONARY
+        val untrustedAccuracies = listOf(25.0, 45.0, Double.NaN, Double.POSITIVE_INFINITY, 0.0, -1.0)
+        for (badAcc in untrustedAccuracies) {
+            val clf = PhoneCarriageClassifier()
+            clf.setSportContext(SportContextHint.CYCLING)
+            for (t in 0L..5_000L step 20L) {
+                clf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+                clf.ingestGyro(0.01, 0.02, t)
+                if (t % 1_000L == 0L) {
+                    clf.ingestGnssSpeed(0.0, accuracyMeters = 8.0, timestampMs = t, latitude = baseLat, longitude = baseLon)
+                    clf.classify(t)
+                }
+            }
+            assertEquals("Baseline must be STATIONARY for acc=$badAcc", PhoneCarriageMode.STATIONARY, clf.currentMode)
+
+            // Inject 2.0 s multipath spike (6.5 m/s + 50 m coordinate jump) with untrusted accuracy
+            for (t in 5_020L..7_000L step 20L) {
+                clf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+                clf.ingestGyro(0.01, 0.02, t)
+                if (t == 6_000L || t == 7_000L) {
+                    clf.ingestGnssSpeed(
+                        speedMps = 6.5,
+                        bearingDeg = 0.0,
+                        accuracyMeters = badAcc,
+                        timestampMs = t,
+                        latitude = baseLat + 50.0 * degLatPerMeter,
+                        longitude = baseLon
+                    )
+                    assertEquals(
+                        "Untrusted accuracy=$badAcc multipath spike must stay STATIONARY at t=$t",
+                        PhoneCarriageMode.STATIONARY,
+                        clf.classify(t)
+                    )
+                }
+            }
+
+            // Follow with optimistic-accuracy stagnant coordinate (same baseLat/baseLon) at 6.0 m/s for 2 s:
+            // if the +50 m jump had poisoned positionSamples, isPositionStagnant() would return false and break STATIONARY!
+            for (t in 7_020L..9_000L step 20L) {
+                clf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+                clf.ingestGyro(0.01, 0.02, t)
+                if (t == 8_000L || t == 9_000L) {
+                    clf.ingestGnssSpeed(
+                        speedMps = 6.0,
+                        bearingDeg = 0.0,
+                        accuracyMeters = 5.0,
+                        timestampMs = t,
+                        latitude = baseLat,
+                        longitude = baseLon
+                    )
+                    assertEquals(
+                        "Untrusted acc=$badAcc jump must NOT poison isPositionStagnant at t=$t",
+                        PhoneCarriageMode.STATIONARY,
+                        clf.classify(t)
+                    )
+                }
+            }
+        }
+
+        // 2. UNKNOWN dropout gap clears nonStationarySinceMs so later motion starts a fresh 1.0 s dwell
+        val gapClf = PhoneCarriageClassifier()
+        gapClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..4_000L step 20L) {
+            gapClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            gapClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                gapClf.ingestGnssSpeed(0.0, accuracyMeters = 6.0, timestampMs = t)
+                gapClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, gapClf.currentMode)
+        // Brief non-stationary blip at t=5_000 ms (0 ms dwell -> seeds nonStationarySinceMs = 5_000)
+        for (t in 4_020L..5_000L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            gapClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            gapClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        gapClf.ingestGnssSpeed(4.0, accuracyMeters = 6.0, timestampMs = 5_000L)
+        assertEquals(PhoneCarriageMode.STATIONARY, gapClf.classify(5_000L))
+        // Induce UNKNOWN gap at t = 12_000 ms (> STALENESS_MS = 6_000 ms with non-quiet IMU & no GNSS/steps)
+        for (t in 11_020L..12_000L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            gapClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            gapClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, gapClf.classify(12_000L))
+        // Resume high speed at t = 12_500 ms (0 ms fresh dwell): MUST stay STATIONARY (UNKNOWN cleared old 5_000 ms timer!)
+        for (t in 12_020L..12_500L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            gapClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            gapClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        gapClf.ingestGnssSpeed(5.0, accuracyMeters = 6.0, timestampMs = 12_500L)
+        assertEquals(
+            "UNKNOWN gap must clear nonStationarySinceMs so resumed motion requires fresh 1.0 s dwell",
+            PhoneCarriageMode.STATIONARY,
+            gapClf.classify(12_500L)
+        )
+        // After full fresh 1.0 s dwell at t = 13_500 ms -> now exits cleanly
+        for (t in 12_520L..13_500L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            gapClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            gapClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        gapClf.ingestGnssSpeed(5.2, accuracyMeters = 6.0, timestampMs = 13_500L)
+        assertTrue("Fresh 1.0 s dwell after UNKNOWN gap must exit STATIONARY", gapClf.classify(13_500L).isCyclingMode())
+
+        // 3. Out-of-order lagged classify()/ingestGnssSpeed() monotonic dwell & reset() state cleanup
+        val monoClf = PhoneCarriageClassifier()
+        monoClf.setSportContext(SportContextHint.CYCLING)
+        for (t in 0L..5_000L step 20L) {
+            monoClf.ingestRotationVector(quaternionFromEulerXDeg(80.0), t)
+            monoClf.ingestGyro(0.01, 0.02, t)
+            if (t % 1_000L == 0L) {
+                monoClf.ingestGnssSpeed(0.0, accuracyMeters = 8.0, timestampMs = t)
+                monoClf.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.STATIONARY, monoClf.currentMode)
+        for (t in 5_020L..6_000L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            monoClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            monoClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        monoClf.ingestGnssSpeed(5.0, accuracyMeters = 6.0, timestampMs = 6_000L)
+        // Lagged classify(3_800 ms) must clamp to effectiveNowMs = 6_000 ms (never seeding 3_800 ms in the past!)
+        assertEquals(PhoneCarriageMode.STATIONARY, monoClf.classify(3_800L))
+        // Lagged older poor-accuracy fix (3_800 ms) must not overwrite newer 6_000 ms accuracy/speed
+        monoClf.ingestGnssSpeed(5.0, accuracyMeters = 50.0, timestampMs = 3_800L)
+        for (t in 6_020L..6_500L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            monoClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            monoClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        assertEquals(
+            "At +500 ms (< 1_000 ms monotonic dwell), lagged classify must not bypass fast-exit dwell",
+            PhoneCarriageMode.STATIONARY,
+            monoClf.classify(6_500L)
+        )
+        for (t in 6_520L..7_000L step 20L) {
+            val phase = 2.0 * PI * 1.3 * (t / 1000.0)
+            monoClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+            monoClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+        }
+        assertTrue(
+            "At +1_000 ms monotonic dwell (uncorrupted by older 50 m accuracy fix), must exit STATIONARY",
+            monoClf.classify(7_000L).isCyclingMode()
+        )
+
+        // reset() clears committedMode, nonStationarySinceMs, and lastGnssAccuracyMeters
+        monoClf.reset()
+        assertEquals(PhoneCarriageMode.UNKNOWN, monoClf.currentMode)
+    }
 }

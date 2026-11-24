@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.45  
+**Version**: 1.0.47  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 100
+**Total Tests**: 101
 
 ---
 
@@ -1982,6 +1982,25 @@
      - Render `SensorSourceDialog` via Robolectric `createComposeRule()` for `SensorType.HR` and assert rendered tree node order (`onAllNodes` / text y-position order) across ECG, ANT+, Optical PPG, and Healthy/Degraded/Stale backups (including `"Armband Optical"` vs `"Polar H10"`).
      - Verify live `emulator-5554` (`com.atrainingtracker.debug`) launch, opening `SensorSourceDialog` from `SensorStatus` (`HR` icon), clean `logcat -b crash -d`, and `Rule 8.5` PNG inspection via `read_file`.
 
+### TST-UI-2805: **Summary-Section-to-Detail-Tab Dynamic Navigation Verification Suite (`ATT-8721`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2805`
+- **Component**: `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutLaps.kt`, `WorkoutSummary.kt`, `WorkoutList.kt`, `WorkoutTabsScreen.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutClustersScreen.kt`, `WorkoutDetailTabsTest.kt`, `WorkoutDetailSectionNavigationUiTest.kt`
+- **Verification Evidence**:
+  - `WorkoutDetailTabsTest` (`21/21` PASS, incl. `TST-UI-2805_1 resolveTabIndexForSection handles renamed reordered deleted and unavailable tabs`).
+  - `WorkoutDetailSectionNavigationUiTest` (`5/5` PASS: `TST-UI-2805_2 workoutSummary propagates tapped sectionType via onSectionClick`, `TST-UI-2805_2 renamed and reordered tabs open matching tab regardless of title or index`, `TST-UI-2805_2 deleted tab and unavailable section fall back safely to tab zero`, `TST-UI-2805_2 async tabConfig and sectionData loading resolves target tab once ready`, `TST-UI-2805_2 singlePageMode scrolls target section into view without tab bar`).
+  - Adjacent & Contract suites (`53/53` PASS): `WorkoutDetailTabbedContentTest` (`7/7`), `WorkoutDetailSectionOrderUiTest` (`5/5`), `WorkoutDetailSummaryDecouplingTest` (`2/2`), `WorkoutSummaryClickContractTest` (`3/3`), `WorkoutSummaryDynamicOrderContractTest` (`3/3`), `WorkoutSummaryLiveUpdateUiTest` (`3/3`), `TrackOnMapAftermathViewModelTest` (`10/10`), `TrackOnMapViewModelTelemetryTest` (`2/2`), `MapDetailLayoutViewportConsolidationUiTest` (`4/4`), `InterfaceSignatureDriftContractTest` (`3/3`), `ArchitectureConformanceContractTest` (`11/11`); total `79/79` PASS across `13` suites (`0` fail/err/skip).
+  - Live `emulator-5554` PNGs `docs/engineering/walkthroughs/img/ATT-8721_emulator_smoke.png` and `docs/engineering/walkthroughs/img/ATT-8721_emulator_map_tab.png` inspected via `read_file` confirming tapping Map on the `Loop from Marienplatz, München` summary card opens Workout Details directly on the `Map & Graphs` tab with `0` crashes in `logcat -b crash -d`.
+- **Jira**: `ATT-8721`
+- **Test Description**:
+  1. *Dynamic Tab-Resolution Unit Tests (`TST-UI-2805.1`, `WorkoutDetailTabsTest`)*:
+     - Verify `WorkoutDetailTabConfig.resolveTabIndexForSectionOrNull` and `resolveTabIndexForSection` resolve renamed, reordered, and custom-grouped tabs strictly by `normalizedSections` membership.
+     - Verify safe fallback to tab `0` when the target tab was deleted, when `targetSection` is `null`, or when `availability.isSectionActive(targetSection)` is `false` for the workout.
+  2. *Behavioral Compose UI & Summary Click Tests (`TST-UI-2805.2`, `WorkoutDetailSectionNavigationUiTest`)*:
+     - Render `WorkoutSummary` via Robolectric `createComposeRule()` and assert clicking summary sections (`DETAILS`, `DESCRIPTION`, `EXTREMA`, `ZONES`, `ELEVATION`, `CHARTS`, `LAPS`, `RPE_AND_FEEL`) invokes `onSectionClick` with the matching `WorkoutSectionType` while `WorkoutHeader` click invokes `onMapClick`.
+     - Render `WorkoutDetailTabbedContent` with renamed/reordered tabs, deleted-tab fallback, unavailable-section fallback, async `isTabsConfigReady`/`isSectionDataLoading` transitions, and single-page mode (`visibleTabs.size == 1`), asserting the matching tab is selected and the target section scrolls into view.
+  3. *Live Emulator Verification (`TST-UI-2805.3`, `emulator-5554`)*:
+     - Verify live `emulator-5554` (`com.atrainingtracker.debug`) launch, clean `logcat -b crash -d`, and `Rule 8.5` PNG inspection via `read_file`.
+
 ---
 
 ## Change History
@@ -2030,3 +2049,5 @@
 | `1.0.43` | 2026-11-23 | Lane 1 Author (`ATT-8134`, `--as agent1`) | `ATT-8134` | Stage 6 Bounce 1 heal on `TST-UI-2803`: added Pan-Mode double-tap zoom reset, lower-bound duplicate-`startDist` scan, trailing-stopped-sample PACE overlay, and `PaceFormatterTest` negative/`MAX_PACE` parity regression tests (`12/12` + `5/5` PASS; `395/395` fresh PASS across `83` targeted JUnit XML suites), removed dead `drawMultiSensorOverlayCurves`/`drawElevationOverlayCurves`/`OverlayXViewport`, and replaced `ATT-8134_workout_detail_charts.png` with populated `sample_workout` `Map & Graphs` tab (`Elevation Profile` + `Speed` + `Cadence` curves) verified via `read_file`. |
 | `1.0.44` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Added `TST-UI-2804` (`[Planned]`, `.1`–`.3`) verifying shared `PrimaryHrSensorArbitrator` persisted-metadata modality/health resolution, `SensorSourceDialog` HR Active Backups & Not Connected sorting (including anti-alphabetical `"Armband Optical"` vs `"Polar H10"`), Compose UI tree order assertions, and live `emulator-5554` PNG verification. |
 | `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Promoted `TST-UI-2804` to `[Verified]` (`214/214` targeted/dependent tests PASS across `34` suites; live `emulator-5554` PNG `ATT-9610_sensor_source_dialog.png` visually inspected via `read_file` with `0` crashes in `logcat -b crash -d`; pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3). |
+| `1.0.46` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Added `TST-UI-2805` (`[Planned]`, `.1`–`.3`) for dynamic section-to-tab resolution unit tests, `WorkoutSummary` & `WorkoutDetailTabbedContent` Compose UI navigation/fallback/single-page tests, and live `emulator-5554` verification. |
+| `1.0.47` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Promoted `TST-UI-2805` to `[Verified]` (`79/79` targeted/adjacent/contract tests PASS across `13` suites; live `emulator-5554` PNGs `ATT-8721_emulator_smoke.png` & `ATT-8721_emulator_map_tab.png` inspected via `read_file` with `0` crashes in `logcat -b crash -d`). |

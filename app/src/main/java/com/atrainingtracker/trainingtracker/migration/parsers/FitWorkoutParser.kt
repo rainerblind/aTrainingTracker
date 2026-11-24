@@ -449,6 +449,7 @@ object FitWorkoutParser : WorkoutParser {
             var metaIsCommute = false
             var metaIsTrainer = false
             var metaIsRace = false
+            var metaIsEpic = false
 
             primarySession?.developerFields?.forEach { devField ->
                 if (!matchesAppId(devField, devDataAppIds, FitFileWriter.APP_METADATA_DEVELOPER_DATA_ID)) {
@@ -480,6 +481,9 @@ object FitWorkoutParser : WorkoutParser {
                 } else if (fieldName == "is_race" || num == 7) {
                     val raw = devField.integerValue ?: (devField.value as? Number)?.toInt()
                     metaIsRace = (raw ?: 0) > 0
+                } else if (fieldName == "is_epic" || num == 8) {
+                    val raw = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                    metaIsEpic = (raw ?: 0) > 0
                 }
             }
 
@@ -501,6 +505,7 @@ object FitWorkoutParser : WorkoutParser {
                     isCommute = metaIsCommute,
                     isTrainer = metaIsTrainer,
                     isRace = metaIsRace,
+                    isEpic = metaIsEpic,
                     sportName = primarySession?.sport?.name,
                     bSportType = bSportType,
                     resolvedSportId = resolvedSportId,

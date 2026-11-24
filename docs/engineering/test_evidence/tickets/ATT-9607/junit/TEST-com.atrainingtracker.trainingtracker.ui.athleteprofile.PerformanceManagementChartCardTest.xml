@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:14.032Z" hostname="rainer-HP-EliteBook-850-G5" time="17.131">
+  <properties/>
+  <testcase name="testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInDarkAmoledTheme_att9558" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="14.485"/>
+  <testcase name="testAcwrBuildingBaseHint_omittedWhenPmcHistoryCompletelyEmpty_tstUi2792_1" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.323"/>
+  <testcase name="testGerman360dpViewport_optimalerAufbauUnclippedSwatchesLegendAndUniformRowHeights_tstUi2791_2" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.378"/>
+  <testcase name="testCapturePmcChartLightAndDarkComparisonPng_tstUi2791_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.585"/>
+  <testcase name="testRow1KpiCards_uniformColoredBordersWithoutTopAccentBarInLightTheme_att9558" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.367"/>
+  <testcase name="testCapturePmcBuildingBaseLightAndDarkComparisonPng_tstUi2792_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.487"/>
+  <testcase name="testAcwrBuildingBaseHint_shownNeutrallyWhenLowCtlAndOmittedWhenEmpty_tstUi2792_1" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.252"/>
+  <testcase name="testAcwrFormatting_respectsCurrentLocaleOverrideIndependentOfJvmDefault_tstUi2791_2" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.PerformanceManagementChartCardTest" time="0.253"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

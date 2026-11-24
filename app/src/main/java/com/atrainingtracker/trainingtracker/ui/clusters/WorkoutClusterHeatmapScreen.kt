@@ -408,6 +408,8 @@ fun WorkoutClusterHeatmapScreen(
                                 routes = activeAftermathState?.routes ?: emptyList(),
                                 markers = activeAftermathState?.markers?.ifEmpty { peekedWorkoutDataWithTrack!!.markers }
                                     ?: peekedWorkoutDataWithTrack!!.markers,
+                                climbs = activeAftermathState?.climbs ?: emptyList(),
+                                knownLocations = activeAftermathState?.knownLocations ?: emptyList(),
                                 enabledTrackTypes = enabledTrackTypes,
                                 onToggleTrackType = { trackOnMapViewModel?.toggleTrackTypeEnabled(it) },
                                 showTechnicalTracks = true,

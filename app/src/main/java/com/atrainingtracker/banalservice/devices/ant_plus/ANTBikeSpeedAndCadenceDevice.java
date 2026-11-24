@@ -146,8 +146,12 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
 
                 @Override
                 public void onNewCalculatedSpeed(long estTimestamp, EnumSet<EventFlag> eventFlags, BigDecimal calculatedSpeed) {
-                    mSpeedSensor.newValue(calculatedSpeed.doubleValue());
-                    mPaceSensor.newValue(1 / calculatedSpeed.doubleValue());   // TODO: correct?
+                    if (calculatedSpeed == null) {
+                        return;
+                    }
+                    double speed = calculatedSpeed.doubleValue();
+                    mSpeedSensor.newValue(speed);
+                    mPaceSensor.newValue(speed > 0.0 ? 1.0 / speed : null);
                 }
             });
 

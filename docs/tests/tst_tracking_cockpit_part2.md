@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.21  
+**Version**: 1.0.26  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 97
+**Total Tests**: 99
 
 ---
 
@@ -2097,6 +2097,40 @@
 
 ---
 
+### TST-CON-058: **`ANTBikeSpeedDevice` & `ANTBikeSpeedAndCadenceDevice` Null Speed Guard & Standstill Pace Verification (`ATT-9605`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-058` (`REQ-CON-058.1`, `REQ-CON-058.2`)
+- **Component**: `ANTBikeSpeedDevice.java`, `ANTBikeSpeedAndCadenceDevice.java`
+- **Jira**: `ATT-9605` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `ANTBikeSpeedDeviceTest#testANTBikeSpeed_nullCalculatedSpeed_initialRemainsNullWithoutNpe_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_nullCalculatedSpeed_afterMotionPreservesValuesWithoutNpe_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_initialZeroSpeed_setsZeroSpeedAndNullPace_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_positiveSpeed_publishesMetersPerSecondAndFinitePace_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_zeroSpeedAfterMotion_decaysPaceToNullAtThreshold_tstCon058_1`, `ANTBikeSpeedDeviceTest#testANTBikeSpeed_negativeSpeed_emitsNullPace_tstCon058_1`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_nullCalculatedSpeed_initialRemainsNullWithoutNpe_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_nullCalculatedSpeed_afterMotionPreservesValuesWithoutNpe_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_initialZeroSpeed_setsZeroSpeedAndNullPace_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_positiveSpeed_publishesMetersPerSecondAndFinitePace_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_zeroSpeedAfterMotion_decaysPaceToNullAtThreshold_tstCon058_2`, `ANTBikeSpeedAndCadenceDeviceTest#testANTBikeSpeedAndCadence_negativeSpeed_emitsNullPace_tstCon058_2`
+- **Test Description**:
+  1. *`ANTBikeSpeedDevice.onNewCalculatedSpeed` Null Guard, Units & Standstill Decay (`TST-CON-058.1` — `ANTBikeSpeedDeviceTest.kt`)*:
+     • Capture `CalculatedSpeedReceiver` via `mockPcc.subscribeCalculatedSpeedEvent(...)`; invoke `onNewCalculatedSpeed(..., null)` both initially and after a valid reading; verify zero NPE (including `myLog` path) and undisturbed `mSpeedSensor` / `mPaceSensor` values.
+     • Invoke `onNewCalculatedSpeed(..., BigDecimal.ZERO)` initially; verify `mSpeedSensor.value == 0.0` and `mPaceSensor.value == null` (never `Double.POSITIVE_INFINITY`).
+     • Invoke `onNewCalculatedSpeed(..., BigDecimal("10.0"))` (`m/s`); verify `mSpeedSensor.value == 10.0` and `mPaceSensor.value == 0.1` (`1.0 / 10.0` finite `s/m`, no `/ 3.6` scaling).
+     • Deliver `8` (`SPEED_THRESHOLD`) consecutive `BigDecimal.ZERO` standstill ticks after motion; verify ticks `1..7` hold `0.1`, tick `8` decays `mPaceSensor.value` cleanly to `null`, and negative speed feeds `null` pace.
+  2. *`ANTBikeSpeedAndCadenceDevice.onNewCalculatedSpeed` Null Guard, Units & Standstill Decay (`TST-CON-058.2` — `ANTBikeSpeedAndCadenceDeviceTest.kt`)*:
+     • Capture `CalculatedSpeedReceiver` via `mockSpeedPcc.subscribeCalculatedSpeedEvent(...)` alongside existing `TST-CON-025.1`/`.2` release-handle tests; verify identical `null` (initial & post-motion), initial `0.0` (`pace == null`), positive `10.0 m/s -> 0.1 s/m`, `8`-tick `SPEED_THRESHOLD` standstill decay to `null`, and negative speed (`pace == null`) assertions.
+  3. *Architecture Contract & Regression Parity (`TST-CON-058.3` — `ArchitectureConformanceContractTest.kt`)*:
+     • Run incremental `--rerun` targeted unit & contract tests (`ANTBikeSpeedDeviceTest`, `ANTBikeSpeedAndCadenceDeviceTest`, `ArchitectureConformanceContractTest`); confirm `ANTBikeSpeedDevice.java <= 1,500` LoC, `ANTBikeSpeedAndCadenceDevice.java <= 1,500` LoC, and `0` string edits (`Localization Parity: N/A - 0 string changes`).
+
+---
+
+### TST-FIL-043: **`PhoneCarriageClassifier` Fast `STATIONARY` Exit, Continuous Non-Stationary Dwell & Indoor Multipath Immunity Verification (`ATT-9469`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-043` (`REQ-FIL-043.1`, `REQ-FIL-043.2`, `REQ-FIL-043.3`)
+- **Component**: `PhoneCarriageClassifier.kt`
+- **Jira**: `ATT-9469` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit
+- **Test Description**:
+  1. *Bank-Stop Departure Continuous Dwell & `<= 1 s` Fast Exit (`TST-FIL-043.1` — `PhoneCarriageClassifierTest#testBankStopDeparture_continuousNonStationaryDwellAndFastExitWithinOneSecond_TST_FIL_043_1`)*:
+     • Reproduce `2026-11-21_081228` Bank-stop departure (`rows 401..409`: `STATIONARY` -> accelerating `2.42 -> 3.88 -> 4.60 m/s` and `3.5 -> 5.5 -> 6.1 m/s` @ `acc = 15.8 -> 13.7 -> 12.2 m`, `> 10 m` displacement, `rawCandidate` shifting `WALKING_TRANSITION -> BIKE_JERSEY_BACK -> BIKE_FRONT_POCKET`); assert `committedMode` exits `STATIONARY` within `<= 1 s` of crossing `3.2 m/s` (`0` multi-second `STATIONARY` tail at `> 5 m/s`), commits active `BIKE_*`, and keeps post-exit dwell state synchronized (`candidateMode`/`candidateSinceMs` cleared); assert a brief `1 s` standstill fidget returning to `STATIONARY` clears `nonStationarySinceMs` without false exit.
+  2. *Cross-Device Portability: Barometer-Free / Wheel-Free, Wheel-Active, Rigid Handlebar & Slow Walk (`TST-FIL-043.2` — `PhoneCarriageClassifierTest#testCrossDeviceStationaryFastExit_baroFreeWheelFreeWheelActiveAndRigidHandlebar_TST_FIL_043_2`)*:
+     • Verify `<= 1 s` exit on barometer-free, wheel-free, `stepDetectorRegistered=false` cycling and running starts (`>= 3.2 m/s`, including omitted `accuracyMeters = null` and empty `positionSamples` with `!quietImu`), on `wheelActiveMoving` cycling launch, and on rigid handlebar mount (`quietImu == true`, no wheel/baro) blocked when `positionSamples` is empty/stale (`< 2` samples or `> STALENESS_MS`) and fast-exiting once `>= 10 m` fresh trusted displacement + `>= 3.2 m/s` holds; verify slow non-stationary walk (`1.2 m/s`) with shifting candidates exits cleanly at `2.0 s` (`dismountHysteresisMs`) without subclass-flip timer resets.
+  3. *Indoor Multipath GNSS-Spike Immunity, Invalid Accuracy, `UNKNOWN`-Gap Reset & Monotonic Guard (`TST-FIL-043.3` — `PhoneCarriageClassifierTest#testStationaryIndoorMultipathSpikeAndLaggedTimestamp_preservesStationaryImmunity_TST_FIL_043_3`, `SpeedAndLocationDevice_ATTFusedTest.kt`, `ArchitectureConformanceContractTest.kt`, `InterfaceSignatureDriftContractTest.kt`)*:
+     • Verify `1–2 s` coarse (`acc = 25..45 m > 20 m`) and invalid-accuracy (`Double.NaN`, `Double.POSITIVE_INFINITY`, `0.0`, `-1.0`) GNSS spikes (`v = 5–7 m/s`, with or without coordinate jumps) do NOT enter `positionSamples` or poison `isPositionStagnant(nowMs)` and produce `0` exits from `STATIONARY` (contrasted with omitted `null` compatibility); verify stagnant-position optimistic-accuracy spikes (`acc = 5 m`, `v = 6 m/s`) under `quietImu == true` stay `STATIONARY`; verify an `UNKNOWN` dropout gap resets `nonStationarySinceMs` so motion resuming afterward starts a fresh dwell; verify lagged timestamps preserve monotonic dwell, `reset()` clears `nonStationarySinceMs`/`lastGnssAccuracyMeters`, `PhoneCarriageClassifier.kt <= 1,500` LoC, and `100%` pass across adjacent `ATTFused`/multisport/replay/contract suites (`Localization Parity: N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2240,3 +2274,8 @@
 | `1.0.19` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `TST-CON-056` (`.1`–`.4`) to `[Verified]` with verbatim method citations (`569/569` in-scope tests PASS across 18 suites incl. `RadarBrakeLightConcurrencyStressTest 5/5`, `TuningPreferencesDataStoreRadarLightControlModeTest 10/10`, `RadarLightControllerTest`, `RadarSnoozeControllerTest`, `RadarStateRepositoryTest`, `RadarTrafficSimulatorTest`, `ANTBikeRadarDeviceTest`, `BTLERadarDeviceTest`, `ArchitectureConformanceContractTest`, live `emulator-5554` smoke `0` crashes, `Rule 8.5` PNG verified). |
 | `1.0.20` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Added `[Planned]` `TST-CON-057` (`.1`–`.4`, strictly symmetric `REQ-CON-057`) covering `DeviceType.getDeviceTypeList()` HRM/BIKE_POWER updates, `HrmSensorCapabilityHelper` matrix (BLE H10 vs Verity Sense vs ANT+ H10 vs non-Polar/spoofed HRMs vs HR/HRV), `DevicesDatabaseManager.getDeviceIdAndNameLists()` & `SensorSourceDialog` Compose verification, and monolith/governance contracts (`N/A - 0 string changes`). |
 | `1.0.21` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Promoted `TST-CON-057` (`.1`–`.4`) to `[Verified]` with 8 verbatim `TestClass#testMethod` citations (`127/127` PASS across 15 suites: `HrmSensorCapabilityHelperTest 4/4`, `DeviceTypeSensorMappingTest 3/3`, `DevicesDatabaseManagerTest 17/17`, `SensorTypeHrvTest 5/5`, `MySensorManagerPriorityTest 8/8`, `AltitudeSlopePriorityTest 3/3`, `PrimaryHrSensorArbitratorTest 9/9`, `SensorSourceDialogPriorityTest 7/7`, `SensorSourceDialogContractTest 13/13`, `EditSensorFieldViewModelTest 28/28`, 5 contract suites `30/30`; `4/4` safety linters PASS; live `emulator-5554` `CADENCE` smoke `0` crashes + `Rule 8.5` PNG verified). |
+| `1.0.22` | 2026-11-23 | Lane 2 Author (`ATT-9605`, `--as agent1`) | `ATT-9605` | Added `[Planned]` `TST-CON-058` (`.1`–`.3`, strictly symmetric `REQ-CON-058`) covering `ANTBikeSpeedDevice` & `ANTBikeSpeedAndCadenceDevice` `onNewCalculatedSpeed` null early-return (initial & post-motion), direct `m/s` scaling, standstill `null` pace + `8`-tick `SPEED_THRESHOLD` decay, negative speed guard, and `ArchitectureConformanceContractTest` parity (`N/A - 0 string changes`). |
+| `1.0.23` | 2026-11-23 | Lane 2 Author (`ATT-9605`, `--as agent1`) | `ATT-9605` | Promoted `TST-CON-058` (`.1`–`.3`) to `[Verified]` with `12` verbatim `TestClass#testMethod` citations (`36/36` PASS across 4 targeted suites: `ANTBikeSpeedDeviceTest 6/6`, `ANTBikeSpeedAndCadenceDeviceTest 9/9`, `ANTBikePowerDeviceTest 10/10`, `ArchitectureConformanceContractTest 11/11`; `3/3` safety linters PASS; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9605/`). |
+| `1.0.24` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Added `[Planned]` `TST-FIL-043` (`.1`–`.3`, strictly symmetric `REQ-FIL-043`) covering Bank-stop departure continuous non-stationary dwell & `<= 1 s` fast exit, barometer-free/wheel-free/wheel-active/rigid-handlebar portability, indoor `acc > 20 m` multipath & stagnant-position spike immunity, lagged-timestamp monotonic guard, and `PhoneCarriageClassifier.kt <= 1,500` LoC (`N/A - 0 string changes`). |
+| `1.0.25` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Gate 3 (`ATT-9674`) revision on `[Planned]` `TST-FIL-043`: expanded verification to cover invalid `accuracyMeters` (`Double.NaN`, `±Infinity`, `0.0`, `-1.0`) vs omitted `null` compatibility, empty/stale `positionSamples` behavior, non-poisoning of `isPositionStagnant(nowMs)` by coarse/invalid coordinate jumps, `UNKNOWN`-gap `nonStationarySinceMs` reset, and post-exit `candidateMode`/`candidateSinceMs` sync. |
+| `1.0.26` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Promoted `TST-FIL-043` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`149/149` PASS across `12` targeted suites: `PhoneCarriageClassifierTest` `19/19`, `SpeedAndLocationDevice_ATTFusedTest` `42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest` `3/3`, `SpeedAndLocationDeviceStationaryJitterTest` `15/15`, `SpeedAndLocationDeviceDecayTest` `14/14`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest` `11/11`, `MultisportTransitionDetectorTest` `10/10`, `BANALServiceMultisportTransitionTest` `4/4`, `KinematicSportTypeDiscriminatorTest` `6/6`, `OfflineTelemetryReplayHarnessTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; `3/3` safety linters PASS; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9469/`). |

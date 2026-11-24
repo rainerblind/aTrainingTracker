@@ -1,0 +1,25 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "5c62fcef6820b2e1b4196cf23f78607ca332d977",
+  "files": {
+    "evidence_summary.json": "a42e5325f7b6ba36e1850f75ef7677a8e7b2c2d933c3a031b1c1dc489a69597a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml": "aca6e76a1bbbe7cba86fcf7f4c89cb18bdf4b33d7025dbb800618e5865985185",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "e67b1900569c5a16882ac4b2f9bd7ecc232ae831b57e44e3e7edc4b2d5e0d618",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml": "18420189ffc691e6fa2196eb3beaef28095a868eea2bcbee043f0ca10b77d9c2",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.FullScreenWorkoutMapUiTest.xml": "6857e76505005345d7badc8804faaacc6920983fc723e57e8448578bab593bee",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapLayersUiTest.xml": "9d810da46c7b551b9c492d6cffe3d719287f1bf9e9a2968967ff3a7767a1aa08",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest.xml": "be60048dd39280b5a2e53375ce0a01354abd67e616d8a867d9a2992b571018fa",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelFallbackTest.xml": "72fde10b2d030f25c1eefaf351ed56857165f0a0b096e89cf07bd5cf38c7e724",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest.xml": "2f371b4d8784beadf44fe913b7bbaf6ec4e5305efd25ac7f61e087e43a974dc4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest.xml": "1c49c27d907be45dc571cf2a724613fa2721ae030f10bf964c8ed598dddbd7df",
+    "screenshots/ATT-9029_embedded_map.png": "0fd060fdd3d4bdc0960f90ef4168a9d1ced0546e7ec331fa8636d4878e40bc62",
+    "screenshots/ATT-9029_fullscreen_dark.png": "be271b72a3ba9eba72c2dd16b987b1bfbd0fed4476381fcbfbeccecef08922ad",
+    "screenshots/ATT-9029_fullscreen_map.png": "00b4fea1c6fcb728e79ea9fd442f3bb07d0086a2e2b4d6861e3b75a42d5c0aa1",
+    "screenshots/ATT-9029_fullscreen_satellite.png": "0924dbae501e6a25910de716ecf38839659edebf00fdd253d25d5f9b5e132045",
+    "screenshots/ATT-9029_layers_sheet.png": "c19f599e0d0cc884ababbe0e61aa1d9c1388b5e00e2053b2702e011b60c0e2b0",
+    "screenshots/ATT-9029_layers_sheet_dark.png": "12ab0a13e08c38dee6e7fb5a71f906c838bd71a5f290d5317a665e90af9c5a8f"
+  },
+  "run_started_utc": "2026-11-24T02:58:13.580745+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9029"
+}

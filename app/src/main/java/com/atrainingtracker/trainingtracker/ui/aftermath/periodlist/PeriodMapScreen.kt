@@ -253,6 +253,8 @@ fun PeriodMapScreen(
                                 segments = activeAftermathState?.segments ?: emptyList(),
                                 routes = activeAftermathState?.routes ?: emptyList(),
                                 markers = activeAftermathState?.markers ?: emptyList(),
+                                climbs = activeAftermathState?.climbs ?: emptyList(),
+                                knownLocations = activeAftermathState?.knownLocations ?: emptyList(),
                                 enabledTrackTypes = enabledTrackTypes,
                                 onToggleTrackType = { trackOnMapViewModel?.toggleTrackTypeEnabled(it) },
                                 showTechnicalTracks = true,

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-23T22:50:39.841Z" hostname="rainer-HP-EliteBook-850-G5" time="0.056">
+  <properties/>
+  <testcase name="testWorkoutSummary_andDetailTabbedContent_wireShareWorkoutContract" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.0"/>
+  <testcase name="testWorkoutDetailTabbedContent_launchedEffectOmitsCurrentPageKeyAndUsesScrollToPage_TST_REV_007_1" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.0"/>
+  <testcase name="testWorkoutHeader_uniformShareActionAndDynamicSpacerContract" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.0"/>
+  <testcase name="testWorkoutDetailTabbedContent_andTrackOnMapScreen_exposeInitialAutoShareSnapshot" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.002"/>
+  <testcase name="testWorkoutShareBottomSheet_rule73StackedActionButtonsContract" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.038"/>
+  <testcase name="testWorkoutDetailTabbedContent_preservesAndRestoresOriginPageIndex_TST_REV_007_2" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.0"/>
+  <testcase name="testWorkoutShareBottomSheet_existsInMapPackage" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.004"/>
+  <testcase name="testWorkoutSummary_andWorkoutList_exposeOnShareMapSnapshot" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.009"/>
+  <testcase name="testMapDetailLayout_exposesExternalSnapshotTriggerAndCompleteCallback" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.001"/>
+  <testcase name="testWorkoutShareBottomSheet_threeTierPhotoCascadeContract" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.001"/>
+  <testcase name="testMapDetailLayout_declaresShowHeaderAndWorkoutDetailTabbedContentPassesFalse_TST_REV_007_3" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.0"/>
+  <testcase name="testMapDetailLayout_exposesWorkoutDataParameter" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheetContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

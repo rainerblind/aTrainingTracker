@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeferredExportTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:18:30.502Z" hostname="rainer-HP-EliteBook-850-G5" time="8.629">
+  <properties/>
+  <testcase name="testLoadFreshWorkoutForExport_readsDirectSqliteCursorAndClosesCleanly_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeferredExportTest" time="3.217"/>
+  <testcase name="testSaveWorkout_deferredExportPreservesSyncToHealthConnectTrueAndFalseOverrides_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeferredExportTest" time="1.819"/>
+  <testcase name="testSaveWorkout_whenPostProcessingActive_persistsMetadataAndRpeFeelWhileDeferringExport_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeferredExportTest" time="1.805"/>
+  <testcase name="testSaveWorkout_whenPostProcessingInactive_triggersExportImmediately_tstTrk091_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeferredExportTest" time="1.788"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

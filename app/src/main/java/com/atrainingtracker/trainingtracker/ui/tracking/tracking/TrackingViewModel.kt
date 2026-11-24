@@ -271,11 +271,13 @@ class TrackingViewModel @JvmOverloads constructor(
         )
     }
 
+    @Volatile
     private var cachedPowerBenchmarks: Map<Int, Double> = emptyMap()
     private val latestArtifactRateByDevice: MutableMap<String?, Double?> = mutableMapOf()
 
     init {
         loadHistoricalPowerBenchmarks()
+        observeWorkoutMutations()
         observeTuningConfig()
         observeZoneDisplayOptions()
         observeWPrimeKj()
@@ -291,11 +293,23 @@ class TrackingViewModel @JvmOverloads constructor(
 
     private fun loadHistoricalPowerBenchmarks() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                cachedPowerBenchmarks = workoutRepository.getHistoricalPowerBenchmarks()
-            } catch (_: Throwable) {
-                // Keep default empty map in isolated test environments
+            refreshHistoricalPowerBenchmarks()
+        }
+    }
+
+    private fun observeWorkoutMutations() {
+        viewModelScope.launch(Dispatchers.IO) {
+            workoutRepository.workoutMutationEvents.collect {
+                refreshHistoricalPowerBenchmarks()
             }
+        }
+    }
+
+    private fun refreshHistoricalPowerBenchmarks() {
+        try {
+            cachedPowerBenchmarks = workoutRepository.getHistoricalPowerBenchmarks()
+        } catch (_: Throwable) {
+            // Keep existing benchmarks in isolated test environments
         }
     }
 

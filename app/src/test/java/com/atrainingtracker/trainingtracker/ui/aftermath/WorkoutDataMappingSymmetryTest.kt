@@ -42,6 +42,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.unmockkStatic
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -112,7 +113,7 @@ class WorkoutDataMappingSymmetryTest {
         unmockkStatic(Log::class)
     }
 
-    private fun createMockCursor(sourceString: String? = "TCX", raceInt: Int = 1): Cursor {
+    private fun createMockCursor(sourceString: String? = "TCX", raceInt: Int = 1, epicInt: Int = 0): Cursor {
         val cursor = mockk<Cursor>(relaxed = true)
 
         val columns = mapOf(
@@ -144,7 +145,8 @@ class WorkoutDataMappingSymmetryTest {
             WorkoutSummaries.GOAL to 25,
             WorkoutSummaries.METHOD to 26,
             WorkoutSummaries.RACE to 27,
-            WorkoutSummaries.SOURCE to 28
+            WorkoutSummaries.SOURCE to 28,
+            WorkoutSummaries.EPIC to 29
         )
 
         columns.forEach { (colName, index) ->
@@ -174,6 +176,8 @@ class WorkoutDataMappingSymmetryTest {
         every { cursor.getInt(19) } returns 1
         every { cursor.getInt(27) } returns raceInt
         every { cursor.getString(28) } returns sourceString
+        every { cursor.isNull(29) } returns false
+        every { cursor.getInt(29) } returns epicInt
 
         return cursor
     }
@@ -183,6 +187,7 @@ class WorkoutDataMappingSymmetryTest {
         val snapshotFields = WorkoutDataMapper.RawCursorSnapshot::class.java.declaredFields.map { it.name }
         assertTrue("RawCursorSnapshot must declare 'source' field (Rule 20)", snapshotFields.contains("source"))
         assertTrue("RawCursorSnapshot must declare 'race' field", snapshotFields.contains("race"))
+        assertTrue("RawCursorSnapshot must declare 'epic' field (REQ-DAT-050.2)", snapshotFields.contains("epic"))
         assertTrue("RawCursorSnapshot must declare 'workoutId' field", snapshotFields.contains("workoutId"))
     }
 
@@ -228,9 +233,45 @@ class WorkoutDataMappingSymmetryTest {
         // Verify Race and other primitive flags symmetry
         assertEquals("Race flag single vs batch", singleData.race, batchData.race)
         assertEquals("Race flag single vs snapshot", singleData.race, snapshotData.race)
+        assertEquals("Epic flag single vs batch", singleData.epic, batchData.epic)
+        assertEquals("Epic flag single vs snapshot", singleData.epic, snapshotData.epic)
         assertEquals("Commute flag single vs batch", singleData.commute, batchData.commute)
         assertEquals("Trainer flag single vs batch", singleData.trainer, batchData.trainer)
         assertEquals("Finished flag single vs batch", singleData.finished, batchData.finished)
+    }
+
+    @Test
+    fun testRule20_epicFlagSymmetryAndNullMissingFallback_tstDat050_2() {
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = emptyMap(),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+
+        // Case 1: epic = 1 with race = 1 -> true across all 3 mapping paths
+        val epicTrueCursor = createMockCursor(sourceString = "FIT", raceInt = 1, epicInt = 1)
+        val singleTrue = mapper.fromCursor(epicTrueCursor)
+        val batchTrue = mapper.fromCursor(epicTrueCursor, batchMetadata)
+        val snapTrue = mapper.readCursorSnapshot(epicTrueCursor)
+        val fromSnapTrue = mapper.fromSnapshot(snapTrue, batchMetadata)
+
+        assertTrue(singleTrue.epic)
+        assertTrue(batchTrue.epic)
+        assertTrue(snapTrue.epic)
+        assertTrue(fromSnapTrue.epic)
+        assertTrue(singleTrue.race)
+
+        // Case 2: epic column missing (-1) or NULL -> safely defaults to false
+        val missingColCursor = createMockCursor(sourceString = "TRACKED", raceInt = 0, epicInt = 1)
+        every { missingColCursor.getColumnIndex(WorkoutSummaries.EPIC) } returns -1
+        assertFalse(mapper.fromCursor(missingColCursor).epic)
+        assertFalse(mapper.fromCursor(missingColCursor, batchMetadata).epic)
+
+        val nullColCursor = createMockCursor(sourceString = "TRACKED", raceInt = 0, epicInt = 1)
+        every { nullColCursor.isNull(29) } returns true
+        assertFalse(mapper.fromCursor(nullColCursor).epic)
+        assertFalse(mapper.fromCursor(nullColCursor, batchMetadata).epic)
     }
 
     @Test

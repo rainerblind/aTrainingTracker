@@ -1,14 +1,14 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.8  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Requirements**: 77
+**Total Requirements**: 78
 
 ---
 
@@ -2868,6 +2868,33 @@
   • *Then* `getClusterScores()` executes `0` SQLite writes and renames propagate display names in-place without reloading `route_points`.
 - **Invariants**: Preserves `REQ-GEO-001`/`REQ-GEO-002` windowed continuity & virtual gates, `REQ-PER-040`/`REQ-PER-041` non-recursive rename sync & whitespace self-healing, zero DB schema version changes, and `Localization Parity: N/A - no UI strings`.
 
+### REQ-MAP-069: Full-Screen Workout Map Mode with Spatial & Base-Map Layer Toggles [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-072`
+- **System Requirement(s)**: Derived (SW-only) — Refining `SYSREQ-TRK-004` (Post-workout geographic inspection & map layer control)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `WorkoutMapLayerModels.kt`, `FullScreenWorkoutMapOverlay.kt`, `MyPreferenceManager.kt`, `DarkMapStyle.kt`, `ATrainingTrackerMap.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `strings_workout_details.xml`
+- **Localization Parity**: All 9 locales (`values*/strings_workout_details.xml`: `en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`)
+- **Rationale**: The embedded Workout Details map (`TrackOnMapScreen` / `WorkoutDetailTabbedContent` / `MapDetailLayout`) is constrained by header and tab chrome and exposes only technical track toggles. Athletes inspecting completed workouts need a full-screen map mode with spatial overlay toggles and base-map style switching (`ATT-9029`).
+- **Description**:
+  1. *Tap-vs-Drag Entry & Explicit Expand Button (`REQ-MAP-069.1`)*: On the embedded Workout Details map (`TrackOnMapScreen` / `WorkoutDetailTabbedContent` / `MapDetailLayout`), tapping an empty map area (`onMapClick`, distinct from pan/drag gestures and marker clicks) OR tapping the floating circular Expand/Fullscreen action button SHALL open a full-screen workout map mode free of workout header and tab bar chrome while preserving underlying `WorkoutDetailTabbedContent` tab and scroll state (`Rule 47`).
+  2. *Clean Exit & System Back (`REQ-MAP-069.2`)*: The full-screen workout map SHALL provide a floating top-start Close (`X`) button and system Back (`BackHandler` / `Dialog.onDismissRequest`) returning cleanly to the exact Workout Details tab.
+  3. *Spatial Overlays, Base-Map Type Controls & Persistence (`REQ-MAP-069.3`)*: A floating top-end Layers button SHALL open an `AppModalBottomSheet` (`WorkoutMapLayersSheet`) inheriting host `MaterialTheme` tokens and allowing the athlete to switch mutually exclusive base-map styles (`NORMAL`, `TERRAIN`, `SATELLITE`, `HYBRID` via Material 3 `SingleChoiceSegmentedButtonRow`, preserving `DarkMapStyle` on `NORMAL` in dark mode) and toggle spatial overlays (`Primary Workout Track`, available `Technical Tracks` without suppressing non-`BEST` fallback tracks when `PRIMARY_TRACK` is unchecked, `Segments`, `Routes`, `Markers & Favorite Locations`, `Climbs`, `Lap Highlights`, with climbs and favorite locations hydrated reactively from repository flows on cold start). Selections SHALL persist immediately in `MyPreferenceManager` DataStore with downgrade-safe defaults (`PRIMARY_TRACK`, `SEGMENTS`, `ROUTES`, `MARKERS`, `LAP_HIGHLIGHTS`; unset base map resolves theme-aware to `NORMAL` dark style in Dark/AMOLED mode per `REQ-MAP-021` and `TERRAIN` in Light mode, while explicit selections override in both themes).
+  4. *9-Language Localization Parity & `ATT-9030` Extensibility (`REQ-MAP-069.4`)*: All layer labels, base-map names, and accessibility descriptions SHALL be localized across all 9 locales in `values*/strings_workout_details.xml`. `FullScreenWorkoutMapContent` SHALL expose an optional `bottomOverlay` slot and scrub parameters so `ATT-9030` can dock a collapsible metric scrubber without refactoring.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the athlete is viewing a GPS workout in Workout Details,
+  • *When* the athlete taps an empty area of the embedded map OR taps the Expand/Fullscreen button,
+  • *Then* full-screen workout map mode opens without workout header or tab bar chrome.
+  • *Given* full-screen workout map mode is open,
+  • *When* the athlete opens the Layers sheet, toggles spatial overlays (`Segments`, `Climbs`, `Markers`, etc.) or technical tracks, or switches the base map (`Normal`, `Terrain`, `Satellite`, `Hybrid`),
+  • *Then* the map updates immediately and the preferences persist across subsequent inspections.
+  • *Given* full-screen workout map mode is open,
+  • *When* the athlete taps Close (`X`) or presses system Back,
+  • *Then* the modal closes cleanly and returns to the preserved Workout Details tab.
+- **Invariants**: Preserves `MapDetailLayout.kt` below `1,500` LoC (`0` LoC added), preserves `DarkMapStyle.resolveMapProperties` for all non-overridden maps (`REQ-MAP-021`), preserves `TrackLayersMenuButton` (`REQ-REV-016.2`), and enforces `TranslationParityTest` 9-language parity.
+
 ---
 
 ## Change History
@@ -2882,3 +2909,5 @@
 | `1.0.6` | 2026-11-19 | Lane A Flash (`ATT-8324`, `--as agent1`) | `ATT-8324` | Promoted `REQ-MAP-017` to `[Verified]` in Stage 5 following `TST-PERF-001` 520-workout memory & vertex-budget verification (`PeriodsRepositoryMemoryTest`, `PeriodVertexBudgetTest`). |
 | `1.0.7` | 2026-11-20 | Lane A Flash (`ATT-8330`, `--as agent1`) | `ATT-8330` | Promoted 3 unblocked map/navigation requirements (`REQ-MAP-007`, `REQ-MAP-010`, `REQ-MAP-013`) to `[Verified]` (Gate 4 `3e20473b`, `Rule 7.5`). |
 | `1.0.8` | 2026-11-23 | Lane 1 Author (`ATT-8133`, `--as agent1`) | `ATT-8133` | Added `REQ-GEO-003` (`GeoMath` polyline projection & elevation-gain consolidation, `RouteAutoDetector` $\cos(\phi)$ fix, read-only `getClusterScores`, lightweight rename sync). |
+| `1.0.9` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Added & verified (`[Verified]`) `REQ-MAP-069` for full-screen workout map mode with spatial overlays, base-map type toggles, DataStore persistence, 9-language localization, and live `emulator-5554` verification. |
+| `1.0.10` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Refined `REQ-MAP-069.3` after Stage 6 BOUNCE 1/5: theme-aware unset base-map default (`NORMAL` in Dark/AMOLED per `REQ-MAP-021`, `TERRAIN` in Light), inherited host `MaterialTheme`, reactive cold-start climbs/locations hydration, and non-`BEST` fallback technical track toggleability. |

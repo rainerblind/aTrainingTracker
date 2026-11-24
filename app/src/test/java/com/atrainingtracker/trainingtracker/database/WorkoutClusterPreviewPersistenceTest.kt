@@ -49,8 +49,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Dedicated Robolectric real-SQLite persistence suite verifying that cluster preview paths
- * enriched by [WorkoutClusterRepository.refreshClusters] persist across simulated app restarts
- * without triggering redundant enrichment progress (REQ-PER-006, TST-PERF-010, ATT-8324).
+ * enriched by [WorkoutClusterRepository.refreshClusters] emit progress deterministically even
+ * after `init` lightweight hydration and persist across simulated app restarts without triggering
+ * redundant enrichment progress (REQ-PER-006, REQ-PER-057, TST-PERF-010, TST-PER-057, ATT-8324, ATT-9580).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -94,14 +95,129 @@ class WorkoutClusterPreviewPersistenceTest {
     }
 
     /**
-     * TST-PERF-010 (REQ-PER-006): Persistent Previews Audit.
-     * Seeds SQLite with an un-enriched cluster and workout polyline, enriches previews on first
-     * run, resets repository & DB helper singletons to simulate restart, and verifies persisted
-     * previewPaths reload silently (migrationStatus == null).
+     * TST-PERF-010 (REQ-PER-006) & TST-PER-057.1 (REQ-PER-057.1, REQ-PER-057.4):
+     * Persistent Previews Audit with completed lightweight `init` hydration.
+     * Seeds SQLite with an un-enriched cluster and workout polyline, verifies `init` synchronously
+     * hydrates `_allClusters` with empty `previewPaths` under `Dispatchers.Unconfined`, verifies
+     * cold `refreshClusters()` STILL emits deterministic `MigrationStatus` updates (via `yield()`)
+     * and persists enriched previews to SQLite, then resets singletons to simulate restart and
+     * verifies persisted `previewPaths` reload silently (`migrationStatus == null`).
      */
     @Test
     fun refreshClusters_persistsEnrichedPreviewsToSqlite_andReloadsSilentlyAfterRestart_TST_PERF_010() = runBlocking {
         val encodedPoly = "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+        val clusterId = seedUnenrichedClusterWithWorkout(encodedPoly)
+
+        // First launch: Dispatchers.Unconfined executes init lightweight load synchronously BEFORE refreshClusters()
+        val scope1 = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repo1 = WorkoutClusterRepository(context, scope1, Dispatchers.Unconfined)
+        assertEquals(
+            "init lightweight load must have hydrated _allClusters with un-enriched cluster prior to refreshClusters (TST-PER-057.1)",
+            emptyList<String>(),
+            repo1.allClusters.value.first { it.id == clusterId }.previewPaths
+        )
+
+        val coldStatuses = mutableListOf<MigrationStatus?>()
+        val coldJob = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            repo1.migrationStatus.collect { coldStatuses.add(it) }
+        }
+        repo1.refreshClusters()
+        coldJob.cancel()
+        scope1.cancel()
+
+        assertTrue(
+            "Initial enrichment must emit progress on cold preview population even after lightweight init (TST-PERF-010, TST-PER-057.1)",
+            coldStatuses.filterNotNull().isNotEmpty()
+        )
+        assertNull(repo1.migrationStatus.value)
+        assertEquals(listOf(encodedPoly), repo1.allClusters.value.first { it.id == clusterId }.previewPaths)
+
+        // Verify persisted directly in SQLite before resetting singletons
+        val persistedRows = WorkoutClusterDatabaseManager.getInstance(context).getAllClusters()
+        assertEquals(listOf(encodedPoly), persistedRows.first { it.id == clusterId }.previewPaths)
+
+        // Simulated restart: clear in-memory singletons while preserving SQLite files on disk
+        resetSingletonsOnly()
+
+        val scope2 = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val repo2 = WorkoutClusterRepository(context, scope2, Dispatchers.Unconfined)
+        val restartStatuses = mutableListOf<MigrationStatus?>()
+        val restartJob = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            repo2.migrationStatus.collect { restartStatuses.add(it) }
+        }
+        repo2.refreshClusters()
+        restartJob.cancel()
+        scope2.cancel()
+
+        assertTrue(
+            "Restart with persisted previews must NOT emit enrichment progress (TST-PERF-010)",
+            restartStatuses.filterNotNull().isEmpty()
+        )
+        assertNull(repo2.migrationStatus.value)
+        assertEquals(listOf(encodedPoly), repo2.allClusters.value.first { it.id == clusterId }.previewPaths)
+    }
+
+    /**
+     * TST-PER-057.4 (REQ-PER-057.1, REQ-PER-057.2):
+     * Multi-iteration real-Dispatchers.IO concurrency stress verification asserting deterministic
+     * state & persistence invariants (no stale overwrite after init settles, migrationStatus == null
+     * on exit, and strictly silent warm restart) without unsynchronized cross-thread StateFlow assertions.
+     */
+    @Test
+    fun refreshClusters_realIoStress_enrichesWithoutStaleOverwrite_andRestartsSilently_TST_PER_057_4() = runBlocking {
+        val encodedPoly = "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+
+        repeat(8) { iteration ->
+            resetSingletonsAndDeleteDatabases()
+            val clusterId = seedUnenrichedClusterWithWorkout(encodedPoly)
+
+            val scope1 = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val repo1 = WorkoutClusterRepository(context, scope1, Dispatchers.IO)
+            repo1.refreshClusters()
+            // Allow any racing init coroutine on Dispatchers.IO to finish and verify it never clobbers enriched previews
+            repo1.loadAllClustersLightweight()
+            scope1.cancel()
+
+            assertNull("Iteration $iteration: migrationStatus must be null after cold refresh", repo1.migrationStatus.value)
+            assertEquals(
+                "Iteration $iteration: enriched previewPaths must survive concurrent lightweight load",
+                listOf(encodedPoly),
+                repo1.allClusters.value.first { it.id == clusterId }.previewPaths
+            )
+            assertEquals(
+                listOf(encodedPoly),
+                WorkoutClusterDatabaseManager.getInstance(context).getAllClusters().first { it.id == clusterId }.previewPaths
+            )
+
+            // Warm restart on real Dispatchers.IO must remain strictly silent
+            resetSingletonsOnly()
+            val scope2 = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val repo2 = WorkoutClusterRepository(context, scope2, Dispatchers.IO)
+            val restartStatuses = java.util.concurrent.CopyOnWriteArrayList<MigrationStatus?>()
+            val restartJob = async(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+                repo2.migrationStatus.collect { restartStatuses.add(it) }
+            }
+            repo2.refreshClusters()
+            restartJob.cancel()
+            scope2.cancel()
+
+            assertTrue(
+                "Iteration $iteration: warm restart must emit zero non-null MigrationStatus updates",
+                restartStatuses.filterNotNull().isEmpty()
+            )
+            assertNull(repo2.migrationStatus.value)
+            assertEquals(listOf(encodedPoly), repo2.allClusters.value.first { it.id == clusterId }.previewPaths)
+        }
+    }
+
+    private fun resetSingletonsOnly() {
+        WorkoutClusterRepository.resetForTesting(null)
+        WorkoutClusterDatabaseManager.resetForTesting(null)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        RoutesDatabaseManager.resetForTesting(null)
+    }
+
+    private fun seedUnenrichedClusterWithWorkout(encodedPoly: String): Long {
         val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
         val clusterId = clusterDb.insertCluster(
             WorkoutCluster(
@@ -133,46 +249,6 @@ class WorkoutClusterPreviewPersistenceTest {
         }
         val workoutId = summariesDb.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
         assertTrue(workoutId > 0L)
-
-        // First launch: enriches missing previewPaths and persists them in RouteClusters.db
-        val scope1 = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
-        val repo1 = WorkoutClusterRepository(context, scope1)
-        val coldStatuses = mutableListOf<MigrationStatus?>()
-        val coldJob = async(start = CoroutineStart.UNDISPATCHED) {
-            repo1.migrationStatus.collect { coldStatuses.add(it) }
-        }
-        repo1.refreshClusters()
-        coldJob.cancel()
-        scope1.cancel()
-
-        assertTrue("Initial enrichment must emit progress on cold preview population", coldStatuses.filterNotNull().isNotEmpty())
-        assertEquals(listOf(encodedPoly), repo1.allClusters.value.first { it.id == clusterId }.previewPaths)
-
-        // Verify persisted directly in SQLite before resetting singletons
-        val persistedRows = WorkoutClusterDatabaseManager.getInstance(context).getAllClusters()
-        assertEquals(listOf(encodedPoly), persistedRows.first { it.id == clusterId }.previewPaths)
-
-        // Simulated restart: clear in-memory singletons while preserving SQLite files on disk
-        WorkoutClusterRepository.resetForTesting(null)
-        WorkoutClusterDatabaseManager.resetForTesting(null)
-        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
-        RoutesDatabaseManager.resetForTesting(null)
-
-        val scope2 = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
-        val repo2 = WorkoutClusterRepository(context, scope2)
-        val restartStatuses = mutableListOf<MigrationStatus?>()
-        val restartJob = async(start = CoroutineStart.UNDISPATCHED) {
-            repo2.migrationStatus.collect { restartStatuses.add(it) }
-        }
-        repo2.refreshClusters()
-        restartJob.cancel()
-        scope2.cancel()
-
-        assertTrue(
-            "Restart with persisted previews must NOT emit enrichment progress (TST-PERF-010)",
-            restartStatuses.filterNotNull().isEmpty()
-        )
-        assertNull(repo2.migrationStatus.value)
-        assertEquals(listOf(encodedPoly), repo2.allClusters.value.first { it.id == clusterId }.previewPaths)
+        return clusterId
     }
 }

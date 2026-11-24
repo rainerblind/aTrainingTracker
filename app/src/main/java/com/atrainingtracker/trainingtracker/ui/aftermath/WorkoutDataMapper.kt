@@ -431,6 +431,7 @@ class WorkoutDataMapper(
         val commute: Boolean,
         val trainer: Boolean,
         val race: Boolean,
+        val epic: Boolean = false,
         val source: WorkoutSource = WorkoutSource.TRACKED,
         val uploadToStrava: Int,
         val minLat: Double?,
@@ -476,6 +477,9 @@ class WorkoutDataMapper(
         val commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1
         val trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1
         val race = cursor.getColumnIndex(WorkoutSummaries.RACE).takeIf { it >= 0 }?.let { cursor.getInt(it) == 1 } ?: false
+        val epic = cursor.getColumnIndex(WorkoutSummaries.EPIC).takeIf { it >= 0 }?.let {
+            !cursor.isNull(it) && cursor.getInt(it) == 1
+        } ?: false
         val source = cursor.getColumnIndex(WorkoutSummaries.SOURCE).takeIf { it >= 0 }?.let {
             WorkoutSource.fromString(cursor.getString(it))
         } ?: WorkoutSource.TRACKED
@@ -539,6 +543,7 @@ class WorkoutDataMapper(
             commute = commute,
             trainer = trainer,
             race = race,
+            epic = epic,
             source = source,
             uploadToStrava = uploadToStrava,
             minLat = minLat,
@@ -691,6 +696,7 @@ class WorkoutDataMapper(
             commute = snapshot.commute,
             trainer = snapshot.trainer,
             race = snapshot.race,
+            epic = snapshot.epic,
             source = snapshot.source,
             uploadToStrava = snapshot.uploadToStrava,
             mapPolyline = snapshot.mapPolyline,

@@ -430,6 +430,44 @@ data class WorkoutDetailTabConfig(
         }
 
         /**
+         * Resolves the index in [visibleTabs] of the first tab whose [normalizedSections] contains
+         * [targetSection], or `null` if [targetSection] is `null`, absent from all tabs (deleted),
+         * or inactive in [availability] (`REQ-UI-2805.2`).
+         *
+         * Matches strictly by section membership — never by tab index, preset, or custom title —
+         * so user tab renaming, reordering, and deletion remain fully resilient.
+         */
+        fun resolveTabIndexForSectionOrNull(
+            visibleTabs: List<WorkoutDetailTabConfig>,
+            targetSection: WorkoutDetailSectionType?,
+            availability: WorkoutDetailSectionAvailability? = null,
+            detailPreferences: WorkoutDetailPreferences = WorkoutDetailPreferences()
+        ): Int? {
+            if (targetSection == null || visibleTabs.isEmpty()) return null
+            if (availability != null && !availability.isSectionActive(targetSection, detailPreferences)) {
+                return null
+            }
+            val index = visibleTabs.indexOfFirst { tab -> targetSection in tab.normalizedSections }
+            return index.takeIf { it >= 0 }
+        }
+
+        /**
+         * Resolves the target tab index in [visibleTabs] for [targetSection], falling back safely
+         * to `0` when no visible tab contains [targetSection] or it is unavailable (`REQ-UI-2805.2`).
+         */
+        fun resolveTabIndexForSection(
+            visibleTabs: List<WorkoutDetailTabConfig>,
+            targetSection: WorkoutDetailSectionType?,
+            availability: WorkoutDetailSectionAvailability? = null,
+            detailPreferences: WorkoutDetailPreferences = WorkoutDetailPreferences()
+        ): Int = resolveTabIndexForSectionOrNull(
+            visibleTabs = visibleTabs,
+            targetSection = targetSection,
+            availability = availability,
+            detailPreferences = detailPreferences
+        ) ?: 0
+
+        /**
          * Serializes [tabs] into a versioned wire string (`v1|<id>:<preset>:<urlEncodedTitle>:<sec1,sec2>;...`).
          */
         fun serializeTabs(tabs: List<WorkoutDetailTabConfig>): String {

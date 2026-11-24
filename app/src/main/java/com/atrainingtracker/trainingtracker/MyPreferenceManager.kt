@@ -38,6 +38,9 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.photos.PhotoThumbnailSize
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryChartKind
+import com.atrainingtracker.trainingtracker.ui.map.WorkoutBaseMapType
+import com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerConfig
+import com.atrainingtracker.trainingtracker.ui.map.WorkoutMapSpatialLayer
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import com.atrainingtracker.util.safeEnumValueOfOrNull
@@ -214,6 +217,8 @@ class MyPreferenceManager private constructor(
         val WORKOUT_DETAIL_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_detail_zone_display_mode")
         val WORKOUT_SECTIONS_ORDER = stringPreferencesKey("workout_sections_order")
         val WORKOUT_DETAIL_TABS_CONFIG = stringPreferencesKey("pref_key_workout_detail_tabs_config")
+        val FULLSCREEN_WORKOUT_MAP_ENABLED_LAYERS = stringSetPreferencesKey("fullscreen_workout_map_enabled_layers")
+        val FULLSCREEN_WORKOUT_MAP_BASE_TYPE = stringPreferencesKey("fullscreen_workout_map_base_type")
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
@@ -456,6 +461,62 @@ class MyPreferenceManager private constructor(
             val current = preferences[ENABLED_TRACK_TYPES] ?: setOf(com.atrainingtracker.trainingtracker.ui.map.TrackType.BEST.name)
             val updated = if (enabled) current + type else current - type
             preferences[ENABLED_TRACK_TYPES] = updated
+        }
+    }
+
+    /**
+     * Persisted spatial overlay visibility and base-map style for the full-screen workout map
+     * (`REQ-MAP-069.3`). Uses downgrade-safe enum resolution and sensible defaults when unset.
+     */
+    val workoutMapLayerConfigFlow: Flow<WorkoutMapLayerConfig> = dataStore.data.map { preferences ->
+        val rawLayers = preferences[FULLSCREEN_WORKOUT_MAP_ENABLED_LAYERS]
+        val enabledLayers = if (rawLayers == null) {
+            WorkoutMapSpatialLayer.DEFAULT_ENABLED
+        } else {
+            rawLayers.mapNotNull { token -> safeEnumValueOfOrNull<WorkoutMapSpatialLayer>(token) }.toSet()
+        }
+        val baseMapType = preferences[FULLSCREEN_WORKOUT_MAP_BASE_TYPE]
+            ?.let { token -> safeEnumValueOfOrNull<WorkoutBaseMapType>(token) }
+        WorkoutMapLayerConfig(
+            enabledLayers = enabledLayers,
+            baseMapType = baseMapType
+        )
+    }
+
+    /**
+     * Toggles a single [WorkoutMapSpatialLayer] in the persisted full-screen workout map configuration (`REQ-MAP-069.3`).
+     */
+    suspend fun toggleWorkoutMapSpatialLayer(layer: WorkoutMapSpatialLayer) {
+        dataStore.edit { preferences ->
+            val current = preferences[FULLSCREEN_WORKOUT_MAP_ENABLED_LAYERS]
+                ?.mapNotNull { token -> safeEnumValueOfOrNull<WorkoutMapSpatialLayer>(token) }
+                ?.toSet()
+                ?: WorkoutMapSpatialLayer.DEFAULT_ENABLED
+            val updated = if (layer in current) current - layer else current + layer
+            preferences[FULLSCREEN_WORKOUT_MAP_ENABLED_LAYERS] = updated.map { it.name }.toSet()
+        }
+    }
+
+    /**
+     * Explicitly enables or disables a single [WorkoutMapSpatialLayer] (`REQ-MAP-069.3`).
+     */
+    suspend fun setWorkoutMapSpatialLayerEnabled(layer: WorkoutMapSpatialLayer, enabled: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[FULLSCREEN_WORKOUT_MAP_ENABLED_LAYERS]
+                ?.mapNotNull { token -> safeEnumValueOfOrNull<WorkoutMapSpatialLayer>(token) }
+                ?.toSet()
+                ?: WorkoutMapSpatialLayer.DEFAULT_ENABLED
+            val updated = if (enabled) current + layer else current - layer
+            preferences[FULLSCREEN_WORKOUT_MAP_ENABLED_LAYERS] = updated.map { it.name }.toSet()
+        }
+    }
+
+    /**
+     * Persists the selected [WorkoutBaseMapType] for full-screen workout map mode (`REQ-MAP-069.3`).
+     */
+    suspend fun setWorkoutMapBaseType(baseMapType: WorkoutBaseMapType) {
+        dataStore.edit { preferences ->
+            preferences[FULLSCREEN_WORKOUT_MAP_BASE_TYPE] = baseMapType.name
         }
     }
 

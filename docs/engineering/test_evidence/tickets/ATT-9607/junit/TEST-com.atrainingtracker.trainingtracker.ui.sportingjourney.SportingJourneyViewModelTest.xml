@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyViewModelTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:40.952Z" hostname="rainer-HP-EliteBook-850-G5" time="3.115">
+  <properties/>
+  <testcase name="testInitialLoad_callsRepositoryWithDefaults" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyViewModelTest" time="2.823"/>
+  <testcase name="testSetHorizon_immediatelyKeysStateAndRefreshes" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyViewModelTest" time="0.121"/>
+  <testcase name="testAndroidViewModelFactoryInstantiation_hasSingleArgConstructor" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyViewModelTest" time="0.077"/>
+  <testcase name="testSetSportFilter_immediatelyKeysStateAndRefreshes" classname="com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneyViewModelTest" time="0.094"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

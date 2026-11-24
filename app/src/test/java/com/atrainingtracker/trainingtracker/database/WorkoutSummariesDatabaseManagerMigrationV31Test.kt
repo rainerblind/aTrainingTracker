@@ -63,14 +63,21 @@ class WorkoutSummariesDatabaseManagerMigrationV31Test {
     }
 
     @Test
-    fun testDbVersionIs31() {
-        assertEquals("WorkoutSummariesDbHelper.DB_VERSION must be 31", 31, WorkoutSummariesDbHelper.DB_VERSION)
+    fun testDbVersionIsAtLeast31() {
+        assertTrue(
+            "WorkoutSummariesDbHelper.DB_VERSION must be >= 31",
+            WorkoutSummariesDbHelper.DB_VERSION >= 31
+        )
     }
 
     @Test
-    fun testDatabaseSchemaRegistryRecordsV31() {
+    fun testDatabaseSchemaRegistryMatchesDbVersion() {
         val version = DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db")
-        assertEquals("WorkoutSummaries.db registered version must be 31", 31, version)
+        assertEquals(
+            "WorkoutSummaries.db registered version must match DB_VERSION",
+            WorkoutSummariesDbHelper.DB_VERSION,
+            version
+        )
     }
 
     @Test

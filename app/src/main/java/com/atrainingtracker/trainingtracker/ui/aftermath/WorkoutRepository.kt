@@ -120,8 +120,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -287,6 +291,35 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     private val stravaUploadDbHelper get() = StravaUploadDbHelper.getInstance(application)
     private val lapsDatabaseManager get() = LapsDatabaseManager.getInstance(application)
     private val clusterDataPort by lazy { SummariesManagerClusterWorkoutDataPort(application) }
+    private val pendingDeleteCascadeFlag = ThreadLocal<java.util.concurrent.atomic.AtomicBoolean>()
+    private val deletionCoordinator by lazy {
+        com.atrainingtracker.trainingtracker.repositories.WorkoutDeletionCoordinator(
+            application = application,
+            summariesManagerProvider = { summariesManager },
+            samplesManagerProvider = { samplesManager },
+            lapsDatabaseManagerProvider = { lapsDatabaseManager },
+            stravaUploadDbHelperProvider = { stravaUploadDbHelper },
+            resolvePreDeleteWorkout = { workoutId -> getWorkoutDataDirect(workoutId) },
+            onEvictCaches = { workoutId ->
+                recentHrvThresholdsCache.remove(workoutId)
+                ineligibleCardioPowerWorkoutIds.remove(workoutId)
+                if (isListLoading.get()) {
+                    deletedDuringLoadIds.add(workoutId)
+                }
+                LiveWorkoutCardStateStore.Default.clearIfMatches(workoutId)
+            },
+            onRemoveFromAllWorkouts = { removedIds ->
+                if (removedIds.isNotEmpty()) {
+                    _allWorkouts.update { currentList ->
+                        currentList.filterNot { it.id in removedIds }
+                    }
+                }
+            },
+            onEmitMutationEvent = { event ->
+                _workoutMutationEvents.tryEmit(event)
+            }
+        )
+    }
 
     fun getLaps(workoutId: Long): List<LapData> = lapsDatabaseManager.getLaps(workoutId) ?: emptyList()
     fun getLap(workoutId: Long, lapNr: Long): LapData? = getLaps(workoutId).find { it.lapNr == lapNr }
@@ -993,6 +1026,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val feelIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL)
                 val commuteIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
                 val raceIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
+                val epicIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.EPIC)
                 val eqIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
 
                 val wId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID
@@ -1029,6 +1063,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     feel = if (feelIdx >= 0 && !cursor.isNull(feelIdx)) cursor.getInt(feelIdx) else null,
                     commute = commuteIdx >= 0 && !cursor.isNull(commuteIdx) && cursor.getInt(commuteIdx) > 0,
                     race = raceIdx >= 0 && !cursor.isNull(raceIdx) && cursor.getInt(raceIdx) > 0,
+                    epic = epicIdx >= 0 && !cursor.isNull(epicIdx) && cursor.getInt(epicIdx) > 0,
                     equipmentId = eqId,
                     equipmentName = eqName,
                     normalizedPower = np,
@@ -1174,64 +1209,21 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
-     * Executes cascade deletion of a workout across all persistence tables (REQ-DAT-042.5).
+     * Executes cascade deletion of a workout across all persistence tables (`REQ-DAT-042.5`, `REQ-DAT-049.1`).
      */
     fun deleteWorkoutCascade(workoutId: Long): Boolean {
-        recentHrvThresholdsCache.remove(workoutId)
-        val fileBaseName = summariesManager.getBaseFileName(workoutId)
-
-        summariesManager.deleteWorkout(workoutId)
-        lapsDatabaseManager.deleteWorkout(workoutId)
-        try {
-            WorkoutRrRepository.getInstance(application).deleteWorkoutBlocking(workoutId)
-        } catch (t: Throwable) {
-            Log.w(TAG, "Could not delete workout RR intervals for $workoutId: ${t.message}")
-        }
-
-        if (!fileBaseName.isNullOrEmpty() && ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
-            try {
-                val wm = androidx.work.WorkManager.getInstance(application)
-                wm.cancelAllWorkByTag(fileBaseName)
-                wm.cancelUniqueWork("export_$fileBaseName")
-                for (format in com.atrainingtracker.trainingtracker.exporter.FileFormat.values()) {
-                    wm.cancelUniqueWork(ExportManager.getUniqueWorkName(fileBaseName, format))
-                }
-            } catch (t: Throwable) {
-                Log.w(TAG, "Could not cancel WorkManager tasks on deletion for $fileBaseName: ${t.message}")
-            }
-
-            samplesManager.deleteWorkout(fileBaseName)
-            ExportStatusRepository.getInstance(application).deleteExportWorkout(fileBaseName)
-            try {
-                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarRawTelemetryPruner.deleteSidecar(application, fileBaseName)
-            } catch (t: Throwable) {
-                Log.w(TAG, "Could not delete polar raw sidecar for $fileBaseName: ${t.message}")
-            }
-            try {
-                stravaUploadDbHelper.deleteWorkout(fileBaseName)
-            } catch (t: Throwable) {
-                Log.w(TAG, "Could not delete strava record for $fileBaseName: ${t.message}")
-            }
-        }
-        return true
+        // Only mark the flag when invoked inside deleteWorkout(id); direct callers leave zero ThreadLocal residue.
+        pendingDeleteCascadeFlag.get()?.set(true)
+        return deletionCoordinator.deleteWorkoutCascade(workoutId)
     }
 
     /**
-     * Bulk deletes old workouts with progress tracking (REQ-DAT-042.5).
+     * Synchronously bulk-deletes old workouts with progress tracking (`REQ-DAT-042.5`, `REQ-DAT-049.2`).
      */
     fun deleteOldWorkoutsCascade(
         daysToKeep: Int,
         progressCallback: WorkoutDeletionHelper.DeletionProgressCallback? = null
-    ): Boolean {
-        val oldWorkoutIds = summariesManager.getOldWorkouts(daysToKeep)
-        val total = oldWorkoutIds.size
-        for (i in 0 until total) {
-            val workoutId = oldWorkoutIds[i]
-            progressCallback?.onProgress(i + 1, total, workoutId)
-            deleteWorkout(workoutId)
-        }
-        return true
-    }
+    ): Boolean = deletionCoordinator.deleteOldWorkoutsCascade(daysToKeep, progressCallback)
 
     /**
      * Checks if a workout exists by file base name or start time (REQ-DAT-042.4).
@@ -1306,7 +1298,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         feel: Int? = null,
         method: String? = null,
         isTrainer: Boolean = false,
-        isRace: Boolean = false
+        isRace: Boolean = false,
+        isEpic: Boolean = false
     ): Long {
         val summaryValues = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
@@ -1332,6 +1325,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
             if (isRace) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE, 1)
+            }
+            if (isEpic) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EPIC, 1)
             }
             if (rpe != null) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE, rpe)
@@ -1812,6 +1808,17 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      */
     private val _allWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
+
+    /**
+     * Bounded post-commit domain event stream emitted on workout deletions and finished-workout
+     * mutations (`REQ-DAT-049.3`, `REQ-PRO-130.1`). Strictly never emitted on 1-Hz unfinished ticks.
+     */
+    private val _workoutMutationEvents = MutableSharedFlow<WorkoutMutationEvent>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val workoutMutationEvents: SharedFlow<WorkoutMutationEvent> = _workoutMutationEvents.asSharedFlow()
     private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val pendingNotifyInitialLoadedIds = mutableSetOf<Long>()
@@ -3620,6 +3627,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
                 // 8. Reload workout data in cache and UI
                 reloadWorkoutData(workoutId)
+                val updatedAfterCrop = allWorkouts.value.find { it.id == workoutId }
+                if (updatedAfterCrop == null || updatedAfterCrop.finished) {
+                    _workoutMutationEvents.tryEmit(WorkoutMutationEvent.Finalized(workoutId))
+                }
 
                 // 9. Enqueue fresh export post-commit
                 try {
@@ -3920,6 +3931,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             updateWorkoutInMemory(workoutId) { current ->
                 current.copy(finished = true)
             }
+            _workoutMutationEvents.tryEmit(WorkoutMutationEvent.Finalized(workoutId))
         }
     }
 
@@ -4512,6 +4524,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             }
 
                             addOrUpdateWorkout(freshWorkoutData)
+                            if (isNewImportOrFinish) {
+                                _workoutMutationEvents.tryEmit(WorkoutMutationEvent.Finalized(workoutId))
+                            }
                         }
                     }
                 }
@@ -4647,6 +4662,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
+                            epic = userEditedWorkout.epic,
                             source = current.source,
                             uploadToStrava = userEditedWorkout.uploadToStrava,
                             syncToHealthConnect = userEditedWorkout.syncToHealthConnect
@@ -4662,6 +4678,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 }
             }
 
+            if (userEditedWorkout.finished) {
+                _workoutMutationEvents.tryEmit(WorkoutMutationEvent.Finalized(workoutId))
+            }
             saveFinishedEvent.postValue(Pair(workoutId, true))
         }
     }
@@ -4698,37 +4717,29 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             deletedDuringLoadIds.add(id)
         }
         launch(Dispatchers.IO) {
-            // Find the workout name *before* deleting it.
+            // Resolve authoritative workout metadata *before* deleting it (in-memory first, SQLite fallback).
             val workout = _allWorkouts.value.find { it.id == id }
+                ?: runCatching { getWorkoutDataDirect(id) }.getOrNull()
             val workoutName = workout?.headerData?.workoutName ?: "Workout ID: $id"
 
             // --- START PROGRESS ---
-            // Post the detailed progress to the LiveData.
             _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
 
             var success = false
+            val cascadeExecuted = java.util.concurrent.atomic.AtomicBoolean(false)
+            pendingDeleteCascadeFlag.set(cascadeExecuted)
             try {
                 // Perform the actual deletion in the database first
                 success = deletionHelper.deleteWorkout(id)
-                if (success) {
-                    recentHrvThresholdsCache.remove(id)
-                    if (isListLoading.get()) {
-                        deletedDuringLoadIds.add(id)
-                    }
-                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
-                    workout?.let {
-                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it.toClusterWorkoutSnapshot())
-                    }
-
-                    // Now, update the in-memory list
-                    _allWorkouts.update { currentList ->
-                        currentList.filterNot { it.id == id }
-                    }
+                if (success && !cascadeExecuted.get()) {
+                    // Fallback for injected test mocks of WorkoutDeletionHelper that bypass deleteWorkoutCascade.
+                    deletionCoordinator.reconcileExternalDelete(id, workout)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "deleteWorkout: exception deleting workoutId=$id", e)
                 success = false
             } finally {
+                pendingDeleteCascadeFlag.remove()
                 // REQ-STB-018.4 / Rule 74 (ATT-5565): Reset progress to Idle BEFORE posting
                 // deleteFinishedEvent so observers awakened by the event never observe a stale InProgress state.
                 _deletionProgress.postValue(DeletionProgress.Idle)

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-23T20:51:45.932Z" hostname="rainer-HP-EliteBook-850-G5" time="0.222">
+  <properties/>
+  <testcase name="testTST_DAT_038_1_repositoryReflection_zeroPublicDatabaseBackdoors" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.222"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

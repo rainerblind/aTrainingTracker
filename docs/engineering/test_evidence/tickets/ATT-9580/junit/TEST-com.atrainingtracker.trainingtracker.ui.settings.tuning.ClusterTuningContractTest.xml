@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:45:33.093Z" hostname="rainer-HP-EliteBook-850-G5" time="0.135">
+  <properties/>
+  <testcase name="clusterTuningContent_deadTuningSliderIsCompletelyRemoved" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.011"/>
+  <testcase name="clusterTuning_includesScoreThresholdSliderAndMasterCoupling" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.018"/>
+  <testcase name="workoutClusterRepository_hasDomainLockAndAsyncScope" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.0"/>
+  <testcase name="clusterTuningContent_delegatesToTuningFormControls" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.016"/>
+  <testcase name="clusterTuningSection_hasRecalculateActionAndConfirmationDialog" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.001"/>
+  <testcase name="clusterTuningContent_truthTableAltitudeGating" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.0"/>
+  <testcase name="clusterTuningContent_isEncapsulatedAndReusable" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.0"/>
+  <testcase name="workoutClusters_hasNoTuningActionOrScreen" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.081"/>
+  <testcase name="clusterTuningSection_delegatesToClusterTuningContent" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.007"/>
+  <testcase name="clusterTuningSection_recalculateButtonStyledInErrorColorsWithAccessibleProgress" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

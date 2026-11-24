@@ -521,7 +521,8 @@ object LegacyImportEngine {
                         feel = parsedWorkout.sessionFeel,
                         method = parsedWorkout.method,
                         isTrainer = parsedWorkout.isTrainer,
-                        isRace = parsedWorkout.isRace
+                        isRace = parsedWorkout.isRace,
+                        isEpic = parsedWorkout.isEpic
                     )
                     require(workoutId > 0) { "Failed to insert summary row for $effectiveBaseFileName" }
 

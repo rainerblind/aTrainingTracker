@@ -90,6 +90,7 @@ fun WorkoutTabsScreen(
     onDeleteConfirmed: (Long) -> Unit,
     onEditWorkout: (Long) -> Unit,
     onMapClick: (WorkoutData) -> Unit,
+    onSectionClick: ((WorkoutData, WorkoutSectionType) -> Unit)? = null,
     onShareMapSnapshot: ((WorkoutData) -> Unit)? = null,
     sortOrder: WorkoutSortOrder,
     onSortOrderChange: (WorkoutSortOrder) -> Unit,
@@ -237,6 +238,7 @@ fun WorkoutTabsScreen(
                     onDeleteRequest = { id -> workoutIdToDelete = id },
                     onEditWorkout = onEditWorkout,
                     onMapClick = onMapClick,
+                    onSectionClick = onSectionClick,
                     onShareMapSnapshot = onShareMapSnapshot,
                     isCompactView = isCompactView,
                     // Use a Spacer or contentPadding that reacts to the offset

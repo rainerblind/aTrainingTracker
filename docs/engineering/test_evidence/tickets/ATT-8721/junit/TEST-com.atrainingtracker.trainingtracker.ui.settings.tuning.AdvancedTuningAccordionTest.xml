@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-23T22:51:03.297Z" hostname="rainer-HP-EliteBook-850-G5" time="0.136">
+  <properties/>
+  <testcase name="testAftermathAnalysisSubtitle_reflectsIndependentDomains" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.013"/>
+  <testcase name="testClusterTuningSubtitle_formatting" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.015"/>
+  <testcase name="testCockpitTypographySubtitle_reflectsFontWeightAndVariant" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.009"/>
+  <testcase name="testSwimmingSubtitleFormatter_andPoolPresetResolution" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.022"/>
+  <testcase name="testMorningCheckSubtitleFormatter" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.004"/>
+  <testcase name="testSensorSearchSubtitle_reflectsRoundsAndActiveStatus" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.005"/>
+  <testcase name="testWorkoutMasksAndCardsSubtitle_reflectsActiveCounts" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.003"/>
+  <testcase name="testTuningSectionEnum_canonicalLifecycleSequence" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.001"/>
+  <testcase name="testAftermathAnalysisSubtitle_reflectsDomain" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.003"/>
+  <testcase name="testSensorsGpsFilterSubtitle_reflectsGpsAltSpeed" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.014"/>
+  <testcase name="testAmoledBatterySaverSubtitle_reflectsDimFactorsAndSlopes" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.006"/>
+  <testcase name="testAutoPauseSubtitle_formatsSpeedAndDebounceDelays" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.005"/>
+  <testcase name="testWorkoutMatrixSubtitle_reflectsListAndDetailCounts" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.003"/>
+  <testcase name="testNavigationSubtitle_reflectsTransparencyDismissDurationAndRadius" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.012"/>
+  <testcase name="testPhysiologyModelsSubtitle_reflectsEnabledSchools" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.008"/>
+  <testcase name="testCockpitTypographySubtitle_reflectsFontAndWeight" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.007"/>
+  <testcase name="TST-UI-2787_4 testWorkoutMatrixSubtitle_withDetailTabsUsesTabAndSectionCounts" classname="com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

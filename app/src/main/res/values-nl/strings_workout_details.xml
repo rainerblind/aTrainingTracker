@@ -39,4 +39,16 @@
     <string name="carriage_timeline_duration_percent">%1$s (%2$d%%)</string>
     <string name="carriage_timeline_segment_repeats">%1$dx</string>
     <string name="workout_detail_section_activity_carriage_bar">Activiteits- en draagbalk</string>
+    <string name="workout_map_open_fullscreen">Kaart op volledig scherm openen</string>
+    <string name="workout_map_close_fullscreen">Kaart op volledig scherm sluiten</string>
+    <string name="workout_map_base_type_header">Kaarttype</string>
+    <string name="workout_map_base_normal">Standaard</string>
+    <string name="workout_map_base_terrain">Terrein</string>
+    <string name="workout_map_base_satellite">Satelliet</string>
+    <string name="workout_map_base_hybrid">Hybride</string>
+    <string name="workout_map_layers_overlays_header">Kaartlagen</string>
+    <string name="workout_map_layers_technical_tracks_header">Technische tracks</string>
+    <string name="workout_map_layer_primary_track">Trainingstrack</string>
+    <string name="workout_map_layer_markers">Markeringen &amp; favoriete locaties</string>
+    <string name="workout_map_layer_lap_highlights">Rondemarkeringen</string>
 </resources>

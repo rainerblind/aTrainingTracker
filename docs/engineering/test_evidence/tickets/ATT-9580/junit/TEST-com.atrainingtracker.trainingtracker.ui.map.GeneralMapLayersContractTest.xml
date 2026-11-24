@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:44:06.943Z" hostname="rainer-HP-EliteBook-850-G5" time="1.277">
+  <properties/>
+  <testcase name="testClusterOnMapSheet_usesMapDetailLayoutAndCanonicalComponents_TST_UI_282_14" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.692"/>
+  <testcase name="testToggleClimbsLayer_persistsAndUpdatesFlow" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.17"/>
+  <testcase name="testToggleClusterLayer_persistsAndUpdatesFlow" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.034"/>
+  <testcase name="testLoadEnabledLayers_fromExistingPreferences" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.027"/>
+  <testcase name="testToggleLayer_persistsAndUpdatesFlow" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.028"/>
+  <testcase name="testGeneralMapLayer_enumEntries" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.018"/>
+  <testcase name="testMapScreenWithTrack_structuralVerification" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.017"/>
+  <testcase name="testGeneralMapLayer_defaultEnabledEntries" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.021"/>
+  <testcase name="testMapClimbsFlow_gatedByClimbLayer" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.091"/>
+  <testcase name="testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.022"/>
+  <testcase name="testLoadEnabledLayers_ignoresUnknownEntries" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.031"/>
+  <testcase name="testMapClustersFlow_gatedByClusterLayer" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.063"/>
+  <testcase name="testDefaultEnabledLayers_excludesClustersWhenPrefsNull" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.025"/>
+  <testcase name="testClusterOnMapSheet_deduplicatesMetadataAndEnablesExpandedMap_TST_UI_282_15" classname="com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest" time="0.037"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

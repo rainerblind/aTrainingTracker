@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T02:08:10.985Z" hostname="rainer-HP-EliteBook-850-G5" time="0.066">
+  <properties/>
+  <testcase name="testAutoPauseFormatStrings_allLocalesHaveValidJavaFormatSpecifiers" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.057"/>
+  <testcase name="mapAutoPausePreferences_migratesLegacyKeysCorrectly" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.007"/>
+  <testcase name="keys_registeredInAllKeysForFactoryReset" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.001"/>
+  <testcase name="clampingBounds_enforcedCorrectly" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.0"/>
+  <testcase name="tuningConfig_defaultsToSportSpecificPolicy" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.001"/>
+  <testcase name="defaultConstants_matchSpecification" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.0"/>
+  <testcase name="tuningConfig_customValuesRetained" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

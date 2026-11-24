@@ -213,6 +213,63 @@ class WorkoutClusterSplitTest {
     }
 
     @Test
+    fun testSplitCluster_propagatesTypedBoundsToRemainingPrimaryCluster() {
+        val primaryId = 10L
+        val newClusterId = 20L
+
+        val primaryCluster = WorkoutCluster(
+            id = primaryId,
+            name = "Commute",
+            probableSportId = 1L,
+            startLat = 48.7000,
+            startLng = 9.0000,
+            endLat = 48.7000,
+            endLng = 9.1000,
+            maxDispLat = 48.7050,
+            maxDispLng = 9.0500,
+            refDistance = 10000.0,
+            hitCount = 2,
+            bSportType = BSportType.BIKE,
+            minLat = 48.5000,
+            minLng = 8.5000,
+            maxLat = 48.9000,
+            maxLng = 9.5000,
+            hasCounter = true
+        )
+
+        val remainingId = 1L
+        val wSplit = createDummyWorkout(2L, 48.7200, 9.0000, 48.7200, 9.1000, 12000.0)
+
+        every { mockClusterDb.getClusterById(primaryId) } returns primaryCluster
+        every { mockClusterDb.isNameTaken(any(), any()) } returns false
+        every { mockClusterDb.insertCluster(any()) } returns newClusterId
+
+        every { mockSummariesManager.getWorkoutCountForCluster(primaryId) } returns 1
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any()) } returns mockCursor
+        every { mockCursor.moveToNext() } returnsMany listOf(true, false)
+        every { mockCursor.getColumnIndexOrThrow(any()) } returns 0
+        every { mockCursor.getLong(any()) } returns remainingId
+        every { mockCursor.getDouble(any()) } returns 10000.0
+
+        every { mockSummariesManager.getExtremaPosition(remainingId, any(), any()) } returns LatLng(48.7000, 9.0000)
+        every { mockSummariesManager.getDouble(remainingId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT) } returns 48.6900
+        every { mockSummariesManager.getDouble(remainingId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG) } returns 8.9900
+        every { mockSummariesManager.getDouble(remainingId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT) } returns 48.7100
+        every { mockSummariesManager.getDouble(remainingId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG) } returns 9.1100
+
+        val variantToSplit = listOf("Commute var 2" to listOf(wSplit.toClusterWorkoutSnapshot()))
+        clusterEngine.splitCluster(mockContext, primaryId, variantToSplit, renameWorkouts = false)
+
+        val updatedPrimarySlot = slot<WorkoutCluster>()
+        verify { mockClusterDb.updateCluster(capture(updatedPrimarySlot)) }
+        assertEquals(48.6900, updatedPrimarySlot.captured.minLat!!, 1e-4)
+        assertEquals(8.9900, updatedPrimarySlot.captured.minLng!!, 1e-4)
+        assertEquals(48.7100, updatedPrimarySlot.captured.maxLat!!, 1e-4)
+        assertEquals(9.1100, updatedPrimarySlot.captured.maxLng!!, 1e-4)
+    }
+
+    @Test
     fun testSplitCluster_returnsEmptyWhenClusterNotFound() {
         every { mockClusterDb.getClusterById(99L) } returns null
         val result = clusterEngine.splitCluster(mockContext, 99L, listOf("Var" to emptyList()))

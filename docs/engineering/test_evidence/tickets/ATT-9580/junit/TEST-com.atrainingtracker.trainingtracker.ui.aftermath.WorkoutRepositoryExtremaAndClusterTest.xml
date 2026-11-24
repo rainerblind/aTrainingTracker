@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:44:26.696Z" hostname="rainer-HP-EliteBook-850-G5" time="12.915">
+  <properties/>
+  <testcase name="updateExtremaValueInMemory_matchesBySensorTypeAcrossLocaleSwitchAndFallsBackWhenNull_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="3.518"/>
+  <testcase name="assignAndUnassignCluster_executeSingleDbReloadAndNotifyInitialWorkoutLoaded_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.788"/>
+  <testcase name="reloadWorkoutDataInternal_coalescedNotifyInitialLoadedStillFiresAfterInFlightPlainReload_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.292"/>
+  <testcase name="addOrUpdateWorkout_preservesExtremaPositionsAcrossLocaleLabelChangeViaSensorType_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.151"/>
+  <testcase name="reloadWorkoutDataInternal_cleansUpTrackingSetsOnNormalExitAndException_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.166"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

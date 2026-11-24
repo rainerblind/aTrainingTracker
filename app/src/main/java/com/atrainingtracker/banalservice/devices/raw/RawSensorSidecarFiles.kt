@@ -89,22 +89,30 @@ object RawSensorSidecarFiles {
         }
     }
 
+    private const val SALVAGE_EXTENSION = ".salvage"
+
     /**
-     * Returns all sidecar and active `.tmp` file candidates for [fileBaseName] (Polar + Phone)
-     * for workout cascade deletion.
+     * Returns all sidecar, active `.tmp`, and crash-recovery `.salvage` file candidates for
+     * [fileBaseName] (Polar + Phone) for workout cascade deletion (`REQ-DAT-049.1`).
      */
     @JvmStatic
     fun getAllSidecarAndTmpFiles(context: Context?, fileBaseName: String?): List<File> {
         if (context == null || fileBaseName.isNullOrBlank()) return emptyList()
-        val out = ArrayList<File>(4)
+        val out = ArrayList<File>(8)
         try {
             val dir = PolarRawTelemetryRecorder.getRawSensorDir(context)
             val polarName = "$fileBaseName${PolarRawTelemetryRecorder.SIDECAR_EXTENSION}"
+            val polarTmpName = "$polarName${PolarRawTelemetryRecorder.TMP_EXTENSION}"
             out.add(File(dir, polarName))
-            out.add(File(dir, "$polarName${PolarRawTelemetryRecorder.TMP_EXTENSION}"))
+            out.add(File(dir, polarTmpName))
+            out.add(File(dir, "$polarTmpName$SALVAGE_EXTENSION"))
+            out.add(File(dir, "$polarName$SALVAGE_EXTENSION"))
             val phoneName = "$fileBaseName${SmartphoneRawTelemetryRecorder.SIDECAR_EXTENSION}"
+            val phoneTmpName = "$phoneName${SmartphoneRawTelemetryRecorder.TMP_EXTENSION}"
             out.add(File(dir, phoneName))
-            out.add(File(dir, "$phoneName${SmartphoneRawTelemetryRecorder.TMP_EXTENSION}"))
+            out.add(File(dir, phoneTmpName))
+            out.add(File(dir, "$phoneTmpName$SALVAGE_EXTENSION"))
+            out.add(File(dir, "$phoneName$SALVAGE_EXTENSION"))
         } catch (_: Throwable) {
             // Safe fallback
         }

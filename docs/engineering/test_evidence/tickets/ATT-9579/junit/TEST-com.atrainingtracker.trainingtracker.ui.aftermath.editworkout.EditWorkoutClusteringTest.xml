@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:18:56.005Z" hostname="rainer-HP-EliteBook-850-G5" time="1.593">
+  <properties/>
+  <testcase name="fetchClusterSuggestions_withHardwareSensors_preservesStrictHardwareSovereignty" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" time="0.737"/>
+  <testcase name="createNewCluster_trimsWhitespaceAndRejectsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" time="0.21"/>
+  <testcase name="fetchClusterSuggestions_whenInitiallyGuessedAsRun_doesNotPenalizeBikeClusterWhenSpeedMatchesBoth" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" time="0.161"/>
+  <testcase name="fetchClusterSuggestions_whenUserManuallyChangesSport_restrictsCandidatesToSelectedSport" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" time="0.165"/>
+  <testcase name="updateSuggestedSportTypeNames_withSensorlessAmbiguousSpeed_includesSportsAcrossBaseSports" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" time="0.158"/>
+  <testcase name="fetchClusterSuggestions_withSensorlessAmbiguousSpeed_evaluatesBothRunAndBikeCandidates" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest" time="0.162"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

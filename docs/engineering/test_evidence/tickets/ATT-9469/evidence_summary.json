@@ -1,0 +1,54 @@
+{
+  "android_test_summary": {
+    "details": "77 Android unit tests passed (4 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 77
+  },
+  "checks": [
+    {
+      "details": "Android: 77 Android unit tests passed (4 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11794 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "e0293f65763a417be2c0ab5add80325dd68280e5",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T03:07:21.666052+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9469_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-9469",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

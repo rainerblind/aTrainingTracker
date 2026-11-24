@@ -70,6 +70,7 @@ class EquipmentViewModelRetiredTest {
         mockSportRepo = mockk(relaxed = true)
         mockDeviceRepo = mockk(relaxed = true)
         mockWorkoutRepo = mockk(relaxed = true)
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
 
         every { mockWorkoutRepo.getEquipmentStats(any()) } returns WorkoutStatsSummary()
     }

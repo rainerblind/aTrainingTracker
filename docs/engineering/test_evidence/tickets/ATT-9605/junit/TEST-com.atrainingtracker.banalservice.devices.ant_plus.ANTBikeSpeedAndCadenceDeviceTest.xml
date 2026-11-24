@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-23T22:38:16.079Z" hostname="rainer-HP-EliteBook-850-G5" time="10.266">
+  <properties/>
+  <testcase name="testANTBikeSpeedAndCadence_negativeSpeed_emitsNullPace_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="6.527"/>
+  <testcase name="testANTBikeSpeedAndCadence_nullCalculatedSpeed_afterMotionPreservesValuesWithoutNpe_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.481"/>
+  <testcase name="testANTBikeSpeedAndCadence_initialZeroSpeed_setsZeroSpeedAndNullPace_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.444"/>
+  <testcase name="testReleaseAccess_whenSecondaryHandleNull_unconditionallyReleasesPrimaryHandle" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.531"/>
+  <testcase name="testReleaseAccess_whenSecondaryHandleThrows_primaryHandleStillCleanedUp" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.482"/>
+  <testcase name="testANTBikeSpeedAndCadence_zeroSpeedAfterMotion_decaysPaceToNullAtThreshold_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.457"/>
+  <testcase name="testANTBikeSpeedAndCadence_nullCalculatedSpeed_initialRemainsNullWithoutNpe_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.467"/>
+  <testcase name="testReleaseAccess_whenBothHandlesActive_releasesBothSafely" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.462"/>
+  <testcase name="testANTBikeSpeedAndCadence_positiveSpeed_publishesMetersPerSecondAndFinitePace_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.405"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

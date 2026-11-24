@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T02:42:50.635Z" hostname="rainer-HP-EliteBook-850-G5" time="0.174">
+  <properties/>
+  <testcase name="hasCustomOverrides_reflectsThemeAwareDefaultsAndExplicitOverrides" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.003"/>
+  <testcase name="resolveFullscreenWorkoutMapContent_whenBestAbsentAllowsTechnicalTrackToggleWithoutDuplication" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.005"/>
+  <testcase name="resolveFullscreenWorkoutMapContent_filtersSpatialAndTechnicalLayersAccurately" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.021"/>
+  <testcase name="workoutMapLayerConfigFlow_returnsThemeAwareDefaultsWhenUnset" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.03"/>
+  <testcase name="toggleAndSetSpatialLayers_persistAcrossReadsIncludingEmptySet" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.014"/>
+  <testcase name="resolveExplicitMapProperties_appliesDarkStyleOnlyOnDarkNormal" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.084"/>
+  <testcase name="workoutMapLayerConfigFlow_safelyIgnoresUnknownFutureEnumTokens" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.008"/>
+  <testcase name="setWorkoutMapBaseType_persistsAllFourSupportedBaseTypes" classname="com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -39,4 +39,16 @@
     <string name="carriage_timeline_duration_percent">%1$s (%2$d%%)</string>
     <string name="carriage_timeline_segment_repeats">%1$dx</string>
     <string name="workout_detail_section_activity_carriage_bar">Barre d\'activité et de port</string>
+    <string name="workout_map_open_fullscreen">Ouvrir la carte en plein écran</string>
+    <string name="workout_map_close_fullscreen">Fermer la carte en plein écran</string>
+    <string name="workout_map_base_type_header">Type de carte</string>
+    <string name="workout_map_base_normal">Normal</string>
+    <string name="workout_map_base_terrain">Relief</string>
+    <string name="workout_map_base_satellite">Satellite</string>
+    <string name="workout_map_base_hybrid">Hybride</string>
+    <string name="workout_map_layers_overlays_header">Couches spatiales</string>
+    <string name="workout_map_layers_technical_tracks_header">Traces techniques</string>
+    <string name="workout_map_layer_primary_track">Trace de la séance</string>
+    <string name="workout_map_layer_markers">Marqueurs et lieux favoris</string>
+    <string name="workout_map_layer_lap_highlights">Surlignage des tours</string>
 </resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.routes.AndroidGeoDistanceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:18:14.657Z" hostname="rainer-HP-EliteBook-850-G5" time="0.19">
+  <properties/>
+  <testcase name="ellipsoidalDistanceMeters_whenLocationDistanceBetweenSucceeds_returnsEllipsoidalValue" classname="com.atrainingtracker.trainingtracker.routes.AndroidGeoDistanceTest" time="0.189"/>
+  <testcase name="ellipsoidalDistanceMeters_unmockedJvmRuntimeException_fallsBackToGeoUtilsHaversine" classname="com.atrainingtracker.trainingtracker.routes.AndroidGeoDistanceTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

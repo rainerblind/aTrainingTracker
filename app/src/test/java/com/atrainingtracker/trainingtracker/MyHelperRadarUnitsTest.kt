@@ -186,6 +186,7 @@ class MyHelperRadarUnitsTest {
         val mockLiveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
         val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
         val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { mockWorkoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
 
         every { mockLiveSegmentsRepo.liveSegments } returns MutableStateFlow(emptyList<LiveSegment>())
         every { mockBanalRepo.bSportType } returns MutableStateFlow(BSportType.BIKE)

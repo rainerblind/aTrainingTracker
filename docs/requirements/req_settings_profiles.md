@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.48  
+**Version**: 1.0.50  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 129
+**Total Requirements**: 130
 
 ---
 
@@ -3112,6 +3112,32 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Canonical `HR` gap-only patching; live HR/GPS/Power preserved; `totalRows == 0` empty-table insert preserved; zero `WorkoutRr.db` writes on Verity Sense; H10 RR-only backfill preserved; `removeOfflineRecord()` gated on `patchedCount > 0 || !hasMissingHeartRateSamples` (with non-empty `baseFileName`); DST fall-back & `-1080..1080` offset guards; all touched files `<= 1,500` LoC; pinned JVM signatures unchanged; `0` UI/string/DB-schema edits.
 
+### REQ-SET-131: Zero-`runBlocking`, Cold-Start-Safe Smartphone Raw Telemetry Opt-In Resolution (`ATT-9578`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-133`
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `SmartphoneRawTelemetryRecorder.kt`, `DataStoreHotPathContractTest.kt`
+- **Rationale**: Eliminates main-thread `runBlocking` DataStore reads introduced for `recordSmartphoneRawTelemetryEnabled` (`b0bf0bc1` in `SettingsDataStoreJavaHelper.kt`, relocated to `SmartphoneRawTelemetryRecorder.isEnabled` in `7b225dee`) while preserving 100% cold-start opt-in accuracy (`TST-EXP-045.1`) across `TrackerService` start/resume hot paths without blocking the service main thread (`REQ-SET-079`).
+- **Description**:
+  1. *Cold-Start-Safe Eager Cache & Dual-Write Mirror (`REQ-SET-131.1`)*: `TuningPreferencesDataStore` SHALL replace the `by lazy` `stateIn` property `recordSmartphoneRawTelemetryEnabled` with an eager `MutableStateFlow<Boolean>` (`_recordSmartphoneRawTelemetryEnabled`) declared strictly before `init`. When `dataStoreOverride == null`, construction SHALL synchronously seed both `_tuningConfigStateFlow` (`TuningConfig.recordSmartphoneRawTelemetryEnabled`) and `_recordSmartphoneRawTelemetryEnabled` from default `SharedPreferences` (`KEY_RECORD_SMARTPHONE_RAW_TELEMETRY.name`, default `false`, exception-safe). All write paths (`saveTuningConfig`, `updateRecordSmartphoneRawTelemetryEnabled` via `editAndSync`, `resetToDefaults`) and the `init` DataStore collector SHALL synchronize both flows and update default `SharedPreferences` via `.apply()` strictly when `dataStoreOverride == null` and the mirrored value differs. When `dataStoreOverride != null`, `SharedPreferences` MUST NOT be read or mutated.
+  2. *Non-Blocking $O(1)$ Java Bridge (`REQ-SET-131.2`)*: `SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context: Context): Boolean` SHALL read `getTuningConfig(context).recordSmartphoneRawTelemetryEnabled` in $O(1)$ with zero `runBlocking`, preserving its public `@JvmStatic` signature and `mockkStatic(SettingsDataStoreJavaHelper::class)` compatibility (`REQ-SET-079.2`).
+  3. *Zero-`runBlocking` Recorder Opt-In Delegation (`REQ-SET-131.3`)*: `SmartphoneRawTelemetryRecorder.isEnabled(context: Context?): Boolean` MUST remove `runBlocking { ...recordSmartphoneRawTelemetryFlow.first() }` and delegate directly to `SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)` inside its exception-safe guard so `TrackerService` start/resume hot paths never park the main thread while preserving `TST-EXP-045.1` cold-start accuracy.
+  4. *Hot-Path Contract Regression Guard & Budgets (`REQ-SET-131.4`)*: `DataStoreHotPathContractTest` SHALL continue banning `runBlocking` in `SettingsDataStoreJavaHelper.kt` and SHALL additionally assert that `SmartphoneRawTelemetryRecorder.kt` contains zero `runBlocking` calls outside timeout-bounded `stopBlocking()`. `TuningPreferencesDataStore.kt` MUST stay `<= 2,410` LoC (`ArchitectureConformanceContractTest`), `TrackerService.java` and `TrainingApplication.java` untouched, and `0` string changes.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-079` (`ATT-3999`) and `REQ-EXP-045.1` (`ATT-9348`) on `TuningPreferencesDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `SmartphoneRawTelemetryRecorder.kt`, and `DataStoreHotPathContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: `b0bf0bc1` (`ATT-9348`) added `runBlocking` in `SettingsDataStoreJavaHelper.kt`; `ATT-9569` flagged `DataStoreHotPathContractTest`; `7b225dee` (`ATT-8136`) relocated `runBlocking` into `SmartphoneRawTelemetryRecorder.isEnabled()`.
+  3. *Root Reason for Existing Formulation*: Prevented stale cold-start `StateFlow` `initialValue = false` from silently dropping raw smartphone telemetry on fresh process launch or post-crash `TrackerService` restart.
+  4. *Preservation of Core Invariants*: DataStore remains single authoritative source of truth (`ADR-005`), cold-start accuracy (`TST-EXP-045.1`) is 100% preserved, main-thread `runBlocking` DataStore reads are eliminated across both `SettingsDataStoreJavaHelper` and `SmartphoneRawTelemetryRecorder`, and `mockkStatic` / `InMemoryPreferencesDataStore` isolation remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `recordSmartphoneRawTelemetryEnabled = true` was persisted via `saveTuningConfig` or `updateRecordSmartphoneRawTelemetryEnabled(true)`, *When* a cold start occurs (`TuningPreferencesDataStore.setInstanceForTesting(null)`) and `SmartphoneRawTelemetryRecorder.isEnabled(context)` or `SettingsDataStoreJavaHelper.isRecordSmartphoneRawTelemetryEnabled(context)` is invoked synchronously, *Then* both return `true` immediately in $O(1)$ without `runBlocking`.
+• *Given* `resetToDefaults()` or `updateRecordSmartphoneRawTelemetryEnabled(false)` executes, *When* a cold start follows, *Then* both accessors return `false` immediately.
+• *Given* `DataStoreHotPathContractTest` executes, *When* auditing `SettingsDataStoreJavaHelper.kt` and `SmartphoneRawTelemetryRecorder.kt`, *Then* zero `runBlocking` DataStore reads exist.
+
+**Invariants**: Zero `runBlocking` DataStore reads; `TST-EXP-045.1` cold-start accuracy preserved; `dataStoreOverride != null` unit tests hermetically isolated from `SharedPreferences`; `mockkStatic(SettingsDataStoreJavaHelper::class)` preserved; `TuningPreferencesDataStore.kt <= 2,410` LoC; `0` edits to `TrackerService.java`, `TrainingApplication.java`, UI, or strings.
+
 ---
 
 ## Change History
@@ -3165,3 +3191,5 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Added `REQ-SET-130` (`[Planned]`, `.1`–`.4`, linked to `SYSREQ-DEX-007`) for pure-JVM UTC `HrOfflineRecording.startTime` alignment (`PolarOfflineHrTimestampAligner`), `<= 5_000 ms` bounded matching in `WorkoutSamplesDatabaseManager.patchMissingHeartRateSamples()`, `patchedCount > 0` flash-deletion gate, and structured Verity Sense + H10 backfill diagnostics (`N/A - 0 string changes`). |
 | `1.0.47` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Gate 3 (`ATT-9661`) revision: added symmetric already-complete-HR fast path in `executePendingSyncSession()` + defense-in-depth `patchedCount == 0 && !hasMissingHeartRateSamples` livelock guard (`REQ-SET-130.3`), DST fall-back `getValidOffsets()` entry matching, and `-1080..1080` `PbLocalDateTime.timeZoneOffset` range guard (`REQ-SET-130.1`). |
 | `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Promoted `REQ-SET-130` to `[Verified]` following Stage 4/5 construction & verification (`250/250 PASS` across 24 Polar/`WorkoutSamples`/Contract suites, `0` production Kotlin/Java warnings, `PolarOfflineHrTimestampAligner.kt` `266` LoC, `PolarVeritySenseOfflineController.kt` `1,476/1,500`, `PolarH10OfflineController.kt` `936/1,500`, `WorkoutSamplesDatabaseManager.java` `1,478/1,500`, and `docs/engineering/walkthroughs/ATT-9611_walkthrough.md`). |
+| `1.0.49` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Added `REQ-SET-131` (`[Planned]`, `.1`–`.4`, refining `REQ-SET-079` & `REQ-EXP-045.1`) for zero-`runBlocking`, cold-start-safe smartphone raw telemetry opt-in resolution via eager `MutableStateFlow` + delta-only `SharedPreferences` cold-start mirror in `TuningPreferencesDataStore`, `O(1)` delegation from `SmartphoneRawTelemetryRecorder.isEnabled` through `SettingsDataStoreJavaHelper`, and `DataStoreHotPathContractTest` regression guard (`N/A - 0 string changes`). |
+| `1.0.50` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Promoted `REQ-SET-131` to `[Verified]` following Stage 4/5 construction & verification (`122/122 PASS` across 24 suites, `0` new production warnings, `TuningPreferencesDataStore.kt` `2,279/2,410`, `SettingsDataStoreJavaHelper.kt` `370`, `SmartphoneRawTelemetryRecorder.kt` `835`, live `emulator-5554` smoke `CRASH_LOGCAT_CLEAN`, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9578/`). |

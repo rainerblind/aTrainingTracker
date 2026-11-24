@@ -1,0 +1,91 @@
+{
+  "android_test_summary": {
+    "details": "Failed Android test(s): com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports, com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest.testClusterFilterCriteria_reconcilesOnRenameMergeAndDelete_TST_PER_048_5",
+    "failing_tests": [
+      "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports",
+      "com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest.testClusterFilterCriteria_reconcilesOnRenameMergeAndDelete_TST_PER_048_5"
+    ],
+    "passed": false,
+    "ran": 250
+  },
+  "checks": [
+    {
+      "details": "Android: Failed Android test(s): com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports, com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest.testClusterFilterCriteria_reconcilesOnRenameMergeAndDelete_TST_PER_048_5 | Python: No Python tests selected.",
+      "failing_tests": [
+        "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports",
+        "com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest.testClusterFilterCriteria_reconcilesOnRenameMergeAndDelete_TST_PER_048_5"
+      ],
+      "name": "dependent_unit_tests",
+      "passed": false
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11648 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "bdaf61c60296e345198516eebb9eee3313296d80",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.EditWorkoutClusterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterApexTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterPreviewPersistenceTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterRealSqliteMigrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterStatsTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutDeletionCascadeIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineCloudRecoveryTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineFitTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.LegacyImportEngineSparseDataTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.SilentImportClusterCreationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.TcxImportStravaToggleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.repositories.RoutesRepositorySyncTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionProgressTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModelFilterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterItemAndFilterPolishTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDeleteTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsViewModelRoutesTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayersContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapClusterActionViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.ClusterTuningUiBehaviorTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-23T23:37:00.078254+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9580_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-9580",
+  "ui_touching": false,
+  "verdict": "FAIL"
+}

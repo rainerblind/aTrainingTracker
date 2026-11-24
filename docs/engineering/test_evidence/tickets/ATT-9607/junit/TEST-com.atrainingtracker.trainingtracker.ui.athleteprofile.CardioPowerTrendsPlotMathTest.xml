@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:20.079Z" hostname="rainer-HP-EliteBook-850-G5" time="0.004">
+  <properties/>
+  <testcase name="testConvertSamplesToPoints" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" time="0.0"/>
+  <testcase name="testOutlierResilientDomainClamping" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" time="0.001"/>
+  <testcase name="testRule48Formatting" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" time="0.001"/>
+  <testcase name="testFindNearestPoint_resolvesAccurately" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" time="0.0"/>
+  <testcase name="testFilterPointsByTimeRange" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" time="0.0"/>
+  <testcase name="testRollingTrendCalculation" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.CardioPowerTrendsPlotMathTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

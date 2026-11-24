@@ -224,6 +224,7 @@ class BANALServiceRepositoryHotpathTest {
         val routesRepo = mockk<RoutesRepository>(relaxed = true)
         val liveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
         val workoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { workoutRepo.workoutMutationEvents } returns kotlinx.coroutines.flow.MutableSharedFlow()
         every { liveSegmentsRepo.liveSegments } returns MutableStateFlow(emptyList())
         every { trackingViewsRepo.getTrackingViewInfoFlow(1L) } returns flowOf(
             TrackingViewInfo(

@@ -113,6 +113,7 @@ fun ATrainingTrackerMap(
     // Visualization Context
     style: MapStyle = MapStyle(),
     darkTheme: Boolean? = null,
+    mapTypeOverride: MapType? = null,
 
     // UI & Callbacks
     modifier: Modifier = Modifier,
@@ -200,8 +201,14 @@ fun ATrainingTrackerMap(
 
     // 4. THE MAP
     val isDark = darkTheme ?: (MaterialTheme.colorScheme.surface.luminance() < 0.5f)
-    val mapProperties = remember(isDark, context, style.useMutedStyle) {
-        if (style.useMutedStyle) {
+    val mapProperties = remember(isDark, context, style.useMutedStyle, mapTypeOverride) {
+        if (mapTypeOverride != null) {
+            DarkMapStyle.resolveExplicitMapProperties(
+                mapType = mapTypeOverride,
+                isDark = isDark,
+                context = context
+            )
+        } else if (style.useMutedStyle) {
             DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
         } else {
             val darkOptions = if (isDark) DarkMapStyle.getMapStyleOptions(context) else null

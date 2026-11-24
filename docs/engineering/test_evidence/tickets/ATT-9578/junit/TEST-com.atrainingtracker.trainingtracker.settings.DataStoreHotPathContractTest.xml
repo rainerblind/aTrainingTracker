@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T02:08:03.772Z" hostname="rainer-HP-EliteBook-850-G5" time="0.485">
+  <properties/>
+  <testcase name="testSettingsDataStore_readsDoNotContainRunBlocking" classname="com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest" time="0.142"/>
+  <testcase name="testLocationNameResolver_resolveLocationNameBlocking_hasWorkerThreadAnnotation" classname="com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest" time="0.01"/>
+  <testcase name="testSmartphoneRawTelemetryRecorder_dataStoreReadsDoNotContainRunBlocking_TST_SET_133_4" classname="com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest" time="0.018"/>
+  <testcase name="testHotPathFiles_containZeroRunBlockingCalls" classname="com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest" time="0.304"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

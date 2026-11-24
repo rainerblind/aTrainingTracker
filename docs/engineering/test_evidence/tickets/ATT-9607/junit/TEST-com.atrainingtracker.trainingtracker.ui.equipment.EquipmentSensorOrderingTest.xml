@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:54:31.255Z" hostname="rainer-HP-EliteBook-850-G5" time="0.053">
+  <properties/>
+  <testcase name="testBikeSensorOrdering_cyclingPriorityTiers" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.008"/>
+  <testcase name="testShoeSensorOrdering_sportSpecificBeforeShared" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.043"/>
+  <testcase name="testTertiaryIdSorting" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.001"/>
+  <testcase name="testPriorityRank_valuesMatchSpecification" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.0"/>
+  <testcase name="testNullDeviceType_placedAtEnd" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.0"/>
+  <testcase name="testSecondaryAlphabeticalSorting_caseInsensitive" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.0"/>
+  <testcase name="testBikeSensorOrdering_sportSpecificBeforeShared" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrderingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

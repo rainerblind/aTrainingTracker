@@ -39,4 +39,16 @@
     <string name="carriage_timeline_duration_percent">%1$s (%2$d%%)</string>
     <string name="carriage_timeline_segment_repeats">%1$dx</string>
     <string name="workout_detail_section_activity_carriage_bar">Aktivitäts- &amp; Tragemodus-Leiste</string>
+    <string name="workout_map_open_fullscreen">Vollbildkarte öffnen</string>
+    <string name="workout_map_close_fullscreen">Vollbildkarte schließen</string>
+    <string name="workout_map_base_type_header">Kartentyp</string>
+    <string name="workout_map_base_normal">Standard</string>
+    <string name="workout_map_base_terrain">Gelände</string>
+    <string name="workout_map_base_satellite">Satellit</string>
+    <string name="workout_map_base_hybrid">Hybrid</string>
+    <string name="workout_map_layers_overlays_header">Kartenebenen</string>
+    <string name="workout_map_layers_technical_tracks_header">Technische Tracks</string>
+    <string name="workout_map_layer_primary_track">Trainingsstrecke</string>
+    <string name="workout_map_layer_markers">Marker &amp; Lieblingsorte</string>
+    <string name="workout_map_layer_lap_highlights">Runden-Hervorhebungen</string>
 </resources>

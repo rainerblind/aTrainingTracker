@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterSplitTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:17:15.176Z" hostname="rainer-HP-EliteBook-850-G5" time="1.366">
+  <properties/>
+  <testcase name="testSplitCluster_createsNewClusterAndReconcilesPrimary" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterSplitTest" time="0.377"/>
+  <testcase name="testSplitCluster_returnsEmptyWhenVariantsEmpty" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterSplitTest" time="0.324"/>
+  <testcase name="testSplitCluster_propagatesTypedBoundsToRemainingPrimaryCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterSplitTest" time="0.34"/>
+  <testcase name="testSplitCluster_returnsEmptyWhenClusterNotFound" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterSplitTest" time="0.325"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-23T20:50:15.458Z" hostname="rainer-HP-EliteBook-850-G5" time="21.408">
+  <properties/>
+  <testcase name="testAthleteProfileContent_pmcTimeRangeClickInvokesCallbackOnceWithoutDoubleMutation_tstUi2803_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="19.605"/>
+  <testcase name="testNonPmcChipToggles_triggerZeroPmcRecomputations_andHrMaxFlowUpdatesReactively_tstUi2803_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="1.803"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

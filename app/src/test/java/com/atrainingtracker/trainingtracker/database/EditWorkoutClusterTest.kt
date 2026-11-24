@@ -25,6 +25,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.toClusterWorkoutSnapshot
 import com.google.android.gms.maps.model.LatLng
@@ -88,6 +89,7 @@ class EditWorkoutClusterTest {
         every { mockSummariesManager.getWorkoutCountForCluster(any()) } returns -1
         every { mockSummariesManager.workoutCountsForAllClusters } returns emptyMap()
 
+        SportTypesRepository.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(mockClusterDb)
         mockClusterRepo = spyk(WorkoutClusterRepository.getInstance(mockContext))
@@ -99,6 +101,7 @@ class EditWorkoutClusterTest {
 
     @After
     fun tearDown() {
+        SportTypesRepository.resetForTesting(null)
         EquipmentAndSportTypeDiscoveryManager.resetForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
         WorkoutClusterRepository.resetForTesting(null)
@@ -773,5 +776,65 @@ class EditWorkoutClusterTest {
         assertEquals(9.8, finalNew.minLng!!, 0.0001)
         assertEquals(12.5, finalNew.maxLat!!, 0.0001)
         assertEquals(12.6, finalNew.maxLng!!, 0.0001)
+    }
+
+    @Test
+    fun testSummariesManagerClusterWorkoutDataPort_getWorkoutRouteBounds_returnsTypedDto() {
+        assertEquals(WorkoutSummaries.BOUND_MIN_LAT, ClusterWorkoutDataPort.BOUND_MIN_LAT)
+        assertEquals(WorkoutSummaries.BOUND_MIN_LNG, ClusterWorkoutDataPort.BOUND_MIN_LNG)
+        assertEquals(WorkoutSummaries.BOUND_MAX_LAT, ClusterWorkoutDataPort.BOUND_MAX_LAT)
+        assertEquals(WorkoutSummaries.BOUND_MAX_LNG, ClusterWorkoutDataPort.BOUND_MAX_LNG)
+
+        val port = SummariesManagerClusterWorkoutDataPort(mockContext)
+        every { mockSummariesManager.getDouble(42L, WorkoutSummaries.BOUND_MIN_LAT) } returns 47.1
+        every { mockSummariesManager.getDouble(42L, WorkoutSummaries.BOUND_MIN_LNG) } returns 11.2
+        every { mockSummariesManager.getDouble(42L, WorkoutSummaries.BOUND_MAX_LAT) } returns 47.3
+        every { mockSummariesManager.getDouble(42L, WorkoutSummaries.BOUND_MAX_LNG) } returns 11.4
+
+        val populated = port.getWorkoutRouteBounds(42L)
+        assertEquals(WorkoutBoundsDto(47.1, 11.2, 47.3, 11.4), populated)
+        assertTrue(populated.hasPoints)
+
+        // Verify interface default method adapter converts getWorkoutBounds() map using BOUND_* keys
+        val delegatePort = object : ClusterWorkoutDataPort by port {
+            override fun getWorkoutRouteBounds(workoutId: Long): WorkoutBoundsDto =
+                super<ClusterWorkoutDataPort>.getWorkoutRouteBounds(workoutId)
+        }
+        assertEquals(WorkoutBoundsDto(47.1, 11.2, 47.3, 11.4), delegatePort.getWorkoutRouteBounds(42L))
+
+        every { mockSummariesManager.getDouble(43L, any()) } returns null
+        val empty = port.getWorkoutRouteBounds(43L)
+        assertEquals(WorkoutBoundsDto(null, null, null, null), empty)
+        assertFalse(empty.hasPoints)
+    }
+
+    @Test
+    fun testCreateNewClusterFromWorkout_propagatesTypedBounds() {
+        val workoutId = 205L
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns LatLng(48.1, 11.5)
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns LatLng(48.2, 11.6)
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) } returns LatLng(48.15, 11.55)
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m) } returns 8500.0
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.SPORT_ID) } returns 1L
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LAT) } returns 48.05
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MIN_LNG) } returns 11.45
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LAT) } returns 48.25
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.BOUND_MAX_LNG) } returns 11.65
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME) } returns "Morning Loop"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "loop_205"
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) } returns -1L
+        every { mockSportDb.getBSportType(1L) } returns BSportType.RUN
+        every { mockClusterDb.isNameTaken(any(), any()) } returns false
+
+        val insertedSlot = slot<WorkoutCluster>()
+        every { mockClusterDb.insertCluster(capture(insertedSlot)) } returns 77L
+
+        val createdId = clusterEngine.createNewClusterFromWorkout(mockContext, workoutId, customName = "Typed Bounds Loop")
+
+        assertEquals(77L, createdId)
+        assertEquals(48.05, insertedSlot.captured.minLat!!, 0.0001)
+        assertEquals(11.45, insertedSlot.captured.minLng!!, 0.0001)
+        assertEquals(48.25, insertedSlot.captured.maxLat!!, 0.0001)
+        assertEquals(11.65, insertedSlot.captured.maxLng!!, 0.0001)
     }
 }

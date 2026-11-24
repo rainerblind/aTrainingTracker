@@ -41,6 +41,7 @@ data class ParsedWorkoutData(
     val isCommute: Boolean = false,
     val isTrainer: Boolean = false,
     val isRace: Boolean = false,
+    val isEpic: Boolean = false,
     val method: String? = null,
     val goal: String? = null,
     val stravaActivityId: String? = null,

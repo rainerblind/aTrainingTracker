@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T02:10:18.750Z" hostname="rainer-HP-EliteBook-850-G5" time="0.266">
+  <properties/>
+  <testcase name="mutatorsMaintainSingleSourceOfTruthAcrossAllFlowsAndConfig_tstCon056_1" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest" time="0.161"/>
+  <testcase name="oneTimeMigration_migratesLegacyClusterPrefsAndCleanUpPreventsResurrectionAfterReset_tstCon056_1" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest" time="0.096"/>
+  <testcase name="canonicalKeysRegistered_andLegacyRadarLightKeysExcludedFromAllKeys_tstCon056_1" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest" time="0.001"/>
+  <testcase name="defaultConstants_areUnifiedAndConsistentOnFreshInstall_tstCon056_1" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest" time="0.0"/>
+  <testcase name="oneTimeMigration_migratesAllLegacyRadarLightPermutationsAndIsIdempotent_tstCon056_1" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

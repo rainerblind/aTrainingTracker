@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.19  
+**Version**: 1.0.24  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 47
+**Total Requirements**: 49
 
 ---
 
@@ -1630,6 +1630,61 @@
 
 ---
 
+### REQ-CON-058: Pre-Dereference Null Guard and Standstill `null` Pace in `ANTBikeSpeedDevice` and `ANTBikeSpeedAndCadenceDevice` (`ATT-9605`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-058`
+- **System Requirement(s)**: `SYSREQ-TRK-001` — Refines ANT+ Bike Speed and Speed & Cadence telemetry acquisition safety (`ANTBikeSpeedDevice.java`, `ANTBikeSpeedAndCadenceDevice.java`).
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ANTBikeSpeedDevice.java`, `ANTBikeSpeedAndCadenceDevice.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: In `ANTBikeSpeedDevice.onNewCalculatedSpeed` (`:112-117`) and `ANTBikeSpeedAndCadenceDevice.onNewCalculatedSpeed` (`:148-151`), `calculatedSpeed.doubleValue()` was dereferenced unconditionally (including inside `myLog(...)` in `ANTBikeSpeedDevice:113`), risking `NullPointerException` on a `null` ANT+ SDK callback, and `1 / calculatedSpeed.doubleValue()` emitted `Double.POSITIVE_INFINITY` at standstill (`0.0`), defeating `ThresholdSensor` (`SPEED_THRESHOLD = 8`) standstill decay semantics and diverging from `ANTBikePowerDevice` (`ATT-6176`, `REQ-STB-026`) and `BTLEBikeDevice` (`ATT-6042`).
+- **Description**:
+  1. *Pre-Dereference Null Guard (`REQ-CON-058.1`)*: `ANTBikeSpeedDevice.onNewCalculatedSpeed` and `ANTBikeSpeedAndCadenceDevice.onNewCalculatedSpeed` SHALL check `if (calculatedSpeed == null) return;` prior to any logging (`myLog(...)`) or `calculatedSpeed.doubleValue()` dereference, throwing zero exceptions and leaving `mSpeedSensor` and `mPaceSensor` values undisturbed.
+  2. *Direct `m/s` Speed Publication & Standstill `null` Pace (`REQ-CON-058.2`)*: For non-null `calculatedSpeed` (in `m/s` per `AntPlusBikeSpeedDistancePcc.CalculatedSpeedReceiver`), both callbacks SHALL publish `double speed = calculatedSpeed.doubleValue();` directly to `mSpeedSensor.newValue(speed)` (no `/ 3.6` scaling) and SHALL publish `mPaceSensor.newValue(speed > 0.0 ? 1.0 / speed : null)`, emitting finite `1.0 / speed` (`s/m`) when `speed > 0.0` and `null` (never `Double.POSITIVE_INFINITY` or negative pace) when `speed <= 0.0`, preserving `ThresholdSensor` (`SPEED_THRESHOLD = 8`) initial `null` and 8-tick standstill decay semantics.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a subscribed `ANTBikeSpeedDevice` or `ANTBikeSpeedAndCadenceDevice` (initial `null` or holding prior motion readings), *When* `onNewCalculatedSpeed(..., null)` fires, *Then* it returns immediately without NPE (including `myLog` path) and leaves `mSpeedSensor` and `mPaceSensor` untouched.
+• *Given* a subscribed `ANTBikeSpeedDevice` or `ANTBikeSpeedAndCadenceDevice`, *When* `BigDecimal.ZERO` (`0.0 m/s`), `BigDecimal("10.0")` (`10.0 m/s`), `8` consecutive `BigDecimal.ZERO` standstill ticks, or negative speed arrive, *Then* initial standstill sets `speed == 0.0` & `pace == null`, `10.0 m/s` sets `speed == 10.0` & `pace == 0.1`, ticks `1..7` hold `0.1` and tick `8` decays `mPaceSensor` to `null` (never `Double.POSITIVE_INFINITY`), and negative speed feeds `null` pace.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-058` extending `REQ-CON-001` (*ANT+ Sensor Support*), `REQ-CON-025` (`ANTBikeSpeedAndCadenceDevice`), and aligning with `REQ-STB-026` (`ATT-6176`, `ANTBikePowerDevice`).
+2. *Historical Origin & Commit Trace*: Legacy ANT+ bike speed callbacks left `// TODO: correct?` on `1 / calculatedSpeed.doubleValue()`; `ATT-6042` (`db8d50c1`) standardized BLE standstill pace to `null` and `ATT-6176` (`ccc04e9a`) fixed `ANTBikePowerDevice`.
+3. *Root Reason for Existing Formulation*: Early ANT+ callback assumed `CalculatedSpeedReceiver` only delivered non-null positive speeds and omitted null/zero guards.
+4. *Preservation of Core Invariants*: Eager `addSensors()` initialization, `ThresholdSensor(..., SPEED_THRESHOLD = 8)` smoothing, direct `m/s` scaling, `onNewCalculatedAccumulatedDistance` wheel-rev forwarding, `ANTBikeSpeedAndCadenceDevice.releaseAccess()` (`REQ-CON-025.1`), `<= 1,500` LoC caps, and zero DB/UI/string changes remain 100% preserved.
+
+---
+
+### REQ-FIL-043: Fast `STATIONARY` Exit on Unambiguous Motion & Continuous Non-Stationary Dwell in `PhoneCarriageClassifier` (`ATT-9469`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-043`
+- **System Requirement(s)**: `SYSREQ-TRK-010` — Refines smartphone carriage classification responsiveness and stationary multipath immunity (`PhoneCarriageClassifier.kt`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `PhoneCarriageClassifier.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Accelerating out of traffic-light or errand stops (`2026-11-21_081228`, Bank stop `rows 406..408`, `5.5–6.1 m/s`) shifted `rawCandidate` across `WALKING_TRANSITION -> BIKE_JERSEY_BACK -> BIKE_FRONT_POCKET`, resetting single-subclass `candidateSinceMs` and trapping `committedMode` in `STATIONARY` for `3–5 s`. Continuous non-stationary dwell plus shortened `<= 1.0 s` fast exit on unambiguous high-confidence motion eliminates multi-second `STATIONARY` tails while preserving indoor multipath GNSS-spike immunity (`REQ-FIL-034.1`, `REQ-FIL-042.3`).
+- **Description**:
+  1. *Continuous Non-Stationary Exit Dwell & Exit State Sync (`REQ-FIL-043.1`)*: While `committedMode == PhoneCarriageMode.STATIONARY` and `rawCandidate` is a non-stationary active mode (`!= STATIONARY`, `!= UNKNOWN`), `PhoneCarriageClassifier` SHALL accumulate continuous non-stationary dwell via `nonStationarySinceMs` (seeded from monotonic `effectiveNowMs` per `REQ-FIL-042.3`) without resetting the exit timer when `rawCandidate` shifts across non-stationary subclasses (`WALKING_TRANSITION -> BIKE_JERSEY_BACK -> BIKE_FRONT_POCKET`). Returning to `STATIONARY`, encountering an `UNKNOWN` gap (`rawCandidate == UNKNOWN`), triggering a `0 ms` wrist glance, or calling `reset()` MUST clear `nonStationarySinceMs = Long.MIN_VALUE`; committing an exit from `STATIONARY` MUST synchronously set `candidateMode = rawCandidate`, `candidateSinceMs = Long.MIN_VALUE`, and `nonStationarySinceMs = Long.MIN_VALUE`. All non-`STATIONARY` transitions MUST remain unchanged.
+  2. *Fast `<= 1.0 s` Exit on Unambiguous Motion (`REQ-FIL-043.2`)*: Define `isAccuracyTrusted(acc: Double?) = acc == null || (acc.isFinite() && acc > 0.0 && acc <= 20.0)` (preserving omitted `null` compatibility while rejecting `Double.NaN`, `±Infinity`, `0.0`, `< 0.0`, and `> 20.0`). While `committedMode == STATIONARY`, when `wheelActiveMoving == true` OR (`effectiveSpeed >= 3.2 m/s` AND `gnssFresh && isAccuracyTrusted(lastGnssAccuracyMeters)` AND `!isPositionStagnant(effectiveNowMs)` AND (`!quietImu` OR `hasConfirmedDisplacement(effectiveNowMs)` requiring `positionSamples.size >= 2`, `(nowMs - last.timestampMs) <= STALENESS_MS`, and `>= 10.0 m` spread across trusted fixes)), `PhoneCarriageClassifier` SHALL apply shortened exit dwell `minOf(dismountHysteresisMs, 1_000L)` and commit directly into `rawCandidate`, operating uniformly without barometer, wheel sensor, or `ACTIVITY_RECOGNITION`.
+  3. *Indoor Multipath GNSS-Spike Immunity, Position Buffer Gating & Monotonic Hygiene (`REQ-FIL-043.3`)*: `ingestGnssSpeed()` SHALL persist raw `lastGnssAccuracyMeters = accuracyMeters` under `isNewerOrEqualGnss && speedMps.isFinite() && speedMps >= 0.0` (cleared in `reset()`, never collapsing invalid non-null values to `null`) and SHALL gate `positionSamples.addLast(...)` on `isAccuracyTrusted(accuracyMeters)` so coarse/invalid coordinate jumps never poison `isPositionStagnant(nowMs)`. When `!wheelActiveMoving && (hasOrientation || hasGyro) && quietImu` and `poorGnssAccuracy = gnssFresh && !isAccuracyTrusted(lastGnssAccuracyMeters)`, `evaluateRawCandidate()` SHALL classify `STATIONARY`, ensuring transient `1–2 s` coarse (`> 20 m`) or invalid (`0.0`, `< 0.0`, `NaN`, `Infinity`) indoor GNSS spikes produce zero false exits. `PhoneCarriageClassifier.kt` MUST stay `<= 1,500` LoC with unchanged public JVM signatures.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `PhoneCarriageClassifier` is in `STATIONARY` and the athlete accelerates (`2.42 -> 3.88 -> 4.60 m/s` / `3.5 -> 5.5 -> 6.1 m/s`, `acc <= 20 m`, non-quiet IMU, real displacement `> 10 m`), *When* `rawCandidate` shifts across `WALKING_TRANSITION -> BIKE_JERSEY_BACK -> BIKE_FRONT_POCKET`, *Then* `committedMode` exits `STATIONARY` within `<= 1 s` of crossing `3.2 m/s` and never stays `STATIONARY` for `3 s` at `> 5 m/s`.
+• *Given* `PhoneCarriageClassifier` is in `STATIONARY` indoors or at a stop with `quietImu == true`, *When* a transient `1–2 s` coarse (`acc > 20 m`), invalid-accuracy (`NaN`, `Infinity`, `0.0`, `< 0.0`), or stagnant-position GNSS speed spike (`v = 5–7 m/s`, with or without coordinate jump) arrives, *Then* coarse/invalid coordinates are excluded from `positionSamples` (`isPositionStagnant` stays unpoisoned) and `committedMode` remains `STATIONARY` with zero false exits.
+• *Given* `PhoneCarriageClassifier` is in `STATIONARY` and sees a brief non-stationary blip followed by an `UNKNOWN` gap (or return to `STATIONARY`), *When* non-stationary motion later resumes, *Then* `nonStationarySinceMs` restarts fresh from `effectiveNowMs` with zero stale accumulated dwell.
+• *Given* a barometer-free, wheel-free, `ACTIVITY_RECOGNITION`-denied device or a rigid handlebar mount (`quietImu == true` with `>= 10 m` fresh trusted displacement), *When* accelerating smoothly out of `STATIONARY`, *Then* fast exit and multipath rejection execute deterministically with zero regressions to existing hysteresis tests.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-043` refining `REQ-FIL-028.1` (`ATT-8890`), `REQ-FIL-034.1` (`ATT-9062`), `REQ-FIL-035.3` (`ATT-9157`), and `REQ-FIL-042.3` (`ATT-9600`) in `PhoneCarriageClassifier.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-8890` set uniform identical-candidate `2.0 s` dwell; `ATT-9062` added `quietImu` + `isPositionStagnant`; `ATT-9600` added `effectiveNowMs` monotonic clamping.
+3. *Root Reason for Existing Formulation*: Prevented transient indoor multipath spikes and brief standstill fidgets from breaking `STATIONARY`.
+4. *Preservation of Core Invariants*: Retains `1.0 s` minimum dwell on fast exit (blocking single-sample spikes), adds `acc > 20 m` indoor `quietImu` stationary guard, preserves all non-`STATIONARY` dwell timings and `REQ-FIL-042.3` monotonic clamping, and keeps `PhoneCarriageClassifier.kt <= 1,500` LoC with `0` edits to `SpeedAndLocationDevice_ATTFused.kt`, UI, or strings.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1758,3 +1813,8 @@
 | `1.0.17` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Promoted `REQ-CON-056` (`.1`–`.4`) to `[Verified]` following Gate 3 (`ATT-9653`) PASS, full Stage 4 construction (`TrainingApplication.java` `1,969/2,050` LoC, `TrackerService.java` `3,184/3,220` LoC, `docs/architecture.md` `v1.0.30`, `tracker_service.md` `v1.0.12`), `569/569` in-scope unit/contract tests PASS (`:app:assembleDebug` + `:app:compileDebugAndroidTestKotlin` PASS), live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8132_walkthrough.md`. |
 | `1.0.18` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Added `[Planned]` `REQ-CON-057` (`.1`–`.4`, linked to `SYSREQ-TRK-001`) for capability-gated Polar Live-IMU HRM source selection (`CADENCE`/`STRIDES` = BLE H10 & Verity Sense; `VERTICAL_OSCILLATION`/`GROUND_CONTACT_TIME` = BLE H10 only) across `DeviceType`, `DevicesDatabaseManager`, and `SensorSourceDialog`, and removal of `DeviceType.BIKE_POWER` from `SLOPE`/`VERTICAL_SPEED`/`ASCENT`/`DESCENT` (`N/A - no UI strings`). |
 | `1.0.19` | 2026-11-23 | Lane 2 Author (`ATT-8991`, `--as agent1`) | `ATT-8991` | Promoted `REQ-CON-057` (`.1`–`.4`) to `[Verified]` following Gate 3 (`ATT-9665`) PASS, full Stage 4 construction (`HrmSensorCapabilityHelper.kt` `98` LoC, `DeviceType.java` `269` LoC, `DevicesDatabaseManager.java` `1,657/1,671` LoC, `SensorSourceDialog.kt` `601/1,500` LoC), `127/127` PASS across 15 unit/Compose/contract suites (`0` new warnings), `4/4` Python safety linters PASS, live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8991_walkthrough.md`. |
+| `1.0.20` | 2026-11-23 | Lane 2 Author (`ATT-9605`, `--as agent1`) | `ATT-9605` | Added `[Planned]` `REQ-CON-058` (`.1`–`.2`, linked to `SYSREQ-TRK-001`) for pre-dereference `calculatedSpeed == null` early-return (before `myLog`/dereference) and standstill `null` pace (`speed > 0.0 ? 1.0 / speed : null`, direct `m/s`) in `ANTBikeSpeedDevice` and `ANTBikeSpeedAndCadenceDevice` (`N/A - 0 string changes`). |
+| `1.0.21` | 2026-11-23 | Lane 2 Author (`ATT-9605`, `--as agent1`) | `ATT-9605` | Promoted `REQ-CON-058` (`.1`–`.2`) to `[Verified]` following Gate 3 (`ATT-9670`) PASS, Stage 4 construction (`ANTBikeSpeedDevice.java` `149/1,500` LoC, `ANTBikeSpeedAndCadenceDevice.java` `254/1,500` LoC), `36/36` targeted unit & contract tests PASS (`ANTBikeSpeedDeviceTest 6/6`, `ANTBikeSpeedAndCadenceDeviceTest 9/9`, `ANTBikePowerDeviceTest 10/10`, `ArchitectureConformanceContractTest 11/11`, `0` warnings), `3/3` safety linters PASS, live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-9605_walkthrough.md`. |
+| `1.0.22` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Added `[Planned]` `REQ-FIL-043` (`.1`–`.3`, linked to `SYSREQ-TRK-010`, refining `REQ-FIL-028.1`/`034.1`/`035.3`/`042.3`) for continuous non-stationary exit dwell (`nonStationarySinceMs`), `<= 1.0 s` fast exit on unambiguous motion (`wheelActiveMoving` or `effectiveSpeed >= 3.2 m/s`, `acc <= 20 m`, `!isPositionStagnant`, `!quietImu || >= 10 m` trusted displacement), and indoor `quietImu` + `acc > 20 m` multipath spike immunity in `PhoneCarriageClassifier.kt` (`N/A - 0 string changes`). |
+| `1.0.23` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Gate 3 (`ATT-9674`) revision on `[Planned]` `REQ-FIL-043`: specified `isAccuracyTrusted(acc)` rejecting `NaN`/`±Infinity`/`<= 0.0`/`> 20.0` while keeping omitted `null` compatible, gated `positionSamples.addLast(...)` on `isAccuracyTrusted(accuracyMeters)` so coarse jumps never poison `isPositionStagnant(nowMs)`, added `size >= 2` + `<= STALENESS_MS` staleness guards on `hasConfirmedDisplacement(nowMs)`, and added `UNKNOWN`-gap `nonStationarySinceMs` reset + synchronized `candidateMode`/`candidateSinceMs` clear on `STATIONARY` exit. |
+| `1.0.24` | 2026-11-24 | Lane 2 Author (`ATT-9469`, `--as agent1`) | `ATT-9469` | Promoted `REQ-FIL-043` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9674`) PASS, Stage 4 implementation (`PhoneCarriageClassifier.kt` `1,264/1,500` LoC, `0` edits to `SpeedAndLocationDevice_ATTFused.kt`, `0` new warnings), `149/149` targeted unit/contract tests PASS across `12` suites (`PhoneCarriageClassifierTest` `19/19`), `3/3` safety linters PASS, live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-9469_walkthrough.md`. |

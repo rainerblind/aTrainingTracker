@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreOnboardingTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T02:08:11.085Z" hostname="rainer-HP-EliteBook-850-G5" time="8.449">
+  <properties/>
+  <testcase name="key_matchesSpecificationAndIsRegisteredInAllKeys" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreOnboardingTest" time="7.589"/>
+  <testcase name="dataStoreFlow_defaultsToFalse_andUpdatesReactively" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreOnboardingTest" time="0.768"/>
+  <testcase name="defaultConstants_matchSpecification" classname="com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreOnboardingTest" time="0.092"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

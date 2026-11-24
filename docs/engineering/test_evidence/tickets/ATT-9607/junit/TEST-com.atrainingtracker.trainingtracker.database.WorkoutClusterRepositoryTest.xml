@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-23T19:56:04.502Z" hostname="rainer-HP-EliteBook-850-G5" time="15.568">
+  <properties/>
+  <testcase name="testClusterMutations_propagateToWorkoutRepositoryRoutesAndEmitEvents_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="6.623"/>
+  <testcase name="testLoadAllClustersLightweight_hydratesClusterStatsWhenEmpty_TST_UI_282_13" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.085"/>
+  <testcase name="testRefreshAndUpdate_healsTrimsAndRejectsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.985"/>
+  <testcase name="testRefreshClusters_emptyDbBootstrapAndRecalculate_emitsMultiPhaseProgress_TST_PERF_003_007" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.11"/>
+  <testcase name="testRefreshClusters_unlinkedZeroWorkoutOrphan_purgesCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.988"/>
+  <testcase name="testLoadAllClustersLightweight_populatesAllClustersWithoutHeavyAggregation" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.93"/>
+  <testcase name="testRefreshClusters_initialEnrichmentEmitsProgress_thenSilentOnRevisit_TST_PERF_003_009" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.966"/>
+  <testcase name="testOnRouteSyncedClusterRename_propagatesWithoutCallingRoutesRepository_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.019"/>
+  <testcase name="testRefreshClusters_survivingCluster_preservesHitCountUntouched" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.932"/>
+  <testcase name="testLoadAllClusters_selfHealsUntrimmedNamesWithCollision_TST_PER_049_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.93"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

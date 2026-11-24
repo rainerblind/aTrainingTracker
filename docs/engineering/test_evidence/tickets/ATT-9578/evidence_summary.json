@@ -1,0 +1,74 @@
+{
+  "android_test_summary": {
+    "details": "122/122 Android unit & contract tests passed across 24 suites (0 fail, 0 err, 0 skip).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 122
+  },
+  "checks": [
+    {
+      "details": "Android: 122/122 PASS across 24 suites (0 fail, 0 err, 0 skip) | Python: N/A (0 Python files changed)",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11764 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "3a931d3ee811b8386aefb17dd66ebc410c5121be",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtrac-3J2QOPPC8US8E.trainingtracker.settings.TuningPreferencesDataStoreTurnCueCountdownDistanceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorderTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.DataStoreHotPathContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelperNonBlockingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreAutoPauseTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreClusterTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDfaA1Test.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreDismissDurationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreElevationSmoothingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreLifecycleTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreOnboardingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStorePaceCeilingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarClosePassTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRadarLightControlModeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRawSensorRetentionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreRoundTripTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStoreSensorFieldVariantTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningErtsContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.StopTrackingCoachmarkTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T02:16:57.754599+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9578_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-9578",
+  "ui_touching": false,
+  "verdict": "PASS"
+}
