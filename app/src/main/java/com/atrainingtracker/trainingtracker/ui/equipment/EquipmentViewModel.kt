@@ -363,9 +363,20 @@ class EquipmentViewModel @JvmOverloads constructor(
         viewModelScope.launch(ioDispatcher) {
             // TODO: when the strava frame type is changed, we should also update strava.
 
-            effectiveEquipmentRepo.updateEquipment(
-                item.id, item.name, item.frameType, item.linkedDeviceIds, item.isRetired
-            )
+            if (item.linkedDeviceWheelPositions.isNotEmpty()) {
+                effectiveEquipmentRepo.updateEquipment(
+                    item.id,
+                    item.name,
+                    item.frameType,
+                    item.linkedDeviceIds,
+                    item.isRetired,
+                    item.linkedDeviceWheelPositions
+                )
+            } else {
+                effectiveEquipmentRepo.updateEquipment(
+                    item.id, item.name, item.frameType, item.linkedDeviceIds, item.isRetired
+                )
+            }
 
             // Update Sport Type links
             effectiveEquipmentRepo.updateLinksForEquipment(item.id, item.linkedSportTypeIds)
@@ -381,11 +392,21 @@ class EquipmentViewModel @JvmOverloads constructor(
         }
     }
 
-    fun addEquipment(name: String, frameType: Int, linkedDeviceIds: List<Long>, linkedSportTypes: List<Long>) {
+    fun addEquipment(
+        name: String,
+        frameType: Int,
+        linkedDeviceIds: List<Long>,
+        linkedSportTypes: List<Long>,
+        linkedDeviceWheelPositions: Map<Long, WheelPosition> = emptyMap()
+    ) {
         viewModelScope.launch(ioDispatcher) {
 
             // Add the equipment and get the new ID
-            val newEquipmentId = effectiveEquipmentRepo.addEquipment(name, frameType, linkedDeviceIds)
+            val newEquipmentId = if (linkedDeviceWheelPositions.isNotEmpty()) {
+                effectiveEquipmentRepo.addEquipment(name, frameType, linkedDeviceIds, linkedDeviceWheelPositions)
+            } else {
+                effectiveEquipmentRepo.addEquipment(name, frameType, linkedDeviceIds)
+            }
 
             // If the insertion was successful, update the link table
             if (newEquipmentId != -1L) {

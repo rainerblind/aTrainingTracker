@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:40:27.254Z" hostname="rainer-HP-EliteBook-850-G5" time="3.572">
+  <properties/>
+  <testcase name="testWorkoutData_defaultRaceIsFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.733"/>
+  <testcase name="testWorkoutData_headerDataReflectsRaceTrue" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.686"/>
+  <testcase name="testWorkoutDataMapper_fromCursor_mapsRaceFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.748"/>
+  <testcase name="testWorkoutDataMapper_fromCursor_mapsRaceTrue" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.728"/>
+  <testcase name="testWorkoutHeaderData_defaultRaceIsFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.677"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'AbstractCursor.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector88.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.AbstractCursor.$$robo$$android_database_AbstractCursor$__constructor__(AbstractCursor.java:227)
+	at android.database.AbstractCursor.<init>(AbstractCursor.java:225)
+	at android.database.MatrixCursor.<init>(MatrixCursor.java:45)
+	at android.database.MatrixCursor.<init>(MatrixCursor.java:63)
+	at com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest.createSampleCursor(WorkoutDataMapperRecordingErrorsParityTest.kt:96)
+	at com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest.testRule20MappingSymmetryWithNullErrors(WorkoutDataMapperRecordingErrorsParityTest.kt:166)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'AbstractCursor.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector88.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.AbstractCursor.$$robo$$android_database_AbstractCursor$__constructor__(AbstractCursor.java:227)
+	at android.database.AbstractCursor.<init>(AbstractCursor.java:225)
+	at android.database.MatrixCursor.<init>(MatrixCursor.java:45)
+	at android.database.MatrixCursor.<init>(MatrixCursor.java:63)
+	at com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest.createSampleCursor(WorkoutDataMapperRecordingErrorsParityTest.kt:96)
+	at com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest.testRule20MappingSymmetryWithNonNullErrors(WorkoutDataMapperRecordingErrorsParityTest.kt:138)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

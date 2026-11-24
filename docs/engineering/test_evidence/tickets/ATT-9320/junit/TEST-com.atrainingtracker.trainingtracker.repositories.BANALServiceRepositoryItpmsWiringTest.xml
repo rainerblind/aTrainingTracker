@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:41:23.455Z" hostname="rainer-HP-EliteBook-850-G5" time="4.496">
+  <properties/>
+  <testcase name="testDeviceDataRepositoryUpdateDevice_emitsBaselineChangedAndUpdatesLiveEstimator_tstSen034_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="1.685"/>
+  <testcase name="testNullLocationAccuracyBearing_dualWheelTpmsStillDetectsRearPunctureGpsFree_tstSen034_2" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="0.214"/>
+  <testcase name="testNullOrNonFiniteGnssAccuracyOrBearing_skipsIndirectTpmsWithoutFabricatingDefaults_tstSen034_2" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="0.176"/>
+  <testcase name="testLiveResetSignalsZeroOverwriteAndErrorPreservation_tstSen034_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="0.195"/>
+  <testcase name="testDeviceDataRepositoryResetBranches_emitBaselineChangedToBanalServiceRepository_tstSen034_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="1.68"/>
+  <testcase name="testBaselineCircumferenceChangedFlow_isBufferedAndDeliversWithoutDropping_tstSen034_3" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="0.162"/>
+  <testcase name="testOutOfOrderAsyncIoLoad_staleCompletionIsDiscardedAndDoesNotOverwriteNewerBaseline_tstSen034_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="0.168"/>
+  <testcase name="testPersistedBaselineLoaded_triggersLowPressureAlertAndDeduplicatesColdStartIo_tstSen034_1" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryItpmsWiringTest" time="0.213"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

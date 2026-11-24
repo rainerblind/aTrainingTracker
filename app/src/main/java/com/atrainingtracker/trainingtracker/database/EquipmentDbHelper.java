@@ -219,6 +219,22 @@ public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
      * @param linkedDeviceIds The new list of sensor IDs to link to this equipment.
      */
     public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds, boolean isRetired) {
+        updateEquipment(id, name, frameType, linkedDeviceIds, isRetired, null);
+    }
+
+    /**
+     * Atomically updates equipment metadata, sensor links, and explicit wheel mounting positions
+     * (`REQ-SEN-035.3`). Any linked device omitted from {@code wheelPositions} preserves its
+     * previously persisted SQLite wheel position (defaulting to {@link WheelPosition#UNSPECIFIED}).
+     */
+    public void updateEquipment(
+            long id,
+            String name,
+            int frameType,
+            @NonNull List<Long> linkedDeviceIds,
+            boolean isRetired,
+            @Nullable java.util.Map<Long, WheelPosition> wheelPositions
+    ) {
         if (id <= 0) {
             return;
         }
@@ -234,7 +250,7 @@ public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
             values.put(RETIRED, isRetired ? 1 : 0);
             db.update(EQUIPMENT, values, C_ID + "=?", new String[]{String.valueOf(id)});
 
-            // Query existing wheel positions to preserve them during equipment updates
+            // Query existing wheel positions to preserve them for untouched sensors during equipment updates
             java.util.Map<Long, WheelPosition> existingPositions = new java.util.HashMap<>();
             try {
                 try (Cursor cursor = db.query(LINKS, new String[]{ANT_DEVICE_ID, WHEEL_POSITION},
@@ -259,12 +275,17 @@ public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
             // 2. Clear existing links for this equipment
             db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
 
-            // 3. Insert new links preserving wheel positions
+            // 3. Insert new links applying explicit draft wheelPositions and preserving untouched existing positions
             for (Long deviceId : linkedDeviceIds) {
                 ContentValues linkValues = new ContentValues();
                 linkValues.put(EQUIPMENT_ID, id);
                 linkValues.put(ANT_DEVICE_ID, deviceId);
-                WheelPosition pos = existingPositions.get(deviceId);
+                WheelPosition pos;
+                if (wheelPositions != null && wheelPositions.containsKey(deviceId)) {
+                    pos = wheelPositions.get(deviceId);
+                } else {
+                    pos = existingPositions.get(deviceId);
+                }
                 linkValues.put(WHEEL_POSITION, pos != null ? pos.name() : WheelPosition.UNSPECIFIED.name());
                 db.insert(LINKS, null, linkValues);
             }
@@ -1024,6 +1045,19 @@ public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
      * @return The ID of the newly created equipment.
      */
     public long addEquipment(String name, int frameType, List<Long> linkedDeviceIds) {
+        return addEquipment(name, frameType, linkedDeviceIds, null);
+    }
+
+    /**
+     * Atomically inserts new equipment alongside linked sensors and optional wheel mounting positions
+     * (`REQ-SEN-035.3`).
+     */
+    public long addEquipment(
+            String name,
+            int frameType,
+            List<Long> linkedDeviceIds,
+            @Nullable java.util.Map<Long, WheelPosition> wheelPositions
+    ) {
         if (DEBUG) Log.i(TAG, "addEquipment: " + name + ", " + frameType + ", " + linkedDeviceIds);
 
         SQLiteDatabase db = this.getWritableDatabase();
@@ -1044,11 +1078,13 @@ public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
 
             newId = db.insert(EQUIPMENT, null, values);
 
-            if (newId != -1) {
+            if (newId != -1 && linkedDeviceIds != null) {
                 for (Long deviceId : linkedDeviceIds) {
                     ContentValues linkValues = new ContentValues();
                     linkValues.put(EQUIPMENT_ID, newId);
                     linkValues.put(ANT_DEVICE_ID, deviceId);
+                    WheelPosition pos = (wheelPositions != null) ? wheelPositions.get(deviceId) : null;
+                    linkValues.put(WHEEL_POSITION, pos != null ? pos.name() : WheelPosition.UNSPECIFIED.name());
                     db.insert(LINKS, null, linkValues);
                 }
             }
@@ -1057,6 +1093,9 @@ public class EquipmentDbHelper extends TrackingSQLiteOpenHelper {
             db.endTransaction();
         }
 
+        if (newId != -1) {
+            EquipmentRepository.notifyEquipmentLinksChanged(null);
+        }
         if (DEBUG) Log.i(TAG, "added equipment with id: " + newId);
         return newId;
     }

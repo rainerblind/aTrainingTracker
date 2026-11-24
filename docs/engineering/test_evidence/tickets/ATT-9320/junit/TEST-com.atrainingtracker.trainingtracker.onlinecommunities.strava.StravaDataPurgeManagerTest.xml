@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataPurgeManagerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:41:20.993Z" hostname="rainer-HP-EliteBook-850-G5" time="2.45">
+  <properties/>
+  <testcase name="testExecuteLocalDataPurge_clearsAllStorageVectors" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataPurgeManagerTest" time="1.494"/>
+  <testcase name="testExecuteLocalDataPurge_preservesInvariants" classname="com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataPurgeManagerTest" time="0.956"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

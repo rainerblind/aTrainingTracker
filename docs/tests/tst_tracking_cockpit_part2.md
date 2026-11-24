@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.32  
+**Version**: 1.0.34  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 101
+**Total Tests**: 102
 
 ---
 
@@ -2163,6 +2163,22 @@
 
 ---
 
+### TST-SEN-035: `EditEquipmentDialog` Wheel Position Prompt, Display & Persistence Suite (`ATT-9320`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-SEN-035` (`REQ-SEN-035.1`, `REQ-SEN-035.2`, `REQ-SEN-035.3`)
+- **Component**: `EditEquipmentDialog.kt`, `EquipmentTabsScreen.kt`, `EquipmentViewModel.kt`, `EquipmentRepository.kt`, `EquipmentDbHelper.java`
+- **Jira**: `ATT-9320` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `EditEquipmentDialogWheelPositionTest#testDraftWheelPositionHelpers_conflictHintsSwapAndThirdSensorDemotion_TST_SEN_035_1`, `EditEquipmentDialogWheelPositionTest#testAddBike_tappingWheelSpeedSensorPromptsDialogAndPersistsFrontRearOnSave_TST_SEN_035_1`, `EditEquipmentDialogWheelPositionTest#testEditBike_conflictSwapUnlinkAndPreservesUntouchedPositions_TST_SEN_035_1`, `EditEquipmentDialogWheelPositionTest#testNonWheelSensorsAndShoes_toggleDirectlyWithoutWheelPositionDialog_TST_SEN_035_2`, `EquipmentRepositoryWheelPositionTest#testAddAndUpdateEquipmentWithWheelPositions_persistsSwapsAndPreservesUntouched_TST_SEN_035_3`, `EquipmentViewModelMatrixTest#testAddAndUpdateEquipment_dispatchesWheelPositionOverloadsWhenPopulated_TST_SEN_035_3`
+- **Test Description**:
+  1. *Wheel Position Prompt, Conflict Swap & Unlink (`TST-SEN-035.1` — `EditEquipmentDialogWheelPositionTest.kt`)*:
+     • Verify in Compose UI (`createComposeRule()`) and helper unit tests that tapping a `BIKE_SPEED` or `BIKE_SPEED_AND_CADENCE` sensor on a bike (`frameType > 0`) opens `WheelPositionSelectionDialog`, displays conflict swap hints when another selected sensor occupies `FRONT`/`REAR`, swaps positions cleanly on conflict selection (2-sensor swap, free-opposite move, 3rd-sensor fallback to `UNSPECIFIED`), unlinks on `Unlink Sensor`, and preserves untouched positions on Save.
+  2. *Visible Position Summary/Badges & Non-Wheel Sensor Passthrough (`TST-SEN-035.2` — `EditEquipmentDialogWheelPositionTest.kt`, `EditEquipmentDialogContractTest.kt`, `WheelPositionSelectionDialogUiTest.kt`)*:
+     • Verify collapsed summary field and expanded sensor rows show localized `Front Wheel`/`Rear Wheel` labels and `F`/`R` badges for linked wheel speed sensors; verify non-wheel sensors (HR, Power, Cadence-only, Radar) and shoe items (`frameType == 0`) toggle directly without opening `WheelPositionSelectionDialog`; verify Light & Dark live emulator PNGs (`Rule 8.5`).
+  3. *Atomic SQLite & ViewModel Persistence (`TST-SEN-035.3` — `EquipmentRepositoryWheelPositionTest.kt`, `EquipmentViewModelMatrixTest.kt`, `EquipmentViewModelRetiredTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify `addEquipment(..., wheelPositions)` and `updateEquipment(..., wheelPositions)` persist `FRONT`/`REAR`/swapped positions atomically in SQLite, preserve existing positions for untouched linked sensors when omitted or using legacy 5-arg overload, and pass all adjacent equipment/contract suites (`Localization Parity: N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2317,3 +2333,5 @@
 | `1.0.30` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Added `[Planned]` `TST-FIL-045` (`.1`–`.3`, strictly symmetric `REQ-FIL-045`) covering `Zum Bäcker #59` `134 s` auto-pause & `4 s`/`17 s`/`>10 min` multi-pause SQLite/`Laps.db` parity, `reconstructTimingWithPauses()` beat/stall/null immunity, segment-independent odometry & altitude/slope ERTS decoupling, `Long` overflow guards, and aligned `TST-FIL-027.1` assertions (`N/A - 0 string changes`). |
 | `1.0.31` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Gate 3 (`ATT-9679`) revision on `[Planned]` `TST-FIL-045`: added out-and-back 180° heading-reversal test (Segment 2 West with Segment 0 explicit East), repeated `4 s` auto-pause timestamp sync & `TIME_TOTAL` pause on `TIME_ACTIVE == null` row tests, trailing 1-sample altitude segment (`ascentM`/`descentM`/bias/`fallbackInitialAlt`) & DEM-only bias handoff tests, per-segment `detectAndCompensateBaroResetSteps()` isolation, and `updateExtrema()` `pauseGapMask` parity. |
 | `1.0.32` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Promoted `TST-FIL-045` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`106/106` PASS across `11` targeted suites: `ErtsPostWorkoutRecomputerTest` `22/22`, `ExtendedRtsOdometrySmootherTest` `15/15`, `ExtendedRtsAltitudeSlopeSmootherTest` `11/11`, `UnicycleOdometryEkfTest` `21/21`, `BarometricAltitudeFilterTest` `7/7`, `TrackerServiceErtsFinalizationTest` `2/2`, `LapsDatabaseManagerTest` `11/11`, `WorkoutDataMapperLapsTest` `1/1`, `AdvancedTuningErtsContractTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9242/`). |
+| `1.0.33` | 2026-11-24 | Lane 1 Author (`ATT-9320`, `--as agent1`) | `ATT-9320` | Added `[Planned]` `TST-SEN-035` (`.1`–`.3`, strictly symmetric `REQ-SEN-035`) covering `EditEquipmentDialog` `WheelPositionSelectionDialog` prompting, conflict swap & unlink, visible position summary/row badges, non-wheel sensor passthrough, atomic `addEquipment`/`updateEquipment` SQLite & ViewModel persistence, and live Light/Dark `Rule 8.5` emulator verification (`N/A - 0 string changes`). |
+| `1.0.34` | 2026-11-24 | Lane 1 Author (`ATT-9320`, `--as agent1`) | `ATT-9320` | Promoted `TST-SEN-035` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`64/64` PASS across `18` targeted suites: `EditEquipmentDialogWheelPositionTest` `4/4`, `EquipmentRepositoryWheelPositionTest` `2/2`, `EquipmentViewModelMatrixTest` `4/4`, `EditEquipmentDialogContractTest` `1/1`, `EquipmentViewModelRetiredTest` `4/4`, `EquipmentTabsScreenContractTest` `1/1`, `WheelPositionSelectionDialogUiTest` `4/4`, `WheelPositionDialogsTest` `4/4`, `EquipmentSensorMatrixScreenTest` `7/7`, `EquipmentSensorMatrixContractTest` `5/5`, `EquipmentSensorMatrixWheelPositionTest` `2/2`, `EditDeviceEquipmentWheelPositionTest` `5/5`, `EditDeviceViewModelTest` `1/1`, `EquipmentDbHelperMigrationTest` `3/3`, `WheelCircumferenceHistoryDbTest` `2/2`, `WheelCircumferenceHistoryChartTest` `1/1`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` SQLite + `4` Light/Dark `Rule 8.5` PNGs verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9320/`). |

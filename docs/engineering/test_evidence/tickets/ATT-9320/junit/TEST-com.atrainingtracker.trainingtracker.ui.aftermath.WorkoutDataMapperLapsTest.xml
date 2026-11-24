@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLapsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:40:19.908Z" hostname="rainer-HP-EliteBook-850-G5" time="3.926">
+  <properties/>
+  <testcase name="testFromCursor_single_queriesLapsDatabaseManager" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLapsTest" time="1.363"/>
+  <testcase name="testFromCursor_batch_workoutWithoutLaps_defaultsToEmptyList" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLapsTest" time="0.843"/>
+  <testcase name="testFromCursor_batch_mapsLapsFromBatchMetadataWithoutDatabaseQuery" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLapsTest" time="0.859"/>
+  <testcase name="testFromCursor_invalidDateTime_fallbackToEpochSentinel" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLapsTest" time="0.861"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

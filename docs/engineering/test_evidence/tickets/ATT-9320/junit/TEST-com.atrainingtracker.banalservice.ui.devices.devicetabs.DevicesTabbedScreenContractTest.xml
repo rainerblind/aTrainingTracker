@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:39:32.227Z" hostname="rainer-HP-EliteBook-850-G5" time="0.23">
+  <properties/>
+  <testcase name="testDevicesTabbedScreen_matrixTabsLinkIconContract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.1"/>
+  <testcase name="testDevicesTabbedScreen_sortOrderContract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.026"/>
+  <testcase name="testDevicesTabbedScreen_onScanForSensors_contract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.001"/>
+  <testcase name="testDevicesTabbedScreen_fiveTabsContract" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenContractTest" time="0.102"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

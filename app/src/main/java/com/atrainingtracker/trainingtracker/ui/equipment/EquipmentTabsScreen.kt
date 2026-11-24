@@ -275,7 +275,9 @@ fun EquipmentTabsScreen(
                     addedItem.name,
                     addedItem.frameType,
                     addedItem.linkedDeviceIds,
-                    addedItem.linkedSportTypeIds)
+                    addedItem.linkedSportTypeIds,
+                    addedItem.linkedDeviceWheelPositions
+                )
                 isAddingNew = false
             }
         )

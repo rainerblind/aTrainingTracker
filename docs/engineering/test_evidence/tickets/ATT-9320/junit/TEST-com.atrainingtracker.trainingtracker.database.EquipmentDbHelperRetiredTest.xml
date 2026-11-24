@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:39:37.884Z" hostname="rainer-HP-EliteBook-850-G5" time="2.624">
+  <properties/>
+  <testcase name="testEquipmentData_isRetiredDefaultAndExplicit" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" time="0.598"/>
+  <testcase name="testSetEquipmentRetired_persistsValue" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" time="0.472"/>
+  <testcase name="testGetEquipmentItems_activeOnly_appendsRetiredClause" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" time="0.413"/>
+  <testcase name="testIsEquipmentRetired_returnsFalseWhenColumnIsZero" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" time="0.37"/>
+  <testcase name="testUpdateEquipment_withIsRetiredTrue_persistsRetiredOne" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" time="0.386"/>
+  <testcase name="testIsEquipmentRetired_returnsTrueWhenColumnIsOne" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperRetiredTest" time="0.385"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

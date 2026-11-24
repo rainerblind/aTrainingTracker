@@ -187,4 +187,58 @@ class EquipmentViewModelMatrixTest {
         verify(exactly = 1) { mockEquipmentRepo.setDeviceLink(1L, 10L, false) }
         assertEquals(listOf(20L), viewModel.bikes.value[0].linkedDeviceIds)
     }
+
+    // REQ-SEN-035.3 / TST-SEN-035.3: addEquipment & updateEquipment dispatch wheel-position overloads when populated
+    @Test
+    fun testAddAndUpdateEquipment_dispatchesWheelPositionOverloadsWhenPopulated_TST_SEN_035_3() {
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockDeviceRepo.allRemoteSensors } returns emptyList()
+        val addPositions = mapOf(2L to com.atrainingtracker.trainingtracker.database.WheelPosition.FRONT)
+        every {
+            mockEquipmentRepo.addEquipment("Gravel Bike", 2, listOf(2L), addPositions)
+        } returns 77L
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // 1. addEquipment with wheel positions uses 4-arg overload
+        viewModel.addEquipment("Gravel Bike", 2, listOf(2L), listOf(10L), addPositions)
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 1) { mockEquipmentRepo.addEquipment("Gravel Bike", 2, listOf(2L), addPositions) }
+        verify(exactly = 1) { mockEquipmentRepo.updateLinksForEquipment(77L, listOf(10L)) }
+
+        // 2. updateEquipment with wheel positions uses 6-arg overload
+        val swapPositions = mapOf(
+            2L to com.atrainingtracker.trainingtracker.database.WheelPosition.REAR,
+            3L to com.atrainingtracker.trainingtracker.database.WheelPosition.FRONT
+        )
+        val itemWithPositions = EquipmentItem(
+            id = 77L,
+            name = "Gravel Bike",
+            linkedDeviceIds = listOf(2L, 3L),
+            linkedDeviceNames = "Front, Rear",
+            linkedSportTypeIds = listOf(10L),
+            linkedSportTypeNames = "Ride",
+            frameType = 2,
+            stravaName = null,
+            stravaId = null,
+            isRetired = false,
+            firstUsed = null,
+            lastUsed = null,
+            statsData = com.atrainingtracker.trainingtracker.ui.components.stats.StatsData(
+                primaryTitle = "Gravel Bike",
+                secondaryTitle = "Total",
+                totalWorkouts = 0,
+                totalDistanceWithUnits = "0",
+                timeWithUnits = "0",
+                totalAscentWithUnits = "0"
+            ),
+            linkedDeviceWheelPositions = swapPositions
+        )
+        viewModel.updateEquipment(itemWithPositions)
+        testDispatcher.scheduler.advanceUntilIdle()
+        verify(exactly = 1) {
+            mockEquipmentRepo.updateEquipment(77L, "Gravel Bike", 2, listOf(2L, 3L), false, swapPositions)
+        }
+    }
 }

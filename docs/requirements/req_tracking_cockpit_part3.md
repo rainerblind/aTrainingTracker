@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.30  
+**Version**: 1.0.32  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 51
+**Total Requirements**: 52
 
 ---
 
@@ -1740,6 +1740,33 @@
 
 ---
 
+### REQ-SEN-035: `EditEquipmentDialog` Wheel Mounting Position Prompt, Display & Atomic Persistence (`ATT-9320`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-035`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003` — Extends Front/Rear wheel mounting position parity (`REQ-SEN-029`, `REQ-SEN-031`, `REQ-SEN-032`) to bike creation and editing in `EditEquipmentDialog.kt`, `EquipmentTabsScreen.kt`, `EquipmentViewModel.kt`, `EquipmentRepository.kt`, and `EquipmentDbHelper.java`.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `EditEquipmentDialog.kt`, `EquipmentTabsScreen.kt`, `EquipmentViewModel.kt`, `EquipmentRepository.kt`, `EquipmentDbHelper.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: PO sprint review of `ATT-8859` identified that while `EquipmentSensorMatrixScreen` and `EditDeviceDialog` prompt for `Front`/`Rear` mounting position via `WheelPositionSelectionDialog`, `EditEquipmentDialog` silently saved newly linked wheel speed sensors as `WheelPosition.UNSPECIFIED` without displaying or letting the user edit their mounting position (`ATT-9320`).
+- **Description**:
+  1. *Wheel Speed Sensor Prompt & Conflict-Swap Staging (`REQ-SEN-035.1`)*: In `EditEquipmentDialog`, when adding or editing a bike (`item.frameType > 0`), tapping a wheel speed sensor (`DeviceType.BIKE_SPEED` or `DeviceType.BIKE_SPEED_AND_CADENCE`) in `MultiSelectSensorSpinner` SHALL open the existing `WheelPositionSelectionDialog` (`Front Wheel` / `Rear Wheel`, dynamic `conflictHints` from other currently selected wheel sensors on the bike, and `Unlink Sensor` when already linked). Selecting a position already occupied by another selected wheel sensor SHALL apply conflict-swap resolution in draft state (swapping positions between 2 sensors, moving to the free opposite wheel, or falling back to `UNSPECIFIED` if a 3rd wheel sensor is linked and both slots are occupied) with zero duplicate `FRONT`/`REAR` assignments; unlinking removes the sensor and its draft position; dismissing discards changes.
+  2. *Visible Mounting Position Display & Non-Wheel Sensor Passthrough (`REQ-SEN-035.2`)*: `MultiSelectSensorSpinner` on bikes SHALL render assigned wheel positions in both the collapsed `OutlinedTextField` summary (`"SensorName (Front Wheel)"` / `"SensorName (Rear Wheel)"` / `"SensorName (Unspecified Position)"`) and on each wheel speed sensor row inside the dropdown (position subtitle + compact `F`/`R` / `V`/`H` badge pill matching `EditDeviceDialog`), reusing existing 9-locale `strings_equipment.xml` resources (`0` new strings). Non-wheel-speed sensors (HR, Power, Cadence-only, Radar) and shoe equipment (`frameType <= 0`) SHALL retain simple 1-tap checkbox toggling without prompting or mutating other sensors' wheel positions.
+  3. *Atomic `addEquipment`/`updateEquipment` Persistence & Preservation (`REQ-SEN-035.3`)*: `EquipmentTabsScreen`, `EquipmentViewModel`, `EquipmentRepository`, and `EquipmentDbHelper` SHALL persist `linkedDeviceWheelPositions` atomically inside the `addEquipment` and `updateEquipment` SQLite transactions via backward-compatible overloads (preserving existing 3-arg `addEquipment` and 5-arg `updateEquipment` signatures and legacy test mocks), preserving previously persisted `WheelPosition` values for untouched already-linked sensors and emitting `EquipmentRepository.notifyEquipmentLinksChanged(null)`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a user opens `EditEquipmentDialog` to add or edit a bike with paired wheel speed sensors (`BIKE_SPEED` / `BIKE_SPEED_AND_CADENCE`) and non-wheel sensors (HR/Power), *When* they tap a wheel speed sensor, *Then* `WheelPositionSelectionDialog` opens with `Front`/`Rear` options (plus conflict swap hint if another sensor holds that slot, and `Unlink` if already linked), updates the visible position label/badge on selection, and persists the exact positions on Save without overwriting untouched sensor positions.
+• *Given* a user taps a non-wheel-speed sensor (HR, Power, Cadence-only, Radar) or edits shoes (`frameType == 0`), *When* they toggle the sensor, *Then* it toggles directly without opening `WheelPositionSelectionDialog`.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-SEN-035` extending `REQ-SEN-029`, `REQ-SEN-031`, and `REQ-SEN-032` to `EditEquipmentDialog`.
+2. *Historical Origin & Commit Trace*: `ATT-7752`, `b08c779e` (`ATT-8719`), `2d7f1489` (`ATT-8859`).
+3. *Root Reason for Existing Formulation*: `EditEquipmentDialog` predated `WHEEL_POSITION` tracking and only passed `List<Long>` `linkedDeviceIds`.
+4. *Preservation of Core Invariants*: Preserves `EditEquipmentDialogContractTest` (`compatibleSensors`, `allSensors = compatibleSensors`), `EquipmentViewModelRetiredTest` 5-arg mock behavior, `WheelPositionSelectionDialog` Front/Rear-only contract (`ATT-8859`), untouched sensor position preservation in SQLite, `<= 1,500` LoC file caps, and `0` string changes.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1879,3 +1906,5 @@
 | `1.0.28` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Added `[Planned]` `REQ-FIL-045` (`.1`–`.3`, linked to `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005`, refining `REQ-FIL-017.1`–`.3`/`027.1`/`032.1`) for `TIME_ACTIVE`-aware pause detection (`dt > 5 s` or `d(TIME_TOTAL)-d(TIME_ACTIVE) > 2 s && extraGap >= 2 s`), segment-independent odometry & altitude/slope ERTS decoupling, `deltaDistanceMeters = 0.0` and `verticalSpeedMps = 0.0` across auto-pause/manual pause gaps, and `Laps.db` / `DISTANCE_m_LAP` parity (`N/A - 0 string changes`). |
 | `1.0.29` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Gate 3 (`ATT-9679`) revision on `[Planned]` `REQ-FIL-045`: fixed `resolveInitialHeadingRad()` relative `(firstEast, firstNorth)` chord offset & Segment 0-only `explicitHeadingRad` (blocking 180° out-and-back inversion), added `timeActivePauseTs` timestamp advancement & null-`TIME_ACTIVE` `prevPair*` reset on any pause branch, hardened altitude `n == 1` `ascentOffset`/`descentOffset` + `fallbackInitialAlt` + DEM-only `inheritedBaroBias` handoff, and isolated `detectAndCompensateBaroResetSteps()` per segment + `updateExtrema()` `pauseGapMask` parity. |
 | `1.0.30` | 2026-11-24 | Lane 1 Author (`ATT-9242`, `--as agent1`) | `ATT-9242` | Promoted `REQ-FIL-045` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9679`) PASS, Stage 4 implementation (`ErtsPostWorkoutRecomputer.kt` `1,252/1,500`, `ExtendedRtsOdometrySmoother.kt` `1,042/1,500`, `ExtendedRtsAltitudeSlopeSmoother.kt` `757/1,500`, `0` new warnings), `106/106` targeted unit/Robolectric/contract tests PASS across `11` suites (`ErtsPostWorkoutRecomputerTest` `22/22`, `ExtendedRtsOdometrySmootherTest` `15/15`, `ExtendedRtsAltitudeSlopeSmootherTest` `11/11`), and `docs/engineering/walkthroughs/ATT-9242_walkthrough.md`. |
+| `1.0.31` | 2026-11-24 | Lane 1 Author (`ATT-9320`, `--as agent1`) | `ATT-9320` | Added `[Planned]` `REQ-SEN-035` (`.1`–`.3`, linked to `SYSREQ-TRK-001`, `SYSREQ-TRK-003`) for `EditEquipmentDialog` `WheelPositionSelectionDialog` prompting (`Front`/`Rear`, conflict swap hints, `Unlink`), visible position summary/row badges, non-wheel sensor passthrough, and atomic `addEquipment`/`updateEquipment` persistence (`N/A - 0 string changes`). |
+| `1.0.32` | 2026-11-24 | Lane 1 Author (`ATT-9320`, `--as agent1`) | `ATT-9320` | Promoted `REQ-SEN-035` (`.1`–`.3`) to `[Verified]` following `tier-b` implementation (`EditEquipmentDialog.kt` `598/1,500`, `EquipmentTabsScreen.kt` `821/1,500`, `EquipmentViewModel.kt` `452/1,500`, `EquipmentRepository.kt` `331/1,500`, `EquipmentDbHelper.java` `1,147/1,500`, `0` new warnings, `0` new strings), `64/64` targeted unit/Robolectric/contract tests PASS across `18` suites, live `emulator-5554` SQLite `Links` persistence + `0`-crash verification, `4` Light/Dark `Rule 8.5` PNG screenshots audited, and `docs/engineering/tickets/ATT-9320.md`. |

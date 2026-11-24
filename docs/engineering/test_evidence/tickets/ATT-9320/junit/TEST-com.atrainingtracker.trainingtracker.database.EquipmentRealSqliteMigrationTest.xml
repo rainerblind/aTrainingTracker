@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentRealSqliteMigrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:39:43.186Z" hostname="rainer-HP-EliteBook-850-G5" time="0.092">
+  <properties/>
+  <testcase name="testUpgradeV1ToV2AddsRetiredColumnAndPreservesEquipment" classname="com.atrainingtracker.trainingtracker.database.EquipmentRealSqliteMigrationTest" time="0.092"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
