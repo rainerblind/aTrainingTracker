@@ -1,0 +1,15 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "e0293f65763a417be2c0ab5add80325dd68280e5",
+  "files": {
+    "evidence_summary.json": "4ae79b1f8acb16b0fd23412c09048cf5517b7b9ba3bf76693fb82642e4d28e59",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml": "8d85f51dc67a9acbea9106d50e66afed35a8b28916839f641276a641861ec0e2",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml": "e5de660b1b4d27cc21b6b2c12b7d73b751c6bf06ee709a6b4a631792a458b50b",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest.xml": "e6d42a357f9f9e6f8f8d40702cc5c4ada9f6ce459bc1f3bc243fd6cf4c3c5731",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml": "63dd4def0df4605c8a33e34e2e0dc47c2141d0130686db198bd32c98aee76dd7",
+    "screenshots/ATT-9469_emulator_smoke.png": "87ebc7c5683d209a6543f3a27eb9d3305bbf8e6b33ca83d09ddfd19f987cea26"
+  },
+  "run_started_utc": "2026-11-24T03:07:21.666052+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9469"
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" tests="42" skipped="0" failures="0" errors="0" timestamp="2026-11-24T03:09:39.312Z" hostname="rainer-HP-EliteBook-850-G5" time="73.724">
+  <properties/>
+  <testcase name="testPreAnchorWheelAndImuDeadReckoning_reanchorsCleanlyAtFirstValidFix_tstFil023_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="8.375"/>
+  <testcase name="testIngestImuMeasurement_predictsEkfAndEmitsWorldYawRate" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.145"/>
+  <testcase name="smartphoneImu_bikeHandlebarSuppressedAndPocketRegistersDynamicCadenceAndCoasts_tstFil029_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="8.675"/>
+  <testcase name="smartphoneImu_midRunReRegistrationNotifiesLiveListenersWithPreservedStridesWithoutZeroDip_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="2.385"/>
+  <testcase name="smartphoneImu_chreDelayedStepBatchAndInterleavedFifoMaintainPerSensorMonotonicity_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="2.248"/>
+  <testcase name="testResetAndShutDown_clearGyroYawRateWindow_tstFil027_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.034"/>
+  <testcase name="smartphoneImu_subscribes50HzAccelerometerIndependentlyOfGyroAndSurvivesLocationUnavailable_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.031"/>
+  <testcase name="smartphoneImu_interleavedFifoAndDelayedStepBatchDoNotRewindClassificationOrAdaptationClocks_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="2.828"/>
+  <testcase name="testStationaryTightCluster_recoversOffTarget18mAnchorWithoutSpeedSpike_tstFil023_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.036"/>
+  <testcase name="testCyclicPedalingYawRate_averagesOverOneSecondWindowAndPreservesSteadyTurn_tstFil027_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.903"/>
+  <testcase name="testPixel10Minus218sGnssOffsetReplay_enforcesFullDwellZeroModeChatterAndPreservesUtcSidecar_TST_FIL_042_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="5.591"/>
+  <testcase name="testMovementWithoutLocationHasSpeed_breaksStationaryAndAdvancesEkf_tstFil028_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.042"/>
+  <testcase name="smartphoneImu_gatedNonRunStridesDuringDwellAreNotRetroactivelyAddedOnReturnToRun_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.886"/>
+  <testcase name="smartphoneImu_gyroAbsentIndoorRunGatedStridesSportChangeAndReset_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="2.226"/>
+  <testcase name="testIndoorHandheldOscillatingMultipath_remainsPinnedWithZeroDistanceCreep_tstFil036_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.642"/>
+  <testcase name="testGenuineFastStartFromStandstill_tracks9MpsDopplerAndWheelWithoutClamping_TST_FIL_041_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.082"/>
+  <testcase name="testProductionWheelSpeedWiring_updatesSpeedAndCalibratesWheel" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.997"/>
+  <testcase name="testTriggerDecayTick_propagatesZeroSpeedToCarriageClassifierWithInjectableClock_tstFil034_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.989"/>
+  <testcase name="smartphoneImu_outOfOrderBatchedStepEventsClampMonotonicallyWithoutDoubleCounting_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.478"/>
+  <testcase name="testOnLocationChanged_updatesEkfAndEmitsFusedLocation" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.891"/>
+  <testcase name="testDivergentOemSensorTimestamps_uptimeAndEpochNsAlignWithGnssWithoutBreakingDt_TST_FIL_042_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="2.834"/>
+  <testcase name="onLocationChanged_whenGnssActive_recordsPreEkfRawFixExactlyOnceIncludingRejectedFixes_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.913"/>
+  <testcase name="testStationaryRejectedIndoorGnss_publishesZeroSpeedCancelsWatchdogAndFreezesDistance_TST_FIL_041_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.162"/>
+  <testcase name="testWheelTimestampNegativeHalClockSkew_preservesMovingState_tstFil023_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.91"/>
+  <testcase name="testWithinGateFixDoesNotDragAnchor_andUnpinnedClusterSnapSyncsAnchor_tstFil023_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.927"/>
+  <testcase name="testPostPause159sStopAnd19mOutdoorSnap_boundsPublishedSpeedNearDoppler_TST_FIL_041_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.871"/>
+  <testcase name="testProcessWheelCalibrationStep_delegatesToCalibrator" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.951"/>
+  <testcase name="testColdStartSouthEasyRun_releasesPinPromptlyWithout23sFreezeOrTeleport_tstFil036_1_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.485"/>
+  <testcase name="smartphoneImu_preservesStridesAccumulatorAcrossSuppressionAndResume_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="2.349"/>
+  <testcase name="testDegradedMultipathIndoorSpeed_gatedFromClassifierAndStationaryPinning_tstFil034_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.024"/>
+  <testcase name="testStepDetectorDefensiveGating_handlesDeniedNullAndSecurityException_tstFil028_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.86"/>
+  <testcase name="wheelAndGnssRawTap_recordsBeforeFeatureGuardsWithElapsedRealtimeClock_TST_EXP_045_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.875"/>
+  <testcase name="testOnWheelMeasurement_updatesEkfSpeed" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.862"/>
+  <testcase name="testColdGnssFixTightening_suppresses25mJumpAnd46KmhSpike_tstFil023_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.891"/>
+  <testcase name="testShutDown_cleansUpListenersAndResetsWatchdog" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.932"/>
+  <testcase name="testMovingToStationaryWithoutLocationHasSpeed_stopsGhostTailAndPinsZupt_tstFil028_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.029"/>
+  <testcase name="concurrentGpsAndAttFused_deduplicatesIdenticalGpsFixAcrossInterleavedFusedUpdate_TST_EXP_047_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.911"/>
+  <testcase name="testGyroClassificationThrottle_andDtInvariantProfileSmoothing_tstFil028_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.899"/>
+  <testcase name="testHandheldGlanceGatingAndRunningChordHeading_tstFil028_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.526"/>
+  <testcase name="testConstructor_registersAllSensorsIncludingWorldYawRate" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.818"/>
+  <testcase name="liveAttFused_disablesEkfSnapshotRetentionAndThrottlesGyroSetLastActive_TST_STB_023_1" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="1.359"/>
+  <testcase name="testActivityAndCarriageModeSensor_adaptsSmoothlyAndResets_tstFil028_1_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" time="0.837"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>
