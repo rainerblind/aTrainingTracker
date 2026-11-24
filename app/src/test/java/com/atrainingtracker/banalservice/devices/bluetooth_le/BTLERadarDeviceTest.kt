@@ -112,6 +112,9 @@ class BTLERadarDeviceTest {
         val mockDevicesDbManager = mockk<DevicesDatabaseManager>(relaxed = true)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
 
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+
         mockContext = mockk(relaxed = true)
         val mockBtManager = mockk<BluetoothManager>(relaxed = true)
         every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
@@ -1889,5 +1892,205 @@ class BTLERadarDeviceTest {
         fallbackDevice.onOtherCharacteristicUpdateForTesting(mockGatt, nulOnlyChar)
 
         assertNull(fallbackDevice.modelNumber)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731):
+     * configureServices() sets RadarState.isV2BondingRequired strictly when
+     * (v2Char != null && !isBonded && !isV1Override), and keeps it false for legacy V1-only hardware,
+     * bonded V2 units, and developer V1-only override.
+     */
+    @Test
+    fun testConfigureServices_v2BondingRequiredMatrix_strictlyUnbondedV2WithoutOverride_tstCon061_1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockGatt.device } returns mockDevice
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        // Case 1: V2-capable & unbonded & override=false -> isV2BondingRequired = true with device MAC
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_NONE
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+        radarDevice.configureServices(mockGatt)
+        assertTrue("Unbonded V2 radar must set isV2BondingRequired=true", RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals("DC:2C:26:01:02:03", RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // Case 2: Legacy V1-only hardware (v2Char == null) -> clears & stays false
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_NONE
+        radarDevice.configureServices(mockGatt)
+        assertFalse("Legacy V1 radar (v2Char == null) must never set isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+        assertNull(RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // Case 3: Bonded V2 radar -> false
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_BONDED
+        radarDevice.configureServices(mockGatt)
+        assertFalse("Bonded V2 radar must keep isV2BondingRequired=false", RadarStateRepository.getState().isV2BondingRequired)
+
+        // Case 4: Unbonded V2 radar with developer V1-only override -> false
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_NONE
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns true
+        radarDevice.configureServices(mockGatt)
+        assertFalse("Developer V1 override must suppress isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+        assertNull(RadarStateRepository.getState().v2BondingDeviceAddress)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731):
+     * 4-8 Hz processTargets() preserves isV2BondingRequired while true and MUST NOT resurrect it
+     * once cleared externally in RadarStateRepository (e.g., ALREADY_BONDED).
+     */
+    @Test
+    fun testProcessTargets_preservesV2BondingFlagAndNeverResurrectsAfterExternalClear_tstCon061_1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockGatt.device } returns mockDevice
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_NONE
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+
+        // 4-8 Hz target update preserves true
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 50f, 12f, ThreatLevel.APPROACHING)))
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals("DC:2C:26:01:02:03", RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // External helper clears on ALREADY_BONDED -> next 4-8 Hz frame must NOT resurrect true
+        RadarStateRepository.setV2BondingRequired(false, null)
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 40f, 14f, ThreatLevel.APPROACHING)))
+        assertFalse("4-8 Hz frame must NEVER resurrect cleared isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+        assertNull(RadarStateRepository.getState().v2BondingDeviceAddress)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731):
+     * Verifies V2 bonding-required flag clears on trimmed case-insensitive matching BOND_BONDED,
+     * V2 notification receipt, remote disconnect via unregisterSensors(), watchdog expiry,
+     * disconnectFromGatt(), and shutDown().
+     */
+    @Test
+    fun testV2BondingCleared_onTrimmedBondBonded_v2Packet_unregisterSensors_watchdog_andShutDown_tstCon061_1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockGatt.device } returns mockDevice
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_NONE
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+
+        // 1. Trimmed case-insensitive BOND_BONDED matching (wrong MAC & BOND_BONDING ignored)
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.handleBondStateChanged("11:22:33:44:55:66", BluetoothDevice.BOND_BONDED)
+        assertTrue("Non-matching MAC must not clear radar bonding hint", RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.handleBondStateChanged("dc:2c:26:01:02:03", BluetoothDevice.BOND_BONDING)
+        assertTrue("BOND_BONDING must not clear radar bonding hint", RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.handleBondStateChanged("  dc:2c:26:01:02:03  ", BluetoothDevice.BOND_BONDED)
+        assertFalse("Trimmed case-insensitive matching BOND_BONDED must clear hint", RadarStateRepository.getState().isV2BondingRequired)
+
+        // 2. V2 notification receipt clears flag
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.mBluetoothGatt = mockGatt
+        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        every { mockV2Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2
+        every { mockV2Char.value } returns byteArrayOf(0x02, 0x00)
+        radarDevice.measurementCharacteristicUpdateForTesting(mockGatt, mockV2Char)
+        assertFalse("V2 packet receipt must clear isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+
+        // 3. Remote disconnect via unregisterSensors() clears flag
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.unregisterSensors()
+        assertFalse("unregisterSensors() remote-disconnect path must clear isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+
+        // 4. 3.5s starvation watchdog clears flag
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.watchdogRunnableForTesting.run()
+        assertFalse("Watchdog DISCONNECTED_ERROR must clear isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+
+        // 5. disconnectFromGatt() and shutDown() clear flag
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.disconnectFromGatt()
+        assertFalse("disconnectFromGatt() must clear isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+
+        radarDevice.configureServices(mockGatt)
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        radarDevice.shutDown()
+        assertFalse("shutDown() must clear isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+        assertFalse("shutDown() must leave bond receiver unregistered", radarDevice.isBondReceiverRegisteredForTesting)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731 Bounce 1 Heal):
+     * A concurrent remote disconnect (unregisterSensors()) arriving mid-configureServices()
+     * between publishing CONNECTED and reaching setV2BondingRequiredState(true), or a late
+     * configureServices() call after shutDown(), must NEVER leak mBondStateReceiver or stick
+     * RadarStateRepository.isV2BondingRequired = true.
+     */
+    @Test
+    fun testConfigureServices_concurrentDisconnectOrShutDownMidConfigure_neverSticksBondingOrLeaksReceiver_tstCon061_1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockGatt.device } returns mockDevice
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+
+        // 1. Simulate Binder remote disconnect (unregisterSensors()) interleaving right before bonding activation
+        every { mockDevice.bondState } answers {
+            radarDevice.unregisterSensors()
+            BluetoothDevice.BOND_NONE
+        }
+        radarDevice.configureServices(mockGatt)
+        assertFalse(
+            "Concurrent unregisterSensors() mid-configureServices() must prevent sticky isV2BondingRequired",
+            RadarStateRepository.getState().isV2BondingRequired
+        )
+        assertFalse(
+            "Concurrent unregisterSensors() mid-configureServices() must not leak bond receiver",
+            radarDevice.isBondReceiverRegisteredForTesting
+        )
+
+        // 2. Late configureServices() after shutDown() must never re-arm bonding or leak receiver
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_NONE
+        radarDevice.shutDown()
+        radarDevice.configureServices(mockGatt)
+        assertFalse("Post-shutDown configureServices() must never set isV2BondingRequired", RadarStateRepository.getState().isV2BondingRequired)
+        assertFalse("Post-shutDown configureServices() must never register bond receiver", radarDevice.isBondReceiverRegisteredForTesting)
     }
 }

@@ -28,6 +28,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.ui.devices.polar.PolarPmdStreamWarningEffect
+import com.atrainingtracker.banalservice.ui.devices.radar.RadarV2BondingSnackbarEffect
 import com.atrainingtracker.util.safeUnregisterReceiver
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.CockpitStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.NonRecordingStatusBanner
@@ -249,6 +250,10 @@ fun TrackingTabsScreen(
 
     val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
+    RadarV2BondingSnackbarEffect(
+        snackbarHostState = snackbarHostState,
+        isAllowedToShow = (trackingMode == TrackingMode.READY)
+    )
     val screenMode by trackingTabsViewModel.screenMode.collectAsState()
 
     var isAutoPaused by remember { mutableStateOf(TrainingApplication.isAutoPaused()) }

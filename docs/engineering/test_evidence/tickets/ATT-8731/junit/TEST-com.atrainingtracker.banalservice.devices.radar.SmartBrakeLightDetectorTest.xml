@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-24T20:05:59.951Z" hostname="rainer-HP-EliteBook-850-G5" time="1.432">
+  <properties/>
+  <testcase name="testDisabledPreference_doesNotTrigger" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.117"/>
+  <testcase name="testAttitudeCompensation_angledMount" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.114"/>
+  <testcase name="testAutoBypass_whenRearVue820Connected_bypassesSoftwareDetector" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.113"/>
+  <testcase name="testDecelerationDetection_transientDeceleration_doesNotTrigger" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.114"/>
+  <testcase name="testThreadSafety_concurrentAccess_doesNotThrow" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.114"/>
+  <testcase name="testSpeedDerivative_acceleratingSpeed_rejectsDecelerationTrigger" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.113"/>
+  <testcase name="testDecelerationDetection_triggersBrakeEventWhenSustained" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.11"/>
+  <testcase name="testPotholeRejection_highVerticalShock_doesNotTrigger" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.111"/>
+  <testcase name="testDecelerationDetection_belowMinSpeed_doesNotTrigger" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.112"/>
+  <testcase name="testResetMotionState_preservesConfigAndAutoBypass" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.11"/>
+  <testcase name="testSensorLifecycle_startAndStopListening" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.189"/>
+  <testcase name="testSpeedDerivative_deceleratingSpeed_allowsDecelerationTrigger" classname="com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest" time="0.113"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

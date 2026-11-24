@@ -408,4 +408,123 @@ class RadarStateRepositoryTest {
         assertEquals(null, skipped)
         assertFalse(RadarStateRepository.getState().isAutoMode)
     }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731):
+     * Single-source-of-truth V2 bonding flag preservation across CONNECTED BLE frames,
+     * zero resurrection after explicit clear, auto-clear + prompt-latch reset on
+     * DISCONNECTED / DISCONNECTED_ERROR / CONNECTING, and clean BLE > ANT_PLUS arbitration.
+     */
+    @Test
+    fun testV2BondingState_ssotPreservation_disconnectAutoClear_arbitrationAndOneShotLatch_tstCon061_1() {
+        // 1. BLE connects and marks V2 bonding required with untrimmed MAC
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "  AA:BB:CC:DD:EE:FF  ")
+
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals("AA:BB:CC:DD:EE:FF", RadarStateRepository.getState().v2BondingDeviceAddress)
+        assertEquals(RadarV2BondingStatus(true, "AA:BB:CC:DD:EE:FF"), RadarStateRepository.getV2BondingStatus())
+
+        // 2. Subsequent 4-8 Hz BLE CONNECTED frame (default false) preserves SSoT true + MAC
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.APPROACHING,
+                targets = listOf(RadarTarget(1, 30f, 10f, ThreatLevel.APPROACHING)),
+                source = RadarSource.BLE
+            )
+        )
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals("AA:BB:CC:DD:EE:FF", RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // 3. One-shot prompt latch fires strictly once per session (case-insensitive)
+        assertTrue(RadarStateRepository.consumeV2BondingPromptIfPending("aa:bb:cc:dd:ee:ff"))
+        assertFalse(RadarStateRepository.consumeV2BondingPromptIfPending("AA:BB:CC:DD:EE:FF"))
+
+        // 4. Explicit clear (ALREADY_BONDED) clears flag & resets latch; subsequent CONNECTED frame never resurrects it
+        RadarStateRepository.setV2BondingRequired(false, null)
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals(null, RadarStateRepository.getState().v2BondingDeviceAddress)
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        assertFalse("Subsequent CONNECTED frame must not resurrect cleared bonding flag", RadarStateRepository.getState().isV2BondingRequired)
+
+        // 5. BLE > ANT_PLUS arbitration + disconnect auto-clear & failover + prompt latch reset
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertTrue(RadarStateRepository.getState().isV2BondingRequired)
+        assertTrue(RadarStateRepository.consumeV2BondingPromptIfPending("AA:BB:CC:DD:EE:FF"))
+
+        // BLE disconnects -> auto-clears BLE bonding, resets latch, fails over to ANT_PLUS
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.DISCONNECTED, source = RadarSource.BLE)
+        )
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired)
+
+        // Reconnect unbonded BLE -> prompt latch was reset on disconnect, so prompt can fire once again
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertTrue("Disconnect must reset one-shot prompt latch for next connection", RadarStateRepository.consumeV2BondingPromptIfPending("AA:BB:CC:DD:EE:FF"))
+
+        // DISCONNECTED_ERROR and CONNECTING auto-clear bonding flag
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.DISCONNECTED_ERROR, source = RadarSource.BLE)
+        )
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired)
+
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTING, source = RadarSource.BLE)
+        )
+        assertFalse(RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired)
+    }
+
+    /**
+     * TST-CON-061.1 / REQ-CON-061.1 (ATT-8731 Bounce 1 Heal):
+     * setV2BondingRequired(true, ...) MUST be ignored whenever BLE is absent or not CONNECTED
+     * (DISCONNECTED, DISCONNECTED_ERROR, CONNECTING), preventing stale-disconnect races.
+     */
+    @Test
+    fun testV2BondingState_setTrueIgnoredWhenBleNotConnected_tstCon061_1() {
+        // 1. No BLE source state yet -> ignored
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+        assertEquals(null, RadarStateRepository.getState().v2BondingDeviceAddress)
+
+        // 2. Only ANT_PLUS connected -> ignored
+        RadarStateRepository.updateThreatState(
+            RadarThreatState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.ANT_PLUS)
+        )
+        RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+        assertFalse(RadarStateRepository.getState().isV2BondingRequired)
+
+        // 3. BLE DISCONNECTED / DISCONNECTED_ERROR / CONNECTING -> all ignored
+        for (state in listOf(
+            RadarConnectionState.DISCONNECTED,
+            RadarConnectionState.DISCONNECTED_ERROR,
+            RadarConnectionState.CONNECTING
+        )) {
+            RadarStateRepository.updateThreatState(
+                RadarThreatState(connectionState = state, source = RadarSource.BLE)
+            )
+            RadarStateRepository.setV2BondingRequired(true, "AA:BB:CC:DD:EE:FF")
+            assertFalse(
+                "setV2BondingRequired(true) must be ignored when BLE is $state",
+                RadarStateRepository.getState(RadarSource.BLE).isV2BondingRequired
+            )
+            assertEquals(null, RadarStateRepository.getState(RadarSource.BLE).v2BondingDeviceAddress)
+        }
+    }
 }

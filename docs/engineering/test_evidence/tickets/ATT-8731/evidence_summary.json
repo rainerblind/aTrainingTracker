@@ -1,0 +1,80 @@
+{
+  "android_test_summary": {
+    "details": "261/261 PASS across 24 Tier-1 targeted suites (0 failed, 0 errors, 0 skipped; Bounce 1/5 heal verified)",
+    "errors": 0,
+    "failed": 0,
+    "failing_tests": [],
+    "failures": 0,
+    "passed": true,
+    "ran": 261,
+    "skipped": 0,
+    "total": 261
+  },
+  "checks": [
+    {
+      "details": "Android: 261/261 PASS across 24 Tier-1 targeted suites (0 failed, 0 errors, 0 skipped; Bounce 1/5 heal verified) | Python: N/A (0 Python files changed)",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12439 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "8a6d6478af605df700d6d75ccfe9784a57e8d967",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarBluetoothBondingHelperTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarSnoozeControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetectorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngineTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.SolarElevationCalculatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-24T20:14:00.774702+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-8731_radar_v2_bonding_card_light_dark.png",
+    "screenshots/ATT-8731_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-8731",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

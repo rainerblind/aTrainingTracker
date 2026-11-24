@@ -180,4 +180,11 @@
     <string name="developer_menu_radar_section_title">Debugowanie radaru rowerowego</string>
     <string name="developer_menu_radar_v1_only_title">Wymuś protokół radaru V1 (starsza wersja)</string>
     <string name="developer_menu_radar_v1_only_desc">Pomija wykrywanie charakterystyki Garmin Varia V2 i natychmiast przełącza na starszą transmisję strumieniową V1 (6a4e3203).</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">Wymagane parowanie Bluetooth dla V2</string>
+    <string name="radar_v2_bonding_hint_desc">Ten radar obsługuje telemetrię 2D V2 (rozmiar pojazdów i odległość boczną), ale obecnie działa w trybie V1. Sparuj go przez Bluetooth w Androidzie, aby włączyć V2 przy następnym połączeniu.</string>
+    <string name="radar_v2_bonding_pair_action">Sparuj przez Bluetooth</string>
+    <string name="radar_v2_bonding_pair_action_short">Sparuj</string>
+    <string name="radar_v2_bonding_initiated_hint">Rozpoczęto parowanie Bluetooth. Telemetria V2 włączy się po sparowaniu przy następnym połączeniu.</string>
+    <string name="radar_v2_bonding_snackbar_message">Radar działa w trybie V1. Sparuj przez Bluetooth, aby odblokować telemetrię 2D V2.</string>
 </resources>

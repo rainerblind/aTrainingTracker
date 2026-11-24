@@ -180,4 +180,11 @@
     <string name="developer_menu_radar_section_title">Depuração de radar para bicicleta</string>
     <string name="developer_menu_radar_v1_only_title">Forçar protocolo de radar V1 (legado)</string>
     <string name="developer_menu_radar_v1_only_desc">Ignora a deteção de características Garmin Varia V2 e reverte imediatamente para a transmissão legada V1 (6a4e3203).</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">Emparelhamento Bluetooth necessário para V2</string>
+    <string name="radar_v2_bonding_hint_desc">Este radar suporta telemetria 2D V2 (tamanho de veículos e distância lateral), mas está atualmente em modo V1. Emparelhe via Bluetooth no Android para ativar V2 na próxima ligação.</string>
+    <string name="radar_v2_bonding_pair_action">Emparelhar via Bluetooth</string>
+    <string name="radar_v2_bonding_pair_action_short">Emparelhar</string>
+    <string name="radar_v2_bonding_initiated_hint">Emparelhamento Bluetooth iniciado. A telemetria V2 será ativada após emparelhar na próxima ligação.</string>
+    <string name="radar_v2_bonding_snackbar_message">Radar em modo V1. Emparelhe via Bluetooth para ativar a telemetria 2D V2.</string>
 </resources>

@@ -98,14 +98,25 @@ enum class RadarSource(val priority: Int) {
 }
 
 /**
- * Orthogonal high-frequency (4–8 Hz) radar traffic & connection state slice (REQ-CON-056.3, REQ-CON-041).
+ * Compact reactive status slice indicating whether the active V2-capable BLE radar fell back to
+ * legacy V1 due to missing Android Bluetooth bonding (`REQ-CON-061.1`).
+ */
+data class RadarV2BondingStatus(
+    val isRequired: Boolean = false,
+    val deviceAddress: String? = null
+)
+
+/**
+ * Orthogonal high-frequency (4–8 Hz) radar traffic & connection state slice (REQ-CON-056.3, REQ-CON-041, REQ-CON-061.1).
  */
 data class RadarThreatState @JvmOverloads constructor(
     val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,
     val overallThreatLevel: ThreatLevel = ThreatLevel.NONE,
     val targets: List<RadarTarget> = emptyList(),
     val lastUpdateRealtimeMs: Long = 0L,
-    val source: RadarSource = RadarSource.NONE
+    val source: RadarSource = RadarSource.NONE,
+    val isV2BondingRequired: Boolean = false,
+    val v2BondingDeviceAddress: String? = null
 )
 
 /**
@@ -118,7 +129,7 @@ data class RadarLightState @JvmOverloads constructor(
 )
 
 /**
- * Immutable combined UI snapshot of cycling radar system state (REQ-CON-028.4, REQ-CON-056.3, REQ-TRK-064.1).
+ * Immutable combined UI snapshot of cycling radar system state (REQ-CON-028.4, REQ-CON-056.3, REQ-TRK-064.1, REQ-CON-061.1).
  *
  * Derived on demand or via `combine(threatState, lightState, snoozeState)` at UI/ViewModel boundaries.
  */
@@ -131,5 +142,7 @@ data class RadarState @JvmOverloads constructor(
     val isLightControlSupported: Boolean = false,
     val audioSnoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
     val source: RadarSource = RadarSource.NONE,
-    val isAutoMode: Boolean = true
+    val isAutoMode: Boolean = true,
+    val isV2BondingRequired: Boolean = false,
+    val v2BondingDeviceAddress: String? = null
 )

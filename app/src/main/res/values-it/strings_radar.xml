@@ -180,4 +180,11 @@
     <string name="developer_menu_radar_section_title">Debug radar per bicicletta</string>
     <string name="developer_menu_radar_v1_only_title">Forza protocollo radar V1 (legacy)</string>
     <string name="developer_menu_radar_v1_only_desc">Bypassa il rilevamento delle caratteristiche Garmin Varia V2 e ricade immediatamente sullo streaming V1 legacy (6a4e3203).</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">Associazione Bluetooth richiesta per V2</string>
+    <string name="radar_v2_bonding_hint_desc">Questo radar supporta la telemetria 2D V2 (dimensione veicoli e distanza laterale), ma è attualmente in modalità V1. Associalo tramite Bluetooth Android per attivare V2 alla prossima connessione.</string>
+    <string name="radar_v2_bonding_pair_action">Associa via Bluetooth</string>
+    <string name="radar_v2_bonding_pair_action_short">Associa</string>
+    <string name="radar_v2_bonding_initiated_hint">Associazione Bluetooth avviata. La telemetria V2 si attiverà dopo l\'associazione alla prossima connessione.</string>
+    <string name="radar_v2_bonding_snackbar_message">Radar in modalità V1. Associa via Bluetooth per sbloccare la telemetria 2D V2.</string>
 </resources>

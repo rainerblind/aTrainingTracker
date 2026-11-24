@@ -180,4 +180,11 @@
     <string name="developer_menu_radar_section_title">自転車レーダーデバッグ</string>
     <string name="developer_menu_radar_v1_only_title">レーダーV1プロトコルを強制 (レガシー)</string>
     <string name="developer_menu_radar_v1_only_desc">Garmin Varia V2の特性検出をバイパスし、レガシーなV1ストリーミング (6a4e3203) に即座にフォールバックします。</string>
+    <!-- BLE V2 Bluetooth Bonding Hint & Pair Action (ATT-8731 / REQ-CON-061) -->
+    <string name="radar_v2_bonding_hint_title">V2にはBluetoothペアリングが必要です</string>
+    <string name="radar_v2_bonding_hint_desc">このレーダーは2D V2テレメトリ（車両サイズと側方通過距離）に対応していますが、現在はV1モードで動作しています。AndroidのBluetoothでペアリングすると次回接続時にV2が有効になります。</string>
+    <string name="radar_v2_bonding_pair_action">Bluetoothでペアリング</string>
+    <string name="radar_v2_bonding_pair_action_short">ペアリング</string>
+    <string name="radar_v2_bonding_initiated_hint">Bluetoothペアリングを開始しました。ペアリング完了後の次回接続時にV2テレメトリが有効になります。</string>
+    <string name="radar_v2_bonding_snackbar_message">レーダーはV1モードで動作中です。Bluetoothでペアリングして2D V2テレメトリを有効にしてください。</string>
 </resources>

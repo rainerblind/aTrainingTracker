@@ -56,8 +56,11 @@ import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
 import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineGattCoordinator
+import com.atrainingtracker.banalservice.devices.radar.RadarBluetoothBondingHelper
+import com.atrainingtracker.banalservice.devices.radar.RadarBondActionResult
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.devicedata.isWheelSpeedSensor
@@ -209,8 +212,31 @@ fun EditDeviceDialog(
                     AttFusedAltitudeConfigSection(viewModel = viewModel)
                 }
 
-                // 8. Radar Tail Light Mode Control (ATT-7540, ATT-8450, ATT-8125, REQ-CON-031.5, REQ-CON-048, REQ-UI-2799.2)
+                // 8. Radar V2 Bonding Hint & Tail Light Mode Control (ATT-7540, ATT-8450, ATT-8125, ATT-8731, REQ-CON-031.5, REQ-CON-048, REQ-CON-061.3, REQ-UI-2799.2)
                 if (data.deviceType == DeviceType.BIKE_RADAR) {
+                    if (data.protocol == Protocol.BLUETOOTH_LE) {
+                        val bondingContext = LocalContext.current
+                        val bondingStatus by remember { RadarStateRepository.observeV2BondingStatus() }
+                            .collectAsStateWithLifecycle(initialValue = RadarStateRepository.getV2BondingStatus())
+                        val radarIdentityId = (persistedIdentity ?: data).id
+                        val radarMac = remember(radarIdentityId) {
+                            runCatching { viewModel.getBluetoothMacAddress(radarIdentityId) }.getOrNull()
+                        }
+                        var bondActionResult by remember(radarIdentityId, bondingStatus.isRequired) {
+                            mutableStateOf<RadarBondActionResult?>(null)
+                        }
+                        if (shouldShowRadarV2BondingHint(data.deviceType, data.protocol, bondingStatus.isRequired, bondingStatus.deviceAddress, radarMac)) {
+                            RadarV2BondingHintCard(
+                                actionResult = bondActionResult,
+                                onPairClick = {
+                                    bondActionResult = RadarBluetoothBondingHelper.requestBondOrOpenSettings(
+                                        context = bondingContext,
+                                        macAddress = bondingStatus.deviceAddress ?: radarMac
+                                    )
+                                }
+                            )
+                        }
+                    }
                     RadarLightControlSection(
                         isConnected = isConnected,
                         deviceName = currentDevice.deviceName,

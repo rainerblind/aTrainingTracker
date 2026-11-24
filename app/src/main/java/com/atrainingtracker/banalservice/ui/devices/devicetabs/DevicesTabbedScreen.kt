@@ -59,6 +59,7 @@ import com.atrainingtracker.banalservice.ui.devices.PairingProtocolBottomSheet
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.polar.PolarPmdStreamWarningEffect
+import com.atrainingtracker.banalservice.ui.devices.radar.RadarV2BondingSnackbarEffect
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
 import androidx.compose.foundation.rememberScrollState
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
@@ -185,6 +186,7 @@ fun DevicesTabbedScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     PolarPmdStreamWarningEffect(snackbarHostState)
+    RadarV2BondingSnackbarEffect(snackbarHostState = snackbarHostState, isAllowedToShow = true)
     val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(tabViewModel) {
