@@ -434,10 +434,13 @@ object TTColor {
         ClusterVariantBrown
     )
 
-    // Rearview Radar Threat Tokens (REQ-TRK-062.2, ATT-5085)
+    // Rearview Radar Threat Tokens (REQ-TRK-062.2, ATT-5085, REQ-RAD-006, ATT-8735)
     val RadarClearGreen = Color(0xFF2E7D32)
     val RadarThreatAmber = Color(0xFFFF8F00)
     val RadarThreatRed = Color(0xFFD32F2F)
+    val RadarClosePassBrown = Color(0xFF6D4C41)           // Rich Warm Brown 600 for V2 close-pass map markers (7.5:1 on white halo)
+    val RadarMapIconOutlineLight = Color(0xFFFFFFFF)      // Opaque crisp white silhouette halo for light/dark map tiles
+    val RadarMapIconOutlineDark = Color(0xCC121417)       // Subtle outer dark contrast hairline on bright light-mode roads
     val RadarDisconnectedAmber = Color(0xFFE65100)
     val RadarRailTrack = Color(0x33000000)
     val RadarRailTrackBorder = Color(0x22FFFFFF)

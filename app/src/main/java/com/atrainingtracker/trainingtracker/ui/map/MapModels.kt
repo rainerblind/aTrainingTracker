@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.util.NumericalEncodingUtils
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
 
 enum class TrackType(
@@ -156,6 +157,100 @@ object MapVisualization {
 }
 
 
+/**
+ * Semantic hazard/closing-speed color category for aftermarket radar vehicle pass map icons
+ * (`REQ-RAD-006`, `REQ-TRK-073.5`, `ATT-8735`).
+ *
+ * Priority order: [CLOSE_PASS] (Brown) > [HIGH_SPEED] (Red) > [MODERATE_SPEED] (Amber) > [LOW_SPEED] (Green).
+ */
+enum class RadarPassColorCategory {
+    LOW_SPEED,
+    MODERATE_SPEED,
+    HIGH_SPEED,
+    CLOSE_PASS
+}
+
+/**
+ * Lightweight immutable metadata attached to a radar vehicle pass [LocationMarker] for zoom-scaled,
+ * viewport-culled, bounded-cache car/truck icon rendering (`REQ-RAD-006`, `ATT-8735`).
+ */
+@Immutable
+data class RadarPassMarkerData(
+    val passIndex: Int = 0,
+    val colorCategory: RadarPassColorCategory,
+    val isLargeVehicle: Boolean = false,
+    val approachSpeedMps: Double = 0.0,
+    val passingDistanceM: Double? = null
+)
+
+/**
+ * Compose-stable geographic viewport bounding box used for viewport culling of high-density
+ * map layers such as 1,000+ radar pass markers without breaking Compose Strong Skipping (`ATT-8735`).
+ */
+@Immutable
+data class MapViewportBounds(
+    val south: Double,
+    val west: Double,
+    val north: Double,
+    val east: Double
+) {
+    val latSpan: Double
+        get() = (north - south).coerceAtLeast(0.0)
+
+    val lngSpan: Double
+        get() = if (west <= east) (east - west) else (360.0 - (west - east))
+
+    fun contains(point: LatLng): Boolean {
+        if (point.latitude < south || point.latitude > north) return false
+        return if (west <= east) {
+            point.longitude >= west && point.longitude <= east
+        } else {
+            point.longitude >= west || point.longitude <= east
+        }
+    }
+
+    fun containsBounds(other: MapViewportBounds): Boolean {
+        if (other.south < south || other.north > north) return false
+        return if (west <= east) {
+            (west <= -180.0 && east >= 180.0) ||
+                (other.west <= other.east && other.west >= west && other.east <= east)
+        } else {
+            if (other.west > other.east) {
+                other.west >= west && other.east <= east
+            } else {
+                (other.west >= west && other.east >= west) ||
+                    (other.west <= east && other.east <= east)
+            }
+        }
+    }
+
+    fun expandBy(marginFraction: Double): MapViewportBounds {
+        val factor = marginFraction.coerceAtLeast(0.0)
+        val dLat = latSpan * factor
+        val dLng = lngSpan * factor
+        val expandedSouth = (south - dLat).coerceAtLeast(-90.0)
+        val expandedNorth = (north + dLat).coerceAtMost(90.0)
+        if (lngSpan + 2.0 * dLng >= 360.0) {
+            return MapViewportBounds(expandedSouth, -180.0, expandedNorth, 180.0)
+        }
+        val rawWest = west - dLng
+        val rawEast = east + dLng
+        val expandedWest = if (rawWest < -180.0) rawWest + 360.0 else rawWest
+        val expandedEast = if (rawEast > 180.0) rawEast - 360.0 else rawEast
+        return MapViewportBounds(expandedSouth, expandedWest, expandedNorth, expandedEast)
+    }
+}
+
+/**
+ * Converts a Google Maps [LatLngBounds] to a Compose-stable [MapViewportBounds].
+ */
+fun LatLngBounds.toMapViewportBounds(): MapViewportBounds = MapViewportBounds(
+    south = southwest.latitude,
+    west = southwest.longitude,
+    north = northeast.latitude,
+    east = northeast.longitude
+)
+
 data class LocationMarker(
     val position: LatLng,
     @DrawableRes val iconResId: Int,
@@ -167,7 +262,8 @@ data class LocationMarker(
     val draggable: Boolean = false,
     val onDragEnd: (LatLng) -> Unit = {},
     val alpha: Float = 1.0f,
-    val onClick: () -> Boolean = { false }
+    val onClick: () -> Boolean = { false },
+    val radarPass: RadarPassMarkerData? = null
 )
 
 /**

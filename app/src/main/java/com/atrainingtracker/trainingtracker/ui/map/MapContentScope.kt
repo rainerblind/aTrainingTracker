@@ -148,9 +148,15 @@ interface MapContentScope {
      * @param contentRevision Monotonic revision returned by [MapContentScopeImpl.collect] so
      *   Compose Strong Skipping always recomposes layer updates even at constant [currentZoom]
      *   and constant scope instance identity (`REQ-UI-2793`).
+     * @param visibleBounds Optional hysteresis-buffered visible viewport bounds used to cull
+     *   high-density radar pass markers when zoomed in (`REQ-RAD-006`, `ATT-8735`).
      */
     @Composable
-    fun Render(currentZoom: Float, contentRevision: Long = 0L)
+    fun Render(
+        currentZoom: Float,
+        contentRevision: Long = 0L,
+        visibleBounds: MapViewportBounds? = null
+    )
 }
 
 /**
@@ -287,7 +293,11 @@ internal class MapContentScopeImpl(
     }
 
     @Composable
-    override fun Render(currentZoom: Float, contentRevision: Long) {
+    override fun Render(
+        currentZoom: Float,
+        contentRevision: Long,
+        visibleBounds: MapViewportBounds?
+    ) {
         // Explicit read of primitive contentRevision guarantees Compose Strong Skipping includes it
         // in $dirty so layer toggles & live track updates render immediately at constant zoom.
         if (contentRevision < 0L) return
@@ -428,15 +438,21 @@ internal class MapContentScopeImpl(
             }
         }
 
-        // 5. Markers
+        // 5. Markers (Standard pins + zoom-scaled, viewport-culled radar pass icons per REQ-RAD-006 / ATT-8735)
         if (markers.isNotEmpty()) {
-            // ATT-342 Refinement: Dynamically adjust member marker visibility
+            // ATT-342 Refinement: Dynamically adjust member marker visibility (preserving full opacity on radar passes)
             val adjustedMarkers = markers.map { marker ->
-                if (marker.alpha < 1.0f) {
+                if (marker.radarPass == null && marker.alpha < 1.0f) {
                     marker.copy(alpha = marker.alpha * markerAlphaMult)
                 } else marker
             }
-            MarkerLayer(adjustedMarkers, primaryColor, context)
+            MarkerLayer(
+                markers = adjustedMarkers,
+                primaryColor = primaryColor,
+                context = context,
+                currentZoom = currentZoom,
+                visibleBounds = visibleBounds
+            )
         }
 
         // 6. Live Tracks

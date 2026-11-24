@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.106  
+**Version**: 1.0.107  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1569,7 +1569,7 @@
 
 ### REQ-TRK-073: Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-TRK-073`
+- **Tests**: `TST-TRK-073`, `TST-RAD-006`
 - **System Requirement(s)**: `SYSREQ-TRK-006`
 - **Priority**: High
 - **Type**: Functional
@@ -1587,7 +1587,7 @@
      - `1.0 m` (3 ft, UK/US standard)
      - `1.5 m` (StVO § 5 Abs. 4 Innerorts / Urban standard)
      - `2.0 m` (StVO § 5 Abs. 4 Außerorts / Rural standard)
-  5. *Post-Workout Close-Pass Hazard Map Layer (`REQ-TRK-073.5`)*: `WorkoutRepository.getWorkoutMarkers()` SHALL inspect `sample.radarPassingDistanceM` upon vehicle pass intervals ($\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$). If passing distance is less than the configured close-pass threshold, a dedicated Close-Pass Hazard `LocationMarker` (hazard icon) SHALL be placed along the polyline on `TrackOnMapScreen.kt` with tooltip detailing clearance distance, vehicle size, and speed.
+  5. *Post-Workout Close-Pass Hazard Map Layer (`REQ-TRK-073.5`)*: `WorkoutRepository.getWorkoutMarkers()` SHALL inspect `sample.radarPassingDistanceM` and per-pass delta `sample.radarLargeVehicleCount` (`> prevLargeVehicles`) upon vehicle pass intervals ($\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$). If passing distance is less than the configured close-pass threshold, a dedicated compact centered Brown (`TTColor.RadarClosePassBrown`) Close-Pass car/truck `LocationMarker` (`REQ-RAD-006`, `ATT-8735`) SHALL be placed along the polyline on `TrackOnMapScreen.kt` with tooltip detailing clearance distance, accurate per-pass vehicle size, and speed.
   6. *Aftermath Summary Card Clearance Metrics (`REQ-TRK-073.6`)*: `RadarTrafficSummaryCard.kt` SHALL display Minimum Passing Distance, Close-Pass Count (with warning badge when $> 0$), and Large Vehicle Count / Share when V2 telemetry is present.
   7. *FIT Protocol V2.0 Developer Fields (`REQ-TRK-073.7`)*: `FitFileWriter.java` SHALL define and serialize developer fields for `passing_distance` (uint16, scale 100, "m") and `large_vehicle_count` (uint16, scale 1, "vehicles") on `RecordMesg`.
   8. *9-Language Localization Parity (`REQ-TRK-073.8`)*: All close-pass settings, map marker titles, and summary card labels SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.

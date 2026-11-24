@@ -93,6 +93,12 @@ fun resolveMapProperties(
     lightMapType = lightMapType
 )
 
+/**
+ * Plain non-snapshot holder for hysteresis-buffered viewport bounds (Rule 66 / Sec 1.10:
+ * avoids Compose MutableState writes during composition).
+ */
+private class ViewportBoundsHolder(var bounds: MapViewportBounds? = null)
+
 @OptIn(MapsComposeExperimentalApi::class)
 @Composable
 fun ATrainingTrackerMap(
@@ -256,9 +262,32 @@ fun ATrainingTrackerMap(
                     }
                 }
 
+                // Resolve hysteresis-buffered viewport bounds only when zoomed-in radar pass icons are active
+                // (REQ-RAD-006 / ATT-8735), preserving zero recomposition overhead on non-radar or zoomed-out maps.
+                val hasRadarPassMarkers = scope.markers.any { it.radarPass != null }
+                val radarZoomBucket = resolveRadarPassZoomBucket(currentZoom)
+                val viewportBoundsHolder = remember { ViewportBoundsHolder() }
+                val visibleBounds = if (hasRadarPassMarkers && radarZoomBucket != null) {
+                    remember(cameraPositionState.position, cameraPositionState.isMoving, isMapLoaded, radarZoomBucket) {
+                        val currentVisible = runCatching {
+                            cameraPositionState.projection?.visibleRegion?.latLngBounds?.toMapViewportBounds()
+                        }.getOrNull()
+                        val buffered = resolveBufferedViewportBounds(
+                            previousBuffered = viewportBoundsHolder.bounds,
+                            currentVisible = currentVisible,
+                            marginFraction = 0.15
+                        )
+                        viewportBoundsHolder.bounds = buffered
+                        buffered
+                    }
+                } else {
+                    viewportBoundsHolder.bounds = null
+                    null
+                }
+
                 // Render the DSL content with monotonic contentRevision so Compose Strong Skipping
                 // always recomposes dynamic layer toggles and track updates at constant zoom (REQ-UI-2793)
-                scope.Render(currentZoom, contentRevision)
+                scope.Render(currentZoom, contentRevision, visibleBounds)
 
                 // Render Shared Overlays (Scrubber, User Location)
                 val scrubPath = activeScrubPath ?: emptyList()

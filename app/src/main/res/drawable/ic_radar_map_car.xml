@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Compact symmetric front-facing car silhouette for aftermath radar map pass markers
+  ~ (REQ-RAD-006 / ATT-8735). Uses evenOdd cutouts for windshield & headlights so tinting
+  ~ colors the vehicle body cleanly over a dual-contrast white/dark silhouette halo.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 7.8,5.2 L 16.2,5.2 C 17.0,5.2 17.6,5.7 17.9,6.4 L 19.2,10.2 L 19.4,10.2 C 19.9,10.2 20.2,10.6 20.2,11.1 L 20.2,15.8 C 20.2,16.2 19.9,16.5 19.4,16.5 L 19.0,16.5 L 19.0,18.2 C 19.0,18.7 18.6,19.1 18.1,19.1 L 16.7,19.1 C 16.2,19.1 15.8,18.7 15.8,18.2 L 15.8,16.5 L 8.2,16.5 L 8.2,18.2 C 8.2,18.7 7.8,19.1 7.3,19.1 L 5.9,19.1 C 5.4,19.1 5.0,18.7 5.0,18.2 L 5.0,16.5 L 4.6,16.5 C 4.1,16.5 3.8,16.2 3.8,15.8 L 3.8,11.1 C 3.8,10.6 4.1,10.2 4.6,10.2 L 4.8,10.2 L 6.1,6.4 C 6.4,5.7 7.0,5.2 7.8,5.2 Z M 8.0,6.8 L 6.7,10.2 L 17.3,10.2 L 16.0,6.8 Z M 6.8,11.8 A 1.35,1.35 0 1,0 6.8,14.5 A 1.35,1.35 0 1,0 6.8,11.8 Z M 17.2,11.8 A 1.35,1.35 0 1,0 17.2,14.5 A 1.35,1.35 0 1,0 17.2,11.8 Z" />
+</vector>

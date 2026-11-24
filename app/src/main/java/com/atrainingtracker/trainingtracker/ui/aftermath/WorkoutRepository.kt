@@ -87,6 +87,10 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDat
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.RadarPassColorCategory
+import com.atrainingtracker.trainingtracker.ui.map.RadarPassMarkerData
+import com.atrainingtracker.trainingtracker.ui.map.resolveRadarPassColorCategory
+import androidx.compose.ui.geometry.Offset
 import com.atrainingtracker.database.SqliteSchemaUtils
 import com.atrainingtracker.trainingtracker.util.StreamSummaryCalculator
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -2784,31 +2788,51 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
         }
 
-        // 4. Radar Vehicle Pass Markers (REQ-RAD-006 / ATT-5088, REQ-TRK-073.4)
+        // 4. Radar Vehicle Pass Markers (REQ-RAD-006 / ATT-5088 / ATT-8735, REQ-TRK-073.5)
         val radarSummary = workoutData.radarTrafficSummary
         val fileBaseName = workoutData.fileBaseName
         if (radarSummary != null && radarSummary.totalVehicles > 0 && !fileBaseName.isNullOrBlank()) {
             try {
                 var prevVehicles = 0
-                val closePassThresholdM = try {
-                    TuningPreferencesDataStore.getInstance(context).getTuningConfig().radarClosePassThresholdM
-                } catch (_: Throwable) {
+                var prevLargeVehicles = 0
+                var passIndex = 0
+                val closePassThresholdM = if (android.os.Build.VERSION.SDK_INT == 0) {
                     1.5f
+                } else {
+                    try {
+                        TuningPreferencesDataStore.getInstance(context).getTuningConfig().radarClosePassThresholdM
+                    } catch (_: Throwable) {
+                        1.5f
+                    }
                 }
                 streamSamples(fileBaseName) { sample ->
                     val vehCount = sample.radarVehicleCount
+                    val largeVehCount = sample.radarLargeVehicleCount
                     if (vehCount != null && vehCount > prevVehicles) {
                         prevVehicles = vehCount
+                        val isLargeVehicle = if (largeVehCount != null && largeVehCount > prevLargeVehicles) {
+                            prevLargeVehicles = largeVehCount
+                            true
+                        } else {
+                            false
+                        }
                         val lat = sample.latitude
                         val lng = sample.longitude
                         if (lat != null && lng != null && GeoUtils.isValidGpsCoordinate(lat, lng)) {
-                            val appSpdKph = (sample.radarApproachSpeedMps ?: 0.0) * 3.6
+                            passIndex++
+                            val approachSpeedMps = sample.radarApproachSpeedMps ?: 0.0
+                            val appSpdKph = approachSpeedMps * 3.6
                             val passDistM = sample.radarPassingDistanceM
-                            val isClosePass = passDistM != null && passDistM < closePassThresholdM
-                            val isHighThreat = (sample.radarThreatCount ?: 0) >= 2 || appSpdKph >= 25.0
+                            val colorCategory = resolveRadarPassColorCategory(
+                                approachSpeedMps = approachSpeedMps,
+                                passingDistanceM = passDistM,
+                                closePassThresholdM = closePassThresholdM
+                            )
+                            val isClosePass = colorCategory == RadarPassColorCategory.CLOSE_PASS
+                            val isHighThreat = colorCategory == RadarPassColorCategory.HIGH_SPEED || (sample.radarThreatCount ?: 0) >= 2
                             val title = when {
                                 isClosePass -> {
-                                    val vehDesc = if ((sample.radarLargeVehicleCount ?: 0) > 0) {
+                                    val vehDesc = if (isLargeVehicle) {
                                         application.getString(R.string.radar_vehicle_size_truck)
                                     } else {
                                         application.getString(R.string.radar_vehicle_size_car)
@@ -2830,11 +2854,21 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             markerList.add(
                                 LocationMarker(
                                     position = LatLng(lat, lng),
-                                    iconResId = R.drawable.bike_radar,
-                                    title = title
+                                    iconResId = if (isLargeVehicle) R.drawable.ic_radar_map_truck else R.drawable.ic_radar_map_car,
+                                    title = title,
+                                    anchor = Offset(0.5f, 0.5f),
+                                    radarPass = RadarPassMarkerData(
+                                        passIndex = passIndex,
+                                        colorCategory = colorCategory,
+                                        isLargeVehicle = isLargeVehicle,
+                                        approachSpeedMps = approachSpeedMps,
+                                        passingDistanceM = passDistM
+                                    )
                                 )
                             )
                         }
+                    } else if (largeVehCount != null && largeVehCount > prevLargeVehicles) {
+                        prevLargeVehicles = largeVehCount
                     }
                 }
             } catch (e: Exception) {
