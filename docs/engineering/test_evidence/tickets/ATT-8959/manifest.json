@@ -1,0 +1,14 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "1f66c8fd89f9b64f1c477f7c54399edac78347dc",
+  "files": {
+    "evidence_summary.json": "7bb9f6fd303eadf3777c966a4faed2134a3f1851cb85f5d139e74707e24ea78c",
+    "screenshots/ATT-8959_live_settings_selector.png": "302214a6e75300c40a861907a2303a7f09002d8d289ff25dd5465b1e38bfb6d5",
+    "screenshots/ATT-8959_live_topdown_dark.png": "4ea70342f7e6024eaa86c8fc3769f6775e9481ee19acbd58176c2f0f7a8ee63a",
+    "screenshots/ATT-8959_live_topdown_light.png": "faddd0eff92fe1b2bd539f6c21b26ecf7abdc0aa66d0588e427daf576f4469da",
+    "screenshots/ATT-8959_radar_top_down_preview.png": "3fb76ea27d7e25f040b341b98dbcfa87081fed6f5ccc271b6ca2675d7a81f3b5"
+  },
+  "run_started_utc": "2026-11-24T12:47:59.086016+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8959"
+}

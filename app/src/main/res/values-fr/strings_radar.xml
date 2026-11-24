@@ -67,6 +67,11 @@
     <string name="radar_overlay_edge_side">Bord d\'écran</string>
     <string name="radar_overlay_edge_left">Bord gauche</string>
     <string name="radar_overlay_mode_fullscreen">Plein écran</string>
+    <string name="radar_fullscreen_marker_style_title">Style des véhicules (plein écran)</string>
+    <string name="radar_fullscreen_marker_style_badge">Badge compact</string>
+    <string name="radar_fullscreen_marker_style_top_down">Vue de dessus</string>
+    <string name="radar_fullscreen_marker_style_badge_desc">Grandes capsules de distance à contraste élevé avec icônes de véhicules</string>
+    <string name="radar_fullscreen_marker_style_top_down_desc">Silhouettes de voitures et camions vues du dessus dans le sens de la marche</string>
     <string name="radar_overlay_edge_right">Bord droit</string>
     <string name="radar_overlay_clear_mode">Affichage voie libre</string>
     <string name="radar_overlay_clear_mode_slim">Bande fine</string>

@@ -67,6 +67,11 @@
     <string name="radar_overlay_edge_side">Schermrand</string>
     <string name="radar_overlay_edge_left">Linkerrand</string>
     <string name="radar_overlay_mode_fullscreen">Volledig scherm</string>
+    <string name="radar_fullscreen_marker_style_title">Voertuigstijl (volledig scherm)</string>
+    <string name="radar_fullscreen_marker_style_badge">Compacte badge</string>
+    <string name="radar_fullscreen_marker_style_top_down">Bovenaanzicht</string>
+    <string name="radar_fullscreen_marker_style_badge_desc">Grote contrastrijke afstandscapsules met voertuigiconen</string>
+    <string name="radar_fullscreen_marker_style_top_down_desc">Auto- en vrachtwagensilhouetten in bovenaanzicht in de rijrichting</string>
     <string name="radar_overlay_edge_right">Rechterrand</string>
     <string name="radar_overlay_clear_mode">Weergave bij vrije weg</string>
     <string name="radar_overlay_clear_mode_slim">Smalle balk</string>

@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.41  
+**Version**: 1.0.42  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 104
+**Total Tests**: 105
 
 ---
 
@@ -2207,6 +2207,26 @@
 
 ---
 
+### TST-TRK-098: **Full-Screen Radar Top-Down ("GTA-1 Style") Overhead Vehicle Markers & Expert Settings Selector Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-8959`
+- **Requirement(s)**: `REQ-TRK-098` (`REQ-TRK-098.1`–`REQ-TRK-098.3`)
+- **Component**: `RadarTopDownVehicleMarker.kt`, `RadarEdgeOverlay.kt`, `Color.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `TrackingTabsScreen.kt`, `RadarTopDownVehicleMarkerTest.kt`, `RadarEdgeOverlayTest.kt`, `RadarSettingsSectionTest.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Test Type**: Unit
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Enum Persistence & Conditional Expert Settings Selector (`TST-TRK-098.1`, `RadarTopDownVehicleMarkerTest.kt`, `RadarSettingsSectionTest.kt`, `TranslationParityTest.kt`)*:
+     • Verify `RadarFullScreenMarkerStyle` defaults to `COMPACT_BADGE`, `safeEnumValueOf` decodes `COMPACT_BADGE`/`TOP_DOWN_VEHICLES` and falls back to `COMPACT_BADGE` on unknown strings.
+     • Verify `RadarSettingsSection` hides the marker-style segmented control when `edgeSide != FULL_SCREEN`, displays `Compact Badge` / `Top-Down Vehicles` when `edgeSide == FULL_SCREEN`, and invokes `updateRadarFullScreenMarkerStyle(TOP_DOWN_VEHICLES)` on tap; verify 9/9 localization parity across all `values*/strings_radar.xml` files via `TranslationParityTest`.
+  2. *Top-Down Overhead Silhouettes, Proportions, Frame-1 Clamping & Touch Pass-Through (`TST-TRK-098.2`, `RadarTopDownVehicleMarkerTest.kt`, `RadarEdgeOverlayTest.kt`)*:
+     • Assert `resolveTopDownVehicleVisualSpec()` enforces strict size hierarchy (`UNKNOWN_OR_LIGHT < CAR < TRUCK_OR_BUS`, generic compact vehicle kind for `UNKNOWN_OR_LIGHT` — never motorcycle) and `>= 18.sp` tabular typography.
+     • Render `RadarEdgeOverlay` in `FULL_SCREEN` + `TOP_DOWN_VEHICLES` mode with `15m`/`128m`/`160m` targets near lateral/vertical boundaries; assert Frame-1 `.layout` clamping inside container bounds, unclipped distance labels, distinct rendered heights/widths (`UNKNOWN_OR_LIGHT < CAR < TRUCK_OR_BUS`), V1 `!has2DData` lane-guide suppression, non-pulsing solid opaque pixels + hysteresis stability, and direct tap + horizontal swipe pass-through over top-down markers to underlying siblings.
+  3. *Contract Hygiene & Rule 8.5 Live Emulator Visual Inspection (`TST-TRK-098.3`, `ThemeColorCentralizationAuditTest`, `ArchitectureConformanceContractTest`, `Rule 8.5`)*:
+     • Execute `RadarTopDownVehicleMarkerTest`, `RadarEdgeOverlayTest`, `RadarSettingsSectionTest`, `TranslationParityTest`, `ThemeColorCentralizationAuditTest`, and `ArchitectureConformanceContractTest` cleanly (`0` new compiler warnings; `RadarEdgeOverlay.kt <= 1,500` LoC).
+     • Verify live on `emulator-5554` (`com.atrainingtracker.debug` in Light & Dark themes) capturing both Expert Settings marker-style selector and live Full-Screen Top-Down Radar overlay PNGs (`docs/engineering/walkthroughs/img/ATT-8959_*.png`) plus V1/V2 Car/Truck preview composite inspected via `read_file` with clean `logcat`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2370,3 +2390,4 @@
 | `1.0.37` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Promoted `TST-TRK-097` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`125/125` PASS across `19` targeted suites: `TrackingTabTitleResolverTest` `4/4`, `TrackingTabLocaleSwitchRobolectricTest` `2/2`, `TrackingViewsRepositoryTest` `15/15`, `BikePowerCockpitDefaultsAndGatingTest` `6/6`, `13` `trackingtabs.*` suites `74/74`, `ProcessStabilityComposeUiTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` `de -> es -> ja` locale-switch verification + `3` `Rule 8.5` PNGs audited; `0` crashes). |
 | `1.0.40` | 2026-11-24 | Lane 2 Author (`ATT-8674`, `--as agent1`) | `ATT-8674` | Updated `TST-CON-031.9`, `TST-CON-047`, and `TST-CON-048` `[Verified]` for `Off (Radar Only)` top-left / `Smart Auto` top-right swap (`[OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]`; StVZO `[OFF, AUTO], [SOLID]`) and `RadarLightController.cycleNextMode()` (`OFF -> AUTO -> ...`), plus `ATT-8674_quick_switch_{light,dark}.png`. |
 | `1.0.38` | 2026-11-24 | Lane 1 Author (`ATT-8958`, `--as agent1`) | `ATT-8958` | Refined & promoted `TST-TRK-089` (`.1`–`.3`) to `[Verified]` with `58/58` PASS across `3` targeted suites (`RadarEdgeOverlayTest` `42/42` covering `resolveFullScreenVehicleVisualSpec_neverUsesMotorcycleForUnknownOrLight_andEnforcesLargeSizing`, `hasFullScreen2DLateralData_suppressesV1And1DAntPlus_enablesGenuine2D`, `fullScreenLaneGuides_hiddenInV1Mode_andShownInV2Mode`, `stepThreatHysteresis_suppressesAlternatingJitter_andTransitionsOnSustainedSignal`, `fullScreenMarkers_stayOpaqueNonPulsing_andSuppressRedOrangeOscillation`, `captureAtt8958V1AndV2FullScreenPreviewPng`; `ThemeColorCentralizationAuditTest` `5/5`; `ArchitectureConformanceContractTest` `11/11`), live `emulator-5554` Light/Dark `Rule 8.5` PNGs (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8958/`. |
+| `1.0.42` | 2026-11-24 | Lane 1 Author (`ATT-8959`, `--as agent1`) | `ATT-8959` | Added & verified `TST-TRK-098` (`.1`–`.3`) with `84/84` PASS across `6` targeted suites (`RadarTopDownVehicleMarkerTest` `6/6`, `RadarEdgeOverlayTest` `42/42`, `RadarSettingsSectionTest` `9/9`, `TranslationParityTest` `11/11`, `ThemeColorCentralizationAuditTest` `5/5`, `ArchitectureConformanceContractTest` `11/11`), live `emulator-5554` Settings + Light/Dark `Convoy` `Rule 8.5` PNGs (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8959/`. |

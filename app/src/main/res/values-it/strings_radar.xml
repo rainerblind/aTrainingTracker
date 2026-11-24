@@ -67,6 +67,11 @@
     <string name="radar_overlay_edge_side">Bordo dello schermo</string>
     <string name="radar_overlay_edge_left">Bordo sinistro</string>
     <string name="radar_overlay_mode_fullscreen">Schermo intero</string>
+    <string name="radar_fullscreen_marker_style_title">Stile veicoli (schermo intero)</string>
+    <string name="radar_fullscreen_marker_style_badge">Badge compatto</string>
+    <string name="radar_fullscreen_marker_style_top_down">Vista dall\'alto</string>
+    <string name="radar_fullscreen_marker_style_badge_desc">Grandi capsule di distanza ad alto contrasto con icone dei veicoli</string>
+    <string name="radar_fullscreen_marker_style_top_down_desc">Sagome di auto e camion viste dall\'alto allineate al senso di marcia</string>
     <string name="radar_overlay_edge_right">Bordo destro</string>
     <string name="radar_overlay_clear_mode">Visualizzazione strada libera</string>
     <string name="radar_overlay_clear_mode_slim">Barra sottile</string>

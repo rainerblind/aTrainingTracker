@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.39  
+**Version**: 1.0.40  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 54
+**Total Requirements**: 55
 
 ---
 
@@ -1812,6 +1812,36 @@
 
 ---
 
+### REQ-TRK-098: Full-Screen Radar Top-Down ("GTA-1 Style") Overhead Vehicle Markers & Expert Settings Style Selector [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-098`
+- **System Requirement(s)**: `SYSREQ-TRK-004` — Provides optional overhead top-down vehicle visualization in Full-Screen Rearview Radar mode selectable in Expert Settings (`RadarTopDownVehicleMarker.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackingTabsScreen.kt`).
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarTopDownVehicleMarker.kt`, `RadarEdgeOverlay.kt`, `Color.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `TrackingTabsScreen.kt`, `strings_radar.xml`
+- **Localization Parity**: `PASS - 9/9 locales (values*/strings_radar.xml: radar_fullscreen_marker_style_title, radar_fullscreen_marker_style_badge, radar_fullscreen_marker_style_top_down, radar_fullscreen_marker_style_badge_desc, radar_fullscreen_marker_style_top_down_desc)`
+- **Rationale**: Follow-up feature from Pixel 10 Sprint Review of `ATT-8733` (`ATT-8959`, Epic `ATT-1286`, complementing `REQ-TRK-089` and `REQ-TRK-062`). Rendering approaching vehicles as intuitive overhead ("GTA-1 style") car and truck silhouettes aligned with the cyclist's forward travel direction (`bottom -> top`) gives athletes an immediate spatial mental model while letting them choose between *Compact Badge* (`ATT-8958`) and *Top-Down Vehicles* in Expert Settings.
+- **Description**:
+  1. *Persistent Full-Screen Marker Style Setting & 9-Locale Expert Settings Selector (`REQ-TRK-098.1`)*:
+     - `TuningPreferencesDataStore` SHALL define `RadarFullScreenMarkerStyle` (`COMPACT_BADGE`, `TOP_DOWN_VEHICLES`), default `TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE = RadarFullScreenMarkerStyle.COMPACT_BADGE`, `KEY_RADAR_FULL_SCREEN_MARKER_STYLE` (`"tuning_radar_full_screen_marker_style"`), `TuningConfig.radarFullScreenMarkerStyle`, `radarFullScreenMarkerStyleFlow`, and `updateRadarFullScreenMarkerStyle()` with defensive `safeEnumValueOf` fallback and factory-reset cleanup.
+     - `RadarSettingsSection` SHALL display a `TuningSegmentedButtonRow` (`COMPACT_BADGE` vs `TOP_DOWN_VEHICLES`, localized across all 9 `values*/strings_radar.xml` locales) strictly when `tuningConfig.radarEdgeSide == RadarEdgeSide.FULL_SCREEN`, persisting selection immediately to `TuningPreferencesDataStore` and forwarding it from `TrackingTabsScreen` into `RadarEdgeOverlay`.
+  2. *Overhead Top-Down ("GTA-1 Style") Canvas Vehicle Renderer (`REQ-TRK-098.2`)*:
+     - Dedicated sibling file `RadarTopDownVehicleMarker.kt` (keeping `RadarEdgeOverlay.kt <= 1,500` LoC) SHALL draw upward-pointing (`bottom -> top`) overhead vehicle silhouettes using centralized `Color.kt` tokens (`TTColor.RadarTopDown*`, zero inline `Color(0x...)` in composables):
+       • `UNKNOWN_OR_LIGHT`: compact overhead generic vehicle/hatchback (`46×72 dp`, **never** a motorcycle per `ATT-8958`) with bold `18.sp` `tnum` distance badge.
+       • `CAR`: overhead 3-box sedan (`52×84 dp`, larger than `UNKNOWN_OR_LIGHT`) with headlights at top, angled windshield, roof panel, side mirrors, tires, rear glass, taillights at bottom, and bold `19.sp` `tnum` distance badge.
+       • `TRUCK_OR_BUS`: elongated overhead cab + articulated cargo trailer with roof ribs (`60×114 dp`, largest silhouette) and bold `20.sp` `tnum` distance badge.
+     - Distance readouts (`15m`, `128m`, `160m`) SHALL render unclipped in a high-contrast solid opaque (`alpha = 1.0f`) dual-rim capsule coupled with the vehicle silhouette inside a single-pass `.layout` Frame-1 bounds-clamped container (zero overflow at `0.15f`/`0.85f` horizontal and `0.0f`/`1.0f` vertical extremes).
+  3. *Preserved Overlay, Anti-Oscillation & Touch Pass-Through Invariants (`REQ-TRK-098.3`)*:
+     - `RadarTopDownVehicleMarker` MUST attach zero `.clickable`, `.pointerInput`, or `.pointerInteropFilter` modifiers (`REQ-TRK-062.3` 100% touch pass-through for `HorizontalPager` and `GoogleMap`).
+     - All `ATT-8958` invariants (`hasFullScreen2DLateralData` V1 lane-guide suppression, 100% solid opaque non-pulsing threat color, per-target `stepThreatHysteresis`, clear-road badge suppression `ATT-8679`, untouched `LEFT`/`RIGHT` `RadarVerticalRail` `REQ-TRK-073.2`, `private` `@Preview` functions, `0` `src/main` test file reads) SHALL remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `RadarEdgeSide.FULL_SCREEN` selected in `RadarSettingsSection`, *When* the athlete switches `RadarFullScreenMarkerStyle` between `COMPACT_BADGE` and `TOP_DOWN_VEHICLES`, *Then* the segmented selector persists immediately via `TuningPreferencesDataStore` (`safeEnumValueOf` fallback on corrupt/unknown storage) and `RadarEdgeOverlay` switches live between compact capsules and top-down overhead vehicle silhouettes (hiding the selector when `LEFT` or `RIGHT` edge rail is selected).
+• *Given* `RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES` with `UNKNOWN_OR_LIGHT`, `CAR`, and `TRUCK_OR_BUS` targets at `15m`, `128m`, and `160m` near viewport boundaries, *When* rendered in Light, Dark, and Map backdrops, *Then* all three overhead silhouettes (`UNKNOWN_OR_LIGHT < CAR < TRUCK_OR_BUS`, zero motorcycles) and unclipped distance labels stay strictly inside container bounds on Frame 1, pass direct taps and horizontal swipes through to underlying siblings, suppress lane guides when `!has2DData`, and maintain 9/9 localization parity.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1960,3 +1990,4 @@
 | `1.0.35` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Promoted `REQ-TRK-097` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`TrackingTabTitleResolver.kt` `126/1,500`, `TrackingViewsRepository.kt` `707/1,500`, `TrackingTabsScreen.kt` `1,460/1,500`, `TrackingTabPreviewHeader.kt` `122/1,500`, `TrackingTabConfigHeader.kt` `193/1,500`, `0` new production warnings, `0` string changes), `125/125` targeted unit/Robolectric/Compose/contract tests PASS across `19` suites, live `emulator-5554` `de -> es -> ja` locale-switch verification (`3` `Rule 8.5` PNGs inspected, `0` crashes in `logcat`), and `docs/engineering/tickets/ATT-9511.md`. |
 | `1.0.38` | 2026-11-24 | Lane 2 Author (`ATT-8674`, `--as agent1`) | `ATT-8674` | Aligned `REQ-CON-048` `[Verified]` Acceptance Criteria with `REQ-CON-047.3` (`ATT-8674`): `OFF` top-left & `AUTO` top-right (`[OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]`; StVZO `[OFF, AUTO], [SOLID]`). |
 | `1.0.36` | 2026-11-24 | Lane 1 Author (`ATT-8958`, `--as agent1`) | `ATT-8958` | Refined & promoted `REQ-TRK-089` (`.1`–`.3`) to `[Verified]` following `tier-b` implementation (`RadarEdgeOverlay.kt` `1,318/1,500` LoC, `0` new warnings, `0` string edits): replaced V1 `TwoWheeler` with `DirectionsCar`, enlarged stadium markers (`>= 92×42..114×52 dp`, `18–21.sp` bold `tnum`), gated `RadarFullScreenLaneGuides` on `hasFullScreen2DLateralData`, eliminated full-screen fill alpha pulsing + added per-target `stepThreatHysteresis` (`3`/`4`-frame), verified `58/58` PASS (`RadarEdgeOverlayTest` `42/42`, `ThemeColorCentralizationAuditTest` `5/5`, `ArchitectureConformanceContractTest` `11/11`) + live `emulator-5554` Light/Dark `Rule 8.5` PNGs (`0` crashes) and `docs/engineering/tickets/ATT-8958.md`. |
+| `1.0.40` | 2026-11-24 | Lane 1 Author (`ATT-8959`, `--as agent1`) | `ATT-8959` | Added & verified `REQ-TRK-098` (`.1`–`.3`, linked to `SYSREQ-TRK-004`) for optional Full-Screen Radar top-down ("GTA-1 style") overhead Canvas vehicle markers (`RadarTopDownVehicleMarker.kt` `713/1,500`, `RadarEdgeOverlay.kt` `1,334/1,500`, `RadarSettingsSection.kt` `603/1,500`, `TrackingTabsScreen.kt` `1,461/1,500`, `0` new prod warnings, `9/9` locale parity across `values*/strings_radar.xml`), `84/84` targeted tests PASS across `6` suites, live `emulator-5554` Settings + Light/Dark `Convoy` `Rule 8.5` PNGs (`0` crashes), and `docs/engineering/tickets/ATT-8959.md`. |

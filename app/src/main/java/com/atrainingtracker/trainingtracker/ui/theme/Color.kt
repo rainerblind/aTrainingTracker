@@ -442,7 +442,7 @@ object TTColor {
     val RadarRailTrack = Color(0x33000000)
     val RadarRailTrackBorder = Color(0x22FFFFFF)
 
-    // Full-Screen Radar Vehicle Marker & Lane Guide Tokens (REQ-TRK-089.2, ATT-8733)
+    // Full-Screen Radar Vehicle Marker & Lane Guide Tokens (REQ-TRK-089.2, ATT-8733, REQ-TRK-098.2, ATT-8959)
     val RadarFullScreenLaneGuideLight = Color(0x2437474F)
     val RadarFullScreenLaneGuideDark = Color(0x2E90A4AE)
     val RadarFullScreenMarkerScrim = Color(0xE0121417)
@@ -452,6 +452,12 @@ object TTColor {
     val RadarFullScreenMapBackdrop = Color(0xFFE8EFE2)
     val RadarFullScreenMapPark = Color(0xFFD0E3C4)
     val RadarFullScreenMapRoad = Color(0xFFFFFFFF)
+    val RadarTopDownWindshield = Color(0xFF1A222B)
+    val RadarTopDownTire = Color(0xFF141619)
+    val RadarTopDownHeadlight = Color(0xFFFFF9C4)
+    val RadarTopDownTaillight = Color(0xFFFF1744)
+    val RadarTopDownRoofHighlight = Color(0x38FFFFFF)
+    val RadarTopDownTrailerRib = Color(0x30000000)
 
     /**
      * Resolves the authoritative threat color token for a given [ThreatLevel] (REQ-TRK-062.2).

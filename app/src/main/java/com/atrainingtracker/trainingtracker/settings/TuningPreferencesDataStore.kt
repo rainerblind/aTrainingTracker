@@ -73,6 +73,14 @@ enum class RadarEdgeSide {
 }
 
 /**
+ * Full-screen radar vehicle marker rendering style (REQ-TRK-098.1, ATT-8959).
+ */
+enum class RadarFullScreenMarkerStyle {
+    COMPACT_BADGE,
+    TOP_DOWN_VEHICLES
+}
+
+/**
  * Radar clear-state behavior when no active threats are detected (REQ-TRK-062.5).
  */
 enum class RadarClearMode {
@@ -127,6 +135,7 @@ object TuningPreferencesDefaults {
     val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
     val SENSOR_FIELD_VARIANT = SensorFieldVariant.CLASSIC_SEAMLESS
     val RADAR_EDGE_SIDE = RadarEdgeSide.RIGHT
+    val RADAR_FULL_SCREEN_MARKER_STYLE = RadarFullScreenMarkerStyle.COMPACT_BADGE
     val RADAR_CLEAR_MODE = RadarClearMode.SLIM_RAIL
     val RADAR_AUDIO_ALERT_MODE = RadarAudioAlertMode.ALL_ALERTS
     const val RADAR_ALERT_VOLUME = 90
@@ -477,6 +486,7 @@ data class TuningConfig(
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     val hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
     val radarEdgeSide: RadarEdgeSide = TuningPreferencesDefaults.RADAR_EDGE_SIDE,
+    val radarFullScreenMarkerStyle: RadarFullScreenMarkerStyle = TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE,
     val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE,
     val radarAudioAlertMode: RadarAudioAlertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
     val radarAlertVolume: Int = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
@@ -690,6 +700,7 @@ class TuningPreferencesDataStore private constructor(
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
         val KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_hrv_artifact_gate_threshold_percent")
         val KEY_RADAR_EDGE_SIDE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_edge_side")
+        val KEY_RADAR_FULL_SCREEN_MARKER_STYLE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_full_screen_marker_style")
         val KEY_RADAR_CLEAR_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_clear_mode")
         val KEY_RADAR_AUDIO_ALERT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_alert_mode")
         val KEY_RADAR_ALERT_VOLUME: Preferences.Key<Int> = intPreferencesKey("tuning_radar_alert_volume")
@@ -876,6 +887,7 @@ class TuningPreferencesDataStore private constructor(
             KEY_DFA_A1_THRESHOLD_T1,
             KEY_DFA_A1_THRESHOLD_T2,
             KEY_RADAR_EDGE_SIDE,
+            KEY_RADAR_FULL_SCREEN_MARKER_STYLE,
             KEY_RADAR_CLEAR_MODE,
             KEY_RADAR_AUDIO_ALERT_MODE,
             KEY_RADAR_ALERT_VOLUME,
@@ -1285,6 +1297,9 @@ data class AutoPausePreferences(
         val rawRadarEdgeSideStr = prefs[KEY_RADAR_EDGE_SIDE]
         val radarEdgeSide = safeEnumValueOf(rawRadarEdgeSideStr, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
 
+        val rawRadarMarkerStyleStr = prefs[KEY_RADAR_FULL_SCREEN_MARKER_STYLE]
+        val radarFullScreenMarkerStyle = safeEnumValueOf(rawRadarMarkerStyleStr, TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE)
+
         val rawRadarClearModeStr = prefs[KEY_RADAR_CLEAR_MODE]
         val radarClearMode = safeEnumValueOf(rawRadarClearModeStr, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
 
@@ -1436,6 +1451,7 @@ data class AutoPausePreferences(
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
             hrvArtifactGateThresholdPercent = prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
             radarEdgeSide = radarEdgeSide,
+            radarFullScreenMarkerStyle = radarFullScreenMarkerStyle,
             radarClearMode = radarClearMode,
             radarAudioAlertMode = radarAudioAlertMode,
             radarAlertVolume = radarAlertVolume,
@@ -1693,6 +1709,7 @@ data class AutoPausePreferences(
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
             PREF_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT.write(prefs, config.hrvArtifactGateThresholdPercent)
             prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
+            prefs[KEY_RADAR_FULL_SCREEN_MARKER_STYLE] = config.radarFullScreenMarkerStyle.name
             prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
             prefs[KEY_RADAR_AUDIO_ALERT_MODE] = config.radarAudioAlertMode.name
             PREF_RADAR_ALERT_VOLUME.write(prefs, config.radarAlertVolume)
@@ -1883,6 +1900,10 @@ data class AutoPausePreferences(
         safeEnumValueOf(prefs[KEY_RADAR_EDGE_SIDE], TuningPreferencesDefaults.RADAR_EDGE_SIDE)
     }
 
+    val radarFullScreenMarkerStyleFlow: Flow<RadarFullScreenMarkerStyle> = dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_FULL_SCREEN_MARKER_STYLE], TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE)
+    }
+
     val radarClearModeFlow: Flow<RadarClearMode> = dataStore.data.map { prefs ->
         safeEnumValueOf(prefs[KEY_RADAR_CLEAR_MODE], TuningPreferencesDefaults.RADAR_CLEAR_MODE)
     }
@@ -1890,6 +1911,12 @@ data class AutoPausePreferences(
     suspend fun updateRadarEdgeSide(side: RadarEdgeSide) {
         dataStore.edit { prefs ->
             prefs[KEY_RADAR_EDGE_SIDE] = side.name
+        }
+    }
+
+    suspend fun updateRadarFullScreenMarkerStyle(style: RadarFullScreenMarkerStyle) {
+        dataStore.edit { prefs ->
+            prefs[KEY_RADAR_FULL_SCREEN_MARKER_STYLE] = style.name
         }
     }
 

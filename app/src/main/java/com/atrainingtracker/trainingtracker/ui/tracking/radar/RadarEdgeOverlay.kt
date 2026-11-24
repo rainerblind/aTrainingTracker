@@ -110,7 +110,9 @@ import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarFullScreenMarkerStyle
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.delay
@@ -338,6 +340,7 @@ fun RadarEdgeOverlay(
     edgeSide: RadarEdgeSide = RadarEdgeSide.RIGHT,
     clearMode: RadarClearMode = RadarClearMode.SLIM_RAIL,
     trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
+    fullScreenMarkerStyle: RadarFullScreenMarkerStyle = TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE,
     modifier: Modifier = Modifier,
     onBadgeClick: () -> Unit = {},
     onReconnectClick: (() -> Unit)? = null
@@ -389,6 +392,7 @@ fun RadarEdgeOverlay(
                     radarState = fullScreenRadarState,
                     showLaneGuides = showLaneGuides,
                     trafficOrientation = trafficOrientation,
+                    markerStyle = fullScreenMarkerStyle,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(top = 36.dp, bottom = 12.dp)
@@ -614,6 +618,7 @@ private fun RadarFullScreenThreatOverlay(
     radarState: RadarState,
     showLaneGuides: Boolean,
     trafficOrientation: RadarTrafficOrientation,
+    markerStyle: RadarFullScreenMarkerStyle = TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE,
     modifier: Modifier = Modifier
 ) {
     val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
@@ -636,15 +641,28 @@ private fun RadarFullScreenThreatOverlay(
             RadarFullScreenLaneGuides(guideColor = guideColor)
         }
 
-        radarState.targets.forEach { target ->
+        // Draw farthest targets first so closer (higher-urgency) vehicles and distance badges always render on top
+        val orderedTargets = remember(radarState.targets) {
+            radarState.targets.sortedByDescending { it.rangeMeters }
+        }
+        orderedTargets.forEach { target ->
             key(target.targetId) {
-                RadarFullScreenVehicleMarker(
-                    target = target,
-                    maxRangeMeters = maxRangeMeters,
-                    trafficOrientation = trafficOrientation,
-                    usableWidthPx = usableWidthPx,
-                    usableHeightPx = usableHeightPx
-                )
+                when (markerStyle) {
+                    RadarFullScreenMarkerStyle.COMPACT_BADGE -> RadarFullScreenVehicleMarker(
+                        target = target,
+                        maxRangeMeters = maxRangeMeters,
+                        trafficOrientation = trafficOrientation,
+                        usableWidthPx = usableWidthPx,
+                        usableHeightPx = usableHeightPx
+                    )
+                    RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES -> RadarTopDownVehicleMarker(
+                        target = target,
+                        maxRangeMeters = maxRangeMeters,
+                        trafficOrientation = trafficOrientation,
+                        usableWidthPx = usableWidthPx,
+                        usableHeightPx = usableHeightPx
+                    )
+                }
             }
         }
     }

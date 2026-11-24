@@ -1032,6 +1032,7 @@ fun TrackingTabsScreen(
                             edgeSide = tuningConfig.radarEdgeSide,
                             clearMode = tuningConfig.radarClearMode,
                             trafficOrientation = tuningConfig.radarTrafficOrientation,
+                            fullScreenMarkerStyle = tuningConfig.radarFullScreenMarkerStyle,
                             onBadgeClick = {
                                 showRadarLightQuickSwitch = true
                             },
