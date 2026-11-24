@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -1202,6 +1203,10 @@ class TuningPreferencesDataStore private constructor(
 
     fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
 
+    private val syncLock = Any()
+    private val activeEdits = java.util.concurrent.atomic.AtomicInteger(0)
+    private val completedEdits = java.util.concurrent.atomic.AtomicLong(0L)
+
     private fun syncCachedConfig(cfg: TuningConfig) {
         _tuningConfigStateFlow.value = cfg
         _recordSmartphoneRawTelemetryEnabled.value = cfg.recordSmartphoneRawTelemetryEnabled
@@ -1211,10 +1216,19 @@ class TuningPreferencesDataStore private constructor(
     }
 
     private suspend inline fun editAndSync(crossinline transform: (MutablePreferences) -> Unit) {
-        val updated = dataStore.edit { prefs ->
-            transform(prefs)
+        activeEdits.incrementAndGet()
+        try {
+            val updated = dataStore.edit { prefs ->
+                transform(prefs)
+            }
+            val cfg = mapPreferencesToConfig(updated)
+            synchronized(syncLock) {
+                completedEdits.incrementAndGet()
+                syncCachedConfig(cfg)
+            }
+        } finally {
+            activeEdits.decrementAndGet()
         }
-        syncCachedConfig(mapPreferencesToConfig(updated))
     }
 
 /**
@@ -1445,8 +1459,24 @@ data class AutoPausePreferences(
 
     init {
         appScope.launch {
-            tuningConfigFlow.collect { cfg ->
-                syncCachedConfig(cfg)
+            dataStore.data.collect { initialPrefs ->
+                var candidatePrefs = initialPrefs
+                var editsBefore = completedEdits.get()
+                while (true) {
+                    val cfg = mapPreferencesToConfig(candidatePrefs)
+                    val applied = synchronized(syncLock) {
+                        if (activeEdits.get() == 0 && completedEdits.get() == editsBefore) {
+                            syncCachedConfig(cfg)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    if (applied) break
+                    kotlinx.coroutines.yield()
+                    editsBefore = completedEdits.get()
+                    candidatePrefs = dataStore.data.first()
+                }
             }
         }
     }

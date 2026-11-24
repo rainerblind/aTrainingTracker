@@ -448,7 +448,7 @@ internal fun WorkoutMapLayersSheet(
 
 /**
  * Content column of [WorkoutMapLayersSheet], factored cleanly for both [AppModalBottomSheet] and
- * Light/Dark Compose `@Preview` inspection.
+ * Light/Dark Compose preview inspection.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
