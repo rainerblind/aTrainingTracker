@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:57:04.854Z" hostname="rainer-HP-EliteBook-850-G5" time="20.488">
+  <properties/>
+  <testcase name="testEditSensorFieldDialog_showsZoneDisplayForZoneCapableMetrics_andHidesForNonZone" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" time="17.098"/>
+  <testcase name="testResolveZoneProfileTarget_matchesTrackingViewModelMapping" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" time="0.158"/>
+  <testcase name="testEditSensorFieldViewModel_cancelDiscards_savePersistsAndPreservesThresholds" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" time="1.578"/>
+  <testcase name="testEditSensorFieldDialog_cancelThenReopenSameTile_discardsCancelledDraftAndRehydrates" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" time="0.983"/>
+  <testcase name="testCockpitTypographySection_noLongerRendersZoneDisplayControls" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" time="0.527"/>
+  <testcase name="testEditSensorFieldViewModel_delayedRepositoryLoadDoesNotClobberHydratedZoneDisplayDraft" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldZoneDisplayTest" time="0.144"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -31,6 +31,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -67,6 +71,7 @@ import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -1012,9 +1017,215 @@ class RadarEdgeOverlayTest {
         val carBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val truckBounds = composeTestRule.onNodeWithTag("RadarFullScreenMarker_3", useUnmergedTree = true).getUnclippedBoundsInRoot()
 
+        assertTrue("UNKNOWN_OR_LIGHT marker must meet handlebar-legible min width (>= 92.dp), got ${lightBounds.width}", lightBounds.width >= 92.dp)
+        assertTrue("UNKNOWN_OR_LIGHT marker must meet handlebar-legible min height (>= 42.dp), got ${lightBounds.height}", lightBounds.height >= 42.dp)
         assertTrue("CAR marker must exceed UNKNOWN_OR_LIGHT width", carBounds.width > lightBounds.width)
         assertTrue("TRUCK_OR_BUS marker must exceed CAR width", truckBounds.width > carBounds.width)
         assertTrue("TRUCK_OR_BUS marker must exceed CAR height", truckBounds.height > carBounds.height)
+    }
+
+    /**
+     * TST-TRK-089.2 / REQ-TRK-089.2 (ATT-8958): UNKNOWN_OR_LIGHT (V1 / ANT+ / simulator)
+     * must render DirectionsCar (never TwoWheeler motorcycle), TRUCK_OR_BUS renders LocalShipping,
+     * and all categories enforce enlarged handlebar-legible dimensions and >= 18.sp typography.
+     */
+    @Test
+    fun resolveFullScreenVehicleVisualSpec_neverUsesMotorcycleForUnknownOrLight_andEnforcesLargeSizing() {
+        val unknownSpec = resolveFullScreenVehicleVisualSpec(VehicleSizeCategory.UNKNOWN_OR_LIGHT)
+        val carSpec = resolveFullScreenVehicleVisualSpec(VehicleSizeCategory.CAR)
+        val truckSpec = resolveFullScreenVehicleVisualSpec(VehicleSizeCategory.TRUCK_OR_BUS)
+
+        assertNotEquals(
+            "UNKNOWN_OR_LIGHT (V1/ANT+/simulator) must NEVER render motorcycle TwoWheeler icon",
+            Icons.Filled.TwoWheeler,
+            unknownSpec.icon
+        )
+        assertEquals(Icons.Filled.DirectionsCar, unknownSpec.icon)
+        assertEquals(Icons.Filled.DirectionsCar, carSpec.icon)
+        assertEquals(Icons.Filled.LocalShipping, truckSpec.icon)
+
+        assertTrue("UNKNOWN_OR_LIGHT minWidth must be >= 92.dp", unknownSpec.minWidth >= 92.dp)
+        assertTrue("UNKNOWN_OR_LIGHT minHeight must be >= 42.dp", unknownSpec.minHeight >= 42.dp)
+        assertTrue("UNKNOWN_OR_LIGHT fontSize must be >= 18.sp", unknownSpec.fontSize >= 18.sp)
+        assertTrue("UNKNOWN_OR_LIGHT iconSize must be >= 24.dp", unknownSpec.iconSize >= 24.dp)
+
+        assertTrue("CAR dimensions must exceed UNKNOWN_OR_LIGHT", carSpec.minWidth > unknownSpec.minWidth && carSpec.minHeight > unknownSpec.minHeight)
+        assertTrue("TRUCK_OR_BUS dimensions must exceed CAR", truckSpec.minWidth > carSpec.minWidth && truckSpec.minHeight > carSpec.minHeight)
+    }
+
+    /**
+     * TST-TRK-089.1 / REQ-TRK-089.1 (ATT-8958): Pure 2D lateral data gate returns false for V1
+     * and 1D ANT+ frames, and true strictly when genuine 2D lateral offset / lane data is present.
+     */
+    @Test
+    fun hasFullScreen2DLateralData_suppressesV1And1DAntPlus_enablesGenuine2D() {
+        val v1State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING)
+            ),
+            source = RadarSource.BLE
+        )
+        assertFalse("BLE V1 range-only state must not enable 2D lane guides", RadarOverlayMath.hasFullScreen2DLateralData(v1State))
+
+        val ant1DState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 75f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = 0.0f,
+                    laneState = LaneState.IN_RIDER_LANE
+                )
+            ),
+            source = RadarSource.ANT_PLUS
+        )
+        assertFalse("ANT+ 1D default IN_RIDER_LANE/0.0m must not enable 2D lane guides", RadarOverlayMath.hasFullScreen2DLateralData(ant1DState))
+
+        val antPassingState = ant1DState.copy(
+            targets = listOf(ant1DState.targets.first().copy(lateralOffsetMeters = -1.5f, laneState = LaneState.PASSING_LANE))
+        )
+        assertTrue("ANT+ with explicit passing-lane lateral separation enables 2D lane guides", RadarOverlayMath.hasFullScreen2DLateralData(antPassingState))
+
+        val v2State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 60f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = -1.8f,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                )
+            ),
+            source = RadarSource.BLE
+        )
+        assertTrue("BLE V2 lateral offset state must enable 2D lane guides", RadarOverlayMath.hasFullScreen2DLateralData(v2State))
+    }
+
+    /**
+     * TST-TRK-089.1 / REQ-TRK-089.1 (ATT-8958): Compose UI verification confirming 3 vertical
+     * dashed lane guides are completely suppressed in V1 (!has2DData) mode and rendered in V2 2D mode.
+     */
+    @Test
+    fun fullScreenLaneGuides_hiddenInV1Mode_andShownInV2Mode() {
+        val v1State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING),
+                RadarTarget(targetId = 2, rangeMeters = 123f, approachSpeedMps = 14f, threatLevel = ThreatLevel.APPROACHING)
+            ),
+            source = RadarSource.SIMULATOR
+        )
+        val v2State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 80f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = -1.8f,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                )
+            ),
+            source = RadarSource.BLE
+        )
+
+        var activeState by mutableStateOf(v1State)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = activeState,
+                        edgeSide = RadarEdgeSide.FULL_SCREEN,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("RadarFullScreenLaneGuides", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true).assertIsDisplayed()
+
+        composeTestRule.runOnIdle { activeState = v2State }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("RadarFullScreenLaneGuides", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    /**
+     * TST-TRK-089.2 / REQ-TRK-089.2 (ATT-8958): Unit test for stepThreatHysteresis verifying
+     * zero oscillation under alternating 1-frame and 2-frame V1 jitter while sustaining crisp
+     * promotion after 3 consecutive FAST_APPROACHING frames and demotion after 4 APPROACHING frames.
+     */
+    @Test
+    fun stepThreatHysteresis_suppressesAlternatingJitter_andTransitionsOnSustainedSignal() {
+        // Initial detection adopts immediately
+        var state = RadarOverlayMath.stepThreatHysteresis(null, ThreatLevel.APPROACHING)
+        assertEquals(ThreatLevel.APPROACHING, state.displayed)
+
+        // Alternating 1-frame 8-Hz V1 quantization jitter (A, F, A, F, A, F) stays solidly APPROACHING
+        val alternating = listOf(
+            ThreatLevel.FAST_APPROACHING,
+            ThreatLevel.APPROACHING,
+            ThreatLevel.FAST_APPROACHING,
+            ThreatLevel.APPROACHING,
+            ThreatLevel.FAST_APPROACHING,
+            ThreatLevel.APPROACHING
+        )
+        for (level in alternating) {
+            state = RadarOverlayMath.stepThreatHysteresis(state, level)
+            assertEquals("Alternating jitter must never flip to FAST_APPROACHING", ThreatLevel.APPROACHING, state.displayed)
+        }
+
+        // 2-frame burst followed by APPROACHING stays APPROACHING
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.FAST_APPROACHING)
+        assertEquals(ThreatLevel.APPROACHING, state.displayed)
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.FAST_APPROACHING)
+        assertEquals(ThreatLevel.APPROACHING, state.displayed)
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.APPROACHING)
+        assertEquals(ThreatLevel.APPROACHING, state.displayed)
+
+        // 3 consecutive FAST_APPROACHING frames promote cleanly
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.FAST_APPROACHING)
+        assertEquals(ThreatLevel.APPROACHING, state.displayed)
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.FAST_APPROACHING)
+        assertEquals(ThreatLevel.APPROACHING, state.displayed)
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.FAST_APPROACHING)
+        assertEquals("3 consecutive FAST_APPROACHING frames must promote", ThreatLevel.FAST_APPROACHING, state.displayed)
+
+        // 3 consecutive APPROACHING dips during fast threat hold FAST_APPROACHING, then reset on FAST_APPROACHING
+        repeat(3) {
+            state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.APPROACHING)
+            assertEquals("Transient dips (<4 frames) must hold FAST_APPROACHING", ThreatLevel.FAST_APPROACHING, state.displayed)
+        }
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.FAST_APPROACHING)
+        assertEquals(ThreatLevel.FAST_APPROACHING, state.displayed)
+
+        // 4 consecutive APPROACHING frames demote cleanly
+        repeat(3) {
+            state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.APPROACHING)
+            assertEquals(ThreatLevel.FAST_APPROACHING, state.displayed)
+        }
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.APPROACHING)
+        assertEquals("4 consecutive APPROACHING frames must demote", ThreatLevel.APPROACHING, state.displayed)
+
+        // NONE clears immediately
+        state = RadarOverlayMath.stepThreatHysteresis(state, ThreatLevel.NONE)
+        assertEquals(ThreatLevel.NONE, state.displayed)
     }
 
     /**
@@ -1230,39 +1441,49 @@ class RadarEdgeOverlayTest {
     }
 
     /**
-     * TST-TRK-089.2 / REQ-TRK-062.2 / REQ-TRK-089.3: Behavioral pulse-gating verification confirming
-     * FAST_APPROACHING modulates marker pixels over time while APPROACHING remains completely static.
+     * TST-TRK-089.2 / REQ-TRK-089.2 (ATT-8958): Full-screen markers render rock-solid 100% opaque
+     * threat fills (zero alpha-pulse flicker over light/warm backgrounds) and apply per-target
+     * threat hysteresis suppressing alternating APPROACHING <-> FAST_APPROACHING jitter while
+     * transitioning cleanly after 3 sustained FAST_APPROACHING frames.
      */
     @Test
-    fun fullScreenMarkers_pulseOnlyWhenFastApproaching() {
-        var threatLevel by mutableStateOf(ThreatLevel.FAST_APPROACHING)
+    fun fullScreenMarkers_stayOpaqueNonPulsing_andSuppressRedOrangeOscillation() {
+        var activeState by mutableStateOf(
+            RadarState(
+                connectionState = RadarConnectionState.CONNECTED,
+                overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+                targets = listOf(
+                    RadarTarget(
+                        targetId = 1,
+                        rangeMeters = 60f,
+                        approachSpeedMps = 22f,
+                        threatLevel = ThreatLevel.FAST_APPROACHING,
+                        laneState = LaneState.IN_RIDER_LANE,
+                        vehicleSizeCategory = VehicleSizeCategory.CAR
+                    )
+                ),
+                lastUpdateRealtimeMs = 1000L
+            )
+        )
         composeTestRule.mainClock.autoAdvance = false
 
         composeTestRule.setContent {
             ATrainingTrackerTheme {
-                Box(modifier = Modifier.width(320.dp).height(400.dp)) {
+                Box(
+                    modifier = Modifier
+                        .width(360.dp)
+                        .height(480.dp)
+                        .background(TTColor.RadarFullScreenMapBackdrop)
+                ) {
                     RadarEdgeOverlay(
-                        radarState = RadarState(
-                            connectionState = RadarConnectionState.CONNECTED,
-                            overallThreatLevel = threatLevel,
-                            targets = listOf(
-                                RadarTarget(
-                                    targetId = 1,
-                                    rangeMeters = 60f,
-                                    approachSpeedMps = 20f,
-                                    threatLevel = threatLevel,
-                                    laneState = LaneState.IN_RIDER_LANE,
-                                    vehicleSizeCategory = VehicleSizeCategory.CAR
-                                )
-                            )
-                        ),
+                        radarState = activeState,
                         edgeSide = RadarEdgeSide.FULL_SCREEN,
                         clearMode = RadarClearMode.SLIM_RAIL
                     )
                 }
             }
         }
-        // Settle initial position animation before comparing pulse modulation
+        // Settle initial position animation before comparing pixel stability across clock ticks
         composeTestRule.mainClock.advanceTimeBy(200L)
         val fastBitmapT0 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
             .captureToImage()
@@ -1273,25 +1494,60 @@ class RadarEdgeOverlayTest {
             .captureToImage()
             .asAndroidBitmap()
 
-        assertTrue(
-            "FAST_APPROACHING marker must visually pulse between t=200ms and t=375ms",
+        assertFalse(
+            "FAST_APPROACHING full-screen marker must remain rock-solid opaque with zero alpha-pulse oscillation",
             bitmapsDiffer(fastBitmapT0, fastBitmapT1)
         )
 
-        threatLevel = ThreatLevel.APPROACHING
-        composeTestRule.mainClock.advanceTimeBy(200L)
-        val approachBitmapT0 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+        // Introduce a new V1 target (targetId = 2) starting at APPROACHING and feed alternating 8-Hz jitter
+        fun v1TargetState(threat: ThreatLevel, tsMs: Long) = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = threat,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 80f,
+                    approachSpeedMps = 12f,
+                    threatLevel = threat
+                )
+            ),
+            lastUpdateRealtimeMs = tsMs
+        )
+
+        composeTestRule.mainClock.autoAdvance = true
+        composeTestRule.runOnUiThread { activeState = v1TargetState(ThreatLevel.APPROACHING, 2000L) }
+        composeTestRule.waitForIdle()
+        val amberBaseline = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true)
             .captureToImage()
             .asAndroidBitmap()
 
-        composeTestRule.mainClock.advanceTimeBy(175L)
-        val approachBitmapT1 = composeTestRule.onNodeWithTag("RadarFullScreenMarker_1", useUnmergedTree = true)
+        // Alternating F -> A -> F -> A must hold steady amber pixels (zero red/orange oscillation)
+        var ts = 2125L
+        for (level in listOf(ThreatLevel.FAST_APPROACHING, ThreatLevel.APPROACHING, ThreatLevel.FAST_APPROACHING, ThreatLevel.APPROACHING)) {
+            composeTestRule.runOnUiThread { activeState = v1TargetState(level, ts) }
+            ts += 125L
+            composeTestRule.waitForIdle()
+            val currentBmp = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true)
+                .captureToImage()
+                .asAndroidBitmap()
+            assertFalse(
+                "Alternating jitter frame ($level) must not oscillate marker pixels away from amber",
+                bitmapsDiffer(amberBaseline, currentBmp)
+            )
+        }
+
+        // 3 consecutive FAST_APPROACHING frames must promote marker cleanly to solid red
+        repeat(3) {
+            composeTestRule.runOnUiThread { activeState = v1TargetState(ThreatLevel.FAST_APPROACHING, ts) }
+            ts += 125L
+            composeTestRule.waitForIdle()
+        }
+        val promotedRedBmp = composeTestRule.onNodeWithTag("RadarFullScreenMarker_2", useUnmergedTree = true)
             .captureToImage()
             .asAndroidBitmap()
-
-        assertFalse(
-            "APPROACHING marker must NOT pulse (bitmaps must remain identical)",
-            bitmapsDiffer(approachBitmapT0, approachBitmapT1)
+        assertTrue(
+            "3 sustained FAST_APPROACHING frames must transition marker color from amber to red",
+            bitmapsDiffer(amberBaseline, promotedRedBmp)
         )
     }
 
@@ -1463,5 +1719,103 @@ class RadarEdgeOverlayTest {
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
         assertTrue("Full-screen preview PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0)
+    }
+
+    /**
+     * TST-TRK-089.3 / Rule 8.5 (ATT-8958): Captures V1 (1D, zero lane guides, neutral car icon,
+     * enlarged badges, solid opaque amber/red) & V2 (2D, lane guides, Car + Truck) Light/Dark composite
+     * at docs/engineering/walkthroughs/img/ATT-8958_radar_fullscreen_preview.png.
+     */
+    @Test
+    fun captureAtt8958V1AndV2FullScreenPreviewPng() {
+        val v1State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING),
+                RadarTarget(targetId = 2, rangeMeters = 123f, approachSpeedMps = 22f, threatLevel = ThreatLevel.FAST_APPROACHING)
+            ),
+            source = RadarSource.BLE
+        )
+        val v2State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 24f,
+                    approachSpeedMps = 24f,
+                    threatLevel = ThreatLevel.FAST_APPROACHING,
+                    lateralOffsetMeters = -2.2f,
+                    laneState = LaneState.PASSING_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+                ),
+                RadarTarget(
+                    targetId = 2,
+                    rangeMeters = 110f,
+                    approachSpeedMps = 12f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = 0.0f,
+                    laneState = LaneState.IN_RIDER_LANE,
+                    vehicleSizeCategory = VehicleSizeCategory.CAR
+                )
+            ),
+            source = RadarSource.BLE
+        )
+
+        composeTestRule.setContent {
+            Row(
+                modifier = Modifier
+                    .width(720.dp)
+                    .background(TTColor.RadarRailTrack)
+                    .padding(12.dp)
+                    .testTag("Att8958FullScreenPreviewComposite"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(224.dp).height(360.dp)) {
+                        Column(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+                            Text("V1 Light (No Guides)", fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                RadarEdgeOverlay(radarState = v1State, edgeSide = RadarEdgeSide.FULL_SCREEN)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = true) {
+                    Surface(color = Color.Black, modifier = Modifier.width(224.dp).height(360.dp)) {
+                        Column(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+                            Text("V1 Dark (No Guides)", color = Color.White, fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                RadarEdgeOverlay(radarState = v1State, edgeSide = RadarEdgeSide.FULL_SCREEN)
+                            }
+                        }
+                    }
+                }
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.width(224.dp).height(360.dp)) {
+                        Column(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+                            Text("V2 2D (With Guides)", fontSize = 11.sp)
+                            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                                RadarEdgeOverlay(radarState = v2State, edgeSide = RadarEdgeSide.FULL_SCREEN)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val bmp = composeTestRule.onNodeWithTag("Att8958FullScreenPreviewComposite")
+            .captureToImage()
+            .asAndroidBitmap()
+
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/ATT-8958_radar_fullscreen_preview.png")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue("ATT-8958 preview PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0)
     }
 }

@@ -1,0 +1,52 @@
+{
+  "android_test_summary": {
+    "details": "15 Android unit tests passed (1 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 15
+  },
+  "checks": [
+    {
+      "details": "Android: 15 Android unit tests passed (1 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Tier C fast lane: zero stage deliverables required.",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12240 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "c7cc9baf7542b2327b768e9be162be269402916f",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-c",
+  "run_started_utc": "2026-11-24T10:09:26.196972+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9318_layout_light.png",
+    "screenshots/ATT-9318_layout_dark.png"
+  ],
+  "ticket_key": "ATT-9318",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

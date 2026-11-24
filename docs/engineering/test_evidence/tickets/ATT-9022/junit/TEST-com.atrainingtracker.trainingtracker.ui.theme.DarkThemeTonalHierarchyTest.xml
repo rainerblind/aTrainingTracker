@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.theme.DarkThemeTonalHierarchyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:28.654Z" hostname="rainer-HP-EliteBook-850-G5" time="0.031">
+  <properties/>
+  <testcase name="testDarkColorScheme_graduatedSurfaceContainerElevation" classname="com.atrainingtracker.trainingtracker.ui.theme.DarkThemeTonalHierarchyTest" time="0.03"/>
+  <testcase name="testDarkColorScheme_cardSeparationFromBackground" classname="com.atrainingtracker.trainingtracker.ui.theme.DarkThemeTonalHierarchyTest" time="0.0"/>
+  <testcase name="testDarkColorScheme_slateBlueHeaderAndTabProgression" classname="com.atrainingtracker.trainingtracker.ui.theme.DarkThemeTonalHierarchyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

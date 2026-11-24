@@ -67,6 +67,11 @@
     <string name="radar_overlay_edge_side">Screen Edge</string>
     <string name="radar_overlay_edge_left">Left Edge</string>
     <string name="radar_overlay_mode_fullscreen">Full Screen</string>
+    <string name="radar_fullscreen_marker_style_title">Full-Screen Vehicle Style</string>
+    <string name="radar_fullscreen_marker_style_badge">Compact Badge</string>
+    <string name="radar_fullscreen_marker_style_top_down">Top-Down Vehicles</string>
+    <string name="radar_fullscreen_marker_style_badge_desc">Large high-contrast distance capsules with vehicle icons</string>
+    <string name="radar_fullscreen_marker_style_top_down_desc">Overhead top-down car and truck silhouettes aligned with riding direction</string>
     <string name="radar_overlay_edge_right">Right Edge</string>
     <string name="radar_overlay_clear_mode">Clear State Display</string>
     <string name="radar_overlay_clear_mode_slim">Slim Rail</string>

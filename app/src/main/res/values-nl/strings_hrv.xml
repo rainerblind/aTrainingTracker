@@ -69,6 +69,8 @@
     <string name="morning_hrv_duration_60s">60 s (Standaard)</string>
     <string name="morning_hrv_duration_120s">120 s (Uitgebreid)</string>
     <string name="morning_hrv_state_ready">Klaar voor meting</string>
+    <string name="morning_hrv_state_no_sensor">Geen hartslagsensor verbonden</string>
+    <string name="morning_hrv_no_sensor_hint">Verbind een compatibele hartslagsensor (ECG-borstband of optische PPI-sensor) om de HRV-meting te starten.</string>
     <string name="morning_hrv_state_stabilizing">Stabiliseren: %1$ds</string>
     <string name="morning_hrv_state_measuring">Meten: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Meting voltooid</string>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:35.488Z" hostname="rainer-HP-EliteBook-850-G5" time="0.107">
+  <properties/>
+  <testcase name="matches_isEpicFalse_filtersOnlyNonEpicWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.001"/>
+  <testcase name="matches_isEpicNull_matchesAllWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.0"/>
+  <testcase name="activeFilterCount_countsIsEpicIndependently" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.0"/>
+  <testcase name="matches_isEpicTrue_filtersOnlyEpicWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.0"/>
+  <testcase name="matches_combinedRaceAndEpic_requiresBothSpecialFlags" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.001"/>
+  <testcase name="jsonSerialization_roundtripsIsEpicAndHandlesLegacyJson" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.025"/>
+  <testcase name="workoutData_headerData_propagatesEpicFlag" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.001"/>
+  <testcase name="epicBadgeColors_resolveDistinctLightAndDarkTokens" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaEpicTest" time="0.075"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

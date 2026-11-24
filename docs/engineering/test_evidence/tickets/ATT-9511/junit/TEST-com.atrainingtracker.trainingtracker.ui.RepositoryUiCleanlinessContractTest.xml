@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:18.379Z" hostname="rainer-HP-EliteBook-850-G5" time="1.049">
+  <properties/>
+  <testcase name="testSportTypeViewModel_zeroWorkoutSummariesDatabaseManagerReferences" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.001"/>
+  <testcase name="testMainActivityWithNavigation_zeroDatabaseManagerReferences" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.009"/>
+  <testcase name="testDevicesTabbedViewModel_zeroDatabaseManagerReferences" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.002"/>
+  <testcase name="testEquipmentViewModel_zeroDatabaseManagerGetInstance" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.001"/>
+  <testcase name="testControlTrackingViewModel_zeroDatabaseManagerReferences" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.002"/>
+  <testcase name="testRepositories_returnPureDomainDtos" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.003"/>
+  <testcase name="testSweepTargetClasses_zeroDatabaseManagerGetInstance" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.076"/>
+  <testcase name="testPackageWideUiAndActivities_zeroDatabaseManagerGetInstance" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.945"/>
+  <testcase name="testImportBackupTabsScreen_zeroDatabaseManagerReferences" classname="com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

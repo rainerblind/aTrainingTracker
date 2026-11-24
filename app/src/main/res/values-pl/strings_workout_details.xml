@@ -51,4 +51,14 @@
     <string name="workout_map_layer_primary_track">Ślad treningu</string>
     <string name="workout_map_layer_markers">Znaczniki i ulubione miejsca</string>
     <string name="workout_map_layer_lap_highlights">Wyróżnienia okrążeń</string>
+    <string name="workout_map_scrubber_metric_elevation">Wysokość</string>
+    <string name="workout_map_scrubber_collapse">Zwiń wykres metryk</string>
+    <string name="workout_map_scrubber_expand">Rozwiń wykres metryk</string>
+    <string name="workout_map_scrubber_clear_selection">Wyczyść wybraną pozycję</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Wybierz metrykę wykresu</string>
+    <string name="epic">Epicki</string>
+    <string name="epic_badge">Epicki</string>
+    <string name="filter_epic_only">Tylko epickie</string>
+    <string name="workout_classification_routine_header">Kontekst codzienny</string>
+    <string name="workout_classification_special_header">Wyjątkowe wyróżnienie</string>
 </resources>

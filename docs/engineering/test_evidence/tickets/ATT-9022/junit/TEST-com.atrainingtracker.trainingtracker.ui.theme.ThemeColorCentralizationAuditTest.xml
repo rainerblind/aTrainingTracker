@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:28.722Z" hostname="rainer-HP-EliteBook-850-G5" time="0.321">
+  <properties/>
+  <testcase name="verifyZeroHexColorsOutsideColorKt" classname="com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" time="0.319"/>
+  <testcase name="verifyBikeBellThemeTokensInTTColor" classname="com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" time="0.0"/>
+  <testcase name="verifyHeatmapHotPaletteTokensInTTColor" classname="com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" time="0.0"/>
+  <testcase name="verifyClimbGradeColor_allBandsAndBoundaries" classname="com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" time="0.0"/>
+  <testcase name="verifyClimbSheetsDelegateToSharedHelper" classname="com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

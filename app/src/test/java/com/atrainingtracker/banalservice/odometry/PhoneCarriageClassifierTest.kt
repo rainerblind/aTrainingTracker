@@ -31,7 +31,7 @@ import kotlin.math.sin
  * 9 [PhoneCarriageMode] states, transition hysteresis, glance detection, `Zum Bäcker`
  * dismount timeline, and missing-sensor fallback (REQ-FIL-028.1, TST-FIL-028.1, ATT-8890).
  */
-// Linked test specs: TST-FIL-028, TST-FIL-034, TST-FIL-035, TST-FIL-039
+// Linked test specs: TST-FIL-028, TST-FIL-034, TST-FIL-035, TST-FIL-039, TST-FIL-043, TST-FIL-044
 class PhoneCarriageClassifierTest {
 
     private fun quaternionFromEulerXDeg(tiltDeg: Double): FloatArray {
@@ -1897,5 +1897,238 @@ class PhoneCarriageClassifierTest {
         // reset() clears committedMode, nonStationarySinceMs, and lastGnssAccuracyMeters
         monoClf.reset()
         assertEquals(PhoneCarriageMode.UNKNOWN, monoClf.currentMode)
+    }
+
+    // REQ-FIL-044.1, REQ-FIL-044.2 / TST-FIL-044.1: Cycling start phone handling / bike-pushing (2026-11-21_081228 rows 1..25),
+    // zero-stride Metzger->Bank errand roll (rows 310..340), <2s cold-start glance, and fresh/reset/Long.MIN_VALUE footstrike guard.
+    @Test
+    fun testCyclingStartPhoneHandlingAndZeroStrideErrandRoll_neverEmitRunHandheld_TST_FIL_044_1() {
+        // 0. Fresh, post-reset, and Long.MIN_VALUE underflow guard on hasActiveRunFootstrike()
+        val guardClf = PhoneCarriageClassifier()
+        assertFalse("Fresh classifier must return false for hasActiveRunFootstrike()", guardClf.hasActiveRunFootstrike())
+        assertFalse("Fresh classifier with Long.MIN_VALUE must return false without underflow", guardClf.hasActiveRunFootstrike(Long.MIN_VALUE))
+        assertFalse("Fresh classifier with 0L must return false without underflow", guardClf.hasActiveRunFootstrike(0L))
+        guardClf.ingestStepEvent(1_000L)
+        guardClf.ingestStepEvent(1_380L)
+        guardClf.ingestStepEvent(1_760L)
+        guardClf.ingestStepEvent(2_140L)
+        assertTrue("Active 2.63 Hz steps must report hasActiveRunFootstrike == true", guardClf.hasActiveRunFootstrike(2_200L))
+        assertFalse("Explicit Long.MIN_VALUE must still return false even after samples", guardClf.hasActiveRunFootstrike(Long.MIN_VALUE))
+        guardClf.reset()
+        assertFalse("Post-reset classifier must return false for hasActiveRunFootstrike()", guardClf.hasActiveRunFootstrike())
+
+        // 1. Window 1 (2026-11-21_081228 rows 1..25): start of ride with phone handling + glance +
+        //    acc>15m GNSS spike (5.71->7.46->5.89 m/s) + 0.32..0.75 m/s bike-pushing with 0 strides.
+        for (stepRegistered in listOf(true, false)) {
+            for (includeBaro in listOf(true, false)) {
+                val startClf = PhoneCarriageClassifier()
+                startClf.setSportContext(SportContextHint.UNKNOWN)
+                startClf.setStepDetectorRegistered(stepRegistered)
+                for (t in 0L..25_000L step 20L) {
+                    val sec = t / 1000.0
+                    // Pull phone out & glance at t=3..4.2s, then irregular non-pendulum handling (~0.4 Hz)
+                    val pitch = when {
+                        t in 3_000L..4_200L -> 20.0
+                        t < 3_000L -> 76.0 + 22.0 * sin(2.0 * PI * 0.45 * sec)
+                        else -> 68.0 + 24.0 * sin(2.0 * PI * 0.42 * sec)
+                    }
+                    startClf.ingestRotationVector(quaternionFromEulerXDeg(pitch), t)
+                    startClf.ingestGyro(0.90 * sin(2.0 * PI * 0.45 * sec), 0.90, t)
+                    // Smooth bike-pushing / pocket-handling accel with zero 2.4-3.6 Hz running footstrikes
+                    startClf.ingestAccelerometer(0.35 * sin(2.0 * PI * 0.8 * sec), -0.25 * cos(2.0 * PI * 0.8 * sec), 9.81 + 0.45 * sin(2.0 * PI * 0.8 * sec), t)
+                    if (includeBaro && t % 200L == 0L) {
+                        startClf.ingestBarometerAltitude(438.0 + 0.65 * sin(PI * sec), t)
+                    }
+                    if (t % 1_000L == 0L) {
+                        val (spd, acc) = when (t) {
+                            in 0L..2_000L -> 0.0 to 27.6
+                            3_000L -> 5.71 to 27.6
+                            4_000L -> 7.46 to 22.0
+                            5_000L -> 5.89 to 17.3
+                            in 6_000L..15_000L -> (0.32 + 0.03 * ((t - 6_000L) / 1_000L)) to 12.0
+                            else -> 0.55 to 8.0
+                        }
+                        startClf.ingestGnssSpeed(spd, bearingDeg = 90.0, accuracyMeters = acc, timestampMs = t)
+                        val mode = startClf.classify(t)
+                        assertFalse(
+                            "Window 1 start (stepReg=$stepRegistered, baro=$includeBaro) must never emit RUN_* at t=$t (was $mode)",
+                            mode.isRunningMode()
+                        )
+                        assertFalse(startClf.hasActiveRunFootstrike(t))
+                    }
+                }
+                assertEquals(
+                    "Low-speed bike pushing (0.32..0.62 m/s, stepReg=$stepRegistered, baro=$includeBaro) must settle in WALKING_TRANSITION",
+                    PhoneCarriageMode.WALKING_TRANSITION,
+                    startClf.currentMode
+                )
+            }
+        }
+
+        // 2. Window 2 (2026-11-21_081228 rows 310..340, Metzger -> Bank): established BIKE resumes
+        //    from stop and rolls 48 m at 2.0..4.0 m/s for 19 s with phone glance, 0 steps across rows 315..332
+        //    and 1 isolated step at row 333 (0.70 m/s).
+        for (stepRegistered in listOf(true, false)) {
+            for (includeBaro in listOf(true, false)) {
+                val rollClf = PhoneCarriageClassifier()
+                rollClf.setSportContext(SportContextHint.UNKNOWN)
+                rollClf.setStepDetectorRegistered(stepRegistered)
+                // Establish BIKE_FRONT_POCKET first (t = 0..6s)
+                for (t in 0L..6_000L step 20L) {
+                    val sec = t / 1000.0
+                    val phase = 2.0 * PI * 1.3 * sec
+                    rollClf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+                    rollClf.ingestGyro(0.75 * sin(phase), 0.75, t)
+                    rollClf.ingestAccelerometer(0.3 * sin(phase), -0.2 * cos(phase), 9.81 + 0.4 * sin(phase), t)
+                    if (includeBaro && t % 200L == 0L) rollClf.ingestBarometerAltitude(438.0 + 0.50 * sin(PI * sec), t)
+                    if (t % 1_000L == 0L) {
+                        rollClf.ingestGnssSpeed(6.5, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                        rollClf.classify(t)
+                    }
+                }
+                assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, rollClf.currentMode)
+
+                // Stationary stop (t = 6..12s)
+                for (t in 6_020L..12_000L step 20L) {
+                    rollClf.ingestRotationVector(quaternionFromEulerXDeg(78.0), t)
+                    rollClf.ingestGyro(0.01, 0.01, t)
+                    rollClf.ingestAccelerometer(0.0, 0.0, 9.81, t)
+                    if (t % 1_000L == 0L) {
+                        rollClf.ingestGnssSpeed(0.0, bearingDeg = 90.0, accuracyMeters = 6.0, timestampMs = t)
+                        rollClf.classify(t)
+                    }
+                }
+                assertEquals(PhoneCarriageMode.STATIONARY, rollClf.currentMode)
+
+                // 19 s roll-out (t = 12..31s, 2.71..3.98..0.70 m/s) with phone glance at t = 13..14s + 1 isolated step at t = 30s
+                for (t in 12_020L..31_000L step 20L) {
+                    val sec = t / 1000.0
+                    val phase = 2.0 * PI * 1.35 * sec
+                    val pitch = if (t in 13_000L..14_200L) 22.0 else 64.0 + 25.0 * sin(phase)
+                    rollClf.ingestRotationVector(quaternionFromEulerXDeg(pitch), t)
+                    rollClf.ingestGyro(0.95 * sin(phase), 0.95, t)
+                    rollClf.ingestAccelerometer(0.35 * sin(phase), -0.25 * cos(phase), 9.81 + 0.45 * sin(phase), t)
+                    if (includeBaro && t % 200L == 0L) rollClf.ingestBarometerAltitude(438.0 + 0.65 * sin(PI * sec), t)
+                    if (stepRegistered && t == 30_000L) rollClf.ingestStepEvent(t)
+                    if (t % 1_000L == 0L) {
+                        val rollSec = (t - 12_000L) / 1_000L
+                        val speed = when {
+                            rollSec <= 4L -> 2.71 + 0.25 * rollSec
+                            rollSec <= 14L -> 3.98 - 0.12 * (rollSec - 4L)
+                            else -> 0.70
+                        }
+                        rollClf.ingestGnssSpeed(speed, bearingDeg = 90.0, accuracyMeters = 6.0, timestampMs = t)
+                        val mode = rollClf.classify(t)
+                        assertFalse(
+                            "Window 2 zero-stride roll (stepReg=$stepRegistered, baro=$includeBaro) must never emit RUN_* at t=$t (was $mode)",
+                            mode.isRunningMode()
+                        )
+                        assertFalse(rollClf.hasActiveRunFootstrike(t))
+                    }
+                }
+            }
+        }
+
+        // 3. Cold-start < 2 s phone glance without accel warmup or step detector must never beat BIKE_FRONT_POCKET
+        for (includeBaro in listOf(true, false)) {
+            val coldGlanceClf = PhoneCarriageClassifier()
+            coldGlanceClf.setSportContext(SportContextHint.UNKNOWN)
+            coldGlanceClf.setStepDetectorRegistered(false)
+            for (t in 0L..4_500L step 20L) {
+                val sec = t / 1000.0
+                val pitch = if (t >= 3_200L) 20.0 else 65.0 + 24.0 * sin(2.0 * PI * 1.3 * sec)
+                coldGlanceClf.ingestRotationVector(quaternionFromEulerXDeg(pitch), t)
+                coldGlanceClf.ingestGyro(0.95 * sin(2.0 * PI * 1.3 * sec), 0.95, t)
+                if (includeBaro && t % 200L == 0L) coldGlanceClf.ingestBarometerAltitude(438.0 + 0.65 * sin(PI * sec), t)
+                if (t % 1_000L == 0L) {
+                    coldGlanceClf.ingestGnssSpeed(3.2, bearingDeg = 90.0, accuracyMeters = 5.0, timestampMs = t)
+                    val mode = coldGlanceClf.classify(t)
+                    assertFalse(
+                        "Cold-start non-running glance (baro=$includeBaro) must not emit RUN_HANDHELD at t=$t (was $mode)",
+                        mode == PhoneCarriageMode.RUN_HANDHELD
+                    )
+                }
+            }
+            assertTrue(
+                "Cold-start non-running glance (baro=$includeBaro) must settle in BIKE_* (was ${coldGlanceClf.currentMode})",
+                coldGlanceClf.currentMode.isCyclingMode()
+            )
+        }
+    }
+
+    // REQ-FIL-044.1, REQ-FIL-044.2 / TST-FIL-044.2: Genuine triathlon T2 slow jogger (2.0 m/s, 153 spm)
+    // with handheld wrist glance across all 4 sensor profiles (hardware steps vs 50-Hz accel, with/without barometer).
+    @Test
+    fun testTriathlonT2SlowJoggerWithHandheldGlance_crossDeviceHardwareAndAccelFootstrikes_TST_FIL_044_2() {
+        for (useHardwareSteps in listOf(true, false)) {
+            for (includeBaro in listOf(true, false)) {
+                for (hint in listOf(SportContextHint.UNKNOWN, SportContextHint.CYCLING)) {
+                    val clf = PhoneCarriageClassifier()
+                    clf.setSportContext(hint)
+                    clf.setStepDetectorRegistered(useHardwareSteps)
+                    // Phase 1: Cycling leg (0..5s)
+                    for (t in 0L..5_000L step 20L) {
+                        val sec = t / 1000.0
+                        val phase = 2.0 * PI * 1.3 * sec
+                        clf.ingestRotationVector(quaternionFromEulerXDeg(60.0 + 20.0 * sin(phase)), t)
+                        clf.ingestGyro(0.75 * sin(phase), 0.75, t)
+                        clf.ingestAccelerometer(0.3 * sin(phase), -0.2 * cos(phase), 9.81 + 0.4 * sin(phase), t)
+                        if (includeBaro && t % 200L == 0L) clf.ingestBarometerAltitude(438.0 + 0.50 * sin(PI * sec), t)
+                        if (t % 1_000L == 0L) {
+                            clf.ingestGnssSpeed(7.5, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                            clf.classify(t)
+                        }
+                    }
+                    assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET, clf.currentMode)
+
+                    // Phase 2: T2 walking dismount (5..10s, 1.1 m/s)
+                    for (t in 5_020L..10_000L step 20L) {
+                        val sec = t / 1000.0
+                        val phase = 2.0 * PI * 0.9 * sec
+                        clf.ingestRotationVector(quaternionFromEulerXDeg(74.0 + 8.0 * sin(phase)), t)
+                        clf.ingestGyro(0.22 * sin(phase), 0.22, t)
+                        clf.ingestAccelerometer(0.2 * sin(phase), 0.1 * cos(phase), 9.81 + 0.5 * sin(2.0 * phase), t)
+                        if (t % 1_000L == 0L) {
+                            clf.ingestGnssSpeed(1.1, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                            clf.classify(t)
+                        }
+                    }
+                    assertEquals(PhoneCarriageMode.WALKING_TRANSITION, clf.currentMode)
+
+                    // Phase 3: T2 slow jogger (10..20s, 2.0 m/s, 2.55 Hz = 153 spm) with handheld wrist glance at t=17..18.2s
+                    var lastStepMs = 9_500L
+                    val stepPeriodMs = (1000.0 / 2.55).toLong() // ~392 ms
+                    for (t in 10_020L..19_000L step 20L) {
+                        val sec = t / 1000.0
+                        val armPhase = 2.0 * PI * 1.28 * sec
+                        val strikePhase = 2.0 * PI * 2.55 * sec
+                        val pitch = if (t in 17_000L..18_200L) 20.0 else 72.0 + 25.0 * sin(armPhase)
+                        clf.ingestRotationVector(quaternionFromEulerXDeg(pitch), t)
+                        clf.ingestGyro(0.95 * sin(armPhase), 0.95, t)
+                        if (!useHardwareSteps) {
+                            clf.ingestAccelerometer(0.5 * sin(strikePhase), -0.4 * cos(strikePhase), 9.81 + 4.2 * sin(strikePhase), t)
+                        }
+                        if (useHardwareSteps && t - lastStepMs >= stepPeriodMs) {
+                            clf.ingestStepEvent(t)
+                            lastStepMs = t
+                        }
+                        if (includeBaro && t % 200L == 0L) clf.ingestBarometerAltitude(438.0 + 0.65 * sin(PI * sec), t)
+                        if (t % 1_000L == 0L) {
+                            clf.ingestGnssSpeed(2.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                            clf.classify(t)
+                        }
+                    }
+                    assertTrue(
+                        "T2 slow 2.0 m/s jogger (hwStep=$useHardwareSteps, baro=$includeBaro, hint=$hint) must report hasActiveRunFootstrike == true",
+                        clf.hasActiveRunFootstrike(19_000L)
+                    )
+                    assertEquals(
+                        "T2 slow 2.0 m/s jogger glancing at handheld phone (hwStep=$useHardwareSteps, baro=$includeBaro, hint=$hint) must commit RUN_HANDHELD",
+                        PhoneCarriageMode.RUN_HANDHELD,
+                        clf.currentMode
+                    )
+                }
+            }
+        }
     }
 }

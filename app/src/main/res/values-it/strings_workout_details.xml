@@ -51,4 +51,14 @@
     <string name="workout_map_layer_primary_track">Traccia allenamento</string>
     <string name="workout_map_layer_markers">Marcatori e luoghi preferiti</string>
     <string name="workout_map_layer_lap_highlights">Evidenziazione giri</string>
+    <string name="workout_map_scrubber_metric_elevation">Altitudine</string>
+    <string name="workout_map_scrubber_collapse">Comprimi grafico metriche</string>
+    <string name="workout_map_scrubber_expand">Espandi grafico metriche</string>
+    <string name="workout_map_scrubber_clear_selection">Cancella posizione selezionata</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Seleziona metrica del grafico</string>
+    <string name="epic">Epico</string>
+    <string name="epic_badge">Epico</string>
+    <string name="filter_epic_only">Solo epici</string>
+    <string name="workout_classification_routine_header">Contesto abituale</string>
+    <string name="workout_classification_special_header">Distinzione speciale</string>
 </resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogUiTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:57.575Z" hostname="rainer-HP-EliteBook-850-G5" time="1.063">
+  <properties/>
+  <testcase name="testLightDarkWheelPositionDialogPreviews_capturePng_rule85" classname="com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogUiTest" time="0.527"/>
+  <testcase name="testLegacyUnspecifiedPosition_leavesNeitherSelected_preservesUnlinkCancelAndConflictHints" classname="com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogUiTest" time="0.21"/>
+  <testcase name="testDialogRendersOnlyFrontAndRear_andInvokesSelectionCallbacks" classname="com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogUiTest" time="0.168"/>
+  <testcase name="testUnlinkedDialog_hidesUnlinkButton_andSelectsRear" classname="com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogUiTest" time="0.157"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

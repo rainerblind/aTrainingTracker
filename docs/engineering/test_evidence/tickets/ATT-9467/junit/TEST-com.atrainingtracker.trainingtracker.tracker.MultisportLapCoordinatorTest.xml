@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:36:05.781Z" hostname="rainer-HP-EliteBook-850-G5" time="1.295">
+  <properties/>
+  <testcase name="workoutSamplesBackfill_addsMissingLapNrColumnAndFallsBackToUtcTimeColumn" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.257"/>
+  <testcase name="brickTransition_persistsNamedLapsWithUtcTimeStart_advancesSynchronously_andBackfillsSamplesDb" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.591"/>
+  <testcase name="directSwitchUnder10s_skipsTransitionAndConservesTotalTimeAndDistance" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.09"/>
+  <testcase name="emptyManualSplit_doesNotLeakPendingStartTimestamp_tstTrk090_1" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.093"/>
+  <testcase name="autoPauseInsideT2_partialAndFull_enforcesReqTrk002AndContiguousLapNr" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.099"/>
+  <testcase name="singleSportMultiLap_persistsPreMutationUtcTimeStart_withPauseNeutrality_underNonUtcTimezone_tstTrk090_1" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.084"/>
+  <testcase name="manualLapInterleaving_clampsBoundariesAndClearsActiveLegAnchorAfterManualLap" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.081"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

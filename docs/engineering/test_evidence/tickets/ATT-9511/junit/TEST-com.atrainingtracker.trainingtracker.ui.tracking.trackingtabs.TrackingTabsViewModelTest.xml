@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:57:14.086Z" hostname="rainer-HP-EliteBook-850-G5" time="7.612">
+  <properties/>
+  <testcase name="testMultipleStartStopCyclesReliability" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="1.063"/>
+  <testcase name="testCopyTab_dialogStateAndAutoNavigation" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.658"/>
+  <testcase name="testAutoPauseResumeFromControlTabPreservesCurrentTab" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.625"/>
+  <testcase name="testManualResumeFromControlTabNavigatesToFirstCockpitTab" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.622"/>
+  <testcase name="testMoveTab_callsRepositoryAndEmitsNavigationEvent" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.687"/>
+  <testcase name="testManualResumeFromTelemetryTabPreservesCurrentTab" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.683"/>
+  <testcase name="testPagerOffsetCalculationForScreenMode" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.196"/>
+  <testcase name="testShouldNavigateToFirstCockpitTab_predicateLogic" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.193"/>
+  <testcase name="testAutoPauseResumePreservesCurrentTab" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.631"/>
+  <testcase name="testTrackingTabsViewModel_bellVolumeEscalationAndSilenceReset" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.349"/>
+  <testcase name="testResumeFromPausedNavigatesToFirstCockpitTab" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.628"/>
+  <testcase name="testTrackingStartNavigatesToFirstCockpitTab" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.638"/>
+  <testcase name="testColdStartInTrackingModeDoesNotTriggerSpuriousNavigation" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelTest" time="0.639"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

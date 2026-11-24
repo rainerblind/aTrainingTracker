@@ -1,14 +1,14 @@
 # Living Requirements: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-REQ-PERIODS`  
-**Version**: 1.0.43  
+**Version**: 1.0.45  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 74
+**Total Requirements**: 75
 
 ---
 
@@ -2226,6 +2226,43 @@
 
 ---
 
+### REQ-HRV-052: Morning HRV Check HR Sensor Availability Gate & Disconnected Status Guidance (`ATT-9323`) [Verified]
+- **System Requirement(s)**: `SYSREQ-TRK-012` (Live HRV / RR-Interval Streaming & DFA Alpha-1 Threshold Estimation — compatible HR/HRV sensor availability gating in `MorningHrvCheckScreen` and `MorningHrvCheckViewModel`)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-HRV-052`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `values*/strings_hrv.xml`
+- **Localization Parity**: `9/9 locales (values*/strings_hrv.xml: morning_hrv_state_no_sensor, morning_hrv_no_sensor_hint)`
+- **Rationale**: `MorningHrvCheckScreen` previously rendered `morning_hrv_start_button` unconditionally enabled and showed `"Ready to Measure"` even with no connected heart rate / HRV sensor, allowing users to start empty measurements that ran a full countdown before failing with `morning_hrv_error_no_rr`. Gating measurement startup on live compatible HR/HRV sensor availability (matching `HrvRampTestScreen.canStartTest`) while preserving standalone Morning Sleep & Wellness saving prevents empty sessions and provides clear sensor guidance (`ATT-9323`).
+- **Description**:
+  1. *Live Compatible HR/HRV Sensor Availability & Disconnect Reset (`REQ-HRV-052.1`)*:
+     - `MorningHrvUiState` SHALL expose `isHrSensorAvailable: Boolean = currentHeartRateBpm != null` and derived `canStartMeasurement: Boolean` (`(phase == READY || phase == COMPLETED) && isHrSensorAvailable`).
+     - `MorningHrvCheckViewModel` SHALL observe `BANALServiceRepository.activeSensors` (`SensorType.HR` / `SensorType.RR_INTERVAL`) combined with `BANALServiceRepository.allFilteredSensorData` (positive `SensorType.HR`) alongside `handleRrBeat(event)` (`event.rrMs > 0.0`, covering BLE ECG, ANT+ HRM, and Polar Verity Sense optical PPI).
+     - When a previously active repository HR sensor disconnects (`SensorType.HR`/`SensorType.RR_INTERVAL` absent and no positive live HR), `MorningHrvCheckViewModel` SHALL immediately set `isHrSensorAvailable = false` and, while in `MorningHrvPhase.READY`, clear stale `currentHeartRateBpm = null` and `isOpticalPpiSession = false`. `cancelMeasurement()` SHALL also clear stale `currentHeartRateBpm = null` if `!isHrSensorAvailable`.
+  2. *Defense-in-Depth ViewModel Start Guard (`REQ-HRV-052.2`)*:
+     - `MorningHrvCheckViewModel.startMeasurement()` SHALL reject execution and remain in `MorningHrvPhase.READY` (without starting stabilization/measurement timers or mutating phase) whenever `!_uiState.value.canStartMeasurement`.
+  3. *Disabled Start CTA, Semantic Ready Guidance & Standalone Wellness Preservation (`REQ-HRV-052.3`)*:
+     - `MorningHrvCheckScreen.kt` SHALL bind `morning_hrv_start_button` to `enabled = uiState.canStartMeasurement`.
+     - When `uiState.phase == MorningHrvPhase.READY && !uiState.isHrSensorAvailable`, `MeasurementPacingCard` SHALL display a semantic `errorContainer` / `onErrorContainer` status pill (`R.string.morning_hrv_state_no_sensor`), muted heart icon (`MaterialTheme.colorScheme.outline`), and clear connection guidance (`R.string.morning_hrv_no_sensor_hint`, `testTag("morning_hrv_no_sensor_guidance")`) rather than `"Ready to Measure"`.
+     - Standalone saving of **Morning Sleep & Wellness** (`onSaveStandaloneWellness`, both `morning_hrv_save_wellness_secondary_button` in Full HRV mode and `morning_hrv_save_wellness_primary_button` in Pure Wellness mode) SHALL remain enabled and fully functional when `!uiState.isHrSensorAvailable`.
+  4. *Localization Parity, Private Previews & LoC Ceiling (`REQ-HRV-052.4`)*:
+     - `morning_hrv_state_no_sensor` and `morning_hrv_no_sensor_hint` SHALL maintain 9/9 locale parity across `app/src/main/res/values*/strings_hrv.xml` (`TranslationParityTest` PASS).
+     - All modified files SHALL remain `<= 1,500` LoC (`ArchitectureConformanceContractTest`), any added `@Preview` composable SHALL be `private fun` with zero parameters, and `0` new Kotlin compiler warnings SHALL be introduced.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-PER-032`, `REQ-HRV-040`, `REQ-HRV-043`, `REQ-HRV-045`, `REQ-HRV-049` targeting `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, and `values*/strings_hrv.xml`.
+  2. *Historical Origin & Commit Trace*: `ATT-3556` (`REQ-PER-032`), `ATT-7034` (`REQ-HRV-040`), `ATT-8598` (`REQ-HRV-043`), `ATT-8846` (`REQ-HRV-045`), `ATT-9177` (`REQ-HRV-049`).
+  3. *Root Reason for Existing Formulation*: Initial `MorningHrvCheckScreen` delegated empty-stream handling purely to post-countdown `completeMeasurement()` (`morning_hrv_error_no_rr`), before live pre-start sensor gating (`HrvRampTestScreen.canStartTest`) became the established UX pattern.
+  4. *Preservation of Core Invariants*: Preserves zero-workout invariant, sticky posture/duration preferences, pure wellness mode (`REQ-HRV-043`), `forceFullHrv` route override (`REQ-HRV-045`), optical PPI non-sticky modality and baseline isolation (`REQ-HRV-049`), and `completeMeasurement()` empty-beats fallback guard.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `MorningHrvCheckScreen` in `READY` with no HR/HRV sensor connected (`isHrSensorAvailable == false`), *When* rendered in Full HRV mode (with or without wellness enabled), *Then* `MeasurementPacingCard` displays `morning_hrv_state_no_sensor` and `morning_hrv_no_sensor_guidance`, `morning_hrv_start_button` is disabled, programmatic `startMeasurement()` remains in `READY`, and `morning_hrv_save_wellness_secondary_button` remains enabled and saves standalone wellness.
+  • *Given* a compatible HR sensor connects via `BANALServiceRepository.activeSensors`/`allFilteredSensorData` or emits an ECG/optical PPI `RrBeatEvent`, *When* `MorningHrvCheckViewModel` processes the update, *Then* `isHrSensorAvailable` and `canStartMeasurement` become `true`, `"Ready to Measure"` replaces the disconnected guidance, and `morning_hrv_start_button` enables and launches the measurement protocol.
+  • *Given* an active HR sensor disconnects in `READY`, *When* `BANALServiceRepository.activeSensors` and `allFilteredSensorData` clear HR/RR sensors, *Then* `isHrSensorAvailable` reverts to `false`, `currentHeartRateBpm` resets to `null`, `morning_hrv_start_button` disables, and disconnected guidance reappears.
+- **Invariants**: `MorningHrvCheckScreen.kt <= 1,500` LoC; `MorningHrvCheckViewModel.kt <= 1,500` LoC; `0` DB schema migrations; `0` workout creation side effects; `9/9` locale parity across `values*/strings_hrv.xml`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2274,3 +2311,5 @@
 | `1.0.41` | 2026-11-23 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Added `REQ-PER-057` (`[Planned]`, `.1`–`.4`) decoupling cold cluster preview enrichment progress from `_allClusters.value.isEmpty()`, adding version-guarded non-clobbering lightweight load publication, guaranteed `finally` progress cleanup, and injectable `ioDispatcher` (`TST-PERF-010` race fix). |
 | `1.0.42` | 2026-11-24 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Gate 3 (`ATT-9671`) revision: refined `REQ-PER-057.1`–`.3` to mandate cooperative `yield()` after each progress write, fast-path return before `try/finally` `_migrationStatus` writes, field declarations above `init {}`, stale SQLite writeback guards + 1-attempt empty-cache retry in `loadAllClustersLightweight()`, and `statePublishLock` parity in `refreshClusterStats()`. |
 | `1.0.43` | 2026-11-24 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Promoted `REQ-PER-057` to `[Verified]` following Stage 4/5 implementation (`WorkoutClusterRepository.kt` `1,014 / 1,500` LoC), `62/62` PASS across 8 targeted & contract suites (`0` fail, `0` skip, `0` new warnings), `3/3` static linters PASS, live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG inspected), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9580/`). |
+| `1.0.44` | 2026-11-24 | Lane 1 Author (`ATT-9323`, `--as agent1`) | `ATT-9323` | Added `REQ-HRV-052` (`[Planned]`, `.1`–`.4`) for Morning HRV Check HR/HRV sensor availability gating, defense-in-depth ViewModel start guard, disconnected status guidance, standalone wellness preservation, and 9-locale localization parity. |
+| `1.0.45` | 2026-11-24 | Lane 1 Author (`ATT-9323`, `--as agent1`) | `ATT-9323` | Promoted `REQ-HRV-052` to `[Verified]` following Stage 4/5 implementation (`MorningHrvCheckScreen.kt` `1,460/1,500` LoC, `MorningHrvCheckViewModel.kt` `655/1,500` LoC, 9/9 `strings_hrv.xml`), `58/58` PASS across 5 targeted/localization/contract suites (`0` new warnings), live `emulator-5554` Light/Dark PNG verification (`Rule 8.5`, `0` crashes/ANRs), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9323/`). |

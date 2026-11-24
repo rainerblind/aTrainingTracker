@@ -194,12 +194,14 @@ object MultisportTransitionBridge {
     }
 
     @JvmStatic
+    @JvmOverloads
     fun evaluateAndDispatch(
         context: android.content.Context?,
         detector: MultisportTransitionDetector,
         mode: PhoneCarriageMode,
         kinematicSport: BSportType,
-        timestampMs: Long
+        timestampMs: Long,
+        hasActiveRunFootstrike: Boolean? = null
     ): MultisportTransitionEvent? {
         val service = context as? BANALService
         val isLocked = try { service?.isUserSportLocked ?: BANALService.isActiveUserSportLocked() } catch (_: Throwable) { false }
@@ -215,7 +217,9 @@ object MultisportTransitionBridge {
             totalTimeData = BANALService.getActiveSensorData(SensorType.TIME_TOTAL),
             distanceData = BANALService.getActiveSensorData(SensorType.DISTANCE_m)
         )
-        val event = detector.onTick(mode, kinematicSport, hw, anchor, isTracking, isPaused, isLocked) ?: return null
+        val event = detector.onTick(
+            mode, kinematicSport, hw, anchor, isTracking, isPaused, isLocked, hasActiveRunFootstrike
+        ) ?: return null
         try {
             if (service != null) service.onConfirmedMultisportTransition(event)
             else BANALService.notifyActiveMultisportTransition(event)

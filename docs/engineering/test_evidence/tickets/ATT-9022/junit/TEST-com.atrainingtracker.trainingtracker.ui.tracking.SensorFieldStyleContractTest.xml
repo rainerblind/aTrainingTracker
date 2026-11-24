@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:29.110Z" hostname="rainer-HP-EliteBook-850-G5" time="0.269">
+  <properties/>
+  <testcase name="testResolveGridSpacing_preservesBaselineForClassicSeamless" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.016"/>
+  <testcase name="testVariant2_elevatedCardsMetrics" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testVariant1_outlinedTilesMetrics" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testSensorFieldVariant_fromStorageDeserialization" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testDefaultParameters_preserveProductionBaseline" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testVariant3_capsuleMetrics" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testSensorFieldVariantEnum_resolvesAllVariants" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.001"/>
+  <testcase name="testResolveGridSpacing_scalesWithBorderThicknessAndCornerRadius" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testResolveBorder_themeContrastInterpolation" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.076"/>
+  <testcase name="testSensorFieldView_structuralContracts" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.058"/>
+  <testcase name="testResolveBorder_moveSelectionOverrides" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testSensorGridScreen_structuralContracts" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.115"/>
+  <testcase name="testResolveBorder_borderlessWhenZeroOrNegative" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <testcase name="testResolveShape_mapsZeroToRectangleAndPositiveToRoundedCorner" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyleContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

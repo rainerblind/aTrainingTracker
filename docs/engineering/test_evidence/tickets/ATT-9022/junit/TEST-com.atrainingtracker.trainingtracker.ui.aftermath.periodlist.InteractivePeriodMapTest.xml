@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:10.677Z" hostname="rainer-HP-EliteBook-850-G5" time="0.021">
+  <properties/>
+  <testcase name="testTstPer027_1_SpatialAnchorScopeIsolationInEnrichment" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" time="0.003"/>
+  <testcase name="testTstPer027_2_InteractiveMapTrackDeduplicationLogic" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" time="0.005"/>
+  <testcase name="testTstPer030_4_HeatmapPrimaryOverviewAndPeekHighlight" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" time="0.0"/>
+  <testcase name="testTstPer027_3_ZeroUIThreadPolylineDecodingWithPreDecodedPaths" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" time="0.001"/>
+  <testcase name="testTstPer027_4_SpatialTapHitTestingResolvesClosestWorkout" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" time="0.01"/>
+  <testcase name="testTstPer027_4_AdaptiveLayeringPeekHighlightOnLargePeriod" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.InteractivePeriodMapTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:23.260Z" hostname="rainer-HP-EliteBook-850-G5" time="0.048">
+  <properties/>
+  <testcase name="formatFullScreenScrubReadout_runPaceAndImperialUnitsFormatAccurately" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.031"/>
+  <testcase name="resolveDefaultScrubberMetric_prefersElevationElseFirstAvailable" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.0"/>
+  <testcase name="interpolateScrubAltitude_linearlyInterpolatesAndClampsBounds" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.003"/>
+  <testcase name="toTelemetryMetricType_adaptsSpeedVsPaceBySportType" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.001"/>
+  <testcase name="resolveAvailableScrubberMetrics_listsOnlyRecordedStreamsAndGatesWPrimeBal" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.011"/>
+  <testcase name="resolveAvailableScrubberMetrics_returnsEmptyForNullSinglePointOrBareTrack" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.0"/>
+  <testcase name="formatFullScreenScrubReadout_powerSelectedIncludesZoneAndNonDuplicatingContext" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.001"/>
+  <testcase name="formatFullScreenScrubReadout_slopeSelectedFormatsGradeAndShowsAltitudeWithoutDuplicatingSlope" classname="com.atrainingtracker.trainingtracker.ui.map.FullScreenWorkoutScrubberModelsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

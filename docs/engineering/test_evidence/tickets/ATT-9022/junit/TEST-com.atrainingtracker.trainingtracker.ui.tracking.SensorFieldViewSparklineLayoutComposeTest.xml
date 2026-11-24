@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewSparklineLayoutComposeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:29.410Z" hostname="rainer-HP-EliteBook-850-G5" time="1.406">
+  <properties/>
+  <testcase name="testNormalValueAndGraphInIntrinsicMinRow_canvasHeightAtLeast34dpAndLabelsVisible_tstUi2788_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewSparklineLayoutComposeTest" time="0.379"/>
+  <testcase name="testCaptureSparklineValueGraphComparisonScreenshot_tstUi2788_3" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewSparklineLayoutComposeTest" time="0.698"/>
+  <testcase name="testMultiColumnRowWithTallerSibling_valueAndGraphSparklineExpandsIntoSurplusHeight_tstUi2788_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewSparklineLayoutComposeTest" time="0.153"/>
+  <testcase name="testFixedHeightCompactCards_preserveUnclippedValueAndXAxisLabels_tstUi2788_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldViewSparklineLayoutComposeTest" time="0.176"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

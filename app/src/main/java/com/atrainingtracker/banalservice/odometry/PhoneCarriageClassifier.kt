@@ -108,6 +108,7 @@ class PhoneCarriageClassifier(
         private const val RUN_CYCLING_MASK_WHEEL_MAX_MPS = 0.5
         private const val RUN_CYCLING_MASK_SPEED_MPS = 5.5
         private const val ACTIVE_FOOTSTRIKE_MIN_HZ = 2.25
+        private const val RUN_MIN_SPEED_MPS = 1.60
         private const val EASY_RUN_MIN_SPEED_MPS = 1.65
         private const val EASY_RUN_FALLBACK_SPEED_MPS = 1.75
         private const val EASY_RUN_IMPACT_RMS_MPS2 = 1.8
@@ -393,6 +394,25 @@ class PhoneCarriageClassifier(
     }
 
     /**
+     * Returns `true` strictly when periodic running footstrikes (`>= 2.25 Hz`) are active via
+     * hardware `TYPE_STEP_DETECTOR` OR permission-free 50-Hz accelerometer periodicity (`REQ-FIL-044.2`).
+     */
+    @Synchronized
+    fun hasActiveRunFootstrike(nowMs: Long = lastEventTimestampMs): Boolean {
+        if (nowMs == Long.MIN_VALUE || firstSampleTimestampMs == Long.MIN_VALUE) return false
+        val effectiveNowMs = if (lastEventTimestampMs != Long.MIN_VALUE && nowMs < lastEventTimestampMs) {
+            lastEventTimestampMs
+        } else {
+            nowMs
+        }
+        pruneWindows(effectiveNowMs)
+        val stepFreqHz = currentStepFrequencyHz(effectiveNowMs)
+        if (stepFreqHz != null && stepFreqHz >= ACTIVE_FOOTSTRIKE_MIN_HZ) return true
+        val accelEval = evaluateAccelFootstrike(effectiveNowMs)
+        return accelEval.footstrikeFreqHz != null && accelEval.footstrikeFreqHz >= ACTIVE_FOOTSTRIKE_MIN_HZ
+    }
+
+    /**
      * Evaluates the sliding feature window at [nowMs] and returns the hysteresis-stabilized [PhoneCarriageMode].
      */
     @Synchronized
@@ -586,13 +606,16 @@ class PhoneCarriageClassifier(
         // Cycling guardrails: mask BIKE_* during Sport = RUN (< 5.5 m/s, no wheel) OR whenever active running
         // footstrikes (>= 2.25 Hz) hold without a moving wheel sensor (REQ-FIL-035.1, REQ-FIL-039.1)
         val noMovingWheel = !wheelActiveMoving && (wheelSpeed == null || wheelSpeed <= RUN_CYCLING_MASK_WHEEL_MAX_MPS)
+        val hasActiveRunningCadence = effectiveRunStepFreqHz != null &&
+            effectiveRunStepFreqHz >= ACTIVE_FOOTSTRIKE_MIN_HZ
         val suppressCyclingForRun = sportHint == SportContextHint.RUNNING &&
             noMovingWheel &&
             (effectiveSpeed == null || effectiveSpeed < RUN_CYCLING_MASK_SPEED_MPS)
-        val suppressCyclingForFootstrikes = noMovingWheel &&
-            effectiveRunStepFreqHz != null &&
-            effectiveRunStepFreqHz >= ACTIVE_FOOTSTRIKE_MIN_HZ
+        val suppressCyclingForFootstrikes = noMovingWheel && hasActiveRunningCadence
         val suppressCycling = suppressCyclingForRun || suppressCyclingForFootstrikes
+        val suppressRunningForNoFootstrikes = !suppressCycling &&
+            confirmedNoFootstrikes &&
+            sportHint != SportContextHint.RUNNING
 
         // 2. Walking / Transition dismount detection (independent of cycling sportHint, with easy-pace run guard; REQ-FIL-035.2)
         val walkingSpeedBand = effectiveSpeed != null && effectiveSpeed in WALK_MIN_SPEED_MPS..WALK_MAX_SPEED_MPS
@@ -627,6 +650,15 @@ class PhoneCarriageClassifier(
                     return RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)
                 }
             }
+            // REQ-FIL-044.1: Sub-running speed floor closes the (0.15, 0.35) gap and irregular
+            // phone-handling / bike-pushing fallthrough so < 1.60 m/s without running cadence resolves to WALKING_TRANSITION.
+            if (!easyRunSuppressWalk &&
+                effectiveSpeed != null &&
+                effectiveSpeed < RUN_MIN_SPEED_MPS &&
+                !hasActiveRunningCadence
+            ) {
+                return RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)
+            }
         }
 
         // 3. Score cycling vs running carriage regimes (kinematic footstrikes prioritized over speed cutoffs; REQ-FIL-034.4, REQ-FIL-035.1)
@@ -635,7 +667,7 @@ class PhoneCarriageClassifier(
         var runningPrior = 0.0
         when {
             wheelActiveMoving -> cyclingPrior += 6.0
-            effectiveRunStepFreqHz != null && effectiveRunStepFreqHz >= ACTIVE_FOOTSTRIKE_MIN_HZ -> runningPrior += 5.0
+            hasActiveRunningCadence -> runningPrior += 5.0
             else -> {
                 if (sportHint == SportContextHint.CYCLING) cyclingPrior += 2.5
                 if (sportHint == SportContextHint.RUNNING) runningPrior += 2.5
@@ -656,7 +688,7 @@ class PhoneCarriageClassifier(
         // Handlebar vs other fallback if zero IMU is available
         if (!hasOrientation && !hasGyro && baroStepRms == null) {
             return RawEvaluation(
-                mode = if (suppressCycling || runningPrior > cyclingPrior) {
+                mode = if (suppressCycling || (!suppressRunningForNoFootstrikes && runningPrior > cyclingPrior)) {
                     PhoneCarriageMode.RUN_WAIST_HIP
                 } else {
                     PhoneCarriageMode.BIKE_HANDLEBAR
@@ -680,15 +712,30 @@ class PhoneCarriageClassifier(
         } else {
             cyclingPrior + scoreBikeFrontPocket(orientationStats, yawResidualRms, baroStepRms, dominantFreqHz)
         }
-        val sRunWaist = runningPrior + scoreRunWaistHip(
-            orientationStats, yawResidualRms, baroStepRms, effectiveRunStepFreqHz, glanceCount
-        )
-        val sRunBicep = runningPrior + scoreRunBicepArm(
-            orientationStats, yawResidualRms, baroStepRms, dominantFreqHz, effectiveRunStepFreqHz, glanceCount
-        )
-        val sRunHandheld = runningPrior + scoreRunHandheld(
-            orientationStats, yawResidualRms, baroStepRms, glanceCount
-        )
+        val allowHandheldGlanceBonus = hasActiveRunningCadence ||
+            sportHint == SportContextHint.RUNNING ||
+            committedMode.isRunningMode()
+        val sRunWaist = if (suppressRunningForNoFootstrikes) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            runningPrior + scoreRunWaistHip(
+                orientationStats, yawResidualRms, baroStepRms, effectiveRunStepFreqHz, glanceCount
+            )
+        }
+        val sRunBicep = if (suppressRunningForNoFootstrikes) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            runningPrior + scoreRunBicepArm(
+                orientationStats, yawResidualRms, baroStepRms, dominantFreqHz, effectiveRunStepFreqHz, glanceCount
+            )
+        }
+        val sRunHandheld = if (suppressRunningForNoFootstrikes) {
+            Double.NEGATIVE_INFINITY
+        } else {
+            runningPrior + scoreRunHandheld(
+                orientationStats, yawResidualRms, baroStepRms, glanceCount, allowHandheldGlanceBonus
+            )
+        }
 
         var bestMode = if (suppressCycling) PhoneCarriageMode.RUN_WAIST_HIP else PhoneCarriageMode.BIKE_HANDLEBAR
         var bestScore = if (suppressCycling) sRunWaist else sBikeHandlebar
@@ -869,7 +916,8 @@ class PhoneCarriageClassifier(
         o: OrientationStats?,
         yawResidualRms: Double?,
         baroStepRms: Double?,
-        glanceCount: Int
+        glanceCount: Int,
+        allowGlanceBonus: Boolean
     ): Double {
         var score = 0.0
         if (o != null) {
@@ -893,7 +941,7 @@ class PhoneCarriageClassifier(
                 else -> -0.4
             }
         }
-        score += if (glanceCount >= 1) 3.8 else -1.8
+        score += if (allowGlanceBonus && glanceCount >= 1) 3.8 else -1.8
         return score
     }
 

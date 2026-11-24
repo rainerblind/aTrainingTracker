@@ -1,14 +1,14 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.9  
+**Version**: 1.0.10  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 73
+**Total Tests**: 74
 
 ---
 
@@ -1355,6 +1355,27 @@
   3. *Localization, Architecture & Live Emulator Visual Inspection (`TST-MAP-072.3`)*:
   • Run `TranslationParityTest` across all 9 locales, `ArchitectureConformanceContractTest` (verifying `MapDetailLayout.kt <= 1,500` LoC and zero UI DB violations), `AndroidViewModelReflectionContractTest`, and live `emulator-5554` verification capturing and visually inspecting Light & Dark PNG screenshots of embedded Expand button, full-screen workout map, Satellite switch, and open Layers sheet (`Rule 8.5`).
 
+### TST-MAP-073: **Full-Screen Workout Map Collapsible Metric Scrubber & Bidirectional Position Sync Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Requirement(s)**: `REQ-MAP-070` (`REQ-MAP-070.1`..`REQ-MAP-070.4`)
+- **Component**: `FullScreenWorkoutScrubberModels.kt`, `FullScreenWorkoutMapScrubberPanel.kt`, `FullScreenWorkoutMapOverlay.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TelemetryChartGestures.kt`, `FullScreenWorkoutScrubberModelsTest.kt`, `FullScreenWorkoutMapScrubberUiTest.kt`
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/FullScreenWorkoutScrubberModelsTest.kt` (`8/8 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/FullScreenWorkoutMapScrubberUiTest.kt` (`4/4 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/FullScreenWorkoutMapUiTest.kt` (`6/6 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryChartGesturesAndCacheTest.kt` (`12/12 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheetContractTest.kt` (`7/7 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt` (`11/11 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt` (`11/11 PASS`), live `emulator-5554` Light & Dark screenshots `docs/engineering/walkthroughs/img/ATT-9030_*.png` (`ATT-9030`)
+- **Jira**: `ATT-9030` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Dynamic Metric Availability, Default Resolution & Live Readout Formatting (`TST-MAP-073.1`, `FullScreenWorkoutScrubberModelsTest.kt`)*:
+  • Verify `resolveAvailableScrubberMetrics(...)` includes strictly streams with recorded valid data in `activeScrubPath`, gates `W_PRIME_BAL` on `enableCriticalPowerModel && hasPowerData`, and returns empty list for `< 2` points or bare lat/lng tracks.
+  • Verify `resolveDefaultScrubberMetric(...)` selects `ELEVATION` when present and falls back to the first available stream otherwise.
+  • Verify `formatFullScreenScrubReadout(...)` produces `Distance · Time · Selected Metric` (including zone tags where thresholds exist and sport-adapted Speed vs Pace) plus non-duplicating secondary context (`Elevation/Grade`, `HR`, `Power`, `Speed/Pace`, `Cadence`) and linear altitude interpolation.
+  2. *Behavioral Compose UI Scrubber Switching, Collapse/Expand, Persistent Drag-End & Bidirectional Sync (`TST-MAP-073.2`, `FullScreenWorkoutMapScrubberUiTest.kt`)*:
+  • Verify switching between available metrics (`Elevation` $\rightarrow$ `Power` / `Heart Rate`) renders the selected metric graph and updates the live floating readout pill while keeping `selectedDistance` synced to `mapSlot`.
+  • Verify dragging along the scrubber graph retains the final scrubbed distance on finger lift (`clearSelectionOnDragEnd = false`) and clear (`×`) dismisses the selection cleanly.
+  • Verify tapping Collapse hides the graph into the minimal expand pill and tapping Expand restores the graph and active readout pill.
+  • Verify bidirectional scrub sync across `WorkoutDetailTabbedContent` / `MapDetailLayout` $\leftrightarrow$ `FullScreenWorkoutMapContent`: opening full-screen at `14.2 km` highlights `14.2 km` immediately; scrubbing to `21.5 km` in full-screen and closing updates Workout Details to `21.5 km`.
+  3. *Localization, Contract & Live Emulator Visual Inspection (`TST-MAP-073.3`)*:
+  • Run `TranslationParityTest` across all 9 locales, `LiveSegmentSheetContractTest`, `ArchitectureConformanceContractTest` (`MapDetailLayout.kt <= 1,500` LoC), `FullScreenWorkoutMapUiTest`, and live `emulator-5554` verification capturing expanded/collapsed/metric-switched/readout PNG screenshots in Light & Dark modes inspected via `read_file` (`Rule 8.5`).
+
 ---
 
 ## Change History
@@ -1370,3 +1391,4 @@
 | `1.0.7` | 2026-11-23 | Lane 1 Author (`ATT-8133`, `--as agent1`) | `ATT-8133` | Added & verified `TST-GEO-003` verifying `REQ-GEO-003` (`GeoMathTest`, `RouteAutoDetectorTest`, `EditWorkoutClusterTest`, `RoutesRepositorySyncTest`, `WorkoutClusterRepositoryTest`). |
 | `1.0.8` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Added & verified (`[Verified]`) `TST-MAP-072` verifying `REQ-MAP-069` (`WorkoutMapLayerPreferencesTest`, `FullScreenWorkoutMapUiTest`, `TranslationParityTest`, `ArchitectureConformanceContractTest`, and live `emulator-5554` verification). |
 | `1.0.9` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Updated `TST-MAP-072` verification evidence after Stage 6 BOUNCE 1/5 (`62/62 PASS` across 9 suites including reactive cold-start hydration, dark-mode unset base-map default, non-`BEST` technical track fallback, and live Dark Mode `emulator-5554` screenshots). |
+| `1.0.10` | 2026-11-24 | Lane 2 Author (`ATT-9030`, `--as agent1`) | `ATT-9030` | Added & verified (`[Verified]`) `TST-MAP-073` verifying `REQ-MAP-070` (`59/59 PASS` across 7 unit/Compose/contract/localization suites incl. Stage 6 BOUNCE 1/5 `SLOPE` + zone-threshold fallback parity + 6 live Light/Dark `emulator-5554` screenshots). |

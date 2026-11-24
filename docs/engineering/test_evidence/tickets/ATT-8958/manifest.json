@@ -1,0 +1,14 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "ee3ec0481633098596a634ff3373356666f4c4be",
+  "files": {
+    "evidence_summary.json": "8c0739ca1d49dc6d78d71da655b7ed87b8410a1a0442ef8ada8fb35d00a2038a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest.xml": "36d75272722c31ef6f894f83ba174723b5a24d8c7f0ef758a1b5c95a8f5952d2",
+    "screenshots/ATT-8958_live_fullscreen_dark.png": "ed5bb99b7cdca586266fdb7984beb1604b87b63a83d6971c1cc298726101b441",
+    "screenshots/ATT-8958_live_fullscreen_light.png": "8c7f31a49bd144e1d3641b05364f47d6c2d922971e57b47f586528f4292be55c",
+    "screenshots/ATT-8958_radar_fullscreen_preview.png": "75f22c605d1f521c5451eadb93f51449edf69f85841a7db24fe3fcf45cfbc206"
+  },
+  "run_started_utc": "2026-11-24T11:41:56.395026+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8958"
+}

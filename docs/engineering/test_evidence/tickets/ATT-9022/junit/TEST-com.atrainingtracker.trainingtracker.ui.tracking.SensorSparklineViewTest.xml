@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:31.172Z" hostname="rainer-HP-EliteBook-850-G5" time="0.038">
+  <properties/>
+  <testcase name="testBuildDynamicZoneVerticalGradientStops_dfaAlpha1InvertedPolarity" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.011"/>
+  <testcase name="testSensorSparklineView_composableSignatureSupportsIsPlaceholder" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.001"/>
+  <testcase name="testResolveSparklineLineColor_allTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.02"/>
+  <testcase name="testDynamicZoneStyling_edgeCaseFallbacks" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.001"/>
+  <testcase name="testResolveSparklineHeight" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <testcase name="testResolveSparklineEffectiveSamples_fallbackAndSupersedence" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <testcase name="testFormatSparklineTimeOffset_multiHour" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.002"/>
+  <testcase name="testFormatSparklineTimeOffset_subHour" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.001"/>
+  <testcase name="testResolveSparklineLineColor_decoupledFromTextZoneColor" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <testcase name="testComputeSparklineY_inversionMapping" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <testcase name="testResolveSparklineEffectiveSpanSeconds_fallbackAndSupersedence" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <testcase name="testResolveSparklineIsPlaceholder_contracts" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.001"/>
+  <testcase name="testBuildDynamicZoneVerticalGradientStops_hrAndPower" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <testcase name="testDefaultPreviewSparklineSamples_properties" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

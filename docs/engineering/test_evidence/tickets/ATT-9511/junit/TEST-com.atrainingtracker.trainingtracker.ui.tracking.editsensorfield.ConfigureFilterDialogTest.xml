@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:48.763Z" hostname="rainer-HP-EliteBook-850-G5" time="4.174">
+  <properties/>
+  <testcase name="testExponentialSmoothing_adjustsAndConstrainsAlpha" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="1.78"/>
+  <testcase name="testResolveFilterPreset_mapsStandardPresetsAccurately" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.336"/>
+  <testcase name="testModeSwitching_togglesCustomFilterExpanded" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.341"/>
+  <testcase name="testResolveFilterPreset_fallsBackToCustomForArbitraryInputs" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.319"/>
+  <testcase name="testSmartAthleticDefaults_defaultsOtherSensorsToInstantaneous" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.343"/>
+  <testcase name="testFilterConfigDismissed_restoresInitialConfiguration" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.357"/>
+  <testcase name="testPresetSelection_transitionsFilterStateCleanly" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.339"/>
+  <testcase name="testSmartAthleticDefaults_defaultsPowerSensorTo3sMovingAverage" classname="com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.ConfigureFilterDialogTest" time="0.357"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

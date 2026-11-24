@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSource
  * @property commute Flag indicating whether the activity was a commute.
  * @property trainer Flag indicating whether the session was on a stationary trainer.
  * @property race Flag indicating whether the session was a competitive race event (ATT-2005).
+ * @property epic Flag indicating whether the session was marked as an Epic workout (ATT-9021, ATT-9022).
  * @property source Origin source provenance of the workout (ATT-2186).
  * @property uploadToStrava Strava upload sync status code.
  * @property stravaSportName Strava-specific sport name override.
@@ -52,6 +53,7 @@ data class WorkoutHeaderData(
     var commute: Boolean,
     var trainer: Boolean,
     var race: Boolean = false,
+    var epic: Boolean = false,
     var source: WorkoutSource = WorkoutSource.TRACKED,
     val uploadToStrava: Int,
     val stravaSportName: String? = null,

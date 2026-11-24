@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:03.618Z" hostname="rainer-HP-EliteBook-850-G5" time="0.191">
+  <properties/>
+  <testcase name="testLiveClimbSheet_structuralDesignAndTelemetryContracts" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.001"/>
+  <testcase name="testLiveClimbSheet_elevationProfileConfiguredWithAdaptiveHeightAndGradientShading" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.001"/>
+  <testcase name="testLiveClimbSheet_previewComposablesExistAndCoverAllStates" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.0"/>
+  <testcase name="testLiveClimbSheet_harmonizedHeaderTokensAndTypography" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.001"/>
+  <testcase name="testLiveClimbSheet_localizationParityAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.181"/>
+  <testcase name="testLiveClimbSheet_composableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.006"/>
+  <testcase name="testLiveClimbSheet_asymmetricTelemetryHudTokens" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.001"/>
+  <testcase name="testLiveClimbSheet_delegatesToLiveTrackingEntitySheet" classname="com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheetLayoutTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

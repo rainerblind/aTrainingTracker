@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-24T09:41:02.328Z" hostname="rainer-HP-EliteBook-850-G5" time="24.333">
+  <properties/>
+  <testcase name="testHrSensorAvailable_enablesStartAndHidesDisconnectedGuidance_TST_HRV_052" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="19.444"/>
+  <testcase name="testActiveMeasurement_keepsHrvLayoutEvenIfStartToggleFalse_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.366"/>
+  <testcase name="testEnabledHrvMode_keepsFullHrvAndWellnessLayout_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.377"/>
+  <testcase name="testForceFullHrvWithWellnessDisabled_showsFullHrvWithoutWellnessCard_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.236"/>
+  <testcase name="testCaptureForceFullHrvLightAndDarkScreenshot_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="1.054"/>
+  <testcase name="testHrSensorConnectedBeforeFirstBeat_enablesStartWithoutDisconnectedGuidance_TST_HRV_052" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.188"/>
+  <testcase name="testForceFullHrvWithWellnessEnabled_preservesFullHrvUiAndOpensInfoSheet_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="1.151"/>
+  <testcase name="testCapturePureWellnessModeLightAndDarkScreenshot_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.531"/>
+  <testcase name="testDirectProfileFallback_keepsHrvLayoutWhenBothTogglesFalse_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.177"/>
+  <testcase name="testPureWellnessMode_savedStateAndEmptyHint_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.144"/>
+  <testcase name="testStartScreenEntry_forceFullHrvFalseRetainsPureWellnessMode_TST_HRV_045" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.187"/>
+  <testcase name="testPureWellnessMode_hidesHrvCardsAndPromotesSaveWellness_TST_HRV_043" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.199"/>
+  <testcase name="testNoHrSensorConnected_disablesStartShowsGuidanceAndKeepsStandaloneWellnessEnabled_TST_HRV_052" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest" time="0.273"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorMidRideContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:30.413Z" hostname="rainer-HP-EliteBook-850-G5" time="0.267">
+  <properties/>
+  <testcase name="midRideHeimwegCard_adheresToDesignSystemTokens" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorMidRideContractTest" time="0.023"/>
+  <testcase name="routeSelectorSheet_conditionallyRendersMidRideHeimwegCard" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorMidRideContractTest" time="0.0"/>
+  <testcase name="trackingTabsScreen_wiresMidRideReturnNavigation" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorMidRideContractTest" time="0.242"/>
+  <testcase name="routeSelectorSheet_declaresMidRideParameters" classname="com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorMidRideContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

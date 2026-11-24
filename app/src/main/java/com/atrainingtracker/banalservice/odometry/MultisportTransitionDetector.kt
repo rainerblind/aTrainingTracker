@@ -86,6 +86,7 @@ class MultisportTransitionDetector(
         const val DEFAULT_ESTABLISH_WINDOW_MS = 3_000L
         const val MIN_TRANSITION_LAP_DURATION_MS = 10_000L
         const val DEFAULT_MAX_ANCHOR_HISTORY = 600
+        const val MIN_RUN_SPEED_MPS = 1.60
         private const val MAX_TICK_DT_MS = 5_000L
     }
 
@@ -96,17 +97,28 @@ class MultisportTransitionDetector(
         UNKNOWN
     }
 
+    private data class CandidateWindowSample(
+        val activeMs: Long,
+        val totalDistanceM: Double,
+        val cumulativeCorroboratedMs: Long,
+        val anchor: MultisportTelemetryAnchor
+    )
+
     private val anchorHistory = ArrayDeque<MultisportTelemetryAnchor>(maxAnchorHistory.coerceAtLeast(16))
+    private val initialWindow = ArrayDeque<CandidateWindowSample>()
+    private val candidateWindow = ArrayDeque<CandidateWindowSample>()
 
     private var establishedSport: BSportType = BSportType.UNKNOWN
     private var pendingInitialSport: BSportType = BSportType.UNKNOWN
     private var pendingInitialActiveMs: Long = 0L
+    private var pendingInitialCorroboratedMs: Long = 0L
     private var lastInitialTickMs: Long = Long.MIN_VALUE
 
     private var exitAnchor: MultisportTelemetryAnchor? = null
     private var candidateTargetSport: BSportType = BSportType.UNKNOWN
     private var enterAnchor: MultisportTelemetryAnchor? = null
     private var candidateConfirmedActiveMs: Long = 0L
+    private var candidateCorroboratedMs: Long = 0L
     private var lastCandidateTickMs: Long = Long.MIN_VALUE
     private var lastTickTimestampMs: Long = Long.MIN_VALUE
 
@@ -125,8 +137,9 @@ class MultisportTransitionDetector(
     /**
      * Processes one 1-Hz observation tick and returns a [MultisportTransitionEvent] strictly when
      * an opposite macro-sport (`BIKE <-> RUN`) has been continuously confirmed for
-     * [confirmationWindowMs] of active unpaused tracking.
+     * [confirmationWindowMs] of active unpaused tracking (`REQ-FIL-031.1`, `REQ-FIL-044.3`).
      */
+    @JvmOverloads
     @Synchronized
     fun onTick(
         carriageMode: PhoneCarriageMode,
@@ -135,7 +148,8 @@ class MultisportTransitionDetector(
         anchor: MultisportTelemetryAnchor,
         isTracking: Boolean,
         isPausedOrAutoPaused: Boolean,
-        isUserSportLocked: Boolean
+        isUserSportLocked: Boolean,
+        hasActiveRunFootstrike: Boolean? = null
     ): MultisportTransitionEvent? {
         val timestampMs = anchor.timestampMs
         if (timestampMs < 0L) return null
@@ -158,6 +172,9 @@ class MultisportTransitionDetector(
 
         val isActiveUnpaused = !isPausedOrAutoPaused
         val tickClass = classifyTick(carriageMode, kinematicSport, hardwareSignals)
+        val isRunCorroboratedTick = hardwareSignals.hasActiveRunHardware ||
+            kinematicSport == BSportType.RUN ||
+            hasActiveRunFootstrike == true
 
         if (!isActiveUnpaused) {
             // Freeze initial/confirmation timers during PAUSED / AUTO_PAUSED; never confirm while paused.
@@ -191,13 +208,38 @@ class MultisportTransitionDetector(
             if (pendingInitialSport != observedSport) {
                 pendingInitialSport = observedSport
                 pendingInitialActiveMs = 0L
+                pendingInitialCorroboratedMs = 0L
                 lastInitialTickMs = timestampMs
+                initialWindow.clear()
+                initialWindow.addLast(CandidateWindowSample(0L, anchor.totalDistanceM, 0L, anchor))
             } else {
                 val dt = (timestampMs - lastInitialTickMs).coerceIn(0L, MAX_TICK_DT_MS)
                 pendingInitialActiveMs += dt
+                if (observedSport == BSportType.RUN && isRunCorroboratedTick) {
+                    pendingInitialCorroboratedMs += dt
+                }
                 lastInitialTickMs = timestampMs
+                initialWindow.addLast(
+                    CandidateWindowSample(pendingInitialActiveMs, anchor.totalDistanceM, pendingInitialCorroboratedMs, anchor)
+                )
+                pruneSlidingWindow(initialWindow, pendingInitialActiveMs, establishWindowMs)
             }
-            if (pendingInitialActiveMs >= establishWindowMs) {
+            if (observedSport == BSportType.RUN) {
+                val minInitialCorroborationMs = minOf(establishWindowMs, (establishWindowMs * 2L) / 3L)
+                if (evaluateRunWindow(
+                        window = initialWindow,
+                        currentActiveMs = pendingInitialActiveMs,
+                        currentCorroboratedMs = pendingInitialCorroboratedMs,
+                        currentAnchor = anchor,
+                        spanMs = establishWindowMs,
+                        minCorroborationMs = minInitialCorroborationMs,
+                        hasActiveRunHardware = hardwareSignals.hasActiveRunHardware
+                    ) != null
+                ) {
+                    establishedSport = BSportType.RUN
+                    clearInitialCandidate()
+                }
+            } else if (pendingInitialActiveMs >= establishWindowMs) {
                 establishedSport = observedSport
                 clearInitialCandidate()
             }
@@ -237,14 +279,51 @@ class MultisportTransitionDetector(
                     candidateTargetSport = targetSport
                     enterAnchor = anchor
                     candidateConfirmedActiveMs = 0L
+                    candidateCorroboratedMs = 0L
                     lastCandidateTickMs = timestampMs
+                    candidateWindow.clear()
+                    candidateWindow.addLast(CandidateWindowSample(0L, anchor.totalDistanceM, 0L, anchor))
                 } else {
                     val dt = (timestampMs - lastCandidateTickMs).coerceIn(0L, MAX_TICK_DT_MS)
                     candidateConfirmedActiveMs += dt
+                    if (targetSport == BSportType.RUN && isRunCorroboratedTick) {
+                        candidateCorroboratedMs += dt
+                    }
                     lastCandidateTickMs = timestampMs
+                    candidateWindow.addLast(
+                        CandidateWindowSample(candidateConfirmedActiveMs, anchor.totalDistanceM, candidateCorroboratedMs, anchor)
+                    )
+                    pruneSlidingWindow(candidateWindow, candidateConfirmedActiveMs, confirmationWindowMs)
+                    if (targetSport == BSportType.RUN) {
+                        enterAnchor = candidateWindow.peekFirst()?.anchor ?: enterAnchor
+                    }
                 }
 
-                if (candidateConfirmedActiveMs >= confirmationWindowMs) {
+                if (targetSport == BSportType.RUN) {
+                    val minConfirmCorroborationMs = minOf(confirmationWindowMs, (confirmationWindowMs * 3L) / 5L)
+                    val qualifyingEnter = evaluateRunWindow(
+                        window = candidateWindow,
+                        currentActiveMs = candidateConfirmedActiveMs,
+                        currentCorroboratedMs = candidateCorroboratedMs,
+                        currentAnchor = anchor,
+                        spanMs = confirmationWindowMs,
+                        minCorroborationMs = minConfirmCorroborationMs,
+                        hasActiveRunHardware = hardwareSignals.hasActiveRunHardware
+                    )
+                    if (qualifyingEnter != null) {
+                        val confirmedExit = exitAnchor ?: qualifyingEnter
+                        val event = MultisportTransitionEvent(
+                            fromSport = establishedSport,
+                            toSport = targetSport,
+                            exitAnchor = confirmedExit,
+                            enterAnchor = qualifyingEnter,
+                            confirmAnchor = anchor
+                        )
+                        establishedSport = targetSport
+                        clearPendingTransition()
+                        return event
+                    }
+                } else if (candidateConfirmedActiveMs >= confirmationWindowMs) {
                     val confirmedExit = exitAnchor ?: anchor
                     val confirmedEnter = enterAnchor ?: anchor
                     val event = MultisportTransitionEvent(
@@ -334,17 +413,68 @@ class MultisportTransitionDetector(
         anchorHistory.addLast(anchor)
     }
 
+    private fun pruneSlidingWindow(
+        window: ArrayDeque<CandidateWindowSample>,
+        currentActiveMs: Long,
+        spanMs: Long
+    ) {
+        val effectiveSpanMs = spanMs.coerceAtLeast(0L)
+        while (window.size >= 2) {
+            val first = window.removeFirst()
+            val second = window.peekFirst()!!
+            if (currentActiveMs - second.activeMs < effectiveSpanMs) {
+                window.addFirst(first)
+                break
+            }
+        }
+    }
+
+    private fun evaluateRunWindow(
+        window: ArrayDeque<CandidateWindowSample>,
+        currentActiveMs: Long,
+        currentCorroboratedMs: Long,
+        currentAnchor: MultisportTelemetryAnchor,
+        spanMs: Long,
+        minCorroborationMs: Long,
+        hasActiveRunHardware: Boolean
+    ): MultisportTelemetryAnchor? {
+        val head = window.peekFirst() ?: return null
+        val windowActiveMs = currentActiveMs - head.activeMs
+        if (windowActiveMs < spanMs) return null
+        if (hasActiveRunHardware || spanMs <= 0L) return head.anchor
+
+        val windowActiveSec = windowActiveMs / 1000.0
+        if (windowActiveSec <= 0.0) return null
+        val windowDistM = safeDistanceDeltaM(head.totalDistanceM, currentAnchor.totalDistanceM)
+        val minWindowDistM = MIN_RUN_SPEED_MPS * (spanMs / 1000.0)
+        val windowAvgSpeedMps = windowDistM / windowActiveSec
+        if (windowDistM < minWindowDistM || windowAvgSpeedMps < MIN_RUN_SPEED_MPS) return null
+
+        val windowCorroboratedMs = (currentCorroboratedMs - head.cumulativeCorroboratedMs).coerceAtLeast(0L)
+        return if (windowCorroboratedMs >= minCorroborationMs) head.anchor else null
+    }
+
+    private fun safeDistanceDeltaM(fromDistanceM: Double, toDistanceM: Double): Double {
+        if (!fromDistanceM.isFinite() || !toDistanceM.isFinite()) return 0.0
+        val delta = toDistanceM - fromDistanceM
+        return if (delta.isFinite() && delta > 0.0) delta else 0.0
+    }
+
     private fun clearInitialCandidate() {
         pendingInitialSport = BSportType.UNKNOWN
         pendingInitialActiveMs = 0L
+        pendingInitialCorroboratedMs = 0L
         lastInitialTickMs = Long.MIN_VALUE
+        initialWindow.clear()
     }
 
     private fun clearTargetCandidateOnly() {
         candidateTargetSport = BSportType.UNKNOWN
         enterAnchor = null
         candidateConfirmedActiveMs = 0L
+        candidateCorroboratedMs = 0L
         lastCandidateTickMs = Long.MIN_VALUE
+        candidateWindow.clear()
     }
 
     private fun clearPendingTransition() {

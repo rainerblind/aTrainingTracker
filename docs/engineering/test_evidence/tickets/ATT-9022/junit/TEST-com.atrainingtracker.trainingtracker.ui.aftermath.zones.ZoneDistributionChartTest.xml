@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionChartTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:55.275Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testZoneDistributionData_fiveColumnHistogramOrdering" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionChartTest" time="0.001"/>
+  <testcase name="testFormatZoneDuration_formattingAccuracy" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionChartTest" time="0.0"/>
+  <testcase name="testCalculateHeightFraction_scalingAccuracy" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionChartTest" time="0.0"/>
+  <testcase name="testCalculateHeightFraction_edgeCases" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionChartTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

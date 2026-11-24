@@ -46,10 +46,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.os.ConfigurationCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
+import com.atrainingtracker.trainingtracker.ui.tracking.resolveTrackingTabTitle
 
 /**
  * Header for the Tab in Config Mode
@@ -68,8 +71,10 @@ fun TrackingTabConfigHeader(
     onMoveTab: (Long, Boolean) -> Unit = { _, _ -> },
     onToggleMode: () -> Unit,
 ) {
-    // Local state for the text field to ensure smooth typing
-    var localName by remember(viewInfo.tabViewId) { mutableStateOf(viewInfo.name) }
+    val displayTitle = resolveTrackingTabTitle(viewInfo.name)
+    val currentLocale = ConfigurationCompat.getLocales(LocalConfiguration.current)[0]
+    // Local state for the text field to ensure smooth typing, refreshing on tab or locale switch
+    var localName by remember(viewInfo.tabViewId, currentLocale) { mutableStateOf(displayTitle) }
 
     Surface(
         color = androidx.compose.ui.graphics.Color.Transparent,

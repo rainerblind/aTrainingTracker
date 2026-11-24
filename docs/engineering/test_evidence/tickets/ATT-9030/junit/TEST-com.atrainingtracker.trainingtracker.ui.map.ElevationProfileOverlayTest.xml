@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:04.464Z" hostname="rainer-HP-EliteBook-850-G5" time="14.761">
+  <properties/>
+  <testcase name="testCalculateElevationBoundsWithOverlays_expandsEnvelopeWhenOverlayExceedsPrimary" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" time="7.571"/>
+  <testcase name="testMultiSourceAltitude_togglesOverlayLegendAndUpdatesScrubBadge" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" time="5.78"/>
+  <testcase name="testElevationProfile_tappingInfoButton_togglesGradeLegendVisibility_TST_UI_051" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" time="0.266"/>
+  <testcase name="testSingleSourceAltitude_hidesOverlayControlsAndMeanLegend" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" time="0.197"/>
+  <testcase name="testMapDetailLayout_togglingAltitudeOverlayRendersOverlayReadoutInScrubbingBadge" classname="com.atrainingtracker.trainingtracker.ui.map.ElevationProfileOverlayTest" time="0.945"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,27 @@
+# Stage 5 Walkthrough — ATT-9468: Fix Race Condition in Retroactive Multisport `LAP_NR` Backfill
+
+- **Ticket**: `ATT-9468` (`2 SP`, Bug, `tier-a`, `severity-major`, Epic `ATT-5908`) | **Target Release**: `V5.0.0` | **Branch**: `feature/ATT-9468` (off `sprint/2026-11-24_01_Früh` `66309b1e`)
+- **Gate 3**: `ATT-9680` (`PASS` / `Erledigt`) | **Requirements / Tests**: `REQ-TRK-096` (`[Verified]`) <-> `TST-TRK-096` (`[Verified]`)
+- **Evidence Bundle (`Rule 8.4`)**: `docs/engineering/test_evidence/tickets/ATT-9468/` (`evidence_summary.json`, `manifest.json`, JUnit XMLs)
+
+## 1. Summary of Changes
+
+1. **`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/MultisportLapCoordinator.kt` (`561 -> 783 / 1,500` LoC)**:
+   - Added immutable `CommittedTransitionWindow` committed atomically inside `planAndCommitAnchorTransition()` (leaf-only `@Synchronized` monitor, BEFORE `advanceLapsFn()` and `persistTask` submission), with `@Volatile hasCommittedTransitions` O(1) lock-free fast path for single-sport workouts, active `committedTransitions` cleared in `resetForSession()`, and bounded (`<= 4` sessions) `pendingReconciliationByFileName` map for rapid Stop -> Start isolation.
+   - Added `@JvmOverloads fun enforceMonotonicLapNr(baseFileName, samplingValues, summaryValues, sampleEpochS)`: enforces per-sample timestamp-windowed `LAP_NR` (`[exit, enter) -> transitionLapNr`, `>= enter -> newLegLapNr`, with UTC `time`/epoch fallback when `TIME_TOTAL` is absent) while decoupling workout-wide `summaryValues[WorkoutSummaries.LAPS]` floor (`maxCommittedNewLegLapNr`) so delayed `< exitS` or `[exitS, enterS)` samples never regress `WorkoutSummaries.LAPS` and higher manual laps are never downgraded.
+   - Unified `backfillWorkoutSamplesTable()` and `reconcileWorkoutSamplesTable()` via shared `applyTransitionWindowsToTable()` using strict monotonic `($lapNrCol < ? OR $lapNrCol IS NULL)` predicates (catching stale `oldLapNr`, torn mid-loop `oldLapNr + 1`, and `NULL` without downgrading manual laps) plus combined `TIME_TOTAL IS NULL` + UTC `time` fallback predicates when both columns exist.
+   - Added `reconcileWorkoutSamplesOnFinalization(context, baseFileName)` with `isNullOrBlank()` short-circuit, order-preserving deduplicated merge of `null`-scoped & keyed windows, `0` SQLite queries on single-sport workouts, and fault-isolated `try/catch (Throwable)`.
+2. **`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java` (`3,184 -> 3,186 / 3,220` LoC, `+2` lines)**:
+   - Wired `mMultisportLapCoordinator.enforceMonotonicLapNr(mBaseFileName, samplingValues, summaryValues)` on `mDbExecutor` right before `WorkoutRepository.recordLiveSample()` (`:2808`).
+   - Wired `mMultisportLapCoordinator.reconcileWorkoutSamplesOnFinalization(getSafeContext(), baseFileName)` on `mDbExecutor` inside `endWorkout()` right after `createNewLap()` and strictly before `finalizeLiveSession()` / `WorkoutPostProcessingCoordinator.enqueue()` (`:2396`).
+3. **`docs/architecture/detailed_design/tracker_service.md` (`v1.0.12 -> v1.0.13`, `REQ-PRO-114`)**: Updated LOC (`3,186`), requirement trace (`REQ-TRK-096`), Sections 3 / 4.2 / 5, and Change History.
+4. **Tests**: Extended `MultisportLapCoordinatorTest.kt` (`+3` tests -> `10/10`) and added Robolectric `TrackerServiceMultisportMonotonicLapTest.kt` (`1/1`) covering all `TST-TRK-096.1`–`.3` scenarios.
+
+## 2. Verification & Governance Results
+
+| Check | Result | Details |
+|---|---|---|
+| **Targeted Unit, Robolectric & Contract Suites (`11` suites, `--rerun`)** | **108/108 PASS** | `MultisportLapCoordinatorTest` (`10/10`), `TrackerServiceMultisportMonotonicLapTest` (`1/1`), `TrackerServiceLapTest` (`7/7`), `TrackerServiceResumeTest` (`18/18`), `TrackerServiceFinalizationTest` (`37/37`), `TrackerServiceIntegrationTest` (`6/6`), `TrackerServiceStateMachineCharacterisationTest` (`8/8`), `BANALServiceMultisportTransitionTest` (`4/4`), `DetailedDesignParityContractTest` (`3/3`), `ArchitectureConformanceContractTest` (`11/11`), `InterfaceSignatureDriftContractTest` (`3/3`); `0` fail, `0` err, `0` skip, `0` new compiler warnings |
+| **Requirement & Living-Doc Governance** | **EXIT 0** | `verify_requirement_governance.py --base-ref sprint/2026-11-24_01_Früh --check-verified-evidence` PASS (`REQ-TRK-096` & `TST-TRK-096` `[Verified]`, master indexes synchronized) |
+| **Monolith, Lock & Scope Invariants** | **PASS** | `TrackerService.java` `3,186 / 3,220` (`+2`), `MultisportLapCoordinator.kt` `783 / 1,500`, `0` edits to `WorkoutSamplesDatabaseManager.java`/`BANALService.java`/`DeviceManager.java`/`WorkoutRepository.kt`, `0` string edits (`N/A`), `0` main-thread SQLite, leaf-only monitor locking (`0` deadlocks), `ANT-Android-SDKs` `160000` |
+| **Automated Gate (`tools/auto_gate.py`)** | **PASS (`--skip-tests --write-bundle`)** | `static_safety_linters` PASS, `deliverable_lint` PASS, `conflict_markers` PASS, authentic SHA-256 evidence bundle generated at `docs/engineering/test_evidence/tickets/ATT-9468/` (`evidence_summary.json` + `manifest.json`, `1` hashed file, verified via `verify_ticket_evidence_bundle('ATT-9468') == True`). Transparent deviation note: unbatched `auto_gate.py` 45-suite fan-out (`TrackerService*` + `MeasuredNfrBenchmarkTest` / `ATT-9639`) exhausted the `-Xmx768m` Kover/MockK worker heap (`99.97%` Old-Gen Full-GC spiral); per Coordinator override, `--skip-tests --write-bundle` was used alongside full 11-suite targeted verification (`108/108 PASS` on `5d1b2c83`, non-UI backend/concurrency ticket, `0` UI/Compose changes). |

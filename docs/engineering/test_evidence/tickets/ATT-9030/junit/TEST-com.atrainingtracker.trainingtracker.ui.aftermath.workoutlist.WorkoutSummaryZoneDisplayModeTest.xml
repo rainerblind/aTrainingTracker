@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T05:58:03.303Z" hostname="rainer-HP-EliteBook-850-G5" time="0.136">
+  <properties/>
+  <testcase name="statePrecedenceLogic_userOverrideTakesPrecedenceOverDefault" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" time="0.0"/>
+  <testcase name="zoneModeSelector_supportsAllThreeDisplayModesWithDeterministicSelectionAndHistogramFallback" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" time="0.004"/>
+  <testcase name="workoutMasksAndCardsSection_contractExposesIndependentSummaryAndDetailZoneModeSelectors" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" time="0.031"/>
+  <testcase name="trackOnMapScreen_contractEnforcesReactiveDetailPreferenceAndLocalOverride" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" time="0.0"/>
+  <testcase name="workoutSummary_contractEnforcesReactivePreferenceAndOmitsModeSelector" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" time="0.073"/>
+  <testcase name="zoneCards_contractSupportsOptionalModeSelectorGating" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

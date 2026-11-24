@@ -1,14 +1,14 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.10  
+**Version**: 1.0.11  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Requirements**: 78
+**Total Requirements**: 79
 
 ---
 
@@ -2895,6 +2895,33 @@
   • *Then* the modal closes cleanly and returns to the preserved Workout Details tab.
 - **Invariants**: Preserves `MapDetailLayout.kt` below `1,500` LoC (`0` LoC added), preserves `DarkMapStyle.resolveMapProperties` for all non-overridden maps (`REQ-MAP-021`), preserves `TrackLayersMenuButton` (`REQ-REV-016.2`), and enforces `TranslationParityTest` 9-language parity.
 
+### REQ-MAP-070: Collapsible Metric Scrubber Graph & Bidirectional Position Sync on Full-Screen Workout Map [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-073`
+- **System Requirement(s)**: Derived (SW-only) — Refining `SYSREQ-TRK-004` (Post-workout geographic & telemetry inspection)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `FullScreenWorkoutScrubberModels.kt`, `FullScreenWorkoutMapScrubberPanel.kt`, `FullScreenWorkoutMapOverlay.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TelemetryChartGestures.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `strings_workout_details.xml`
+- **Localization Parity**: All 9 locales (`values*/strings_workout_details.xml`: `en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`)
+- **Rationale**: A full-screen workout map alone shows geography without effort context along the route. Docking a single collapsible, metric-selectable scrubber graph with live telemetry readout and bidirectional Workout Details position sync enables rich positional effort analysis while still supporting an unobstructed full-screen map (`ATT-9030`).
+- **Description**:
+  1. *Collapsible Bottom Scrubber Panel & Adaptive Map Padding (`REQ-MAP-070.1`)*: `FullScreenWorkoutMapContent` SHALL dock a compact single-graph scrubber panel at the bottom when `activeScrubPath` contains at least one plottable telemetry stream (omitting the panel when no streams exist). The panel SHALL provide a Collapse / Expand toggle button; collapsing SHALL minimize the panel to a compact bottom pill maximizing the unobstructed map viewport, and tapping Expand SHALL restore the graph. `ATrainingTrackerMap` bottom `contentPadding` SHALL adapt to the panel height so bounds framing, Google attribution, and `ScrubberController` centering stay above the panel.
+  2. *Dynamic Metric Selector (`REQ-MAP-070.2`)*: The scrubber header SHALL expose a compact single-line horizontal scrollable metric selector listing strictly metrics present in `activeScrubPath` (`Elevation`, `Heart Rate`, `Power`, `Speed`/`Pace` sport-adapted, `Cadence`, `Slope`, `W'bal` when Critical Power model is enabled, `HRV DFA a1`, `HRV rMSSD`), defaulting to `Elevation` when available or else the first available metric, and reusing `ElevationProfile` (preserving canonical adaptive height `calculateElevationProfileHeight(range)`) and `TelemetryMetricGraph` plotted against `ProfileXAxisDomain.DISTANCE`.
+  3. *Live Floating Scrub Readout Pill & Persistent Drag-End Marker (`REQ-MAP-070.3`)*: Whenever a scrub position is active, a compact floating readout pill centered above the expanded scrubber SHALL display `Distance · Time · Selected Metric` (including zone tag where thresholds exist) plus concise available secondary context (`Elevation/Grade`, `HR`, `Power`, `Speed/Pace`, `Cadence` without duplicating the selected metric) and a clear (`×`) control, synchronized 1:1 with the map position marker (`ScrubMarkerLayer` / `ScrubberController`). Dragging along the full-screen scrubber SHALL retain the final scrubbed distance upon finger lift (`clearSelectionOnDragEnd = false`).
+  4. *Bidirectional Scrub Position Sync & 9-Language Localization (`REQ-MAP-070.4`)*: Opening full-screen map mode from Workout Details (`TrackOnMapScreen` / `WorkoutDetailTabbedContent` / `MapDetailLayout`) SHALL initialize full-screen scrub distance from Workout Details' current selected distance (highlighting the scrub marker and readout immediately). Closing full-screen map mode (via Close `X` or system Back) SHALL synchronize the updated scrub distance back to Workout Details' embedded map and charts. All scrubber controls, labels, and tooltips SHALL maintain 100% 9-language localization parity in `values*/strings_workout_details.xml`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a workout with elevation, heart rate, and power streams is open in the full-screen map,
+  • *When* the user switches the bottom graph from `Elevation` to `Power` and drags along the graph,
+  • *Then* the bottom graph renders the Power stream, the floating readout pill updates live (`Distance · Time · Power` + secondary context), and the map position marker moves along the track in sync and remains pinned on finger lift.
+  • *Given* the bottom scrubber graph is visible in the full-screen map,
+  • *When* the user taps Collapse,
+  • *Then* the graph collapses cleanly to a minimal pill maximizing the map viewport, and tapping Expand restores it.
+  • *Given* the user scrubbed to `14.2 km` in Workout Details before opening full-screen, then scrubbed to `21.5 km` in full-screen,
+  • *When* the user opens and later closes the full-screen map,
+  • *Then* full-screen opens at `14.2 km` and Workout Details updates to `21.5 km` upon return.
+- **Invariants**: Preserves `MapDetailLayout.kt` below `1,500` LoC, preserves `LiveSegmentSheetContractTest`'s `LaunchedEffect(externalScrubDistance)` block verbatim, preserves `ElevationProfile` adaptive height (`Design Guidelines §2.3`), preserves `TelemetryChartGestures` default `clearSelectionOnDragEnd = true` for embedded charts, and enforces `TranslationParityTest` 9-language parity.
+
 ---
 
 ## Change History
@@ -2911,3 +2938,4 @@
 | `1.0.8` | 2026-11-23 | Lane 1 Author (`ATT-8133`, `--as agent1`) | `ATT-8133` | Added `REQ-GEO-003` (`GeoMath` polyline projection & elevation-gain consolidation, `RouteAutoDetector` $\cos(\phi)$ fix, read-only `getClusterScores`, lightweight rename sync). |
 | `1.0.9` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Added & verified (`[Verified]`) `REQ-MAP-069` for full-screen workout map mode with spatial overlays, base-map type toggles, DataStore persistence, 9-language localization, and live `emulator-5554` verification. |
 | `1.0.10` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Refined `REQ-MAP-069.3` after Stage 6 BOUNCE 1/5: theme-aware unset base-map default (`NORMAL` in Dark/AMOLED per `REQ-MAP-021`, `TERRAIN` in Light), inherited host `MaterialTheme`, reactive cold-start climbs/locations hydration, and non-`BEST` fallback technical track toggleability. |
+| `1.0.11` | 2026-11-24 | Lane 2 Author (`ATT-9030`, `--as agent1`) | `ATT-9030` | Added & verified (`[Verified]`) `REQ-MAP-070` for collapsible metric scrubber graph, dynamic metric selector, live floating scrub readout pill, bidirectional Workout Details scrub sync, 9-language localization, and live `emulator-5554` verification. |

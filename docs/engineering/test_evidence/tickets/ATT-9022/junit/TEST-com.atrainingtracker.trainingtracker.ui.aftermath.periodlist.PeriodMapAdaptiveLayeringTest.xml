@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:10.711Z" hostname="rainer-HP-EliteBook-850-G5" time="0.018">
+  <properties/>
+  <testcase name="testThumbnailTracksConstant_isEight" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.0"/>
+  <testcase name="testThumbnailTracks_smallPeriodIncludesAllWorkouts" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.003"/>
+  <testcase name="testAdaptiveThresholdConstant_isThirty" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.0"/>
+  <testcase name="testAdaptiveLayering_boundaryConditionAtThirty" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.004"/>
+  <testcase name="testAdaptiveLayering_sportFilterEnablesTracksForFilteredSubset" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.003"/>
+  <testcase name="testAdaptiveLayering_suppressesVectorTracksAndMarkersWhenOverThreshold" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.002"/>
+  <testcase name="testThumbnailTracks_curationRespectsBudgetAndPreservesAnchors" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.005"/>
+  <testcase name="testLargeHeapBudgetInvariant" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.0"/>
+  <testcase name="testAdaptiveLayering_enablesVectorTracksAndMarkersWhenWithinThreshold" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodMapAdaptiveLayeringTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

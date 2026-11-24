@@ -22,12 +22,13 @@ import com.atrainingtracker.banalservice.BSportType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Pure-JVM unit tests for [MultisportTransitionDetector] (`ATT-8917`, `REQ-FIL-031.1`, `TST-FIL-031.1`).
  */
-// Linked test specs: TST-FIL-031
+// Linked test specs: TST-FIL-031, TST-FIL-044
 class MultisportTransitionDetectorTest {
 
     private val baseEpochMs = 1_760_000_000_000L
@@ -43,7 +44,8 @@ class MultisportTransitionDetectorTest {
         distM: Double = sec * 5.0,
         isTracking: Boolean = true,
         isPaused: Boolean = false,
-        isUserLocked: Boolean = false
+        isUserLocked: Boolean = false,
+        hasActiveRunFootstrike: Boolean? = null
     ): MultisportTransitionEvent? {
         return detector.onTick(
             carriageMode = mode,
@@ -57,7 +59,8 @@ class MultisportTransitionDetectorTest {
             ),
             isTracking = isTracking,
             isPausedOrAutoPaused = isPaused,
-            isUserSportLocked = isUserLocked
+            isUserSportLocked = isUserLocked,
+            hasActiveRunFootstrike = hasActiveRunFootstrike
         )
     }
 
@@ -320,5 +323,193 @@ class MultisportTransitionDetectorTest {
         assertNull(detector.pendingExitAnchor)
         assertNull(detector.pendingEnterAnchor)
         assertEquals(0, detector.anchorHistorySize())
+    }
+
+    // REQ-FIL-044.2, REQ-FIL-044.3 / TST-FIL-044.3: Bounded trailing active-unpaused sliding-window RUN guardrails:
+    // (a) Window 1 start low-speed (0.46 m/s, 10.9 m) rejection, (b) Window 2 zero-stride 47.8 m roll rejection,
+    // (c) Phase 1 (1 s < 2 s) & Phase 2 (5 s < 9 s) corroboration-dilution immunity after 60 s uncorroborated roll,
+    // (d) Phase 1 & Phase 2 post-low-speed recovery (enterAnchor at qualifying start, exitAnchor intact) & pause immunity,
+    // (e) NaN/negative distance & zero-duration safety, reset() cleanup, and @JvmStatic @JvmOverloads 5/6-arg bridge interop.
+    @Test
+    fun testRunEstablishmentAndBikeToRunGuardrails_blockLowSpeedAndZeroStrideRollsWhilePreservingSlowT2_TST_FIL_044_3() {
+        // (a) Window 1 (2026-11-21_081228 rows 1..25): 24 s at 0.46 m/s (10.9 m), 0 footstrikes -> NEVER locks RUN,
+        //     then genuine cycling establishes BIKE with 0 phantom Laufen->Rad splits.
+        val startDet = MultisportTransitionDetector()
+        for (s in 0..24) {
+            val ev = tick(
+                startDet, s, PhoneCarriageMode.RUN_HANDHELD, kinematicSport = BSportType.UNKNOWN,
+                distM = s * 0.454, hasActiveRunFootstrike = false
+            )
+            assertNull("Low-speed start must emit 0 transitions at t=$s", ev)
+        }
+        assertEquals("0.46 m/s bike pushing must never lock establishedSport = RUN", BSportType.UNKNOWN, startDet.currentEstablishedSport)
+        for (s in 25..45) {
+            val ev = tick(
+                startDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, kinematicSport = BSportType.BIKE,
+                distM = 10.9 + (s - 24) * 6.5, hasActiveRunFootstrike = false
+            )
+            assertNull("Establishing BIKE after low-speed start must emit 0 phantom Laufen->Rad splits", ev)
+        }
+        assertEquals(BSportType.BIKE, startDet.currentEstablishedSport)
+
+        // (b) Window 2 (2026-11-21_081228 rows 310..340, Metzger -> Bank): established BIKE rolls 47.8 m at
+        //     2.0..4.0 m/s for 19 s with 0 footstrikes -> 0 BIKE->RUN transitions (both false and null footstrike arg).
+        for (footstrikeArg in listOf(false, null)) {
+            val rollDet = MultisportTransitionDetector()
+            for (s in 0..30) {
+                assertNull(tick(rollDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = s * 6.5, hasActiveRunFootstrike = false))
+            }
+            assertEquals(BSportType.BIKE, rollDet.currentEstablishedSport)
+            for (s in 31..40) {
+                assertNull(tick(rollDet, s, PhoneCarriageMode.STATIONARY, BSportType.BIKE, distM = 30 * 6.5, hasActiveRunFootstrike = false))
+            }
+            var dist = 30 * 6.5
+            for (s in 41..60) {
+                dist += 2.52 // ~47.8 m over 19 s
+                assertNull(
+                    "Zero-stride 47.8 m roll (footstrike=$footstrikeArg) must NOT confirm BIKE->RUN at t=$s",
+                    tick(rollDet, s, PhoneCarriageMode.RUN_HANDHELD, BSportType.BIKE, distM = dist, hasActiveRunFootstrike = footstrikeArg)
+                )
+            }
+            assertEquals(BSportType.BIKE, rollDet.currentEstablishedSport)
+        }
+
+        // (c1) Phase 1 corroboration-dilution immunity: 60 s uncorroborated roll + brief 1 s (< 2 s) noise burst -> UNKNOWN
+        val p1DiluteDet = MultisportTransitionDetector()
+        for (s in 0..60) {
+            tick(p1DiluteDet, s, PhoneCarriageMode.RUN_HANDHELD, BSportType.UNKNOWN, distM = s * 3.0, hasActiveRunFootstrike = false)
+        }
+        assertEquals(BSportType.UNKNOWN, p1DiluteDet.currentEstablishedSport)
+        // Brief 1 s noise burst (t = 61) -> trailing 3 s window has only 1_000 ms < 2_000 ms -> stays UNKNOWN
+        tick(p1DiluteDet, 61, PhoneCarriageMode.RUN_HANDHELD, BSportType.RUN, distM = 61 * 3.0, hasActiveRunFootstrike = true)
+        assertEquals("Phase 1 60 s uncorroborated + 1 s burst must NOT lock RUN", BSportType.UNKNOWN, p1DiluteDet.currentEstablishedSport)
+
+        // (c2) Phase 2 corroboration-dilution immunity: 60 s uncorroborated roll + brief 5 s (< 9 s) noise burst -> 0 transitions
+        val p2DiluteDet = MultisportTransitionDetector()
+        for (s in 0..20) tick(p2DiluteDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = s * 6.0, hasActiveRunFootstrike = false)
+        assertEquals(BSportType.BIKE, p2DiluteDet.currentEstablishedSport)
+        var dDilute = 20 * 6.0
+        for (s in 21..85) {
+            dDilute += 3.0
+            val burst = s in 81..85 // 5 s burst (< 9 s threshold of 15 s trailing window)
+            val ev = tick(
+                p2DiluteDet, s, PhoneCarriageMode.RUN_HANDHELD,
+                kinematicSport = if (burst) BSportType.RUN else BSportType.BIKE,
+                distM = dDilute,
+                hasActiveRunFootstrike = burst
+            )
+            assertNull("Phase 2 60 s uncorroborated + 5 s noise burst must NOT emit BIKE->RUN at t=$s", ev)
+        }
+        assertEquals(BSportType.BIKE, p2DiluteDet.currentEstablishedSport)
+
+        // (d1) Phase 2 post-low-speed recovery: 15 s slow RUN ticks (0.5 m/s) followed by 15 s slow T2 jog (2.0 m/s,
+        //      corroborated via hasActiveRunFootstrike = true even while kinematicSport = BIKE) -> confirms cleanly at +15 s
+        //      with enterAnchor at qualifying jog start and exitAnchor preserved intact!
+        val recoveryDet = MultisportTransitionDetector()
+        for (s in 0..99) {
+            assertNull(tick(recoveryDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = s * 7.0, hasActiveRunFootstrike = false))
+        }
+        assertEquals(BSportType.BIKE, recoveryDet.currentEstablishedSport)
+        // Dismount into T2 at t = 100
+        assertNull(tick(recoveryDet, 100, PhoneCarriageMode.WALKING_TRANSITION, BSportType.BIKE, distM = 700.0, hasActiveRunFootstrike = false))
+        var dRec = 700.0
+        // 15 s slow RUN ticks (101..115 at 0.5 m/s) -> must NOT confirm
+        for (s in 101..115) {
+            dRec += 0.5
+            assertNull(
+                "Slow 0.5 m/s RUN ticks must not confirm at t=$s",
+                tick(recoveryDet, s, PhoneCarriageMode.RUN_HANDHELD, BSportType.BIKE, distM = dRec, hasActiveRunFootstrike = true)
+            )
+        }
+        // Genuine 2.0 m/s T2 slow jog begins at t = 116 -> must recover cleanly within <= 15 s of genuine jogging
+        // (no 40-60 s cumulative drag), preserving exitAnchor = 100 and anchoring enterAnchor to the qualifying 15 s window head
+        var recoveredEvent: MultisportTransitionEvent? = null
+        for (s in 116..132) {
+            if (s > 116) dRec += 2.0
+            val ev = tick(recoveryDet, s, PhoneCarriageMode.RUN_HANDHELD, BSportType.BIKE, distM = dRec, hasActiveRunFootstrike = true)
+            if (ev != null) {
+                recoveredEvent = ev
+                break
+            }
+        }
+        assertNotNull("Phase 2 must recover from 15 s slow start within <= 15 s of genuine 2.0 m/s jogging", recoveredEvent)
+        val recEv = recoveredEvent!!
+        assertEquals("exitAnchor must stay preserved at T2 dismount (t=100)", 100, recEv.exitAnchor.activeTimeS)
+        assertEquals(
+            "enterAnchor must anchor to the qualifying 15 s window head (confirm - 15)",
+            recEv.confirmAnchor.activeTimeS - 15,
+            recEv.enterAnchor.activeTimeS
+        )
+        assertTrue(
+            "enterAnchor must advance past stale slow-start t=101 (was ${recEv.enterAnchor.activeTimeS})",
+            recEv.enterAnchor.activeTimeS >= 113
+        )
+        assertTrue(
+            "Must confirm within <= 15 s of genuine 2.0 m/s jogging (confirm=${recEv.confirmAnchor.activeTimeS})",
+            recEv.confirmAnchor.activeTimeS <= 131
+        )
+        assertTrue(
+            "Qualifying window displacement must meet >= 24.0 m floor",
+            (recEv.confirmAnchor.totalDistanceM - recEv.enterAnchor.totalDistanceM) >= 24.0
+        )
+        assertEquals(BSportType.RUN, recoveryDet.currentEstablishedSport)
+
+        // (d2) Phase 1 post-low-speed recovery: 10 s at 0.5 m/s -> 3 s at 2.0 m/s corroborated -> establishes RUN in 3 s
+        val p1RecDet = MultisportTransitionDetector()
+        var dP1 = 0.0
+        for (s in 0..10) {
+            dP1 += 0.5
+            tick(p1RecDet, s, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = dP1, hasActiveRunFootstrike = true)
+        }
+        assertEquals(BSportType.UNKNOWN, p1RecDet.currentEstablishedSport)
+        for (s in 11..14) {
+            if (s > 11) dP1 += 2.0
+            tick(p1RecDet, s, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = dP1, hasActiveRunFootstrike = true)
+        }
+        assertEquals("Phase 1 must recover cleanly within 3 s of 2.0 m/s running", BSportType.RUN, p1RecDet.currentEstablishedSport)
+
+        // (d3) Pause-immune active average speed: 2.0 m/s jog paused for 20 s mid-confirmation (flat dist during pause) confirms at 15 s active
+        val pauseDet = MultisportTransitionDetector()
+        for (s in 0..19) tick(pauseDet, s, PhoneCarriageMode.BIKE_HANDLEBAR, BSportType.BIKE, distM = s * 6.0)
+        tick(pauseDet, 20, PhoneCarriageMode.WALKING_TRANSITION, BSportType.BIKE, distM = 120.0)
+        var dPause = 120.0
+        for (s in 21..29) { // 8 s active RUN at 2.0 m/s (+16 m)
+            if (s > 21) dPause += 2.0
+            assertNull(tick(pauseDet, s, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, activeS = s, distM = dPause, isPaused = false, hasActiveRunFootstrike = true))
+        }
+        for (s in 30..49) { // 20 s auto-pause with flat distance
+            assertNull(tick(pauseDet, s, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, activeS = 29, distM = dPause, isPaused = true, hasActiveRunFootstrike = true))
+        }
+        var pauseConfirm: MultisportTransitionEvent? = null
+        for (s in 50..58) { // 7 more active s at 2.0 m/s (+14 m -> total 30 m / 15 s active = 2.0 m/s)
+            dPause += 2.0
+            val ev = tick(pauseDet, s, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, activeS = 29 + (s - 49), distM = dPause, isPaused = false, hasActiveRunFootstrike = true)
+            if (ev != null) { pauseConfirm = ev; break }
+        }
+        assertNotNull("Pause-immune 2.0 m/s slow jogger must confirm after 15 s active unpaused", pauseConfirm)
+
+        // (e) NaN/negative distance safety, zero-duration spanMs=0L safety, reset() cleanup & @JvmStatic @JvmOverloads bridge interop
+        val safeDet = MultisportTransitionDetector()
+        tick(safeDet, 0, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = Double.NaN, hasActiveRunFootstrike = true)
+        tick(safeDet, 1, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = -5.0, hasActiveRunFootstrike = true)
+        tick(safeDet, 2, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = Double.POSITIVE_INFINITY, hasActiveRunFootstrike = true)
+        tick(safeDet, 3, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = 1.0, hasActiveRunFootstrike = true)
+        assertEquals("Non-finite/negative distance deltas must not establish RUN", BSportType.UNKNOWN, safeDet.currentEstablishedSport)
+        safeDet.reset()
+        assertEquals(0, safeDet.anchorHistorySize())
+
+        val zeroSpanDet = MultisportTransitionDetector(confirmationWindowMs = 0L, establishWindowMs = 0L)
+        tick(zeroSpanDet, 0, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = 0.0, hasActiveRunFootstrike = true)
+        assertEquals(BSportType.RUN, zeroSpanDet.currentEstablishedSport)
+
+        val bridgeMethods = MultisportTransitionBridge::class.java.declaredMethods
+            .filter { it.name == "evaluateAndDispatch" && java.lang.reflect.Modifier.isStatic(it.modifiers) }
+            .map { it.parameterCount }
+            .toSet()
+        assertEquals(
+            "MultisportTransitionBridge.evaluateAndDispatch must preserve @JvmStatic @JvmOverloads 5-arg & 6-arg signatures",
+            setOf(5, 6),
+            bridgeMethods
+        )
     }
 }

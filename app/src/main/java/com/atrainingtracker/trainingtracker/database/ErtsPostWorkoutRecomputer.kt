@@ -135,6 +135,7 @@ object ErtsPostWorkoutRecomputer {
     private const val MAX_ACTIVE_SAMPLE_GAP_SEC = 5.0
     private const val PAUSE_GAP_THRESHOLD_MS = 5_000L
     private const val PAUSE_TIME_TOTAL_GAP_SEC = 5L
+    private const val PAUSE_TIME_DIFF_THRESHOLD_SEC = 2L
     const val MIN_PLAUSIBLE_ALTITUDE_M = -1000.0
     const val MAX_PLAUSIBLE_ALTITUDE_M = 9000.0
     const val MAX_PLAUSIBLE_ASCENT_M = 20_000.0
@@ -236,6 +237,7 @@ object ErtsPostWorkoutRecomputer {
             val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
             val lapNrIdx = cursor.getColumnIndex(SensorType.LAP_NR.name)
             val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
 
             // Look for raw 9-locale barometer altitude column for slew/median pre-filtering (REQ-FIL-027.5)
             val baroAltColName = colNames.firstOrNull { isBarometricAltitudeColumn(it) }
@@ -252,7 +254,9 @@ object ErtsPostWorkoutRecomputer {
             val wheelSpeedCol = colNames.firstOrNull { isWheelSpeedColumn(it) }
             val wheelSpeedIdx = if (wheelSpeedCol != null) cursor.getColumnIndex(wheelSpeedCol) else -1
 
-            val rawTimingPairs = mutableListOf<Pair<Long?, Long?>>()
+            val parsedWallTsList = mutableListOf<Long?>()
+            val timeTotalSecList = mutableListOf<Long?>()
+            val timeActiveSecList = mutableListOf<Long?>()
             while (cursor.moveToNext()) {
                 val rowId = cursor.getLong(idIdx)
                 val timeStr = cursor.getString(timeIdx)
@@ -262,7 +266,14 @@ object ErtsPostWorkoutRecomputer {
                 } else {
                     null
                 }
-                rawTimingPairs.add(parsedTs to timeTotalSec)
+                val timeActiveSec = if (timeActiveIdx >= 0 && !cursor.isNull(timeActiveIdx)) {
+                    cursor.getLong(timeActiveIdx)
+                } else {
+                    null
+                }
+                parsedWallTsList.add(parsedTs)
+                timeTotalSecList.add(timeTotalSec)
+                timeActiveSecList.add(timeActiveSec)
 
                 val lat = if (latIdx >= 0 && !cursor.isNull(latIdx)) cursor.getDouble(latIdx).takeIf { it.isFinite() } else null
                 val lon = if (lonIdx >= 0 && !cursor.isNull(lonIdx)) cursor.getDouble(lonIdx).takeIf { it.isFinite() } else null
@@ -316,13 +327,29 @@ object ErtsPostWorkoutRecomputer {
                     )
                 )
             }
-            // Reconstruct beat-immune monotonic 1-Hz timestamps BEFORE barometer/ERTS filtering (REQ-FIL-027.1, REQ-FIL-032.1)
-            val reconstructedTs = reconstructTimestamps(rawTimingPairs)
+            // Reconstruct beat-immune monotonic 1-Hz timestamps & pause boundaries BEFORE barometer/ERTS filtering
+            // (REQ-FIL-027.1, REQ-FIL-032.1, REQ-FIL-045.1)
+            val timing = reconstructTimingWithPauses(parsedWallTsList, timeTotalSecList, timeActiveSecList)
             for (i in result.indices) {
-                result[i] = result[i].copy(timestampMs = reconstructedTs[i])
+                result[i] = result[i].copy(
+                    timestampMs = timing.timestampsMs[i],
+                    isPauseGap = timing.pauseGapMask[i]
+                )
             }
         }
         return resolveCarriageModesAndFilterBaro(result)
+    }
+
+    internal data class ReconstructedTiming(
+        val timestampsMs: LongArray,
+        val pauseGapMask: BooleanArray
+    )
+
+    private fun isPauseBoundary(rows: List<RawSampleRow>, idx: Int): Boolean {
+        return idx > 0 && (
+            rows[idx].isPauseGap ||
+                ExtendedRtsOdometrySmoother.isTimestampPauseGap(rows[idx - 1].timestampMs, rows[idx].timestampMs)
+            )
     }
 
     /**
@@ -335,17 +362,51 @@ object ErtsPostWorkoutRecomputer {
         samples: List<Pair<Long?, Long?>>,
         fallbackStartMs: Long = System.currentTimeMillis()
     ): LongArray {
-        val result = LongArray(samples.size)
+        return reconstructTimingWithPauses(
+            parsedWallTsMs = samples.map { it.first },
+            timeTotalSecs = samples.map { it.second },
+            timeActiveSecs = emptyList(),
+            fallbackStartMs = fallbackStartMs
+        ).timestampsMs
+    }
+
+    /**
+     * Reconstructs monotonic 1-Hz timestamps alongside an authoritative [ReconstructedTiming.pauseGapMask]
+     * detecting `> 5 s` wall-clock/`TIME_TOTAL` pauses AND short auto-pauses (`>= 3 s`) where paired
+     * `TIME_TOTAL` advances more than `2 s` ahead of `TIME_ACTIVE` with missing rows (`REQ-FIL-045.1`).
+     */
+    internal fun reconstructTimingWithPauses(
+        parsedWallTsMs: List<Long?>,
+        timeTotalSecs: List<Long?>,
+        timeActiveSecs: List<Long?>,
+        fallbackStartMs: Long = System.currentTimeMillis()
+    ): ReconstructedTiming {
+        val n = parsedWallTsMs.size
+        val result = LongArray(n)
+        val pauseGapMask = BooleanArray(n)
         var prevTs = 0L
         var prevTimeTotalSec: Long? = null
         var prevTimeTotalIdx = -1
-        for (i in samples.indices) {
-            val (parsedTs, timeTotalSec) = samples[i]
-            val ts = if (i == 0) {
-                parsedTs ?: fallbackStartMs
+        var prevPairTotalSec: Long? = null
+        var prevPairActiveSec: Long? = null
+        var prevPairIdx = -1
+
+        for (i in 0 until n) {
+            val parsedTs = parsedWallTsMs[i]
+            val timeTotalSec = timeTotalSecs.getOrNull(i)
+            val timeActiveSec = timeActiveSecs.getOrNull(i)
+            val ts: Long
+            if (i == 0) {
+                ts = parsedTs ?: fallbackStartMs
+                pauseGapMask[0] = false
             } else {
                 val oneHzTs = prevTs + 1000L
-                val wallPauseTs = if (parsedTs != null && (parsedTs - oneHzTs) > PAUSE_GAP_THRESHOLD_MS) {
+                val wallPauseTs = if (
+                    parsedTs != null &&
+                    parsedTs > oneHzTs &&
+                    oneHzTs <= Long.MAX_VALUE - PAUSE_GAP_THRESHOLD_MS &&
+                    parsedTs > oneHzTs + PAUSE_GAP_THRESHOLD_MS
+                ) {
                     parsedTs
                 } else {
                     null
@@ -360,13 +421,43 @@ object ErtsPostWorkoutRecomputer {
                 } else {
                     null
                 }
-                when {
-                    wallPauseTs != null && timeTotalPauseTs != null -> max(wallPauseTs, timeTotalPauseTs)
-                    wallPauseTs != null -> wallPauseTs
-                    timeTotalPauseTs != null -> timeTotalPauseTs
-                    else -> oneHzTs
+                val timeActivePauseTs = if (
+                    timeTotalSec != null &&
+                    timeActiveSec != null &&
+                    prevPairTotalSec != null &&
+                    prevPairActiveSec != null
+                ) {
+                    val deltaTotal = timeTotalSec - prevPairTotalSec
+                    val deltaActive = timeActiveSec - prevPairActiveSec
+                    val pauseDiffSec = deltaTotal - deltaActive
+                    val extraPairGapSec = deltaTotal - (i - prevPairIdx).toLong()
+                    if (
+                        deltaTotal > 0L &&
+                        deltaActive >= 0L &&
+                        pauseDiffSec > PAUSE_TIME_DIFF_THRESHOLD_SEC &&
+                        extraPairGapSec >= PAUSE_TIME_DIFF_THRESHOLD_SEC
+                    ) {
+                        oneHzTs + extraPairGapSec * 1000L
+                    } else {
+                        null
+                    }
+                } else {
+                    null
                 }
+
+                var resolvedPauseTs: Long? = null
+                if (wallPauseTs != null) resolvedPauseTs = wallPauseTs
+                if (timeTotalPauseTs != null) {
+                    resolvedPauseTs = if (resolvedPauseTs != null) max(resolvedPauseTs, timeTotalPauseTs) else timeTotalPauseTs
+                }
+                if (timeActivePauseTs != null) {
+                    resolvedPauseTs = if (resolvedPauseTs != null) max(resolvedPauseTs, timeActivePauseTs) else timeActivePauseTs
+                }
+                ts = resolvedPauseTs ?: oneHzTs
+                pauseGapMask[i] = resolvedPauseTs != null ||
+                    ExtendedRtsOdometrySmoother.isTimestampPauseGap(prevTs, ts)
             }
+
             result[i] = ts
             prevTs = ts
             if (timeTotalSec != null) {
@@ -377,14 +468,24 @@ object ErtsPostWorkoutRecomputer {
                 prevTimeTotalSec = null
                 prevTimeTotalIdx = -1
             }
+            if (timeTotalSec != null && timeActiveSec != null) {
+                prevPairTotalSec = timeTotalSec
+                prevPairActiveSec = timeActiveSec
+                prevPairIdx = i
+            } else if (pauseGapMask[i]) {
+                // Re-anchor paired TIME_TOTAL/TIME_ACTIVE reference across any pause landing on a null row
+                prevPairTotalSec = null
+                prevPairActiveSec = null
+                prevPairIdx = -1
+            }
         }
-        return result
+        return ReconstructedTiming(result, pauseGapMask)
     }
 
     /**
      * Resolves recorded 1-Hz [PhoneCarriageMode] entries (falling back to deterministic 1-Hz kinematic
      * and barometric-jitter inference on legacy DBs) and pre-filters raw barometer columns using
-     * each epoch's adaptive median/slew parameters (REQ-FIL-028.4).
+     * each epoch's adaptive median/slew parameters (REQ-FIL-028.4, REQ-FIL-045.1).
      */
     internal fun resolveCarriageModesAndFilterBaro(rows: List<RawSampleRow>): List<RawSampleRow> {
         if (rows.isEmpty()) return rows
@@ -394,6 +495,10 @@ object ErtsPostWorkoutRecomputer {
         val resolved = ArrayList<RawSampleRow>(n)
         for (i in 0 until n) {
             val row = rows[i]
+            if (isPauseBoundary(rows, i)) {
+                // Reset median/slew buffer across pause boundaries so pre-pause pressure never smears into resume
+                baroFilter.reset()
+            }
             val mode = row.recordedCarriageMode?.takeIf { it != PhoneCarriageMode.UNKNOWN }
                 ?: inferLegacyCarriageModeAt(rows, i)
             val epochSpeedMps = row.wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
@@ -420,74 +525,82 @@ object ErtsPostWorkoutRecomputer {
 
     /**
      * Detects sustained barometer reset/calibration steps (e.g., `+20.2 m` after mid-workout crash
-     * recovery) on raw un-slewed barometer readings BEFORE [BarometricAltitudeFilter.filterSlewOnly]
-     * can smear the step into a multi-second `+1.2 m/s` (`+35%` grade) ramp (`REQ-STB-025.4`).
+     * recovery) on raw un-slewed barometer readings independently per pause-delimited active segment
+     * BEFORE [BarometricAltitudeFilter.filterSlewOnly] can smear the step (`REQ-STB-025.4`, `REQ-FIL-045.1`).
      *
      * Distinguishes sustained steps (`>= 3` shifted post-step samples) from transient 1–2 sample
-     * pocket-compression pulses (`REQ-TRK-057.1`) and genuine alpine climbs (`REQ-FIL-033.2`).
+     * pocket-compression pulses (`REQ-TRK-057.1`) and genuine alpine climbs (`REQ-FIL-033.2`), while
+     * preventing null-baro pause masking, cross-pause medians, and cross-pause `cumulativeShift` leakage.
      */
     internal fun detectAndCompensateBaroResetSteps(
         rows: List<RawSampleRow>
     ): Pair<List<Double?>, Set<Int>> {
         val compensated = rows.map { it.rawBaroAltitude }.toMutableList()
-        val validIndices = rows.indices.filter { rows[it].rawBaroAltitude?.isFinite() == true }
-        if (validIndices.size < 4) {
-            return compensated to emptySet()
-        }
-
         val resetIndices = mutableSetOf<Int>()
-        var cumulativeShift = 0.0
+        val n = rows.size
+        var segStart = 0
 
-        for (pos in 1 until validIndices.size) {
-            val prevIdx = validIndices[pos - 1]
-            val currIdx = validIndices[pos]
-            val prevRaw = rows[prevIdx].rawBaroAltitude!!
-            val currRaw = rows[currIdx].rawBaroAltitude!!
+        while (segStart < n) {
+            var segEnd = segStart + 1
+            while (segEnd < n && !isPauseBoundary(rows, segEnd)) {
+                segEnd++
+            }
+            val validIndices = (segStart until segEnd).filter { rows[it].rawBaroAltitude?.isFinite() == true }
+            if (validIndices.size >= 4) {
+                var cumulativeShift = 0.0
+                for (pos in 1 until validIndices.size) {
+                    val prevIdx = validIndices[pos - 1]
+                    val currIdx = validIndices[pos]
+                    val prevRaw = rows[prevIdx].rawBaroAltitude!!
+                    val currRaw = rows[currIdx].rawBaroAltitude!!
 
-            val dtSec = max(1.0, (rows[currIdx].timestampMs - rows[prevIdx].timestampMs) / 1000.0)
-            val vPrev = rows[prevIdx].wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
-                ?: rows[prevIdx].speedMps?.takeIf { it.isFinite() && it >= 0.0 }
-                ?: 0.0
-            val vCurr = rows[currIdx].wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
-                ?: rows[currIdx].speedMps?.takeIf { it.isFinite() && it >= 0.0 }
-                ?: 0.0
-            val refSpeed = max(max(vPrev, vCurr), 2.0)
-            val stepThresholdM = max(
-                ExtendedRtsAltitudeSlopeSmoother.BARO_RESET_STEP_MIN_M,
-                ExtendedRtsAltitudeSlopeSmoother.MAX_PHYSICAL_SLOPE * refSpeed * min(dtSec, 15.0) + 3.0
-            )
+                    val dtSec = max(1.0, (rows[currIdx].timestampMs - rows[prevIdx].timestampMs) / 1000.0)
+                    val vPrev = rows[prevIdx].wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                        ?: rows[prevIdx].speedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                        ?: 0.0
+                    val vCurr = rows[currIdx].wheelSpeedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                        ?: rows[currIdx].speedMps?.takeIf { it.isFinite() && it >= 0.0 }
+                        ?: 0.0
+                    val refSpeed = max(max(vPrev, vCurr), 2.0)
+                    val stepThresholdM = max(
+                        ExtendedRtsAltitudeSlopeSmoother.BARO_RESET_STEP_MIN_M,
+                        ExtendedRtsAltitudeSlopeSmoother.MAX_PHYSICAL_SLOPE * refSpeed * min(dtSec, 15.0) + 3.0
+                    )
 
-            val jump = currRaw - prevRaw
-            if (abs(jump) >= stepThresholdM) {
-                val preStart = max(0, pos - 5)
-                val preVals = (preStart until pos).map { rows[validIndices[it]].rawBaroAltitude!! }.sorted()
-                val preMedian = (preVals[(preVals.size - 1) / 2] + preVals[preVals.size / 2]) / 2.0
-                val preStableCount = preVals.count { abs(it - preMedian) <= 0.5 * stepThresholdM }
-                val preBaselineStable = preStableCount >= min(3, preVals.size) &&
-                    abs(prevRaw - preMedian) <= 0.5 * stepThresholdM
+                    val jump = currRaw - prevRaw
+                    if (abs(jump) >= stepThresholdM) {
+                        val preStart = max(0, pos - 5)
+                        val preVals = (preStart until pos).map { rows[validIndices[it]].rawBaroAltitude!! }.sorted()
+                        val preMedian = (preVals[(preVals.size - 1) / 2] + preVals[preVals.size / 2]) / 2.0
+                        val preStableCount = preVals.count { abs(it - preMedian) <= 0.5 * stepThresholdM }
+                        val preBaselineStable = preStableCount >= min(3, preVals.size) &&
+                            abs(prevRaw - preMedian) <= 0.5 * stepThresholdM
 
-                val postEnd = min(validIndices.size, pos + 4)
-                if (preBaselineStable && postEnd - pos >= 3) {
-                    val postVals = (pos until postEnd).map { rows[validIndices[it]].rawBaroAltitude!! }
-                    val sortedPost = postVals.sorted()
-                    val postMedian = (sortedPost[(sortedPost.size - 1) / 2] + sortedPost[sortedPost.size / 2]) / 2.0
-                    val stepOffset = postMedian - preMedian
+                        val postEnd = min(validIndices.size, pos + 4)
+                        if (preBaselineStable && postEnd - pos >= 3) {
+                            val postVals = (pos until postEnd).map { rows[validIndices[it]].rawBaroAltitude!! }
+                            val sortedPost = postVals.sorted()
+                            val postMedian = (sortedPost[(sortedPost.size - 1) / 2] + sortedPost[sortedPost.size / 2]) / 2.0
+                            val stepOffset = postMedian - preMedian
 
-                    val sustainedCount = postVals.count { v ->
-                        (v - preMedian) * stepOffset > 0.0 && abs(v - preMedian) >= 0.5 * abs(stepOffset)
+                            val sustainedCount = postVals.count { v ->
+                                (v - preMedian) * stepOffset > 0.0 && abs(v - preMedian) >= 0.5 * abs(stepOffset)
+                            }
+                            if (abs(stepOffset) >= stepThresholdM && stepOffset * jump > 0.0 && sustainedCount >= 3) {
+                                cumulativeShift += stepOffset
+                                resetIndices.add(currIdx)
+                                Log.i(
+                                    TAG,
+                                    "Compensated sustained barometric reset step of ${"%.2f".format(Locale.US, stepOffset)} m " +
+                                        "at row=${rows[currIdx].rowId} (dt=${"%.1f".format(Locale.US, dtSec)} s)"
+                                )
+                            }
+                        }
                     }
-                    if (abs(stepOffset) >= stepThresholdM && stepOffset * jump > 0.0 && sustainedCount >= 3) {
-                        cumulativeShift += stepOffset
-                        resetIndices.add(currIdx)
-                        Log.i(
-                            TAG,
-                            "Compensated sustained barometric reset step of ${"%.2f".format(Locale.US, stepOffset)} m " +
-                                "at row=${rows[currIdx].rowId} (dt=${"%.1f".format(Locale.US, dtSec)} s)"
-                        )
-                    }
+                    compensated[currIdx] = currRaw - cumulativeShift
                 }
             }
-            compensated[currIdx] = currRaw - cumulativeShift
+            segStart = segEnd
         }
         return compensated to resetIndices
     }
@@ -501,8 +614,14 @@ object ErtsPostWorkoutRecomputer {
             return PhoneCarriageMode.STATIONARY
         }
 
-        val lo = max(0, idx - 3)
-        val hi = min(rows.size - 1, idx + 3)
+        var lo = idx
+        while (lo > max(0, idx - 3) && !isPauseBoundary(rows, lo)) {
+            lo--
+        }
+        var hi = idx
+        while (hi < min(rows.size - 1, idx + 3) && !isPauseBoundary(rows, hi + 1)) {
+            hi++
+        }
         var yawSumSq = 0.0
         var yawCount = 0
         val baros = mutableListOf<Pair<Long, Double>>()
@@ -566,7 +685,8 @@ object ErtsPostWorkoutRecomputer {
                 accuracyMeters = row.accuracyM,
                 worldYawRateRadPerSec = row.yawRateRadPerSec,
                 wheelSpeedMps = row.wheelSpeedMps,
-                carriageMode = row.effectiveCarriageMode
+                carriageMode = row.effectiveCarriageMode,
+                isPauseGap = row.isPauseGap
             )
         }
         return ExtendedRtsOdometrySmoother.smoothSamples(rawSamples)
@@ -584,7 +704,8 @@ object ErtsPostWorkoutRecomputer {
                 referenceAltitudeM = row.referenceAltitude,
                 smoothedSpeedMps = speed,
                 carriageMode = row.effectiveCarriageMode,
-                baroResetStep = row.baroResetStep
+                baroResetStep = row.baroResetStep,
+                isPauseGap = row.isPauseGap
             )
         }
         return ExtendedRtsAltitudeSlopeSmoother.smooth(rawAltSamples)
@@ -796,9 +917,10 @@ object ErtsPostWorkoutRecomputer {
         summariesDbManager.updateMapAndStreams(workoutId, polyline, altitudeStream, distanceStream)
 
         // Update session totals & extrema in WorkoutSummaries.TABLE
+        val pauseGapMask = BooleanArray(rawRows.size) { i -> isPauseBoundary(rawRows, i) }
         val authoritativeAvgSpeed = if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
             val timeActiveSec = summariesDbManager.getInt(workoutId, WorkoutSummaries.TIME_ACTIVE_s)
-            computeAuthoritativeAverageSpeedMps(totalDistance, timeActiveSec, smoothedOdometry)
+            computeAuthoritativeAverageSpeedMps(totalDistance, timeActiveSec, smoothedOdometry, pauseGapMask)
         } else {
             null
         }
@@ -826,7 +948,8 @@ object ErtsPostWorkoutRecomputer {
             rawRows,
             smoothedOdometry,
             smoothedAltitude,
-            authoritativeAvgSpeed
+            authoritativeAvgSpeed,
+            pauseGapMask
         )
 
         // REQ-FIL-025.4: Keep Laps.db synchronized with smoothed WorkoutSummaries.db totals
@@ -862,7 +985,8 @@ object ErtsPostWorkoutRecomputer {
     internal fun computeAuthoritativeAverageSpeedMps(
         totalDistanceM: Double,
         timeActiveSec: Int?,
-        smoothedOdometry: List<SmoothedOdometryPoint>
+        smoothedOdometry: List<SmoothedOdometryPoint>,
+        pauseGapMask: BooleanArray? = null
     ): Double {
         if (timeActiveSec != null && timeActiveSec > 0 && totalDistanceM.isFinite() && totalDistanceM >= 0.0) {
             val speed = totalDistanceM / timeActiveSec.toDouble()
@@ -873,6 +997,7 @@ object ErtsPostWorkoutRecomputer {
             var activeDistM = 0.0
             var activeDtSec = 0.0
             for (i in 1 until smoothedOdometry.size) {
+                if (pauseGapMask != null && i < pauseGapMask.size && pauseGapMask[i]) continue
                 val dtSec = (smoothedOdometry[i].timestampMs - smoothedOdometry[i - 1].timestampMs) / 1000.0
                 if (dtSec > 0.0 && dtSec <= MAX_ACTIVE_SAMPLE_GAP_SEC) {
                     val stepDist = smoothedOdometry[i].deltaDistanceMeters
@@ -906,7 +1031,8 @@ object ErtsPostWorkoutRecomputer {
         rawRows: List<RawSampleRow>,
         smoothedOdometry: List<SmoothedOdometryPoint>?,
         smoothedAltitude: List<SmoothedAltitudeSlopePoint>?,
-        authoritativeAvgSpeed: Double? = null
+        authoritativeAvgSpeed: Double? = null,
+        pauseGapMask: BooleanArray? = null
     ) {
         summariesDb.inTransaction {
             if (smoothedOdometry != null && smoothedOdometry.isNotEmpty()) {
@@ -916,7 +1042,8 @@ object ErtsPostWorkoutRecomputer {
                     ?: computeAuthoritativeAverageSpeedMps(
                         totalDistanceM = smoothedOdometry.sumOf { it.deltaDistanceMeters },
                         timeActiveSec = null,
-                        smoothedOdometry = smoothedOdometry
+                        smoothedOdometry = smoothedOdometry,
+                        pauseGapMask = pauseGapMask
                     )
 
                 summariesManager.updateExtremaValue(summariesDb, workoutId, SensorType.SPEED_mps, ExtremaType.MAX, maxSpeed, null)
@@ -1047,6 +1174,7 @@ object ErtsPostWorkoutRecomputer {
         var integratedDist = 0.0
         var hasValidSpeed = false
         for (i in 1 until rawRows.size) {
+            if (isPauseBoundary(rawRows, i)) continue
             val dtSec = (rawRows[i].timestampMs - rawRows[i - 1].timestampMs) / 1000.0
             if (dtSec > 0.0 && dtSec <= MAX_ACTIVE_SAMPLE_GAP_SEC) {
                 val speed = rawRows[i].speedMps ?: rawRows[i - 1].speedMps
@@ -1118,6 +1246,7 @@ object ErtsPostWorkoutRecomputer {
         val recordedCarriageMode: PhoneCarriageMode? = null,
         val effectiveCarriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN,
         val rawBaroAltitude: Double? = null,
-        val baroResetStep: Boolean = false
+        val baroResetStep: Boolean = false,
+        val isPauseGap: Boolean = false
     )
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:57.125Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="defaultClusterId_isNegativeOne" classname="com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest" time="0.0"/>
+  <testcase name="onEditWorkoutCallback_receivesCorrectWorkoutId" classname="com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest" time="0.001"/>
+  <testcase name="workoutBodyClick_routesToMapNavigation_andRemainsIsolatedFromEdit" classname="com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest" time="0.0"/>
+  <testcase name="customClusterIdAndName_arePreserved" classname="com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest" time="0.0"/>
+  <testcase name="mapScreenNavigationPrecedence_presentsEditImmediately_andRestoresMapOnDismiss" classname="com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderDataTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-24T06:26:55.159Z" hostname="rainer-HP-EliteBook-850-G5" time="1.116">
+  <properties/>
+  <testcase name="testPostUnpinTeleportAnd1TickGlitch_suppresses573MpsCatchUpOvershoot_tstFil036_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.341"/>
+  <testcase name="testLeadingNullGnssFixes_anchorsToFirstValidFixWithoutNullIslandShock" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.023"/>
+  <testcase name="testRunningPaceWith1HzYawRateAliasingAndStandstill_preservesSpeedAndAltitudeStandstill_tstFil025_2" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.065"/>
+  <testcase name="testPauseGapDecouplingAndOutAndBackHeading_zeroPauseDistanceAndNoCrossPauseBleed_TST_FIL_045_2" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.023"/>
+  <testcase name="testMidWorkoutGnssGap_bridgesSmoothlyWithoutNullIslandPull" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.004"/>
+  <testcase name="testRunningPaceSouthWestTrack_resolvesInitialHeadingAndPreservesDistance_tstFil025_1" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.013"/>
+  <testcase name="testCurvedTunnelOutageReplay_eliminatesExitStepDiscontinuity" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.006"/>
+  <testcase name="testCarriageModeAwareErtsReplay_pinsStationaryJitterAndAdaptsGyroScaling_tstFil028_4" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.004"/>
+  <testcase name="testIndoorStopZuptPinning_eliminatesPhantomDriftWithoutCollapsingPreStopSpeed_tstFil027_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.017"/>
+  <testcase name="testPerformanceBenchmark_14400Samples_executesUnder100Ms" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.591"/>
+  <testcase name="testGenuineLaunchAndMultiSecondSprint_notClippedByTeleportOrGlitchGates_tstFil036_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.003"/>
+  <testcase name="testNonFiniteSpeedAndWheelSpeed_doesNotBypassZuptOrPoisonEkf_tstFil027_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.001"/>
+  <testcase name="testStationaryIndoorStop_pinsCoordinatesToZeroHaversineDriftAcross118sOutage_tstFil032_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.012"/>
+  <testcase name="testSmoothSnapshots_pinsConsecutiveStationaryPositionsDirectly_tstFil032_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.001"/>
+  <testcase name="testDopplerDropoutReplay_maintainsContinuousSpeed" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest" time="0.002"/>
+  <system-out><![CDATA[Performance benchmark: 14,400 samples processed in 511 ms
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

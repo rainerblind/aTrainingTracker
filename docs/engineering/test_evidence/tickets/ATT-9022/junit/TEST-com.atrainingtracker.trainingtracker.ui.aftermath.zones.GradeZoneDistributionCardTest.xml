@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCardTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:46.265Z" hostname="rainer-HP-EliteBook-850-G5" time="0.064">
+  <properties/>
+  <testcase name="testGradeZoneDistribution_badgeLabelDecouplingAndThresholds" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCardTest" time="0.024"/>
+  <testcase name="testGradeZoneDistribution_displayModeFallbackResolution" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCardTest" time="0.004"/>
+  <testcase name="testGradeZoneDistributionCard_contractAndLayoutArchitecture" classname="com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCardTest" time="0.036"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

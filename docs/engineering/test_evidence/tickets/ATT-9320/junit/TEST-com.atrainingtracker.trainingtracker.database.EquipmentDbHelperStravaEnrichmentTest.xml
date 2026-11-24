@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperStravaEnrichmentTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:39:52.246Z" hostname="rainer-HP-EliteBook-850-G5" time="1.787">
+  <properties/>
+  <testcase name="testGetIdFromStravaId_returnsMinusOneWhenNotFound" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperStravaEnrichmentTest" time="0.378"/>
+  <testcase name="testOnUpgrade_fromVersion1To2_addsRetiredColumnSafely" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperStravaEnrichmentTest" time="0.359"/>
+  <testcase name="testGetIdFromStravaId_returnsMinusOneForNullOrEmpty" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperStravaEnrichmentTest" time="0.342"/>
+  <testcase name="testAddOrUpdateStravaGear_insertsNewRecordWhenNotPresent" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperStravaEnrichmentTest" time="0.363"/>
+  <testcase name="testGetIdFromStravaId_returnsIdWhenFound" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperStravaEnrichmentTest" time="0.345"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

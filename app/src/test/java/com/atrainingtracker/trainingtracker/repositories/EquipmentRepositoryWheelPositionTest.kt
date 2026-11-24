@@ -87,4 +87,72 @@ class EquipmentRepositoryWheelPositionTest {
         repository.setDeviceLink(bikeId, sensor1Id, false)
         assertNull(repository.getWheelPosition(bikeId, sensor1Id))
     }
+
+    // REQ-SEN-035.3 / TST-SEN-035.3: addEquipment & updateEquipment with explicit wheelPositions persist swaps and preserve untouched sensors
+    @Test
+    fun testAddAndUpdateEquipmentWithWheelPositions_persistsSwapsAndPreservesUntouched_TST_SEN_035_3() {
+        val frontSensorId = 101L
+        val rearSensorId = 102L
+        val hrmSensorId = 201L
+        val powerSensorId = 202L
+
+        // 1. Add bike with explicit FRONT / REAR positions + non-wheel HRM
+        val bikeId = repository.addEquipment(
+            name = "Gravel Bike",
+            frameType = EquipmentDbHelper.CROSS,
+            linkedDeviceIds = listOf(frontSensorId, rearSensorId, hrmSensorId),
+            wheelPositions = mapOf(
+                frontSensorId to WheelPosition.FRONT,
+                rearSensorId to WheelPosition.REAR
+            )
+        )
+        var positions = repository.getDeviceWheelPositionsForEquipment(bikeId)
+        assertEquals(WheelPosition.FRONT, positions[frontSensorId])
+        assertEquals(WheelPosition.REAR, positions[rearSensorId])
+        assertEquals(WheelPosition.UNSPECIFIED, positions[hrmSensorId])
+
+        // 2. Update bike swapping FRONT <-> REAR atomically
+        repository.updateEquipment(
+            id = bikeId,
+            name = "Gravel Bike v2",
+            frameType = EquipmentDbHelper.CROSS,
+            linkedDeviceIds = listOf(frontSensorId, rearSensorId, hrmSensorId),
+            isRetired = false,
+            wheelPositions = mapOf(
+                frontSensorId to WheelPosition.REAR,
+                rearSensorId to WheelPosition.FRONT
+            )
+        )
+        positions = repository.getDeviceWheelPositionsForEquipment(bikeId)
+        assertEquals(WheelPosition.REAR, positions[frontSensorId])
+        assertEquals(WheelPosition.FRONT, positions[rearSensorId])
+        assertEquals(WheelPosition.UNSPECIFIED, positions[hrmSensorId])
+
+        // 3. Partial map update adding power sensor preserves untouched wheel sensor positions
+        repository.updateEquipment(
+            id = bikeId,
+            name = "Gravel Bike v3",
+            frameType = EquipmentDbHelper.CROSS,
+            linkedDeviceIds = listOf(frontSensorId, rearSensorId, hrmSensorId, powerSensorId),
+            isRetired = false,
+            wheelPositions = mapOf(powerSensorId to WheelPosition.UNSPECIFIED)
+        )
+        positions = repository.getDeviceWheelPositionsForEquipment(bikeId)
+        assertEquals(WheelPosition.REAR, positions[frontSensorId])
+        assertEquals(WheelPosition.FRONT, positions[rearSensorId])
+        assertEquals(WheelPosition.UNSPECIFIED, positions[powerSensorId])
+
+        // 4. Legacy 5-arg updateEquipment preserves existing wheel positions too
+        repository.updateEquipment(
+            id = bikeId,
+            name = "Gravel Bike v4",
+            frameType = EquipmentDbHelper.CROSS,
+            linkedDeviceIds = listOf(frontSensorId, rearSensorId),
+            isRetired = false
+        )
+        positions = repository.getDeviceWheelPositionsForEquipment(bikeId)
+        assertEquals(WheelPosition.REAR, positions[frontSensorId])
+        assertEquals(WheelPosition.FRONT, positions[rearSensorId])
+        assertNull(positions[hrmSensorId])
+    }
 }

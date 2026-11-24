@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:55.291Z" hostname="rainer-HP-EliteBook-850-G5" time="15.092">
+  <properties/>
+  <testcase name="testPostFinishAnalyticsAndBackfillMutations_triggerCardioAndTrainingLoadReloads_TST_STB_020_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" time="2.629"/>
+  <testcase name="testRollingTrend_preservesBoundaryPreSlicing" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" time="2.144"/>
+  <testcase name="testUiState_defaultsReflectCardioPowerDynamicsGating" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" time="2.188"/>
+  <testcase name="testUnfinishedWorkoutChurn_triggersZeroSqlQueries_andFinishedRefreshes_TST_STB_020_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" time="3.641"/>
+  <testcase name="testViewModel_loadsSamplesAndComputesTrends" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" time="2.372"/>
+  <testcase name="testReactiveRefresh_onWorkoutsChange" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelCardioPowerTest" time="2.118"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

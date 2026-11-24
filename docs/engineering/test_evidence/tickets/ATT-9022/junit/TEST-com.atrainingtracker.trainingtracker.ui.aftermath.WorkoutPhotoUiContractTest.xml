@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:18:16.969Z" hostname="rainer-HP-EliteBook-850-G5" time="6.348">
+  <properties/>
+  <testcase name="testPhotoLocationMarkersInWorkoutRepository" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="1.207"/>
+  <testcase name="testWorkoutPhotoEntryPropertiesAndAccessors" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.405"/>
+  <testcase name="testPhotoLocationMarkerExcludedWhenNullIslandCoordinates" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="2.756"/>
+  <testcase name="testWorkoutSummary_photoSectionDividerContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.479"/>
+  <testcase name="testWorkoutPhotoStrip_neutralStylingAndHeaderAddButtonContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.411"/>
+  <testcase name="testWorkoutPhotoPreviewBottomSheetComposableExists" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.385"/>
+  <testcase name="testWorkoutPhotoPreviewBottomSheet_stackedButtonsContract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.353"/>
+  <testcase name="testWorkoutPhotoStripComposableExists" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutPhotoUiContractTest" time="0.352"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector88.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.BaseDatabaseManager.getDatabase(BaseDatabaseManager.kt:77)
+	at com.atrainingtracker.trainingtracker.database.SummariesManagerClusterWorkoutDataPort.runInTransaction(ClusterWorkoutDataPort.kt:129)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt:635)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$default(WorkoutClusterEngine.kt:612)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt)
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(TrainingApplication.java:1558)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Exception in thread "Thread-79" android.database.sqlite.SQLiteDatabaseLockedException: database is locked (code 5 SQLITE_BUSY): , while compiling: PRAGMA journal_mode
+	at org.robolectric.nativeruntime.SQLiteConnectionNatives.nativePrepareStatement(Native Method)
+	at org.robolectric.shadows.ShadowNativeSQLiteConnection.lambda$nativePrepareStatement$2(ShadowNativeSQLiteConnection.java:66)
+	at org.robolectric.util.PerfStatsCollector.measure(PerfStatsCollector.java:51)
+	at org.robolectric.shadows.ShadowNativeSQLiteConnection.nativePrepareStatement(ShadowNativeSQLiteConnection.java:64)
+	at android.database.sqlite.SQLiteConnection.nativePrepareStatement(SQLiteConnection.java)
+	at android.database.sqlite.SQLiteConnection.acquirePreparedStatement(SQLiteConnection.java:1069)
+	at android.database.sqlite.SQLiteConnection.executeForString(SQLiteConnection.java:811)
+	at android.database.sqlite.SQLiteConnection.setJournalMode(SQLiteConnection.java:419)
+	at android.database.sqlite.SQLiteConnection.setJournalFromConfiguration(SQLiteConnection.java:339)
+	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:268)
+	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java:205)
+	at android.database.sqlite.SQLiteConnectionPool.openConnectionLocked(SQLiteConnectionPool.java:528)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java:215)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java:207)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java:1087)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java:316)
+	at com.atrainingtracker.database.BaseDatabaseManager.getDatabase(BaseDatabaseManager.kt:77)
+	at com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getCursorForAllWorkoutsAsc(WorkoutSummariesDatabaseManager.java:574)
+	at com.atrainingtracker.trainingtracker.database.SummariesManagerClusterWorkoutDataPort.forEachWorkoutAscWithProgress(ClusterWorkoutDataPort.kt:273)
+	at com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.forEachWorkoutAscWithProgress(WorkoutRepository.kt:1732)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$lambda$0$1$0(WorkoutClusterEngine.kt:637)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.runInTransaction(WorkoutClusterRepository.kt:1012)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$lambda$0$1(WorkoutClusterEngine.kt:636)
+	at com.atrainingtracker.trainingtracker.database.SummariesManagerClusterWorkoutDataPort.runInTransaction(ClusterWorkoutDataPort.kt:129)
+	at com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.runInTransaction(WorkoutRepository.kt:1780)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt:635)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$default(WorkoutClusterEngine.kt:612)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt)
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(TrainingApplication.java:1558)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+]]></system-err>
+</testsuite>

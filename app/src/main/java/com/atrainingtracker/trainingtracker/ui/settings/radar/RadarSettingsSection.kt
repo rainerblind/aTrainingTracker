@@ -56,6 +56,7 @@ import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarFullScreenMarkerStyle
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
@@ -124,8 +125,32 @@ fun RadarSettingsSection(
             }
         )
 
-        // Clear State Mode Selection (hidden in FULL_SCREEN mode, REQ-TRK-062.5b)
-        if (tuningConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN) {
+        // Full-Screen Vehicle Marker Style Selection (REQ-TRK-098.1, ATT-8959) vs Clear State Mode (REQ-TRK-062.5b)
+        if (tuningConfig.radarEdgeSide == RadarEdgeSide.FULL_SCREEN) {
+            TuningSegmentedButtonRow(
+                title = stringResource(R.string.radar_fullscreen_marker_style_title),
+                options = listOf(
+                    RadarFullScreenMarkerStyle.COMPACT_BADGE,
+                    RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES
+                ),
+                selectedOption = tuningConfig.radarFullScreenMarkerStyle,
+                onOptionSelected = { style ->
+                    coroutineScope.launch {
+                        actualDataStore.updateRadarFullScreenMarkerStyle(style)
+                    }
+                },
+                helperText = when (tuningConfig.radarFullScreenMarkerStyle) {
+                    RadarFullScreenMarkerStyle.COMPACT_BADGE -> stringResource(R.string.radar_fullscreen_marker_style_badge_desc)
+                    RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES -> stringResource(R.string.radar_fullscreen_marker_style_top_down_desc)
+                },
+                labelProvider = { style ->
+                    when (style) {
+                        RadarFullScreenMarkerStyle.COMPACT_BADGE -> stringResource(R.string.radar_fullscreen_marker_style_badge)
+                        RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES -> stringResource(R.string.radar_fullscreen_marker_style_top_down)
+                    }
+                }
+            )
+        } else {
             TuningSegmentedButtonRow(
                 title = stringResource(R.string.radar_overlay_clear_mode),
                 options = listOf(RadarClearMode.SLIM_RAIL, RadarClearMode.BADGE_ONLY, RadarClearMode.AUTO_HIDE_3S),

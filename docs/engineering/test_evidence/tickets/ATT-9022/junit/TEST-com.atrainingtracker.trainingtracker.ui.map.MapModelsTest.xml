@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:29.975Z" hostname="rainer-HP-EliteBook-850-G5" time="0.017">
+  <properties/>
+  <testcase name="toMapTrack_withEmptyPolyline_returnsEmptyPath" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.01"/>
+  <testcase name="toMapTrack_withCorruptedPolylineOrStream_returnsEmptyOrZeroFallbackWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.0"/>
+  <testcase name="toMapTrack_withValidPolylineAndStreams_decodesAltitudesAndDistancesAccurately" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.0"/>
+  <testcase name="toMapTrack_withEmptyStreams_fallsBackToZeroAltitudesAndDistancesWithoutException" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.0"/>
+  <testcase name="toMapCluster_emptyPolylineAndEmptyPreviewPaths_returnsNull" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.001"/>
+  <testcase name="toMapCluster_withValidRoutePolyline_decodesSuccessfullyAndPopulatesFields" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.003"/>
+  <testcase name="toMapCluster_withPreviewPathsFallback_decodesSuccessfully" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.0"/>
+  <testcase name="toMapTrack_withMismatchedStreamLengths_gracefullyPadsMissingWithZero" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.001"/>
+  <testcase name="toMapCluster_preservesReferentialIdentityAcrossMultipleCalls_REQ_MAP_051" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.0"/>
+  <testcase name="toMapCluster_withStats_enrichesMapClusterAndPreservesCoordinates_TST_UI_282_6" classname="com.atrainingtracker.trainingtracker.ui.map.MapModelsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

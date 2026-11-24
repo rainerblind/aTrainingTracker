@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:25:18.957Z" hostname="rainer-HP-EliteBook-850-G5" time="0.003">
+  <properties/>
+  <testcase name="testCalculateZoneColor_smoothedStream_suppressesZone2Color" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.001"/>
+  <testcase name="testCalculateZoneGaugeState_nullOrInvalid_returnsNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneGaugeState_strictlyMonotonicNeedle" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneColor_aerobicBase_returnsZone2Green" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneColor_nullNanNegativeGated_returnsDefaultTransparent" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.001"/>
+  <testcase name="testCalculateZoneColor_highIntensity_returnsZone4Red" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneGaugeState_thresholdTransition_mapsToZone3" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneGaugeState_aerobicBase_mapsToZone2" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneColor_thresholdTransition_returnsZone3Orange" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneGaugeState_highIntensity_mapsToZone4" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneColor_customThresholds_respectsOverriddenBoundaries" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <testcase name="testCalculateZoneGaugeState_proportionalSegmentWeights" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.001"/>
+  <testcase name="testCalculateZoneGaugeState_customZoneLabels" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingHrvZoneIndicatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

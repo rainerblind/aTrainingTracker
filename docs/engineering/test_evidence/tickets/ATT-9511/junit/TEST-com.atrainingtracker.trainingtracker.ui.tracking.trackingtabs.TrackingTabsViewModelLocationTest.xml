@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:57:38.263Z" hostname="rainer-HP-EliteBook-850-G5" time="15.245">
+  <properties/>
+  <testcase name="testInsideGeofenceDispatchesAltimeterCalibrationAndReflectsCalibratedState" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="2.01"/>
+  <testcase name="testInsideGeofenceEmitsLocationCalibrationStatus" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.638"/>
+  <testcase name="testCalibrateAltitude_withMatchedLocation_updatesExistingRecordAndCalibrates" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.63"/>
+  <testcase name="testMovingFromInsideToOutsideGeofenceUpdatesStatus" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.62"/>
+  <testcase name="testNullCurrentLocationEmitsNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.631"/>
+  <testcase name="testOutsideGeofenceEmitsNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.714"/>
+  <testcase name="testCalibrateAltitude_withoutMatchedLocation_calibratesDirectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.776"/>
+  <testcase name="testCalibrationGating_dispatchesOnlyOnGeofenceTransition" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.619"/>
+  <testcase name="testMultipleOverlappingLocationsSelectsClosest" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModelLocationTest" time="1.607"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

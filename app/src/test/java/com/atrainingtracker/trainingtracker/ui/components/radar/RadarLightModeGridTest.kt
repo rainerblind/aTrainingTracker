@@ -115,10 +115,10 @@ class RadarLightModeGridTest {
         val bNight = composeTestRule.onNodeWithTag("RadarLightMode_NIGHT_FLASH").getBoundsInRoot()
         val bDay = composeTestRule.onNodeWithTag("RadarLightMode_DAY_FLASH").getBoundsInRoot()
 
-        assertEquals(bAuto.top, bOff.top)
-        assertTrue(bAuto.left < bOff.left)
+        assertEquals(bOff.top, bAuto.top)
+        assertTrue(bOff.left < bAuto.left)
         assertEquals(bPeloton.top, bSolid.top)
-        assertTrue(bPeloton.top > bAuto.top && bPeloton.left < bSolid.left)
+        assertTrue(bPeloton.top > bOff.top && bPeloton.left < bSolid.left)
         assertEquals(bNight.top, bDay.top)
         assertTrue(bNight.top > bPeloton.top && bNight.left < bDay.left)
 

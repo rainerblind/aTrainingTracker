@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryCardTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:18:00.027Z" hostname="rainer-HP-EliteBook-850-G5" time="0.968">
+  <properties/>
+  <testcase name="testCard_formatsSpeedsUnderImperialUnits" classname="com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryCardTest" time="0.221"/>
+  <testcase name="testCard_captureLightAndDarkImperialPreview" classname="com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryCardTest" time="0.341"/>
+  <testcase name="testCard_preservesNonSpeedMetrics" classname="com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryCardTest" time="0.141"/>
+  <testcase name="testCard_formatsSpeedsUnderMetricUnits" classname="com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryCardTest" time="0.142"/>
+  <testcase name="testCard_nullAndZeroVehicles_rendersNothing" classname="com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryCardTest" time="0.123"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" tests="24" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:22:45.736Z" hostname="rainer-HP-EliteBook-850-G5" time="0.012">
+  <properties/>
+  <testcase name="testJsonSerializationRoundTrip" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.001"/>
+  <testcase name="testJsonDeserialization_HandlesNullOrMalformedSafely" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testJsonDeserialization_LegacyJsonCompatibility" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.002"/>
+  <testcase name="testBSportTypeActiveFilterCount_TST_MAP_064_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testDistanceIntervalFiltering" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testElevationGainIntervalFiltering_andActiveFilterCount_TST_UI_389_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.001"/>
+  <testcase name="testActiveElevationFilterChipFormatting_andDismissalContract_TST_UI_389_7" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testBSportTypeFilterMatchesAndMismatch_TST_MAP_064_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.001"/>
+  <testcase name="testYearAndMonthFiltering" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testFilterByOriginSource_MatchesCorrectSource" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testFlagFiltering_CommuteTrainerGps" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.001"/>
+  <testcase name="testJsonSerializationRoundtrip_withElevationGainInterval_andLegacyCompatibility_TST_UI_389_6" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testDateRangeFiltering" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testTabAwareSportsSelectionLogic" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.002"/>
+  <testcase name="testDurationIntervalFiltering" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testBSportTypeSerializationAndDeserialization_TST_MAP_064_3" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.001"/>
+  <testcase name="testEmptyCriteriaMatchesEverything" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testQueryMatchingAcrossFields" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testFilterByOriginSource_JsonSerializationDeserialization" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.001"/>
+  <testcase name="testDistanceAndDurationThresholds" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testFilterByOriginSource_ActiveFilterCount" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testSportAndEquipmentFiltering" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <testcase name="testSportAwareEquipmentSelectionLogic" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.002"/>
+  <testcase name="testActiveFilterCountCalculation" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteriaTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

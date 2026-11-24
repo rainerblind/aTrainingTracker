@@ -529,4 +529,144 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
             jitterSmoothed.all { it.altitudeM.isFinite() && it.slopePercent.isFinite() }
         )
     }
+
+    // REQ-FIL-045.3 / TST-FIL-045.3: Multi-pause altitude segmentation, zero phantom g*v*dt_pause jump,
+    // trailing 1-sample ascent/descent/bias/fallback continuity, and DEM-only bias carryover.
+    @Test
+    fun testPauseGapSegmentation_zeroPhantomJumpAndTrailingSingleSampleAndBiasCarryover_TST_FIL_045_3() {
+        // 1. Overflow-safe isTimestampPauseGap checks
+        org.junit.Assert.assertFalse(ExtendedRtsAltitudeSlopeSmoother.isTimestampPauseGap(1_000L, 6_000L))
+        assertTrue(ExtendedRtsAltitudeSlopeSmoother.isTimestampPauseGap(1_000L, 6_001L))
+        assertTrue(ExtendedRtsAltitudeSlopeSmoother.isTimestampPauseGap(Long.MIN_VALUE, 0L))
+        org.junit.Assert.assertFalse(ExtendedRtsAltitudeSlopeSmoother.isTimestampPauseGap(Long.MAX_VALUE - 1_000L, Long.MAX_VALUE))
+
+        // 2. Multi-pause climb/descent:
+        //    Seg 0 (0..59): +20 m climb at 5.0 m/s (+6.7% grade, 500 -> 520 m)
+        //    4 s auto-pause (isPauseGap = true, dt = 5 s) -> Seg 1 (60..79): flat 520 m
+        //    17 s auto-pause -> Seg 2 (80..99): flat 520 m
+        //    134 s auto-pause (resume 3.84 m/s while prior climb was steep!) -> Seg 3 (100..139): -10 m descent (520 -> 510 m)
+        //    610 s (> 10 min) manual pause with +12 m baro weather drift during pause -> Seg 4 (140..159): flat 510 m (DEM=510, baro=522)
+        //    20 s pause -> Seg 5 (160): trailing 1-sample post-pause segment (must preserve cumulative ascent/descent!)
+        val samples = mutableListOf<RawAltitudeSample>()
+        var tMs = 20_000_000L
+
+        // Seg 0: 60 s climb 500 -> 520 m (baro offset +5 m)
+        for (i in 0 until 60) {
+            if (i > 0) tMs += 1_000L
+            val trueAlt = 500.0 + (20.0 * i / 59.0)
+            samples.add(RawAltitudeSample(tMs, trueAlt + 5.0, trueAlt, 5.0, false))
+        }
+        val pause4s = samples.size
+        tMs += 5_000L
+        for (i in 0 until 20) {
+            if (i > 0) tMs += 1_000L
+            samples.add(RawAltitudeSample(tMs, 525.0, 520.0, 5.0, false, isPauseGap = (i == 0)))
+        }
+        val pause17s = samples.size
+        tMs += 17_000L
+        for (i in 0 until 20) {
+            if (i > 0) tMs += 1_000L
+            samples.add(RawAltitudeSample(tMs, 525.0, 520.0, 4.0, false))
+        }
+        val pause134s = samples.size
+        tMs += 134_000L // 134 s pause resuming at 3.84 m/s
+        for (i in 0 until 40) {
+            if (i > 0) tMs += 1_000L
+            val trueAlt = 520.0 - (10.0 * i / 39.0)
+            val spd = if (i == 0) 3.84 else 5.0
+            samples.add(RawAltitudeSample(tMs, trueAlt + 5.0, trueAlt, spd, false))
+        }
+        val pause610s = samples.size
+        tMs += 610_000L // > 10 min manual pause with +12 m weather drift in baro (510 -> 522 m raw baro, DEM stays 510 m)
+        for (i in 0 until 20) {
+            if (i > 0) tMs += 1_000L
+            samples.add(RawAltitudeSample(tMs, 522.0, 510.0, 5.0, false))
+        }
+        val pauseTrailingSingle = samples.size
+        tMs += 20_000L // Trailing 1-sample segment after pause
+        samples.add(RawAltitudeSample(tMs, 522.0, 510.0, 4.0, false))
+
+        val smoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(samples)
+        assertEquals(samples.size, smoothed.size)
+        assertTrue(
+            "All outputs must be finite and within +-35% slope",
+            smoothed.all { it.altitudeM.isFinite() && it.slopePercent.isFinite() && abs(it.slopePercent) <= 35.0 + 1e-6 }
+        )
+
+        // Every pause-resume row must emit verticalSpeedMps == 0.0 and zero phantom altitude jump
+        for (pIdx in listOf(pause4s, pause17s, pause134s, pause610s, pauseTrailingSingle)) {
+            assertEquals("Pause boundary $pIdx must emit 0.0 m/s vertical speed", 0.0, smoothed[pIdx].verticalSpeedMps, 1e-12)
+        }
+        assertTrue(
+            "134 s pause resume altitude must stay near 520 m without g*v*dt_pause jump (was ${smoothed[pause134s].altitudeM})",
+            abs(smoothed[pause134s].altitudeM - 520.0) <= 2.5
+        )
+        assertTrue(
+            "610 s manual pause with +12 m baro weather drift must stay near 510 m (was ${smoothed[pause610s].altitudeM})",
+            abs(smoothed[pause610s].altitudeM - 510.0) <= 2.5
+        )
+
+        // Cumulative ascent/descent must remain monotonic and preserved on trailing 1-sample segment (never reset to 0!)
+        for (i in 1 until smoothed.size) {
+            assertTrue("Ascent must be non-decreasing at $i", smoothed[i].ascentM >= smoothed[i - 1].ascentM - 1e-9)
+            assertTrue("Descent must be non-decreasing at $i", smoothed[i].descentM >= smoothed[i - 1].descentM - 1e-9)
+        }
+        assertTrue("Active climb (~20 m) preserved on trailing 1-sample tail (was ${smoothed.last().ascentM})", smoothed.last().ascentM >= 16.0)
+        assertTrue("Active descent (~10 m) preserved on trailing 1-sample tail (was ${smoothed.last().descentM})", smoothed.last().descentM >= 7.0)
+        assertEquals("Trailing 1-sample segment must carry exact prior ascent", smoothed[pauseTrailingSingle - 1].ascentM, smoothed.last().ascentM, 1e-9)
+        assertEquals("Trailing 1-sample segment must carry exact prior descent", smoothed[pauseTrailingSingle - 1].descentM, smoothed.last().descentM, 1e-9)
+
+        // 3. DEM-only middle segment forwarding learned +15 m baro bias to baro-only final segment + all-NaN fallback
+        val biasHandoffSamples = mutableListOf<RawAltitudeSample>()
+        var bt = 30_000_000L
+        // Seg 0: baro = 515 m, DEM = 500 m -> learns b_baro ~= +15 m
+        for (i in 0 until 40) {
+            if (i > 0) bt += 1_000L
+            biasHandoffSamples.add(RawAltitudeSample(bt, 515.0, 500.0, 5.0, false))
+        }
+        // Pause -> Seg 1: DEM-only (no baro) at 500 m
+        bt += 30_000L
+        for (i in 0 until 15) {
+            if (i > 0) bt += 1_000L
+            biasHandoffSamples.add(RawAltitudeSample(bt, Double.NaN, 500.0, 5.0, false))
+        }
+        // Pause -> Seg 2: Baro-only (no DEM) at raw 515 m -> must inherit +15 m bias and stay near 500 m!
+        val baroOnlyStart = biasHandoffSamples.size
+        bt += 30_000L
+        for (i in 0 until 15) {
+            if (i > 0) bt += 1_000L
+            biasHandoffSamples.add(RawAltitudeSample(bt, 515.0, null, 5.0, false))
+        }
+        // Pause -> Seg 3: Single baro-only sample (n == 1) -> must also subtract inherited +15 m bias (~500 m)
+        val singleBaroOnlyIdx = biasHandoffSamples.size
+        bt += 30_000L
+        biasHandoffSamples.add(RawAltitudeSample(bt, 515.0, null, 5.0, false))
+        // Pause -> Seg 4: All-NaN multi-sample & single-sample segments -> must use fallbackInitialAlt (~500 m, never 0.0!)
+        val allNaNMultiIdx = biasHandoffSamples.size
+        bt += 30_000L
+        biasHandoffSamples.add(RawAltitudeSample(bt, Double.NaN, null, 5.0, false))
+        bt += 1_000L
+        biasHandoffSamples.add(RawAltitudeSample(bt, Double.NaN, null, 5.0, false))
+        val allNaNSingleIdx = biasHandoffSamples.size
+        bt += 30_000L
+        biasHandoffSamples.add(RawAltitudeSample(bt, Double.NaN, null, 5.0, false))
+
+        val biasSmoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(biasHandoffSamples)
+        assertTrue(
+            "Baro-only segment after DEM-only bridge must inherit +15 m bias near 500 m (was ${biasSmoothed[baroOnlyStart].altitudeM})",
+            abs(biasSmoothed[baroOnlyStart].altitudeM - 500.0) <= 3.0
+        )
+        assertTrue(
+            "Single-sample baro-only segment must inherit +15 m bias near 500 m (was ${biasSmoothed[singleBaroOnlyIdx].altitudeM})",
+            abs(biasSmoothed[singleBaroOnlyIdx].altitudeM - 500.0) <= 3.0
+        )
+        assertTrue(
+            "All-NaN multi-sample segment must stay at fallback ~500 m (not 0.0 m; was ${biasSmoothed[allNaNMultiIdx].altitudeM})",
+            abs(biasSmoothed[allNaNMultiIdx].altitudeM - 500.0) <= 3.0
+        )
+        assertTrue(
+            "All-NaN single-sample segment must stay at fallback ~500 m (not 0.0 m; was ${biasSmoothed[allNaNSingleIdx].altitudeM})",
+            abs(biasSmoothed[allNaNSingleIdx].altitudeM - 500.0) <= 3.0
+        )
+    }
 }

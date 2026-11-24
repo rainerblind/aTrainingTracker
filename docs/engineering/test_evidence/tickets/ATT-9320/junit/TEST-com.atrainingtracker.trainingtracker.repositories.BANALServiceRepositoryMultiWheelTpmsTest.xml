@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:40:05.393Z" hostname="rainer-HP-EliteBook-850-G5" time="0.787">
+  <properties/>
+  <testcase name="testRepositoryContract_multiWheelTelemetryLoopAndCaching" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" time="0.169"/>
+  <testcase name="testPersistConvergedCircumferences_savesLockedEstimatorData" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" time="0.455"/>
+  <testcase name="testMultiWheelTelemetryRouting_independentEstimators" classname="com.atrainingtracker.trainingtracker.repositories.BANALServiceRepositoryMultiWheelTpmsTest" time="0.161"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

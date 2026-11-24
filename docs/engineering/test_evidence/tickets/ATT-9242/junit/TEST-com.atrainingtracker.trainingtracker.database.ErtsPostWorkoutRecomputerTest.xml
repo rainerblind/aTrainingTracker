@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-11-24T06:26:56.773Z" hostname="rainer-HP-EliteBook-850-G5" time="12.419">
+  <properties/>
+  <testcase name="testRecomputeWorkout_ingestsAndPreserves1HzActivityAndCarriageMode_tstFil028_2_4" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="9.629"/>
+  <testcase name="testPostUnpinTeleportRun_boundsCanonicalSpeedAndMaxExtremaAndPreservesRawColumns_tstFil036_3" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.257"/>
+  <testcase name="testComputeAuthoritativeAverageSpeedMps_precedenceAndPauseImmunity_tstFil032_2" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.093"/>
+  <testcase name="testOutputSanityGuardAbortsCorruptedOutputAndPreservesLiveData" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.089"/>
+  <testcase name="testBindColumnValue_verticalSpeedScalesRoundsClampsAndHandlesNull" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.091"/>
+  <testcase name="testNineLocaleBarometerPreFilteredViaSlewOnly_andRawPreserved_tstFil027_5" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.164"/>
+  <testcase name="testReconstructTimestamps_clockBeatZeroTwoPairsDoNotStretchAndPausesReanchor_tstFil032_1" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.115"/>
+  <testcase name="testLeadingNullTimeTotal_batchFlushStall6s_andDoubleWallClockPause_tstFil027_1" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.134"/>
+  <testcase name="testAlpineClimbAndFastDescentInFrontPocket_speedCoupledSlewUnclippedAndNaNWheelSpeedSafe_tstFil033_2" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.142"/>
+  <testcase name="testZumBaeckerProfile_endToEndBeatImmunitySpeedParityAndZeroIndoorDrift_tstFil032_1_2_3" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.295"/>
+  <testcase name="testRecomputeWorkout_synchronizesLapsDbWithSmoothedLapSegments_tstFil025_4" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.107"/>
+  <testcase name="testSymmetricSanityBounds_rejectsCollapsedOutputAndAllowsPausedWorkout_tstFil025_3" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.074"/>
+  <testcase name="testLegacyTableWithoutCarriageModeColumn_infers1HzKinematicFallback_tstFil028_4" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.111"/>
+  <testcase name="testTimeTotalReconstructsMonotonicTimestamps_andEliminatesZeroVamDrops_tstFil027_1" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.11"/>
+  <testcase name="testVerticalSpeedRecomputation_convertsClimbAndDescentToIntegerMphAndPreservesDeviceColumns" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.109"/>
+  <testcase name="testRadarAndYawColumnsNotMatchedAsWheelSpeed_andNaNSanitized_tstFil027_3" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.118"/>
+  <testcase name="testDistanceMLapSyncAndStreamSubsamplingParity_tstFil027_4" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.121"/>
+  <testcase name="testBarometerFreeDemOnlyAndLeadingNullAltitudeWorkout_smoothAndFinite_tstFil033_3" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.104"/>
+  <testcase name="testZumBaecker59AndMultiPauseRecomputation_zeroPauseDistanceAndLapsAndTimingParity_TST_FIL_045_1" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.266"/>
+  <testcase name="testStrictColumnScopeInvariantAndRecomputation" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.099"/>
+  <testcase name="testLeadingNullCoordinatesPreservedInDbAndExcludedFromPolyline" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.096"/>
+  <testcase name="testBarometerResetStep_compensatedBeforeSlewFilterWhilePreservingPocketSpikeAndAlpineClimb_TST_STB_025_4" classname="com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest" time="0.09"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

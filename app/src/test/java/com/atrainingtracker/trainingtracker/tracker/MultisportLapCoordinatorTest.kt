@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -39,6 +40,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,15 +52,21 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Robolectric unit tests for [MultisportLapCoordinator] covering retroactive named laps,
  * UTC `TIME_START` formatting, auto-pause `T2` contiguous `LAP_NR` pre-increment checks,
- * manual-lap clamping, and asynchronous `WorkoutSamples.db` `LAP_NR` backfilling
- * (`ATT-8917`, `REQ-FIL-031.3`, `TST-FIL-031.3`).
+ * manual-lap clamping, asynchronous `WorkoutSamples.db` `LAP_NR` backfilling, and
+ * race-free monotonic `LAP_NR` enforcement & finalization reconciliation
+ * (`ATT-8917`, `REQ-FIL-031.3`, `TST-FIL-031.3`; `ATT-9159`, `REQ-TRK-090`, `TST-TRK-090`;
+ * `ATT-9468`, `REQ-TRK-096`, `TST-TRK-096`).
  */
-// Linked test specs: TST-FIL-031
+// Linked test specs: TST-FIL-031, TST-TRK-090, TST-TRK-096
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class MultisportLapCoordinatorTest {
@@ -447,6 +455,415 @@ class MultisportLapCoordinatorTest {
             MultisportLapCoordinator.formatUtcTimestamp(emptySplitMs),
             coordinator.consumeLapStartTimeUtc(60)
         )
+    }
+
+    // REQ-TRK-096 / TST-TRK-096.1
+    @Test
+    fun row425RaceInterleaving_inFlightStaleAndTornLapNrEnforcedMonotonically_tstTrk096_1() {
+        val workoutId = 2423L
+        val baseFileName = "2026-11-21_081228"
+        val samplesDbMgr = WorkoutSamplesDatabaseManager.getInstance(context)
+        samplesDbMgr.createNewTable(baseFileName, listOf(SensorType.TIME_TOTAL, SensorType.LAP_NR, SensorType.DISTANCE_m))
+        val samplesDb = samplesDbMgr.database
+        val table = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val repo = WorkoutRepository.getInstance(context)
+
+        // Pre-transition rows: 1295..1352 with LAP_NR = 4, plus torn LAP_NR = 5 at 1350,
+        // a dual-column row with TIME_TOTAL IS NULL + valid UTC time at 1351s, and a manual lap 7 at 1360s.
+        fun insertRow(tt: Int?, lapNr: Int?, epochOffsetS: Int = tt ?: 0) {
+            val cv = ContentValues().apply {
+                put(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME, MultisportLapCoordinator.formatUtcTimestamp(sessionStartMs + epochOffsetS * 1000L))
+                if (tt != null) put(SensorType.TIME_TOTAL.name, tt)
+                if (lapNr != null) put(SensorType.LAP_NR.name, lapNr)
+            }
+            samplesDb.insertOrThrow(table, null, cv)
+        }
+        insertRow(1295, 4)
+        insertRow(1300, 4)
+        insertRow(1336, 4)
+        for (t in 1337..1349) insertRow(t, 4)
+        insertRow(1350, 5) // Torn mid-loop LAP_NR = 5 already in DB before backfill
+        insertRow(null, 4, epochOffsetS = 1351) // TIME_TOTAL IS NULL in dual-column table!
+        insertRow(1352, 4)
+        insertRow(1360, 7) // Higher manual lap must NEVER be downgraded
+
+        // Snapshot in-flight 1-Hz samples BEFORE onMultisportTransitionIntent runs (exact Pixel 10 row 425 race)
+        val preTransitionSample = ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1299)
+            put(SensorType.LAP_NR.name, 4)
+        }
+        val preTransitionSummary = ContentValues().apply { put(WorkoutSummaries.LAPS, 4) }
+
+        val delayedTransitionSample = ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1320)
+            put(SensorType.LAP_NR.name, 4)
+        }
+        val delayedTransitionSummary = ContentValues().apply { put(WorkoutSummaries.LAPS, 4) }
+
+        val row425StaleSample = ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1353)
+            put(SensorType.LAP_NR.name, 4)
+        }
+        val row425StaleSummary = ContentValues().apply { put(WorkoutSummaries.LAPS, 4) }
+
+        val tornInFlightSample = ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1354)
+            put(SensorType.LAP_NR.name, 5)
+        }
+        val tornInFlightSummary = ContentValues().apply { put(WorkoutSummaries.LAPS, 5) }
+
+        val utcOnlyInFlightSample = ContentValues().apply {
+            put(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME, MultisportLapCoordinator.formatUtcTimestamp(sessionStartMs + 1355_000L))
+            put(SensorType.LAP_NR.name, 4)
+        }
+        val utcOnlySummary = ContentValues().apply { put(WorkoutSummaries.LAPS, 4) }
+
+        val manualLapSample = ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1361)
+            put(SensorType.LAP_NR.name, 7)
+        }
+        val manualLapSummary = ContentValues().apply { put(WorkoutSummaries.LAPS, 7) }
+
+        val coordinator = MultisportLapCoordinator { _, _, _ -> }
+        coordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+        val event = MultisportTransitionEvent(
+            fromSport = BSportType.RUN,
+            toSport = BSportType.BIKE,
+            exitAnchor = MultisportTelemetryAnchor(sessionStartMs + 1300_000L, 1300, 1300, 5200.0),
+            enterAnchor = MultisportTelemetryAnchor(sessionStartMs + 1337_000L, 1337, 1337, 5240.0),
+            confirmAnchor = MultisportTelemetryAnchor(sessionStartMs + 1353_000L, 1353, 1353, 5360.0)
+        )
+        coordinator.onMultisportTransitionIntent(
+            context = context,
+            intent = MultisportTransitionBridge.toIntent(event, context.packageName),
+            banalService = mockBanalLapNr(4),
+            workoutIdProvider = { workoutId },
+            baseFileNameProvider = { baseFileName },
+            isStoppingProvider = { false },
+            workoutRepository = repo,
+            tableInitFuture = null,
+            dbExecutor = directExecutor,
+            onDiscreteEdge = {}
+        )
+
+        // Now flush all snapshotted in-flight samples AFTER backfill already committed!
+        listOf(
+            preTransitionSample to preTransitionSummary,
+            delayedTransitionSample to delayedTransitionSummary,
+            row425StaleSample to row425StaleSummary,
+            tornInFlightSample to tornInFlightSummary,
+            utcOnlyInFlightSample to utcOnlySummary,
+            manualLapSample to manualLapSummary
+        ).forEach { (sv, sum) ->
+            coordinator.enforceMonotonicLapNr(baseFileName, sv, sum)
+            if (!sv.containsKey(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)) {
+                val tt = sv.getAsInteger(SensorType.TIME_TOTAL.name) ?: 0
+                sv.put(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME, MultisportLapCoordinator.formatUtcTimestamp(sessionStartMs + tt * 1000L))
+            }
+            samplesDb.insertOrThrow(table, null, sv)
+        }
+
+        // Assert decoupled summaryValues.LAPS floor (workout-wide 6, never regressed by t=1299 or t=1320; manual 7 preserved)
+        assertEquals(4, preTransitionSample.getAsInteger(SensorType.LAP_NR.name))
+        assertEquals(6, preTransitionSummary.getAsInteger(WorkoutSummaries.LAPS))
+        assertEquals(5, delayedTransitionSample.getAsInteger(SensorType.LAP_NR.name))
+        assertEquals(6, delayedTransitionSummary.getAsInteger(WorkoutSummaries.LAPS))
+        assertEquals(6, row425StaleSample.getAsInteger(SensorType.LAP_NR.name))
+        assertEquals(6, row425StaleSummary.getAsInteger(WorkoutSummaries.LAPS))
+        assertEquals(6, tornInFlightSample.getAsInteger(SensorType.LAP_NR.name))
+        assertEquals(6, tornInFlightSummary.getAsInteger(WorkoutSummaries.LAPS))
+        assertEquals(6, utcOnlyInFlightSample.getAsInteger(SensorType.LAP_NR.name))
+        assertEquals(6, utcOnlySummary.getAsInteger(WorkoutSummaries.LAPS))
+        assertEquals(7, manualLapSample.getAsInteger(SensorType.LAP_NR.name))
+        assertEquals(7, manualLapSummary.getAsInteger(WorkoutSummaries.LAPS))
+
+        // Verify persisted DB rows sorted chronologically are 100% monotonically non-decreasing
+        val orderedRows = mutableListOf<Pair<Long, Int>>()
+        val startEpochS = sessionStartMs / 1000L
+        samplesDb.rawQuery(
+            "SELECT COALESCE(${SensorType.TIME_TOTAL.name}, CAST(strftime('%s', time) AS INTEGER) - $startEpochS) AS t, ${SensorType.LAP_NR.name} FROM $table ORDER BY t ASC",
+            null
+        ).use { c ->
+            while (c.moveToNext()) orderedRows.add(c.getLong(0) to c.getInt(1))
+        }
+        val byT = orderedRows.toMap()
+        assertEquals(4, byT[1295L])
+        assertEquals(4, byT[1299L])
+        assertEquals(5, byT[1300L])
+        assertEquals(5, byT[1320L])
+        assertEquals(5, byT[1336L])
+        assertEquals(6, byT[1337L])
+        assertEquals(6, byT[1350L]) // Pre-existing torn 5 upgraded to 6
+        assertEquals(6, byT[1351L]) // Dual-column TIME_TOTAL IS NULL backfilled via UTC time to 6
+        assertEquals(6, byT[1352L])
+        assertEquals(6, byT[1353L]) // Exact row 425 race sample is 6, never 4!
+        assertEquals(6, byT[1354L]) // In-flight torn 5 upgraded to 6
+        assertEquals(6, byT[1355L]) // UTC-only in-flight sample upgraded to 6
+        assertEquals(7, byT[1360L]) // Pre-existing manual lap 7 untouched
+        assertEquals(7, byT[1361L])
+
+        for (i in 0 until orderedRows.size - 1) {
+            assertTrue(
+                "Non-monotonic LAP_NR at t=${orderedRows[i].first}->${orderedRows[i + 1].first}: ${orderedRows[i].second} > ${orderedRows[i + 1].second}",
+                orderedRows[i].second <= orderedRows[i + 1].second
+            )
+        }
+    }
+
+    // REQ-TRK-096 / TST-TRK-096.2
+    @Test
+    fun multiTransitionWithManualLapDirectSwitchAndSessionIsolation_reconcilesMonotonically_tstTrk096_2() {
+        val session1File = "2026-11-24_080000"
+        val session2File = "2026-11-24_090000"
+        val samplesDbMgr = WorkoutSamplesDatabaseManager.getInstance(context)
+        samplesDbMgr.createNewTable(session1File, listOf(SensorType.TIME_TOTAL, SensorType.LAP_NR))
+        val samplesDb = samplesDbMgr.database
+        val table1 = WorkoutSamplesDatabaseManager.getTableName(session1File)
+        val repo = WorkoutRepository.getInstance(context)
+
+        val coordinator = MultisportLapCoordinator { _, _, _ -> }
+        coordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+
+        // Transition 1: Run (1) -> T1 (2) [600..640) -> Bike (3) [>=640] (simulate cold-resume null baseFileName!)
+        val t1Event = MultisportTransitionEvent(
+            fromSport = BSportType.RUN,
+            toSport = BSportType.BIKE,
+            exitAnchor = MultisportTelemetryAnchor(sessionStartMs + 600_000L, 600, 600, 2400.0),
+            enterAnchor = MultisportTelemetryAnchor(sessionStartMs + 640_000L, 640, 640, 2450.0),
+            confirmAnchor = MultisportTelemetryAnchor(sessionStartMs + 655_000L, 655, 655, 2570.0)
+        )
+        coordinator.planAndCommitAnchorTransition(context, t1Event, 1, null)
+
+        // Manual lap pressed at t=1200 -> Lap 4 starts
+        val manualIntent = Intent(BANALService.LAP_SUMMARY)
+            .putExtra(BANALService.PREV_LAP_NR, 3)
+            .putExtra(BANALService.PREV_LAP_TIME_S, 560)
+            .putExtra(BANALService.PREV_LAP_DISTANCE_m, 4480.0)
+            .putExtra(BANALService.PREV_LAP_SPEED_mps, 8.0)
+            .putExtra(BANALService.IS_PAUSE, false)
+        coordinator.onLapSummaryIntent(
+            manualIntent, 501L, sessionStartMs + 1200_000L, 1200, 1200, 6930.0,
+            false, repo, { _, _, _, _ -> }, {}
+        )
+
+        // Transition 2: Bike (4) -> T2 (5) [1800..1850) -> Run (6) [>=1850] (with session1File)
+        val t2Event = MultisportTransitionEvent(
+            fromSport = BSportType.BIKE,
+            toSport = BSportType.RUN,
+            exitAnchor = MultisportTelemetryAnchor(sessionStartMs + 1800_000L, 1800, 1800, 11730.0),
+            enterAnchor = MultisportTelemetryAnchor(sessionStartMs + 1850_000L, 1850, 1850, 11780.0),
+            confirmAnchor = MultisportTelemetryAnchor(sessionStartMs + 1865_000L, 1865, 1865, 11840.0)
+        )
+        coordinator.onMultisportTransitionIntent(
+            context, MultisportTransitionBridge.toIntent(t2Event, context.packageName),
+            mockBanalLapNr(4), { 501L }, { session1File }, { false }, repo, null, directExecutor, {}
+        )
+
+        // Transition 3: Direct <10s switch (hasTransition=false): Run (6) -> Bike (7) [>=2106]
+        val t3Event = MultisportTransitionEvent(
+            fromSport = BSportType.RUN,
+            toSport = BSportType.BIKE,
+            exitAnchor = MultisportTelemetryAnchor(sessionStartMs + 2100_000L, 2100, 2100, 12800.0),
+            enterAnchor = MultisportTelemetryAnchor(sessionStartMs + 2106_000L, 2106, 2106, 12824.0),
+            confirmAnchor = MultisportTelemetryAnchor(sessionStartMs + 2121_000L, 2121, 2121, 12944.0)
+        )
+        coordinator.onMultisportTransitionIntent(
+            context, MultisportTransitionBridge.toIntent(t3Event, context.packageName),
+            mockBanalLapNr(6), { 501L }, { session1File }, { false }, repo, null, directExecutor, {}
+        )
+
+        // Verify enforceMonotonicLapNr across every segment (including manual lap 4 and direct <10s switch)
+        val expectedByTimeAndRaw = listOf(
+            Triple(599, 1, 1),
+            Triple(620, 1, 2),
+            Triple(900, 1, 3),
+            Triple(1400, 4, 4), // Manual lap 4 preserved!
+            Triple(1820, 4, 5),
+            Triple(1865, 4, 6),
+            Triple(2103, 6, 6), // Direct <10s switch: pre-enter stays 6
+            Triple(2106, 6, 7)  // Direct <10s switch: >= enter becomes 7
+        )
+        for ((t, rawLap, expectedLap) in expectedByTimeAndRaw) {
+            val cv = ContentValues().apply {
+                put(SensorType.TIME_TOTAL.name, t)
+                put(SensorType.LAP_NR.name, rawLap)
+            }
+            coordinator.enforceMonotonicLapNr(session1File, cv)
+            assertEquals("Mismatch at t=$t (raw=$rawLap)", expectedLap, cv.getAsInteger(SensorType.LAP_NR.name))
+        }
+
+        // Seed stale rows directly into Session 1 DB covering BOTH the null-baseFileName T1 window and keyed T2/T3 windows
+        listOf(620 to 1, 900 to 1, 1400 to 4, 1825 to 4, 1865 to 4, 2110 to 6).forEach { (tt, lap) ->
+            samplesDb.insertOrThrow(table1, null, ContentValues().apply {
+                put(SensorType.TIME_TOTAL.name, tt)
+                put(SensorType.LAP_NR.name, lap)
+            })
+        }
+
+        // Short-circuit on null / blank baseFileName must be a clean no-op
+        coordinator.reconcileWorkoutSamplesOnFinalization(context, null)
+        coordinator.reconcileWorkoutSamplesOnFinalization(context, "   ")
+
+        // Mixed-window merge while Session 1 is active repairs BOTH T1 (null-scoped) and T2/T3 (keyed) rows!
+        coordinator.reconcileWorkoutSamplesOnFinalization(context, session1File)
+        val afterActiveReconcile = mutableMapOf<Int, Int>()
+        samplesDb.rawQuery("SELECT ${SensorType.TIME_TOTAL.name}, ${SensorType.LAP_NR.name} FROM $table1", null).use { c ->
+            while (c.moveToNext()) afterActiveReconcile[c.getInt(0)] = c.getInt(1)
+        }
+        assertEquals(2, afterActiveReconcile[620])
+        assertEquals(3, afterActiveReconcile[900])
+        assertEquals(4, afterActiveReconcile[1400])
+        assertEquals(5, afterActiveReconcile[1825])
+        assertEquals(6, afterActiveReconcile[1865])
+        assertEquals(7, afterActiveReconcile[2110])
+
+        // Rapid Stop -> Start isolation: re-commit a keyed Session 1 transition, start Session 2 via resetForSession,
+        // verify Session 2 samples have ZERO cross-session bleed while Session 1's queued finalization STILL reconciles!
+        val session1LateFile = "2026-11-24_083000"
+        samplesDbMgr.createNewTable(session1LateFile, listOf(SensorType.TIME_TOTAL, SensorType.LAP_NR))
+        val table1Late = WorkoutSamplesDatabaseManager.getTableName(session1LateFile)
+        coordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+        coordinator.planAndCommitAnchorTransition(context, t2Event, 4, session1LateFile)
+        samplesDb.insertOrThrow(table1Late, null, ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1865)
+            put(SensorType.LAP_NR.name, 4)
+        })
+
+        // Start Session 2 BEFORE Session 1's endWorkout reconciliation runs!
+        coordinator.resetForSession(sessionStartMs + 3600_000L, 0, 0, 0.0)
+        val session2Sample = ContentValues().apply {
+            put(SensorType.TIME_TOTAL.name, 1900)
+            put(SensorType.LAP_NR.name, 1)
+        }
+        coordinator.enforceMonotonicLapNr(session2File, session2Sample)
+        assertEquals("Session 2 must NOT inherit Session 1 floor", 1, session2Sample.getAsInteger(SensorType.LAP_NR.name))
+
+        // Session 1's queued endWorkout() still reconciles its own table via pendingReconciliationByFileName!
+        coordinator.reconcileWorkoutSamplesOnFinalization(context, session1LateFile)
+        samplesDb.rawQuery("SELECT ${SensorType.LAP_NR.name} FROM $table1Late WHERE ${SensorType.TIME_TOTAL.name} = 1865", null).use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(6, c.getInt(0))
+        }
+
+        // Single-sport workout (no transitions for session2File) performs zero DB I/O cleanly
+        coordinator.reconcileWorkoutSamplesOnFinalization(context, "nonexistent_single_sport_table")
+    }
+
+    // REQ-TRK-096 / TST-TRK-096.3
+    @Test
+    fun concurrentSamplingAndMultisportTransitions_zeroNonMonotonicAnomaliesAndZeroDeadlocks_tstTrk096_3() {
+        val baseFileName = "2026-11-24_100000"
+        val samplesDbMgr = WorkoutSamplesDatabaseManager.getInstance(context)
+        samplesDbMgr.createNewTable(baseFileName, listOf(SensorType.TIME_TOTAL, SensorType.LAP_NR))
+        val samplesDb = samplesDbMgr.database
+        val table = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val repo = WorkoutRepository.getInstance(context)
+
+        val liveLapNr = AtomicInteger(1)
+        val coordinator = MultisportLapCoordinator { count, _, _ ->
+            // Simulate step-by-step BANALService.advanceLapsForMultisport with yield to expose torn reads!
+            repeat(count) {
+                liveLapNr.incrementAndGet()
+                Thread.yield()
+            }
+        }
+        coordinator.resetForSession(sessionStartMs, 0, 0, 0.0)
+
+        val dbExecutor = Executors.newSingleThreadExecutor()
+        val transitionTimes = listOf(100, 200, 300)
+        val samplerDone = CountDownLatch(1)
+        val transitionTriggers = transitionTimes.map { CountDownLatch(1) }
+        val transitionEnqueued = transitionTimes.map { CountDownLatch(1) }
+        val banalMock = mockk<BANALService.BANALServiceComm>(relaxed = true)
+        every { banalMock.getBestSensorData(SensorType.LAP_NR) } answers {
+            val v = liveLapNr.get()
+            SensorData(SensorType.LAP_NR, v, "$v", "clock")
+        }
+
+        // Background sampler thread (simulates TrackerService mScheduler)
+        val samplerThread = Thread {
+            try {
+                for (t in 1..350) {
+                    val snapLap = liveLapNr.get()
+                    val transIdx = transitionTimes.indexOf(t)
+                    if (transIdx >= 0) {
+                        // Signal transition at t == confirmT AFTER snapshotting stale oldLapNr,
+                        // and wait until transition commits & enqueues backfill BEFORE enqueueing this sample!
+                        transitionTriggers[transIdx].countDown()
+                        transitionEnqueued[transIdx].await(5, TimeUnit.SECONDS)
+                    }
+                    val cv = ContentValues().apply {
+                        put(SensorType.TIME_TOTAL.name, t)
+                        put(SensorType.LAP_NR.name, snapLap)
+                    }
+                    dbExecutor.execute {
+                        coordinator.enforceMonotonicLapNr(baseFileName, cv)
+                        samplesDb.insertOrThrow(table, null, cv)
+                    }
+                }
+            } finally {
+                samplerDone.countDown()
+            }
+        }
+        samplerThread.start()
+
+        // Main-style thread dispatching 3 consecutive multisport transitions at their authentic confirmT
+        val sports = listOf(
+            BSportType.RUN to BSportType.BIKE,
+            BSportType.BIKE to BSportType.RUN,
+            BSportType.RUN to BSportType.BIKE
+        )
+        for ((idx, confirmT) in transitionTimes.withIndex()) {
+            assertTrue("Sampler did not reach confirmT=$confirmT", transitionTriggers[idx].await(5, TimeUnit.SECONDS))
+            val exitT = confirmT - 40
+            val enterT = confirmT - 15
+            val event = MultisportTransitionEvent(
+                fromSport = sports[idx].first,
+                toSport = sports[idx].second,
+                exitAnchor = MultisportTelemetryAnchor(sessionStartMs + exitT * 1000L, exitT, exitT, exitT * 4.0),
+                enterAnchor = MultisportTelemetryAnchor(sessionStartMs + enterT * 1000L, enterT, enterT, enterT * 4.0),
+                confirmAnchor = MultisportTelemetryAnchor(sessionStartMs + confirmT * 1000L, confirmT, confirmT, confirmT * 4.0)
+            )
+            coordinator.onMultisportTransitionIntent(
+                context = context,
+                intent = MultisportTransitionBridge.toIntent(event, context.packageName),
+                banalService = banalMock,
+                workoutIdProvider = { 700L },
+                baseFileNameProvider = { baseFileName },
+                isStoppingProvider = { false },
+                workoutRepository = repo,
+                tableInitFuture = null,
+                dbExecutor = dbExecutor,
+                onDiscreteEdge = {}
+            )
+            transitionEnqueued[idx].countDown()
+        }
+
+        assertTrue("Sampler thread deadlocked or timed out", samplerDone.await(10, TimeUnit.SECONDS))
+        dbExecutor.execute { coordinator.reconcileWorkoutSamplesOnFinalization(context, baseFileName) }
+        dbExecutor.shutdown()
+        assertTrue("DB executor deadlocked or timed out", dbExecutor.awaitTermination(10, TimeUnit.SECONDS))
+
+        val rows = mutableListOf<Pair<Int, Int>>()
+        samplesDb.rawQuery("SELECT ${SensorType.TIME_TOTAL.name}, ${SensorType.LAP_NR.name} FROM $table ORDER BY ${SensorType.TIME_TOTAL.name} ASC", null).use { c ->
+            while (c.moveToNext()) rows.add(c.getInt(0) to c.getInt(1))
+        }
+        assertEquals(350, rows.size)
+        for (i in 0 until rows.size - 1) {
+            assertTrue(
+                "Non-monotonic LAP_NR at t=${rows[i].first}->${rows[i + 1].first}: ${rows[i].second} > ${rows[i + 1].second}",
+                rows[i].second <= rows[i + 1].second
+            )
+        }
+        val byT = rows.toMap()
+        assertEquals(1, byT[59])
+        assertEquals(2, byT[70])
+        assertEquals(3, byT[100])
+        assertEquals(4, byT[170])
+        assertEquals(5, byT[200])
+        assertEquals(6, byT[270])
+        assertEquals(7, byT[300])
+        assertEquals(7, byT[350])
     }
 
     private fun parseUtcMs(utcText: String): Long {

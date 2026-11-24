@@ -28,8 +28,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -247,9 +249,9 @@ class RadarLightQuickSwitchSheetTest {
         val bAuto = composeTestRule.onNodeWithTag("RadarLightMode_AUTO").getBoundsInRoot()
         val bOff = composeTestRule.onNodeWithTag("RadarLightMode_OFF").getBoundsInRoot()
         val bSolid = composeTestRule.onNodeWithTag("RadarLightMode_SOLID").getBoundsInRoot()
-        assertEquals("OFF and SOLID must share row 2 top", bOff.top, bSolid.top)
-        assertTrue("OFF must be below AUTO and left of SOLID", bOff.top > bAuto.top && bOff.left < bSolid.left)
-        assertTrue("AUTO must span full width across both columns", bAuto.right > bOff.right)
+        assertEquals("OFF and AUTO must share row 1 top", bOff.top, bAuto.top)
+        assertTrue("OFF must be left of AUTO on row 1", bOff.left < bAuto.left)
+        assertTrue("SOLID must be below OFF on row 2", bSolid.top > bOff.top)
     }
 
     @Test
@@ -354,7 +356,7 @@ class RadarLightQuickSwitchSheetTest {
         composeTestRule.onNodeWithTag("RadarSnooze_SNOOZE_15M").assertIsSelected()
         composeTestRule.onNodeWithTag("RadarSnooze_REST_OF_RIDE").assertIsNotSelected()
 
-        // Verify 2-column ascending reading order (row-major: [AUTO, OFF], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH])
+        // Verify 2-column reading order (row-major: [OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH])
         val bAuto = composeTestRule.onNodeWithTag("RadarLightMode_AUTO").getBoundsInRoot()
         val bOff = composeTestRule.onNodeWithTag("RadarLightMode_OFF").getBoundsInRoot()
         val bPeloton = composeTestRule.onNodeWithTag("RadarLightMode_PELOTON").getBoundsInRoot()
@@ -362,9 +364,100 @@ class RadarLightQuickSwitchSheetTest {
         val bNight = composeTestRule.onNodeWithTag("RadarLightMode_NIGHT_FLASH").getBoundsInRoot()
         val bDay = composeTestRule.onNodeWithTag("RadarLightMode_DAY_FLASH").getBoundsInRoot()
 
-        assertTrue("AUTO must be left of OFF on row 1", bAuto.left < bOff.left)
-        assertTrue("PELOTON must be below AUTO and left of SOLID on row 2", bPeloton.top > bAuto.top && bPeloton.left < bSolid.left)
+        assertEquals("OFF and AUTO must share row 1 top", bOff.top, bAuto.top)
+        assertTrue("OFF must be left of AUTO on row 1", bOff.left < bAuto.left)
+        assertTrue("PELOTON must be below OFF and left of SOLID on row 2", bPeloton.top > bOff.top && bPeloton.left < bSolid.left)
         assertTrue("NIGHT_FLASH must be below PELOTON and left of DAY_FLASH on row 3", bNight.top > bPeloton.top && bNight.left < bDay.left)
+    }
+
+    private fun captureQuickSwitchThemeScreenshot(darkTheme: Boolean, fileName: String) {
+        val repoRoot = if (File("..", "docs/engineering/walkthroughs/img").exists()) File("..") else File(".")
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = darkTheme) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .width(420.dp)
+                        .testTag("QuickSwitchThemeCapture_$fileName")
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (darkTheme) "Dark — Non-StVZO (Off | Auto -> Peloton -> Solid -> Night -> Day)" else "Light — Non-StVZO (Off | Auto -> Peloton -> Solid -> Night -> Day)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        RadarLightQuickSwitchSheetContent(
+                            currentMode = RadarLightMode.DAY_FLASH,
+                            availableModes = RadarLightMode.getAvailableModes(false),
+                            isStvzo = false,
+                            isAutoMode = true,
+                            isLightControlSupported = true,
+                            snoozeState = RadarAudioSnoozeState(isSnoozed = false),
+                            onModeSelected = {},
+                            onAutoSelected = {},
+                            onSnoozeSelected = {},
+                            onResumeAudio = {},
+                            onDismiss = {}
+                        )
+                        HorizontalDivider()
+                        Text(
+                            text = if (darkTheme) "Dark — StVZO (Off | Auto -> Solid)" else "Light — StVZO (Off | Auto -> Solid)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        RadarLightQuickSwitchSheetContent(
+                            currentMode = RadarLightMode.SOLID,
+                            availableModes = RadarLightMode.getAvailableModes(true),
+                            isStvzo = true,
+                            isAutoMode = false,
+                            isLightControlSupported = true,
+                            snoozeState = RadarAudioSnoozeState(
+                                isSnoozed = true,
+                                mode = RadarAudioSnoozeMode.SNOOZE_15M
+                            ),
+                            onModeSelected = {},
+                            onAutoSelected = {},
+                            onSnoozeSelected = {},
+                            onResumeAudio = {},
+                            onDismiss = {}
+                        )
+                    }
+                }
+            }
+        }
+
+        val bmp = composeTestRule.onNodeWithTag("QuickSwitchThemeCapture_$fileName")
+            .captureToImage()
+            .asAndroidBitmap()
+        val outFile = File(repoRoot, "docs/engineering/walkthroughs/img/$fileName")
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue("Screenshot PNG $fileName must exist and be non-empty", outFile.exists() && outFile.length() > 0L)
+    }
+
+    /**
+     * TST-CON-047.4 / Rule 8.5 (ATT-8674): Captures Light theme PNG (Non-StVZO & StVZO)
+     * in docs/engineering/walkthroughs/img/ for visual self-inspection.
+     */
+    @Test
+    @Config(qualifiers = "w880dp-h1200dp-xxhdpi")
+    fun testContent_captureLightScreenshot_ATT8674() {
+        captureQuickSwitchThemeScreenshot(darkTheme = false, fileName = "ATT-8674_quick_switch_light.png")
+    }
+
+    /**
+     * TST-CON-047.4 / Rule 8.5 (ATT-8674): Captures Dark theme PNG (Non-StVZO & StVZO)
+     * in docs/engineering/walkthroughs/img/ for visual self-inspection.
+     */
+    @Test
+    @Config(qualifiers = "w880dp-h1200dp-xxhdpi")
+    fun testContent_captureDarkScreenshot_ATT8674() {
+        captureQuickSwitchThemeScreenshot(darkTheme = true, fileName = "ATT-8674_quick_switch_dark.png")
     }
 
     /**

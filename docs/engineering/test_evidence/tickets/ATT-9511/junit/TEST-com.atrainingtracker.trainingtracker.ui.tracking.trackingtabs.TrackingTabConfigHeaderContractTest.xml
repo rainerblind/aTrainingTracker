@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabConfigHeaderContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:57:14.044Z" hostname="rainer-HP-EliteBook-850-G5" time="0.02">
+  <properties/>
+  <testcase name="testTrackingTabConfigHeader_hasCopyButtonContract" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabConfigHeaderContractTest" time="0.013"/>
+  <testcase name="testCopyTrackingTabDialog_existsAndDeclaresActivityTypeMultiSelect" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabConfigHeaderContractTest" time="0.007"/>
+  <testcase name="testTrackingTabConfigHeader_hasMoveButtonsAndBoundaryContracts" classname="com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabConfigHeaderContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

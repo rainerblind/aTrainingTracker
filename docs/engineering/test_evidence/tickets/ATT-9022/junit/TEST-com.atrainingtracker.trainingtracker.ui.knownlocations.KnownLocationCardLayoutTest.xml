@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:59.898Z" hostname="rainer-HP-EliteBook-850-G5" time="0.012">
+  <properties/>
+  <testcase name="testUnboxedPrimaryStartsMetric" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testMapPreviewThumbnail_usesCalibratedZoomMath" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.002"/>
+  <testcase name="testMapPreviewThumbnailLayoutAndLiteMode" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testMapPreviewThumbnail_eliminatesHardcoded14_5Literal" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testAltitudeDecoupledFromBadgesRow" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testHarmonizedBottomAnchoredColumnArchitecture" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testEliminationOfBoxedPillContainersInMetadataColumn" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testSportTypeStartsBreakdownInCanonicalOrder" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.002"/>
+  <testcase name="testLocationCardStandardizedTitleLargeTypography" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <testcase name="testUnboxedSecondaryRoutesCrossLink" classname="com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationCardLayoutTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

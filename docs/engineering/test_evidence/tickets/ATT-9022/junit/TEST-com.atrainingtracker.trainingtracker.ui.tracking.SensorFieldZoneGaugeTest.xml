@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:25:18.895Z" hostname="rainer-HP-EliteBook-850-G5" time="0.057">
+  <properties/>
+  <testcase name="testZoneGaugeState_customZoneLabels_preserved" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.001"/>
+  <testcase name="testZoneGaugeState_hrAndPowerDefaults_zoneLabelsIsNull" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.002"/>
+  <testcase name="testCalculateActiveTrackHeight_elevatesActiveZone_andKeepsInactiveUniform" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.012"/>
+  <testcase name="sensorFieldState_defaultsToNoZoneGauge" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.0"/>
+  <testcase name="testHrvZoneGaugeState_threeZones_inSensorFieldState" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.002"/>
+  <testcase name="sensorFieldState_staleGaugeState_hasNullNeedleAndNullActiveZone" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.0"/>
+  <testcase name="sensorFieldState_copyMutation_updatesZoneGaugeStateIndependently" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.001"/>
+  <testcase name="testResolveBarOnlyTrackHeights_scalesWithViewSize" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.033"/>
+  <testcase name="testZoneGaugeBar_usesProportionalWeightsUnderSegmentBadgeAndPrimaryBlueNeedle" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.003"/>
+  <testcase name="testZoneGaugeBar_sourceContainsActiveZoneElevationAndContainerHeight" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.0"/>
+  <testcase name="sensorFieldState_showValueAndShowBar_defaultsAndCopy" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.0"/>
+  <testcase name="sensorFieldState_withHrZoneGaugeState_isPreserved" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.001"/>
+  <testcase name="sensorFieldState_withPowerZoneGaugeState_isPreserved" classname="com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldZoneGaugeTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

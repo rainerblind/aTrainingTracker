@@ -1,0 +1,14 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "4cdbefa97722c98ccdb308f2c17c2a8319f5afe1",
+  "files": {
+    "evidence_summary.json": "0514c1000c0f73c574d2aadc3e49327f40cd7cdc9da6d19018acea1187c82804",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest.xml": "a3528cff4be51fc1d5cc9332303fd54d2c0755b16e3f55adbc8554219ac24f74",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModelTest.xml": "452c100f2092c6be778a46d1c75e6cb5b657a531813c35a0cf5f39ecb009c723",
+    "screenshots/ATT-9323_morning_hrv_no_sensor_dark.png": "641efaa286523e232b90860565f78cb340de8a659f9a98ffd293cddd8212fe51",
+    "screenshots/ATT-9323_morning_hrv_no_sensor_light.png": "bc3e8a382228fe87e63e661bf919efcd8e31042f36b3e27a1ff7e6ed37c1f04a"
+  },
+  "run_started_utc": "2026-11-24T09:37:55.163333+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9323"
+}

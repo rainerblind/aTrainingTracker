@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:25:01.390Z" hostname="rainer-HP-EliteBook-850-G5" time="0.017">
+  <properties/>
+  <testcase name="testWaypointType_allTypesHaveValidIconResource" classname="com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest" time="0.004"/>
+  <testcase name="testMapUtils_createWaypointBadgeMarkerContract" classname="com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest" time="0.011"/>
+  <testcase name="testResolveWaypointCategoryColor_allTypesCoveredWithDistinctVibrantColors" classname="com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest" time="0.001"/>
+  <testcase name="testMapUtils_defaultMarkerSizeConstant_is22Dp" classname="com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

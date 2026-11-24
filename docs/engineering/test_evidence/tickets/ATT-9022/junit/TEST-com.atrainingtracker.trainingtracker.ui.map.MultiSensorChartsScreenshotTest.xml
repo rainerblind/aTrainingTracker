@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MultiSensorChartsScreenshotTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:38.230Z" hostname="rainer-HP-EliteBook-850-G5" time="20.134">
+  <properties/>
+  <testcase name="testCaptureMultiSensorChartsComparisonScreenshot" classname="com.atrainingtracker.trainingtracker.ui.map.MultiSensorChartsScreenshotTest" time="20.125"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -154,7 +154,9 @@ fun WorkoutDetailTabbedContent(
     activityCarriageTimeline: ActivityCarriageTimeline? = null,
     initialSection: WorkoutDetailSectionType? = null,
     isTabsConfigReady: Boolean = true,
-    isSectionDataLoading: Boolean = false
+    isSectionDataLoading: Boolean = false,
+    externalScrubDistance: Double? = null,
+    onScrubDistanceChange: ((Double?) -> Unit)? = null
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
         WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(
@@ -508,6 +510,8 @@ fun WorkoutDetailTabbedContent(
                             powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                             hrZoneThresholds = hrZoneThresholds,
                             powerZoneThresholds = powerZoneThresholds,
+                            externalScrubDistance = externalScrubDistance,
+                            onScrubDistanceChange = onScrubDistanceChange,
                             workoutData = workoutData,
                             onMapClick = onMapClick,
                             onCreateLapClick = onCreateLapClick,
@@ -545,6 +549,8 @@ fun WorkoutDetailTabbedContent(
                             powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                             hrZoneThresholds = hrZoneThresholds,
                             powerZoneThresholds = powerZoneThresholds,
+                            externalScrubDistance = externalScrubDistance,
+                            onScrubDistanceChange = onScrubDistanceChange,
                             workoutData = workoutData,
                             onMapClick = onMapClick,
                             onCreateLapClick = onCreateLapClick,
@@ -599,6 +605,8 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
+                                externalScrubDistance = externalScrubDistance,
+                                onScrubDistanceChange = onScrubDistanceChange,
                                 workoutData = workoutData,
                                 onCreateLapClick = onCreateLapClick,
                                 onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },

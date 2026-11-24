@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:34.653Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testFastPathBoundary_45kmReturnsSingleRegion_110kmReturnsTwoRegions" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.001"/>
+  <testcase name="testBuildNormalizedBounds_singlePointHasSafeNonZeroSpan" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.0"/>
+  <testcase name="testDominantRegionRanking_breaksTiesByDistanceAndRecency" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.0"/>
+  <testcase name="testDetectRegionsFromPaths_multiContinent_isolatesRoutesAndBounds" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.001"/>
+  <testcase name="testMultiContinentWorkouts_partitionsIntoEuropeAndUSA" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.001"/>
+  <testcase name="testAntimeridianCrossing_buildsWrappedBoundsWithoutWorldSpan" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.0"/>
+  <testcase name="testSingleRegionWithinTerritory_returnsSingleRegionWithExactBounds" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.001"/>
+  <testcase name="testNonGpsAndSentinelCoordinates_safelyBypassed" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.SpatialRegionEngineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

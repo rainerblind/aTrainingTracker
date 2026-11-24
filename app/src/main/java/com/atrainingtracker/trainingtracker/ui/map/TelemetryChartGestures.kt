@@ -205,6 +205,7 @@ fun Modifier.telemetryChartGestures(
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)?,
     onDistanceSelected: (Double?) -> Unit,
     onPointSelected: ((PathPoint?) -> Unit)? = null,
+    clearSelectionOnDragEnd: Boolean = true,
     doubleTapTimeoutMs: Long = 350L,
     clockMs: () -> Long = System::currentTimeMillis
 ): Modifier {
@@ -215,6 +216,7 @@ fun Modifier.telemetryChartGestures(
     val currentOnZoomChangedState by rememberUpdatedState(onZoomChanged)
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
     val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
+    val currentClearOnDragEndState by rememberUpdatedState(clearSelectionOnDragEnd)
     val currentPathPointsState by rememberUpdatedState(pathPoints)
     val currentIsTracklessState by rememberUpdatedState(isTrackless)
     val currentStartPaddingState by rememberUpdatedState(startPadding)
@@ -350,7 +352,7 @@ fun Modifier.telemetryChartGestures(
 
             if (!isTransforming) {
                 if (isDragging) {
-                    if (!isPanMode) {
+                    if (!isPanMode && currentClearOnDragEndState) {
                         currentOnDistanceSelectedState(null)
                         currentOnPointSelectedState?.invoke(null)
                     }

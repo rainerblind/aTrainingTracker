@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.MapThemeResolutionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:24:04.651Z" hostname="rainer-HP-EliteBook-850-G5" time="0.135">
+  <properties/>
+  <testcase name="testResolveMapPropertiesWhenLightPreservesTerrain" classname="com.atrainingtracker.trainingtracker.ui.map.MapThemeResolutionTest" time="0.134"/>
+  <testcase name="testLuminanceThresholdingAccuracy" classname="com.atrainingtracker.trainingtracker.ui.map.MapThemeResolutionTest" time="0.0"/>
+  <testcase name="testResolveMapPropertiesWhenDark" classname="com.atrainingtracker.trainingtracker.ui.map.MapThemeResolutionTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

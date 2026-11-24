@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:41:29.333Z" hostname="rainer-HP-EliteBook-850-G5" time="1.005">
+  <properties/>
+  <testcase name="testUpdateEquipment_passesIsRetiredToDbHelper" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest" time="0.382"/>
+  <testcase name="testLoadEquipment_populatesIsRetiredAccurately" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest" time="0.22"/>
+  <testcase name="testEquipmentViewModel_hasApplicationOnlyConstructorForViewModelProvider" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest" time="0.188"/>
+  <testcase name="testToggleRetired_callsSetEquipmentRetiredWithInvertedStatus" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelRetiredTest" time="0.214"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

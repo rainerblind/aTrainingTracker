@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.LegacyUiDecommissioningComposeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:25:01.439Z" hostname="rainer-HP-EliteBook-850-G5" time="8.798">
+  <properties/>
+  <testcase name="mainActivityWithNavigation_preservesPureComposeDialogFlagsAcrossRotation_TST_UI_2801_2" classname="com.atrainingtracker.trainingtracker.ui.navigation.LegacyUiDecommissioningComposeTest" time="7.382"/>
+  <testcase name="retiredFragmentsSettingsDialogFragmentsAndBridges_areExcisedFromClasspathAndDisk_TST_UI_2801_1" classname="com.atrainingtracker.trainingtracker.ui.navigation.LegacyUiDecommissioningComposeTest" time="0.167"/>
+  <testcase name="mainActivityWithNavigation_triggersPureComposeDialogStatesWithoutLegacyFields_TST_UI_2801_2" classname="com.atrainingtracker.trainingtracker.ui.navigation.LegacyUiDecommissioningComposeTest" time="0.64"/>
+  <testcase name="pureComposeDialogs_renderAndDispatchActions_andCaptureLightDarkPng_TST_UI_2801_2" classname="com.atrainingtracker.trainingtracker.ui.navigation.LegacyUiDecommissioningComposeTest" time="0.609"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

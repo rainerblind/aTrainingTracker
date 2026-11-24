@@ -51,4 +51,14 @@
     <string name="workout_map_layer_primary_track">Workout Track</string>
     <string name="workout_map_layer_markers">Markers &amp; Favorite Locations</string>
     <string name="workout_map_layer_lap_highlights">Lap Highlights</string>
+    <string name="workout_map_scrubber_metric_elevation">Elevation</string>
+    <string name="workout_map_scrubber_collapse">Collapse metric graph</string>
+    <string name="workout_map_scrubber_expand">Expand metric graph</string>
+    <string name="workout_map_scrubber_clear_selection">Clear selected position</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Select scrubber graph metric</string>
+    <string name="epic">Epic</string>
+    <string name="epic_badge">Epic</string>
+    <string name="filter_epic_only">Epic only</string>
+    <string name="workout_classification_routine_header">Routine Context</string>
+    <string name="workout_classification_special_header">Special Distinction</string>
 </resources>

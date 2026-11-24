@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:55:58.417Z" hostname="rainer-HP-EliteBook-850-G5" time="18.119">
+  <properties/>
+  <testcase name="testFilterManager_rebindFilter_ingestsInitialValueStrictlyOnceInMovingAverage_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="13.518"/>
+  <testcase name="testEndToEndDeviceRenameSurvival_filterManagerViewModelAndSparklinesStayLive_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="4.24"/>
+  <testcase name="testProxySensor_addSensorListener_concurrentSwapDuringAttachReattachesCleanly_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.13"/>
+  <testcase name="testResolveSensor_whenDeviceFoundByIdButSensorMissing_doesNotFallbackToDeviceName_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.127"/>
+  <testcase name="testProxySensor_addSensorListener_deliversSingleInitialValueWithoutLeadingNull_tstUi2800_3" classname="com.atrainingtracker.banalservice.filters.ProxySensorAndFilterManagerIdKeyTest" time="0.098"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

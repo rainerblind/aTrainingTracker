@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:41.893Z" hostname="rainer-HP-EliteBook-850-G5" time="1.177">
+  <properties/>
+  <testcase name="testSensorGridConfigurationMode_zoneDisplayControlsPersistImmediately" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" time="0.695"/>
+  <testcase name="testCaptureZoneDisplayTileAndTabsScreenshot_LightAndDark" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" time="0.403"/>
+  <testcase name="testDefaultZoneProfileTarget_mapsAllActivityTypes" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" time="0.079"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

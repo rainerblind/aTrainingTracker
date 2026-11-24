@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:41:34.422Z" hostname="rainer-HP-EliteBook-850-G5" time="3.89">
+  <properties/>
+  <testcase name="testFromCursor_singleEndpoint_resolvesOnlyRecognizedStart" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest" time="1.418"/>
+  <testcase name="testFromCursor_roundTrip_resolvesSameLocationForBothEndpoints" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest" time="0.627"/>
+  <testcase name="testFromCursor_pointToPoint_resolvesBothStartAndDestination" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest" time="0.621"/>
+  <testcase name="testFromCursor_outsideGeofencesOrNullCoordinates_resolvesToNull" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest" time="0.615"/>
+  <testcase name="testFromCursor_nullDatabaseManager_safelyReturnsNullWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperLocationTest" time="0.609"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

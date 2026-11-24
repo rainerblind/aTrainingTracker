@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarFullScreenMarkerStyle
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -92,6 +93,9 @@ class RadarSettingsSectionTest {
         every { mockDataStore.getTuningConfig() } answers { configFlow.value }
         coEvery { mockDataStore.updateRadarEdgeSide(any()) } coAnswers {
             configFlow.value = configFlow.value.copy(radarEdgeSide = firstArg())
+        }
+        coEvery { mockDataStore.updateRadarFullScreenMarkerStyle(any()) } coAnswers {
+            configFlow.value = configFlow.value.copy(radarFullScreenMarkerStyle = firstArg())
         }
         coEvery { mockDataStore.updateRadarSpatialAudioEnabled(any()) } coAnswers {
             configFlow.value = configFlow.value.copy(radarSpatialAudioEnabled = firstArg())
@@ -368,5 +372,45 @@ class RadarSettingsSectionTest {
         assertNotEquals(0, R.string.radar_alert_mode_approach_fast_desc)
         assertNotEquals(0, R.string.radar_alert_mode_fast_only_desc)
         assertNotEquals(0, R.string.radar_alert_mode_muted_desc)
+    }
+
+    /**
+     * TST-TRK-098.1 / REQ-TRK-098.1 (ATT-8959): Full-Screen Vehicle Style segmented control is
+     * hidden on LEFT/RIGHT edge modes, visible in FULL_SCREEN mode, and persists TOP_DOWN_VEHICLES.
+     */
+    @Test
+    fun fullScreenMarkerStyleSelector_visibleOnlyInFullScreenAndUpdatesDataStore() {
+        renderSection(
+            initialConfig = TuningConfig(
+                radarEdgeSide = RadarEdgeSide.RIGHT,
+                radarFullScreenMarkerStyle = RadarFullScreenMarkerStyle.COMPACT_BADGE
+            )
+        )
+
+        val styleTitle = context.getString(R.string.radar_fullscreen_marker_style_title)
+        val badgeLabel = context.getString(R.string.radar_fullscreen_marker_style_badge)
+        val topDownLabel = context.getString(R.string.radar_fullscreen_marker_style_top_down)
+        val topDownDesc = context.getString(R.string.radar_fullscreen_marker_style_top_down_desc)
+
+        composeTestRule.onNodeWithText(styleTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_overlay_clear_mode)).assertIsDisplayed()
+
+        // Switch to Full Screen -> Clear Mode hides and Vehicle Marker Style appears
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_overlay_mode_fullscreen)).performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(context.getString(R.string.radar_overlay_clear_mode)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(styleTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(badgeLabel).assertIsDisplayed()
+        composeTestRule.onNodeWithText(topDownLabel).assertIsDisplayed()
+
+        // Select Top-Down Vehicles -> persists via DataStore and updates helper description
+        composeTestRule.onNodeWithText(topDownLabel).performClick()
+        composeTestRule.waitForIdle()
+
+        coVerify(exactly = 1) {
+            mockDataStore.updateRadarFullScreenMarkerStyle(RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES)
+        }
+        composeTestRule.onNodeWithText(topDownDesc).assertIsDisplayed()
     }
 }

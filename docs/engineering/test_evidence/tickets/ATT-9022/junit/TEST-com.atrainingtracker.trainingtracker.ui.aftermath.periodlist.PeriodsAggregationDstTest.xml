@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsAggregationDstTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:19:18.003Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="fallBackTransition_evaluatesExact25HourDayAnd169HourWeek" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsAggregationDstTest" time="0.0"/>
+  <testcase name="standardDayAndWeek_preserveExact24HourAnd168HourLengths" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsAggregationDstTest" time="0.001"/>
+  <testcase name="springForwardTransition_evaluatesExact23HourDayAnd167HourWeek" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsAggregationDstTest" time="0.0"/>
+  <testcase name="invalidWorkouts_withZeroOrNegativeTimestamp_areFilteredOut" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsAggregationDstTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

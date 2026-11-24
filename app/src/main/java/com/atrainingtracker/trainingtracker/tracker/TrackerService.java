@@ -2393,6 +2393,7 @@ public class TrackerService extends Service {
         } catch (Throwable t) {
             Log.e(TAG, "Error in createNewLap during endWorkout", t);
         }
+        mMultisportLapCoordinator.reconcileWorkoutSamplesOnFinalization(getSafeContext(), baseFileName);
 
         final BANALServiceComm banalService = mBanalService;
 
@@ -2805,6 +2806,7 @@ public class TrackerService extends Service {
             final String tableName = resolvedTableName;
             final long workoutId = mWorkoutID;
 
+            mMultisportLapCoordinator.enforceMonotonicLapNr(mBaseFileName, samplingValues, summaryValues);
             boolean sampleInserted = getWorkoutRepository().recordLiveSample(
                     mBaseFileName,
                     workoutId,

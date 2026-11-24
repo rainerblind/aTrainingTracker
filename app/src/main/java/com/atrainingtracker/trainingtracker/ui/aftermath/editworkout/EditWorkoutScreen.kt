@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,6 +40,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Commute
 import androidx.compose.material.icons.filled.ContentCut
@@ -77,7 +79,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
@@ -308,150 +313,17 @@ fun EditWorkoutDialog(
                 )
             }
 
-            // 4. Workout classification tag tiles (Commute / Indoor / Race - Variant B, ATT-7517)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val isCommute = workoutData?.commute ?: false
-                val isTrainer = workoutData?.trainer ?: false
-                val isRace = workoutData?.race ?: false
-
-                // 4a. Commute Tile
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 42.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (isCommute) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        )
-                        .border(
-                            width = if (isCommute) 2.dp else 0.5.dp,
-                            color = if (isCommute) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .toggleable(
-                            value = isCommute,
-                            role = Role.Checkbox,
-                            onValueChange = { viewModel.updateIsCommute(it) }
-                        )
-                        .padding(horizontal = 6.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Commute,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (isCommute) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.commute),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isCommute) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isCommute) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                // 4b. Indoor Tile
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 42.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (isTrainer) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        )
-                        .border(
-                            width = if (isTrainer) 2.dp else 0.5.dp,
-                            color = if (isTrainer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .toggleable(
-                            value = isTrainer,
-                            role = Role.Checkbox,
-                            onValueChange = { viewModel.updateIsTrainer(it) }
-                        )
-                        .padding(horizontal = 6.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (isTrainer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.indoor_short),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isTrainer) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isTrainer) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                // 4c. Race Tile (EmojiEvents with tertiaryContainer styling matching WorkoutHeader.kt)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 42.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (isRace) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        )
-                        .border(
-                            width = if (isRace) 2.dp else 0.5.dp,
-                            color = if (isRace) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .toggleable(
-                            value = isRace,
-                            role = Role.Checkbox,
-                            onValueChange = { viewModel.updateIsRace(it) }
-                        )
-                        .padding(horizontal = 6.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.EmojiEvents,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (isRace) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.race),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isRace) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isRace) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
+            // 4. Two-Tier Workout Classification Tags: Routine Context (Commute/Indoor) vs Special Distinction (Race/Epic) (REQ-REV-018.1, ATT-9022)
+            WorkoutClassificationSection(
+                isCommute = workoutData?.commute ?: false,
+                isTrainer = workoutData?.trainer ?: false,
+                isRace = workoutData?.race ?: false,
+                isEpic = workoutData?.epic ?: false,
+                onCommuteChange = { viewModel.updateIsCommute(it) },
+                onTrainerChange = { viewModel.updateIsTrainer(it) },
+                onRaceChange = { viewModel.updateIsRace(it) },
+                onEpicChange = { viewModel.updateIsEpic(it) }
+            )
 
             // 5. Grouped Cloud Sync Card (Strava and/or Health Connect, ATT-7517)
             val showStrava = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
@@ -620,6 +492,332 @@ fun EditWorkoutDialog(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Deterministic semantics test tags for the two-tier workout classification section in
+ * [EditWorkoutScreen] (`REQ-REV-018.1`, `ATT-9022`).
+ */
+internal object EditWorkoutClassificationTestTags {
+    const val ROUTINE_GROUP = "edit_workout_classification_routine_group"
+    const val SPECIAL_GROUP = "edit_workout_classification_special_group"
+    const val COMMUTE_TILE = "edit_workout_tag_commute"
+    const val INDOOR_TILE = "edit_workout_tag_indoor"
+    const val RACE_TILE = "edit_workout_tag_race"
+    const val EPIC_TILE = "edit_workout_tag_epic"
+}
+
+/**
+ * Two-tier workout classification selector separating everyday routine conditions (`Commute`,
+ * `Indoor` — calm low-emphasis styling, mutually exclusive via ViewModel) from memorable special
+ * distinctions (`Race`, `Epic` — elevated standout accent styling, independently toggleable
+ * including together) (`REQ-REV-018.1`, `ATT-9022`).
+ */
+@Composable
+internal fun WorkoutClassificationSection(
+    isCommute: Boolean,
+    isTrainer: Boolean,
+    isRace: Boolean,
+    isEpic: Boolean,
+    onCommuteChange: (Boolean) -> Unit,
+    onTrainerChange: (Boolean) -> Unit,
+    onRaceChange: (Boolean) -> Unit,
+    onEpicChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val epicColors = TTColor.epicBadgeColors()
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Tier 1: Routine Context (calm, low-emphasis styling)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(EditWorkoutClassificationTestTags.ROUTINE_GROUP),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.workout_classification_routine_header),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Commute Tile (calm routine tone)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 42.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isCommute) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        )
+                        .border(
+                            width = if (isCommute) 1.5.dp else 0.5.dp,
+                            color = if (isCommute) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .toggleable(
+                            value = isCommute,
+                            role = Role.Checkbox,
+                            onValueChange = onCommuteChange
+                        )
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                        .testTag(EditWorkoutClassificationTestTags.COMMUTE_TILE),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Commute,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isCommute) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.commute),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isCommute) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isCommute) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Indoor Tile (calm routine tone)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 42.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isTrainer) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        )
+                        .border(
+                            width = if (isTrainer) 1.5.dp else 0.5.dp,
+                            color = if (isTrainer) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .toggleable(
+                            value = isTrainer,
+                            role = Role.Checkbox,
+                            onValueChange = onTrainerChange
+                        )
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                        .testTag(EditWorkoutClassificationTestTags.INDOOR_TILE),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isTrainer) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.indoor_short),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isTrainer) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isTrainer) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        // Tier 2: Special Distinction (elevated, standout styling; independently toggleable)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(EditWorkoutClassificationTestTags.SPECIAL_GROUP),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.workout_classification_special_header),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Race Tile (EmojiEvents + Royal Blue tertiary accent matching WorkoutHeader)
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isRace) {
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    },
+                    border = BorderStroke(
+                        width = if (isRace) 2.dp else 1.dp,
+                        color = if (isRace) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)
+                        }
+                    ),
+                    shadowElevation = if (isRace) 2.dp else 0.dp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 46.dp)
+                        .toggleable(
+                            value = isRace,
+                            role = Role.Checkbox,
+                            onValueChange = onRaceChange
+                        )
+                        .testTag(EditWorkoutClassificationTestTags.RACE_TILE)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EmojiEvents,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = if (isRace) {
+                                MaterialTheme.colorScheme.tertiary
+                            } else {
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f)
+                            }
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.race),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isRace) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isRace) {
+                                MaterialTheme.colorScheme.onTertiaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Epic Tile (AutoAwesome + warm Gold/Amber TTColor accent matching WorkoutHeader)
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isEpic) {
+                        epicColors.container
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    },
+                    border = BorderStroke(
+                        width = if (isEpic) 2.dp else 1.dp,
+                        color = if (isEpic) {
+                            epicColors.accent
+                        } else {
+                            epicColors.accent.copy(alpha = 0.4f)
+                        }
+                    ),
+                    shadowElevation = if (isEpic) 2.dp else 0.dp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 46.dp)
+                        .toggleable(
+                            value = isEpic,
+                            role = Role.Checkbox,
+                            onValueChange = onEpicChange
+                        )
+                        .testTag(EditWorkoutClassificationTestTags.EPIC_TILE)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = if (isEpic) {
+                                epicColors.accent
+                            } else {
+                                epicColors.accent.copy(alpha = 0.8f)
+                            }
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.epic),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isEpic) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isEpic) {
+                                epicColors.onContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(name = "Classification Two-Tier Light", showBackground = true)
+@Preview(name = "Classification Two-Tier Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun WorkoutClassificationSectionPreview() {
+    ATrainingTrackerTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            WorkoutClassificationSection(
+                isCommute = true,
+                isTrainer = false,
+                isRace = true,
+                isEpic = true,
+                onCommuteChange = {},
+                onTrainerChange = {},
+                onRaceChange = {},
+                onEpicChange = {},
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@Preview(name = "Classification Unselected Light", showBackground = true)
+@Preview(name = "Classification Unselected Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun WorkoutClassificationSectionUnselectedPreview() {
+    ATrainingTrackerTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            WorkoutClassificationSection(
+                isCommute = false,
+                isTrainer = false,
+                isRace = false,
+                isEpic = false,
+                onCommuteChange = {},
+                onTrainerChange = {},
+                onRaceChange = {},
+                onEpicChange = {},
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }

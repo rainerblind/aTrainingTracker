@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:17:04.085Z" hostname="rainer-HP-EliteBook-850-G5" time="11.165">
+  <properties/>
+  <testcase name="testEnqueue_invalidWorkoutId_skipsEnqueue" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="2.571"/>
+  <testcase name="testDoWork_syncFailure_returnsRetry" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="2.423"/>
+  <testcase name="testEnqueue_validWorkoutId_enqueuesOneTimeWorkRequest" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="1.241"/>
+  <testcase name="testDoWork_workoutNotFound_returnsFailure" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="1.221"/>
+  <testcase name="testEnqueue_whenWorkManagerUnavailable_skipsEnqueue" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="1.223"/>
+  <testcase name="testDoWork_invalidWorkoutId_returnsFailure" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="1.2"/>
+  <testcase name="testDoWork_syncSuccess_returnsSuccess" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectWorkoutSyncWorkerTest" time="1.286"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

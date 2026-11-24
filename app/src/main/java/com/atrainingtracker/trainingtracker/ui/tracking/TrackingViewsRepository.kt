@@ -122,7 +122,7 @@ enum class ScreenMode {
  */
 class TrackingViewsRepository private constructor(private val context: Context) {
 
-
+    private val appContext: Context = context.applicationContext ?: context
     private val viewsDbManager = TrackingViewsDatabaseManager.getInstance(context)
     // Add a member for the DevicesDatabaseManager
     private val devicesDbManager = DevicesDatabaseManager.getInstance(context)
@@ -165,7 +165,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
             null, null, null
         )
         return cursor.use {
-            if (it.moveToFirst()) it.toTrackingViewInfo() else null
+            if (it.moveToFirst()) it.toTrackingViewInfo(appContext) else null
         }
     }
 
@@ -194,7 +194,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         )
         cursor.use {
             while (it.moveToNext()) {
-                viewList.add(it.toTrackingViewInfo())
+                viewList.add(it.toTrackingViewInfo(appContext))
             }
         }
         return viewList
@@ -636,9 +636,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
             TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_RADAR_LIGHT
         )
 
-        private fun Cursor.toTrackingViewInfo(): TrackingViewInfo {
+        private fun Cursor.toTrackingViewInfo(context: Context): TrackingViewInfo {
             val id = getLong(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID))
-            val name = getString(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME))
+            val rawName = getString(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME)) ?: ""
+            val name = TrackingTabTitleResolver.resolveTitle(context, rawName)
             val showMap = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP)) == 1
             val showLap = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON)) == 1
             val showLiveSeg = getInt(getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS)) == 1

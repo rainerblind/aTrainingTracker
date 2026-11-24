@@ -67,6 +67,11 @@
     <string name="radar_overlay_edge_side">Borda do ecrã</string>
     <string name="radar_overlay_edge_left">Borda esquerda</string>
     <string name="radar_overlay_mode_fullscreen">Tela cheia</string>
+    <string name="radar_fullscreen_marker_style_title">Estilo dos veículos (tela cheia)</string>
+    <string name="radar_fullscreen_marker_style_badge">Crachá compacto</string>
+    <string name="radar_fullscreen_marker_style_top_down">Vista superior</string>
+    <string name="radar_fullscreen_marker_style_badge_desc">Cápsulas grandes de distância de alto contraste com ícones de veículos</string>
+    <string name="radar_fullscreen_marker_style_top_down_desc">Silhuetas de carros e caminhões vistas de cima alinhadas com a direção de marcha</string>
     <string name="radar_overlay_edge_right">Borda direita</string>
     <string name="radar_overlay_clear_mode">Exibição sem perigo</string>
     <string name="radar_overlay_clear_mode_slim">Barra fina</string>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:39:54.374Z" hostname="rainer-HP-EliteBook-850-G5" time="0.455">
+  <properties/>
+  <testcase name="testResolveIdentity_NoDeviceUsesSpeedBasedFallbackAndUnlinkedEquipment_TST_UNT_003" classname="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryTest" time="0.44"/>
+  <testcase name="testResolveIdentity_UniqueDeviceResolvesLinkedEquipmentAndSport_TST_UNT_003" classname="com.atrainingtracker.trainingtracker.database.EquipmentDiscoveryTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

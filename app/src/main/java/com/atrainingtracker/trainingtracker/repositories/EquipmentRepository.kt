@@ -188,6 +188,15 @@ open class EquipmentRepository internal constructor(
     open fun updateEquipment(id: Long, name: String, frameType: Int, linkedDeviceIds: List<Long>, isRetired: Boolean) =
         equipmentDbHelper.updateEquipment(id, name, frameType, linkedDeviceIds, isRetired)
 
+    open fun updateEquipment(
+        id: Long,
+        name: String,
+        frameType: Int,
+        linkedDeviceIds: List<Long>,
+        isRetired: Boolean,
+        wheelPositions: Map<Long, WheelPosition>
+    ) = equipmentDbHelper.updateEquipment(id, name, frameType, linkedDeviceIds, isRetired, wheelPositions)
+
     open fun updateLinksForEquipment(equipmentId: Long, linkedSportTypeIds: List<Long>) =
         linksHelper.updateLinksForEquipment(equipmentId, linkedSportTypeIds)
 
@@ -196,6 +205,13 @@ open class EquipmentRepository internal constructor(
 
     open fun addEquipment(name: String, frameType: Int, linkedDeviceIds: List<Long>): Long =
         equipmentDbHelper.addEquipment(name, frameType, linkedDeviceIds)
+
+    open fun addEquipment(
+        name: String,
+        frameType: Int,
+        linkedDeviceIds: List<Long>,
+        wheelPositions: Map<Long, WheelPosition>
+    ): Long = equipmentDbHelper.addEquipment(name, frameType, linkedDeviceIds, wheelPositions)
 
     open fun deleteEquipment(equipmentId: Long) {
         equipmentDbHelper.deleteEquipment(equipmentId)

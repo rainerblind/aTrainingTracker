@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:42:52.861Z" hostname="rainer-HP-EliteBook-850-G5" time="0.036">
+  <properties/>
+  <testcase name="testEquipmentSportSensorMatrix_structuralContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest" time="0.003"/>
+  <testcase name="testEquipmentSensorMatrixScreen_structuralContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest" time="0.001"/>
+  <testcase name="testEquipmentSensorOrderingContract_screenAndDialogMustApplyPrioritizedOrdering" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest" time="0.001"/>
+  <testcase name="testEquipmentTabsScreen_twoTabsAndUnconditionalFabContract" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest" time="0.001"/>
+  <testcase name="testLocalizationParity_allNineLocalesMustContainNewStringKeys" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorMatrixContractTest" time="0.029"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

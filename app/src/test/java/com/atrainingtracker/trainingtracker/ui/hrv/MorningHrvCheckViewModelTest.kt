@@ -24,6 +24,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseManager
@@ -113,7 +116,8 @@ class MorningHrvCheckViewModelTest {
         assertEquals("Must start in READY state", MorningHrvPhase.READY, viewModel.uiState.value.phase)
         assertEquals("Initial remaining seconds must be 0", 0, viewModel.uiState.value.remainingSec)
 
-        // 2. Start measurement (use 2s stabilization and 5s duration for fast test)
+        // 2. Connect HR/RR stream and start measurement (use 2s stabilization and 5s duration for fast test)
+        viewModel.handleRrBeat(RrBeatEvent(500L, 1000.0, 0, ProtocolType.BLE))
         viewModel.setStabilizationDurationSec(2)
         viewModel.setDurationSec(5)
         viewModel.startMeasurement()
@@ -242,6 +246,7 @@ class MorningHrvCheckViewModelTest {
             dispatcher = testDispatcher
         )
 
+        viewModel.handleRrBeat(RrBeatEvent(500L, 1000.0, 0, ProtocolType.BLE))
         viewModel.setStabilizationDurationSec(1)
         viewModel.setDurationSec(2)
         viewModel.startMeasurement()
@@ -281,6 +286,7 @@ class MorningHrvCheckViewModelTest {
             dispatcher = testDispatcher
         )
 
+        viewModel.handleRrBeat(RrBeatEvent(500L, 1000.0, 0, ProtocolType.BLE))
         viewModel.setStabilizationDurationSec(1)
         viewModel.setDurationSec(2)
         viewModel.startMeasurement()
@@ -323,6 +329,7 @@ class MorningHrvCheckViewModelTest {
             dispatcher = testDispatcher
         )
 
+        viewModel.handleRrBeat(RrBeatEvent(500L, 820.0, 0, ProtocolType.BLE))
         viewModel.setStabilizationDurationSec(1)
         viewModel.setDurationSec(2)
         viewModel.startMeasurement()
@@ -355,6 +362,7 @@ class MorningHrvCheckViewModelTest {
             dispatcher = testDispatcher
         )
 
+        viewModel.handleRrBeat(RrBeatEvent(500L, 1000.0, 0, ProtocolType.BLE))
         viewModel.setStabilizationDurationSec(1)
         viewModel.setDurationSec(10)
         viewModel.startMeasurement()
@@ -395,6 +403,7 @@ class MorningHrvCheckViewModelTest {
             dispatcher = testDispatcher
         )
 
+        viewModel.handleRrBeat(RrBeatEvent(500L, 900.0, 0, ProtocolType.BLE))
         viewModel.setStabilizationDurationSec(1)
         viewModel.setDurationSec(2)
         viewModel.startMeasurement()
@@ -706,6 +715,7 @@ class MorningHrvCheckViewModelTest {
             dispatcher = testDispatcher
         )
         advanceUntilIdle()
+        viewModel.handleRrBeat(RrBeatEvent(500L, 950.0, 0, ProtocolType.BLE, isOpticalPpi = true))
         viewModel.setStabilizationDurationSec(1)
         viewModel.setDurationSec(2)
         viewModel.startMeasurement()
@@ -728,5 +738,196 @@ class MorningHrvCheckViewModelTest {
             com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.HIGH_ARTIFACTS,
             state.signalQualityStatus
         )
+    }
+
+    @Test
+    fun testStartMeasurement_blockedWhenNoHrSensorAvailable_andStandaloneWellnessStillSaves_TST_HRV_052() = runTest(testDispatcher) {
+        // REQ-HRV-052.1 / REQ-HRV-052.2 / REQ-HRV-052.3 / TST-HRV-052.1
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        assertFalse("No HR sensor connected initially", viewModel.uiState.value.isHrSensorAvailable)
+        assertFalse("Start measurement must be blocked without HR sensor", viewModel.uiState.value.canStartMeasurement)
+
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        advanceTimeBy(5000L)
+        advanceUntilIdle()
+
+        assertEquals(
+            "Defense-in-depth startMeasurement() guard must keep phase in READY",
+            MorningHrvPhase.READY,
+            viewModel.uiState.value.phase
+        )
+        assertEquals(0, viewModel.uiState.value.remainingSec)
+        assertNull(viewModel.uiState.value.computedEntry)
+
+        // Standalone Morning Sleep & Wellness saving MUST remain fully operational without an HR sensor
+        viewModel.setWellnessTogglesForTesting(
+            enableMorningSleepAndWellness = true,
+            enableSleepDurationAndQuality = true,
+            enableMorningEnergy = true
+        )
+        viewModel.setSleepDurationMinutes(465)
+        viewModel.setSleepQuality(4)
+        viewModel.setMorningEnergy(5)
+
+        val rowId = viewModel.saveStandaloneWellness()
+        advanceUntilIdle()
+        assertTrue("Standalone wellness must save without connected HR sensor", rowId > 0)
+        assertTrue(viewModel.uiState.value.isWellnessSaved)
+        val saved = hrvRepository.getEntryById(rowId)
+        assertNotNull(saved)
+        assertNull(saved!!.rmssdMs)
+        assertEquals(465, saved.sleepDurationMin)
+    }
+
+    @Test
+    fun testSensorAvailability_reactsToRepositoryActiveSensorsFilteredHrAndDisconnect_TST_HRV_052() = runTest(testDispatcher) {
+        // REQ-HRV-052.1 / REQ-HRV-052.2 / TST-HRV-052.1
+        val activeSensorsFlow = MutableStateFlow<Set<SensorType>>(emptySet())
+        val filteredDataFlow = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        every { mockBanalRepo.activeSensors } returns activeSensorsFlow
+        every { mockBanalRepo.allFilteredSensorData } returns filteredDataFlow
+
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = mockBanalRepo,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isHrSensorAvailable)
+        assertFalse(viewModel.uiState.value.canStartMeasurement)
+
+        // 1. Connect HR sensor via BANALServiceRepository.activeSensors + live HR sample
+        activeSensorsFlow.value = setOf(SensorType.HR)
+        filteredDataFlow.value = listOf(
+            FilteredSensorData(SensorType.HR, 58, "58", null, FilterType.INSTANTANEOUS, 1.0)
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isHrSensorAvailable)
+        assertTrue(viewModel.uiState.value.canStartMeasurement)
+        assertEquals(58, viewModel.uiState.value.currentHeartRateBpm)
+
+        // 2. Sensor disconnects in READY -> availability and stale HR clear immediately
+        activeSensorsFlow.value = emptySet()
+        filteredDataFlow.value = emptyList()
+        advanceUntilIdle()
+
+        assertFalse("Disconnect must clear isHrSensorAvailable", viewModel.uiState.value.isHrSensorAvailable)
+        assertFalse("Disconnect must disable canStartMeasurement", viewModel.uiState.value.canStartMeasurement)
+        assertNull("Disconnect in READY must clear stale currentHeartRateBpm", viewModel.uiState.value.currentHeartRateBpm)
+        assertFalse(viewModel.uiState.value.isOpticalPpiSession)
+
+        // Defense-in-depth blocks startMeasurement after disconnect
+        viewModel.startMeasurement()
+        assertEquals(MorningHrvPhase.READY, viewModel.uiState.value.phase)
+
+        // 3. Reconnect via RR_INTERVAL -> enables startMeasurement and transitions to STABILIZING
+        activeSensorsFlow.value = setOf(SensorType.RR_INTERVAL)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isHrSensorAvailable)
+        assertTrue(viewModel.uiState.value.canStartMeasurement)
+
+        viewModel.setStabilizationDurationSec(2)
+        viewModel.setDurationSec(5)
+        viewModel.startMeasurement()
+        assertEquals(MorningHrvPhase.STABILIZING, viewModel.uiState.value.phase)
+
+        // 4. Disconnect mid-measurement + cancel -> READY with stale HR/optical cleared
+        activeSensorsFlow.value = emptySet()
+        advanceUntilIdle()
+        viewModel.cancelMeasurement()
+        assertEquals(MorningHrvPhase.READY, viewModel.uiState.value.phase)
+        assertFalse(viewModel.uiState.value.isHrSensorAvailable)
+        assertNull(viewModel.uiState.value.currentHeartRateBpm)
+    }
+
+    @Test
+    fun testOpticalPpiBeat_enablesStartMeasurement_andInvalidRrBeatDoesNot_TST_HRV_052() = runTest(testDispatcher) {
+        // REQ-HRV-052.1 / REQ-HRV-052.2 / TST-HRV-052.1
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        // Invalid non-positive RR beat must NOT unlock measurement
+        viewModel.handleRrBeat(RrBeatEvent(1000L, 0.0, 1, ProtocolType.BLE))
+        assertFalse(viewModel.uiState.value.isHrSensorAvailable)
+        assertFalse(viewModel.uiState.value.canStartMeasurement)
+
+        // Valid Polar Verity Sense optical PPI beat unlocks measurement
+        viewModel.handleRrBeat(RrBeatEvent(2000L, 950.0, 2, ProtocolType.BLE, isOpticalPpi = true))
+        assertTrue(viewModel.uiState.value.isHrSensorAvailable)
+        assertTrue(viewModel.uiState.value.canStartMeasurement)
+        assertTrue(viewModel.uiState.value.isOpticalPpiSession)
+        assertEquals(63, viewModel.uiState.value.currentHeartRateBpm)
+
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        assertEquals(MorningHrvPhase.STABILIZING, viewModel.uiState.value.phase)
+        viewModel.cancelMeasurement()
+    }
+
+    @Test
+    fun testMidMeasurementDisconnect_zeroBeatCompleteMeasurementClearsStaleHrOpticalAndRemainingSec_TST_HRV_052() = runTest(testDispatcher) {
+        // REQ-HRV-052.1 / TST-HRV-052.1: Stage 6 Bounce 1 heal — 0-beat completeMeasurement() clears remainingSec, stale BPM & optical flag
+        val activeSensorsFlow = MutableStateFlow<Set<SensorType>>(setOf(SensorType.HR, SensorType.RR_INTERVAL))
+        val filteredDataFlow = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        every { mockBanalRepo.activeSensors } returns activeSensorsFlow
+        every { mockBanalRepo.allFilteredSensorData } returns filteredDataFlow
+
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = mockBanalRepo,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        // Connect optical PPI sensor in READY and start measurement
+        viewModel.handleRrBeat(RrBeatEvent(1000L, 960.0, 1, ProtocolType.BLE, isOpticalPpi = true))
+        assertTrue(viewModel.uiState.value.isHrSensorAvailable)
+        assertTrue(viewModel.uiState.value.isOpticalPpiSession)
+        assertEquals(63, viewModel.uiState.value.currentHeartRateBpm)
+
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        advanceTimeBy(1001L)
+        assertEquals(MorningHrvPhase.MEASURING, viewModel.uiState.value.phase)
+
+        // Sensor disconnects mid-measurement with 0 beats recorded during MEASURING
+        activeSensorsFlow.value = emptySet()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isHrSensorAvailable)
+
+        // Countdown finishes with 0 beats -> completeMeasurement() returns to READY with clean reset
+        advanceTimeBy(2500L)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(MorningHrvPhase.READY, state.phase)
+        assertEquals("remainingSec must reset to 0 on 0-beat completion", 0, state.remainingSec)
+        assertNull("Stale pre-disconnect BPM must clear on 0-beat completion", state.currentHeartRateBpm)
+        assertFalse("Stale optical PPI flag must clear on 0-beat completion", state.isOpticalPpiSession)
+        assertFalse(state.isHrSensorAvailable)
+        assertFalse(state.canStartMeasurement)
+        assertEquals(com.atrainingtracker.R.string.morning_hrv_error_no_rr, state.errorMessageResId)
     }
 }

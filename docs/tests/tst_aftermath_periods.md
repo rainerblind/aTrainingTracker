@@ -1,14 +1,14 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Document ID**: `DOC-TST-PERIODS`  
-**Version**: 1.0.48  
+**Version**: 1.0.51  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 80
+**Total Tests**: 81
 
 ---
 
@@ -1473,6 +1473,30 @@
 
 ---
 
+### TST-HRV-052: **Morning HRV Check HR Sensor Availability Gate, Disconnected Guidance & Standalone Wellness Verification** (`ATT-9323`) [Verified]
+- **Requirement(s)**: `REQ-HRV-052` (`REQ-HRV-052.1`..`REQ-HRV-052.4`)
+- **Component**: `MorningHrvCheckViewModel.kt`, `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModelTest.kt`, `MorningHrvCheckScreenTest.kt`, `MorningHrvOpticalPpiUiTest.kt`, `TranslationParityTest.kt`, `ArchitectureConformanceContractTest.kt`
+- **Jira**: `ATT-9323`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Localization Parity**: `9/9 locales (values*/strings_hrv.xml: morning_hrv_state_no_sensor, morning_hrv_no_sensor_hint)`
+- **Test Description**:
+  1. *ViewModel Sensor Availability, Defense-in-Depth Start Guard & Disconnect Reset (`TST-HRV-052.1`, `MorningHrvCheckViewModelTest#testStartMeasurement_blockedWhenNoHrSensorAvailable_andStandaloneWellnessStillSaves_TST_HRV_052`, `MorningHrvCheckViewModelTest#testSensorAvailability_reactsToRepositoryActiveSensorsFilteredHrAndDisconnect_TST_HRV_052`, `MorningHrvCheckViewModelTest#testOpticalPpiBeat_enablesStartMeasurement_andInvalidRrBeatDoesNot_TST_HRV_052`, `MorningHrvCheckViewModelTest#testMidMeasurementDisconnect_zeroBeatCompleteMeasurementClearsStaleHrOpticalAndRemainingSec_TST_HRV_052`)*:
+     • Verify initial `MorningHrvUiState` has `isHrSensorAvailable == false` and `canStartMeasurement == false`; verify calling `startMeasurement()` without a sensor stays strictly in `MorningHrvPhase.READY` with `remainingSec == 0`.
+     • Verify connecting an HR sensor via `BANALServiceRepository.activeSensors` (`SensorType.HR` / `SensorType.RR_INTERVAL`), live `allFilteredSensorData` (`SensorType.HR`), or direct ECG / optical PPI `handleRrBeat` enables `isHrSensorAvailable` and `canStartMeasurement`, permitting `startMeasurement()` to enter `STABILIZING`, while invalid non-positive RR beats (`rrMs <= 0`) do not unlock startup.
+     • Verify disconnecting the repository HR sensor in `READY` resets `isHrSensorAvailable = false`, `currentHeartRateBpm = null`, and `isOpticalPpiSession = false`, blocking subsequent `startMeasurement()` calls while keeping `saveStandaloneWellness()` fully operational; verify mid-measurement disconnect + `cancelMeasurement()` and 0-beat `completeMeasurement()` both reset `remainingSec = 0`, `currentHeartRateBpm = null`, and `isOpticalPpiSession = false` in `READY`.
+  2. *Compose UI Disabled Start CTA, Ready Guidance & Standalone Wellness Preservation (`TST-HRV-052.2`, `MorningHrvCheckScreenTest#testNoHrSensorConnected_disablesStartShowsGuidanceAndKeepsStandaloneWellnessEnabled_TST_HRV_052`, `MorningHrvCheckScreenTest#testHrSensorAvailable_enablesStartAndHidesDisconnectedGuidance_TST_HRV_052`, `MorningHrvCheckScreenTest#testHrSensorConnectedBeforeFirstBeat_enablesStartWithoutDisconnectedGuidance_TST_HRV_052`)*:
+     • Verify that in `READY` with `!isHrSensorAvailable`, `morning_hrv_start_button` is displayed and disabled (`assertIsNotEnabled()`), `morning_hrv_state_no_sensor` and `morning_hrv_no_sensor_guidance` are displayed, and `morning_hrv_save_wellness_secondary_button` remains enabled and invokes `onSaveStandaloneWellness`.
+     • Verify that when `isHrSensorAvailable == true` (with live HR or connected prior to first beat), `morning_hrv_start_button` is enabled (`assertIsEnabled()`) and invokes `onStart`, `"Ready to Measure"` is shown, and `morning_hrv_no_sensor_guidance` does not exist.
+     • Verify Pure Wellness Mode (`REQ-HRV-043`), `forceFullHrv` (`REQ-HRV-045`), and Optical PPI (`REQ-HRV-049`) regressions remain green.
+  3. *9-Language Localization, Architecture Contracts & Live `emulator-5554` Visual Inspection (`TST-HRV-052.3`, `TranslationParityTest`, `ArchitectureConformanceContractTest`, `Rule 8.5`)*:
+     • Verify `TranslationParityTest` (`11/11` PASS) across all 9 locales for `morning_hrv_state_no_sensor` and `morning_hrv_no_sensor_hint` and `ArchitectureConformanceContractTest` (`11/11` PASS) confirming `MorningHrvCheckScreen.kt` (`1,460/1,500` LoC) and `MorningHrvCheckViewModel.kt` (`658/1,500` LoC).
+     • Verify live on `emulator-5554` (`MorningHrvCheckScreen` without connected HR sensor in Light & Dark themes) confirming tapping disabled `Start Measurement` does not start a countdown, capturing `ATT-9323_morning_hrv_no_sensor_light.png` and `ATT-9323_morning_hrv_no_sensor_dark.png` inspected via `read_file` (`Rule 8.5`), and verifying clean `logcat` (`0` crashes/ANRs/exceptions).
+- **Verification Evidence**: `59/59` PASS (`0` fail, `0` err, `0` skip, `0` new Kotlin compiler warnings) across 5 targeted/localization/contract suites (`MorningHrvCheckViewModelTest` `21/21`, `MorningHrvCheckScreenTest` `13/13`, `MorningHrvOpticalPpiUiTest` `3/3`, `TranslationParityTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`); live `emulator-5554` (`Pixel_8_Android_15`) install & interactive verification (`0` crashes/ANRs, `ATT-9323_morning_hrv_no_sensor_light.png` & `ATT-9323_morning_hrv_no_sensor_dark.png` visually audited via `read_file`); SHA-256 evidence bundle at `docs/engineering/test_evidence/tickets/ATT-9323/`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1526,3 +1550,6 @@
 | `1.0.46` | 2026-11-23 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Added `TST-PER-057` (`[Planned]`, `.1`–`.4`) covering cold enrichment progress after lightweight init & warm restart silence (`TST-PERF-010`), version-guarded non-clobber vs `refreshClusters()` / `ATT-9607` `syncClusterAfterWorkoutDeletion()`, indoor revisit silence & failure `finally` cleanup, and real-`Dispatchers.IO` regression verification. |
 | `1.0.47` | 2026-11-24 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Gate 3 (`ATT-9671`) revision: aligned `TST-PER-057.1`–`.4` with `yield()` progress delivery, stale SQLite writeback guard & 1-attempt empty-cache retry, cancellation `finally` cleanup, and deterministic real-`Dispatchers.IO` state-invariant stress assertions. |
 | `1.0.48` | 2026-11-24 | Lane 2 Author (`ATT-9580`, `--as agent1`) | `ATT-9580` | Promoted `TST-PER-057` to `[Verified]` with verbatim test method citations (`62/62` PASS across 8 Tier-1 & contract suites, `0` fail, `0` skip, `0` new warnings), `3/3` static linters PASS, live `emulator-5554` smoke (`0` crashes, `ATT-9580_emulator_smoke.png` inspected), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9580/`). |
+| `1.0.49` | 2026-11-24 | Lane 1 Author (`ATT-9323`, `--as agent1`) | `ATT-9323` | Added `TST-HRV-052` (`[Planned]`, `.1`–`.3`) covering Morning HRV Check HR/HRV sensor availability gating, defense-in-depth start guard, disconnect clearing, disconnected Compose UI guidance, standalone wellness preservation, 9-locale parity, and live `emulator-5554` verification. |
+| `1.0.50` | 2026-11-24 | Lane 1 Author (`ATT-9323`, `--as agent1`) | `ATT-9323` | Promoted `TST-HRV-052` to `[Verified]` with verbatim `MorningHrvCheckViewModelTest` and `MorningHrvCheckScreenTest` citations (`58/58` PASS across 5 suites, `0` new warnings), live `emulator-5554` Light/Dark PNG verification (`Rule 8.5`, `0` crashes/ANRs), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9323/`). |
+| `1.0.51` | 2026-11-24 | Lane 1 Author (`ATT-9323`, `--as agent1`) | `ATT-9323` | Stage 6 Bounce 1/5 heal: added `testMidMeasurementDisconnect_zeroBeatCompleteMeasurementClearsStaleHrOpticalAndRemainingSec_TST_HRV_052` (`MorningHrvCheckViewModelTest` `21/21`, `59/59` total PASS across 5 suites, `0` new warnings) verifying 0-beat `completeMeasurement()` clears `remainingSec`, stale BPM, and optical PPI flag alongside `MeasurementPacingCard` `!isSensorMissingInReady` pulse-scale guard. |

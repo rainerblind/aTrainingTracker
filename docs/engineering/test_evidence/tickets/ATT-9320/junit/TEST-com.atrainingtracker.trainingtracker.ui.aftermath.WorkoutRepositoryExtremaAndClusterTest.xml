@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:42:00.733Z" hostname="rainer-HP-EliteBook-850-G5" time="14.131">
+  <properties/>
+  <testcase name="updateExtremaValueInMemory_matchesBySensorTypeAcrossLocaleSwitchAndFallsBackWhenNull_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="4.242"/>
+  <testcase name="assignAndUnassignCluster_executeSingleDbReloadAndNotifyInitialWorkoutLoaded_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.61"/>
+  <testcase name="reloadWorkoutDataInternal_coalescedNotifyInitialLoadedStillFiresAfterInFlightPlainReload_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.499"/>
+  <testcase name="addOrUpdateWorkout_preservesExtremaPositionsAcrossLocaleLabelChangeViaSensorType_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.367"/>
+  <testcase name="reloadWorkoutDataInternal_cleansUpTrackingSetsOnNormalExitAndException_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExtremaAndClusterTest" time="2.412"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector88.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openInner(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.open(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(Unknown Source)
+	at com.atrainingtracker.database.TrackingSQLiteOpenHelper.getWritableDatabase(Unknown Source)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getDatabase(Unknown Source)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getAllClusters(Unknown Source)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.getAllClustersSync(WorkoutClusterRepository.kt:997)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine$dbManager$1.getAllClusters(WorkoutClusterEngine.kt:49)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt:633)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$default(WorkoutClusterEngine.kt:612)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt)
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

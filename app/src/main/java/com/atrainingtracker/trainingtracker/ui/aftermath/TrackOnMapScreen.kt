@@ -123,6 +123,12 @@ fun TrackOnMapScreen(
     val persistedHiddenCharts by preferenceManager.hiddenTelemetryChartsFlow.collectAsState(initial = emptySet())
     val workoutMapLayerConfig by preferenceManager.workoutMapLayerConfigFlow.collectAsState(initial = WorkoutMapLayerConfig())
     var showFullscreenMap by rememberSaveable(workoutData.id) { mutableStateOf(false) }
+    var sharedScrubDistance by rememberSaveable(workoutData.id) { mutableStateOf<Double?>(null) }
+    var fullscreenScrubDistance by rememberSaveable(workoutData.id) { mutableStateOf<Double?>(null) }
+    val openFullscreenMap: () -> Unit = {
+        fullscreenScrubDistance = sharedScrubDistance
+        showFullscreenMap = true
+    }
     val handleToggleChartVisibility: (TelemetryChartKind) -> Unit = { chartKind ->
         val nextVisible = chartKind in persistedHiddenCharts
         coroutineScope.launch {
@@ -383,6 +389,8 @@ fun TrackOnMapScreen(
         initialSection = initialSection,
         isTabsConfigReady = isTabsConfigReady,
         isSectionDataLoading = isAftermathLoading,
+        externalScrubDistance = sharedScrubDistance,
+        onScrubDistanceChange = { sharedScrubDistance = it },
         hiddenCharts = persistedHiddenCharts,
         onToggleChartVisibility = handleToggleChartVisibility,
         onUpdateFtp = effectiveOnUpdateFtp,
@@ -417,7 +425,7 @@ fun TrackOnMapScreen(
         mapTopEndActions = {
             if (showMap && hasGpsTrack && !initialAutoShareSnapshot) {
                 WorkoutMapExpandButton(
-                    onClick = { showFullscreenMap = true }
+                    onClick = openFullscreenMap
                 )
             }
             if (showTechnicalTracks) {
@@ -429,7 +437,7 @@ fun TrackOnMapScreen(
             }
         },
         onMapClick = if (showMap && hasGpsTrack && !initialAutoShareSnapshot) {
-            { showFullscreenMap = true }
+            { openFullscreenMap() }
         } else {
             null
         },
@@ -477,8 +485,20 @@ fun TrackOnMapScreen(
                     preferenceManager.setWorkoutMapBaseType(baseType)
                 }
             },
-            onClose = { showFullscreenMap = false },
-            activeScrubPath = activeScrubPath
+            onClose = {
+                sharedScrubDistance = fullscreenScrubDistance
+                showFullscreenMap = false
+            },
+            activeScrubPath = activeScrubPath,
+            selectedDistance = fullscreenScrubDistance,
+            onSelectedDistanceChange = { fullscreenScrubDistance = it },
+            minAltitudeOverride = workoutData.minAltitude,
+            maxAltitudeOverride = workoutData.maxAltitude,
+            hrZoneThresholds = hrZoneThresholds,
+            powerZoneThresholds = powerZoneThresholds,
+            hrZoneDistribution = hrZoneDistribution,
+            powerZoneDistribution = powerZoneDistribution,
+            tuningConfig = tuningConfig
         )
     }
 

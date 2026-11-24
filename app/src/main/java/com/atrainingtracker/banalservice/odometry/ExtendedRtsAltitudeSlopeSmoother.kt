@@ -54,7 +54,8 @@ data class RawAltitudeSample(
     val smoothedSpeedMps: Double = 0.0,
     val isStandstill: Boolean = smoothedSpeedMps < 0.3,
     val carriageMode: PhoneCarriageMode = PhoneCarriageMode.UNKNOWN,
-    val baroResetStep: Boolean = false
+    val baroResetStep: Boolean = false,
+    val isPauseGap: Boolean = false
 )
 
 /**
@@ -68,6 +69,7 @@ data class RawAltitudeSample(
 object ExtendedRtsAltitudeSlopeSmoother {
 
     const val STATE_DIM = 3 // [h, g, b_baro]
+    const val MAX_ACTIVE_SAMPLE_GAP_MS = 5_000L
     const val ASCENT_DESCENT_HYSTERESIS_METERS = 2.0
     const val MAX_PHYSICAL_SLOPE = 0.35 // +/-35% grade clamp (REQ-FIL-023.3, REQ-FIL-033.1)
     const val LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2 // Low-speed slope damping ceiling (REQ-FIL-033.1)
@@ -116,28 +118,108 @@ object ExtendedRtsAltitudeSlopeSmoother {
         return rawSlope.coerceIn(-MAX_PHYSICAL_SLOPE, MAX_PHYSICAL_SLOPE)
     }
 
+    private data class AltitudeSegmentResult(
+        val points: List<SmoothedAltitudeSlopePoint>,
+        val endAltitudeM: Double,
+        val endBaroBiasM: Double,
+        val endAscentM: Double,
+        val endDescentM: Double
+    )
+
     /**
-     * Executes forward-backward ERTS pass over raw altitude samples driven by smoothed speeds
-     * (REQ-FIL-017.2, REQ-FIL-033.1, REQ-FIL-033.3).
+     * Overflow-safe check for whether two consecutive altitude sample timestamps span a pause gap
+     * (`dt > 5 s`, REQ-FIL-045.3).
+     */
+    internal fun isTimestampPauseGap(prevTimestampMs: Long, currTimestampMs: Long): Boolean {
+        return currTimestampMs > prevTimestampMs &&
+            prevTimestampMs <= Long.MAX_VALUE - MAX_ACTIVE_SAMPLE_GAP_MS &&
+            currTimestampMs > prevTimestampMs + MAX_ACTIVE_SAMPLE_GAP_MS
+    }
+
+    /**
+     * Executes forward-backward ERTS pass over raw altitude samples driven by smoothed speeds,
+     * partitioning independent contiguous active segments across every pause boundary
+     * (REQ-FIL-017.2, REQ-FIL-033.1, REQ-FIL-033.3, REQ-FIL-045.3).
      */
     fun smooth(samples: List<RawAltitudeSample>): List<SmoothedAltitudeSlopePoint> {
         val n = samples.size
         if (n == 0) return emptyList()
 
+        var globalFallbackAlt = 0.0
+        for (s in samples) {
+            val candidate = s.referenceAltitudeM?.takeIf { it.isFinite() }
+                ?: s.rawAltitudeM.takeIf { it.isFinite() }
+            if (candidate != null) {
+                globalFallbackAlt = candidate
+                break
+            }
+        }
+
+        val result = ArrayList<SmoothedAltitudeSlopePoint>(n)
+        var segStart = 0
+        var fallbackAlt = globalFallbackAlt
+        var inheritedBaroBias = Double.NaN
+        var runningAscent = 0.0
+        var runningDescent = 0.0
+
+        while (segStart < n) {
+            var segEnd = segStart + 1
+            while (segEnd < n) {
+                val curr = samples[segEnd]
+                val prev = samples[segEnd - 1]
+                if (curr.isPauseGap || isTimestampPauseGap(prev.timestampMs, curr.timestampMs)) {
+                    break
+                }
+                segEnd++
+            }
+
+            val segResult = smoothContiguousSegment(
+                samples = samples.subList(segStart, segEnd),
+                fallbackInitialAlt = fallbackAlt,
+                inheritedBaroBias = inheritedBaroBias,
+                ascentOffset = runningAscent,
+                descentOffset = runningDescent
+            )
+            result.addAll(segResult.points)
+            fallbackAlt = segResult.endAltitudeM
+            inheritedBaroBias = segResult.endBaroBiasM
+            runningAscent = segResult.endAscentM
+            runningDescent = segResult.endDescentM
+            segStart = segEnd
+        }
+
+        return result
+    }
+
+    private fun smoothContiguousSegment(
+        samples: List<RawAltitudeSample>,
+        fallbackInitialAlt: Double,
+        inheritedBaroBias: Double,
+        ascentOffset: Double,
+        descentOffset: Double
+    ): AltitudeSegmentResult {
+        val n = samples.size
         if (n == 1) {
             val s0 = samples[0]
             val alt = s0.referenceAltitudeM?.takeIf { it.isFinite() }
-                ?: s0.rawAltitudeM.takeIf { it.isFinite() }
-                ?: 0.0
-            return listOf(
-                SmoothedAltitudeSlopePoint(
-                    timestampMs = s0.timestampMs,
-                    altitudeM = alt,
-                    slopePercent = 0.0,
-                    verticalSpeedMps = 0.0,
-                    ascentM = 0.0,
-                    descentM = 0.0
-                )
+                ?: s0.rawAltitudeM.takeIf { it.isFinite() }?.let { raw ->
+                    if (inheritedBaroBias.isFinite()) raw - inheritedBaroBias else raw
+                }
+                ?: fallbackInitialAlt
+            val pt = SmoothedAltitudeSlopePoint(
+                timestampMs = s0.timestampMs,
+                altitudeM = alt,
+                slopePercent = 0.0,
+                verticalSpeedMps = 0.0,
+                ascentM = ascentOffset,
+                descentM = descentOffset
+            )
+            return AltitudeSegmentResult(
+                points = listOf(pt),
+                endAltitudeM = alt,
+                endBaroBiasM = inheritedBaroBias,
+                endAscentM = ascentOffset,
+                endDescentM = descentOffset
             )
         }
 
@@ -153,18 +235,25 @@ object ExtendedRtsAltitudeSlopeSmoother {
         // Sequential finite-scan initialization preserving k=0 hasInitialRef for delayed-anchor convergence
         val firstSample = samples.first()
         val hasInitialRef = firstSample.referenceAltitudeM?.isFinite() == true
-        var initialAlt = 0.0
-        for (s in samples) {
-            val candidate = s.referenceAltitudeM?.takeIf { it.isFinite() }
-                ?: s.rawAltitudeM.takeIf { it.isFinite() }
-            if (candidate != null) {
-                initialAlt = candidate
-                break
+        if (!hasReference && hasBaroData && inheritedBaroBias.isFinite()) {
+            val firstRawBaro = samples.first { it.rawAltitudeM.isFinite() }.rawAltitudeM
+            x[0] = firstRawBaro - inheritedBaroBias
+            x[1] = 0.0
+            x[2] = inheritedBaroBias
+        } else {
+            var initialAlt = fallbackInitialAlt
+            for (s in samples) {
+                val candidate = s.referenceAltitudeM?.takeIf { it.isFinite() }
+                    ?: s.rawAltitudeM.takeIf { it.isFinite() }
+                if (candidate != null) {
+                    initialAlt = candidate
+                    break
+                }
             }
+            x[0] = initialAlt
+            x[1] = 0.0
+            x[2] = 0.0
         }
-        x[0] = initialAlt
-        x[1] = 0.0
-        x[2] = 0.0
         p[0][0] = if (hasInitialRef) DEFAULT_VAR_DEM else 400.0
         p[1][1] = DEFAULT_INITIAL_SLOPE_VAR
         p[2][2] = if (hasReference) 400.0 else 1e-4
@@ -408,8 +497,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
 
         // Output points and compute metrics
         val result = ArrayList<SmoothedAltitudeSlopePoint>(n)
-        var cumulativeAscent = 0.0
-        var cumulativeDescent = 0.0
+        var cumulativeAscent = ascentOffset
+        var cumulativeDescent = descentOffset
         var previousAlt = Double.NaN
         var anchorAlt = Double.NaN
 
@@ -467,7 +556,19 @@ object ExtendedRtsAltitudeSlopeSmoother {
             )
         }
 
-        return result
+        val endAlt = result.last().altitudeM.takeIf { it.isFinite() } ?: fallbackInitialAlt
+        val endBias = if (hasBaroData && smoothedStates.last()[2].isFinite()) {
+            smoothedStates.last()[2]
+        } else {
+            inheritedBaroBias
+        }
+        return AltitudeSegmentResult(
+            points = result,
+            endAltitudeM = endAlt,
+            endBaroBiasM = endBias,
+            endAscentM = cumulativeAscent,
+            endDescentM = cumulativeDescent
+        )
     }
 
     /**

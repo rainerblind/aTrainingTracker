@@ -51,4 +51,14 @@
     <string name="workout_map_layer_primary_track">Trace de la séance</string>
     <string name="workout_map_layer_markers">Marqueurs et lieux favoris</string>
     <string name="workout_map_layer_lap_highlights">Surlignage des tours</string>
+    <string name="workout_map_scrubber_metric_elevation">Altitude</string>
+    <string name="workout_map_scrubber_collapse">Réduire le graphique des métriques</string>
+    <string name="workout_map_scrubber_expand">Développer le graphique des métriques</string>
+    <string name="workout_map_scrubber_clear_selection">Effacer la position sélectionnée</string>
+    <string name="workout_map_scrubber_metric_selector_cd">Sélectionner la métrique du graphique</string>
+    <string name="epic">Épique</string>
+    <string name="epic_badge">Épique</string>
+    <string name="filter_epic_only">Épiques uniquement</string>
+    <string name="workout_classification_routine_header">Contexte habituel</string>
+    <string name="workout_classification_special_header">Distinction spéciale</string>
 </resources>

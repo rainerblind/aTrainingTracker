@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.helpers.ShareThemeResolverTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:17:45.178Z" hostname="rainer-HP-EliteBook-850-G5" time="0.287">
+  <properties/>
+  <testcase name="testDarkModeColors_matchDarkThemeSpecification" classname="com.atrainingtracker.trainingtracker.helpers.ShareThemeResolverTest" time="0.002"/>
+  <testcase name="testImmutableStaticColorDefinitions" classname="com.atrainingtracker.trainingtracker.helpers.ShareThemeResolverTest" time="0.001"/>
+  <testcase name="testWcagContrastRatios_exceedLevelAaaStandards" classname="com.atrainingtracker.trainingtracker.helpers.ShareThemeResolverTest" time="0.001"/>
+  <testcase name="testLightModeColors_matchHistoricalDesignConstants" classname="com.atrainingtracker.trainingtracker.helpers.ShareThemeResolverTest" time="0.001"/>
+  <testcase name="testNightModeDetection_evaluatesUiModeCorrectly" classname="com.atrainingtracker.trainingtracker.helpers.ShareThemeResolverTest" time="0.282"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

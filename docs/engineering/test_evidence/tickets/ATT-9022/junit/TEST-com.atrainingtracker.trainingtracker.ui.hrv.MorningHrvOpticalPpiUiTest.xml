@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvOpticalPpiUiTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:23:58.663Z" hostname="rainer-HP-EliteBook-850-G5" time="1.228">
+  <properties/>
+  <testcase name="testOpticalPpiMorningHrv_showsGuidanceProvenanceAndOpticalArtifactAdvice_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvOpticalPpiUiTest" time="0.412"/>
+  <testcase name="testCaptureOpticalPpiMorningHrvLightDarkPng_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvOpticalPpiUiTest" time="0.429"/>
+  <testcase name="testTrendCard_segmentedModalitySelectorSwitchesBetweenEcgAndOpticalCohorts_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvOpticalPpiUiTest" time="0.387"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersTabsUiTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:20:15.714Z" hostname="rainer-HP-EliteBook-850-G5" time="2.371">
+  <properties/>
+  <testcase name="workoutClustersTabsScreen_preservesHoistedScrollStateAcrossDetailToggle_TST_SET_019" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersTabsUiTest" time="1.41"/>
+  <testcase name="workoutClustersTabsScreen_rendersTabsFabFiltersAndUnclusteredNavigation_TST_SET_017_018_020_029_040" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersTabsUiTest" time="0.807"/>
+  <testcase name="workoutClusterDetails_displaysEquipmentArrowNotation_andTriggersHitCountClick_TST_SET_016_TST_SET_041" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersTabsUiTest" time="0.154"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

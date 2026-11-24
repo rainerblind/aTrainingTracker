@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.theme.RouteColorPaletteContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T07:21:28.690Z" hostname="rainer-HP-EliteBook-850-G5" time="0.021">
+  <properties/>
+  <testcase name="testDesignGuidelines_codifiesRoyalBlueAndEliminatesGreenRouteMentions" classname="com.atrainingtracker.trainingtracker.ui.theme.RouteColorPaletteContractTest" time="0.016"/>
+  <testcase name="testRouteColorTokens_haveExactRoyalBlueValues" classname="com.atrainingtracker.trainingtracker.ui.theme.RouteColorPaletteContractTest" time="0.0"/>
+  <testcase name="testClimbCategoryContrast_withRoyalBlueRoute" classname="com.atrainingtracker.trainingtracker.ui.theme.RouteColorPaletteContractTest" time="0.004"/>
+  <testcase name="testStravaOrange_retainsHighContrastWithRoyalBlue" classname="com.atrainingtracker.trainingtracker.ui.theme.RouteColorPaletteContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

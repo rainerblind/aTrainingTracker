@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T10:56:58.361Z" hostname="rainer-HP-EliteBook-850-G5" time="0.019">
+  <properties/>
+  <testcase name="testOptionATotalScreenEdgeOffset_equalsExactly16dp" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.017"/>
+  <testcase name="testPortraitLayoutConstants_matchOptionADesignTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.0"/>
+  <testcase name="testIcRadarDrawableFile_existsAndIsValidVector" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.0"/>
+  <testcase name="testSymmetricalSlotWidth_guaranteesMathematicalCenterAlignmentOfSensors" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.0"/>
+  <testcase name="testNineIconPortraitBudget_fitsWithin360dpAvailableWidth" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.001"/>
+  <testcase name="testRadarSensorTypes_mapToDedicatedIcRadarDrawable" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.0"/>
+  <testcase name="testTouchTargetEnlargement_improvesErgonomicsOverLegacy24dp" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatusTopBarSpacingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

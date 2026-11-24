@@ -73,6 +73,7 @@ fun ActiveFilterChipsRow(
         onRemoveCommute = { onUpdateCriteria { it.copy(isCommute = null) } },
         onRemoveTrainer = { onUpdateCriteria { it.copy(isTrainer = null) } },
         onRemoveRace = { onUpdateCriteria { it.copy(isRace = null) } },
+        onRemoveEpic = { onUpdateCriteria { it.copy(isEpic = null) } },
         onRemoveSource = { onUpdateCriteria { it.copy(source = null) } },
         onRemoveGpsTrack = { onUpdateCriteria { it.copy(hasGpsTrack = null) } },
         onRemoveDistanceRange = { onUpdateCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
@@ -123,6 +124,7 @@ fun ActiveFilterChipsRow(
     onRemoveCommute: () -> Unit,
     onRemoveTrainer: () -> Unit,
     onRemoveRace: () -> Unit = {},
+    onRemoveEpic: () -> Unit = {},
     onRemoveSource: () -> Unit = {},
     onRemoveGpsTrack: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
@@ -286,6 +288,16 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = stringResource(R.string.filter_race_only),
                     onRemove = onRemoveRace
+                )
+            }
+        }
+
+        // Epic Chip (ATT-9022 / REQ-REV-018.3)
+        if (criteria.isEpic != null) {
+            item("epic") {
+                RemovableFilterChip(
+                    label = stringResource(R.string.filter_epic_only),
+                    onRemove = onRemoveEpic
                 )
             }
         }
