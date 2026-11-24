@@ -59,6 +59,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -296,26 +297,8 @@ fun MorningHrvCheckContent(
                 }
             }
 
-            if (!isPureWellnessMode) {
-                // 1. Checklist / Protocol Card
-                WakingProtocolChecklistCard(
-                    modifier = Modifier.testTag("morning_hrv_protocol_card")
-                )
-
-                // 2. Configuration Controls (Posture & Duration) - Enabled only in READY phase
-                if (uiState.phase == MorningHrvPhase.READY) {
-                    PostureAndDurationCard(
-                        selectedPosture = uiState.posture,
-                        selectedDurationSec = uiState.durationSec,
-                        onPostureSelected = onPostureSelected,
-                        onDurationSelected = onDurationSelected,
-                        modifier = Modifier.testTag("morning_hrv_posture_duration_card")
-                    )
-                }
-            }
-
-            // Morning Sleep & Minimal Wellness Card (REQ-HRV-038, REQ-HRV-040, REQ-HRV-041)
-            if (uiState.enableMorningSleepAndWellness) {
+            if (isPureWellnessMode) {
+                // Pure Wellness Mode (REQ-HRV-043): Wellness inputs + promoted primary Save CTA
                 MorningWellnessInputCard(
                     uiState = uiState,
                     onSleepDurationChange = onSleepDurationChange,
@@ -325,55 +308,115 @@ fun MorningHrvCheckContent(
                     onToggleContextTag = onToggleContextTag,
                     modifier = Modifier.testTag("morning_hrv_wellness_card")
                 )
-            }
 
-            if (!isPureWellnessMode) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ActionButtonsSection(
+                    uiState = uiState,
+                    isPureWellnessMode = true,
+                    onStart = onStart,
+                    onCancel = onCancel,
+                    onDiscard = onDiscard,
+                    onSave = onSave,
+                    onSaveStandaloneWellness = onSaveStandaloneWellness
+                )
+            } else {
+                // 1. Cohesive HRV Measurement Block: Protocol -> Posture/Duration -> Pacing/Sensor Status -> Primary CTA
+                WakingProtocolChecklistCard(
+                    modifier = Modifier.testTag("morning_hrv_protocol_card")
+                )
+
+                if (uiState.phase == MorningHrvPhase.READY) {
+                    PostureAndDurationCard(
+                        selectedPosture = uiState.posture,
+                        selectedDurationSec = uiState.durationSec,
+                        onPostureSelected = onPostureSelected,
+                        onDurationSelected = onDurationSelected,
+                        modifier = Modifier.testTag("morning_hrv_posture_duration_card")
+                    )
+                }
+
                 if (uiState.isOpticalPpiSession) {
                     OpticalPpiGuidanceCard()
                 }
-                // 3. Live Pacing / Measurement Status Card
+
                 MeasurementPacingCard(
                     uiState = uiState,
                     modifier = Modifier.testTag("morning_hrv_pacing_card")
                 )
+
+                if (uiState.highArtifactWarning) {
+                    ArtifactWarningCard(
+                        artifactRatePct = uiState.artifactRatePct ?: 0.0,
+                        isOpticalPpi = uiState.isOpticalPpiSession
+                    )
+                }
+
+                if (uiState.phase == MorningHrvPhase.COMPLETED &&
+                    (uiState.signalQualityStatus == HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                     uiState.signalQualityStatus == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC)
+                ) {
+                    SmoothedSignalWarningCard()
+                }
+
+                if (uiState.phase == MorningHrvPhase.COMPLETED && uiState.computedEntry != null) {
+                    ReadinessResultCard(
+                        entry = uiState.computedEntry!!,
+                        readinessResult = uiState.readinessResult
+                    )
+                }
+
+                // Keep Start Measurement / Cancel directly beneath Pacing Card before optional Wellness section
+                if (uiState.phase != MorningHrvPhase.COMPLETED) {
+                    ActionButtonsSection(
+                        uiState = uiState,
+                        isPureWellnessMode = false,
+                        onStart = onStart,
+                        onCancel = onCancel,
+                        onDiscard = onDiscard,
+                        onSave = onSave
+                    )
+                }
+
+                // 2. Separate Morning Sleep & Wellness Section below the HRV block (ATT-9318, REQ-HRV-040)
+                if (uiState.enableMorningSleepAndWellness) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    MorningWellnessInputCard(
+                        uiState = uiState,
+                        onSleepDurationChange = onSleepDurationChange,
+                        onSleepQualityChange = onSleepQualityChange,
+                        onMorningEnergyChange = onMorningEnergyChange,
+                        onMuscleSorenessChange = onMuscleSorenessChange,
+                        onToggleContextTag = onToggleContextTag,
+                        modifier = Modifier.testTag("morning_hrv_wellness_card")
+                    )
+                    if (uiState.phase == MorningHrvPhase.READY) {
+                        OutlinedButton(
+                            onClick = onSaveStandaloneWellness,
+                            enabled = !uiState.isWellnessSaved,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .testTag("morning_hrv_save_wellness_secondary_button"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            SaveWellnessButtonContent(isWellnessSaved = uiState.isWellnessSaved)
+                        }
+                    }
+                }
+
+                if (uiState.phase == MorningHrvPhase.COMPLETED) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ActionButtonsSection(
+                        uiState = uiState,
+                        isPureWellnessMode = false,
+                        onStart = onStart,
+                        onCancel = onCancel,
+                        onDiscard = onDiscard,
+                        onSave = onSave
+                    )
+                }
             }
-
-            // 4. Artifact Warning (Amber Badge if > 5.0%)
-            if (uiState.highArtifactWarning) {
-                ArtifactWarningCard(
-                    artifactRatePct = uiState.artifactRatePct ?: 0.0,
-                    isOpticalPpi = uiState.isOpticalPpiSession
-                )
-            }
-
-            // Smoothed / Quantized Signal Warning (REQ-TRK-068.3)
-            if (uiState.phase == MorningHrvPhase.COMPLETED &&
-                (uiState.signalQualityStatus == HrvSignalQualityStatus.SMOOTHED_STREAM ||
-                 uiState.signalQualityStatus == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC)
-            ) {
-                SmoothedSignalWarningCard()
-            }
-
-            // 5. Post-Hoc Measurement Results Card
-            if (uiState.phase == MorningHrvPhase.COMPLETED && uiState.computedEntry != null) {
-                ReadinessResultCard(
-                    entry = uiState.computedEntry!!,
-                    readinessResult = uiState.readinessResult
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 6. Action Buttons
-            ActionButtonsSection(
-                uiState = uiState,
-                isPureWellnessMode = isPureWellnessMode,
-                onStart = onStart,
-                onCancel = onCancel,
-                onDiscard = onDiscard,
-                onSave = onSave,
-                onSaveStandaloneWellness = onSaveStandaloneWellness
-            )
         }
     }
 
@@ -959,20 +1002,6 @@ private fun ActionButtonsSection(
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
-                        }
-
-                        if (uiState.enableMorningSleepAndWellness) {
-                            OutlinedButton(
-                                onClick = onSaveStandaloneWellness,
-                                enabled = !uiState.isWellnessSaved,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 52.dp)
-                                    .testTag("morning_hrv_save_wellness_secondary_button"),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                SaveWellnessButtonContent(isWellnessSaved = uiState.isWellnessSaved)
-                            }
                         }
                     }
                 }

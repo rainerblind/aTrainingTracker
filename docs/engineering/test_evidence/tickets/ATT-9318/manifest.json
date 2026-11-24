@@ -1,0 +1,13 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "c7cc9baf7542b2327b768e9be162be269402916f",
+  "files": {
+    "evidence_summary.json": "bf9c5667f5028f9252ec54319b0f2bc7022f4c9977b6f0e7870203505d4e53a6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreenTest.xml": "9c70f3ab0ad1a7f82afc89ff65f3e8dd664da6286b957ca6aa8a816af928a2f8",
+    "screenshots/ATT-9318_layout_dark.png": "98ac97c4eb5cb8f19c97ad331ef601f7a45cb19085f249dc33401157e531ea1c",
+    "screenshots/ATT-9318_layout_light.png": "753d3097de28e744ab714baff4c13535be77bb85bc2d3651ff2448e4ff1b0a7d"
+  },
+  "run_started_utc": "2026-11-24T10:09:26.196972+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9318"
+}

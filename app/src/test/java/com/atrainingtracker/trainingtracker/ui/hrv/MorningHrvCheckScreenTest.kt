@@ -35,6 +35,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -578,5 +579,89 @@ class MorningHrvCheckScreenTest {
             .performScrollTo()
             .assertIsDisplayed()
             .assertIsEnabled()
+    }
+
+    @Test
+    fun testFullHrvLayoutOrder_keepsHrvBlockCohesiveAboveMorningWellnessSection_ATT_9318() {
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.READY,
+                        showMorningCheckOnStartScreen = false,
+                        enableMorningSleepAndWellness = true,
+                        enableSleepDurationAndQuality = true,
+                        enableMorningEnergy = true,
+                        currentHeartRateBpm = 54,
+                        isHrSensorAvailable = true
+                    ),
+                    onNavigateBack = {},
+                    forceFullHrv = true
+                )
+            }
+        }
+
+        val protocolBounds = composeTestRule.onNodeWithTag("morning_hrv_protocol_card").getUnclippedBoundsInRoot()
+        val postureBounds = composeTestRule.onNodeWithTag("morning_hrv_posture_duration_card").getUnclippedBoundsInRoot()
+        val pacingBounds = composeTestRule.onNodeWithTag("morning_hrv_pacing_card").getUnclippedBoundsInRoot()
+        val startBtnBounds = composeTestRule.onNodeWithTag("morning_hrv_start_button").getUnclippedBoundsInRoot()
+        val wellnessBounds = composeTestRule.onNodeWithTag("morning_hrv_wellness_card").getUnclippedBoundsInRoot()
+        val saveWellnessBounds = composeTestRule.onNodeWithTag("morning_hrv_save_wellness_secondary_button").getUnclippedBoundsInRoot()
+
+        assertTrue(
+            "Protocol (${protocolBounds.top}) must sit above Posture/Duration (${postureBounds.top})",
+            protocolBounds.bottom <= postureBounds.top
+        )
+        assertTrue(
+            "Posture/Duration (${postureBounds.bottom}) must sit directly above Pacing/Ready (${pacingBounds.top})",
+            postureBounds.bottom <= pacingBounds.top
+        )
+        assertTrue(
+            "Pacing/Ready (${pacingBounds.bottom}) must sit directly above Start Measurement CTA (${startBtnBounds.top})",
+            pacingBounds.bottom <= startBtnBounds.top
+        )
+        assertTrue(
+            "Start Measurement CTA (${startBtnBounds.bottom}) must sit above Morning Sleep & Wellness (${wellnessBounds.top})",
+            startBtnBounds.bottom <= wellnessBounds.top
+        )
+        assertTrue(
+            "Morning Sleep & Wellness (${wellnessBounds.bottom}) must sit above Save Morning Wellness CTA (${saveWellnessBounds.top})",
+            wellnessBounds.bottom <= saveWellnessBounds.top
+        )
+    }
+
+    @Test
+    fun testMeasuringPhaseLayoutOrder_keepsCancelButtonAboveWellnessCard_ATT_9318() {
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                MorningHrvCheckContent(
+                    uiState = MorningHrvUiState(
+                        phase = MorningHrvPhase.MEASURING,
+                        remainingSec = 42,
+                        currentHeartRateBpm = 54,
+                        beatCount = 18,
+                        showMorningCheckOnStartScreen = true,
+                        enableMorningSleepAndWellness = true,
+                        enableSleepDurationAndQuality = true,
+                        enableMorningEnergy = true
+                    ),
+                    onNavigateBack = {}
+                )
+            }
+        }
+
+        val pacingBounds = composeTestRule.onNodeWithTag("morning_hrv_pacing_card").getUnclippedBoundsInRoot()
+        val cancelBounds = composeTestRule.onNodeWithText(context.getString(R.string.morning_hrv_btn_cancel))
+            .getUnclippedBoundsInRoot()
+        val wellnessBounds = composeTestRule.onNodeWithTag("morning_hrv_wellness_card").getUnclippedBoundsInRoot()
+
+        assertTrue(
+            "Pacing card (${pacingBounds.bottom}) must sit above Cancel button (${cancelBounds.top})",
+            pacingBounds.bottom <= cancelBounds.top
+        )
+        assertTrue(
+            "Cancel button (${cancelBounds.bottom}) must sit above Wellness card (${wellnessBounds.top})",
+            cancelBounds.bottom <= wellnessBounds.top
+        )
     }
 }
