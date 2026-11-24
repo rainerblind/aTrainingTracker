@@ -23,7 +23,6 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
@@ -658,11 +657,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         val workoutSportType = SportTypesRepository.getInstance(context).getBSportType(sportId)
                         
                         val match = suggestCluster(start, end, apex, distance, normalizedName, workoutSportType, minAltPos, maxAltPos, localClusters)
-                        val wBounds = workoutRepo.getWorkoutBounds(workoutId)
-                        val wMinLat = wBounds[WorkoutSummaries.BOUND_MIN_LAT]
-                        val wMinLng = wBounds[WorkoutSummaries.BOUND_MIN_LNG]
-                        val wMaxLat = wBounds[WorkoutSummaries.BOUND_MAX_LAT]
-                        val wMaxLng = wBounds[WorkoutSummaries.BOUND_MAX_LNG]
+                        val wBounds = workoutRepo.getWorkoutRouteBounds(workoutId)
+                        val wMinLat = wBounds.minLat
+                        val wMinLng = wBounds.minLng
+                        val wMaxLat = wBounds.maxLat
+                        val wMaxLng = wBounds.maxLng
 
                         if (match != null) {
                             val rawName = normalizedName ?: match.name
@@ -888,7 +887,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val apex = workoutRepo.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
             val distance = workoutRepo.getWorkoutDistance(workoutId) ?: 0.0
             val sportId = workoutRepo.getWorkoutSportId(workoutId)
-            val wBounds = workoutRepo.getWorkoutBounds(workoutId)
+            val wBounds = workoutRepo.getWorkoutRouteBounds(workoutId)
             val workoutName = workoutRepo.getWorkoutName(workoutId)
             val minAltPos = workoutRepo.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
             val maxAltPos = workoutRepo.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
@@ -902,10 +901,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 distance = distance,
                 sportId = sportId,
                 workoutName = workoutName,
-                minLat = wBounds[WorkoutSummaries.BOUND_MIN_LAT],
-                minLng = wBounds[WorkoutSummaries.BOUND_MIN_LNG],
-                maxLat = wBounds[WorkoutSummaries.BOUND_MAX_LAT],
-                maxLng = wBounds[WorkoutSummaries.BOUND_MAX_LNG],
+                minLat = wBounds.minLat,
+                minLng = wBounds.minLng,
+                maxLat = wBounds.maxLat,
+                maxLng = wBounds.maxLng,
                 minAltPos = minAltPos,
                 maxAltPos = maxAltPos,
                 customName = customName,
@@ -1252,7 +1251,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
             val minAltPos = workoutRepo.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN)
             val maxAltPos = workoutRepo.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX)
-            val wBounds = workoutRepo.getWorkoutBounds(workoutId)
+            val wBounds = workoutRepo.getWorkoutRouteBounds(workoutId)
 
             // 1. Compute and persist updated weighted centroids & altitude extrema using pre-move hitCount
             val oldCluster = dbManager.getClusterById(currentClusterId)
@@ -1277,10 +1276,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         end = end,
                         apex = apex,
                         distance = distance,
-                        minLat = wBounds[WorkoutSummaries.BOUND_MIN_LAT],
-                        minLng = wBounds[WorkoutSummaries.BOUND_MIN_LNG],
-                        maxLat = wBounds[WorkoutSummaries.BOUND_MAX_LAT],
-                        maxLng = wBounds[WorkoutSummaries.BOUND_MAX_LNG],
+                        minLat = wBounds.minLat,
+                        minLng = wBounds.minLng,
+                        maxLat = wBounds.maxLat,
+                        maxLng = wBounds.maxLng,
                         minAltPos = minAltPos,
                         maxAltPos = maxAltPos
                     )
@@ -1518,11 +1517,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         val dist = candidate.distance
                         val start = workoutRepo.getExtremaPosition(wId, SensorType.LATITUDE, ExtremaType.START)
                         val end = workoutRepo.getExtremaPosition(wId, SensorType.LATITUDE, ExtremaType.END)
-                        val wBounds = workoutRepo.getWorkoutBounds(wId)
-                        val wMinLat = wBounds["BoundMinLat"]
-                        val wMinLng = wBounds["BoundMinLng"]
-                        val wMaxLat = wBounds["BoundMaxLat"]
-                        val wMaxLng = wBounds["BoundMaxLng"]
+                        val wBounds = workoutRepo.getWorkoutRouteBounds(wId)
+                        val wMinLat = wBounds.minLat
+                        val wMinLng = wBounds.minLng
+                        val wMaxLat = wBounds.maxLat
+                        val wMaxLng = wBounds.maxLng
                         val poly = workoutRepo.getWorkoutPolyline(wId)
 
                         if (start != null && end != null) {

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:17:14.313Z" hostname="rainer-HP-EliteBook-850-G5" time="0.85">
+  <properties/>
+  <testcase name="testClosedLoopCourse_preservesLegacyStartDisplacement100Percent" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" time="0.149"/>
+  <testcase name="testCollinearStraightPointToPointRoute_selectsMidpoint" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" time="0.144"/>
+  <testcase name="testPointToPointRoute_withEndpointOvershoots_selectsDetourApexAndSuppressesOvershoots" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" time="0.145"/>
+  <testcase name="testPointToPointRouteWithLateralArc_selectsEllipticalApexAwayFromEnd" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" time="0.144"/>
+  <testcase name="testPointToPointRoute_straightCollinearWithTerminalOvershoot_selectsMidpoint" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" time="0.131"/>
+  <testcase name="testEdgeCases_emptyListAndSinglePoint" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterPointToPointApexTest" time="0.136"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

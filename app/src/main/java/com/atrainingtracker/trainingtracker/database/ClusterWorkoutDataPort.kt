@@ -65,7 +65,23 @@ interface ClusterWorkoutDataPort {
     )
     fun <T> runInTransaction(block: () -> T): T
     fun getWorkoutBounds(workoutId: Long): Map<String, Double>
+    fun getWorkoutRouteBounds(workoutId: Long): WorkoutBoundsDto {
+        val bounds = getWorkoutBounds(workoutId)
+        return WorkoutBoundsDto(
+            minLat = bounds[BOUND_MIN_LAT],
+            minLng = bounds[BOUND_MIN_LNG],
+            maxLat = bounds[BOUND_MAX_LAT],
+            maxLng = bounds[BOUND_MAX_LNG]
+        )
+    }
     fun getWorkoutClusterId(workoutId: Long): Long
+
+    companion object {
+        const val BOUND_MIN_LAT = "boundMinLat"
+        const val BOUND_MIN_LNG = "boundMinLng"
+        const val BOUND_MAX_LAT = "boundMaxLat"
+        const val BOUND_MAX_LNG = "boundMaxLng"
+    }
     fun getWorkoutName(workoutId: Long): String?
     fun getWorkoutFileBaseName(workoutId: Long): String?
     fun updateWorkoutSummary(workoutId: Long, values: ContentValues): Int
@@ -125,6 +141,13 @@ class SummariesManagerClusterWorkoutDataPort(
             ?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG] = it }
         return map
     }
+
+    override fun getWorkoutRouteBounds(workoutId: Long): WorkoutBoundsDto = WorkoutBoundsDto(
+        minLat = summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT),
+        minLng = summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG),
+        maxLat = summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT),
+        maxLng = summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG)
+    )
 
     override fun getWorkoutClusterId(workoutId: Long): Long =
         summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID) ?: -1L

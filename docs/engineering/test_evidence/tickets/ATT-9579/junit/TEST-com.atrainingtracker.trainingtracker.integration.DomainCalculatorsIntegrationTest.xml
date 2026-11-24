@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.DomainCalculatorsIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-24T01:17:16.552Z" hostname="rainer-HP-EliteBook-850-G5" time="0.995">
+  <properties/>
+  <testcase name="testPhysiologyAndPowerHrCalculators_syntheticWorkoutSeries" classname="com.atrainingtracker.trainingtracker.integration.DomainCalculatorsIntegrationTest" time="0.438"/>
+  <testcase name="testAutoPauseManager_velocityTimeSeries_pauseAndResumeTransitions" classname="com.atrainingtracker.trainingtracker.integration.DomainCalculatorsIntegrationTest" time="0.285"/>
+  <testcase name="testSpatialRouteAndClimbCalculators_syntheticTrack" classname="com.atrainingtracker.trainingtracker.integration.DomainCalculatorsIntegrationTest" time="0.272"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
