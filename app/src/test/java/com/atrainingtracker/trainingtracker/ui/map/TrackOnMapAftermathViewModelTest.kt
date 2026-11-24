@@ -23,6 +23,10 @@ import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -459,5 +463,66 @@ class TrackOnMapAftermathViewModelTest {
         advanceUntilIdle()
         assertEquals(setOf(TrackType.BEST, TrackType.GPS), vm2.enabledTrackTypes.value)
         collectJob2.cancel()
+    }
+
+    /**
+     * TST-MAP-072.1 (REQ-MAP-069.3): Verifies cold-start async hydration of climbs and favorite
+     * locations updates AftermathMapUIState reactively after loadAftermathData() completes and
+     * survives subsequent workout switches without resetting to emptyList().
+     */
+    @Test
+    fun reactiveClimbsAndKnownLocations_hydrateAfterColdStartAndSurviveWorkoutSwitch() = runTest(testDispatcher) {
+        val climbsFlow = MutableStateFlow<List<Climb>>(emptyList())
+        val locationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
+        val viewModel = TrackOnMapAftermathViewModel(
+            application = mockApplication,
+            ioDispatcher = testDispatcher,
+            climbsFlowProvider = { climbsFlow },
+            knownLocationsFlowProvider = { locationsFlow }
+        )
+
+        // Cold-start workout load finishes while repositories are still hydrating from SQLite
+        viewModel.loadAftermathData(createWorkout(101L))
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.climbs.isEmpty())
+        assertTrue(viewModel.uiState.value.knownLocations.isEmpty())
+
+        // Repositories finish async hydration later -> uiState updates reactively without re-opening workout
+        val hydratedClimb = Climb(
+            id = 77L,
+            name = "Olympiaberg",
+            routeId = 10L,
+            startLat = 48.168,
+            startLng = 11.5463,
+            endLat = 48.1765,
+            endLng = 11.562,
+            distanceMeters = 600.0,
+            elevationGainMeters = 45.0,
+            avgGradePercent = 7.5,
+            maxGradePercent = 11.0,
+            category = ClimbCategory.CAT_4
+        )
+        val hydratedLocation = KnownLocationItem(
+            id = 88L,
+            name = "Olympiapark",
+            altitude = 515.0,
+            radius = 100,
+            latLng = LatLng(48.1731, 11.5466),
+            hitCount = 5,
+            isLocked = false,
+            source = ElevationSource.AUTO_LEARNED
+        )
+        climbsFlow.value = listOf(hydratedClimb)
+        locationsFlow.value = listOf(hydratedLocation)
+        advanceUntilIdle()
+
+        assertEquals(listOf(hydratedClimb), viewModel.uiState.value.climbs)
+        assertEquals(listOf(hydratedLocation), viewModel.uiState.value.knownLocations)
+
+        // Switching to another workout must preserve already-hydrated global climbs & favorite locations
+        viewModel.loadAftermathData(createWorkout(202L))
+        advanceUntilIdle()
+        assertEquals(listOf(hydratedClimb), viewModel.uiState.value.climbs)
+        assertEquals(listOf(hydratedLocation), viewModel.uiState.value.knownLocations)
     }
 }

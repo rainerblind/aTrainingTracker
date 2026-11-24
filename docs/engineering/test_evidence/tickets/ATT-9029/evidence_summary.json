@@ -1,0 +1,64 @@
+{
+  "android_test_summary": {
+    "details": "Tier-1 targeted Gradle suites (9 classes, --rerun): 62/62 PASS (0 fail, 0 err, 0 skip). BOUNCE 1/5 healed: reactive climbs/locations hydration, dark-mode unset base-map default (NORMAL), host MaterialTheme inheritance, non-BEST fallback technical track toggle. All 6 Light & Dark emulator-5554 screenshots visually inspected via read_file.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 62
+  },
+  "checks": [
+    {
+      "details": "Android: Tier-1 targeted Gradle suites (9 classes, --rerun): 62/62 PASS (0 fail, 0 err, 0 skip). BOUNCE 1/5 healed: reactive climbs/locations hydration, dark-mode unset base-map default (NORMAL), host MaterialTheme inheritance, non-BEST fallback technical track toggle. All 6 Light & Dark emulator-5554 screenshots visually inspected via read_file. | Python: N/A (0 changed Python files).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (11721 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "5c62fcef6820b2e1b4196cf23f78607ca332d977",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.FullScreenWorkoutMapUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapLayersUiTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelFallbackTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-24T02:58:13.580745+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-9029_embedded_map.png",
+    "screenshots/ATT-9029_fullscreen_dark.png",
+    "screenshots/ATT-9029_fullscreen_map.png",
+    "screenshots/ATT-9029_fullscreen_satellite.png",
+    "screenshots/ATT-9029_layers_sheet.png",
+    "screenshots/ATT-9029_layers_sheet_dark.png"
+  ],
+  "ticket_key": "ATT-9029",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

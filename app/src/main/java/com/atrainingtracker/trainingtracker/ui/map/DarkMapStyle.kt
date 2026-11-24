@@ -189,6 +189,46 @@ object DarkMapStyle {
             isMyLocationEnabled = isMyLocationEnabled
         )
     }
+
+    /**
+     * Resolves [MapProperties] for an explicit user-selected base [MapType] (`REQ-MAP-069.3`).
+     *
+     * - [MapType.NORMAL] preserves [darkMapStyleOptions] in dark mode (`REQ-MAP-021`) and uses unstyled
+     *   vector tiles in light mode.
+     * - [MapType.TERRAIN], [MapType.SATELLITE], and [MapType.HYBRID] apply the requested tile layer
+     *   with `mapStyleOptions = null` in both light and dark themes so explicit tile selection always renders.
+     */
+    fun resolveExplicitMapProperties(
+        mapType: MapType,
+        isDark: Boolean,
+        darkMapStyleOptions: MapStyleOptions?,
+        isMyLocationEnabled: Boolean = false
+    ): MapProperties {
+        val styleOptions = if (mapType == MapType.NORMAL && isDark) darkMapStyleOptions else null
+        return MapProperties(
+            mapType = mapType,
+            mapStyleOptions = styleOptions,
+            isMyLocationEnabled = isMyLocationEnabled
+        )
+    }
+
+    /**
+     * Context-backed overload of [resolveExplicitMapProperties] lazily loading singleton-cached dark style JSON.
+     */
+    fun resolveExplicitMapProperties(
+        mapType: MapType,
+        isDark: Boolean,
+        context: Context,
+        isMyLocationEnabled: Boolean = false
+    ): MapProperties {
+        val darkOptions = if (mapType == MapType.NORMAL && isDark) getMapStyleOptions(context) else null
+        return resolveExplicitMapProperties(
+            mapType = mapType,
+            isDark = isDark,
+            darkMapStyleOptions = darkOptions,
+            isMyLocationEnabled = isMyLocationEnabled
+        )
+    }
 }
 
 /**

@@ -1,14 +1,14 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.7  
+**Version**: 1.0.9  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 72
+**Total Tests**: 73
 
 ---
 
@@ -1337,6 +1337,24 @@
   • Verify `WorkoutClusterEngine.getClusterScores()` projects authoritative counts in-memory with `0` SQLite writes (`updateCluster`/`insertCluster`/`deleteCluster` never called).
   • Verify `RoutesRepository.syncClusterNameChange()` and `updateRouteSummary()` update metadata in-place with `0` calls to `getAllRoutes()`, `getRouteByClusterId()`, or `getRoutePath()`, and `WorkoutClusterRepository.onRouteSyncedClusterRename()` patches `_allClusters` in-place without calling `getAllClusters()`.
 
+### TST-MAP-072: **Full-Screen Workout Map Mode, Layer Persistence & UI Interaction Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Requirement(s)**: `REQ-MAP-069` (`REQ-MAP-069.1`..`REQ-MAP-069.4`)
+- **Component**: `WorkoutMapLayerModels.kt`, `FullScreenWorkoutMapOverlay.kt`, `MyPreferenceManager.kt`, `DarkMapStyle.kt`, `ATrainingTrackerMap.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutMapLayerPreferencesTest.kt`, `FullScreenWorkoutMapUiTest.kt`
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/WorkoutMapLayerPreferencesTest.kt` (`8/8 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/FullScreenWorkoutMapUiTest.kt` (`6/6 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/TrackOnMapAftermathViewModelTest.kt` (`11/11 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapLayersUiTest.kt` (`3/3 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt` (`11/11 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt` (`11/11 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/build/AndroidViewModelReflectionContractTest.kt` (`2/2 PASS`), live `emulator-5554` Light & Dark screenshots `docs/engineering/walkthroughs/img/ATT-9029_*.png` (`ATT-9029`)
+- **Jira**: `ATT-9029` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Layer Filtering, Base-Map Property Resolution & DataStore Persistence (`TST-MAP-072.1`, `WorkoutMapLayerPreferencesTest.kt`)*:
+  • Verify `MyPreferenceManager.workoutMapLayerConfigFlow` leaves `baseMapType` unset (`null`, resolving theme-aware to `NORMAL` in dark mode and `TERRAIN` in light mode) until explicitly persisted, persists individual `WorkoutMapSpatialLayer` toggles (including empty set) and `WorkoutBaseMapType` overrides (`NORMAL`, `TERRAIN`, `SATELLITE`, `HYBRID`), and safely ignores unknown future enum strings.
+  • Verify `resolveFullscreenWorkoutMapContent(...)` filters primary track, available technical tracks (including non-`BEST` fallback tracks without contradictory suppression or duplication), segments, routes, markers + favorite locations, climbs, and lap highlights strictly according to enabled flags.
+  • Verify `DarkMapStyle.resolveExplicitMapProperties(...)` preserves `DarkMapStyle` on `MapType.NORMAL` in dark mode and maps `TERRAIN`/`SATELLITE`/`HYBRID` with null custom style in both Light and Dark modes, and `TrackOnMapAftermathViewModelTest` verifies reactive cold-start hydration of `climbs` and `knownLocations` surviving workout switches.
+  2. *Behavioral Compose UI Full-Screen Entry, Exit, BackHandler & Layer Sheet (`TST-MAP-072.2`, `FullScreenWorkoutMapUiTest.kt`)*:
+  • Render via Robolectric `createComposeRule()` asserting Expand button and empty-map `onMapClick` open full-screen mode without header/tab chrome, Close (`X`) and system Back close full-screen cleanly, dark-mode unset base-map defaults to `NORMAL` while honoring explicit `TERRAIN` selection, and `WorkoutMapLayersSheet` renders all spatial layers, conditional technical tracks, and 4 base-map segmented choices dispatching toggle/selection callbacks.
+  3. *Localization, Architecture & Live Emulator Visual Inspection (`TST-MAP-072.3`)*:
+  • Run `TranslationParityTest` across all 9 locales, `ArchitectureConformanceContractTest` (verifying `MapDetailLayout.kt <= 1,500` LoC and zero UI DB violations), `AndroidViewModelReflectionContractTest`, and live `emulator-5554` verification capturing and visually inspecting Light & Dark PNG screenshots of embedded Expand button, full-screen workout map, Satellite switch, and open Layers sheet (`Rule 8.5`).
+
 ---
 
 ## Change History
@@ -1350,3 +1368,5 @@
 | `1.0.4` | 2026-11-18 | AI Agent (`ATT-8326`) | `ATT-8326` | Code-grounded `TST-NAV-001/002/003/005/006` and `TST-MAP-010/020` (`[Implemented]`) with deterministic `createComposeRule()` / Robolectric / JVM test specs and GL boundary. |
 | `1.0.5` | 2026-11-18 | AI Agent (`ATT-8326`) | `ATT-8326` | Promoted `TST-NAV-001/002/003/005/006` and `TST-MAP-010/020` to `[Verified]` with `- **Code**:` pointers and Stage 5 `emulator-5554` verification. |
 | `1.0.7` | 2026-11-23 | Lane 1 Author (`ATT-8133`, `--as agent1`) | `ATT-8133` | Added & verified `TST-GEO-003` verifying `REQ-GEO-003` (`GeoMathTest`, `RouteAutoDetectorTest`, `EditWorkoutClusterTest`, `RoutesRepositorySyncTest`, `WorkoutClusterRepositoryTest`). |
+| `1.0.8` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Added & verified (`[Verified]`) `TST-MAP-072` verifying `REQ-MAP-069` (`WorkoutMapLayerPreferencesTest`, `FullScreenWorkoutMapUiTest`, `TranslationParityTest`, `ArchitectureConformanceContractTest`, and live `emulator-5554` verification). |
+| `1.0.9` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Updated `TST-MAP-072` verification evidence after Stage 6 BOUNCE 1/5 (`62/62 PASS` across 9 suites including reactive cold-start hydration, dark-mode unset base-map default, non-`BEST` technical track fallback, and live Dark Mode `emulator-5554` screenshots). |

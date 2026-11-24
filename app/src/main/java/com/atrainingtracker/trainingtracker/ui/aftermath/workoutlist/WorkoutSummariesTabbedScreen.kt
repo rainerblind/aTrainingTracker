@@ -335,6 +335,8 @@ fun WorkoutSummariesTabbedScreen(
                     segments = aftermathUIState.segments,
                     routes = aftermathUIState.routes,
                     markers = aftermathUIState.markers,
+                    climbs = aftermathUIState.climbs,
+                    knownLocations = aftermathUIState.knownLocations,
                     enabledTrackTypes = enabledTrackTypes,
                     onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                     showTechnicalTracks = true,

@@ -19,12 +19,17 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
+import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.ActivityCarriageTimeline
@@ -54,6 +59,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -63,6 +69,8 @@ data class AftermathMapUIState(
     val segments: List<MapSegment> = emptyList(),
     val routes: List<MapRoute> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
+    val climbs: List<Climb> = emptyList(),
+    val knownLocations: List<KnownLocationItem> = emptyList(),
     val bSportType: BSportType = BSportType.UNKNOWN,
     val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
     val hrZoneDistribution: ZoneDistributionData? = null,
@@ -81,7 +89,9 @@ data class AftermathMapUIState(
 
 class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     application: Application,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val climbsFlowProvider: (() -> StateFlow<List<Climb>>?)? = null,
+    private val knownLocationsFlowProvider: (() -> StateFlow<List<KnownLocationItem>>?)? = null
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(AftermathMapUIState())
@@ -93,7 +103,36 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     private val segmentsRepository = SegmentsRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
     private val clusterRepository by lazy { WorkoutClusterRepository.getInstance(application) }
+    private val liveClimbsFlow: StateFlow<List<Climb>>? by lazy {
+        climbsFlowProvider?.invoke()
+            ?: if (Build.VERSION.SDK_INT == 0) null
+            else runCatching { LiveClimbsRepository.getInstance(application).allStoredClimbs }.getOrNull()
+    }
+    private val knownLocationsFlow: StateFlow<List<KnownLocationItem>>? by lazy {
+        knownLocationsFlowProvider?.invoke()
+            ?: if (Build.VERSION.SDK_INT == 0) null
+            else runCatching { KnownLocationsRepository.getInstance(application).locationsFlow }.getOrNull()
+    }
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager.getInstance(application)
+
+    init {
+        // Reactively observe stored climbs & favorite locations so cold-start SQLite hydration
+        // propagates immediately into AftermathMapUIState without one-shot empty-list races (REQ-MAP-069.3).
+        liveClimbsFlow?.let { flow ->
+            viewModelScope.launch {
+                flow.collect { storedClimbs ->
+                    _uiState.update { it.copy(climbs = storedClimbs) }
+                }
+            }
+        }
+        knownLocationsFlow?.let { flow ->
+            viewModelScope.launch {
+                flow.collect { favoriteLocations ->
+                    _uiState.update { it.copy(knownLocations = favoriteLocations) }
+                }
+            }
+        }
+    }
 
     private val _clusterCandidates = MutableStateFlow<List<Pair<WorkoutCluster, Double>>>(emptyList())
     /** Candidate route clusters for the active cluster-change dialog (`REQ-UI-2786.3`). */
@@ -134,20 +173,26 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
         // If reloading the same workout (e.g. lap split/move, export broadcasts), retain tracks
         // to prevent visibleTabs collapse and HorizontalPager tab jumping (Rule 73).
         if (!isSameWorkout) {
-            _uiState.value = AftermathMapUIState(
-                zoomFocus = MapZoomFocus.FIT_PRIMARY,
-                bSportType = bSportType,
-                tracks = emptyList(),
-                markers = emptyList(),
-                loadedWorkoutId = workoutId,
-                isLoading = true
-            )
+            _uiState.update { current ->
+                AftermathMapUIState(
+                    zoomFocus = MapZoomFocus.FIT_PRIMARY,
+                    bSportType = bSportType,
+                    tracks = emptyList(),
+                    markers = emptyList(),
+                    climbs = liveClimbsFlow?.value ?: current.climbs,
+                    knownLocations = knownLocationsFlow?.value ?: current.knownLocations,
+                    loadedWorkoutId = workoutId,
+                    isLoading = true
+                )
+            }
         } else {
-            _uiState.value = _uiState.value.copy(
-                bSportType = bSportType,
-                loadedWorkoutId = workoutId,
-                isLoading = true
-            )
+            _uiState.update { current ->
+                current.copy(
+                    bSportType = bSportType,
+                    loadedWorkoutId = workoutId,
+                    isLoading = true
+                )
+            }
         }
 
         loadJob = viewModelScope.launch(ioDispatcher) {
@@ -184,9 +229,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 )
 
                 withContext(Dispatchers.Main) {
-                    _uiState.value = _uiState.value.copy(
-                        tracks = listOf(fastTrack)
-                    )
+                    _uiState.update { it.copy(tracks = listOf(fastTrack)) }
                 }
             }
 
@@ -194,7 +237,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             val markerList = workoutRepository.getWorkoutMarkers(workoutData)
 
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(markers = markerList)
+                _uiState.update { it.copy(markers = markerList) }
             }
 
             // --- PHASE 4: High-Resolution Tracks (From Samples DB) ---
@@ -251,17 +294,19 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             val hasValidSampleTrack = fullTracks.any { it.path.size >= 2 }
             if (fullTracks.isNotEmpty()) {
                 withContext(Dispatchers.Main) {
-                    val tracksToSet = if (hasValidSampleTrack || _uiState.value.tracks.isEmpty()) {
-                        fullTracks
-                    } else {
-                        _uiState.value.tracks
+                    _uiState.update { current ->
+                        val tracksToSet = if (hasValidSampleTrack || current.tracks.isEmpty()) {
+                            fullTracks
+                        } else {
+                            current.tracks
+                        }
+                        current.copy(
+                            tracks = tracksToSet,
+                            availableTrackTypes = fullTracks.map { it.type }.toSet(),
+                            multiSensorOverlays = telemetry?.multiSensorOverlays ?: emptyMap(),
+                            activityCarriageTimeline = telemetry?.activityCarriageTimeline
+                        )
                     }
-                    _uiState.value = _uiState.value.copy(
-                        tracks = tracksToSet,
-                        availableTrackTypes = fullTracks.map { it.type }.toSet(),
-                        multiSensorOverlays = telemetry?.multiSensorOverlays ?: emptyMap(),
-                        activityCarriageTimeline = telemetry?.activityCarriageTimeline
-                    )
                 }
             } else {
                 val (telemetryPoints, tracklessOverlays) = try {
@@ -270,11 +315,13 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     workoutRepository.getWorkoutTelemetryPoints(workoutId) to emptyMap()
                 }
                 withContext(Dispatchers.Main) {
-                    _uiState.value = _uiState.value.copy(
-                        telemetryPath = telemetryPoints,
-                        multiSensorOverlays = tracklessOverlays,
-                        activityCarriageTimeline = telemetry?.activityCarriageTimeline
-                    )
+                    _uiState.update { current ->
+                        current.copy(
+                            telemetryPath = telemetryPoints,
+                            multiSensorOverlays = tracklessOverlays,
+                            activityCarriageTimeline = telemetry?.activityCarriageTimeline
+                        )
+                    }
                 }
             }
 
@@ -292,20 +339,24 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 }
 
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(
-                    segments = mapSegments
-                )
+                _uiState.update { it.copy(segments = mapSegments) }
             }
 
-            // --- PHASE 6: Routes (All for spatial context) ---
+            // --- PHASE 6: Routes, Climbs & Favorite Locations (All for spatial context, REQ-MAP-069.3) ---
             val allRoutes = routesRepository.allRoutes.value
             val mapRoutes = allRoutes
                 .map { it.toMapRoute() }
+            val storedClimbs = liveClimbsFlow?.value
+            val favoriteLocations = knownLocationsFlow?.value
 
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(
-                    routes = mapRoutes
-                )
+                _uiState.update { current ->
+                    current.copy(
+                        routes = mapRoutes,
+                        climbs = storedClimbs ?: current.climbs,
+                        knownLocations = favoriteLocations ?: current.knownLocations
+                    )
+                }
             }
 
             // --- PHASE 7: Zone Analytics (Heart Rate, Power & Grade Zone Distribution & Thresholds) ---
@@ -317,16 +368,18 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             val recentHrvSessions = workoutRepository.getRecentHrvSessionThresholds(workoutId)
             val isSmoothedHrv = workoutRepository.isWorkoutHrvSmoothed(workoutId)
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(
-                    hrZoneDistribution = hrDistribution,
-                    powerZoneDistribution = powerDistribution,
-                    gradeZoneDistribution = gradeDistribution,
-                    hrThresholds = hrThresholds,
-                    powerThresholds = powerThresholds,
-                    recentSessions = recentHrvSessions,
-                    isSmoothedHrvStream = isSmoothedHrv,
-                    isLoading = false
-                )
+                _uiState.update { current ->
+                    current.copy(
+                        hrZoneDistribution = hrDistribution,
+                        powerZoneDistribution = powerDistribution,
+                        gradeZoneDistribution = gradeDistribution,
+                        hrThresholds = hrThresholds,
+                        powerThresholds = powerThresholds,
+                        recentSessions = recentHrvSessions,
+                        isSmoothedHrvStream = isSmoothedHrv,
+                        isLoading = false
+                    )
+                }
             }
 
             // --- PHASE 8: Lazy Cardio-Power Dynamics Resolution (REQ-REV-009 / ATT-6722) ---
