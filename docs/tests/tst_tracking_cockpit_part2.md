@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.40  
+**Version**: 1.0.41  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1550,23 +1550,25 @@
   4. *Tier-1 Targeted Regression & Source-Text Audit (`TST-FIL-026.4`, `SourceTextReadingAuditContractTest.kt`)*:
      • Execute `./gradlew :app:testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest" --tests "com.atrainingtracker.banalservice.devices.BarometricAltitudeFilterTest" --tests "com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate with `0` new `src/main` source-text reads (`REQ-PRO-049.1`; `Localization parity: N/A - no UI strings`).
 
-### TST-TRK-089: **Full-Screen Radar Vehicle Markers, V2 Icons & Contrast Framing Verification Suite** [Verified]
+### TST-TRK-089: **Full-Screen Radar Vehicle Markers, V1/V2 Icons, 2D Lane Guides & Non-Oscillating Threat Color Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
-- **Tickets**: `ATT-8733`
+- **Tickets**: `ATT-8733`, `ATT-8958`
 - **Requirement(s)**: `REQ-TRK-089` (`REQ-TRK-089.1`..`REQ-TRK-089.3`)
-- **Component**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlayTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `TranslationParityTest.kt`
+- **Component**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlayTest.kt`, `ThemeColorCentralizationAuditTest.kt`, `DeadCodeEliminationContractTest.kt`, `SourceTextReadingAuditContractTest.kt`, `ArchitectureConformanceContractTest.kt`
 - **Test Type**: Unit
 - **Verification Method**: Unit
 - **Procedure**:
-  1. *Non-Clipping Content-Sized Markers & Edge Clamping (`TST-TRK-089.1`, `RadarEdgeOverlayTest.kt`, `createComposeRule()`)*:
+  1. *Enlarged Handlebar-Legible Markers, Edge Clamping & 2D-Gated Lane Guides (`TST-TRK-089.1`, `RadarEdgeOverlayTest.kt`, `createComposeRule()`)*:
      • Render `RadarEdgeOverlay` in `RadarEdgeSide.FULL_SCREEN` with 2- and 3-digit targets (`15m`, `128m`, `160m`) placed at central and extreme lateral/vertical positions (`0.15f` / `0.85f` horizontal, `0.0f` / `1.0f` range).
-     • Assert each distance label (`15m`, `128m`, `160m`) is displayed unclipped (`getUnclippedBoundsInRoot()`), marker bounds remain strictly inside the `RadarEdgeOverlay` container bounds, and `TRUCK_OR_BUS` marker dimensions exceed `CAR` / `UNKNOWN_OR_LIGHT`.
-  2. *Distinct V2 Icons, 9-Locale Accessibility & Invariant Preservation (`TST-TRK-089.2`, `RadarEdgeOverlayTest.kt`, `TranslationParityTest.kt`)*:
-     • Render mixed V2 targets (`CAR`, `TRUCK_OR_BUS`, `UNKNOWN_OR_LIGHT`) in `FULL_SCREEN` mode; assert distinct localized accessibility descriptions using existing `radar_vehicle_size_car`, `radar_vehicle_size_truck`, and `radar_vehicle_size_light` (zero `"Target"` fallback) and `0` missing keys across all 9 `values*/strings_radar.xml` locales (`Localization Parity: PASS - 9/9 existing strings_radar.xml keys reused, zero new keys needed`).
-     • Assert full-screen markers/guides expose zero clickable/pointer actions (`assertHasNoClickAction()`), `RadarStatusBadgePill` remains absent when road is clear (`ATT-8679`), `FAST_APPROACHING` pulse activates only for `ThreatLevel.FAST_APPROACHING`, and `LEFT`/`RIGHT` `RadarVerticalRail` bounds/sizes remain unchanged (`REQ-TRK-073.2`).
-  3. *Contract Hygiene & Rule 8.5 Visual Inspection (`TST-TRK-089.3`, `ThemeColorCentralizationAuditTest`, `DeadCodeEliminationContractTest`, `SourceTextReadingAuditContractTest`, `Rule 8.5`)*:
-     • Execute `RadarEdgeOverlayTest`, `ThemeColorCentralizationAuditTest` (zero inline `Color(0x...)` in composables), `DeadCodeEliminationContractTest` (all `@Preview` functions `private`), `SourceTextReadingAuditContractTest` (`0` `src/main` file reads in `RadarEdgeOverlayTest.kt`), `TranslationParityTest`, and `:app:lintDebug`.
-     • Capture Light/Dark/Map-style `@Preview` PNG screenshot at `docs/engineering/walkthroughs/img/ATT-8733_radar_fullscreen_markers_preview.png` in Stage 5 and inspect via `read_file` against `Rule 8.5`.
+     • Assert each enlarged marker meets handlebar-legibility minimums (`>= 92.dp` wide, `>= 42.dp` tall, `18–21.sp` font), distance labels (`15m`, `128m`, `160m`) render unclipped inside marker bounds, marker bounds clamp strictly inside `RadarFullScreenThreatOverlay` on Frame 1 and across `99m -> 100m` width growth, and `UNKNOWN_OR_LIGHT < CAR < TRUCK_OR_BUS`.
+     • Assert `RadarOverlayMath.hasFullScreen2DLateralData()` returns `false` for V1 / 1D ANT+ states and `true` for V2 / 2D lateral states, and assert `onNodeWithTag("RadarFullScreenLaneGuides")` does not exist in V1 / `!has2DData` mode while displaying in V2 / `has2DData` mode.
+  2. *Neutral V1 Iconography, Non-Oscillating Opaque Threat Colors, Hysteresis & Invariant Preservation (`TST-TRK-089.2`, `RadarEdgeOverlayTest.kt`)*:
+     • Assert `resolveFullScreenVehicleVisualSpec(VehicleSizeCategory.UNKNOWN_OR_LIGHT)` uses `Icons.Filled.DirectionsCar` (never `Icons.Filled.TwoWheeler`), `CAR` uses `Icons.Filled.DirectionsCar`, `TRUCK_OR_BUS` uses `Icons.Filled.LocalShipping`, and localized accessibility descriptions reuse `radar_vehicle_size_*` (zero `"Target"` fallback).
+     • Assert `FAST_APPROACHING` full-screen marker renders rock-solid opaque pixels over time (`!bitmapsDiffer` across clock ticks, zero red-to-orange alpha-pulse blending) and `RadarOverlayMath.stepThreatHysteresis()` suppresses alternating 8-Hz `APPROACHING ↔ FAST_APPROACHING` jitter while promoting after `3` consecutive `FAST_APPROACHING` frames and demoting after `4` consecutive `APPROACHING` frames (both unit-level and Compose UI stateful emissions).
+     • Assert full-screen markers/guides expose zero clickable/pointer actions and pass tap + horizontal swipe directly through marker bounds to underlying siblings, `RadarStatusBadgePill` remains absent when road is clear (`ATT-8679`), and `LEFT`/`RIGHT` `RadarVerticalRail` bounds/sizes remain unchanged (`REQ-TRK-073.2`).
+  3. *Contract Hygiene & Rule 8.5 Live Emulator Visual Inspection (`TST-TRK-089.3`, `ThemeColorCentralizationAuditTest`, `ArchitectureConformanceContractTest`, `Rule 8.5`)*:
+     • Execute `RadarEdgeOverlayTest`, `ThemeColorCentralizationAuditTest`, and `ArchitectureConformanceContractTest` cleanly (`0` new compiler warnings).
+     • Verify live on `emulator-5554` (`com.atrainingtracker.debug` with built-in radar simulator in `FULL_SCREEN` mode) in Light & Dark themes, capturing PNG screenshots (`docs/engineering/walkthroughs/img/ATT-8958_*.png`) plus `@Preview` composite inspected via `read_file` against `Rule 8.5` with clean `logcat`.
 
 ### TST-FIL-027: **Post-Workout ERTS Monotonic Timing, Stationary Pinning, Pocket Gyro/Baro Filtering, Lap Sync & Stream Subsampling Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
@@ -2367,3 +2369,4 @@
 | `1.0.36` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Added `[Planned]` `TST-TRK-097` (`.1`–`.3`, strictly symmetric `REQ-TRK-097`) covering 9-language XML parity & cross-locale resolution matrix, newly created & legacy SQLite `TrackingViewsRepository` resolution, custom title preservation (`"Intervalle"`, `"Race Cockpit"`, `"4"`), behavioral Compose UI locale-switch rendering, and live `emulator-5554` `Rule 8.5` verification (`N/A - 0 string changes`). |
 | `1.0.37` | 2026-11-24 | Lane 2 Author (`ATT-9511`, `--as agent1`) | `ATT-9511` | Promoted `TST-TRK-097` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`125/125` PASS across `19` targeted suites: `TrackingTabTitleResolverTest` `4/4`, `TrackingTabLocaleSwitchRobolectricTest` `2/2`, `TrackingViewsRepositoryTest` `15/15`, `BikePowerCockpitDefaultsAndGatingTest` `6/6`, `13` `trackingtabs.*` suites `74/74`, `ProcessStabilityComposeUiTest` `10/10`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` `de -> es -> ja` locale-switch verification + `3` `Rule 8.5` PNGs audited; `0` crashes). |
 | `1.0.40` | 2026-11-24 | Lane 2 Author (`ATT-8674`, `--as agent1`) | `ATT-8674` | Updated `TST-CON-031.9`, `TST-CON-047`, and `TST-CON-048` `[Verified]` for `Off (Radar Only)` top-left / `Smart Auto` top-right swap (`[OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]`; StVZO `[OFF, AUTO], [SOLID]`) and `RadarLightController.cycleNextMode()` (`OFF -> AUTO -> ...`), plus `ATT-8674_quick_switch_{light,dark}.png`. |
+| `1.0.38` | 2026-11-24 | Lane 1 Author (`ATT-8958`, `--as agent1`) | `ATT-8958` | Refined & promoted `TST-TRK-089` (`.1`–`.3`) to `[Verified]` with `58/58` PASS across `3` targeted suites (`RadarEdgeOverlayTest` `42/42` covering `resolveFullScreenVehicleVisualSpec_neverUsesMotorcycleForUnknownOrLight_andEnforcesLargeSizing`, `hasFullScreen2DLateralData_suppressesV1And1DAntPlus_enablesGenuine2D`, `fullScreenLaneGuides_hiddenInV1Mode_andShownInV2Mode`, `stepThreatHysteresis_suppressesAlternatingJitter_andTransitionsOnSustainedSignal`, `fullScreenMarkers_stayOpaqueNonPulsing_andSuppressRedOrangeOscillation`, `captureAtt8958V1AndV2FullScreenPreviewPng`; `ThemeColorCentralizationAuditTest` `5/5`; `ArchitectureConformanceContractTest` `11/11`), live `emulator-5554` Light/Dark `Rule 8.5` PNGs (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8958/`. |

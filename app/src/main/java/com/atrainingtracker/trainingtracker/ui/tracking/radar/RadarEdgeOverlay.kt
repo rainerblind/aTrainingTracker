@@ -47,13 +47,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -105,6 +103,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -122,6 +121,66 @@ import kotlinx.coroutines.delay
 object RadarOverlayMath {
     const val MAX_RADAR_RANGE_METERS = 140.0f
     const val MAX_RADAR_RANGE_V2_METERS = 175.0f
+    const val THREAT_ESCALATE_CONSECUTIVE_FRAMES = 3
+    const val THREAT_DEESCALATE_CONSECUTIVE_FRAMES = 4
+
+    /**
+     * Per-target display hysteresis state preventing frame-to-frame red/orange oscillation (REQ-TRK-089.2).
+     */
+    data class ThreatHysteresisState(
+        val displayed: ThreatLevel,
+        val pending: ThreatLevel? = null,
+        val pendingCount: Int = 0
+    )
+
+    /**
+     * Advances display threat hysteresis for a single target (REQ-TRK-089.2, ATT-8958):
+     * - Initial detection adopts [incoming] immediately (zero Frame-1 lag).
+     * - Escalating [ThreatLevel.APPROACHING] -> [ThreatLevel.FAST_APPROACHING] requires
+     *   [THREAT_ESCALATE_CONSECUTIVE_FRAMES] consecutive frames.
+     * - De-escalating [ThreatLevel.FAST_APPROACHING] -> [ThreatLevel.APPROACHING] requires
+     *   [THREAT_DEESCALATE_CONSECUTIVE_FRAMES] consecutive frames.
+     */
+    fun stepThreatHysteresis(
+        previous: ThreatHysteresisState?,
+        incoming: ThreatLevel
+    ): ThreatHysteresisState {
+        if (previous == null || incoming == ThreatLevel.NONE) {
+            return ThreatHysteresisState(displayed = incoming)
+        }
+        if (incoming == previous.displayed) {
+            return previous.copy(pending = null, pendingCount = 0)
+        }
+        val requiredFrames = if (incoming == ThreatLevel.FAST_APPROACHING) {
+            THREAT_ESCALATE_CONSECUTIVE_FRAMES
+        } else {
+            THREAT_DEESCALATE_CONSECUTIVE_FRAMES
+        }
+        val nextCount = if (previous.pending == incoming) previous.pendingCount + 1 else 1
+        return if (nextCount >= requiredFrames) {
+            ThreatHysteresisState(displayed = incoming)
+        } else {
+            previous.copy(pending = incoming, pendingCount = nextCount)
+        }
+    }
+
+    /**
+     * Returns true strictly when [radarState] carries genuine 2D lateral offset / lane-separation data
+     * suitable for drawing full-screen lane guides (REQ-TRK-089.1, ATT-8958).
+     * Returns false for 1D range-only V1 BLE/simulator streams and ANT+ frames without lateral separation.
+     */
+    fun hasFullScreen2DLateralData(radarState: RadarState): Boolean {
+        if (radarState.source == RadarSource.ANT_PLUS) {
+            return radarState.targets.any {
+                (it.lateralOffsetMeters != null && it.lateralOffsetMeters != 0.0f) ||
+                    it.laneState == LaneState.PASSING_LANE ||
+                    it.laneState == LaneState.CHANGING_LANE
+            }
+        }
+        return radarState.targets.any {
+            it.lateralOffsetMeters != null || it.laneState != LaneState.UNKNOWN
+        }
+    }
 
     /**
      * Resolves dynamic maximum rail range in meters: 175m for V2 radar or distant targets, 140m otherwise.
@@ -309,24 +368,15 @@ fun RadarEdgeOverlay(
         label = "radarRailAlpha"
     )
 
-    // Pulsing animation for FAST_APPROACHING red alert (only composed when fast threats active)
-    val pulseAlphaState: State<Float> = if (radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING) {
-        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-        infiniteTransition.animateFloat(
-            initialValue = 0.4f,
-            targetValue = 0.95f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(350, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "fastApproachingPulse"
-        )
-    } else {
-        remember { mutableFloatStateOf(1.0f) }
-    }
-
     if (edgeSide == RadarEdgeSide.FULL_SCREEN) {
-        // FULL_SCREEN Mode (REQ-TRK-062.1a, REQ-TRK-062.3a, REQ-TRK-062.5b)
+        // FULL_SCREEN Mode (REQ-TRK-062.1a, REQ-TRK-062.3a, REQ-TRK-062.5b, REQ-TRK-089)
+        // Per-target threat-level hysteresis prevents 8-Hz V1 boundary jitter from flashing red/orange.
+        val threatHysteresisSession = remember { RadarThreatHysteresisSession() }
+        val fullScreenRadarState = remember(radarState) {
+            threatHysteresisSession.stabilize(radarState)
+        }
+        val showLaneGuides = RadarOverlayMath.hasFullScreen2DLateralData(fullScreenRadarState)
+
         Box(
             modifier = modifier
                 .fillMaxSize()
@@ -336,8 +386,8 @@ fun RadarEdgeOverlay(
             // Full-screen vehicle threat overlay (zero pointer capture)
             if (hasActiveThreats) {
                 RadarFullScreenThreatOverlay(
-                    radarState = radarState,
-                    pulseAlphaProvider = { pulseAlphaState.value },
+                    radarState = fullScreenRadarState,
+                    showLaneGuides = showLaneGuides,
                     trafficOrientation = trafficOrientation,
                     modifier = Modifier
                         .fillMaxSize()
@@ -346,11 +396,11 @@ fun RadarEdgeOverlay(
             }
 
             if (showStatusBadge) {
-                // Top Status Badge Pill (only clickable element in full-screen overlay)
+                // Top Status Badge Pill (only clickable element in full-screen overlay; solid opaque fill)
                 RadarStatusBadgePill(
-                    radarState = radarState,
+                    radarState = fullScreenRadarState,
                     isDisconnectError = isDisconnectError,
-                    pulseAlphaProvider = { pulseAlphaState.value },
+                    pulseAlphaProvider = { 1.0f },
                     onClick = {
                         if (isDisconnectError && onReconnectClick != null) {
                             onReconnectClick()
@@ -365,6 +415,22 @@ fun RadarEdgeOverlay(
             }
         }
     } else {
+        // Pulsing animation for FAST_APPROACHING red alert in Edge Rail mode only
+        val pulseAlphaState: State<Float> = if (radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING) {
+            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+            infiniteTransition.animateFloat(
+                initialValue = 0.4f,
+                targetValue = 0.95f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(350, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "fastApproachingPulse"
+            )
+        } else {
+            remember { mutableFloatStateOf(1.0f) }
+        }
+
         // Edge Rail Mode (LEFT or RIGHT)
         val containerWidth = if (has2DData) 30.dp else 24.dp
 
@@ -427,7 +493,52 @@ fun RadarEdgeOverlay(
     }
 }
 
-private data class FullScreenVehicleVisualSpec(
+/**
+ * Plain non-Compose session tracker applying [RadarOverlayMath.stepThreatHysteresis] per active
+ * targetId across incoming [RadarState] frames while pruning departed targets (REQ-TRK-089.2).
+ */
+private class RadarThreatHysteresisSession {
+    private var states: Map<Int, RadarOverlayMath.ThreatHysteresisState> = emptyMap()
+
+    fun stabilize(radarState: RadarState): RadarState {
+        if (radarState.targets.isEmpty()) {
+            states = emptyMap()
+            return radarState
+        }
+        val nextStates = HashMap<Int, RadarOverlayMath.ThreatHysteresisState>(radarState.targets.size)
+        var anyTargetChanged = false
+        val stabilizedTargets = radarState.targets.map { target ->
+            val stepped = RadarOverlayMath.stepThreatHysteresis(
+                previous = states[target.targetId],
+                incoming = target.threatLevel
+            )
+            nextStates[target.targetId] = stepped
+            if (stepped.displayed == target.threatLevel) {
+                target
+            } else {
+                anyTargetChanged = true
+                target.copy(threatLevel = stepped.displayed)
+            }
+        }
+        states = nextStates
+
+        val stabilizedOverall = when {
+            stabilizedTargets.any { it.threatLevel == ThreatLevel.FAST_APPROACHING } -> ThreatLevel.FAST_APPROACHING
+            stabilizedTargets.any { it.threatLevel == ThreatLevel.APPROACHING } -> ThreatLevel.APPROACHING
+            else -> ThreatLevel.NONE
+        }
+        return if (!anyTargetChanged && stabilizedOverall == radarState.overallThreatLevel) {
+            radarState
+        } else {
+            radarState.copy(
+                overallThreatLevel = stabilizedOverall,
+                targets = stabilizedTargets
+            )
+        }
+    }
+}
+
+internal data class FullScreenVehicleVisualSpec(
     val icon: ImageVector,
     val iconSize: Dp,
     val minWidth: Dp,
@@ -436,45 +547,49 @@ private data class FullScreenVehicleVisualSpec(
     val descriptionRes: Int
 )
 
-private fun resolveFullScreenVehicleVisualSpec(
+internal fun resolveFullScreenVehicleVisualSpec(
     category: VehicleSizeCategory
 ): FullScreenVehicleVisualSpec = when (category) {
     VehicleSizeCategory.UNKNOWN_OR_LIGHT -> FullScreenVehicleVisualSpec(
-        icon = Icons.Filled.TwoWheeler,
-        iconSize = 15.dp,
-        minWidth = 54.dp,
-        minHeight = 26.dp,
-        fontSize = 11.sp,
+        icon = Icons.Filled.DirectionsCar,
+        iconSize = 24.dp,
+        minWidth = 92.dp,
+        minHeight = 42.dp,
+        fontSize = 18.sp,
         descriptionRes = R.string.radar_vehicle_size_light
     )
     VehicleSizeCategory.CAR -> FullScreenVehicleVisualSpec(
         icon = Icons.Filled.DirectionsCar,
-        iconSize = 16.dp,
-        minWidth = 60.dp,
-        minHeight = 28.dp,
-        fontSize = 12.sp,
+        iconSize = 26.dp,
+        minWidth = 100.dp,
+        minHeight = 46.dp,
+        fontSize = 19.sp,
         descriptionRes = R.string.radar_vehicle_size_car
     )
     VehicleSizeCategory.TRUCK_OR_BUS -> FullScreenVehicleVisualSpec(
         icon = Icons.Filled.LocalShipping,
-        iconSize = 18.dp,
-        minWidth = 70.dp,
-        minHeight = 32.dp,
-        fontSize = 13.sp,
+        iconSize = 28.dp,
+        minWidth = 114.dp,
+        minHeight = 52.dp,
+        fontSize = 21.sp,
         descriptionRes = R.string.radar_vehicle_size_truck
     )
 }
 
 /**
- * Subtle non-interactive road-lane framing guides rendered solely while active threats exist
- * in FULL_SCREEN mode (REQ-TRK-089.1/.3).
+ * Subtle non-interactive road-lane framing guides rendered strictly when genuine 2D lateral
+ * data is present alongside active threats in FULL_SCREEN mode (REQ-TRK-089.1/.3).
  */
 @Composable
 private fun RadarFullScreenLaneGuides(
     guideColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("RadarFullScreenLaneGuides")
+    ) {
         val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 14f), 0f)
         val strokePx = 1.dp.toPx()
         for (fraction in listOf(0.30f, 0.50f, 0.70f)) {
@@ -497,7 +612,7 @@ private fun RadarFullScreenLaneGuides(
 @Composable
 private fun RadarFullScreenThreatOverlay(
     radarState: RadarState,
-    pulseAlphaProvider: () -> Float,
+    showLaneGuides: Boolean,
     trafficOrientation: RadarTrafficOrientation,
     modifier: Modifier = Modifier
 ) {
@@ -517,14 +632,15 @@ private fun RadarFullScreenThreatOverlay(
         val usableHeightPx = constraints.maxHeight.toFloat()
         val usableWidthPx = constraints.maxWidth.toFloat()
 
-        RadarFullScreenLaneGuides(guideColor = guideColor)
+        if (showLaneGuides) {
+            RadarFullScreenLaneGuides(guideColor = guideColor)
+        }
 
         radarState.targets.forEach { target ->
             key(target.targetId) {
                 RadarFullScreenVehicleMarker(
                     target = target,
                     maxRangeMeters = maxRangeMeters,
-                    pulseAlphaProvider = pulseAlphaProvider,
                     trafficOrientation = trafficOrientation,
                     usableWidthPx = usableWidthPx,
                     usableHeightPx = usableHeightPx
@@ -535,15 +651,15 @@ private fun RadarFullScreenThreatOverlay(
 }
 
 /**
- * Touch-transparent, elevated, content-sized capsule marker for a single approaching radar vehicle
- * in FULL_SCREEN mode with V2 size iconography, tabular distance readout, high-contrast dual-rim
- * framing, and single-pass `.layout` bounds clamping (REQ-TRK-089.1/.2/.3).
+ * Touch-transparent, elevated, handlebar-legible stadium capsule marker for a single approaching
+ * radar vehicle in FULL_SCREEN mode with neutral V1/V2 iconography, enlarged tabular distance
+ * readout, 100% solid opaque threat fill, dual-rim framing, and single-pass `.layout` clamping
+ * (REQ-TRK-089.1/.2/.3, ATT-8958).
  */
 @Composable
 private fun RadarFullScreenVehicleMarker(
     target: RadarTarget,
     maxRangeMeters: Float,
-    pulseAlphaProvider: () -> Float,
     trafficOrientation: RadarTrafficOrientation,
     usableWidthPx: Float,
     usableHeightPx: Float
@@ -560,7 +676,6 @@ private fun RadarFullScreenVehicleMarker(
     )
     val horizontalFraction = RadarOverlayMath.calculateFullScreenHorizontalFraction(target, trafficOrientation)
 
-    val isFastApproaching = target.threatLevel == ThreatLevel.FAST_APPROACHING
     val baseThreatColor = RadarOverlayMath.resolveThreatColor(target.threatLevel)
     val contentColor = if (target.threatLevel == ThreatLevel.APPROACHING) {
         TTColor.RadarFullScreenApproachingContent
@@ -568,8 +683,7 @@ private fun RadarFullScreenVehicleMarker(
         TTColor.RadarFullScreenFastContent
     }
 
-    val outerShape = RoundedCornerShape(15.dp)
-    val innerShape = RoundedCornerShape(13.5.dp)
+    val capsuleShape = RoundedCornerShape(percent = 50)
 
     Box(
         modifier = Modifier
@@ -599,8 +713,8 @@ private fun RadarFullScreenVehicleMarker(
                 scaleX = perspectiveScale
                 scaleY = perspectiveScale
             }
-            .background(TTColor.RadarFullScreenMarkerScrim, outerShape)
-            .padding(1.5.dp)
+            .background(TTColor.RadarFullScreenMarkerScrim, capsuleShape)
+            .padding(2.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription = "$vehicleDesc, ${distanceMeters}m"
             }
@@ -610,31 +724,25 @@ private fun RadarFullScreenVehicleMarker(
             modifier = Modifier
                 .widthIn(min = spec.minWidth)
                 .heightIn(min = spec.minHeight)
-                .wrapContentWidth()
-                .shadow(elevation = 6.dp, shape = innerShape, clip = false)
+                .shadow(elevation = 6.dp, shape = capsuleShape, clip = false)
                 .drawBehind {
-                    val alpha = if (isFastApproaching) {
-                        (0.65f + 0.35f * pulseAlphaProvider()).coerceIn(0f, 1f)
-                    } else {
-                        0.95f
-                    }
-                    val cornerPx = 13.5.dp.toPx()
+                    val radiusPx = size.height / 2f
                     drawRoundRect(
-                        color = baseThreatColor.copy(alpha = alpha),
-                        cornerRadius = CornerRadius(cornerPx, cornerPx)
+                        color = baseThreatColor,
+                        cornerRadius = CornerRadius(radiusPx, radiusPx)
                     )
                 }
                 .border(
-                    width = 1.25.dp,
+                    width = 1.5.dp,
                     color = TTColor.RadarFullScreenMarkerInnerBorder,
-                    shape = innerShape
+                    shape = capsuleShape
                 ),
             contentAlignment = Alignment.Center
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
             ) {
                 Icon(
                     imageVector = spec.icon,
@@ -646,7 +754,7 @@ private fun RadarFullScreenVehicleMarker(
                     text = "${distanceMeters}m",
                     color = contentColor,
                     fontSize = spec.fontSize,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     softWrap = false,
                     style = TextStyle(fontFeatureSettings = "tnum")
@@ -1172,6 +1280,37 @@ private fun PreviewRadarFullScreenOverlayMapBackdrop() {
                     modifier = Modifier.fillMaxSize()
                 )
             }
+        }
+    }
+}
+
+@Preview(name = "Radar FullScreen - V1 1D No Lane Guides", showBackground = true)
+@Composable
+private fun PreviewRadarFullScreenOverlayV1Light() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface(modifier = Modifier.width(360.dp).height(480.dp)) {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+                    targets = listOf(
+                        RadarTarget(
+                            targetId = 1,
+                            rangeMeters = 80f,
+                            approachSpeedMps = 12f,
+                            threatLevel = ThreatLevel.APPROACHING
+                        ),
+                        RadarTarget(
+                            targetId = 2,
+                            rangeMeters = 123f,
+                            approachSpeedMps = 22f,
+                            threatLevel = ThreatLevel.FAST_APPROACHING
+                        )
+                    )
+                ),
+                edgeSide = RadarEdgeSide.FULL_SCREEN,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
